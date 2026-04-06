@@ -39,7 +39,7 @@ boa_engine = "0.21"
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 # P2P sync engine (embedded, uses same SQLite via WAL mode)
-# cadence = { path = "../../../services/cadence" }  # TODO: Enable when cadence is added to Monobase
+cadence = { path = "../../../services/cadence" }
 flate2 = "1.0"
 bcrypt = "0.16"
 hmac = "0.12"

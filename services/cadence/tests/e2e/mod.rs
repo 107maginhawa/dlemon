@@ -1,0 +1,12 @@
+mod sqlite_sqlite_test;
+mod full_stack_sync_test;
+mod scope_filtered_sync_test;
+mod metadata_recovery_test;
+mod new_peer_join_test;
+mod multi_peer_test;
+mod persistent_sync_test;
+mod postgres_postgres_test;
+mod sqlite_postgres_test;
+mod ws_sqlite_test;
+mod mixed_transport_test;
+mod pg_watcher_null_updated_at_test;

@@ -1,0 +1,46 @@
+[tools]
+rust = "1.88"
+
+[tasks.dev]
+description = "Run in dev mode"
+run = "cargo run"
+
+[tasks.build]
+description = "Build release binary"
+run = "cargo build --release"
+
+[tasks."docker:build"]
+description = "Build Docker image"
+run = "./build-docker.sh"
+
+[tasks."docker:push"]
+description = "Build and push Docker image"
+run = "./build-docker.sh --push"
+
+[tasks.test]
+description = "Run all tests"
+run = "cargo test"
+
+[tasks."test:unit"]
+description = "Run unit tests"
+run = "cargo test --test unit"
+
+[tasks."test:integration"]
+description = "Run integration tests"
+run = "cargo test --test integration --features integration-tests"
+
+[tasks."test:e2e"]
+description = "Run e2e tests"
+run = "cargo test --test e2e --features integration-tests"
+
+[tasks."deps:up"]
+description = "Start test dependencies (PostgreSQL, Valkey)"
+run = "docker compose -f docker-compose.deps.yml up -d --wait"
+
+[tasks."deps:down"]
+description = "Stop test dependencies and cleanup volumes"
+run = "docker compose -f docker-compose.deps.yml down -v"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "cargo clean"

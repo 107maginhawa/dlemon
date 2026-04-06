@@ -1,0 +1,16 @@
+mod applier_test;
+mod catchup_checkpoint_test;
+mod config_test;
+mod state_test;
+mod storage_test;
+mod schema_test;
+mod protocol_test;
+mod lww_test;
+mod crdt_test;
+mod merge_router_test;
+mod auth_test;
+mod token_test;
+mod stream_test;
+mod valkey_test;
+mod primary_reader_test;
+mod watcher_initial_scan_test;

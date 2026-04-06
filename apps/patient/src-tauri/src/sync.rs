@@ -7,10 +7,8 @@
 //! NOTE: Cadence integration is currently stubbed. Once Cadence is added to
 //! the Monobase monorepo, uncomment the imports and implementation.
 
-// TODO: Uncomment when cadence is added to Monobase
-// use cadence::storage::runtime_backend::{Backend, StorageConfig};
-// use cadence::storage::backend::StorageBackend;
-// use cadence::sync::manager::SyncEngine;
+use cadence::storage::{MetadataBackend, SqliteBackend};
+use cadence::sync::SyncEngine;
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

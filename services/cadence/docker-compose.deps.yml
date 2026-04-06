@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: cadence-test-postgres-${TEST_INSTANCE:-default}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cadence_test
+    ports:
+      - "${POSTGRES_PORT:-15434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - test-network
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: cadence-test-valkey-${TEST_INSTANCE:-default}
+    ports:
+      - "${VALKEY_PORT:-16379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    tmpfs:
+      - /data
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+    name: cadence-test-network-${TEST_INSTANCE:-default}
