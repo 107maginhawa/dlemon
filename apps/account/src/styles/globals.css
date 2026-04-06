@@ -1,0 +1,7 @@
+/* Import Monobase brand theme from shared UI */
+@import "@monobase/ui/styles";
+
+/* Import Better Auth UI styles (after theme variables are defined) */
+@import "@daveyplate/better-auth-ui/css";
+
+/* App-specific style overrides (if any) */

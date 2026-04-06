@@ -1,0 +1,8 @@
+<svg width="200" height="48" viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern hexagon icon -->
+  <path d="M18 8L28 14V26L18 32L8 26V14L18 8Z" fill="#2563eb" stroke="#1e40af" stroke-width="1.5"/>
+  <text x="18" y="27" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle">M</text>
+
+  <!-- MONOBASE text -->
+  <text x="42" y="30" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#1e293b" letter-spacing="0.5">MONOBASE</text>
+</svg>

@@ -1,0 +1,33 @@
+{
+    # Disable automatic HTTPS (running behind K8s ingress)
+    auto_https off
+    # Disable admin API
+    admin off
+}
+
+:{$PORT:80} {
+    # Enable gzip compression
+    encode gzip
+    
+    # Dynamic runtime config endpoint (served from /tmp for read-only filesystems)
+    handle /config.json {
+        root * /tmp
+        file_server
+        header Cache-Control "no-cache, no-store, must-revalidate"
+        header Pragma "no-cache"
+        header Expires "0"
+    }
+    
+    # Cache static assets aggressively
+    @static {
+        path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot
+    }
+    
+    # Handle everything else - SPA routing
+    handle {
+        root * /srv
+        header @static Cache-Control "public, max-age=31536000, immutable"
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+}

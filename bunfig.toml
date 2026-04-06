@@ -1,0 +1,13 @@
+[install]
+# Use isolated mode (pnpm-style) for strict dependency isolation
+linker = "isolated"
+
+# Install packages to individual package node_modules directories
+# This ensures better isolation between packages
+cache = true
+
+# Skip optional dependencies for faster installs
+optional = false
+
+# Logging configuration
+logLevel = "info"

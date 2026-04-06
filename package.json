@@ -1,0 +1,27 @@
+{
+  "name": "monobase",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monobase Application Platform Monorepo",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
+    "specs/*"
+  ],
+  "packageManager": "bun@1.2.21",
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "clean": "rm -rf node_modules bun.lock && find . -name 'node_modules' -type d -prune -exec rm -rf {} +"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.2.21"
+  },
+  "devDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.52.3",
+    "@rollup/rollup-linux-x64-gnu": "^4.52.3",
+    "pg-cloudflare": "^1.2.7"
+  }
+}

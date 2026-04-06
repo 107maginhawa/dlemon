@@ -1,0 +1,13 @@
+{
+  "extends": "@monobase/typescript-config/app.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@monobase/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "exclude": ["node_modules"]
+}

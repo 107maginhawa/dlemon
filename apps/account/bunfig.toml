@@ -1,0 +1,11 @@
+# Bun configuration for provider app
+
+[test]
+# Exclude E2E tests from Bun test runner
+# E2E tests are run with Playwright: bun run test:e2e
+# Bun runs unit tests (src/**/*.test.ts)
+# Playwright runs E2E tests (tests/e2e/**/*.spec.ts)
+ignore = ["**/*.spec.ts"]
+
+# Run unit tests only (colocated *.test.ts files in src/)
+# Example: src/api/billing.test.ts, src/api/notifications.test.ts
