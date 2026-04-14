@@ -1,7 +1,7 @@
 {
   "name": "@monobase/api-spec",
   "version": "0.1.0",
-  "description": "TypeSpec API definitions for Monobase platform",
+  "description": "TypeSpec API definitions for Monobase Healthcare Platform - Universal Healthcare API",
   "type": "module",
   "exports": {
     "./openapi.json": "./dist/openapi/openapi.json",

@@ -222,7 +222,7 @@ model PersonUpdateRequest {
   gender?: Gender | null;
 
   @doc("Primary address - can be null to clear")
-  primaryAddress?: AddressUpdate | null;
+  primaryAddress?: AddressPatchInput | null;
 
   @doc("Contact information - can be null to clear")
   contactInfo?: ContactInfo | null;

@@ -1,8 +1,8 @@
 {
-  "name": "monobase",
+  "name": "monobase-healthcare",
   "version": "0.1.0",
   "private": true,
-  "description": "Monobase Application Platform Monorepo",
+  "description": "Monobase Healthcare Application Platform - Universal Healthcare API",
   "type": "module",
   "workspaces": [
     "apps/*",

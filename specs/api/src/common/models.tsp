@@ -209,7 +209,7 @@ model Address {
  * Physical address for updates (with nullable fields)
  */
 @doc("Physical mailing address for updates - all fields optional, null clears field")
-model AddressUpdate {
+model AddressPatchInput {
   @doc("Street address line 1")
   @minLength(1)
   @maxLength(100)
