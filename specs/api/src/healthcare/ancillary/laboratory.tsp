@@ -382,3 +382,124 @@ interface DiagnosticReportManagement {
   @operationId("searchDiagnosticReports")
   search(...DiagnosticReportSearchParams): PaginatedResponse<DiagnosticReport> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 }
+
+// ---------------------------------------------------------------------------
+// Enumerations – Lab Result Verification
+// ---------------------------------------------------------------------------
+
+/**
+ * Verification lifecycle status for a laboratory result.
+ */
+enum VerificationStatus {
+  unverified,
+  preliminaryReview,
+  verified,
+  amended,
+  corrected,
+}
+
+// ---------------------------------------------------------------------------
+// Resource model – LabResultVerification
+// ---------------------------------------------------------------------------
+
+/**
+ * A record capturing the verification workflow for a diagnostic report,
+ * including who verified the results and the method used.
+ */
+model LabResultVerification extends HealthcareBaseEntity {
+  /** Reference to the DiagnosticReport being verified. */
+  report: Reference;
+
+  /** Current verification lifecycle status. */
+  status: VerificationStatus;
+
+  /** Practitioner who verified the results. */
+  verifiedBy?: Reference;
+
+  /** Date/time at which verification was completed. */
+  verifiedAt?: utcDateTime;
+
+  /** Method used to verify the results (e.g. manual-review, delta-check). */
+  verificationMethod?: CodeableConcept;
+
+  /** Free-text comments from the verifier. */
+  comments?: string;
+
+  /** Previous verification status before the most recent update. */
+  previousStatus?: VerificationStatus;
+}
+
+// ---------------------------------------------------------------------------
+// Resource model – ResultPanel
+// ---------------------------------------------------------------------------
+
+/**
+ * A logical grouping of Observation results that form a laboratory test panel
+ * (e.g. basic metabolic panel, complete blood count).
+ */
+model ResultPanel extends HealthcareBaseEntity {
+  /** LOINC panel code identifying this grouping of tests. */
+  code: CodeableConcept;
+
+  /** Human-readable name of the panel (e.g. "Basic Metabolic Panel"). */
+  name: string;
+
+  /** References to the individual Observation members of this panel. */
+  members: Reference[];
+
+  /** Overall result status of the panel derived from member observations. */
+  status: DiagnosticReportStatus;
+
+  /** Practitioner or organisation that ordered this panel. */
+  orderedBy?: Reference;
+
+  /** Date/time the panel was performed or reported. */
+  performedAt?: utcDateTime;
+}
+
+// ---------------------------------------------------------------------------
+// Request / response wrappers – Verification
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload for submitting or updating a lab result verification.
+ */
+model LabResultVerificationRequest {
+  ...OmitProperties<LabResultVerification, "id" | "meta" | "createdAt" | "updatedAt">;
+}
+
+// ---------------------------------------------------------------------------
+// Interface – Lab Verification
+// ---------------------------------------------------------------------------
+
+/**
+ * Operations for verifying laboratory diagnostic reports.
+ */
+@useAuth(bearerAuth)
+@tag("Healthcare:Ancillary")
+interface LabVerificationService {
+  /**
+   * Submit a verification record for a diagnostic report.
+   * @param body Lab result verification payload.
+   * @returns The newly created or updated verification record.
+   */
+  @post
+  @operationId("verifyLabResult")
+  verify(@body body: LabResultVerificationRequest): {
+    @statusCode statusCode: 201;
+    @body verification: LabResultVerification;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Retrieve the verification record for a specific diagnostic report.
+   * @param reportId The identifier of the DiagnosticReport to look up verification for.
+   * @returns The lab result verification record for the requested report.
+   */
+  @get
+  @operationId("getLabResultVerification")
+  @route("/{reportId}")
+  getVerification(@path reportId: string): {
+    @statusCode statusCode: 200;
+    @body verification: LabResultVerification;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+}

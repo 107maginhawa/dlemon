@@ -444,3 +444,87 @@ model HealthcareBaseEntity extends BaseEntity {
   @doc("Additional content defined by implementations that extends the base resource definition")
   extensions?: ResourceExtension[];
 }
+
+// ---------------------------------------------------------------------------
+// Data Quality and Privacy Enumerations
+// ---------------------------------------------------------------------------
+
+@doc("Reason why a data element value is absent. Aligns with FHIR DataAbsentReason value set.")
+enum DataAbsentReason {
+  @doc("The value is expected to exist but is not known")
+  `unknown`: "unknown",
+  @doc("The source was asked but does not know the value")
+  askedUnknown: "asked-unknown",
+  @doc("There is reason to expect that the value may become known")
+  tempUnknown: "temp-unknown",
+  @doc("The workflow did not lead to this value being known")
+  notAsked: "not-asked",
+  @doc("The source was asked but declined to answer")
+  askedDeclined: "asked-declined",
+  @doc("The information is not available due to security, privacy, or related reasons")
+  masked: "masked",
+  @doc("There is no proper value for this element (e.g., last menstrual period for a male)")
+  notApplicable: "not-applicable",
+  @doc("The source system was not capable of supporting this element")
+  unsupported: "unsupported",
+  @doc("The content of the data is represented in the resource narrative")
+  asText: "as-text",
+  @doc("Some system or workflow process error means that the information is not available")
+  error: "error",
+  @doc("The numeric value is undefined or unrepresentable (NaN)")
+  notANumber: "not-a-number",
+  @doc("The numeric value is excessively low and unrepresentable")
+  negativeInfinity: "negative-infinity",
+  @doc("The numeric value is excessively high and unrepresentable")
+  positiveInfinity: "positive-infinity",
+  @doc("The value is not available because the measurement was not started or completed")
+  notPerformed: "not-performed",
+  @doc("The value is not permitted in this context")
+  notPermitted: "not-permitted",
+}
+
+@doc("Confidentiality classification for clinical data access control. Aligns with HL7 Confidentiality code system.")
+enum ConfidentialityClassification {
+  @doc("No restrictions on access")
+  unrestricted: "U",
+  @doc("Low confidentiality — minimal restrictions")
+  low: "L",
+  @doc("Moderate confidentiality")
+  moderate: "M",
+  @doc("Normal confidentiality — standard clinical data protection")
+  normal: "N",
+  @doc("Restricted — additional access controls required (e.g., mental health, substance use, HIV)")
+  restricted: "R",
+  @doc("Very restricted — break-glass access only (e.g., VIP, celebrity, employee records)")
+  veryRestricted: "V",
+}
+
+@doc("Purpose for which data is being accessed or used. Aligns with FHIR PurposeOfUse value set.")
+enum PurposeOfUse {
+  @doc("Treatment — provision of healthcare")
+  treatment: "TREAT",
+  @doc("Payment — billing, claims, and revenue cycle")
+  payment: "HPAYMT",
+  @doc("Healthcare operations — quality, safety, compliance")
+  operations: "HOPERAT",
+  @doc("System administration — technical operations")
+  sysadmin: "SYSADMIN",
+  @doc("Fraud detection and prevention")
+  fraud: "FRAUD",
+  @doc("Psychotherapy notes — special HIPAA protections")
+  psychotherapy: "PSYCHOTHERAPY",
+  @doc("Training and education purposes")
+  training: "TRAIN",
+  @doc("Legal proceedings")
+  legal: "HLEGAL",
+  @doc("Marketing communications (requires explicit consent)")
+  marketing: "HMARKT",
+  @doc("Provider or facility directory")
+  directory: "HDIR",
+  @doc("Required disclosure (public health, law enforcement)")
+  disclosure: "HDISCL",
+  @doc("Emergency treatment access")
+  emergency: "ETREAT",
+  @doc("Research purposes (requires IRB approval or consent)")
+  research: "HRESCH",
+}

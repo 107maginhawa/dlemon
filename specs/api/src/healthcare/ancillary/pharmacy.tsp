@@ -299,3 +299,271 @@ interface DrugInteractionService {
   @operationId("checkDrugInteractions")
   check(@body body: DrugInteractionCheckRequest): DrugInteractionCheck | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 }
+
+// ---------------------------------------------------------------------------
+// Enumerations – Medication Reconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * Lifecycle status of a medication reconciliation event.
+ */
+enum ReconciliationStatus {
+  inProgress,
+  completed,
+  cancelled,
+}
+
+/**
+ * The care transition that triggered the reconciliation.
+ */
+enum ReconciliationType {
+  admission,
+  discharge,
+  transfer,
+}
+
+/**
+ * Prior use status of a medication during a reconciliation review.
+ */
+enum ReconciliationMedStatus {
+  active,
+  discontinued,
+  changed,
+  noChange,
+  `new`: "new",
+}
+
+/**
+ * Action to be taken on a medication as a result of reconciliation.
+ */
+enum ReconciliationAction {
+  continue,
+  discontinue,
+  modify,
+  add,
+  hold,
+}
+
+/**
+ * The method by which medication adherence data was collected.
+ */
+enum AdherenceSource {
+  selfReport,
+  deviceMonitoring,
+  pharmacyRefill,
+  clinicianAssessment,
+}
+
+// ---------------------------------------------------------------------------
+// Supporting models – Reconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * A single medication line item reviewed during a reconciliation encounter.
+ */
+model ReconciliationItem {
+  /** Coded identification of the medication under review. */
+  medication: CodeableConcept;
+
+  /** Use status of the medication prior to this reconciliation. */
+  priorStatus: ReconciliationMedStatus;
+
+  /** Clinical decision/action determined for this medication. */
+  action: ReconciliationAction;
+
+  /** Reference to a new or modified MedicationRequest created as a result of this action. */
+  newMedicationRequest?: Reference;
+
+  /** Rationale for the action taken. */
+  reason?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Resource model – MedicationReconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * A structured review of a patient's complete medication list at a point of
+ * care transition (admission, discharge, or transfer) to identify and resolve
+ * discrepancies.
+ */
+model MedicationReconciliation extends HealthcareBaseEntity {
+  /** Current lifecycle status of the reconciliation. */
+  status: ReconciliationStatus;
+
+  /** Reference to the patient whose medications are being reconciled. */
+  patient: Reference;
+
+  /** Clinical encounter during which the reconciliation occurred. */
+  encounter?: Reference;
+
+  /** Practitioner who performed the reconciliation. */
+  performer: Reference;
+
+  /** Date/time the reconciliation was performed. */
+  performedAt: utcDateTime;
+
+  /** Type of care transition that triggered the reconciliation. */
+  type: ReconciliationType;
+
+  /** Individual medication line items reviewed and adjudicated. */
+  items: ReconciliationItem[];
+
+  /** Annotations about the reconciliation event. */
+  note?: Annotation[];
+}
+
+// ---------------------------------------------------------------------------
+// Resource model – AdherenceRecord
+// ---------------------------------------------------------------------------
+
+/**
+ * A measure of how consistently a patient takes their prescribed medications
+ * over a defined period.
+ */
+model AdherenceRecord extends HealthcareBaseEntity {
+  /** Reference to the patient whose adherence is recorded. */
+  patient: Reference;
+
+  /** Reference to the medication (Medication resource or MedicationRequest). */
+  medication: Reference;
+
+  /** Period over which adherence was measured. */
+  period: Period;
+
+  /**
+   * Calculated adherence rate expressed as a proportion between 0.0 (completely
+   * non-adherent) and 1.0 (fully adherent).
+   */
+  adherenceRate?: float64;
+
+  /** Number of doses missed during the measurement period. */
+  missedDoses?: int32;
+
+  /** Total number of doses expected during the measurement period. */
+  totalDoses?: int32;
+
+  /** Method by which adherence data was collected. */
+  source: AdherenceSource;
+
+  /** Annotations about the adherence measurement. */
+  note?: Annotation[];
+}
+
+// ---------------------------------------------------------------------------
+// Request / response wrappers – Reconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload for creating a new MedicationReconciliation record.
+ */
+model MedicationReconciliationCreateRequest {
+  ...OmitProperties<MedicationReconciliation, "id" | "meta" | "createdAt" | "updatedAt">;
+}
+
+/**
+ * Query parameters for searching MedicationReconciliation resources.
+ */
+model MedicationReconciliationSearchParams {
+  /** Filter by patient reference identifier. */
+  patientId?: string;
+
+  /** Filter by encounter reference identifier. */
+  encounterId?: string;
+
+  /** Filter by reconciliation type. */
+  type?: ReconciliationType;
+
+  /** Filter by lifecycle status. */
+  status?: ReconciliationStatus;
+
+  ...PaginationQuery;
+}
+
+// ---------------------------------------------------------------------------
+// Interface – Reconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * CRUD and search operations for MedicationReconciliation resources.
+ */
+@useAuth(bearerAuth)
+@tag("Healthcare:Ancillary")
+interface ReconciliationManagement {
+  /**
+   * Create a new medication reconciliation record.
+   * @param body Medication reconciliation creation payload.
+   * @returns The newly created medication reconciliation record.
+   */
+  @post
+  @operationId("createMedicationReconciliation")
+  create(@body body: MedicationReconciliationCreateRequest): {
+    @statusCode statusCode: 201;
+    @body reconciliation: MedicationReconciliation;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Retrieve a medication reconciliation record by its unique identifier.
+   * @param id The medication reconciliation identifier.
+   * @returns The requested medication reconciliation record.
+   */
+  @get
+  @operationId("getMedicationReconciliation")
+  @route("/{id}")
+  read(@path id: string): {
+    @statusCode statusCode: 200;
+    @body reconciliation: MedicationReconciliation;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Replace an existing medication reconciliation record.
+   * @param id The medication reconciliation identifier.
+   * @param body Updated medication reconciliation payload.
+   * @returns The updated medication reconciliation record.
+   */
+  @put
+  @operationId("updateMedicationReconciliation")
+  @route("/{id}")
+  update(@path id: string, @body body: MedicationReconciliationCreateRequest): {
+    @statusCode statusCode: 200;
+    @body reconciliation: MedicationReconciliation;
+  } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Partially update a medication reconciliation record.
+   * @param id The medication reconciliation identifier.
+   * @param body Fields to update.
+   * @returns The updated medication reconciliation record.
+   */
+  @patch
+  @operationId("patchMedicationReconciliation")
+  @route("/{id}")
+  patch(@path id: string, @body body: Record<unknown>): {
+    @statusCode statusCode: 200;
+    @body reconciliation: MedicationReconciliation;
+  } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Delete a medication reconciliation record.
+   * @param id The medication reconciliation identifier.
+   */
+  @delete
+  @operationId("deleteMedicationReconciliation")
+  @route("/{id}")
+  delete(@path id: string): {
+    @statusCode statusCode: 204;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Search medication reconciliation records by patient, encounter, type, or status.
+   * @param params Search and pagination parameters.
+   * @returns A paginated list of matching medication reconciliation records.
+   */
+  @get
+  @operationId("searchMedicationReconciliations")
+  @route("/search")
+  search(...MedicationReconciliationSearchParams): {
+    @statusCode statusCode: 200;
+    @body result: PaginatedResponse<MedicationReconciliation>;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+}

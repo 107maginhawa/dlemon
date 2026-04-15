@@ -251,3 +251,210 @@ interface ImagingStudyManagement {
   @operationId("searchImagingStudies")
   search(...ImagingStudySearchParams): PaginatedResponse<ImagingStudy> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 }
+
+// ---------------------------------------------------------------------------
+// Supporting models – RadiologyReport
+// ---------------------------------------------------------------------------
+
+/**
+ * A single finding documented within a radiology report,
+ * describing an observed abnormality or normal structure.
+ */
+model RadiologyFinding {
+  /** Coded anatomical body site described in this finding. */
+  bodySite?: CodeableConcept;
+
+  /** Narrative description of the finding. */
+  description: string;
+
+  /** Coded severity or significance of the finding. */
+  severity?: CodeableConcept;
+
+  /** Reference to a related Observation resource capturing structured measurement data. */
+  relatedObservation?: Reference;
+}
+
+/**
+ * A supplemental note appended to a radiology report after initial release.
+ */
+model RadiologyAddendum {
+  /** Practitioner or organisation who authored the addendum. */
+  author: Reference;
+
+  /** Date/time the addendum was added. */
+  date: utcDateTime;
+
+  /** Narrative text of the addendum. */
+  text: string;
+}
+
+// ---------------------------------------------------------------------------
+// Resource model – RadiologyReport
+// ---------------------------------------------------------------------------
+
+/**
+ * The structured findings and interpretation produced by a radiologist
+ * for a specific imaging study.  Complements ImagingStudy and aligns with
+ * FHIR R4 DiagnosticReport (category RAD).
+ */
+model RadiologyReport extends HealthcareBaseEntity {
+  /** Current lifecycle status of the radiology report. */
+  status: ImagingStudyStatus;
+
+  /** Reference to the ImagingStudy this report is based on. */
+  study: Reference;
+
+  /** Reference to the patient who is the subject of the report. */
+  subject: Reference;
+
+  /** Clinical encounter during which the imaging study was performed. */
+  encounter?: Reference;
+
+  /** Date/time the report was issued. */
+  issued: utcDateTime;
+
+  /** Radiologist(s) or organisations responsible for producing the report. */
+  performer: Reference[];
+
+  /** Practitioner(s) who interpreted the imaging results. */
+  resultsInterpreter?: Reference[];
+
+  /** Overall clinical impression summarising the findings. */
+  impression?: string;
+
+  /** Individual findings documented in the report. */
+  findings: RadiologyFinding[];
+
+  /** Final conclusion of the report. */
+  conclusion?: string;
+
+  /** Coded conclusion(s) (e.g. RadLex, SNOMED-CT). */
+  conclusionCode?: CodeableConcept[];
+
+  /** Full report document(s) presented in one or more formats (e.g. PDF, HTML). */
+  presentedForm?: Attachment[];
+
+  /** Addenda appended to the report after initial release. */
+  addendum?: RadiologyAddendum[];
+}
+
+// ---------------------------------------------------------------------------
+// Request / response wrappers – RadiologyReport
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload for creating a new RadiologyReport record.
+ */
+model RadiologyReportCreateRequest {
+  ...OmitProperties<RadiologyReport, "id" | "meta" | "createdAt" | "updatedAt">;
+}
+
+/**
+ * Query parameters for searching RadiologyReport resources.
+ */
+model RadiologyReportSearchParams {
+  /** Filter by patient (subject) reference identifier. */
+  patientId?: string;
+
+  /** Filter by imaging study reference identifier. */
+  studyId?: string;
+
+  /** Filter by report status. */
+  status?: ImagingStudyStatus;
+
+  /** Earliest issued date of the report. */
+  dateFrom?: utcDateTime;
+
+  /** Latest issued date of the report. */
+  dateTo?: utcDateTime;
+
+  ...PaginationQuery;
+}
+
+// ---------------------------------------------------------------------------
+// Interface – RadiologyReport
+// ---------------------------------------------------------------------------
+
+/**
+ * CRUD and search operations for RadiologyReport resources.
+ */
+@useAuth(bearerAuth)
+@tag("Healthcare:Ancillary")
+interface RadiologyReportManagement {
+  /**
+   * Create a new radiology report.
+   * @param body Radiology report creation payload.
+   * @returns The newly created radiology report.
+   */
+  @post
+  @operationId("createRadiologyReport")
+  create(@body body: RadiologyReportCreateRequest): {
+    @statusCode statusCode: 201;
+    @body report: RadiologyReport;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Retrieve a radiology report by its unique identifier.
+   * @param id The radiology report identifier.
+   * @returns The requested radiology report.
+   */
+  @get
+  @operationId("getRadiologyReport")
+  @route("/{id}")
+  read(@path id: string): {
+    @statusCode statusCode: 200;
+    @body report: RadiologyReport;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Replace an existing radiology report.
+   * @param id The radiology report identifier.
+   * @param body Updated radiology report payload.
+   * @returns The updated radiology report.
+   */
+  @put
+  @operationId("updateRadiologyReport")
+  @route("/{id}")
+  update(@path id: string, @body body: RadiologyReportCreateRequest): {
+    @statusCode statusCode: 200;
+    @body report: RadiologyReport;
+  } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Partially update a radiology report.
+   * @param id The radiology report identifier.
+   * @param body Fields to update.
+   * @returns The updated radiology report.
+   */
+  @patch
+  @operationId("patchRadiologyReport")
+  @route("/{id}")
+  patch(@path id: string, @body body: Record<unknown>): {
+    @statusCode statusCode: 200;
+    @body report: RadiologyReport;
+  } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Delete a radiology report.
+   * @param id The radiology report identifier.
+   */
+  @delete
+  @operationId("deleteRadiologyReport")
+  @route("/{id}")
+  delete(@path id: string): {
+    @statusCode statusCode: 204;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  /**
+   * Search radiology reports by patient, study, status, or date range.
+   * @param params Search and pagination parameters.
+   * @returns A paginated list of matching radiology reports.
+   */
+  @get
+  @operationId("searchRadiologyReports")
+  @route("/search")
+  search(...RadiologyReportSearchParams): {
+    @statusCode statusCode: 200;
+    @body result: PaginatedResponse<RadiologyReport>;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+}

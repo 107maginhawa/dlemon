@@ -43,6 +43,9 @@ import "./healthcare/clinical/immunization.tsp";
 import "./healthcare/clinical/service-request.tsp";
 import "./healthcare/clinical/document-reference.tsp";
 import "./healthcare/clinical/family-history.tsp";
+import "./healthcare/clinical/related-person.tsp";
+import "./healthcare/clinical/episode-of-care.tsp";
+import "./healthcare/clinical/flag.tsp";
 
 // Administrative — scheduling, bed management, insurance, claims, prior auth
 import "./healthcare/administrative/scheduling.tsp";
@@ -51,17 +54,32 @@ import "./healthcare/administrative/insurance.tsp";
 import "./healthcare/administrative/claims.tsp";
 import "./healthcare/administrative/prior-authorization.tsp";
 
-// Ancillary — laboratory, pharmacy, radiology, dental
+// Ancillary — laboratory, pharmacy, radiology, dental, medication catalog
 import "./healthcare/ancillary/laboratory.tsp";
 import "./healthcare/ancillary/pharmacy.tsp";
 import "./healthcare/ancillary/radiology.tsp";
 import "./healthcare/ancillary/dental.tsp";
+import "./healthcare/ancillary/medication.tsp";
+import "./healthcare/ancillary/medication-administration.tsp";
 
-// Support — care planning, consent, CDS hooks, SDOH
+// Support — care planning, consent, CDS hooks, SDOH, provenance, signatures, questionnaires, tasks
 import "./healthcare/support/care-plan.tsp";
 import "./healthcare/support/consent.tsp";
 import "./healthcare/support/cds.tsp";
 import "./healthcare/support/sdoh.tsp";
+import "./healthcare/support/provenance.tsp";
+import "./healthcare/support/signature.tsp";
+import "./healthcare/support/questionnaire.tsp";
+import "./healthcare/support/task.tsp";
+
+// Operational — inventory, devices
+import "./healthcare/operational/inventory.tsp";
+import "./healthcare/operational/device.tsp";
+
+// Analytics — de-identification, cohorts, AI metadata
+import "./healthcare/analytics/de-identification.tsp";
+import "./healthcare/analytics/cohort.tsp";
+import "./healthcare/analytics/ai-metadata.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Versioning;
@@ -145,7 +163,21 @@ using TypeSpec.OpenAPI;
 // TAG METADATA — Healthcare Support
 // ============================================================================
 @tagMetadata("Healthcare:Support", #{
-  description: "Healthcare support services. Care planning (care plans, care teams, goals), consent management (FHIR Consent), clinical decision support (CDS Hooks), and social determinants of health screening and referrals (CMS-mandated SDOH)."
+  description: "Healthcare support services. Care planning, consent, CDS Hooks, SDOH, provenance, electronic signatures, questionnaires, and task/workflow management."
+})
+
+// ============================================================================
+// TAG METADATA — Healthcare Operational
+// ============================================================================
+@tagMetadata("Healthcare:Operational", #{
+  description: "Operational resource management. Inventory tracking (items, batches, lots, expiry), medical devices (assignment, metrics, calibration), supply consumption, and storage locations."
+})
+
+// ============================================================================
+// TAG METADATA — Healthcare Analytics
+// ============================================================================
+@tagMetadata("Healthcare:Analytics", #{
+  description: "Analytics, research, and AI. De-identification profiles, cohort definitions, research data extracts, data lineage tracking, and AI output metadata with confidence scores and evidence sources."
 })
 
 namespace MonobaseHealthcareAPI {
@@ -257,6 +289,18 @@ namespace MonobaseHealthcareAPI {
   @route("/healthcare/clinical/family-history")
   interface FamilyMemberHistoryService extends Healthcare.Clinical.FamilyHistory.FamilyMemberHistoryService {}
 
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/related-persons")
+  interface RelatedPersonManagement extends Healthcare.Clinical.RelatedPersons.RelatedPersonManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/episodes-of-care")
+  interface EpisodeOfCareManagement extends Healthcare.Clinical.EpisodesOfCare.EpisodeOfCareManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/flags")
+  interface FlagManagement extends Healthcare.Clinical.Flags.FlagManagement {}
+
   // ========================================================================
   // HEALTHCARE ADMINISTRATIVE
   // ========================================================================
@@ -329,6 +373,30 @@ namespace MonobaseHealthcareAPI {
   @route("/healthcare/dental/treatment-plans")
   interface DentalTreatmentPlanManagement extends Healthcare.Ancillary.Dental.DentalTreatmentPlanManagement {}
 
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/medications")
+  interface MedicationCatalogManagement extends Healthcare.Ancillary.Medications.MedicationCatalogManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/formulary")
+  interface FormularyManagement extends Healthcare.Ancillary.Medications.FormularyManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/medication-administrations")
+  interface MedicationAdministrationManagement extends Healthcare.Ancillary.MedicationAdministrations.MedicationAdministrationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/pharmacy/reconciliations")
+  interface ReconciliationManagement extends Healthcare.Ancillary.Pharmacy.ReconciliationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/laboratory/verifications")
+  interface LabVerificationService extends Healthcare.Ancillary.Laboratory.LabVerificationService {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/radiology/reports")
+  interface RadiologyReportManagement extends Healthcare.Ancillary.Radiology.RadiologyReportManagement {}
+
   // ========================================================================
   // HEALTHCARE SUPPORT
   // ========================================================================
@@ -360,6 +428,78 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Support")
   @route("/healthcare/sdoh/referrals")
   interface SDOHReferralManagement extends Healthcare.Support.SDOH.SDOHReferralManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/provenance")
+  interface ProvenanceManagement extends Healthcare.Support.Provenance.ProvenanceManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/signatures")
+  interface SignatureManagement extends Healthcare.Support.Signatures.SignatureManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/questionnaires")
+  interface QuestionnaireManagement extends Healthcare.Support.Questionnaires.QuestionnaireManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/questionnaire-responses")
+  interface QuestionnaireResponseManagement extends Healthcare.Support.Questionnaires.QuestionnaireResponseManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/tasks")
+  interface TaskManagement extends Healthcare.Support.Tasks.TaskManagement {}
+
+  // ========================================================================
+  // HEALTHCARE OPERATIONAL
+  // ========================================================================
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/inventory/items")
+  interface InventoryManagement extends Healthcare.Operational.Inventory.InventoryManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/inventory/batches")
+  interface BatchManagement extends Healthcare.Operational.Inventory.BatchManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/inventory/consumption")
+  interface SupplyConsumptionManagement extends Healthcare.Operational.Inventory.SupplyConsumptionManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/devices")
+  interface DeviceManagement extends Healthcare.Operational.Devices.DeviceManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/device-assignments")
+  interface DeviceAssignmentManagement extends Healthcare.Operational.Devices.DeviceAssignmentManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/device-metrics")
+  interface DeviceMetricManagement extends Healthcare.Operational.Devices.DeviceMetricManagement {}
+
+  // ========================================================================
+  // HEALTHCARE ANALYTICS
+  // ========================================================================
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/de-identification")
+  interface DeIdentificationManagement extends Healthcare.Analytics.DeIdentification.DeIdentificationManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/cohorts")
+  interface CohortManagement extends Healthcare.Analytics.Cohorts.CohortManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/research-extracts")
+  interface ResearchExtractManagement extends Healthcare.Analytics.Cohorts.ResearchExtractManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/data-lineage")
+  interface DataLineageManagement extends Healthcare.Analytics.Cohorts.DataLineageManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/ai-outputs")
+  interface AIOutputManagement extends Healthcare.Analytics.AIMetadata.AIOutputManagement {}
 }
 
 /**
