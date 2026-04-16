@@ -389,6 +389,7 @@ model SDOHReferralSearchParams {
 @useAuth(bearerAuth)
 interface SDOHScreeningManagement {
   /** Create a new SDOHScreening. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createSDOHScreening")
   create(
@@ -399,6 +400,7 @@ interface SDOHScreeningManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single SDOHScreening by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getSDOHScreening")
   @route("/{id}")
@@ -410,6 +412,7 @@ interface SDOHScreeningManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing SDOHScreening. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateSDOHScreening")
   @route("/{id}")
@@ -422,6 +425,7 @@ interface SDOHScreeningManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update an SDOHScreening. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchSDOHScreening")
   @route("/{id}")
@@ -434,6 +438,7 @@ interface SDOHScreeningManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete an SDOHScreening by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteSDOHScreening")
   @route("/{id}")
@@ -444,6 +449,7 @@ interface SDOHScreeningManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for SDOHScreenings using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchSDOHScreenings")
   @route("/search")
@@ -462,6 +468,7 @@ interface SDOHScreeningManagement {
 @useAuth(bearerAuth)
 interface SDOHReferralManagement {
   /** Create a new SDOHReferral. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createSDOHReferral")
   create(
@@ -472,6 +479,7 @@ interface SDOHReferralManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single SDOHReferral by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getSDOHReferral")
   @route("/{id}")
@@ -483,6 +491,7 @@ interface SDOHReferralManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing SDOHReferral. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateSDOHReferral")
   @route("/{id}")
@@ -495,6 +504,7 @@ interface SDOHReferralManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update an SDOHReferral. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchSDOHReferral")
   @route("/{id}")
@@ -507,6 +517,7 @@ interface SDOHReferralManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete an SDOHReferral by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteSDOHReferral")
   @route("/{id}")
@@ -517,6 +528,7 @@ interface SDOHReferralManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for SDOHReferrals using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchSDOHReferrals")
   @route("/search")

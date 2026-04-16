@@ -254,6 +254,7 @@ interface ObservationService {
   /**
    * Create a new Observation.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createObservation")
   create(
@@ -266,6 +267,7 @@ interface ObservationService {
   /**
    * Retrieve a single Observation by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getObservation")
   @route("/{id}")
@@ -279,6 +281,7 @@ interface ObservationService {
   /**
    * Replace an existing Observation.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateObservation")
   @route("/{id}")
@@ -293,6 +296,7 @@ interface ObservationService {
   /**
    * Partially update an Observation.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchObservation")
   @route("/{id}")
@@ -307,6 +311,7 @@ interface ObservationService {
   /**
    * Delete an Observation.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteObservation")
   @route("/{id}")
@@ -320,6 +325,7 @@ interface ObservationService {
    * Bulk-create multiple Observations in one request.
    * Partial success is supported — the response reports both created records and errors.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("bulkCreateObservations")
   @route("/bulk")
@@ -333,6 +339,7 @@ interface ObservationService {
   /**
    * Search for Observation resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchObservations")
   @route("/search")

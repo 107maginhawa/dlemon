@@ -124,6 +124,7 @@ interface RelatedPersonManagement {
    * @param body Related person creation payload.
    * @returns The newly created related person record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createRelatedPerson")
   create(@body body: RelatedPersonCreateRequest): {
@@ -136,6 +137,7 @@ interface RelatedPersonManagement {
    * @param id The related person identifier.
    * @returns The requested related person record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getRelatedPerson")
   @route("/{id}")
@@ -150,6 +152,7 @@ interface RelatedPersonManagement {
    * @param body Updated related person payload.
    * @returns The updated related person record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateRelatedPerson")
   @route("/{id}")
@@ -164,6 +167,7 @@ interface RelatedPersonManagement {
    * @param body Fields to update.
    * @returns The updated related person record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchRelatedPerson")
   @route("/{id}")
@@ -176,6 +180,7 @@ interface RelatedPersonManagement {
    * Delete a related person record.
    * @param id The related person identifier.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteRelatedPerson")
   @route("/{id}")
@@ -188,6 +193,7 @@ interface RelatedPersonManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching related person records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchRelatedPersons")
   @route("/search")

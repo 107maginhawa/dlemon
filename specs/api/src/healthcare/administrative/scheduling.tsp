@@ -378,6 +378,7 @@ model AppointmentSearchParams {
 @useAuth(bearerAuth)
 interface ScheduleManagement {
   @doc("Create a new Schedule.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @post
   @operationId("createSchedule")
   create(
@@ -388,6 +389,7 @@ interface ScheduleManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Schedule by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("getSchedule")
   @route("/{id}")
@@ -399,6 +401,7 @@ interface ScheduleManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Schedule.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @put
   @operationId("updateSchedule")
   @route("/{id}")
@@ -411,6 +414,7 @@ interface ScheduleManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a Schedule.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @patch
   @operationId("patchSchedule")
   @route("/{id}")
@@ -423,6 +427,7 @@ interface ScheduleManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Schedule by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @delete
   @operationId("deleteSchedule")
   @route("/{id}")
@@ -433,6 +438,7 @@ interface ScheduleManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Schedules using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("searchSchedules")
   @route("/search")
@@ -449,6 +455,7 @@ interface ScheduleManagement {
 @useAuth(bearerAuth)
 interface SlotManagement {
   @doc("Create a new Slot.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @post
   @operationId("createSlot")
   create(
@@ -459,6 +466,7 @@ interface SlotManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Slot by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("getSlot")
   @route("/{id}")
@@ -470,6 +478,7 @@ interface SlotManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Slot.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @put
   @operationId("updateSlot")
   @route("/{id}")
@@ -482,6 +491,7 @@ interface SlotManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a Slot.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @patch
   @operationId("patchSlot")
   @route("/{id}")
@@ -494,6 +504,7 @@ interface SlotManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Slot by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @delete
   @operationId("deleteSlot")
   @route("/{id}")
@@ -504,6 +515,7 @@ interface SlotManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Slots using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("searchSlots")
   @route("/search")
@@ -520,6 +532,7 @@ interface SlotManagement {
 @useAuth(bearerAuth)
 interface AppointmentManagement {
   @doc("Create a new Appointment.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @post
   @operationId("createAppointment")
   create(
@@ -530,6 +543,7 @@ interface AppointmentManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Appointment by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("getAppointment")
   @route("/{id}")
@@ -541,6 +555,7 @@ interface AppointmentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Appointment.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @put
   @operationId("updateAppointment")
   @route("/{id}")
@@ -553,6 +568,7 @@ interface AppointmentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update an Appointment.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @patch
   @operationId("patchAppointment")
   @route("/{id}")
@@ -565,6 +581,7 @@ interface AppointmentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete an Appointment by id.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @delete
   @operationId("deleteAppointment")
   @route("/{id}")
@@ -575,6 +592,7 @@ interface AppointmentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Transition an Appointment to a new lifecycle status.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @post
   @operationId("transitionAppointmentStatus")
   @route("/{id}/status")
@@ -587,6 +605,7 @@ interface AppointmentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Appointments using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "scheduler", "clinician"])
   @get
   @operationId("searchAppointments")
   @route("/search")

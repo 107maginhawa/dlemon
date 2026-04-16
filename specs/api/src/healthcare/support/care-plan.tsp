@@ -472,6 +472,7 @@ model GoalSearchParams {
 @useAuth(bearerAuth)
 interface CarePlanManagement {
   /** Create a new CarePlan. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createCarePlan")
   create(
@@ -482,6 +483,7 @@ interface CarePlanManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single CarePlan by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getCarePlan")
   @route("/{id}")
@@ -493,6 +495,7 @@ interface CarePlanManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing CarePlan. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateCarePlan")
   @route("/{id}")
@@ -505,6 +508,7 @@ interface CarePlanManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a CarePlan. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchCarePlan")
   @route("/{id}")
@@ -517,6 +521,7 @@ interface CarePlanManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a CarePlan by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteCarePlan")
   @route("/{id}")
@@ -527,6 +532,7 @@ interface CarePlanManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for CarePlans using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchCarePlans")
   @route("/search")
@@ -545,6 +551,7 @@ interface CarePlanManagement {
 @useAuth(bearerAuth)
 interface CareTeamManagement {
   /** Create a new CareTeam. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createCareTeam")
   create(
@@ -555,6 +562,7 @@ interface CareTeamManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single CareTeam by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getCareTeam")
   @route("/{id}")
@@ -566,6 +574,7 @@ interface CareTeamManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing CareTeam. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateCareTeam")
   @route("/{id}")
@@ -578,6 +587,7 @@ interface CareTeamManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a CareTeam. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchCareTeam")
   @route("/{id}")
@@ -590,6 +600,7 @@ interface CareTeamManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a CareTeam by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteCareTeam")
   @route("/{id}")
@@ -600,6 +611,7 @@ interface CareTeamManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for CareTeams using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchCareTeams")
   @route("/search")
@@ -618,6 +630,7 @@ interface CareTeamManagement {
 @useAuth(bearerAuth)
 interface GoalManagement {
   /** Create a new Goal. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createGoal")
   create(
@@ -628,6 +641,7 @@ interface GoalManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single Goal by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getGoal")
   @route("/{id}")
@@ -639,6 +653,7 @@ interface GoalManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing Goal. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateGoal")
   @route("/{id}")
@@ -651,6 +666,7 @@ interface GoalManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a Goal. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchGoal")
   @route("/{id}")
@@ -663,6 +679,7 @@ interface GoalManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a Goal by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteGoal")
   @route("/{id}")
@@ -673,6 +690,7 @@ interface GoalManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for Goals using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchGoals")
   @route("/search")

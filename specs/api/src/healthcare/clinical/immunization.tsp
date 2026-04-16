@@ -185,6 +185,7 @@ interface ImmunizationService {
   /**
    * Create a new Immunization record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createImmunization")
   create(
@@ -197,6 +198,7 @@ interface ImmunizationService {
   /**
    * Retrieve a single Immunization by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getImmunization")
   @route("/{id}")
@@ -210,6 +212,7 @@ interface ImmunizationService {
   /**
    * Replace an existing Immunization.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateImmunization")
   @route("/{id}")
@@ -224,6 +227,7 @@ interface ImmunizationService {
   /**
    * Partially update an Immunization.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchImmunization")
   @route("/{id}")
@@ -238,6 +242,7 @@ interface ImmunizationService {
   /**
    * Delete an Immunization record.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteImmunization")
   @route("/{id}")
@@ -250,6 +255,7 @@ interface ImmunizationService {
   /**
    * Search for Immunization resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchImmunizations")
   @route("/search")

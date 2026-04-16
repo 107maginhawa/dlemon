@@ -280,6 +280,7 @@ interface SpecimenManagement {
    * @param body Specimen creation payload.
    * @returns The newly created specimen.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @post
   @operationId("createSpecimen")
   create(@body body: SpecimenCreateRequest): {
@@ -292,6 +293,7 @@ interface SpecimenManagement {
    * @param id The specimen identifier.
    * @returns The requested specimen.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @operationId("getSpecimen")
   read(@path id: string): Specimen | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -302,6 +304,7 @@ interface SpecimenManagement {
    * @param body Updated specimen payload.
    * @returns The updated specimen.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @put
   @operationId("updateSpecimen")
   update(@path id: string, @body body: SpecimenCreateRequest): Specimen | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -310,6 +313,7 @@ interface SpecimenManagement {
    * Delete a specimen record.
    * @param id The specimen identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @delete
   @operationId("deleteSpecimen")
   delete(@path id: string): {
@@ -321,6 +325,7 @@ interface SpecimenManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching specimens.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @operationId("searchSpecimens")
   search(...SpecimenSearchParams): PaginatedResponse<Specimen> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -337,6 +342,7 @@ interface DiagnosticReportManagement {
    * @param body Diagnostic report creation payload.
    * @returns The newly created diagnostic report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @post
   @operationId("createDiagnosticReport")
   create(@body body: DiagnosticReportCreateRequest): {
@@ -349,6 +355,7 @@ interface DiagnosticReportManagement {
    * @param id The diagnostic report identifier.
    * @returns The requested diagnostic report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @operationId("getDiagnosticReport")
   read(@path id: string): DiagnosticReport | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -359,6 +366,7 @@ interface DiagnosticReportManagement {
    * @param body Updated diagnostic report payload.
    * @returns The updated diagnostic report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @put
   @operationId("updateDiagnosticReport")
   update(@path id: string, @body body: DiagnosticReportCreateRequest): DiagnosticReport | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -367,6 +375,7 @@ interface DiagnosticReportManagement {
    * Delete a diagnostic report.
    * @param id The diagnostic report identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @delete
   @operationId("deleteDiagnosticReport")
   delete(@path id: string): {
@@ -378,6 +387,7 @@ interface DiagnosticReportManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching diagnostic reports.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @operationId("searchDiagnosticReports")
   search(...DiagnosticReportSearchParams): PaginatedResponse<DiagnosticReport> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -483,6 +493,7 @@ interface LabVerificationService {
    * @param body Lab result verification payload.
    * @returns The newly created or updated verification record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @post
   @operationId("verifyLabResult")
   verify(@body body: LabResultVerificationRequest): {
@@ -495,6 +506,7 @@ interface LabVerificationService {
    * @param reportId The identifier of the DiagnosticReport to look up verification for.
    * @returns The lab result verification record for the requested report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @operationId("getLabResultVerification")
   @route("/{reportId}")
@@ -505,6 +517,7 @@ interface LabVerificationService {
 
   @doc("Search lab result verifications.")
   @operationId("searchLabVerifications")
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @route("/search")
   searchVerifications(
@@ -523,6 +536,7 @@ interface LabVerificationService {
 interface ResultPanelManagement {
   @doc("Create a result panel grouping.")
   @operationId("createResultPanel")
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @post
   create(
     @body body: ResultPanel
@@ -533,6 +547,7 @@ interface ResultPanelManagement {
 
   @doc("Get a result panel by ID.")
   @operationId("getResultPanel")
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @route("/{id}")
   get(
@@ -544,6 +559,7 @@ interface ResultPanelManagement {
 
   @doc("Search result panels.")
   @operationId("searchResultPanels")
+  @extension("x-security-required-roles", #["admin", "clinician", "lab-tech"])
   @get
   @route("/search")
   search(

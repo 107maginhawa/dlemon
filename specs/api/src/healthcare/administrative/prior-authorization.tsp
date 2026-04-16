@@ -213,6 +213,7 @@ model PriorAuthSearchParams {
 @useAuth(bearerAuth)
 interface PriorAuthorizationManagement {
   @doc("Create a new PriorAuthorization in draft status.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @post
   @operationId("createPriorAuthorization")
   create(
@@ -223,6 +224,7 @@ interface PriorAuthorizationManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single PriorAuthorization by id.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @get
   @operationId("getPriorAuthorization")
   @route("/{id}")
@@ -234,6 +236,7 @@ interface PriorAuthorizationManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing PriorAuthorization.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @put
   @operationId("updatePriorAuthorization")
   @route("/{id}")
@@ -246,6 +249,7 @@ interface PriorAuthorizationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a PriorAuthorization.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @patch
   @operationId("patchPriorAuthorization")
   @route("/{id}")
@@ -258,6 +262,7 @@ interface PriorAuthorizationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a PriorAuthorization by id.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @delete
   @operationId("deletePriorAuthorization")
   @route("/{id}")
@@ -268,6 +273,7 @@ interface PriorAuthorizationManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Submit a prior authorization to the payer, transitioning its status from draft to submitted.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @post
   @operationId("submitPriorAuthorization")
   @route("/submit")
@@ -279,6 +285,7 @@ interface PriorAuthorizationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   @doc("Transition a PriorAuthorization to a new lifecycle status (e.g., record payer decision).")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @post
   @operationId("transitionPriorAuthorizationStatus")
   @route("/{id}/status")
@@ -291,6 +298,7 @@ interface PriorAuthorizationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for PriorAuthorization resources using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "biller", "clinician"])
   @get
   @operationId("searchPriorAuthorizations")
   @route("/search")

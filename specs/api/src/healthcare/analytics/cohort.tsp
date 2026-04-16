@@ -370,6 +370,7 @@ model DataLineageSearchParams {
 @useAuth(bearerAuth)
 interface CohortManagement {
   /** Create a new CohortDefinition. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("createCohortDefinition")
   create(
@@ -380,6 +381,7 @@ interface CohortManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single CohortDefinition by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("getCohortDefinition")
   @route("/{id}")
@@ -391,6 +393,7 @@ interface CohortManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing CohortDefinition. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @put
   @operationId("updateCohortDefinition")
   @route("/{id}")
@@ -403,6 +406,7 @@ interface CohortManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a CohortDefinition. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @patch
   @operationId("patchCohortDefinition")
   @route("/{id}")
@@ -415,6 +419,7 @@ interface CohortManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a CohortDefinition by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @delete
   @operationId("deleteCohortDefinition")
   @route("/{id}")
@@ -425,6 +430,7 @@ interface CohortManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Evaluate a cohort definition against the current patient population. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("evaluateCohort")
   @route("/{id}/evaluate")
@@ -437,6 +443,7 @@ interface CohortManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for CohortDefinitions using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("searchCohortDefinitions")
   @route("/search")
@@ -455,6 +462,7 @@ interface CohortManagement {
 @useAuth(bearerAuth)
 interface ResearchExtractManagement {
   /** Request a new research data extract. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("createResearchExtract")
   create(
@@ -465,6 +473,7 @@ interface ResearchExtractManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single ResearchExtract record by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("getResearchExtract")
   @route("/{id}")
@@ -476,6 +485,7 @@ interface ResearchExtractManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for ResearchExtracts using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("searchResearchExtracts")
   @route("/search")
@@ -487,6 +497,7 @@ interface ResearchExtractManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Obtain a pre-signed download URL for a completed research extract. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("downloadResearchExtract")
   @route("/{id}/download")
@@ -512,6 +523,7 @@ interface ResearchExtractManagement {
 @useAuth(bearerAuth)
 interface DataLineageManagement {
   /** Create a new DataLineageRecord. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("createDataLineageRecord")
   create(
@@ -522,6 +534,7 @@ interface DataLineageManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single DataLineageRecord by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("getDataLineageRecord")
   @route("/{id}")
@@ -533,6 +546,7 @@ interface DataLineageManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for DataLineageRecords using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("searchDataLineageRecords")
   @route("/search")

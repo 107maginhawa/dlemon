@@ -171,6 +171,7 @@ interface ProcedureService {
   /**
    * Create a new Procedure record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createProcedure")
   create(
@@ -183,6 +184,7 @@ interface ProcedureService {
   /**
    * Retrieve a single Procedure by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getProcedure")
   @route("/{id}")
@@ -196,6 +198,7 @@ interface ProcedureService {
   /**
    * Replace an existing Procedure.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateProcedure")
   @route("/{id}")
@@ -210,6 +213,7 @@ interface ProcedureService {
   /**
    * Partially update a Procedure.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchProcedure")
   @route("/{id}")
@@ -224,6 +228,7 @@ interface ProcedureService {
   /**
    * Delete a Procedure record.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteProcedure")
   @route("/{id}")
@@ -236,6 +241,7 @@ interface ProcedureService {
   /**
    * Search for Procedure resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchProcedures")
   @route("/search")

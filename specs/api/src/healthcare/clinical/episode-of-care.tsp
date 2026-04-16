@@ -157,6 +157,7 @@ interface EpisodeOfCareManagement {
    * @param body Episode of care creation payload.
    * @returns The newly created episode of care record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createEpisodeOfCare")
   create(@body body: EpisodeOfCareCreateRequest): {
@@ -169,6 +170,7 @@ interface EpisodeOfCareManagement {
    * @param id The episode of care identifier.
    * @returns The requested episode of care record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getEpisodeOfCare")
   @route("/{id}")
@@ -183,6 +185,7 @@ interface EpisodeOfCareManagement {
    * @param body Updated episode of care payload.
    * @returns The updated episode of care record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateEpisodeOfCare")
   @route("/{id}")
@@ -197,6 +200,7 @@ interface EpisodeOfCareManagement {
    * @param body Fields to update.
    * @returns The updated episode of care record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchEpisodeOfCare")
   @route("/{id}")
@@ -209,6 +213,7 @@ interface EpisodeOfCareManagement {
    * Delete an episode of care record.
    * @param id The episode of care identifier.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteEpisodeOfCare")
   @route("/{id}")
@@ -222,6 +227,7 @@ interface EpisodeOfCareManagement {
    * @param body Status transition payload.
    * @returns The updated episode of care record reflecting the new status.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("transitionEpisodeOfCareStatus")
   @route("/{id}/status")
@@ -235,6 +241,7 @@ interface EpisodeOfCareManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching episode of care records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchEpisodesOfCare")
   @route("/search")

@@ -213,6 +213,7 @@ model TaskSearchParams {
 @useAuth(bearerAuth)
 interface TaskManagement {
   /** Create a new Task. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @post
   @operationId("createTask")
   create(
@@ -223,6 +224,7 @@ interface TaskManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single Task by id. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @get
   @operationId("getTask")
   @route("/{id}")
@@ -234,6 +236,7 @@ interface TaskManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing Task. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @put
   @operationId("updateTask")
   @route("/{id}")
@@ -246,6 +249,7 @@ interface TaskManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a Task. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @patch
   @operationId("patchTask")
   @route("/{id}")
@@ -258,6 +262,7 @@ interface TaskManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a Task by id. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @delete
   @operationId("deleteTask")
   @route("/{id}")
@@ -268,6 +273,7 @@ interface TaskManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Transition a Task to a new status. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @post
   @operationId("transitionTaskStatus")
   @route("/{id}/status")
@@ -280,6 +286,7 @@ interface TaskManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   /** Search for Tasks using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician", "scheduler"])
   @get
   @operationId("searchTasks")
   @route("/search")

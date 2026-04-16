@@ -111,6 +111,7 @@ model CreateSignatureRequest {
 interface SignatureManagement {
   @doc("Create an electronic signature for clinical documents or resources.")
   @operationId("createSignature")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   create(
     @body body: CreateSignatureRequest
@@ -121,6 +122,7 @@ interface SignatureManagement {
 
   @doc("Get a signature by ID.")
   @operationId("getSignature")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @route("/{id}")
   get(
@@ -132,6 +134,7 @@ interface SignatureManagement {
 
   @doc("Search signatures for a target resource.")
   @operationId("searchSignatures")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @route("/search")
   search(
@@ -146,6 +149,7 @@ interface SignatureManagement {
 
   @doc("Verify a signature.")
   @operationId("verifySignature")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @route("/{id}/verify")
   verify(
@@ -157,6 +161,7 @@ interface SignatureManagement {
 
   @doc("Revoke an electronic signature. Sets the signature as invalid/withdrawn.")
   @operationId("revokeSignature")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @route("/{id}/revoke")
   revoke(

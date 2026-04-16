@@ -322,6 +322,7 @@ interface CDSService {
    * call this endpoint once during registration to configure which hook calls
    * to make and what prefetch data to include.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("discoverCDSServices")
   @route("/services")
@@ -337,6 +338,7 @@ interface CDSService {
    * to surface relevant alerts, reminders, or recommendations based on the
    * patient's record at the time of chart review.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("cdsPatientView")
   @route("/patient-view")
@@ -355,6 +357,7 @@ interface CDSService {
    * interaction alerts, dose-range checks, or formulary guidance before
    * the orders are committed.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("cdsOrderSign")
   @route("/order-sign")
@@ -372,6 +375,7 @@ interface CDSService {
    * catalog (before signing). Allows CDS services to provide real-time
    * guidance during order entry.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("cdsOrderSelect")
   @route("/order-select")
@@ -389,6 +393,7 @@ interface CDSService {
    * surface care gap reminders, preventive care recommendations, chronic
    * disease management alerts, and SDOH screening prompts at the start of care.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("cdsEncounterStart")
   @route("/encounter-start")

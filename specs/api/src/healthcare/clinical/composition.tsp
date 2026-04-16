@@ -345,6 +345,7 @@ model CompositionSearchParams {
 @useAuth(bearerAuth)
 interface CompositionManagement {
   @doc("Create a new Composition resource representing a structured clinical document.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createComposition")
   create(
@@ -355,6 +356,7 @@ interface CompositionManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Composition by its id.")
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getComposition")
   @route("/{id}")
@@ -366,6 +368,7 @@ interface CompositionManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Composition in its entirety.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateComposition")
   @route("/{id}")
@@ -378,6 +381,7 @@ interface CompositionManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update an existing Composition, supplying only the fields to change.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchComposition")
   @route("/{id}")
@@ -390,6 +394,7 @@ interface CompositionManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Composition by its id.")
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteComposition")
   @route("/{id}")
@@ -400,6 +405,7 @@ interface CompositionManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Composition resources using filter parameters. Supports filtering by patient, type, encounter, status, date range, and author.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchCompositions")
   @route("/search")

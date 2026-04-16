@@ -196,6 +196,7 @@ interface AllergyIntoleranceService {
   /**
    * Create a new AllergyIntolerance record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createAllergyIntolerance")
   create(
@@ -208,6 +209,7 @@ interface AllergyIntoleranceService {
   /**
    * Retrieve a single AllergyIntolerance by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getAllergyIntolerance")
   @route("/{id}")
@@ -221,6 +223,7 @@ interface AllergyIntoleranceService {
   /**
    * Replace an existing AllergyIntolerance.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateAllergyIntolerance")
   @route("/{id}")
@@ -235,6 +238,7 @@ interface AllergyIntoleranceService {
   /**
    * Partially update an AllergyIntolerance.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchAllergyIntolerance")
   @route("/{id}")
@@ -249,6 +253,7 @@ interface AllergyIntoleranceService {
   /**
    * Delete an AllergyIntolerance record.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteAllergyIntolerance")
   @route("/{id}")
@@ -261,6 +266,7 @@ interface AllergyIntoleranceService {
   /**
    * Search for AllergyIntolerance records using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchAllergyIntolerances")
   @route("/search")

@@ -187,6 +187,7 @@ model BedOccupancySearchParams {
 @useAuth(bearerAuth)
 interface BedManagementService {
   @doc("Register a new Bed in the facility.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createBed")
   create(
@@ -197,6 +198,7 @@ interface BedManagementService {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Bed by id.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getBed")
   @route("/{id}")
@@ -208,6 +210,7 @@ interface BedManagementService {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Bed record.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateBed")
   @route("/{id}")
@@ -220,6 +223,7 @@ interface BedManagementService {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a Bed record.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchBed")
   @route("/{id}")
@@ -232,6 +236,7 @@ interface BedManagementService {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Bed record by id.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteBed")
   @route("/{id}")
@@ -242,6 +247,7 @@ interface BedManagementService {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Bed resources using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchBeds")
   @route("/search")
@@ -253,6 +259,7 @@ interface BedManagementService {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Assign a patient to a bed, setting status to occupied and creating an occupancy record.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("assignBed")
   @route("/{id}/assign")
@@ -265,6 +272,7 @@ interface BedManagementService {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   @doc("Release a bed from its current occupant, closing the occupancy record and resetting status to housekeeping.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("releaseBed")
   @route("/{id}/release")
@@ -276,6 +284,7 @@ interface BedManagementService {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve the occupancy history for a specific bed or patient.")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("listBedOccupancy")
   @route("/occupancy")

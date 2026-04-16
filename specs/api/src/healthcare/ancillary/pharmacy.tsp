@@ -238,6 +238,7 @@ interface MedicationDispenseManagement {
    * @param body Medication dispense creation payload.
    * @returns The newly created medication dispense record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   @operationId("createMedicationDispense")
   create(@body body: MedicationDispenseCreateRequest): {
@@ -250,6 +251,7 @@ interface MedicationDispenseManagement {
    * @param id The medication dispense identifier.
    * @returns The requested medication dispense record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("getMedicationDispense")
   read(@path id: string): MedicationDispense | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -260,6 +262,7 @@ interface MedicationDispenseManagement {
    * @param body Updated medication dispense payload.
    * @returns The updated medication dispense record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @put
   @operationId("updateMedicationDispense")
   update(@path id: string, @body body: MedicationDispenseCreateRequest): MedicationDispense | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -268,6 +271,7 @@ interface MedicationDispenseManagement {
    * Delete a medication dispense record.
    * @param id The medication dispense identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @delete
   @operationId("deleteMedicationDispense")
   delete(@path id: string): {
@@ -279,6 +283,7 @@ interface MedicationDispenseManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching medication dispense records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("searchMedicationDispenses")
   search(...MedicationDispenseSearchParams): PaginatedResponse<MedicationDispense> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -295,6 +300,7 @@ interface DrugInteractionService {
    * @param body List of medications to check.
    * @returns Interaction check result including all identified interactions.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   @operationId("checkDrugInteractions")
   check(@body body: DrugInteractionCheckRequest): DrugInteractionCheck | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -495,6 +501,7 @@ interface ReconciliationManagement {
    * @param body Medication reconciliation creation payload.
    * @returns The newly created medication reconciliation record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   @operationId("createMedicationReconciliation")
   create(@body body: MedicationReconciliationCreateRequest): {
@@ -507,6 +514,7 @@ interface ReconciliationManagement {
    * @param id The medication reconciliation identifier.
    * @returns The requested medication reconciliation record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("getMedicationReconciliation")
   @route("/{id}")
@@ -521,6 +529,7 @@ interface ReconciliationManagement {
    * @param body Updated medication reconciliation payload.
    * @returns The updated medication reconciliation record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @put
   @operationId("updateMedicationReconciliation")
   @route("/{id}")
@@ -535,6 +544,7 @@ interface ReconciliationManagement {
    * @param body Fields to update.
    * @returns The updated medication reconciliation record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @patch
   @operationId("patchMedicationReconciliation")
   @route("/{id}")
@@ -547,6 +557,7 @@ interface ReconciliationManagement {
    * Delete a medication reconciliation record.
    * @param id The medication reconciliation identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @delete
   @operationId("deleteMedicationReconciliation")
   @route("/{id}")
@@ -559,6 +570,7 @@ interface ReconciliationManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching medication reconciliation records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("searchMedicationReconciliations")
   @route("/search")
@@ -573,6 +585,7 @@ interface ReconciliationManagement {
 interface AdherenceManagement {
   @doc("Record a medication adherence assessment.")
   @operationId("createAdherenceRecord")
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   create(
     @body body: AdherenceRecord
@@ -583,6 +596,7 @@ interface AdherenceManagement {
 
   @doc("Get an adherence record by ID.")
   @operationId("getAdherenceRecord")
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @route("/{id}")
   get(
@@ -594,6 +608,7 @@ interface AdherenceManagement {
 
   @doc("Search adherence records.")
   @operationId("searchAdherenceRecords")
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @route("/search")
   search(

@@ -218,6 +218,7 @@ interface MedicationCatalogManagement {
    * @param body Medication creation payload.
    * @returns The newly created medication record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   @operationId("createMedication")
   create(@body body: MedicationCreateRequest): {
@@ -230,6 +231,7 @@ interface MedicationCatalogManagement {
    * @param id The medication identifier.
    * @returns The requested medication record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("getMedication")
   @route("/{id}")
@@ -244,6 +246,7 @@ interface MedicationCatalogManagement {
    * @param body Updated medication payload.
    * @returns The updated medication record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @put
   @operationId("updateMedication")
   @route("/{id}")
@@ -258,6 +261,7 @@ interface MedicationCatalogManagement {
    * @param body Fields to update.
    * @returns The updated medication record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @patch
   @operationId("patchMedication")
   @route("/{id}")
@@ -270,6 +274,7 @@ interface MedicationCatalogManagement {
    * Delete a medication catalog entry.
    * @param id The medication identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @delete
   @operationId("deleteMedication")
   @route("/{id}")
@@ -282,6 +287,7 @@ interface MedicationCatalogManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching medication records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("searchMedications")
   @route("/search")
@@ -302,6 +308,7 @@ interface FormularyManagement {
    * @param body Formulary item creation payload.
    * @returns The newly created formulary item.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @post
   @operationId("createFormularyItem")
   create(@body body: FormularyItemCreateRequest): {
@@ -314,6 +321,7 @@ interface FormularyManagement {
    * @param id The formulary item identifier.
    * @returns The requested formulary item.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("getFormularyItem")
   @route("/{id}")
@@ -328,6 +336,7 @@ interface FormularyManagement {
    * @param body Updated formulary item payload.
    * @returns The updated formulary item.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @put
   @operationId("updateFormularyItem")
   @route("/{id}")
@@ -342,6 +351,7 @@ interface FormularyManagement {
    * @param body Fields to update.
    * @returns The updated formulary item.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @patch
   @operationId("patchFormularyItem")
   @route("/{id}")
@@ -354,6 +364,7 @@ interface FormularyManagement {
    * Delete a formulary item.
    * @param id The formulary item identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @delete
   @operationId("deleteFormularyItem")
   @route("/{id}")
@@ -366,6 +377,7 @@ interface FormularyManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching formulary items.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "pharmacist"])
   @get
   @operationId("searchFormularyItems")
   @route("/search")

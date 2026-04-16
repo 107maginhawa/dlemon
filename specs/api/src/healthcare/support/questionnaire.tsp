@@ -463,6 +463,7 @@ model QuestionnaireResponseSearchParams {
 @useAuth(bearerAuth)
 interface QuestionnaireManagement {
   /** Create a new Questionnaire. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createQuestionnaire")
   create(
@@ -473,6 +474,7 @@ interface QuestionnaireManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single Questionnaire by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getQuestionnaire")
   @route("/{id}")
@@ -484,6 +486,7 @@ interface QuestionnaireManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing Questionnaire. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateQuestionnaire")
   @route("/{id}")
@@ -496,6 +499,7 @@ interface QuestionnaireManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a Questionnaire. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchQuestionnaire")
   @route("/{id}")
@@ -508,6 +512,7 @@ interface QuestionnaireManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a Questionnaire by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteQuestionnaire")
   @route("/{id}")
@@ -518,6 +523,7 @@ interface QuestionnaireManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for Questionnaires using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchQuestionnaires")
   @route("/search")
@@ -536,6 +542,7 @@ interface QuestionnaireManagement {
 @useAuth(bearerAuth)
 interface QuestionnaireResponseManagement {
   /** Create a new QuestionnaireResponse. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createQuestionnaireResponse")
   create(
@@ -546,6 +553,7 @@ interface QuestionnaireResponseManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single QuestionnaireResponse by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getQuestionnaireResponse")
   @route("/{id}")
@@ -557,6 +565,7 @@ interface QuestionnaireResponseManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing QuestionnaireResponse. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateQuestionnaireResponse")
   @route("/{id}")
@@ -569,6 +578,7 @@ interface QuestionnaireResponseManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a QuestionnaireResponse. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchQuestionnaireResponse")
   @route("/{id}")
@@ -581,6 +591,7 @@ interface QuestionnaireResponseManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a QuestionnaireResponse by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteQuestionnaireResponse")
   @route("/{id}")
@@ -591,6 +602,7 @@ interface QuestionnaireResponseManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for QuestionnaireResponses using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchQuestionnaireResponses")
   @route("/search")

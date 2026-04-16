@@ -203,6 +203,7 @@ interface ServiceRequestService {
   /**
    * Create a new ServiceRequest (order).
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createServiceRequest")
   create(
@@ -215,6 +216,7 @@ interface ServiceRequestService {
   /**
    * Retrieve a single ServiceRequest by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getServiceRequest")
   @route("/{id}")
@@ -228,6 +230,7 @@ interface ServiceRequestService {
   /**
    * Replace an existing ServiceRequest.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateServiceRequest")
   @route("/{id}")
@@ -242,6 +245,7 @@ interface ServiceRequestService {
   /**
    * Partially update a ServiceRequest.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchServiceRequest")
   @route("/{id}")
@@ -256,6 +260,7 @@ interface ServiceRequestService {
   /**
    * Delete a ServiceRequest.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteServiceRequest")
   @route("/{id}")
@@ -268,6 +273,7 @@ interface ServiceRequestService {
   /**
    * Transition a ServiceRequest to a new lifecycle status.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("transitionServiceRequestStatus")
   @route("/{id}/status")
@@ -282,6 +288,7 @@ interface ServiceRequestService {
   /**
    * Search for ServiceRequest resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchServiceRequests")
   @route("/search")

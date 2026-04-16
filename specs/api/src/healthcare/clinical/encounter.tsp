@@ -258,6 +258,7 @@ interface EncounterService {
   /**
    * Create a new Encounter.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createEncounter")
   create(
@@ -270,6 +271,7 @@ interface EncounterService {
   /**
    * Retrieve a single Encounter by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getEncounter")
   @route("/{id}")
@@ -283,6 +285,7 @@ interface EncounterService {
   /**
    * Replace an existing Encounter.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateEncounter")
   @route("/{id}")
@@ -297,6 +300,7 @@ interface EncounterService {
   /**
    * Partially update an Encounter.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchEncounter")
   @route("/{id}")
@@ -311,6 +315,7 @@ interface EncounterService {
   /**
    * Delete an Encounter by id.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteEncounter")
   @route("/{id}")
@@ -323,6 +328,7 @@ interface EncounterService {
   /**
    * Transition an Encounter to a new lifecycle status.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("transitionEncounterStatus")
   @route("/{id}/status")
@@ -337,6 +343,7 @@ interface EncounterService {
   /**
    * Search for Encounters using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchEncounters")
   @route("/search")

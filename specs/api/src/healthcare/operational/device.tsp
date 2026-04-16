@@ -379,6 +379,7 @@ model DeviceMetricSearchParams {
 @useAuth(bearerAuth)
 interface DeviceManagement {
   /** Create a new Device. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createDevice")
   create(
@@ -389,6 +390,7 @@ interface DeviceManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single Device by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getDevice")
   @route("/{id}")
@@ -400,6 +402,7 @@ interface DeviceManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing Device. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateDevice")
   @route("/{id}")
@@ -412,6 +415,7 @@ interface DeviceManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a Device. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchDevice")
   @route("/{id}")
@@ -424,6 +428,7 @@ interface DeviceManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a Device by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteDevice")
   @route("/{id}")
@@ -434,6 +439,7 @@ interface DeviceManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for Devices using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchDevices")
   @route("/search")
@@ -452,6 +458,7 @@ interface DeviceManagement {
 @useAuth(bearerAuth)
 interface DeviceAssignmentManagement {
   /** Create a new DeviceAssignment. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createDeviceAssignment")
   create(
@@ -462,6 +469,7 @@ interface DeviceAssignmentManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single DeviceAssignment by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getDeviceAssignment")
   @route("/{id}")
@@ -473,6 +481,7 @@ interface DeviceAssignmentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing DeviceAssignment. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateDeviceAssignment")
   @route("/{id}")
@@ -485,6 +494,7 @@ interface DeviceAssignmentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a DeviceAssignment. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchDeviceAssignment")
   @route("/{id}")
@@ -497,6 +507,7 @@ interface DeviceAssignmentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a DeviceAssignment by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteDeviceAssignment")
   @route("/{id}")
@@ -507,6 +518,7 @@ interface DeviceAssignmentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for DeviceAssignments using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchDeviceAssignments")
   @route("/search")
@@ -525,6 +537,7 @@ interface DeviceAssignmentManagement {
 @useAuth(bearerAuth)
 interface DeviceMetricManagement {
   /** Create a new DeviceMetric. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createDeviceMetric")
   create(
@@ -535,6 +548,7 @@ interface DeviceMetricManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single DeviceMetric by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getDeviceMetric")
   @route("/{id}")
@@ -546,6 +560,7 @@ interface DeviceMetricManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing DeviceMetric. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateDeviceMetric")
   @route("/{id}")
@@ -558,6 +573,7 @@ interface DeviceMetricManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a DeviceMetric. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchDeviceMetric")
   @route("/{id}")
@@ -570,6 +586,7 @@ interface DeviceMetricManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a DeviceMetric by id. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteDeviceMetric")
   @route("/{id}")
@@ -580,6 +597,7 @@ interface DeviceMetricManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for DeviceMetrics using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchDeviceMetrics")
   @route("/search")

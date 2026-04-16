@@ -268,6 +268,7 @@ model AIOutputSearchParams {
 @useAuth(bearerAuth)
 interface AIOutputManagement {
   /** Record metadata for a new AI model output. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("createAIOutputMetadata")
   create(
@@ -278,6 +279,7 @@ interface AIOutputManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single AIOutputMetadata record by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("getAIOutputMetadata")
   @route("/{id}")
@@ -289,6 +291,7 @@ interface AIOutputManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for AIOutputMetadata records using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("searchAIOutputMetadata")
   @route("/search")
@@ -300,6 +303,7 @@ interface AIOutputManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Submit a human review decision for an AI output. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("reviewAIOutput")
   @route("/{id}/review")

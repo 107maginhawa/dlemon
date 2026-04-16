@@ -230,6 +230,7 @@ interface MedicationRequestService {
   /**
    * Create a new MedicationRequest (prescription).
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createMedicationRequest")
   create(
@@ -242,6 +243,7 @@ interface MedicationRequestService {
   /**
    * Retrieve a single MedicationRequest by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getMedicationRequest")
   @route("/{id}")
@@ -255,6 +257,7 @@ interface MedicationRequestService {
   /**
    * Replace an existing MedicationRequest.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateMedicationRequest")
   @route("/{id}")
@@ -269,6 +272,7 @@ interface MedicationRequestService {
   /**
    * Partially update a MedicationRequest.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchMedicationRequest")
   @route("/{id}")
@@ -283,6 +287,7 @@ interface MedicationRequestService {
   /**
    * Delete a MedicationRequest.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteMedicationRequest")
   @route("/{id}")
@@ -295,6 +300,7 @@ interface MedicationRequestService {
   /**
    * Transition a MedicationRequest to a new lifecycle status.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("transitionMedicationRequestStatus")
   @route("/{id}/status")
@@ -309,6 +315,7 @@ interface MedicationRequestService {
   /**
    * Search for MedicationRequest resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchMedicationRequests")
   @route("/search")

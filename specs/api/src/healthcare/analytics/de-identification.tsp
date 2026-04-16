@@ -244,6 +244,7 @@ model DeIdentificationProfileSearchParams {
 @useAuth(bearerAuth)
 interface DeIdentificationManagement {
   /** Create a new DeIdentificationProfile. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("createDeIdentificationProfile")
   create(
@@ -254,6 +255,7 @@ interface DeIdentificationManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single DeIdentificationProfile by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("getDeIdentificationProfile")
   @route("/{id}")
@@ -265,6 +267,7 @@ interface DeIdentificationManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing DeIdentificationProfile. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @put
   @operationId("updateDeIdentificationProfile")
   @route("/{id}")
@@ -277,6 +280,7 @@ interface DeIdentificationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a DeIdentificationProfile. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @patch
   @operationId("patchDeIdentificationProfile")
   @route("/{id}")
@@ -289,6 +293,7 @@ interface DeIdentificationManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a DeIdentificationProfile by id. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @delete
   @operationId("deleteDeIdentificationProfile")
   @route("/{id}")
@@ -299,6 +304,7 @@ interface DeIdentificationManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for DeIdentificationProfiles using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @get
   @operationId("searchDeIdentificationProfiles")
   @route("/search")
@@ -310,6 +316,7 @@ interface DeIdentificationManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Execute a de-identification pipeline against a resource using a specified profile. */
+  @extension("x-security-required-roles", #["admin", "researcher", "privacy-officer"])
   @post
   @operationId("executeDeIdentification")
   @extension("x-security-required-roles", #["privacy-officer"])

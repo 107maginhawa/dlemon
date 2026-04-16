@@ -281,6 +281,7 @@ interface OdontogramManagement {
    * @param body Odontogram creation payload.
    * @returns The newly created odontogram.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createOdontogram")
   create(@body body: OdontogramCreateRequest): {
@@ -293,6 +294,7 @@ interface OdontogramManagement {
    * @param id The odontogram identifier.
    * @returns The requested odontogram.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getOdontogram")
   read(@path id: string): Odontogram | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -303,6 +305,7 @@ interface OdontogramManagement {
    * @param body Updated odontogram payload.
    * @returns The updated odontogram.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateOdontogram")
   update(@path id: string, @body body: OdontogramCreateRequest): Odontogram | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -311,6 +314,7 @@ interface OdontogramManagement {
    * Delete an odontogram record.
    * @param id The odontogram identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteOdontogram")
   delete(@path id: string): {
@@ -322,6 +326,7 @@ interface OdontogramManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching odontograms.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchOdontograms")
   search(...OdontogramSearchParams): PaginatedResponse<Odontogram> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -338,6 +343,7 @@ interface DentalTreatmentPlanManagement {
    * @param body Treatment plan creation payload.
    * @returns The newly created dental treatment plan.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createDentalTreatmentPlan")
   create(@body body: DentalTreatmentPlanCreateRequest): {
@@ -350,6 +356,7 @@ interface DentalTreatmentPlanManagement {
    * @param id The treatment plan identifier.
    * @returns The requested dental treatment plan.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getDentalTreatmentPlan")
   read(@path id: string): DentalTreatmentPlan | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -360,6 +367,7 @@ interface DentalTreatmentPlanManagement {
    * @param body Updated treatment plan payload.
    * @returns The updated dental treatment plan.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateDentalTreatmentPlan")
   update(@path id: string, @body body: DentalTreatmentPlanCreateRequest): DentalTreatmentPlan | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -368,6 +376,7 @@ interface DentalTreatmentPlanManagement {
    * Delete a dental treatment plan.
    * @param id The treatment plan identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteDentalTreatmentPlan")
   delete(@path id: string): {
@@ -379,6 +388,7 @@ interface DentalTreatmentPlanManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching dental treatment plans.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchDentalTreatmentPlans")
   search(...DentalTreatmentPlanSearchParams): PaginatedResponse<DentalTreatmentPlan> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;

@@ -104,6 +104,7 @@ interface FlagManagement {
    * @param body Flag creation payload.
    * @returns The newly created flag record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createFlag")
   create(@body body: FlagCreateRequest): {
@@ -116,6 +117,7 @@ interface FlagManagement {
    * @param id The flag identifier.
    * @returns The requested flag record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getFlag")
   @route("/{id}")
@@ -130,6 +132,7 @@ interface FlagManagement {
    * @param body Updated flag payload.
    * @returns The updated flag record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateFlag")
   @route("/{id}")
@@ -144,6 +147,7 @@ interface FlagManagement {
    * @param body Fields to update.
    * @returns The updated flag record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchFlag")
   @route("/{id}")
@@ -156,6 +160,7 @@ interface FlagManagement {
    * Delete a flag record.
    * @param id The flag identifier.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteFlag")
   @route("/{id}")
@@ -168,6 +173,7 @@ interface FlagManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching flag records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchFlags")
   @route("/search")

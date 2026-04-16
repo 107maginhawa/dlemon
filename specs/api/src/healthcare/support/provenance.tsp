@@ -171,6 +171,7 @@ model CreateProvenanceRequest {
 interface ProvenanceManagement {
   @doc("Create a provenance record for a clinical resource change or access.")
   @operationId("createProvenance")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   create(
     @body body: CreateProvenanceRequest
@@ -181,6 +182,7 @@ interface ProvenanceManagement {
 
   @doc("Get a provenance record by ID.")
   @operationId("getProvenance")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @route("/{id}")
   get(
@@ -192,6 +194,7 @@ interface ProvenanceManagement {
 
   @doc("Search provenance records for a target resource.")
   @operationId("searchProvenance")
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @route("/search")
   search(

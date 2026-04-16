@@ -502,6 +502,7 @@ model ClaimResponseSearchParams {
 @useAuth(bearerAuth)
 interface ClaimManagement {
   @doc("Create a new Claim in draft status.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @post
   @operationId("createClaim")
   create(
@@ -512,6 +513,7 @@ interface ClaimManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Claim by id.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("getClaim")
   @route("/{id}")
@@ -523,6 +525,7 @@ interface ClaimManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Claim.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @put
   @operationId("updateClaim")
   @route("/{id}")
@@ -535,6 +538,7 @@ interface ClaimManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a Claim.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @patch
   @operationId("patchClaim")
   @route("/{id}")
@@ -547,6 +551,7 @@ interface ClaimManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Claim by id.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @delete
   @operationId("deleteClaim")
   @route("/{id}")
@@ -557,6 +562,7 @@ interface ClaimManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Submit a Claim to the insurer for adjudication, transitioning its status from draft to active.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @post
   @operationId("submitClaim")
   @route("/submit")
@@ -568,6 +574,7 @@ interface ClaimManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiConflictResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Claim resources using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("searchClaims")
   @route("/search")
@@ -584,6 +591,7 @@ interface ClaimManagement {
 @useAuth(bearerAuth)
 interface ClaimResponseManagement {
   @doc("Retrieve a single ClaimResponse by id.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("getClaimResponse")
   @route("/{id}")
@@ -595,6 +603,7 @@ interface ClaimResponseManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for ClaimResponse resources using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("searchClaimResponses")
   @route("/search")

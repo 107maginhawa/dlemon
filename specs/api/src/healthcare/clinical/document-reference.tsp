@@ -211,6 +211,7 @@ interface DocumentReferenceService {
   /**
    * Create a new DocumentReference (clinical note or other document).
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createDocumentReference")
   create(
@@ -223,6 +224,7 @@ interface DocumentReferenceService {
   /**
    * Retrieve a single DocumentReference by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getDocumentReference")
   @route("/{id}")
@@ -236,6 +238,7 @@ interface DocumentReferenceService {
   /**
    * Replace an existing DocumentReference.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateDocumentReference")
   @route("/{id}")
@@ -250,6 +253,7 @@ interface DocumentReferenceService {
   /**
    * Partially update a DocumentReference.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchDocumentReference")
   @route("/{id}")
@@ -264,6 +268,7 @@ interface DocumentReferenceService {
   /**
    * Delete a DocumentReference.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteDocumentReference")
   @route("/{id}")
@@ -276,6 +281,7 @@ interface DocumentReferenceService {
   /**
    * Search for DocumentReference resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchDocumentReferences")
   @route("/search")

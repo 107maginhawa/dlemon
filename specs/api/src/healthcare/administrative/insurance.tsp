@@ -235,6 +235,7 @@ model CoverageSearchParams {
 @useAuth(bearerAuth)
 interface CoverageManagement {
   @doc("Create a new Coverage record.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @post
   @operationId("createCoverage")
   create(
@@ -245,6 +246,7 @@ interface CoverageManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Retrieve a single Coverage by id.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("getCoverage")
   @route("/{id}")
@@ -256,6 +258,7 @@ interface CoverageManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Replace an existing Coverage record.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @put
   @operationId("updateCoverage")
   @route("/{id}")
@@ -268,6 +271,7 @@ interface CoverageManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Partially update a Coverage record.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @patch
   @operationId("patchCoverage")
   @route("/{id}")
@@ -280,6 +284,7 @@ interface CoverageManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Delete a Coverage record by id.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @delete
   @operationId("deleteCoverage")
   @route("/{id}")
@@ -290,6 +295,7 @@ interface CoverageManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   @doc("Search for Coverage resources using filter parameters.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @get
   @operationId("searchCoverages")
   @route("/search")
@@ -306,6 +312,7 @@ interface CoverageManagement {
 @useAuth(bearerAuth)
 interface EligibilityService {
   @doc("Submit a real-time eligibility verification inquiry for a patient and coverage.")
+  @extension("x-security-required-roles", #["admin", "biller"])
   @post
   @operationId("verifyEligibility")
   verifyEligibility(

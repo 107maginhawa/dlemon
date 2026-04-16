@@ -157,6 +157,7 @@ interface FamilyMemberHistoryService {
   /**
    * Create a new FamilyMemberHistory record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createFamilyMemberHistory")
   create(
@@ -169,6 +170,7 @@ interface FamilyMemberHistoryService {
   /**
    * Retrieve a single FamilyMemberHistory by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getFamilyMemberHistory")
   @route("/{id}")
@@ -182,6 +184,7 @@ interface FamilyMemberHistoryService {
   /**
    * Replace an existing FamilyMemberHistory.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateFamilyMemberHistory")
   @route("/{id}")
@@ -196,6 +199,7 @@ interface FamilyMemberHistoryService {
   /**
    * Partially update a FamilyMemberHistory.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchFamilyMemberHistory")
   @route("/{id}")
@@ -210,6 +214,7 @@ interface FamilyMemberHistoryService {
   /**
    * Delete a FamilyMemberHistory record.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteFamilyMemberHistory")
   @route("/{id}")
@@ -222,6 +227,7 @@ interface FamilyMemberHistoryService {
   /**
    * Search for FamilyMemberHistory resources using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchFamilyMemberHistories")
   @route("/search")

@@ -206,6 +206,7 @@ interface ImagingStudyManagement {
    * @param body Imaging study creation payload.
    * @returns The newly created imaging study.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createImagingStudy")
   create(@body body: ImagingStudyCreateRequest): {
@@ -218,6 +219,7 @@ interface ImagingStudyManagement {
    * @param id The imaging study identifier.
    * @returns The requested imaging study.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getImagingStudy")
   read(@path id: string): ImagingStudy | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -228,6 +230,7 @@ interface ImagingStudyManagement {
    * @param body Updated imaging study payload.
    * @returns The updated imaging study.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateImagingStudy")
   update(@path id: string, @body body: ImagingStudyCreateRequest): ImagingStudy | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -236,6 +239,7 @@ interface ImagingStudyManagement {
    * Delete an imaging study record.
    * @param id The imaging study identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteImagingStudy")
   delete(@path id: string): {
@@ -247,6 +251,7 @@ interface ImagingStudyManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching imaging studies.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchImagingStudies")
   search(...ImagingStudySearchParams): PaginatedResponse<ImagingStudy> | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
@@ -386,6 +391,7 @@ interface RadiologyReportManagement {
    * @param body Radiology report creation payload.
    * @returns The newly created radiology report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createRadiologyReport")
   create(@body body: RadiologyReportCreateRequest): {
@@ -398,6 +404,7 @@ interface RadiologyReportManagement {
    * @param id The radiology report identifier.
    * @returns The requested radiology report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getRadiologyReport")
   @route("/{id}")
@@ -412,6 +419,7 @@ interface RadiologyReportManagement {
    * @param body Updated radiology report payload.
    * @returns The updated radiology report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateRadiologyReport")
   @route("/{id}")
@@ -426,6 +434,7 @@ interface RadiologyReportManagement {
    * @param body Fields to update.
    * @returns The updated radiology report.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchRadiologyReport")
   @route("/{id}")
@@ -438,6 +447,7 @@ interface RadiologyReportManagement {
    * Delete a radiology report.
    * @param id The radiology report identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteRadiologyReport")
   @route("/{id}")
@@ -450,6 +460,7 @@ interface RadiologyReportManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching radiology reports.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchRadiologyReports")
   @route("/search")

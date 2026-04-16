@@ -161,6 +161,7 @@ interface ConditionService {
   /**
    * Create a new Condition.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createCondition")
   create(
@@ -173,6 +174,7 @@ interface ConditionService {
   /**
    * Retrieve a single Condition by id.
    */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getCondition")
   @route("/{id}")
@@ -186,6 +188,7 @@ interface ConditionService {
   /**
    * Replace an existing Condition.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateCondition")
   @route("/{id}")
@@ -200,6 +203,7 @@ interface ConditionService {
   /**
    * Partially update a Condition.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchCondition")
   @route("/{id}")
@@ -214,6 +218,7 @@ interface ConditionService {
   /**
    * Delete a Condition by id.
    */
+  @extension("x-security-required-roles", #["admin"])
   @delete
   @operationId("deleteCondition")
   @route("/{id}")
@@ -226,6 +231,7 @@ interface ConditionService {
   /**
    * Search for Conditions using filter parameters.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchConditions")
   @route("/search")

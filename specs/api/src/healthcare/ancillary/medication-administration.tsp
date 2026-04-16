@@ -175,6 +175,7 @@ interface MedicationAdministrationManagement {
    * @param body Medication administration creation payload.
    * @returns The newly created medication administration record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @post
   @operationId("createMedicationAdministration")
   create(@body body: MedicationAdministrationCreateRequest): {
@@ -187,6 +188,7 @@ interface MedicationAdministrationManagement {
    * @param id The medication administration identifier.
    * @returns The requested medication administration record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("getMedicationAdministration")
   @route("/{id}")
@@ -201,6 +203,7 @@ interface MedicationAdministrationManagement {
    * @param body Updated medication administration payload.
    * @returns The updated medication administration record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @put
   @operationId("updateMedicationAdministration")
   @route("/{id}")
@@ -215,6 +218,7 @@ interface MedicationAdministrationManagement {
    * @param body Fields to update.
    * @returns The updated medication administration record.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @patch
   @operationId("patchMedicationAdministration")
   @route("/{id}")
@@ -227,6 +231,7 @@ interface MedicationAdministrationManagement {
    * Delete a medication administration record.
    * @param id The medication administration identifier.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @delete
   @operationId("deleteMedicationAdministration")
   @route("/{id}")
@@ -239,6 +244,7 @@ interface MedicationAdministrationManagement {
    * @param params Search and pagination parameters.
    * @returns A paginated list of matching medication administration records.
    */
+  @extension("x-security-required-roles", #["admin", "clinician"])
   @get
   @operationId("searchMedicationAdministrations")
   @route("/search")

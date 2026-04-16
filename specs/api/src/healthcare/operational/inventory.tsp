@@ -299,6 +299,7 @@ model SupplyConsumptionSearchParams {
 @useAuth(bearerAuth)
 interface InventoryManagement {
   /** Create a new InventoryItem. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @post
   @operationId("createInventoryItem")
   create(
@@ -309,6 +310,7 @@ interface InventoryManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single InventoryItem by id. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("getInventoryItem")
   @route("/{id}")
@@ -320,6 +322,7 @@ interface InventoryManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing InventoryItem. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @put
   @operationId("updateInventoryItem")
   @route("/{id}")
@@ -332,6 +335,7 @@ interface InventoryManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update an InventoryItem. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @patch
   @operationId("patchInventoryItem")
   @route("/{id}")
@@ -344,6 +348,7 @@ interface InventoryManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete an InventoryItem by id. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @delete
   @operationId("deleteInventoryItem")
   @route("/{id}")
@@ -354,6 +359,7 @@ interface InventoryManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for InventoryItems using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("searchInventoryItems")
   @route("/search")
@@ -372,6 +378,7 @@ interface InventoryManagement {
 @useAuth(bearerAuth)
 interface BatchManagement {
   /** Create a new InventoryBatch. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @post
   @operationId("createInventoryBatch")
   create(
@@ -382,6 +389,7 @@ interface BatchManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single InventoryBatch by id. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("getInventoryBatch")
   @route("/{id}")
@@ -393,6 +401,7 @@ interface BatchManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing InventoryBatch. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @put
   @operationId("updateInventoryBatch")
   @route("/{id}")
@@ -405,6 +414,7 @@ interface BatchManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update an InventoryBatch. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @patch
   @operationId("patchInventoryBatch")
   @route("/{id}")
@@ -417,6 +427,7 @@ interface BatchManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete an InventoryBatch by id. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @delete
   @operationId("deleteInventoryBatch")
   @route("/{id}")
@@ -427,6 +438,7 @@ interface BatchManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for InventoryBatches using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("searchInventoryBatches")
   @route("/search")
@@ -447,6 +459,7 @@ interface BatchManagement {
 @useAuth(bearerAuth)
 interface SupplyConsumptionManagement {
   /** Record a new SupplyConsumption event. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @post
   @operationId("createSupplyConsumption")
   create(
@@ -457,6 +470,7 @@ interface SupplyConsumptionManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single SupplyConsumption record by id. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("getSupplyConsumption")
   @route("/{id}")
@@ -468,6 +482,7 @@ interface SupplyConsumptionManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for SupplyConsumption records using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "pharmacist", "clinician"])
   @get
   @operationId("searchSupplyConsumptions")
   @route("/search")

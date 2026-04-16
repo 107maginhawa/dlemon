@@ -237,6 +237,7 @@ model ConsentSearchParams {
 @useAuth(bearerAuth)
 interface ConsentManagement {
   /** Create a new Consent. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @post
   @operationId("createConsent")
   create(
@@ -247,6 +248,7 @@ interface ConsentManagement {
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Retrieve a single Consent by id. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("getConsent")
   @route("/{id}")
@@ -258,6 +260,7 @@ interface ConsentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Replace an existing Consent. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @put
   @operationId("updateConsent")
   @route("/{id}")
@@ -270,6 +273,7 @@ interface ConsentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Partially update a Consent. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @patch
   @operationId("patchConsent")
   @route("/{id}")
@@ -282,6 +286,7 @@ interface ConsentManagement {
   } | ApiBadRequestResponse | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Delete a Consent by id. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @delete
   @operationId("deleteConsent")
   @route("/{id}")
@@ -292,6 +297,7 @@ interface ConsentManagement {
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 
   /** Search for Consents using filter parameters. */
+  @extension("x-security-required-roles", #["admin", "clinician", "patient:owner"])
   @get
   @operationId("searchConsents")
   @route("/search")
