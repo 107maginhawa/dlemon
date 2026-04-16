@@ -18,10 +18,22 @@ namespace Healthcare.Core.Terminology;
 
 @doc("Official FHIR system URIs for standard healthcare coding systems. Use these values in Coding.system fields to ensure interoperability.")
 enum CodingSystem {
-  @doc("ICD-10-CM: International Classification of Diseases, 10th Revision, Clinical Modification — used for diagnosis coding in the United States")
+  @doc("WHO ICD-10 — International Statistical Classification of Diseases and Related Health Problems, 10th Revision. The global base standard from which national modifications (ICD-10-CM, ICD-10-AM, ICD-10-CA) derive.")
+  icd10: "http://hl7.org/fhir/sid/icd-10",
+
+  @doc("WHO ICD-11 — International Classification of Diseases, 11th Revision. Successor to ICD-10, adopted by WHO member states. Includes improved coding structure and digital-first design.")
+  icd11: "http://id.who.int/icd/release/11/mms",
+
+  @doc("WHO ATC — Anatomical Therapeutic Chemical Classification System. International standard for classifying active pharmaceutical ingredients by organ system and therapeutic properties.")
+  atcWho: "http://www.whocc.no/atc",
+
+  @doc("WHO ICF — International Classification of Functioning, Disability and Health. Classifies health and health-related domains for rehabilitation and disability assessment.")
+  icf: "http://hl7.org/fhir/sid/icf",
+
+  @doc("US Clinical Modification of WHO ICD-10. Used for diagnosis coding in the United States. For the international base standard, use icd10.")
   icd10cm: "http://hl7.org/fhir/sid/icd-10-cm",
 
-  @doc("ICD-10-PCS: International Classification of Diseases, 10th Revision, Procedure Coding System — used for inpatient procedure coding (CMS)")
+  @doc("US ICD-10 Procedure Coding System. Used for inpatient procedure coding in the United States. Maintained by CMS.")
   icd10pcs: "http://www.cms.gov/Medicare/Coding/ICD10",
 
   @doc("ICD-9-CM: International Classification of Diseases, 9th Revision, Clinical Modification — legacy diagnosis and procedure coding")
@@ -30,10 +42,10 @@ enum CodingSystem {
   @doc("SNOMED CT: Systematized Nomenclature of Medicine — Clinical Terms; comprehensive clinical terminology for clinical findings, diseases, and procedures")
   snomedCt: "http://snomed.info/sct",
 
-  @doc("CPT: Current Procedural Terminology — AMA codes for physician services and outpatient procedures")
+  @doc("Current Procedural Terminology. US-specific procedure and service coding maintained by the American Medical Association (AMA).")
   cpt: "http://www.ama-assn.org/go/cpt",
 
-  @doc("HCPCS Level II: Healthcare Common Procedure Coding System — CMS codes for services, supplies, and equipment not covered by CPT")
+  @doc("Healthcare Common Procedure Coding System. US-specific coding for items and services not covered by CPT. Maintained by CMS.")
   hcpcs: "https://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
 
   @doc("CDT: Code on Dental Procedures and Nomenclature — ADA codes for dental procedures")
@@ -42,7 +54,7 @@ enum CodingSystem {
   @doc("RxNorm: NLM normalized names for clinical drugs and drug deliveries; used for medication coding and drug interaction checking")
   rxNorm: "http://www.nlm.nih.gov/research/umls/rxnorm",
 
-  @doc("NDC: National Drug Code — FDA identifier for human drugs, biologics, and medical devices")
+  @doc("National Drug Code. US-specific drug product identifier assigned by the FDA.")
   ndc: "http://hl7.org/fhir/sid/ndc",
 
   @doc("LOINC: Logical Observation Identifiers Names and Codes — universal codes for laboratory and clinical observations, documents, and panels")
@@ -54,7 +66,7 @@ enum CodingSystem {
   @doc("CVX: Vaccine Administered codes — CDC codes identifying vaccines administered or intended for use in the United States")
   cvx: "http://hl7.org/fhir/sid/cvx",
 
-  @doc("NPI: National Provider Identifier — unique 10-digit identification number issued to health care providers in the United States")
+  @doc("US National Provider Identifier. 10-digit identifier for healthcare providers in the United States.")
   npi: "http://hl7.org/fhir/sid/us-npi",
 
   @doc("HL7 ActCode: HL7 vocabulary for the code of a V3 Act including clinical acts, financial transactions, and administrative acts")
@@ -63,10 +75,10 @@ enum CodingSystem {
   @doc("HL7 V2 Table 0203: HL7 Version 2 Table 0203 — Identifier Type codes used in CX and PL data types")
   hl7V2Tables: "http://terminology.hl7.org/CodeSystem/v2-0203",
 
-  @doc("NUBC Patient Discharge Status: National Uniform Billing Committee codes indicating where a patient was discharged to after an inpatient stay")
+  @doc("US National Uniform Billing Committee patient discharge status codes.")
   nubc: "https://www.nubc.org/CodeSystem/PatDischargeStatus",
 
-  @doc("Place of Service (POS) Codes: CMS codes indicating the setting in which a service was provided (e.g., office, inpatient hospital, telehealth)")
+  @doc("US CMS Place of Service codes identifying where healthcare services are rendered.")
   pos: "https://www.cms.gov/Medicare/Coding/place-of-service-codes",
 }
 

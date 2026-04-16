@@ -60,6 +60,7 @@ Entities that represent the direct clinical activity delivered to patients.
 | **DocumentReference** | Clinical | A reference to a document — clinical notes, discharge summaries, pathology reports, scanned documents — stored in a content system. The entity is the reference and metadata; the document itself lives in a content store. | `DocumentReference` | Core | `current`, `superseded`, `entered-in-error` | References `Patient`, `Encounter`, `Practitioner`; may reference `DiagnosticReport` or `ImagingStudy` |
 | **FamilyMemberHistory** | Clinical | Significant health conditions of a patient's family members. | `FamilyMemberHistory` | Core | `partial`, `completed`, `entered-in-error`, `health-unknown` | References `Patient`; informs `Condition`, `RiskAssessment` |
 | **Flag** | Clinical | A prospective warning of potential issues when providing care to a patient. Flags are active alerts attached to patient records that warrant attention before proceeding. | `Flag` | Core | `active`, `inactive`, `entered-in-error` | References `Patient`; may reference `Condition`, `AllergyIntolerance`; raised by `Practitioner` |
+| **Composition** | Clinical | Structured clinical document that composes other resources into cohesive documents such as discharge summaries, progress notes, and clinical abstracts. Contains typed sections referencing clinical resources. | FHIR R4 Composition | Core | preliminary, final, amended, enteredInError | subject→Patient, encounter→Encounter, author→Practitioner, section.entry→[any resource] |
 
 ---
 

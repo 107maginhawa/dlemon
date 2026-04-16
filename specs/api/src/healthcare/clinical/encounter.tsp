@@ -109,6 +109,9 @@ model EncounterHospitalization {
 
   /** Location/organization to which the patient is discharged. */
   destination?: Reference;
+
+  @doc("Free-text discharge instructions for the simple inline case. For structured discharge instructions, use a Composition resource with a discharge-instructions section (LOINC 8653-8).")
+  dischargeInstruction?: string;
 }
 
 /**

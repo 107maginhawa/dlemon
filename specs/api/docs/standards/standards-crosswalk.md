@@ -50,6 +50,7 @@ Our model is FHIR R4-informed, not FHIR R4-compliant. Where we use the same enti
 | DocumentReference | `DocumentReference` | Close | `content.attachment` always required; URL-based content references only |
 | FamilyMemberHistory | `FamilyMemberHistory` | Close | No significant divergences |
 | Flag | `Flag` | Close | No significant divergences |
+| Composition | `Composition` | Full alignment | `confidentiality` uses HL7 enum instead of FHIR code |
 | Schedule | `Schedule` | Close | `actor` references restricted to `PractitionerRole` and `Location` |
 | Slot | `Slot` | Close | No significant divergences |
 | Appointment | `Appointment` | Close | `participant` array typed strictly; `requestedPeriod` removed |

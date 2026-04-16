@@ -171,6 +171,20 @@ Each localization pack must include a README that documents:
 - Local code system sources and update frequency
 - Known gaps or limitations
 
+### 2.7 First Implementation — Philippines (PH)
+
+The first localization pack implemented is `localization/ph/` for the Philippines, covering PhilHealth integration, DOH regulatory compliance, PRC provider licensing, and Philippine-specific value sets for discharge dispositions, ward types, and hospital classification levels.
+
+The PH pack can be used as the reference implementation when authoring new localization packs. It demonstrates:
+
+- How to declare local code system URIs (`code-systems.tsp`) without importing from core
+- How to enumerate identifier system URIs and document validation patterns (`identifiers.tsp`)
+- How to define jurisdiction-specific value set extensions for clinical and administrative concepts (`value-sets.tsp`)
+- How to document terminology mapping relationships and policies without embedding code-level mapping tables in TypeSpec (`terminology-map.tsp`)
+- How to write a comprehensive pack README covering regulatory context, usage examples, claims requirements, and retention obligations
+
+Refer to `src/localization/ph/README.md` for the full regulatory and usage documentation for the Philippine pack.
+
 ---
 
 ## 3. Country-Specific Examples

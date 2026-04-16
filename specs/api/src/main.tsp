@@ -46,6 +46,7 @@ import "./healthcare/clinical/family-history.tsp";
 import "./healthcare/clinical/related-person.tsp";
 import "./healthcare/clinical/episode-of-care.tsp";
 import "./healthcare/clinical/flag.tsp";
+import "./healthcare/clinical/composition.tsp";
 
 // Administrative — scheduling, bed management, insurance, claims, prior auth
 import "./healthcare/administrative/scheduling.tsp";
@@ -300,6 +301,10 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Clinical")
   @route("/healthcare/clinical/flags")
   interface FlagManagement extends Healthcare.Clinical.Flags.FlagManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/compositions")
+  interface CompositionManagement extends Healthcare.Clinical.Compositions.CompositionManagement {}
 
   // ========================================================================
   // HEALTHCARE ADMINISTRATIVE
