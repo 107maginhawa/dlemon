@@ -791,3 +791,15 @@ enum DeviceStatus {
   @doc("Device status is unknown")
   `unknown`: "unknown",
 }
+
+@doc("The lifecycle publication status of a conformance or knowledge artifact. Aligns with FHIR PublicationStatus.")
+enum PublicationStatus {
+  @doc("This resource is still under development and is not yet considered to be ready for normal use")
+  draft,
+  @doc("This resource is ready for normal use")
+  active,
+  @doc("This resource has been withdrawn or superseded and should no longer be used")
+  retired,
+  @doc("Status is not known")
+  `unknown`: "unknown",
+}

@@ -50,6 +50,16 @@ import "./healthcare/clinical/composition.tsp";
 import "./healthcare/clinical/surgical-management.tsp";
 import "./healthcare/clinical/clinical-communication.tsp";
 
+// Hospital clinical specialties
+import "./healthcare/clinical/hospital/emergency-department.tsp";
+import "./healthcare/clinical/hospital/nursing-assessment.tsp";
+import "./healthcare/clinical/hospital/order-management.tsp";
+import "./healthcare/clinical/hospital/icu-critical-care.tsp";
+import "./healthcare/clinical/hospital/labor-delivery.tsp";
+import "./healthcare/clinical/hospital/oncology.tsp";
+import "./healthcare/clinical/hospital/dialysis.tsp";
+import "./healthcare/clinical/hospital/behavioral-health.tsp";
+
 // Administrative — scheduling, bed management, insurance, claims, prior auth, credentialing
 import "./healthcare/administrative/scheduling.tsp";
 import "./healthcare/administrative/bed-management.tsp";
@@ -57,6 +67,10 @@ import "./healthcare/administrative/insurance.tsp";
 import "./healthcare/administrative/claims.tsp";
 import "./healthcare/administrative/prior-authorization.tsp";
 import "./healthcare/administrative/staff-credentialing.tsp";
+import "./healthcare/administrative/charge-capture.tsp";
+import "./healthcare/administrative/patient-financial.tsp";
+import "./healthcare/administrative/fee-schedule.tsp";
+import "./healthcare/administrative/workforce-scheduling.tsp";
 
 // Ancillary — laboratory, pharmacy, radiology, dental, medication catalog
 import "./healthcare/ancillary/laboratory.tsp";
@@ -66,6 +80,14 @@ import "./healthcare/ancillary/dental.tsp";
 import "./healthcare/ancillary/medication.tsp";
 import "./healthcare/ancillary/medication-administration.tsp";
 import "./healthcare/ancillary/blood-bank.tsp";
+
+// Dental specialty
+import "./healthcare/ancillary/periodontal.tsp";
+import "./healthcare/ancillary/orthodontic.tsp";
+import "./healthcare/ancillary/endodontic.tsp";
+import "./healthcare/ancillary/prosthodontic.tsp";
+import "./healthcare/ancillary/dental-lab.tsp";
+import "./healthcare/ancillary/pediatric-dental.tsp";
 
 // Support — care planning, consent, CDS hooks, SDOH, provenance, signatures, questionnaires, tasks
 import "./healthcare/support/care-plan.tsp";
@@ -82,6 +104,15 @@ import "./healthcare/support/infection-control.tsp";
 // Operational — inventory, devices
 import "./healthcare/operational/inventory.tsp";
 import "./healthcare/operational/device.tsp";
+import "./healthcare/operational/recall.tsp";
+import "./healthcare/operational/implant-registry.tsp";
+import "./healthcare/operational/operatory.tsp";
+// Hospital operations
+import "./healthcare/operational/hospital/environmental-services.tsp";
+import "./healthcare/operational/hospital/patient-transport.tsp";
+import "./healthcare/operational/hospital/dietary-services.tsp";
+import "./healthcare/operational/hospital/sterile-processing.tsp";
+import "./healthcare/operational/hospital/mortuary.tsp";
 
 // Conformance — FHIR capability statement, operations, terminology, bulk export, subscriptions, IPS
 import "./healthcare/conformance/capability-statement.tsp";
@@ -200,6 +231,13 @@ using TypeSpec.OpenAPI;
 // ============================================================================
 @tagMetadata("Healthcare:Conformance", #{
   description: "FHIR conformance and interoperability. CapabilityStatement, FHIR operations ($match, $everything, $validate, $document), terminology services ($lookup, $expand, $validate-code, $translate), bulk data export ($export), FHIR subscriptions, and International Patient Summary (IPS) generation."
+})
+
+// ============================================================================
+// TAG METADATA — Healthcare Hospital
+// ============================================================================
+@tagMetadata("Healthcare:Hospital", #{
+  description: "Hospital-specific clinical specialties and operational services. Emergency department, nursing assessments, clinical order management, ICU/critical care, labor and delivery, oncology, dialysis, behavioral health, environmental services, patient transport, dietary services, sterile processing, and mortuary services."
 })
 
 namespace MonobaseHealthcareAPI {
@@ -634,6 +672,386 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Conformance")
   @route("/fhir")
   interface IPSService extends Healthcare.Conformance.IPS.IPSService {}
+
+  // ========================================================================
+  // HEALTHCARE CLINICAL — Hospital Specialties
+  // ========================================================================
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/ed-visits")
+  interface EDVisitManagement extends Healthcare.Clinical.Hospital.EmergencyDepartment.EDVisitManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/triage")
+  interface TriageManagement extends Healthcare.Clinical.Hospital.EmergencyDepartment.TriageManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/ed-board")
+  interface EDBoardService extends Healthcare.Clinical.Hospital.EmergencyDepartment.EDBoardService {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/nursing-assessments")
+  interface NursingAssessmentManagement extends Healthcare.Clinical.Hospital.NursingAssessment.NursingAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/fall-risk")
+  interface FallRiskManagement extends Healthcare.Clinical.Hospital.NursingAssessment.FallRiskManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/pressure-injury")
+  interface PressureInjuryRiskManagement extends Healthcare.Clinical.Hospital.NursingAssessment.PressureInjuryRiskManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/pain-assessments")
+  interface PainAssessmentManagement extends Healthcare.Clinical.Hospital.NursingAssessment.PainAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/orders")
+  interface ClinicalOrderManagement extends Healthcare.Clinical.Hospital.OrderManagement.ClinicalOrderManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/order-sets")
+  interface OrderSetManagement extends Healthcare.Clinical.Hospital.OrderManagement.OrderSetManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/order-verifications")
+  interface OrderVerificationService extends Healthcare.Clinical.Hospital.OrderManagement.OrderVerificationService {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/icu-admissions")
+  interface ICUAdmissionManagement extends Healthcare.Clinical.Hospital.ICU.ICUAdmissionManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/ventilators")
+  interface VentilatorManagement extends Healthcare.Clinical.Hospital.ICU.VentilatorManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/flowsheets")
+  interface FlowsheetManagement extends Healthcare.Clinical.Hospital.ICU.FlowsheetManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/severity-scores")
+  interface SeverityScoreManagement extends Healthcare.Clinical.Hospital.ICU.SeverityScoreManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/pregnancies")
+  interface PregnancyManagement extends Healthcare.Clinical.Hospital.LaborDelivery.PregnancyManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/labor-records")
+  interface LaborManagement extends Healthcare.Clinical.Hospital.LaborDelivery.LaborManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/newborns")
+  interface NewbornManagement extends Healthcare.Clinical.Hospital.LaborDelivery.NewbornManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/postpartum")
+  interface PostpartumManagement extends Healthcare.Clinical.Hospital.LaborDelivery.PostpartumManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/cancer-diagnoses")
+  interface CancerDiagnosisManagement extends Healthcare.Clinical.Hospital.Oncology.CancerDiagnosisManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/chemo-protocols")
+  interface ChemotherapyProtocolManagement extends Healthcare.Clinical.Hospital.Oncology.ChemotherapyProtocolManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/chemo-cycles")
+  interface ChemotherapyCycleManagement extends Healthcare.Clinical.Hospital.Oncology.ChemotherapyCycleManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/radiation-therapy")
+  interface RadiationTherapyManagement extends Healthcare.Clinical.Hospital.Oncology.RadiationTherapyManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/dialysis-orders")
+  interface DialysisOrderManagement extends Healthcare.Clinical.Hospital.Dialysis.DialysisOrderManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/dialysis-sessions")
+  interface DialysisSessionManagement extends Healthcare.Clinical.Hospital.Dialysis.DialysisSessionManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/dialysis-access")
+  interface DialysisAccessManagement extends Healthcare.Clinical.Hospital.Dialysis.DialysisAccessManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/psychiatric-assessments")
+  interface PsychiatricAssessmentManagement extends Healthcare.Clinical.Hospital.BehavioralHealth.PsychiatricAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/involuntary-holds")
+  interface InvoluntaryHoldManagement extends Healthcare.Clinical.Hospital.BehavioralHealth.InvoluntaryHoldManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/behavioral-health-plans")
+  interface BehavioralHealthPlanManagement extends Healthcare.Clinical.Hospital.BehavioralHealth.BehavioralHealthPlanManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/substance-use")
+  interface SubstanceUseAssessmentManagement extends Healthcare.Clinical.Hospital.BehavioralHealth.SubstanceUseAssessmentManagement {}
+
+  // ========================================================================
+  // HEALTHCARE ADMINISTRATIVE (new: charge capture, patient financial, fee schedule, workforce)
+  // ========================================================================
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/charge-capture/items")
+  interface ChargeItemManagement extends Healthcare.Administrative.ChargeCapture.ChargeItemManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/charge-capture/definitions")
+  interface ChargeDefinitionManagement extends Healthcare.Administrative.ChargeCapture.ChargeDefinitionManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/patient-financial/payments")
+  interface PaymentManagement extends Healthcare.Administrative.PatientFinancial.PaymentManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/patient-financial/receipts")
+  interface ReceiptManagement extends Healthcare.Administrative.PatientFinancial.ReceiptManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/patient-financial/payment-plans")
+  interface PaymentPlanManagement extends Healthcare.Administrative.PatientFinancial.PaymentPlanManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/patient-financial/promissory-notes")
+  interface PromissoryNoteManagement extends Healthcare.Administrative.PatientFinancial.PromissoryNoteManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/fee-schedules")
+  interface FeeScheduleManagement extends Healthcare.Administrative.FeeSchedule.FeeScheduleManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/fee-schedules/items")
+  interface FeeScheduleItemManagement extends Healthcare.Administrative.FeeSchedule.FeeScheduleItemManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/fee-schedules/contract-rates")
+  interface InsuranceContractRateManagement extends Healthcare.Administrative.FeeSchedule.InsuranceContractRateManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/fee-schedules/discounts")
+  interface DiscountManagement extends Healthcare.Administrative.FeeSchedule.DiscountManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/workforce/schedules")
+  interface WorkScheduleManagement extends Healthcare.Administrative.WorkforceScheduling.WorkScheduleManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/workforce/shifts")
+  interface ShiftAssignmentManagement extends Healthcare.Administrative.WorkforceScheduling.ShiftAssignmentManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/workforce/time-off")
+  interface TimeOffRequestManagement extends Healthcare.Administrative.WorkforceScheduling.TimeOffRequestManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/workforce/on-call")
+  interface OnCallScheduleManagement extends Healthcare.Administrative.WorkforceScheduling.OnCallScheduleManagement {}
+
+  // ========================================================================
+  // HEALTHCARE ANCILLARY — Dental Specialties
+  // ========================================================================
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/periodontal/exams")
+  interface PerioExamManagement extends Healthcare.Ancillary.Periodontal.PerioExamManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/periodontal/furcations")
+  interface FurcationManagement extends Healthcare.Ancillary.Periodontal.FurcationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/periodontal/mobility")
+  interface MobilityManagement extends Healthcare.Ancillary.Periodontal.MobilityManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/orthodontic/cases")
+  interface OrthoCaseManagement extends Healthcare.Ancillary.Orthodontic.OrthoCaseManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/orthodontic/stages")
+  interface OrthoStageManagement extends Healthcare.Ancillary.Orthodontic.OrthoStageManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/orthodontic/aligners")
+  interface AlignerSeriesManagement extends Healthcare.Ancillary.Orthodontic.AlignerSeriesManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/orthodontic/progress")
+  interface OrthoProgressManagement extends Healthcare.Ancillary.Orthodontic.OrthoProgressManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/endodontic/records")
+  interface EndoRecordManagement extends Healthcare.Ancillary.Endodontic.EndoRecordManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/endodontic/irrigations")
+  interface IrrigationManagement extends Healthcare.Ancillary.Endodontic.IrrigationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/endodontic/retreatments")
+  interface EndoRetreatmentManagement extends Healthcare.Ancillary.Endodontic.EndoRetreatmentManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/prosthodontic/records")
+  interface ProsthoRecordManagement extends Healthcare.Ancillary.Prosthodontic.ProsthoRecordManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/prosthodontic/shades")
+  interface ShadeSelectionManagement extends Healthcare.Ancillary.Prosthodontic.ShadeSelectionManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/prosthodontic/impressions")
+  interface ImpressionManagement extends Healthcare.Ancillary.Prosthodontic.ImpressionManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/prosthodontic/lab-cases")
+  interface LabCaseLinkManagement extends Healthcare.Ancillary.Prosthodontic.LabCaseLinkManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/lab/cases")
+  interface DentalLabCaseManagement extends Healthcare.Ancillary.DentalLab.DentalLabCaseManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/lab/providers")
+  interface DentalLabProviderManagement extends Healthcare.Ancillary.DentalLab.DentalLabProviderManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/lab/communications")
+  interface LabCommunicationManagement extends Healthcare.Ancillary.DentalLab.LabCommunicationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/eruptions")
+  interface EruptionManagement extends Healthcare.Ancillary.PediatricDental.EruptionManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/exfoliations")
+  interface ExfoliationManagement extends Healthcare.Ancillary.PediatricDental.ExfoliationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/behavior")
+  interface BehaviorAssessmentManagement extends Healthcare.Ancillary.PediatricDental.BehaviorAssessmentManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/fluoride")
+  interface FluorideApplicationManagement extends Healthcare.Ancillary.PediatricDental.FluorideApplicationManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/sealants")
+  interface SealantManagement extends Healthcare.Ancillary.PediatricDental.SealantManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/pediatric/space-maintainers")
+  interface SpaceMaintainerManagement extends Healthcare.Ancillary.PediatricDental.SpaceMaintainerManagement {}
+
+  // ========================================================================
+  // HEALTHCARE OPERATIONAL (new: recall, implant registry, operatory, hospital ops)
+  // ========================================================================
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/recall/rules")
+  interface RecallRuleManagement extends Healthcare.Operational.Recall.RecallRuleManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/recall/schedules")
+  interface RecallScheduleManagement extends Healthcare.Operational.Recall.RecallScheduleManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/recall/campaigns")
+  interface RecallCampaignManagement extends Healthcare.Operational.Recall.RecallCampaignManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/implant-registry/implants")
+  interface ImplantManagement extends Healthcare.Operational.ImplantRegistry.ImplantManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/implant-registry/osseointegration")
+  interface OsseointegrationCheckManagement extends Healthcare.Operational.ImplantRegistry.OsseointegrationCheckManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/implant-registry/recalls")
+  interface ImplantRecallService extends Healthcare.Operational.ImplantRegistry.ImplantRecallService {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/operatory/rooms")
+  interface OperatoryManagement extends Healthcare.Operational.Operatory.OperatoryManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/operatory/assignments")
+  interface OperatoryAssignmentManagement extends Healthcare.Operational.Operatory.OperatoryAssignmentManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/operatory/chair-blocks")
+  interface ChairTimeBlockManagement extends Healthcare.Operational.Operatory.ChairTimeBlockManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/operatory/turnovers")
+  interface TurnoverManagement extends Healthcare.Operational.Operatory.TurnoverManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/operatory/metrics")
+  interface OperatoryMetricsService extends Healthcare.Operational.Operatory.OperatoryMetricsService {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/cleaning-tasks")
+  interface CleaningTaskManagement extends Healthcare.Operational.Hospital.EVS.CleaningTaskManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/cleaning-schedules")
+  interface CleaningScheduleManagement extends Healthcare.Operational.Hospital.EVS.CleaningScheduleManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/transport-requests")
+  interface TransportRequestManagement extends Healthcare.Operational.Hospital.Transport.TransportRequestManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/transport-teams")
+  interface TransportTeamManagement extends Healthcare.Operational.Hospital.Transport.TransportTeamManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/diet-orders")
+  interface DietOrderManagement extends Healthcare.Operational.Hospital.Dietary.DietOrderManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/meal-service")
+  interface MealServiceManagement extends Healthcare.Operational.Hospital.Dietary.MealServiceManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/nutrition-screening")
+  interface NutritionScreeningManagement extends Healthcare.Operational.Hospital.Dietary.NutritionScreeningManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/instrument-sets")
+  interface InstrumentSetManagement extends Healthcare.Operational.Hospital.SterileProcessing.InstrumentSetManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/sterilization-cycles")
+  interface SterilizationCycleManagement extends Healthcare.Operational.Hospital.SterileProcessing.SterilizationCycleManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/biological-indicators")
+  interface BiologicalIndicatorManagement extends Healthcare.Operational.Hospital.SterileProcessing.BiologicalIndicatorManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/sterilization-logs")
+  interface SterilizationLogManagement extends Healthcare.Operational.Hospital.SterileProcessing.SterilizationLogManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/deceased-records")
+  interface DeceasedRecordManagement extends Healthcare.Operational.Hospital.Mortuary.DeceasedRecordManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/body-releases")
+  interface BodyReleaseManagement extends Healthcare.Operational.Hospital.Mortuary.BodyReleaseManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/mortuary-storage")
+  interface MortuaryStorageManagement extends Healthcare.Operational.Hospital.Mortuary.MortuaryStorageManagement {}
 }
 
 /**
