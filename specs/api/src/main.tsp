@@ -59,6 +59,8 @@ import "./healthcare/clinical/hospital/labor-delivery.tsp";
 import "./healthcare/clinical/hospital/oncology.tsp";
 import "./healthcare/clinical/hospital/dialysis.tsp";
 import "./healthcare/clinical/hospital/behavioral-health.tsp";
+import "./healthcare/clinical/hospital/wound-care.tsp";
+import "./healthcare/clinical/hospital/code-blue.tsp";
 
 // Administrative — scheduling, bed management, insurance, claims, prior auth, credentialing
 import "./healthcare/administrative/scheduling.tsp";
@@ -71,6 +73,11 @@ import "./healthcare/administrative/charge-capture.tsp";
 import "./healthcare/administrative/patient-financial.tsp";
 import "./healthcare/administrative/fee-schedule.tsp";
 import "./healthcare/administrative/workforce-scheduling.tsp";
+
+// Hospital administrative
+import "./healthcare/administrative/hospital/him-roi.tsp";
+import "./healthcare/administrative/hospital/cost-accounting.tsp";
+import "./healthcare/administrative/hospital/gme.tsp";
 
 // Ancillary — laboratory, pharmacy, radiology, dental, medication catalog
 import "./healthcare/ancillary/laboratory.tsp";
@@ -88,6 +95,8 @@ import "./healthcare/ancillary/endodontic.tsp";
 import "./healthcare/ancillary/prosthodontic.tsp";
 import "./healthcare/ancillary/dental-lab.tsp";
 import "./healthcare/ancillary/pediatric-dental.tsp";
+import "./healthcare/ancillary/cosmetic-dental.tsp";
+import "./healthcare/ancillary/oral-surgery-dental.tsp";
 
 // Support — care planning, consent, CDS hooks, SDOH, provenance, signatures, questionnaires, tasks
 import "./healthcare/support/care-plan.tsp";
@@ -100,6 +109,10 @@ import "./healthcare/support/questionnaire.tsp";
 import "./healthcare/support/task.tsp";
 import "./healthcare/support/incident-reporting.tsp";
 import "./healthcare/support/infection-control.tsp";
+import "./healthcare/support/telehealth.tsp";
+import "./healthcare/support/clinical-outcomes.tsp";
+import "./healthcare/support/data-import.tsp";
+import "./healthcare/support/workflow-automation.tsp";
 
 // Operational — inventory, devices
 import "./healthcare/operational/inventory.tsp";
@@ -113,6 +126,10 @@ import "./healthcare/operational/hospital/patient-transport.tsp";
 import "./healthcare/operational/hospital/dietary-services.tsp";
 import "./healthcare/operational/hospital/sterile-processing.tsp";
 import "./healthcare/operational/hospital/mortuary.tsp";
+import "./healthcare/operational/hospital/peer-review.tsp";
+import "./healthcare/operational/hospital/emergency-preparedness.tsp";
+import "./healthcare/operational/patient-portal.tsp";
+import "./healthcare/operational/external-connectors.tsp";
 
 // Conformance — FHIR capability statement, operations, terminology, bulk export, subscriptions, IPS
 import "./healthcare/conformance/capability-statement.tsp";
@@ -126,6 +143,7 @@ import "./healthcare/conformance/ips.tsp";
 import "./healthcare/analytics/de-identification.tsp";
 import "./healthcare/analytics/cohort.tsp";
 import "./healthcare/analytics/ai-metadata.tsp";
+import "./healthcare/analytics/reporting.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Versioning;
@@ -1052,6 +1070,258 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Operational")
   @route("/healthcare/hospital-ops/mortuary-storage")
   interface MortuaryStorageManagement extends Healthcare.Operational.Hospital.Mortuary.MortuaryStorageManagement {}
+
+  // ========================================================================
+  // WAVE 2 — CLINICAL HOSPITAL
+  // ========================================================================
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/wound-assessments")
+  interface WoundAssessmentManagement extends Healthcare.Clinical.Hospital.WoundCare.WoundAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/wound-treatments")
+  interface WoundTreatmentManagement extends Healthcare.Clinical.Hospital.WoundCare.WoundTreatmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/wound-orders")
+  interface WoundCareOrderManagement extends Healthcare.Clinical.Hospital.WoundCare.WoundCareOrderManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/code-blue-events")
+  interface CodeBlueEventManagement extends Healthcare.Clinical.Hospital.CodeBlue.CodeBlueEventManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/code-blue-teams")
+  interface CodeBlueTeamManagement extends Healthcare.Clinical.Hospital.CodeBlue.CodeBlueTeamManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/code-blue-debriefs")
+  interface CodeBlueDebriefManagement extends Healthcare.Clinical.Hospital.CodeBlue.CodeBlueDebriefManagement {}
+
+  // ========================================================================
+  // WAVE 2 — ADMINISTRATIVE HOSPITAL
+  // ========================================================================
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/roi-requests")
+  interface ROIRequestManagement extends Healthcare.Administrative.Hospital.HIMROI.ROIRequestManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/record-requests")
+  interface MedicalRecordRequestManagement extends Healthcare.Administrative.Hospital.HIMROI.MedicalRecordRequestManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/coding-reviews")
+  interface CodingReviewManagement extends Healthcare.Administrative.Hospital.HIMROI.CodingReviewManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/cost-centers")
+  interface CostCenterManagement extends Healthcare.Administrative.Hospital.CostAccounting.CostCenterManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/cost-allocations")
+  interface CostAllocationManagement extends Healthcare.Administrative.Hospital.CostAccounting.CostAllocationManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/case-costing")
+  interface CaseCostingManagement extends Healthcare.Administrative.Hospital.CostAccounting.CaseCostingManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gl-exports")
+  interface GLExportManagement extends Healthcare.Administrative.Hospital.CostAccounting.GLExportManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gme/programs")
+  interface ResidencyProgramManagement extends Healthcare.Administrative.Hospital.GME.ResidencyProgramManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gme/residents")
+  interface ResidentManagement extends Healthcare.Administrative.Hospital.GME.ResidentManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gme/rotations")
+  interface RotationAssignmentManagement extends Healthcare.Administrative.Hospital.GME.RotationAssignmentManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gme/evaluations")
+  interface ResidentEvaluationManagement extends Healthcare.Administrative.Hospital.GME.ResidentEvaluationManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/hospital-admin/gme/procedure-logs")
+  interface ProcedureLogManagement extends Healthcare.Administrative.Hospital.GME.ProcedureLogManagement {}
+
+  // ========================================================================
+  // WAVE 2 — DENTAL ANCILLARY
+  // ========================================================================
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/cosmetic/cases")
+  interface CosmeticCaseManagement extends Healthcare.Ancillary.CosmeticDental.CosmeticCaseManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/cosmetic/smile-designs")
+  interface SmileDesignManagement extends Healthcare.Ancillary.CosmeticDental.SmileDesignManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/cosmetic/whitening")
+  interface WhiteningRecordManagement extends Healthcare.Ancillary.CosmeticDental.WhiteningRecordManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/cosmetic/veneers")
+  interface VeneerRecordManagement extends Healthcare.Ancillary.CosmeticDental.VeneerRecordManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/cosmetic/photos")
+  interface BeforeAfterPhotoManagement extends Healthcare.Ancillary.CosmeticDental.BeforeAfterPhotoManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/oral-surgery/extractions")
+  interface ExtractionRecordManagement extends Healthcare.Ancillary.OralSurgeryDental.ExtractionRecordManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/oral-surgery/pathology")
+  interface DentalPathologyManagement extends Healthcare.Ancillary.OralSurgeryDental.DentalPathologyManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/oral-surgery/post-op")
+  interface PostOpInstructionManagement extends Healthcare.Ancillary.OralSurgeryDental.PostOpInstructionManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/dental/oral-surgery/healing")
+  interface HealingFollowUpManagement extends Healthcare.Ancillary.OralSurgeryDental.HealingFollowUpManagement {}
+
+  // ========================================================================
+  // WAVE 2 — SUPPORT
+  // ========================================================================
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/telehealth/sessions")
+  interface TelehealthSessionManagement extends Healthcare.Support.Telehealth.TelehealthSessionManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/telehealth/async-consultations")
+  interface AsyncConsultationManagement extends Healthcare.Support.Telehealth.AsyncConsultationManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/telehealth/remote-monitoring")
+  interface RemoteMonitoringManagement extends Healthcare.Support.Telehealth.RemoteMonitoringManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/clinical-outcomes/records")
+  interface OutcomeRecordManagement extends Healthcare.Support.ClinicalOutcomes.OutcomeRecordManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/clinical-outcomes/benchmarks")
+  interface ClinicalBenchmarkManagement extends Healthcare.Support.ClinicalOutcomes.ClinicalBenchmarkManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/clinical-outcomes/reports")
+  interface OutcomeReportService extends Healthcare.Support.ClinicalOutcomes.OutcomeReportService {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/data-import/jobs")
+  interface ImportJobManagement extends Healthcare.Support.DataImport.ImportJobManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/data-import/mappings")
+  interface ImportMappingManagement extends Healthcare.Support.DataImport.ImportMappingManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/workflow-automation/rules")
+  interface WorkflowRuleManagement extends Healthcare.Support.WorkflowAutomation.WorkflowRuleManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/workflow-automation/executions")
+  interface WorkflowExecutionManagement extends Healthcare.Support.WorkflowAutomation.WorkflowExecutionManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/workflow-automation/queues")
+  interface TaskQueueManagement extends Healthcare.Support.WorkflowAutomation.TaskQueueManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/workflow-automation/queue-items")
+  interface TaskQueueItemManagement extends Healthcare.Support.WorkflowAutomation.TaskQueueItemManagement {}
+
+  // ========================================================================
+  // WAVE 2 — OPERATIONAL
+  // ========================================================================
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/patient-portal/accounts")
+  interface PortalAccountManagement extends Healthcare.Operational.PatientPortal.PortalAccountManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/patient-portal/bookings")
+  interface OnlineBookingManagement extends Healthcare.Operational.PatientPortal.OnlineBookingManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/patient-portal/messages")
+  interface PortalMessageManagement extends Healthcare.Operational.PatientPortal.PortalMessageManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/patient-portal/payments")
+  interface PortalPaymentManagement extends Healthcare.Operational.PatientPortal.PortalPaymentManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/patient-portal/intake-forms")
+  interface PatientIntakeFormManagement extends Healthcare.Operational.PatientPortal.PatientIntakeFormManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/connectors")
+  interface ConnectorManagement extends Healthcare.Operational.ExternalConnectors.ConnectorManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/connectors/credentials")
+  interface ConnectorCredentialManagement extends Healthcare.Operational.ExternalConnectors.ConnectorCredentialManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/connectors/sync-logs")
+  interface ConnectorSyncLogManagement extends Healthcare.Operational.ExternalConnectors.ConnectorSyncLogManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/peer-review/cases")
+  interface PeerReviewCaseManagement extends Healthcare.Operational.Hospital.PeerReview.PeerReviewCaseManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/peer-review/panels")
+  interface PeerReviewPanelManagement extends Healthcare.Operational.Hospital.PeerReview.PeerReviewPanelManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/peer-review/actions")
+  interface PeerReviewActionManagement extends Healthcare.Operational.Hospital.PeerReview.PeerReviewActionManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/emergency/plans")
+  interface EmergencyPlanManagement extends Healthcare.Operational.Hospital.EmergencyPreparedness.EmergencyPlanManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/emergency/activations")
+  interface EmergencyActivationManagement extends Healthcare.Operational.Hospital.EmergencyPreparedness.EmergencyActivationManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/emergency/surge-capacity")
+  interface SurgeCapacityManagement extends Healthcare.Operational.Hospital.EmergencyPreparedness.SurgeCapacityManagement {}
+
+  @tag("Healthcare:Operational")
+  @route("/healthcare/hospital-ops/emergency/drills")
+  interface EmergencyDrillManagement extends Healthcare.Operational.Hospital.EmergencyPreparedness.EmergencyDrillManagement {}
+
+  // ========================================================================
+  // WAVE 2 — ANALYTICS
+  // ========================================================================
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/reports/definitions")
+  interface ReportDefinitionManagement extends Healthcare.Analytics.Reporting.ReportDefinitionManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/reports/runs")
+  interface ReportRunManagement extends Healthcare.Analytics.Reporting.ReportRunManagement {}
+
+  @tag("Healthcare:Analytics")
+  @route("/healthcare/analytics/dashboards")
+  interface DashboardManagement extends Healthcare.Analytics.Reporting.DashboardManagement {}
 }
 
 /**
