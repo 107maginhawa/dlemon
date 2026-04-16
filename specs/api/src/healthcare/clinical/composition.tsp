@@ -166,6 +166,25 @@ model CompositionSection {
 }
 
 @doc("A structured document composed of clinical resources, such as a discharge summary, progress note, or clinical abstract. Aligns with FHIR R4 Composition.")
+@example(#{
+  id: "comp-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T12:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T12:00:00Z"),
+  status: CompositionStatus.final,
+  type: #{ coding: #[#{ system: "http://loinc.org", code: "18842-5", display: "Discharge summary" }] },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  encounter: #{ resourceType: "Encounter", id: "enc-001", display: "Outpatient visit 2024-06-10" },
+  date: utcDateTime.fromISO("2024-06-10T12:00:00Z"),
+  author: #[#{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" }],
+  title: "Discharge Summary - John Smith - 2024-06-10",
+  section: #[
+    #{ title: "Discharge Diagnoses", code: #{ coding: #[#{ system: "http://loinc.org", code: "11535-2", display: "Hospital discharge Dx" }] }, text: "1. Acute upper respiratory infection (J06.9)" },
+    #{ title: "Hospital Course", code: #{ coding: #[#{ system: "http://loinc.org", code: "8648-8", display: "Hospital course" }] }, text: "Patient admitted with 5-day history of cough. Treated with antibiotics. Improved and discharged." },
+    #{ title: "Discharge Instructions", code: #{ coding: #[#{ system: "http://loinc.org", code: "8653-8", display: "Discharge instructions" }] }, text: "Continue amoxicillin for 7 days. Follow up in 2 weeks. Return if symptoms worsen." },
+  ],
+}, #{ title: "Discharge summary document" })
 model Composition extends HealthcareBaseEntity {
   @doc("The workflow/clinical status of this composition. The status is a marker for the clinical standing/relevance of the document.")
   status: CompositionStatus;

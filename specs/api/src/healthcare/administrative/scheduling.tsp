@@ -200,6 +200,24 @@ model Slot extends HealthcareBaseEntity {
   comment?: string;
 }
 
+@example(#{
+  id: "appt-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-08T14:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-08T14:00:00Z"),
+  status: AppointmentStatus.booked,
+  serviceType: #[#{ coding: #[#{ system: "http://snomed.info/sct", code: "394802001", display: "General medicine" }] }],
+  start: utcDateTime.fromISO("2024-06-10T09:00:00Z"),
+  end: utcDateTime.fromISO("2024-06-10T09:30:00Z"),
+  minutesDuration: 30,
+  created: utcDateTime.fromISO("2024-06-08T14:00:00Z"),
+  participant: #[
+    #{ actor: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" }, status: ParticipantStatus.accepted },
+    #{ actor: #{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" }, status: ParticipantStatus.accepted },
+  ],
+  visitType: VisitType.inPerson,
+}, #{ title: "Booked in-person appointment" })
 @doc("A booking of a healthcare event among patient(s), practitioner(s), related person(s) and/or device(s). Aligns with FHIR R4 Appointment.")
 model Appointment extends HealthcareBaseEntity {
   @doc("The overall status of the appointment")

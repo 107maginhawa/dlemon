@@ -102,6 +102,20 @@ model MedicationSubstitution {
  * for administration of the medication to a patient.
  * Mapped to FHIR R4 MedicationRequest.
  */
+@example(#{
+  id: "med-req-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T09:25:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T09:25:00Z"),
+  status: MedicationRequestStatus.active,
+  intent: MedicationRequestIntent.order,
+  medicationCode: #{ coding: #[#{ system: "http://www.nlm.nih.gov/research/umls/rxnorm", code: "197696", display: "Amoxicillin 500 MG Oral Capsule" }] },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  authoredOn: utcDateTime.fromISO("2024-06-10T09:25:00Z"),
+  requester: #{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" },
+  dosageInstruction: #[#{ text: "Take 1 capsule by mouth three times daily for 7 days" }],
+}, #{ title: "Amoxicillin prescription" })
 model MedicationRequest extends HealthcareBaseEntity {
   /** Current lifecycle status of the medication request. */
   status: MedicationRequestStatus;

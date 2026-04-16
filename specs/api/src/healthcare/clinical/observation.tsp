@@ -100,6 +100,20 @@ model ObservationComponent {
  * clinical assessments.
  * Mapped to FHIR R4 Observation.
  */
+@example(#{
+  id: "obs-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T09:15:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T09:15:00Z"),
+  status: ObservationStatus.final,
+  category: #[#{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "vital-signs", display: "Vital Signs" }] }],
+  code: #{ coding: #[#{ system: "http://loinc.org", code: "8480-6", display: "Systolic blood pressure" }] },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  effectiveDateTime: utcDateTime.fromISO("2024-06-10T09:15:00Z"),
+  performer: #[#{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" }],
+  valueQuantity: #{ value: 120.0, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+}, #{ title: "Systolic blood pressure vital sign" })
 model Observation extends HealthcareBaseEntity {
   /** ServiceRequest(s) this observation is based on. */
   basedOn?: Reference[];

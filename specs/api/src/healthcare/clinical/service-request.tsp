@@ -58,6 +58,20 @@ enum ServiceRequestIntent {
  * imaging orders, referrals, and procedure orders.
  * Mapped to FHIR R4 ServiceRequest.
  */
+@example(#{
+  id: "sr-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T09:30:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T09:30:00Z"),
+  status: ServiceRequestStatus.active,
+  intent: ServiceRequestIntent.order,
+  category: #[#{ coding: #[#{ system: "http://snomed.info/sct", code: "108252007", display: "Laboratory procedure" }] }],
+  code: #{ coding: #[#{ system: "http://loinc.org", code: "58410-2", display: "Complete blood count (CBC)" }] },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  authoredOn: utcDateTime.fromISO("2024-06-10T09:30:00Z"),
+  requester: #{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" },
+}, #{ title: "CBC lab order" })
 model ServiceRequest extends HealthcareBaseEntity {
   /** The status of the order. */
   status: ServiceRequestStatus;

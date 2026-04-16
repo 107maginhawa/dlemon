@@ -174,6 +174,19 @@ model DiagnosticReportMedia {
 // Resource model – DiagnosticReport
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "dr-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T11:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T11:00:00Z"),
+  status: DiagnosticReportStatus.final,
+  category: #[#{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB", display: "Laboratory" }] }],
+  code: #{ coding: #[#{ system: "http://loinc.org", code: "58410-2", display: "Complete blood count (CBC) panel" }] },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  issued: utcDateTime.fromISO("2024-06-10T11:00:00Z"),
+  conclusion: "CBC within normal limits. No abnormalities detected.",
+}, #{ title: "Complete blood count lab report" })
 /**
  * The findings and interpretation of diagnostic tests performed on patients.
  * Aligns with the FHIR R4 DiagnosticReport resource.

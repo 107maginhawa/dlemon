@@ -137,6 +137,26 @@ model EncounterLocation {
  * and a healthcare provider for the purpose of providing healthcare service(s).
  * Mapped to FHIR R4 Encounter.
  */
+@example(#{
+  id: "enc-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T08:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T12:00:00Z"),
+  status: EncounterStatus.finished,
+  `class`: EncounterClass.ambulatory,
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  participant: #[#{
+    type: #[#{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/v3-ParticipationType", code: "ATND", display: "attender" }] }],
+    individual: #{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" },
+    isPrimary: true,
+  }],
+  period: #{ start: utcDateTime.fromISO("2024-06-10T09:00:00Z"), end: utcDateTime.fromISO("2024-06-10T09:30:00Z") },
+  chiefComplaint: "Persistent cough for 5 days",
+  diagnosis: #[],
+  location: #[],
+  serviceProvider: #{ resourceType: "Organization", id: "org-001", display: "City Medical Center" },
+}, #{ title: "Completed outpatient visit" })
 model Encounter extends HealthcareBaseEntity {
   /** Current lifecycle status of the encounter. */
   status: EncounterStatus;

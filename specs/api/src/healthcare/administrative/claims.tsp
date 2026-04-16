@@ -304,6 +304,36 @@ model ClaimResponseTotal {
 // Resource models
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "clm-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T13:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T13:00:00Z"),
+  status: ClaimStatus.active,
+  type: #{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/claim-type", code: "professional", display: "Professional" }] },
+  use: ClaimUse.claim,
+  patient: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+  created: utcDateTime.fromISO("2024-06-10T13:00:00Z"),
+  provider: #{ resourceType: "Practitioner", id: "prac-001", display: "Dr. Jane Doe" },
+  priority: #{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/processpriority", code: "normal", display: "Normal" }] },
+  diagnosis: #[#{
+    sequence: 1,
+    diagnosisCode: #{ coding: #[#{ system: "http://hl7.org/fhir/sid/icd-10", code: "J06.9", display: "Acute upper respiratory infection" }] },
+  }],
+  insurance: #[#{
+    sequence: 1,
+    focal: true,
+    coverage: #{ resourceType: "Coverage", id: "cov-001", display: "BlueCross Plan A" },
+  }],
+  item: #[#{
+    sequence: 1,
+    productOrService: #{ coding: #[#{ system: "http://www.ama-assn.org/go/cpt", code: "99213", display: "Office visit, established patient" }] },
+    unitPrice: #{ value: 150.00, currency: "USD" },
+    net: #{ value: 150.00, currency: "USD" },
+  }],
+  total: #{ value: 150.00, currency: "USD" },
+}, #{ title: "Professional claim for office visit" })
 @doc("A healthcare claim for billing. Aligns with FHIR R4 Claim.")
 model Claim extends HealthcareBaseEntity {
   @doc("The status of the resource instance")

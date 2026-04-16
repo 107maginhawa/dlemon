@@ -53,6 +53,18 @@ model ConditionEvidence {
  * A clinical condition, problem, diagnosis, or other event that is of clinical
  * concern to a patient.  Mapped to FHIR R4 Condition.
  */
+@example(#{
+  id: "cond-001",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-06-10T09:20:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-06-10T09:20:00Z"),
+  clinicalStatus: #{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active", display: "Active" }] },
+  verificationStatus: #{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed", display: "Confirmed" }] },
+  category: #[#{ coding: #[#{ system: "http://terminology.hl7.org/CodeSystem/condition-category", code: "encounter-diagnosis", display: "Encounter Diagnosis" }] }],
+  code: #{ coding: #[#{ system: "http://hl7.org/fhir/sid/icd-10", code: "J06.9", display: "Acute upper respiratory infection, unspecified" }], text: "Upper respiratory infection" },
+  subject: #{ resourceType: "Patient", id: "pat-001", display: "John Smith" },
+}, #{ title: "Active confirmed diagnosis" })
 model Condition extends HealthcareBaseEntity {
   /**
    * Clinical status of the condition (active, recurrence, relapse, inactive,

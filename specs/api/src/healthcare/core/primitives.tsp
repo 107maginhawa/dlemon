@@ -105,6 +105,11 @@ enum ContactUse {
 // ---------------------------------------------------------------------------
 
 @doc("A reference to a code defined by a terminology system. Aligns with FHIR Coding.")
+@example(#{
+  system: "http://loinc.org",
+  code: "8867-4",
+  display: "Heart rate",
+}, #{ title: "LOINC heart rate code" })
 model Coding {
   @doc("The URI for the coding system (e.g., http://loinc.org)")
   @format("uri")
@@ -124,6 +129,10 @@ model Coding {
 }
 
 @doc("A concept that may be defined by a formal reference to a terminology or ontology. Aligns with FHIR CodeableConcept.")
+@example(#{
+  coding: #[#{ system: "http://hl7.org/fhir/sid/icd-10", code: "J06.9", display: "Acute upper respiratory infection, unspecified" }],
+  text: "Upper respiratory infection",
+}, #{ title: "ICD-10 diagnosis code" })
 model CodeableConcept {
   @doc("One or more codings representing this concept, potentially from multiple coding systems")
   coding: Coding[];
@@ -133,6 +142,11 @@ model CodeableConcept {
 }
 
 @doc("A typed pointer to another resource. Aligns with FHIR Reference.")
+@example(#{
+  resourceType: "Patient",
+  id: "f5c7e14a-3b92-4d81-a6e0-7c2f9b8d4e31",
+  display: "John Smith",
+}, #{ title: "Reference to a Patient" })
 model Reference {
   @doc("The type of the resource being referenced (e.g., Patient, Practitioner)")
   resourceType: string;
@@ -154,6 +168,12 @@ model Period {
 }
 
 @doc("A measured or measurable amount with a Unified Code for Units of Measure (UCUM) unit. Aligns with FHIR Quantity.")
+@example(#{
+  value: 120.0,
+  unit: "mmHg",
+  system: "http://unitsofmeasure.org",
+  code: "mm[Hg]",
+}, #{ title: "Systolic blood pressure measurement" })
 model Quantity {
   @doc("The numerical value of the quantity")
   value: float64;
@@ -188,6 +208,11 @@ model Ratio {
 }
 
 @doc("A numeric or alphanumeric string that is associated with a single object or entity within a given system. Aligns with FHIR Identifier.")
+@example(#{
+  use: IdentifierUse.official,
+  system: "http://hospital.example/mrn",
+  value: "MRN-2024-001",
+}, #{ title: "Medical record number" })
 model Identifier {
   @doc("The purpose of this identifier")
   use?: IdentifierUse;
@@ -210,6 +235,11 @@ model Identifier {
 }
 
 @doc("A human's name with the ability to identify parts and usage. Aligns with FHIR HumanName.")
+@example(#{
+  use: NameUse.official,
+  family: "Smith",
+  given: #["John", "Michael"],
+}, #{ title: "Patient full name" })
 model HumanName {
   @doc("Identifies the purpose for which this name is being used")
   use?: NameUse;
@@ -388,6 +418,10 @@ model Dosage {
 }
 
 @doc("An amount of economic utility in some recognized currency. Aligns with FHIR Money using ISO 4217 currency codes.")
+@example(#{
+  value: 150.00,
+  currency: "USD",
+}, #{ title: "US dollar amount" })
 model Money {
   @doc("Numerical value (with implicit precision) as defined in ISO 31-8; amount must be non-negative")
   @minValue(0)

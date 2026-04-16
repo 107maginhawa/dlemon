@@ -74,6 +74,19 @@ model EmergencyContact {
  * Patient model - FHIR R4 Patient resource aligned
  */
 @doc("FHIR R4-aligned patient record extending the healthcare base entity")
+@example(#{
+  id: "f5c7e14a-3b92-4d81-a6e0-7c2f9b8d4e31",
+  version: 1,
+  tenantId: "tenant-001",
+  createdAt: utcDateTime.fromISO("2024-01-15T10:30:00Z"),
+  updatedAt: utcDateTime.fromISO("2024-01-15T10:30:00Z"),
+  active: true,
+  name: #[#{ use: NameUse.official, family: "Smith", given: #["John", "Michael"] }],
+  birthDate: plainDate.fromISO("1985-03-15"),
+  gender: AdministrativeGender.male,
+  mrn: "MRN-2024-001",
+  telecom: #[#{ system: ContactSystem.phone, value: "+1-555-0123", use: ContactUse.mobile }],
+}, #{ title: "Adult male patient" })
 model Patient extends HealthcareBaseEntity {
   @doc("Whether this patient record is in active use")
   active: boolean;
