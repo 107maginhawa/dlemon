@@ -103,10 +103,10 @@ model ProvenanceRecord extends HealthcareBaseEntity {
   @doc("Reference to the resource(s) this provenance record is about")
   target: Reference[];
 
-  @doc("When the activity occurred")
+  @doc("When the activity occurred (Mutually exclusive with occurredPeriod — exactly one must be provided)")
   occurredDateTime?: utcDateTime;
 
-  @doc("When the activity occurred (period)")
+  @doc("When the activity occurred (period) (Mutually exclusive with occurredDateTime — exactly one must be provided)")
   occurredPeriod?: Period;
 
   @doc("When the provenance was recorded")
@@ -144,9 +144,9 @@ model ProvenanceRecord extends HealthcareBaseEntity {
 model CreateProvenanceRequest {
   @doc("Reference to the resource(s) this provenance record is about")
   target: Reference[];
-  @doc("When the activity occurred")
+  @doc("When the activity occurred (Mutually exclusive with occurredPeriod — exactly one must be provided)")
   occurredDateTime?: utcDateTime;
-  @doc("When the activity occurred (period)")
+  @doc("When the activity occurred (period) (Mutually exclusive with occurredDateTime — exactly one must be provided)")
   occurredPeriod?: Period;
   @doc("Policy or plan that authorized the activity")
   policy?: string[];
@@ -175,7 +175,7 @@ interface ProvenanceManagement {
   create(
     @body body: CreateProvenanceRequest
   ): {
-    @statusCode _: 201;
+    @statusCode statusCode: 201;
     @body body: ProvenanceRecord;
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
@@ -186,7 +186,7 @@ interface ProvenanceManagement {
   get(
     @path id: UUID
   ): {
-    @statusCode _: 200;
+    @statusCode statusCode: 200;
     @body body: ProvenanceRecord;
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
@@ -201,7 +201,7 @@ interface ProvenanceManagement {
     @query recorded?: string,
     ...PaginationQuery
   ): {
-    @statusCode _: 200;
+    @statusCode statusCode: 200;
     @body body: PaginatedResponse<ProvenanceRecord>;
   } | ApiUnauthorizedResponse | ApiForbiddenResponse;
 }

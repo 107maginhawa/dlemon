@@ -337,7 +337,7 @@ enum ReconciliationMedStatus {
  * Action to be taken on a medication as a result of reconciliation.
  */
 enum ReconciliationAction {
-  continue,
+  `continue`,
   discontinue,
   modify,
   add,
@@ -566,4 +566,42 @@ interface ReconciliationManagement {
     @statusCode statusCode: 200;
     @body result: PaginatedResponse<MedicationReconciliation>;
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+}
+
+@tag("Healthcare:Ancillary")
+@useAuth(bearerAuth)
+interface AdherenceManagement {
+  @doc("Record a medication adherence assessment.")
+  @operationId("createAdherenceRecord")
+  @post
+  create(
+    @body body: AdherenceRecord
+  ): {
+    @statusCode statusCode: 201;
+    @body body: AdherenceRecord;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Get an adherence record by ID.")
+  @operationId("getAdherenceRecord")
+  @get
+  @route("/{id}")
+  get(
+    @path id: UUID
+  ): {
+    @statusCode statusCode: 200;
+    @body body: AdherenceRecord;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Search adherence records.")
+  @operationId("searchAdherenceRecords")
+  @get
+  @route("/search")
+  search(
+    @query patient?: string,
+    @query medication?: string,
+    ...PaginationQuery
+  ): {
+    @statusCode statusCode: 200;
+    @body body: PaginatedResponse<AdherenceRecord>;
+  } | ApiUnauthorizedResponse | ApiForbiddenResponse;
 }

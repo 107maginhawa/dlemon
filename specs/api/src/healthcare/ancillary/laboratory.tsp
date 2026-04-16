@@ -502,4 +502,56 @@ interface LabVerificationService {
     @statusCode statusCode: 200;
     @body verification: LabResultVerification;
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
+
+  @doc("Search lab result verifications.")
+  @operationId("searchLabVerifications")
+  @get
+  @route("/search")
+  searchVerifications(
+    @query reportId?: string,
+    @query status?: string,
+    @query verifiedBy?: string,
+    ...PaginationQuery
+  ): {
+    @statusCode statusCode: 200;
+    @body body: PaginatedResponse<LabResultVerification>;
+  } | ApiUnauthorizedResponse | ApiForbiddenResponse;
+}
+
+@tag("Healthcare:Ancillary")
+@useAuth(bearerAuth)
+interface ResultPanelManagement {
+  @doc("Create a result panel grouping.")
+  @operationId("createResultPanel")
+  @post
+  create(
+    @body body: ResultPanel
+  ): {
+    @statusCode statusCode: 201;
+    @body body: ResultPanel;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Get a result panel by ID.")
+  @operationId("getResultPanel")
+  @get
+  @route("/{id}")
+  get(
+    @path id: UUID
+  ): {
+    @statusCode statusCode: 200;
+    @body body: ResultPanel;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Search result panels.")
+  @operationId("searchResultPanels")
+  @get
+  @route("/search")
+  search(
+    @query code?: string,
+    @query status?: string,
+    ...PaginationQuery
+  ): {
+    @statusCode statusCode: 200;
+    @body body: PaginatedResponse<ResultPanel>;
+  } | ApiUnauthorizedResponse | ApiForbiddenResponse;
 }

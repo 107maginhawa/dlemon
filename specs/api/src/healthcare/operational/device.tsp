@@ -27,21 +27,6 @@ namespace Healthcare.Operational.Devices;
 // Enumerations
 // ---------------------------------------------------------------------------
 
-@doc("The availability status of a device. Aligns with FHIR FHIRDeviceStatus.")
-enum DeviceStatus {
-  @doc("The device is available for use")
-  active,
-
-  @doc("The device is no longer available for use (e.g., lost, expired, damaged)")
-  inactive,
-
-  @doc("The device was entered in error and should not be used")
-  enteredInError,
-
-  @doc("The device status is unknown")
-  `unknown`: "unknown",
-}
-
 @doc("The type of name associated with a device.")
 enum DeviceNameType {
   @doc("The name as known by the user of the device")
@@ -346,11 +331,7 @@ model DeviceSearchParams {
   /** Filter by manufacturer name (partial match). */
   @query manufacturer?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching DeviceAssignment resources. */
@@ -370,11 +351,7 @@ model DeviceAssignmentSearchParams {
   /** Filter by encounter reference id. */
   @query encounter?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching DeviceMetric resources. */
@@ -388,11 +365,7 @@ model DeviceMetricSearchParams {
   /** Filter by category. */
   @query category?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

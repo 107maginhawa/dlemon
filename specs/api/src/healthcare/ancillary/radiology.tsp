@@ -299,7 +299,7 @@ model RadiologyAddendum {
  */
 model RadiologyReport extends HealthcareBaseEntity {
   /** Current lifecycle status of the radiology report. */
-  status: ImagingStudyStatus;
+  status: DiagnosticReportStatus;
 
   /** Reference to the ImagingStudy this report is based on. */
   study: Reference;
@@ -360,7 +360,7 @@ model RadiologyReportSearchParams {
   studyId?: string;
 
   /** Filter by report status. */
-  status?: ImagingStudyStatus;
+  status?: DiagnosticReportStatus;
 
   /** Earliest issued date of the report. */
   dateFrom?: utcDateTime;

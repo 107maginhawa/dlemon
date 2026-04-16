@@ -24,94 +24,6 @@ using Healthcare.Core.Terminology;
 namespace Healthcare.Support.Tasks;
 
 // ---------------------------------------------------------------------------
-// Enumerations
-// ---------------------------------------------------------------------------
-
-@doc("The current status of a task. Aligns with FHIR TaskStatus.")
-enum TaskStatus {
-  @doc("The task is yet to be acted upon")
-  draft,
-
-  @doc("The task is ready to be acted upon and action is sought")
-  requested,
-
-  @doc("A potential performer has claimed ownership of the task and is evaluating whether to perform it")
-  received,
-
-  @doc("The potential performer has agreed to execute the task but has not yet started work")
-  accepted,
-
-  @doc("The potential performer who claimed ownership of the task has decided not to execute it prior to performing any action")
-  rejected,
-
-  @doc("The task is ready to be performed, but no action has yet been taken; used in place of requested/received/accepted/rejected when request assignment is not relevant")
-  ready,
-
-  @doc("The task was not completed")
-  cancelled,
-
-  @doc("The task has been started but is not yet complete")
-  inProgress,
-
-  @doc("The task has been started but work has been paused")
-  onHold,
-
-  @doc("The task was attempted but could not be completed due to some error")
-  failed,
-
-  @doc("The task has been completed")
-  completed,
-
-  @doc("The task should never have existed and is retained only because of the possibility it may have used")
-  enteredInError,
-}
-
-@doc("Distinguishes whether the task is a proposal, plan or full order. Aligns with FHIR TaskIntent.")
-enum TaskIntent {
-  @doc("The request is a suggestion made by someone/something that doesn't have an intention to ensure it occurs and without providing an authorization to act")
-  proposal,
-
-  @doc("The request represents an intention to ensure something occurs without providing an authorization for others to act")
-  plan,
-
-  @doc("The request represents a request/demand and authorization for action")
-  order,
-
-  @doc("The request represents an original authorization for action")
-  originalOrder,
-
-  @doc("The request represents an automatically generated supplemental authorization for action based on a parent authorization")
-  reflexOrder,
-
-  @doc("The request represents the view of an authorization instantiated by a fulfilling system representing the details of the fulfiller's intention to act upon a submitted order")
-  fillerOrder,
-
-  @doc("The request represents an instance for the particular order, for example a medication administration record")
-  instanceOrder,
-
-  @doc("The request represents a component or option for a RequestGroup that establishes timing, conditionality and/or other constraints among a set of requests")
-  option,
-
-  @doc("The task is unknown in context")
-  `unknown`: "unknown",
-}
-
-@doc("Identifies the priority of the task. Aligns with FHIR RequestPriority.")
-enum TaskPriority {
-  @doc("The task has normal priority")
-  routine,
-
-  @doc("The task should be actioned promptly — higher priority than routine")
-  urgent,
-
-  @doc("The task should be actioned as soon as possible — higher priority than urgent")
-  asap,
-
-  @doc("The task should be actioned immediately — highest possible priority; used for life-threatening situations")
-  stat,
-}
-
-// ---------------------------------------------------------------------------
 // Supporting models
 // ---------------------------------------------------------------------------
 
@@ -287,11 +199,7 @@ model TaskSearchParams {
   /** Filter by task code. */
   @query code?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

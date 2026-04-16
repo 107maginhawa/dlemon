@@ -254,11 +254,7 @@ model AIOutputSearchParams {
   /** Filter by regulatory status. */
   @query regulatoryStatus?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

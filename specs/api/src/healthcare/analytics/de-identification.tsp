@@ -155,7 +155,7 @@ model PseudonymizationMap extends HealthcareBaseEntity {
   /** The de-identification profile under which this pseudonymisation mapping was created. */
   profile: Reference;
 
-  /** The original real-world identifier that was pseudonymised. */
+  @doc("SENSITIVE — Contains PHI (Protected Health Information). This field MUST be stored encrypted at rest. Access restricted to authorized privacy officers only. Never included in standard API responses.")
   sourceIdentifier: string;
 
   /** The pseudonym assigned to the source identifier. */
@@ -229,11 +229,7 @@ model DeIdentificationProfileSearchParams {
   /** Filter by profile status. */
   @query status?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +312,7 @@ interface DeIdentificationManagement {
   /** Execute a de-identification pipeline against a resource using a specified profile. */
   @post
   @operationId("executeDeIdentification")
+  @extension("x-security-required-roles", #["privacy-officer"])
   @route("/execute")
   execute(
     @body body: DeIdentificationExecuteRequest,

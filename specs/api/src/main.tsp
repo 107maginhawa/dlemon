@@ -397,6 +397,14 @@ namespace MonobaseHealthcareAPI {
   @route("/healthcare/radiology/reports")
   interface RadiologyReportManagement extends Healthcare.Ancillary.Radiology.RadiologyReportManagement {}
 
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/pharmacy/adherence")
+  interface AdherenceManagement extends Healthcare.Ancillary.Pharmacy.AdherenceManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/laboratory/panels")
+  interface ResultPanelManagement extends Healthcare.Ancillary.Laboratory.ResultPanelManagement {}
+
   // ========================================================================
   // HEALTHCARE SUPPORT
   // ========================================================================

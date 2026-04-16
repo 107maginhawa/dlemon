@@ -111,33 +111,6 @@ enum ExportFormat {
   fhirBundle,
 }
 
-@doc("The purpose of use for a research data extract, aligning with HIPAA minimum-necessary principles.")
-enum PurposeOfUse {
-  @doc("Treatment — use for the treatment of an individual")
-  treatment,
-
-  @doc("Payment — use for billing and payment operations")
-  payment,
-
-  @doc("Operations — use for healthcare operations")
-  operations,
-
-  @doc("Research — use for research with patient authorisation or IRB waiver")
-  research,
-
-  @doc("Public health reporting")
-  publicHealth,
-
-  @doc("Quality improvement and performance measurement")
-  qualityImprovement,
-
-  @doc("Education and training")
-  education,
-
-  @doc("Legal and regulatory compliance")
-  legal,
-}
-
 @doc("The type of transformation applied in a data lineage record.")
 enum TransformationType {
   @doc("Data was copied verbatim from the source to the target")
@@ -322,7 +295,7 @@ model CohortEvaluateRequest {
 /** Response body for a cohort evaluation. */
 model CohortEvaluateResponse {
   /** The number of subjects matching the cohort criteria. */
-  count: int32;
+  count: int64;
 
   /** The ids of matching subjects, if requested and within the maxResults limit. */
   subjectIds?: string[];
@@ -349,11 +322,7 @@ model CohortSearchParams {
   /** Filter by author reference id. */
   @query author?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching ResearchExtract resources. */
@@ -370,11 +339,7 @@ model ResearchExtractSearchParams {
   /** Filter by purpose of use. */
   @query purpose?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching DataLineageRecord resources. */
@@ -391,11 +356,7 @@ model DataLineageSearchParams {
   /** Filter by performer reference id. */
   @query performedBy?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

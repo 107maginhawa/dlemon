@@ -115,7 +115,7 @@ interface SignatureManagement {
   create(
     @body body: CreateSignatureRequest
   ): {
-    @statusCode _: 201;
+    @statusCode statusCode: 201;
     @body body: ElectronicSignature;
   } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
@@ -126,7 +126,7 @@ interface SignatureManagement {
   get(
     @path id: UUID
   ): {
-    @statusCode _: 200;
+    @statusCode statusCode: 200;
     @body body: ElectronicSignature;
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
@@ -140,7 +140,7 @@ interface SignatureManagement {
     @query type?: string,
     ...PaginationQuery
   ): {
-    @statusCode _: 200;
+    @statusCode statusCode: 200;
     @body body: PaginatedResponse<ElectronicSignature>;
   } | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
@@ -151,7 +151,18 @@ interface SignatureManagement {
   verify(
     @path id: UUID
   ): {
-    @statusCode _: 200;
+    @statusCode statusCode: 200;
+    @body body: ElectronicSignature;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Revoke an electronic signature. Sets the signature as invalid/withdrawn.")
+  @operationId("revokeSignature")
+  @post
+  @route("/{id}/revoke")
+  revoke(
+    @path id: UUID
+  ): {
+    @statusCode statusCode: 200;
     @body body: ElectronicSignature;
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
 }

@@ -432,11 +432,7 @@ model QuestionnaireSearchParams {
   /** Filter by code (system|code). */
   @query code?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching QuestionnaireResponse resources. */
@@ -453,11 +449,7 @@ model QuestionnaireResponseSearchParams {
   /** Filter by response status. */
   @query status?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

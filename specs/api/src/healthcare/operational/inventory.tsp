@@ -27,21 +27,6 @@ namespace Healthcare.Operational.Inventory;
 // Enumerations
 // ---------------------------------------------------------------------------
 
-@doc("The operational status of an inventory item.")
-enum InventoryItemStatus {
-  @doc("The item is actively stocked and available for use")
-  active,
-
-  @doc("The item is no longer being actively stocked or ordered")
-  inactive,
-
-  @doc("The item record was entered in error")
-  enteredInError,
-
-  @doc("The item status is unknown")
-  `unknown`: "unknown",
-}
-
 @doc("The status of an inventory batch or lot.")
 enum BatchStatus {
   @doc("The batch is available for use")
@@ -257,11 +242,7 @@ model InventoryItemSearchParams {
   /** Filter by manufacturer reference id. */
   @query manufacturer?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching InventoryBatch resources. */
@@ -278,11 +259,7 @@ model InventoryBatchSearchParams {
   /** Filter by expiration date (ISO 8601; batches expiring on or before this date). */
   @query expiresOnOrBefore?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 /** Query parameters for searching SupplyConsumption resources. */
@@ -308,11 +285,7 @@ model SupplyConsumptionSearchParams {
   /** Filter by consumed date (ISO 8601 date; inclusive end). */
   @query consumedTo?: string;
 
-  /** Page number (1-based). */
-  @query page?: int32;
-
-  /** Number of results per page. */
-  @query pageSize?: int32;
+  ...PaginationQuery;
 }
 
 // ---------------------------------------------------------------------------

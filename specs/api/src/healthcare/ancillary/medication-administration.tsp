@@ -93,10 +93,10 @@ model MedicationAdministration extends HealthcareBaseEntity {
    */
   supportingInformation?: Reference[];
 
-  /** Date/time the medication was administered (for instantaneous administrations). */
+  /** Date/time the medication was administered (for instantaneous administrations). (Mutually exclusive with effectivePeriod — exactly one must be provided) */
   effectiveDateTime?: utcDateTime;
 
-  /** Period over which the medication was administered (for infusions/extended administrations). */
+  /** Period over which the medication was administered (for infusions/extended administrations). (Mutually exclusive with effectiveDateTime — exactly one must be provided) */
   effectivePeriod?: Period;
 
   /** Personnel who performed the administration. */
