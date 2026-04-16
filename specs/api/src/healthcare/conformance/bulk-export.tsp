@@ -185,3 +185,113 @@ interface BulkExportService {
     @statusCode statusCode: 204;
   } | ApiNotFoundResponse | ApiUnauthorizedResponse | ApiForbiddenResponse | ApiInternalServerErrorResponse;
 }
+
+// ---------------------------------------------------------------------------
+// FHIR Bulk Data $import
+// ---------------------------------------------------------------------------
+
+@doc("Status of a bulk import job.")
+enum BulkImportStatus {
+  @doc("Import request accepted, processing not yet started")
+  accepted,
+  @doc("Import is in progress")
+  inProgress,
+  @doc("Import completed successfully")
+  complete,
+  @doc("Import encountered errors")
+  error,
+  @doc("Import was cancelled")
+  cancelled,
+}
+
+@doc("Parameters for a FHIR Bulk Data $import kickoff request.")
+model BulkImportKickoffParams {
+  @doc("The type of input — currently only 'ndjson' is supported")
+  inputFormat?: string;
+
+  @doc("Input source files to import")
+  inputSource: BulkImportInputFile[];
+
+  @doc("Storage detail — how/where the data is available")
+  storageDetail?: Record<unknown>;
+}
+
+@doc("An input file for bulk import.")
+model BulkImportInputFile {
+  @doc("FHIR resource type contained in this file")
+  type: string;
+
+  @doc("URL where the NDJSON file can be retrieved")
+  url: string;
+}
+
+@doc("Status response for a bulk import job.")
+model BulkImportStatusResponse {
+  @doc("Current status of the import")
+  status: BulkImportStatus;
+
+  @doc("Progress description")
+  progress?: string;
+
+  @doc("Number of resources successfully imported")
+  resourcesImported?: int64;
+
+  @doc("Number of resources that failed to import")
+  resourcesFailed?: int64;
+
+  @doc("Error details if status is 'error'")
+  errors?: BulkImportError[];
+}
+
+@doc("An error encountered during bulk import.")
+model BulkImportError {
+  @doc("FHIR resource type that failed")
+  type: string;
+
+  @doc("The URL of the source file")
+  url: string;
+
+  @doc("Number of resources that failed from this file")
+  count: int64;
+
+  @doc("Error details")
+  details?: string;
+}
+
+@doc("FHIR Bulk Data $import service. Complement to $export for loading data into the system.")
+@tag("Healthcare:Conformance")
+@useAuth(bearerAuth)
+interface BulkImportService {
+  @doc("Kick off a FHIR Bulk Data $import operation.")
+  @operationId("kickoffBulkImport")
+  @extension("x-security-required-roles", #["admin"])
+  @post
+  @route("/$import")
+  kickoffImport(
+    @body params: BulkImportKickoffParams
+  ): {
+    @statusCode statusCode: 202;
+    @header("Content-Location") contentLocation: string;
+  } | ApiBadRequestResponse | ApiUnauthorizedResponse | ApiForbiddenResponse;
+
+  @doc("Check the status of a bulk import job.")
+  @operationId("getBulkImportStatus")
+  @extension("x-security-required-roles", #["admin"])
+  @get
+  @route("/$import-status/{importId}")
+  getImportStatus(
+    @path importId: string
+  ): {
+    @statusCode statusCode: 200;
+    @body body: BulkImportStatusResponse;
+  } | ApiNotFoundResponse | ApiUnauthorizedResponse;
+
+  @doc("Cancel an in-progress bulk import job.")
+  @operationId("cancelBulkImport")
+  @extension("x-security-required-roles", #["admin"])
+  @delete
+  @route("/$import-status/{importId}")
+  cancelImport(
+    @path importId: string
+  ): ApiNoContentResponse | ApiNotFoundResponse | ApiUnauthorizedResponse;
+}

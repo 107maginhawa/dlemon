@@ -275,6 +275,40 @@ model UpdatePatientRequest {
   insuranceCoverage?: Reference[] | null;
 }
 
+@doc("Request to merge two patient records into one")
+model PatientMergeRequest {
+  @doc("The patient record to keep (target)")
+  targetPatientId: UUID;
+  @doc("The patient record to merge into the target (source — will be marked as replaced)")
+  sourcePatientId: UUID;
+  @doc("Reason for the merge")
+  reason: string;
+  @doc("Whether to preview the merge without executing")
+  dryRun?: boolean;
+}
+
+@doc("Request to reverse a previous patient merge")
+model PatientUnmergeRequest {
+  @doc("The merged (target) patient ID")
+  targetPatientId: UUID;
+  @doc("The original source patient ID to restore")
+  sourcePatientId: UUID;
+  @doc("Reason for the unmerge")
+  reason: string;
+}
+
+@doc("Result of a patient merge or unmerge operation")
+model PatientMergeResult {
+  @doc("Whether the operation succeeded")
+  success: boolean;
+  @doc("The surviving patient record")
+  targetPatient: Patient;
+  @doc("Number of records updated")
+  recordsUpdated: int64;
+  @doc("Details of what was merged/unmerged")
+  details?: string;
+}
+
 /**
  * Patient Management Module
  *
@@ -363,5 +397,29 @@ namespace PatientModule {
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse;
+
+    @doc("Merge two patient records. The source patient record is marked as replaced and all references are updated to point to the target patient.")
+    @operationId("mergePatients")
+    @extension("x-security-required-roles", #["admin"])
+    @post
+    @route("/merge")
+    mergePatients(
+      @body body: PatientMergeRequest
+    ): ApiOkResponse<PatientMergeResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse;
+
+    @doc("Unmerge previously merged patient records. Reverses a merge operation and restores the source patient record.")
+    @operationId("unmergePatients")
+    @extension("x-security-required-roles", #["admin"])
+    @post
+    @route("/unmerge")
+    unmergePatients(
+      @body body: PatientUnmergeRequest
+    ): ApiOkResponse<PatientMergeResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse;
   }
 }

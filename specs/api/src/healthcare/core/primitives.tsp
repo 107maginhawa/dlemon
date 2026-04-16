@@ -477,6 +477,9 @@ model HealthcareBaseEntity extends BaseEntity {
 
   @doc("Additional content defined by implementations that extends the base resource definition")
   extensions?: ResourceExtension[];
+
+  @doc("Sensitivity labels for enhanced access control. Resources tagged with sensitive categories require additional consent and audit beyond standard clinical data access.")
+  sensitivityLabels?: SensitivityLabel[];
 }
 
 // ---------------------------------------------------------------------------
@@ -561,4 +564,51 @@ enum PurposeOfUse {
   emergency: "ETREAT",
   @doc("Research purposes (requires IRB approval or consent)")
   research: "HRESCH",
+}
+
+// ---------------------------------------------------------------------------
+// Sensitive Data Classification
+// ---------------------------------------------------------------------------
+
+@doc("Classification of sensitive health data categories requiring enhanced access controls. Used to tag resources containing protected information under 42 CFR Part 2, state laws, and international privacy regulations.")
+enum SensitiveDataCategory {
+  @doc("Mental health records — may require separate consent under state laws")
+  mentalHealth: "mental-health",
+  @doc("Substance use disorder records — protected under 42 CFR Part 2 (US), requiring explicit consent for each disclosure")
+  substanceUseDisorder: "substance-use-disorder",
+  @doc("HIV/AIDS status and related test results — restricted in many jurisdictions")
+  hivAids: "hiv-aids",
+  @doc("Sexually transmitted infection records")
+  sexuallyTransmittedInfection: "sti",
+  @doc("Reproductive health including contraception, pregnancy termination, fertility treatment")
+  reproductiveHealth: "reproductive-health",
+  @doc("Genetic and genomic data — subject to GINA (US), additional consent requirements")
+  geneticData: "genetic-data",
+  @doc("Sexual orientation and gender identity (SOGI) data")
+  sexualOrientationGenderIdentity: "sogi",
+  @doc("Psychotherapy notes — highest protection level under HIPAA, separate from general MH records")
+  psychotherapyNotes: "psychotherapy-notes",
+  @doc("Child/adolescent records with minor confidentiality protections")
+  adolescentConfidential: "adolescent-confidential",
+  @doc("Domestic violence / abuse records")
+  domesticViolence: "domestic-violence",
+  @doc("Worker's compensation records")
+  workersCompensation: "workers-compensation",
+  @doc("Celebrity/VIP records requiring enhanced access monitoring")
+  vipRecord: "vip-record",
+}
+
+@doc("Metadata for marking a resource as containing sensitive data. Applied via the sensitivityLabels field on HealthcareBaseEntity.")
+model SensitivityLabel {
+  @doc("The category of sensitive data")
+  category: SensitiveDataCategory;
+
+  @doc("Legal basis requiring this sensitivity classification")
+  legalBasis?: string;
+
+  @doc("Whether break-glass access is permitted for this category")
+  breakGlassPermitted: boolean;
+
+  @doc("Additional consent required beyond standard treatment consent")
+  additionalConsentRequired: boolean;
 }

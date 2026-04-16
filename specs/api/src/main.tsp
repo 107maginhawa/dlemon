@@ -62,6 +62,17 @@ import "./healthcare/clinical/hospital/behavioral-health.tsp";
 import "./healthcare/clinical/hospital/wound-care.tsp";
 import "./healthcare/clinical/hospital/code-blue.tsp";
 
+// Hospital clinical specialties (wave 3)
+import "./healthcare/clinical/hospital/specialty/respiratory-therapy.tsp";
+import "./healthcare/clinical/hospital/specialty/cardiology.tsp";
+import "./healthcare/clinical/hospital/specialty/rehab-therapy.tsp";
+import "./healthcare/clinical/hospital/specialty/palliative-hospice.tsp";
+import "./healthcare/clinical/hospital/specialty/post-acute-care.tsp";
+import "./healthcare/clinical/hospital/specialty/neonatal.tsp";
+
+// Clinical — ADT events
+import "./healthcare/clinical/adt-events.tsp";
+
 // Administrative — scheduling, bed management, insurance, claims, prior auth, credentialing
 import "./healthcare/administrative/scheduling.tsp";
 import "./healthcare/administrative/bed-management.tsp";
@@ -113,6 +124,18 @@ import "./healthcare/support/telehealth.tsp";
 import "./healthcare/support/clinical-outcomes.tsp";
 import "./healthcare/support/data-import.tsp";
 import "./healthcare/support/workflow-automation.tsp";
+import "./healthcare/support/proxy-access.tsp";
+import "./healthcare/support/break-glass.tsp";
+import "./healthcare/support/mandatory-reporting.tsp";
+import "./healthcare/support/public-health/electronic-case-reporting.tsp";
+import "./healthcare/support/public-health/immunization-registry.tsp";
+import "./healthcare/support/public-health/vital-records.tsp";
+import "./healthcare/support/public-health/cancer-registry.tsp";
+import "./healthcare/support/public-health/surveillance.tsp";
+
+// Compliance — program management, privacy workflows
+import "./healthcare/compliance/compliance-program.tsp";
+import "./healthcare/compliance/privacy-workflow.tsp";
 
 // Operational — inventory, devices
 import "./healthcare/operational/inventory.tsp";
@@ -256,6 +279,14 @@ using TypeSpec.OpenAPI;
 // ============================================================================
 @tagMetadata("Healthcare:Hospital", #{
   description: "Hospital-specific clinical specialties and operational services. Emergency department, nursing assessments, clinical order management, ICU/critical care, labor and delivery, oncology, dialysis, behavioral health, environmental services, patient transport, dietary services, sterile processing, and mortuary services."
+})
+
+@tagMetadata("Healthcare:Compliance", #{
+  description: "Compliance and governance. Policy management, attestations, BAA lifecycle, CAPA tracking, data retention, legal holds, privacy workflows (amendment requests, accounting of disclosures, breach assessment/notification, privacy complaints)."
+})
+
+@tagMetadata("Healthcare:PublicHealth", #{
+  description: "Public health reporting and surveillance. Electronic case reporting (eCR), immunization registry integration (IIS), vital records (birth/death certificates), cancer registry abstraction, syndromic surveillance, electronic lab reporting (ELR), trauma registry."
 })
 
 namespace MonobaseHealthcareAPI {
@@ -1322,6 +1353,244 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Analytics")
   @route("/healthcare/analytics/dashboards")
   interface DashboardManagement extends Healthcare.Analytics.Reporting.DashboardManagement {}
+
+  // ========================================================================
+  // WAVE 3 — CLINICAL ADT EVENTS
+  // ========================================================================
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/adt-events")
+  interface ADTEventManagement extends Healthcare.Clinical.ADTEvents.ADTEventManagement {}
+
+  // ========================================================================
+  // WAVE 3 — CLINICAL HOSPITAL SPECIALTIES
+  // ========================================================================
+
+  // Respiratory Therapy
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/respiratory/orders")
+  interface RespiratoryOrderManagement extends Healthcare.Clinical.Hospital.Specialty.RespiratoryTherapy.RespiratoryOrderManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/respiratory/treatments")
+  interface RespiratoryTreatmentManagement extends Healthcare.Clinical.Hospital.Specialty.RespiratoryTherapy.RespiratoryTreatmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/respiratory/abg-results")
+  interface ABGResultManagement extends Healthcare.Clinical.Hospital.Specialty.RespiratoryTherapy.ABGResultManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/respiratory/pft")
+  interface PFTManagement extends Healthcare.Clinical.Hospital.Specialty.RespiratoryTherapy.PFTManagement {}
+
+  // Cardiology
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/cardiology/cath-records")
+  interface CardiacCathManagement extends Healthcare.Clinical.Hospital.Specialty.Cardiology.CardiacCathManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/cardiology/echo-reports")
+  interface EchoManagement extends Healthcare.Clinical.Hospital.Specialty.Cardiology.EchoManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/cardiology/ep-studies")
+  interface EPStudyManagement extends Healthcare.Clinical.Hospital.Specialty.Cardiology.EPStudyManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/cardiology/cardiac-rehab")
+  interface CardiacRehabManagement extends Healthcare.Clinical.Hospital.Specialty.Cardiology.CardiacRehabManagement {}
+
+  // Rehab Therapy
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/rehab/referrals")
+  interface RehabReferralManagement extends Healthcare.Clinical.Hospital.Specialty.RehabTherapy.RehabReferralManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/rehab/evaluations")
+  interface RehabEvaluationManagement extends Healthcare.Clinical.Hospital.Specialty.RehabTherapy.RehabEvaluationManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/rehab/sessions")
+  interface RehabSessionManagement extends Healthcare.Clinical.Hospital.Specialty.RehabTherapy.RehabSessionManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/rehab/functional-outcomes")
+  interface FunctionalOutcomeManagement extends Healthcare.Clinical.Hospital.Specialty.RehabTherapy.FunctionalOutcomeManagement {}
+
+  // Palliative / Hospice
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/palliative/goals-of-care")
+  interface GoalsOfCareManagement extends Healthcare.Clinical.Hospital.Specialty.PalliativeHospice.GoalsOfCareManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/palliative/symptom-assessments")
+  interface SymptomAssessmentManagement extends Healthcare.Clinical.Hospital.Specialty.PalliativeHospice.SymptomAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/palliative/hospice-eligibility")
+  interface HospiceEligibilityManagement extends Healthcare.Clinical.Hospital.Specialty.PalliativeHospice.HospiceEligibilityManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/palliative/hospice-idt")
+  interface HospiceIDTManagement extends Healthcare.Clinical.Hospital.Specialty.PalliativeHospice.HospiceIDTManagement {}
+
+  // Post-Acute Care
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/post-acute/admissions")
+  interface PostAcuteAdmissionManagement extends Healthcare.Clinical.Hospital.Specialty.PostAcuteCare.PostAcuteAdmissionManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/post-acute/adl-assessments")
+  interface ADLAssessmentManagement extends Healthcare.Clinical.Hospital.Specialty.PostAcuteCare.ADLAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/post-acute/mds-assessments")
+  interface MDSAssessmentManagement extends Healthcare.Clinical.Hospital.Specialty.PostAcuteCare.MDSAssessmentManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/post-acute/home-health-certifications")
+  interface HomeHealthCertificationManagement extends Healthcare.Clinical.Hospital.Specialty.PostAcuteCare.HomeHealthCertificationManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/post-acute/oasis-assessments")
+  interface OASISAssessmentManagement extends Healthcare.Clinical.Hospital.Specialty.PostAcuteCare.OASISAssessmentManagement {}
+
+  // Neonatal
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/neonatal/admissions")
+  interface NICUAdmissionManagement extends Healthcare.Clinical.Hospital.Specialty.Neonatal.NICUAdmissionManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/neonatal/vitals")
+  interface NeonatalVitalsManagement extends Healthcare.Clinical.Hospital.Specialty.Neonatal.NeonatalVitalsManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/neonatal/feeding-records")
+  interface FeedingRecordManagement extends Healthcare.Clinical.Hospital.Specialty.Neonatal.FeedingRecordManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/hospital/neonatal/newborn-screening")
+  interface NewbornScreeningManagement extends Healthcare.Clinical.Hospital.Specialty.Neonatal.NewbornScreeningManagement {}
+
+  // ========================================================================
+  // WAVE 3 — SUPPORT (proxy access, break glass, mandatory reporting)
+  // ========================================================================
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/proxy-access")
+  interface ProxyAccessManagement extends Healthcare.Support.ProxyAccess.ProxyAccessManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/break-glass")
+  interface BreakGlassService extends Healthcare.Support.BreakGlass.BreakGlassService {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/mandatory-reporting")
+  interface MandatoryReportManagement extends Healthcare.Support.MandatoryReporting.MandatoryReportManagement {}
+
+  // ========================================================================
+  // WAVE 3 — PUBLIC HEALTH
+  // ========================================================================
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/ecr")
+  interface ECRManagement extends Healthcare.Support.PublicHealth.ECR.ECRManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/iis/submissions")
+  interface IISSubmissionManagement extends Healthcare.Support.PublicHealth.ImmunizationRegistry.IISSubmissionManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/iis/queries")
+  interface IISQueryManagement extends Healthcare.Support.PublicHealth.ImmunizationRegistry.IISQueryManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/vital-records/births")
+  interface BirthCertificateManagement extends Healthcare.Support.PublicHealth.VitalRecords.BirthCertificateManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/vital-records/deaths")
+  interface DeathCertificateManagement extends Healthcare.Support.PublicHealth.VitalRecords.DeathCertificateManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/vital-records/fetal-deaths")
+  interface FetalDeathReportManagement extends Healthcare.Support.PublicHealth.VitalRecords.FetalDeathReportManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/cancer-registry/cases")
+  interface CancerRegistryCaseManagement extends Healthcare.Support.PublicHealth.CancerRegistry.CancerRegistryCaseManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/cancer-registry/abstracts")
+  interface CancerAbstractManagement extends Healthcare.Support.PublicHealth.CancerRegistry.CancerAbstractManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/surveillance/syndromic")
+  interface SyndromicSurveillanceManagement extends Healthcare.Support.PublicHealth.Surveillance.SyndromicSurveillanceManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/surveillance/elr")
+  interface ELRManagement extends Healthcare.Support.PublicHealth.Surveillance.ELRManagement {}
+
+  @tag("Healthcare:PublicHealth")
+  @route("/healthcare/public-health/surveillance/trauma")
+  interface TraumaRegistryManagement extends Healthcare.Support.PublicHealth.Surveillance.TraumaRegistryManagement {}
+
+  // ========================================================================
+  // WAVE 3 — COMPLIANCE
+  // ========================================================================
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/policies")
+  interface CompliancePolicyManagement extends Healthcare.Compliance.ComplianceProgram.CompliancePolicyManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/attestations")
+  interface PolicyAttestationManagement extends Healthcare.Compliance.ComplianceProgram.PolicyAttestationManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/baa-records")
+  interface BAARecordManagement extends Healthcare.Compliance.ComplianceProgram.BAARecordManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/capa")
+  interface CAPARecordManagement extends Healthcare.Compliance.ComplianceProgram.CAPARecordManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/data-retention")
+  interface DataRetentionManagement extends Healthcare.Compliance.ComplianceProgram.DataRetentionManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/legal-holds")
+  interface LegalHoldManagement extends Healthcare.Compliance.ComplianceProgram.LegalHoldManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/privacy/amendments")
+  interface AmendmentRequestManagement extends Healthcare.Compliance.PrivacyWorkflow.AmendmentRequestManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/privacy/disclosures")
+  interface AccountingOfDisclosuresManagement extends Healthcare.Compliance.PrivacyWorkflow.AccountingOfDisclosuresManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/privacy/breach-assessments")
+  interface BreachAssessmentManagement extends Healthcare.Compliance.PrivacyWorkflow.BreachAssessmentManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/privacy/breach-notifications")
+  interface BreachNotificationManagement extends Healthcare.Compliance.PrivacyWorkflow.BreachNotificationManagement {}
+
+  @tag("Healthcare:Compliance")
+  @route("/healthcare/compliance/privacy/complaints")
+  interface PrivacyComplaintManagement extends Healthcare.Compliance.PrivacyWorkflow.PrivacyComplaintManagement {}
+
+  // ========================================================================
+  // WAVE 3 — CONFORMANCE (bulk import)
+  // ========================================================================
+
+  @tag("Healthcare:Conformance")
+  @route("/fhir")
+  interface BulkImportService extends Healthcare.Conformance.BulkExport.BulkImportService {}
 }
 
 /**
