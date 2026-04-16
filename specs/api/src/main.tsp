@@ -47,13 +47,16 @@ import "./healthcare/clinical/related-person.tsp";
 import "./healthcare/clinical/episode-of-care.tsp";
 import "./healthcare/clinical/flag.tsp";
 import "./healthcare/clinical/composition.tsp";
+import "./healthcare/clinical/surgical-management.tsp";
+import "./healthcare/clinical/clinical-communication.tsp";
 
-// Administrative — scheduling, bed management, insurance, claims, prior auth
+// Administrative — scheduling, bed management, insurance, claims, prior auth, credentialing
 import "./healthcare/administrative/scheduling.tsp";
 import "./healthcare/administrative/bed-management.tsp";
 import "./healthcare/administrative/insurance.tsp";
 import "./healthcare/administrative/claims.tsp";
 import "./healthcare/administrative/prior-authorization.tsp";
+import "./healthcare/administrative/staff-credentialing.tsp";
 
 // Ancillary — laboratory, pharmacy, radiology, dental, medication catalog
 import "./healthcare/ancillary/laboratory.tsp";
@@ -62,6 +65,7 @@ import "./healthcare/ancillary/radiology.tsp";
 import "./healthcare/ancillary/dental.tsp";
 import "./healthcare/ancillary/medication.tsp";
 import "./healthcare/ancillary/medication-administration.tsp";
+import "./healthcare/ancillary/blood-bank.tsp";
 
 // Support — care planning, consent, CDS hooks, SDOH, provenance, signatures, questionnaires, tasks
 import "./healthcare/support/care-plan.tsp";
@@ -72,10 +76,20 @@ import "./healthcare/support/provenance.tsp";
 import "./healthcare/support/signature.tsp";
 import "./healthcare/support/questionnaire.tsp";
 import "./healthcare/support/task.tsp";
+import "./healthcare/support/incident-reporting.tsp";
+import "./healthcare/support/infection-control.tsp";
 
 // Operational — inventory, devices
 import "./healthcare/operational/inventory.tsp";
 import "./healthcare/operational/device.tsp";
+
+// Conformance — FHIR capability statement, operations, terminology, bulk export, subscriptions, IPS
+import "./healthcare/conformance/capability-statement.tsp";
+import "./healthcare/conformance/fhir-operations.tsp";
+import "./healthcare/conformance/terminology-service.tsp";
+import "./healthcare/conformance/bulk-export.tsp";
+import "./healthcare/conformance/subscriptions.tsp";
+import "./healthcare/conformance/ips.tsp";
 
 // Analytics — de-identification, cohorts, AI metadata
 import "./healthcare/analytics/de-identification.tsp";
@@ -179,6 +193,13 @@ using TypeSpec.OpenAPI;
 // ============================================================================
 @tagMetadata("Healthcare:Analytics", #{
   description: "Analytics, research, and AI. De-identification profiles, cohort definitions, research data extracts, data lineage tracking, and AI output metadata with confidence scores and evidence sources."
+})
+
+// ============================================================================
+// TAG METADATA — Healthcare Conformance
+// ============================================================================
+@tagMetadata("Healthcare:Conformance", #{
+  description: "FHIR conformance and interoperability. CapabilityStatement, FHIR operations ($match, $everything, $validate, $document), terminology services ($lookup, $expand, $validate-code, $translate), bulk data export ($export), FHIR subscriptions, and International Patient Summary (IPS) generation."
 })
 
 namespace MonobaseHealthcareAPI {
@@ -513,6 +534,106 @@ namespace MonobaseHealthcareAPI {
   @tag("Healthcare:Analytics")
   @route("/healthcare/analytics/ai-outputs")
   interface AIOutputManagement extends Healthcare.Analytics.AIMetadata.AIOutputManagement {}
+
+  // ========================================================================
+  // HEALTHCARE CLINICAL (new: surgical, communication)
+  // ========================================================================
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/surgical-cases")
+  interface SurgicalCaseManagement extends Healthcare.Clinical.Surgical.SurgicalCaseManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/operating-rooms")
+  interface OperatingRoomManagement extends Healthcare.Clinical.Surgical.OperatingRoomManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/anesthesia-records")
+  interface AnesthesiaRecordManagement extends Healthcare.Clinical.Surgical.AnesthesiaRecordManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/handoffs")
+  interface ClinicalHandoffManagement extends Healthcare.Clinical.Communication.ClinicalHandoffManagement {}
+
+  @tag("Healthcare:Clinical")
+  @route("/healthcare/clinical/messages")
+  interface ClinicalMessageManagement extends Healthcare.Clinical.Communication.ClinicalMessageManagement {}
+
+  // ========================================================================
+  // HEALTHCARE ADMINISTRATIVE (new: credentialing)
+  // ========================================================================
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/credentialing/records")
+  interface CredentialingManagement extends Healthcare.Administrative.Credentialing.CredentialingManagement {}
+
+  @tag("Healthcare:Administrative")
+  @route("/healthcare/credentialing/privileges")
+  interface PrivilegeManagement extends Healthcare.Administrative.Credentialing.PrivilegeManagement {}
+
+  // ========================================================================
+  // HEALTHCARE ANCILLARY (new: blood bank)
+  // ========================================================================
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/blood-bank/products")
+  interface BloodProductManagement extends Healthcare.Ancillary.BloodBank.BloodProductManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/blood-bank/crossmatch")
+  interface CrossmatchManagement extends Healthcare.Ancillary.BloodBank.CrossmatchManagement {}
+
+  @tag("Healthcare:Ancillary")
+  @route("/healthcare/blood-bank/transfusions")
+  interface TransfusionManagement extends Healthcare.Ancillary.BloodBank.TransfusionManagement {}
+
+  // ========================================================================
+  // HEALTHCARE SUPPORT (new: incident, infection)
+  // ========================================================================
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/quality/incidents")
+  interface IncidentReportManagement extends Healthcare.Support.IncidentReporting.IncidentReportManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/quality/measures")
+  interface QualityMeasureManagement extends Healthcare.Support.IncidentReporting.QualityMeasureManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/infection-control/surveillance")
+  interface InfectionSurveillanceManagement extends Healthcare.Support.InfectionControl.InfectionSurveillanceManagement {}
+
+  @tag("Healthcare:Support")
+  @route("/healthcare/infection-control/antibiograms")
+  interface AntibiogramManagement extends Healthcare.Support.InfectionControl.AntibiogramManagement {}
+
+  // ========================================================================
+  // HEALTHCARE CONFORMANCE (FHIR)
+  // ========================================================================
+
+  @tag("Healthcare:Conformance")
+  @route("/fhir")
+  interface CapabilityStatementService extends Healthcare.Conformance.Capabilities.CapabilityStatementService {}
+
+  @tag("Healthcare:Conformance")
+  @route("/fhir")
+  interface FHIROperationsService extends Healthcare.Conformance.Operations.FHIROperationsService {}
+
+  @tag("Healthcare:Conformance")
+  @route("/healthcare/terminology")
+  interface TerminologyService extends Healthcare.Conformance.Terminology.TerminologyService {}
+
+  @tag("Healthcare:Conformance")
+  @route("/fhir")
+  interface BulkExportService extends Healthcare.Conformance.BulkExport.BulkExportService {}
+
+  @tag("Healthcare:Conformance")
+  @route("/healthcare/subscriptions")
+  interface SubscriptionManagement extends Healthcare.Conformance.Subscriptions.SubscriptionManagement {}
+
+  @tag("Healthcare:Conformance")
+  @route("/fhir")
+  interface IPSService extends Healthcare.Conformance.IPS.IPSService {}
 }
 
 /**
