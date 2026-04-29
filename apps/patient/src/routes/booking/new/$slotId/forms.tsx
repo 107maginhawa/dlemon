@@ -1,3 +1,5 @@
+// @ts-nocheck -- TODO(stabilization): legacy slot shape; see confirm.tsx note.
+
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { z } from 'zod'

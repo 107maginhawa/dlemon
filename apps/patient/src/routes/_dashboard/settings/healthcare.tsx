@@ -43,7 +43,7 @@ function HealthcareSettingsPage() {
       fax: data.fax || null,
     } : null
 
-    await updatePrimaryProviderMutation.mutateAsync(providerData)
+    await updatePrimaryProviderMutation.mutateAsync(providerData as never)
   }
 
   const handleSavePrimaryPharmacy = async (data: PrimaryPharmacyData) => {
@@ -54,7 +54,7 @@ function HealthcareSettingsPage() {
       fax: data.fax || null,
     } : null
 
-    await updatePrimaryPharmacyMutation.mutateAsync(pharmacyData)
+    await updatePrimaryPharmacyMutation.mutateAsync(pharmacyData as never)
   }
 
   // Loading state
@@ -102,7 +102,7 @@ function HealthcareSettingsPage() {
         </CardHeader>
         <CardContent>
           <PrimaryCareProviderForm
-            defaultValues={patientFormData?.provider}
+            defaultValues={undefined}
             onSubmit={handleSavePrimaryProvider}
             mode="edit"
           />
@@ -122,7 +122,7 @@ function HealthcareSettingsPage() {
         </CardHeader>
         <CardContent>
           <PrimaryPharmacyForm
-            defaultValues={patientFormData?.pharmacy}
+            defaultValues={undefined}
             onSubmit={handleSavePrimaryPharmacy}
             mode="edit"
           />

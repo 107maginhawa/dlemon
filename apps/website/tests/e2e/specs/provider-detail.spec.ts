@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { PharmacistDetailPage } from '../pages/pharmacist-detail.page';
-import { PharmacistListPage } from '../pages/pharmacist-list.page';
+import { ProviderDetailPage } from '../pages/provider-detail.page';
+import { ProviderListPage } from '../pages/provider-list.page';
 import { makeBookingFormData, makeInvalidBookingData, makeTestSlotsForDay } from '../fixtures/test-data';
 import {
   createTestProvider,
@@ -13,7 +13,7 @@ import {
 let testProvider: CreatedProvider;
 
 test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
-  let pharmacistDetailPage: PharmacistDetailPage;
+  let providerDetailPage: ProviderDetailPage;
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
@@ -64,14 +64,14 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    pharmacistDetailPage = new PharmacistDetailPage(page);
+    providerDetailPage = new ProviderDetailPage(page);
   });
 
   test('should display provider information correctly', async () => {
     // Navigate directly to the test provider's detail page
-    await pharmacistDetailPage.goto(testProvider.id);
+    await providerDetailPage.goto(testProvider.id);
 
-    const info = await pharmacistDetailPage.getPharmacistInfo();
+    const info = await providerDetailPage.getProviderInfo();
 
     // Verify the displayed information matches our created provider
     expect(info.name).toContain(testProvider.name);
@@ -83,17 +83,17 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test('should navigate to detail page from list and display correct provider', async ({ page }) => {
-    const pharmacistListPage = new PharmacistListPage(page);
+    const providerListPage = new ProviderListPage(page);
 
     // Start from the list page
-    await pharmacistListPage.goto();
-    await pharmacistListPage.waitForPharmacistsToLoad();
+    await providerListPage.goto();
+    await providerListPage.waitForProvidersToLoad();
 
     // Search for our test provider
-    await pharmacistListPage.searchPharmacists(testProvider.name);
+    await providerListPage.searchProviders(testProvider.name);
 
     // Find and click on the test provider
-    const providerCards = pharmacistListPage.pharmacistCards;
+    const providerCards = providerListPage.providerCards;
     const count = await providerCards.count();
 
     let found = false;
@@ -101,7 +101,7 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
       const nameElement = providerCards.nth(i).locator('[data-testid="pharmacist-name"]');
       const name = await nameElement.textContent();
       if (name?.includes(testProvider.name)) {
-        await pharmacistListPage.clickPharmacistCard(i);
+        await providerListPage.clickProviderCard(i);
         found = true;
         break;
       }
@@ -112,7 +112,7 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
     // Verify we're on the detail page for the correct provider
     await expect(page).toHaveURL(new RegExp(`/pharmacists/${testProvider.id}`));
 
-    const info = await pharmacistDetailPage.getPharmacistInfo();
+    const info = await providerDetailPage.getProviderInfo();
     expect(info.name).toContain(testProvider.name);
   });
 
@@ -133,17 +133,17 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
       console.log('Failed to parse response:', e);
     }
 
-    await pharmacistDetailPage.goto(testProvider.id);
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.goto(testProvider.id);
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
     // Select tomorrow's date (second date button) since we created slots for tomorrow
     // Using 'Sat' as the date identifier (or 'Sat4Oct' for more specific matching)
-    await pharmacistDetailPage.selectDate('Sat');
+    await providerDetailPage.selectDate('Sat');
 
     // Wait for slots to load for the new date
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
-    const availableSlots = await pharmacistDetailPage.getAvailableTimeSlotCount();
+    const availableSlots = await providerDetailPage.getAvailableTimeSlotCount();
 
     // Should have at least some available slots (we created 6)
     expect(availableSlots).toBeGreaterThan(0);
@@ -151,37 +151,37 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test('should select time slot and verify selection', async () => {
-    await pharmacistDetailPage.goto(testProvider.id);
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.goto(testProvider.id);
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
-    const availableSlots = await pharmacistDetailPage.getAvailableTimeSlotCount();
+    const availableSlots = await providerDetailPage.getAvailableTimeSlotCount();
     expect(availableSlots).toBeGreaterThan(0);
 
     // Select first available slot
-    await pharmacistDetailPage.selectTimeSlot(0);
+    await providerDetailPage.selectTimeSlot(0);
 
     // Verify slot is selected
-    const isSelected = await pharmacistDetailPage.isTimeSlotSelected(0);
+    const isSelected = await providerDetailPage.isTimeSlotSelected(0);
     expect(isSelected).toBe(true);
 
     // Clicking again should deselect
-    await pharmacistDetailPage.selectTimeSlot(0);
-    const isDeselected = await pharmacistDetailPage.isTimeSlotSelected(0);
+    await providerDetailPage.selectTimeSlot(0);
+    const isDeselected = await providerDetailPage.isTimeSlotSelected(0);
     expect(isDeselected).toBe(false);
   });
 
   test('should redirect to patient app when clicking Continue to Book', async ({ page, context }) => {
-    await pharmacistDetailPage.goto(testProvider.id);
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.goto(testProvider.id);
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
     // Select a time slot
-    await pharmacistDetailPage.selectTimeSlot(0);
+    await providerDetailPage.selectTimeSlot(0);
 
     // Listen for new page (tab) opening
     const pagePromise = context.waitForEvent('page');
 
     // Click "Continue to Book"
-    await pharmacistDetailPage.bookAppointmentButton.click();
+    await providerDetailPage.bookAppointmentButton.click();
 
     // Wait for new tab to open
     const newPage = await pagePromise;
@@ -199,45 +199,45 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test('should handle date changes and load new slots', async () => {
-    await pharmacistDetailPage.goto(testProvider.id);
+    await providerDetailPage.goto(testProvider.id);
 
     // Select tomorrow's date
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateString = tomorrow.getDate().toString();
 
-    await pharmacistDetailPage.selectDate(dateString);
+    await providerDetailPage.selectDate(dateString);
 
     // Wait for new slots to load
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
     // Should either show slots or no slots message
-    const availableSlots = await pharmacistDetailPage.getAvailableTimeSlotCount();
-    const noSlotsVisible = await pharmacistDetailPage.isNoSlotsMessageVisible();
+    const availableSlots = await providerDetailPage.getAvailableTimeSlotCount();
+    const noSlotsVisible = await providerDetailPage.isNoSlotsMessageVisible();
 
     expect(availableSlots >= 0 || noSlotsVisible).toBe(true);
   });
 
   test('should disable booking button when no time slot selected', async () => {
-    await pharmacistDetailPage.goto(testProvider.id);
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.goto(testProvider.id);
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
     // Initially, booking button should be disabled
-    const isEnabled = await pharmacistDetailPage.isBookAppointmentEnabled();
+    const isEnabled = await providerDetailPage.isBookAppointmentEnabled();
     expect(isEnabled).toBe(false);
 
     // Select a time slot
-    await pharmacistDetailPage.selectTimeSlot(0);
+    await providerDetailPage.selectTimeSlot(0);
 
     // Now booking button should be enabled
-    const isEnabledAfter = await pharmacistDetailPage.isBookAppointmentEnabled();
+    const isEnabledAfter = await providerDetailPage.isBookAppointmentEnabled();
     expect(isEnabledAfter).toBe(true);
 
     // Deselect the slot
-    await pharmacistDetailPage.selectTimeSlot(0);
+    await providerDetailPage.selectTimeSlot(0);
 
     // Button should be disabled again
-    const isDisabledAgain = await pharmacistDetailPage.isBookAppointmentEnabled();
+    const isDisabledAgain = await providerDetailPage.isBookAppointmentEnabled();
     expect(isDisabledAgain).toBe(false);
   });
 
@@ -249,19 +249,19 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
     });
 
     try {
-      await pharmacistDetailPage.goto(noSlotsProvider.slug);
-      await pharmacistDetailPage.waitForTimeSlotsToLoad();
+      await providerDetailPage.goto(noSlotsProvider.slug);
+      await providerDetailPage.waitForTimeSlotsToLoad();
 
       // Should show no slots message
-      const noSlotsVisible = await pharmacistDetailPage.isNoSlotsMessageVisible();
+      const noSlotsVisible = await providerDetailPage.isNoSlotsMessageVisible();
       expect(noSlotsVisible).toBe(true);
 
       // Should have zero available slots
-      const availableSlots = await pharmacistDetailPage.getAvailableTimeSlotCount();
+      const availableSlots = await providerDetailPage.getAvailableTimeSlotCount();
       expect(availableSlots).toBe(0);
 
       // Booking button should be disabled
-      const isEnabled = await pharmacistDetailPage.isBookAppointmentEnabled();
+      const isEnabled = await providerDetailPage.isBookAppointmentEnabled();
       expect(isEnabled).toBe(false);
     } finally {
       // Clean up the test provider
@@ -270,17 +270,17 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test('should navigate back to pharmacist list', async ({ page }) => {
-    await pharmacistDetailPage.goto(testProvider.id);
+    await providerDetailPage.goto(testProvider.id);
 
-    await pharmacistDetailPage.goBack();
+    await providerDetailPage.goBack();
 
     // Should navigate back to the list page
     await expect(page).toHaveURL('/pharmacists');
   });
 
   test('should be keyboard navigable', async ({ page }) => {
-    await pharmacistDetailPage.goto(testProvider.id);
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
+    await providerDetailPage.goto(testProvider.id);
+    await providerDetailPage.waitForTimeSlotsToLoad();
 
     // Tab through elements
     await page.keyboard.press('Tab');
@@ -299,16 +299,16 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
   });
 
   test('should have proper ARIA labels for interactive elements', async ({ page }) => {
-    await pharmacistDetailPage.goto(testProvider.id);
+    await providerDetailPage.goto(testProvider.id);
 
     // Check booking button has aria-label
-    const bookButton = pharmacistDetailPage.bookAppointmentButton;
+    const bookButton = providerDetailPage.bookAppointmentButton;
     const ariaLabel = await bookButton.getAttribute('aria-label');
     expect(ariaLabel).toBeTruthy();
 
     // Check time slots have proper attributes
-    await pharmacistDetailPage.waitForTimeSlotsToLoad();
-    const slots = pharmacistDetailPage.timeSlots;
+    await providerDetailPage.waitForTimeSlotsToLoad();
+    const slots = providerDetailPage.timeSlots;
     const firstSlot = slots.first();
     const role = await firstSlot.getAttribute('role');
     expect(role).toBeTruthy();
@@ -317,8 +317,8 @@ test.describe('Pharmacist Detail Page - Dynamic Provider', () => {
 
 test.describe('Pharmacist Detail Page - Error Handling', () => {
   test('should handle invalid pharmacist slug gracefully', async ({ page }) => {
-    const pharmacistDetailPage = new PharmacistDetailPage(page);
-    await pharmacistDetailPage.goto('invalid-provider-slug-xyz-123');
+    const providerDetailPage = new ProviderDetailPage(page);
+    await providerDetailPage.goto('invalid-provider-slug-xyz-123');
 
     // Should either show 404 or redirect to list
     const url = page.url();

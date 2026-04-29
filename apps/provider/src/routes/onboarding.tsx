@@ -17,7 +17,8 @@ import { PersonalInfoForm } from '@monobase/ui/person/components/personal-info-f
 import { AddressForm } from '@monobase/ui/person/components/address-form'
 import { ProviderForm } from '@monobase/ui/provider/components/provider-form'
 import { MerchantAccountSetup } from '@monobase/ui/billing/components/merchant-account-setup'
-import { type PersonCreateRequest } from '@monobase/sdk/services/person'
+import { type CreatePersonData } from '@monobase/sdk/services/person'
+import { ApiError } from '@monobase/sdk/api'
 import type { PersonalInfo, OptionalAddress } from '@monobase/ui/person/schemas'
 import type { ProviderFormData } from '@monobase/ui/provider/schemas'
 
@@ -49,6 +50,7 @@ function OnboardingPage() {
   const [formData, setFormData] = useState<{
     personal?: PersonalInfo
     address?: OptionalAddress
+    provider?: ProviderFormData
   }>({})
 
   const createPersonMutation = useCreateMyPerson({
@@ -67,8 +69,9 @@ function OnboardingPage() {
   })
   const createProviderMutation = useCreateMyProvider()
   
-  const { data: merchantAccount, isLoading: merchantLoading } = useMyMerchantAccountStatus()
-  const status = getAccountSetupStatus(merchantAccount?.account ?? null)
+  const merchantAccount = useMyMerchantAccountStatus()
+  const merchantLoading = merchantAccount.isLoading
+  const status = getAccountSetupStatus(merchantAccount.account ?? null)
   const createMerchantMutation = useCreateMyMerchantAccount()
   const onboardingMutation = useGetMyOnboardingUrl()
 
@@ -98,16 +101,16 @@ function OnboardingPage() {
 
     try {
       // Create person profile
-      await createPersonMutation.mutateAsync({
+      const personPayload: CreatePersonData = {
         firstName: formData.personal.firstName,
         lastName: formData.personal.lastName,
         middleName: formData.personal.middleName,
         dateOfBirth: formData.personal.dateOfBirth,
         gender: formData.personal.gender,
-        avatar: formData.personal.avatar,
         languagesSpoken: [detectedLanguage],
         timezone: detectedTimezone,
-      }).catch(error => {
+      }
+      await createPersonMutation.mutateAsync(personPayload).catch(error => {
         // If person already exists, that's okay - continue to create patient
         if (error instanceof ApiError && error.message?.includes('already has a person profile')) {
           console.log('Person profile already exists, proceeding with provider creation')
@@ -119,7 +122,7 @@ function OnboardingPage() {
 
       // Create provider profile with bio and years
       await createProviderMutation.mutateAsync({
-        providerType: data.providerType || 'general',
+        providerType: ((data.providerType || 'other') as 'pharmacist' | 'other'),
         biography: data.biography,
         yearsOfExperience: data.yearsOfExperience,
       })

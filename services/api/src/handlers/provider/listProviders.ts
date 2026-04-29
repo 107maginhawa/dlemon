@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { 
   UnauthorizedError,
@@ -18,7 +18,7 @@ import { parsePagination, buildPaginationMeta, parseFilters } from '@/utils/quer
  * OperationId: listProviders
  * Security: Public endpoint - no authentication required
  */
-export async function listProviders(ctx: Context) {
+export async function listProviders(ctx: HandlerContext) {
   // Public endpoint - no auth required
   
   // Extract validated query parameters

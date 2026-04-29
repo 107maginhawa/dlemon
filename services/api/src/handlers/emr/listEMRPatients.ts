@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
@@ -19,7 +19,7 @@ import { subDays } from 'date-fns';
  * Providers see only patients they have treated.
  * Returns patients with their consultation statistics.
  */
-export async function listEMRPatients(ctx: Context) {
+export async function listEMRPatients(ctx: HandlerContext) {
   // Get authenticated user from Better-Auth
   const user = ctx.get('user') as User;
 

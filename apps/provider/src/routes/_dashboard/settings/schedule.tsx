@@ -80,7 +80,9 @@ type DailyConfig = {
 }
 
 function SchedulePage() {
-  const { person, profile } = Route.useRouteContext()
+  const ctx = Route.useRouteContext()
+  const person = ctx.person!
+  const profile = ctx.profile!
   const [showCreateScheduleDialog, setShowCreateScheduleDialog] = useState(false)
   const [showVisibilityDialog, setShowVisibilityDialog] = useState(false)
   const [pendingVisibilityAction, setPendingVisibilityAction] = useState<'enable' | 'disable' | null>(null)

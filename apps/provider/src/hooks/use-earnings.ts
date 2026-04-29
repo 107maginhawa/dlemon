@@ -39,7 +39,7 @@ import {
  */
 export function useEarningsOverview() {
   const { data: invoicesData, isLoading, error } = useMyInvoices({ limit: 100 })
-  const invoices = invoicesData?.items || []
+  const invoices = invoicesData?.data || []
 
   const overview = useMemo(() => {
     const now = new Date()
@@ -133,7 +133,7 @@ export function useEarningsOverview() {
  */
 export function useEarningsStats() {
   const { data: invoicesData, isLoading, error } = useMyInvoices({ limit: 100 })
-  const invoices = invoicesData?.items || []
+  const invoices = invoicesData?.data || []
 
   const stats = useMemo(() => {
     const totalEarnings = calculateTotalEarnings(invoices)

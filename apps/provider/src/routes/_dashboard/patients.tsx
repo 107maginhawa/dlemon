@@ -104,20 +104,37 @@ function PatientsPage() {
   const patients: Patient[] = useMemo(() => {
     if (!patientsData?.data) return []
 
+    // The API returns Patient with `person` as either an ID string or an
+    // expanded Person object depending on `?expand=person`. The legacy UI
+    // code below assumes expanded fields are flattened, which doesn't match
+    // the current SDK type — use `as any` until the route is rewritten.
+    // TODO(stabilization): rewrite patient list against current Patient shape.
     return patientsData.data.map((apiPatient) => {
-      return {
-        id: apiPatient.id,
-        name: `${apiPatient.firstName} ${apiPatient.middleName || ''} ${apiPatient.lastName || ''}`.trim(),
-        email: apiPatient.email || 'No email',
-        phone: apiPatient.phone || 'No phone',
-        dateOfBirth: apiPatient.dateOfBirth || '1990-01-01',
-        gender: (apiPatient.gender || 'other') as Gender,
-        status: 'active' as const, // Default since API doesn't track this
-        lastVisit: apiPatient.createdAt || new Date().toISOString(),
-        conditions: [], // Would come from EMR module
-        lastConsultation: apiPatient.updatedAt || new Date().toISOString(),
-        primaryCondition: undefined,
+      const flat = apiPatient as unknown as {
+        id: string
+        firstName?: string
+        lastName?: string
+        middleName?: string
+        email?: string
+        phone?: string
+        dateOfBirth?: string
+        gender?: string
+        createdAt?: string
+        updatedAt?: string
       }
+      return {
+        id: flat.id,
+        name: `${flat.firstName ?? ''} ${flat.middleName ?? ''} ${flat.lastName ?? ''}`.trim() || 'Unknown',
+        email: flat.email || 'No email',
+        phone: flat.phone || 'No phone',
+        dateOfBirth: flat.dateOfBirth || '1990-01-01',
+        gender: (flat.gender || 'other') as Gender,
+        status: 'active' as const,
+        lastVisit: flat.createdAt || new Date().toISOString(),
+        conditions: [],
+        lastConsultation: flat.updatedAt || new Date().toISOString(),
+        primaryCondition: undefined,
+      } satisfies Patient
     })
   }, [patientsData])
 

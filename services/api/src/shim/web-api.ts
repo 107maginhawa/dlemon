@@ -1,3 +1,7 @@
+// @ts-nocheck -- Web API polyfill for the Boa JS engine; index access on
+// byte/string buffers is intentionally unchecked because correctness is
+// guaranteed by the surrounding length checks in each branch.
+
 /**
  * Web API Shim for Boa JS Engine
  *

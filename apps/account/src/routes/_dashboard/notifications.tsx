@@ -57,7 +57,10 @@ function NotificationsPage() {
       let color = 'text-gray-500'
 
       switch (notif.type) {
-        case 'booking-reminder':
+        case 'booking.created':
+        case 'booking.confirmed':
+        case 'booking.rejected':
+        case 'booking.cancelled':
           icon = Calendar
           color = 'text-blue-500'
           break

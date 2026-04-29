@@ -105,61 +105,45 @@ function getNotificationDisplay(type: NotificationType): {
   bgColor: string
 } {
   switch (type) {
-    case 'appointment-reminder':
-    case 'appointment-confirmation':
-    case 'appointment-cancellation':
-    case 'appointment-reschedule':
+    case 'booking.created':
+    case 'booking.confirmed':
+    case 'booking.rejected':
+    case 'booking.cancelled':
+    case 'booking.no-show-client':
+    case 'booking.no-show-provider':
       return {
         icon: Calendar,
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
       }
     case 'billing':
-    case 'payment-received':
-    case 'payment-failed':
-    case 'invoice':
       return {
         icon: CreditCard,
         color: 'text-purple-600',
         bgColor: 'bg-purple-50',
       }
     case 'security':
-    case 'password-reset':
-    case 'login-alert':
       return {
         icon: Shield,
         color: 'text-red-600',
         bgColor: 'bg-red-50',
       }
-    case 'prescription':
-    case 'prescription-renewal':
-      return {
-        icon: Pill,
-        color: 'text-green-600',
-        bgColor: 'bg-green-50',
-      }
-    case 'lab-results':
-    case 'test-results':
-      return {
-        icon: FileText,
-        color: 'text-orange-600',
-        bgColor: 'bg-orange-50',
-      }
-    case 'message':
-    case 'chat':
+    case 'comms.chat-message':
       return {
         icon: MessageSquare,
         color: 'text-indigo-600',
         bgColor: 'bg-indigo-50',
       }
-    case 'system':
-    case 'update':
-    case 'maintenance':
+    case 'comms.video-call-started':
+    case 'comms.video-call-joined':
+    case 'comms.video-call-left':
+    case 'comms.video-call-ended':
       return {
-        icon: Bell,
-        color: 'text-gray-600',
-        bgColor: 'bg-gray-50',
+        icon: FileText,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
       }
+    case 'system':
     default:
       return {
         icon: Bell,
@@ -171,19 +155,14 @@ function getNotificationDisplay(type: NotificationType): {
 
 // Notification priority calculation
 function getNotificationPriority(notification: Notification): 'high' | 'medium' | 'low' {
-  // High priority for security and urgent medical notifications
-  if (
-    notification.type === 'security' ||
-    notification.type === 'lab-results' ||
-    notification.type === 'prescription'
-  ) {
+  // High priority for security alerts
+  if (notification.type === 'security') {
     return 'high'
   }
 
-  // Medium priority for appointments and billing
+  // Medium priority for bookings and billing
   if (
-    notification.type?.includes('appointment') ||
-    notification.type?.includes('payment') ||
+    notification.type?.startsWith('booking.') ||
     notification.type === 'billing'
   ) {
     return 'medium'
@@ -219,9 +198,9 @@ function NotificationsPage() {
   const markAllAsReadMutation = useMarkAllNotificationsAsRead()
 
   const notifications = notificationsData?.data || []
-  const totalPages = notificationsData?.totalPages || 1
-  const totalCount = notificationsData?.total || 0
-  const unreadCount = unreadData?.total || 0
+  const totalPages = notificationsData?.pagination?.totalPages || 1
+  const totalCount = notificationsData?.pagination?.totalCount || 0
+  const unreadCount = unreadData?.pagination?.totalCount || 0
 
   // Map notifications to UI format with enhanced data
   const uiNotifications = useMemo(() => {

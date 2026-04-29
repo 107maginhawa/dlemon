@@ -15,14 +15,26 @@ For detailed information, refer to:
 **Key Technologies**: Bun, PostgreSQL, Drizzle ORM, Hono API, TypeSpec, TanStack Router, Better-Auth, OneSignal, S3/MinIO
 
 **Monorepo Structure**:
-- `apps/` - Frontend applications (currently only account app)
-- `services/api/` - Backend API service with business modules
-- `specs/api/` - TypeSpec API definitions
-- `packages/` - Shared packages (typescript-config and ui)
+- `apps/` - Frontend applications:
+  - `account/` - Vite + TanStack Router app for self-service account management
+  - `patient/` - Vite + TanStack Router app for the patient-facing experience
+  - `provider/` - Vite + TanStack Router app for the provider/practitioner portal
+  - `website/` - Next.js public marketing site
+- `services/api/` - Backend API service (Hono + Drizzle) with business modules
+- `specs/api/` - TypeSpec API definitions (compiled to OpenAPI + TypeScript types)
+- `packages/` - Shared packages:
+  - `eslint-config/` - Shared ESLint flat configs (`base`, `react`, `next`)
+  - `sdk/` - Type-safe API client + TanStack Query hooks
+  - `typescript-config/` - Shared TypeScript configs
+  - `ui/` - Shared UI component library (Radix primitives, Tailwind)
 
 ## Business Domain Modules
 
-The platform implements the following core modules:
+The API service implements 13 handler modules. The first nine are documented as
+core business modules; the latter four (`patient`, `provider`, `emr`, `ws`)
+are platform-specific modules that compose them and may evolve independently.
+
+Core modules:
 
 1. **person** - User profile management and central PII safeguard
 2. **booking** - Professional booking and scheduling system
@@ -33,6 +45,16 @@ The platform implements the following core modules:
 7. **storage** - File upload/download (S3/MinIO)
 8. **email** - Transactional emails (SMTP/Postmark)
 9. **reviews** - NPS review system
+
+Platform-specific modules:
+
+10. **patient** - Patient profile and patient-side workflows (extends `person`)
+11. **provider** - Provider/practitioner profile and listing (extends `person`)
+12. **emr** - Electronic medical records: consultation notes, vitals, prescriptions, follow-ups
+13. **ws** - WebSocket transport for real-time chat and WebRTC signaling (handler-only; no TypeSpec/REST surface)
+
+TypeSpec definitions exist for modules 1-12 (12 `.tsp` files under
+`specs/api/src/modules/`). Module 13 (`ws`) is transport-level only.
 
 **Note**: Authentication is handled by Better-Auth (integrated, not a separate module). Consent management is implemented as JSONB fields on the Person model (not a standalone module).
 
@@ -176,12 +198,16 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 
 ## Frontend Development
 
-### Account App (Vite + TanStack Router)
-- **Port**: 3002
-- **Routing**: File-based in `src/routes/`
-- **Auth**: Better-Auth with TanStack integration
-- **Data Fetching**: TanStack Query with React Query
-- **UI Components**: Radix UI primitives (shadcn/ui patterns)
+The repo has four frontend apps. The Vite-based ones share the same stack
+(TanStack Router file-based routing, TanStack Query, Better-Auth, Radix UI
+primitives via shadcn/ui patterns); the website is Next.js.
+
+| App | Framework | Port | Purpose |
+|-----|-----------|------|---------|
+| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
+| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
+| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
+| `apps/website` | Next.js | 3000 | Public marketing site |
 
 **Standards**: See [CONTRIBUTING.md#coding-standards](./CONTRIBUTING.md#coding-standards)
 
@@ -222,15 +248,21 @@ cd apps/account && bun run test:e2e     # E2E tests
 ## Important Notes
 
 ### What Exists
+- ✅ **apps/account, apps/patient, apps/provider** - Vite + TanStack Router apps
+- ✅ **apps/website** - Next.js marketing site
 - ✅ **packages/ui/** - Shared UI component library
-- ✅ **packages/sdk/** - Type-safe API client
+- ✅ **packages/sdk/** - Type-safe API client + TanStack Query hooks
+- ✅ **packages/eslint-config/** - Shared ESLint flat configs
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
-- ✅ **9 Core Modules**: person, booking, billing, audit, notifs, comms, storage, email, reviews
+- ✅ **13 API handler modules**: 9 core (person, booking, billing, audit, notifs, comms, storage, email, reviews) plus 4 platform-specific (patient, provider, emr, ws)
 
-### What Does Not Exist
-- ❌ **apps/admin/** - No admin/service provider app yet
-- ❌ **apps/website/** - No Next.js marketing website yet
+### Known In-Progress Areas
+- The `patient` and `provider` apps have routes that consume API surfaces
+  still being aligned with the SDK; expect typecheck drift in those apps
+  (lint and build are clean).
+- Billing module schema fields (line items, platform fees, line-level audit)
+  are stubbed in handlers — see in-file `TODO` comments.
 
 ## When in Doubt
 

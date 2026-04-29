@@ -109,7 +109,8 @@ export function useMediaStream(
       const displayMediaStream = await getDisplayMediaStream()
 
       // Listen for browser stop sharing button
-      displayMediaStream.getVideoTracks()[0].addEventListener('ended', () => {
+      const videoTrack = displayMediaStream.getVideoTracks()[0]
+      videoTrack?.addEventListener('ended', () => {
         console.log('[useMediaStream] Screen sharing stopped by user')
         setIsScreenSharing(false)
         setDisplayStream(null)

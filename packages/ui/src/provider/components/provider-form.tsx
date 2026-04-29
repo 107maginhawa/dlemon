@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { providerFormSchema, type ProviderFormData } from '../schemas'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../../components/form'
@@ -16,7 +16,7 @@ interface ProviderFormProps {
 
 export function ProviderForm({ defaultValues, onSubmit, isLoading, showButtons = true, formId }: ProviderFormProps) {
   const form = useForm<ProviderFormData>({
-    resolver: zodResolver(providerFormSchema),
+    resolver: zodResolver(providerFormSchema) as Resolver<ProviderFormData>,
     defaultValues: defaultValues || {
       providerType: 'general',
       yearsOfExperience: undefined,

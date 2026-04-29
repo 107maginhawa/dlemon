@@ -63,9 +63,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <PersonalInfoForm
-            defaultValues={person || undefined}
+            defaultValues={person as never}
             onSubmit={async (data) => {
-              await updatePersonalInfo.mutateAsync(data)
+              if (!person) return
+              await updatePersonalInfo.mutateAsync({ personId: person.id, data: data as never })
             }}
             mode="edit"
             memberSince={person?.createdAt}
@@ -81,9 +82,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <ContactInfoForm
-            defaultValues={person?.contactInfo}
+            defaultValues={person?.contactInfo as never}
             onSubmit={async (data) => {
-              await updateContactInfo.mutateAsync(data)
+              if (!person) return
+              await updateContactInfo.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>
@@ -96,9 +98,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <AddressForm
-            defaultValues={person?.primaryAddress}
+            defaultValues={person?.primaryAddress as never}
             onSubmit={async (data) => {
-              await updateAddress.mutateAsync(data)
+              if (!person) return
+              await updateAddress.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>
@@ -111,9 +114,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <PreferencesForm
-            defaultValues={person || undefined}
+            defaultValues={person as never}
             onSubmit={async (data) => {
-              await updatePreferences.mutateAsync(data)
+              if (!person) return
+              await updatePreferences.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>

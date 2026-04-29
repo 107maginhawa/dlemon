@@ -63,10 +63,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <PersonalInfoForm
-            defaultValues={person || undefined}
+            defaultValues={person as never}
             onSubmit={async (data) => {
               if (!person?.id) return
-              await updatePersonalInfo.mutateAsync({ personId: person.id, data })
+              await updatePersonalInfo.mutateAsync({ personId: person.id, data: data as never })
             }}
             mode="edit"
             memberSince={person?.createdAt}

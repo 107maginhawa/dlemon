@@ -68,7 +68,7 @@ export class PersonRepository extends DatabaseRepository<Person, NewPerson, Pers
     this.logger?.debug({ userId, hasPersonInput: !!personInput }, 'Ensuring person for user');
 
     // Always check if person exists first
-    let existingPerson = await this.findOneById(userId);
+    const existingPerson = await this.findOneById(userId);
     
     if (existingPerson) {
       this.logger?.debug({ userId }, 'Found existing person for user');

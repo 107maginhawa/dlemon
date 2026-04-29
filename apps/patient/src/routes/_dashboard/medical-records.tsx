@@ -21,20 +21,19 @@ export const Route = createFileRoute('/_dashboard/medical-records')({
 })
 
 function MedicalRecordsPage() {
-  const { profile } = Route.useRouteContext()
+  const ctx = Route.useRouteContext() as unknown as { auth?: { patient?: { personId?: string } } }
+  const profilePersonId = ctx.auth?.patient?.personId
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<ConsultationStatus | 'all'>('all')
 
   // Fetch consultations for current patient
   const { data: consultationsData, isLoading, error } = useConsultations({
-    patient: profile.id,
-    expand: 'provider,provider.person',
+    patient: profilePersonId,
     status: statusFilter !== 'all' ? statusFilter : undefined,
-    sort: '-createdAt', // Most recent first
   })
 
   // Filter by search query (chief complaint)
-  const filteredConsultations = consultationsData?.items?.filter((consultation) => {
+  const filteredConsultations = consultationsData?.data?.filter((consultation) => {
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return consultation.chiefComplaint?.toLowerCase().includes(query)
@@ -85,18 +84,18 @@ function MedicalRecordsPage() {
       {consultationsData && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="border rounded-lg p-4">
-            <div className="text-2xl font-bold">{consultationsData.total || 0}</div>
+            <div className="text-2xl font-bold">{consultationsData.pagination?.totalCount || 0}</div>
             <div className="text-sm text-muted-foreground">Total Consultations</div>
           </div>
           <div className="border rounded-lg p-4">
             <div className="text-2xl font-bold">
-              {consultationsData.items?.filter((c) => c.status === 'finalized').length || 0}
+              {consultationsData.data?.filter((c) => c.status === 'finalized').length || 0}
             </div>
             <div className="text-sm text-muted-foreground">Finalized Notes</div>
           </div>
           <div className="border rounded-lg p-4">
             <div className="text-2xl font-bold">
-              {consultationsData.items?.filter((c) => c.prescriptions && c.prescriptions.length > 0).length || 0}
+              {consultationsData.data?.filter((c) => c.prescriptions && c.prescriptions.length > 0).length || 0}
             </div>
             <div className="text-sm text-muted-foreground">With Prescriptions</div>
           </div>

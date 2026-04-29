@@ -141,16 +141,17 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
   }
 
   /**
-   * Delete a single entity by ID (hard delete)
+   * Delete a single entity by ID (hard delete). The optional `actorId`
+   * is recorded in the audit log only; it is not persisted to the row.
    */
-  async deleteOneById(id: string): Promise<void> {
-    this.logger?.debug({ id }, 'Deleting record by ID');
+  async deleteOneById(id: string, actorId?: string): Promise<void> {
+    this.logger?.debug({ id, actorId }, 'Deleting record by ID');
 
     await this.db
       .delete(this.table)
       .where(eq((this.table as any).id, id));
 
-    this.logger?.info({ id }, 'Record deleted successfully');
+    this.logger?.info({ id, actorId }, 'Record deleted successfully');
   }
 
   /**

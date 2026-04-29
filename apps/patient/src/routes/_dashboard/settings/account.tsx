@@ -16,21 +16,22 @@ import { useFileUpload } from '@monobase/sdk/react/hooks/use-storage'
 export const Route = createFileRoute('/_dashboard/settings/account')({
   component: AccountSettingsPage,
   beforeLoad: async ({ context }) => {
-    return { user: context.user }
+    return { user: context.auth.user }
   },
 })
 
 function AccountSettingsPage() {
   const { user } = Route.useRouteContext()
+  void user
   const { upload } = useFileUpload()
 
   const { data: person, isLoading: isLoadingPerson } = useMyPerson()
   // Data transformation done inline below
 
-  const updatePersonalInfo = useUpdateMyPersonalInfo(person?.id || '')
-  const updateContactInfo = useUpdateMyContactInfo(person?.id || '')
-  const updateAddress = useUpdateMyAddress(person?.id || '')
-  const updatePreferences = useUpdateMyPreferences(person?.id || '')
+  const updatePersonalInfo = useUpdateMyPersonalInfo()
+  const updateContactInfo = useUpdateMyContactInfo()
+  const updateAddress = useUpdateMyAddress()
+  const updatePreferences = useUpdateMyPreferences()
 
   const handleAvatarUpload = async (file: File): Promise<{ file?: string, url: string }> => {
     // Upload file to storage and get download URL
@@ -64,9 +65,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <PersonalInfoForm
-            defaultValues={person}
+            defaultValues={person as never}
             onSubmit={async (data) => {
-              await updatePersonalInfo.mutateAsync(data)
+              if (!person) return
+              await updatePersonalInfo.mutateAsync({ personId: person.id, data: data as never })
             }}
             mode="edit"
             role="provider"
@@ -83,9 +85,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <ContactInfoForm
-            defaultValues={person?.contactInfo}
+            defaultValues={person?.contactInfo as never}
             onSubmit={async (data) => {
-              await updateContactInfo.mutateAsync(data)
+              if (!person) return
+              await updateContactInfo.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>
@@ -98,9 +101,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <AddressForm
-            defaultValues={person?.primaryAddress}
+            defaultValues={person?.primaryAddress as never}
             onSubmit={async (data) => {
-              await updateAddress.mutateAsync(data)
+              if (!person) return
+              await updateAddress.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>
@@ -113,9 +117,10 @@ function AccountSettingsPage() {
         </CardHeader>
         <CardContent>
           <PreferencesForm
-            defaultValues={person}
+            defaultValues={person as never}
             onSubmit={async (data) => {
-              await updatePreferences.mutateAsync(data)
+              if (!person) return
+              await updatePreferences.mutateAsync({ personId: person.id, data })
             }}
           />
         </CardContent>

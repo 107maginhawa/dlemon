@@ -37,9 +37,10 @@ export default defineConfig({
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari14',
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
-    esbuild: {
-      // Remove console.log in production, keep console.error/warn for debugging
-      drop: process.env.TAURI_ENV_DEBUG ? [] : ['console.log'],
-    },
+  },
+  esbuild: {
+    // Mark console.log as side-effect-free so the bundler can drop it in
+    // production while keeping console.error/warn/info intact.
+    pure: process.env.TAURI_ENV_DEBUG ? [] : ['console.log'],
   },
 })

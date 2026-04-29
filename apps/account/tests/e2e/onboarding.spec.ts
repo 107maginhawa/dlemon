@@ -57,7 +57,7 @@ test.describe('Onboarding Flow', () => {
     await expect(page).toHaveURL('/onboarding')
 
     // Step 1: Verify pre-filled name from signup
-    const expectedFirstName = user.name.split(' ')[0]
+    const expectedFirstName = user.name.split(' ')[0] ?? ''
     await expect(page.getByLabel(/first name/i)).toHaveValue(expectedFirstName)
 
     // Complete personal info step
@@ -175,7 +175,7 @@ test.describe('Onboarding Flow', () => {
     await expect(page).toHaveURL('/onboarding')
 
     // Verify firstName is pre-filled with first part of name
-    const expectedFirstName = user.name.split(' ')[0]
+    const expectedFirstName = user.name.split(' ')[0] ?? ''
     await expect(page.getByLabel(/first name/i)).toHaveValue(expectedFirstName)
 
     // Verify lastName is pre-filled with rest of name

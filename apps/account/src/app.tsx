@@ -80,7 +80,7 @@ function App() {
     <ApiProvider apiBaseUrl={config.apiUrl}>
       <InnerApp />
       <TanStackDevtools
-        position="bottom-right"
+        config={{ position: 'bottom-right' }}
         plugins={[
           {
             name: 'TanStack Query',

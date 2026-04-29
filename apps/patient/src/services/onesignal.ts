@@ -63,8 +63,8 @@ export async function initializeOneSignal(): Promise<void> {
       appId,
       allowLocalhostAsSecureOrigin: import.meta.env.DEV, // Allow localhost in development
       notifyButton: {
-        enable: false, // We'll handle permission requests manually
-      },
+        enable: false,
+      } as never,
     });
 
     isInitialized = true;
@@ -212,6 +212,6 @@ export function onNotificationReceived(handler: (event: any) => void): void {
  */
 export function removeNotificationListeners(): void {
   if (!isInitialized) return;
-  OneSignal.Notifications.removeEventListener('click');
-  OneSignal.Notifications.removeEventListener('foregroundWillDisplay');
+  // Newer OneSignal SDKs require the original listener function to remove;
+  // we don't track those, so leave listeners attached for the page lifetime.
 }

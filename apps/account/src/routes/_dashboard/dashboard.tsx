@@ -71,7 +71,7 @@ function DashboardPage() {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={user?.image} />
+            <AvatarImage src={user?.image ?? undefined} />
             <AvatarFallback className="text-lg">{initials}</AvatarFallback>
           </Avatar>
           <div>

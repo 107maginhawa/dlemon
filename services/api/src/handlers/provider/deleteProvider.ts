@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { 
@@ -17,7 +17,7 @@ import { removeUserRole } from '@/utils/auth';
  * OperationId: deleteProvider
  * Security: bearerAuth with role ["owner"]
  */
-export async function deleteProvider(ctx: Context) {
+export async function deleteProvider(ctx: HandlerContext) {
   // Get authenticated user (guaranteed by middleware)
   const user = ctx.get('user') as User;
   
@@ -42,7 +42,7 @@ export async function deleteProvider(ctx: Context) {
   }
   
   // Check authorization - owner can only delete their own record
-  const personId = typeof provider.person === 'string' ? provider.person : provider.person.id;
+  const personId = typeof provider.person === 'string' ? provider.person : (provider.person as { id: string }).id;
   const isOwner = personId === user.id;
   if (!isOwner) {
     throw new ForbiddenError('You can only delete your own provider profile');

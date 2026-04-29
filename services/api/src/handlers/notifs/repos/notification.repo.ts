@@ -342,7 +342,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     });
     
     switch (notification.channel) {
-      case 'email':
+      case 'email': {
         // Use email service to queue the email
         const emailService = (globalThis as any).app?.email;
         if (emailService) {
@@ -380,7 +380,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
         // Mark as delivered (email is queued separately)
         await this.updateOneById(notification.id, { status: 'delivered' });
         break;
-        
+      }
+
       case 'push':
         // Send push notification via OneSignal
         if (this.oneSignalClient && this.oneSignalAppId) {

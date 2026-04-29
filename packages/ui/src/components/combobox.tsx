@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/button"
-import { Badge } from "@/components/badge"
+import { cn } from "@monobase/ui/lib/utils"
+import { Button } from "@monobase/ui/components/button"
+import { Badge } from "@monobase/ui/components/badge"
 import {
   Command,
   CommandEmpty,
@@ -12,12 +12,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/command"
+} from "@monobase/ui/components/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/popover"
+} from "@monobase/ui/components/popover"
 
 export interface ComboboxOption {
   value: string

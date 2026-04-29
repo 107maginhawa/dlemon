@@ -34,7 +34,8 @@ export const Route = createFileRoute('/onboarding')({
 
 function OnboardingPage() {
   const navigate = useNavigate()
-  const { user } = Route.useRouteContext()
+  const { auth } = Route.useRouteContext()
+  const user = auth.user!
   const [currentStep, setCurrentStep] = useState(1)
   const detectedLanguage = useDetectLanguage()
   const detectedTimezone = useDetectTimezone()
@@ -103,7 +104,6 @@ function OnboardingPage() {
         middleName: formData.personal.middleName,
         dateOfBirth: formData.personal.dateOfBirth,
         gender: formData.personal.gender,
-        avatar: formData.personal.avatar,
         languagesSpoken: [detectedLanguage],
         timezone: detectedTimezone,
       }).catch(error => {
@@ -258,7 +258,7 @@ function OnboardingPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    onClick={handlePharmacySubmit}
+                    onClick={handlePharmacySubmit as never}
                   >
                     Next
                     <ChevronRight className="w-4 h-4 ml-2" />

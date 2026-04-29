@@ -13,10 +13,14 @@ interface ConsultationCardProps {
 }
 
 export function ConsultationCard({ consultation }: ConsultationCardProps) {
-  // Extract provider name if expanded
+  // Extract provider name if expanded (provider field is an ID string by default,
+  // but may be expanded to a Provider object via the API ?expand=provider param).
+  const expandedProvider = consultation.provider as unknown as
+    | { person?: { firstName?: string; lastName?: string } }
+    | string
   const providerName =
-    typeof consultation.provider === 'object'
-      ? `${consultation.provider.person.firstName} ${consultation.provider.person.lastName}`
+    typeof expandedProvider === 'object' && expandedProvider?.person
+      ? `${expandedProvider.person.firstName ?? ''} ${expandedProvider.person.lastName ?? ''}`.trim() || 'Provider'
       : 'Provider'
 
   // Format date
