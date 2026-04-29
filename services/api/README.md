@@ -257,6 +257,14 @@ bun run dev:deps:down  # Stop dependencies
 
 For detailed development patterns, handler implementation, database operations, and best practices, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+### Handler Modules
+
+`src/handlers/` contains 13 modules: 9 core (`person`, `booking`, `billing`,
+`audit`, `comms`, `email`, `notifs`, `storage`, `reviews`) and 4
+platform-specific (`patient`, `provider`, `emr`, `ws`). The first 12 have
+matching TypeSpec definitions under `specs/api/src/modules/`; `ws` is
+WebSocket transport with no REST surface.
+
 ### Quick Reference
 
 **Before implementing features:**
@@ -272,4 +280,4 @@ For detailed development patterns, handler implementation, database operations, 
 
 ---
 
-**Part of the Monobase Healthcare Platform monorepo**
+**Part of the Monobase Application Platform monorepo**

@@ -133,7 +133,11 @@ function PastBookingsPage() {
   return (
     <div className="space-y-4">
       {appointments.map((appointment) => {
-        const { date, time } = formatAppointmentDateTime(appointment.scheduledAt)
+        const scheduledAt =
+          appointment.scheduledAt instanceof Date
+            ? appointment.scheduledAt.toISOString()
+            : (appointment.scheduledAt as string)
+        const { date, time } = formatAppointmentDateTime(scheduledAt)
         return (
           <Card key={appointment.id}>
             <CardContent className="p-6">
@@ -145,8 +149,8 @@ function PastBookingsPage() {
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold">Patient {appointment.client.substring(0, 8)}</p>
-                      <Badge variant={getStatusBadge(appointment.status).variant} className="text-xs">
-                        {getStatusBadge(appointment.status).label}
+                      <Badge variant={getStatusBadge(appointment.status as AppointmentStatus).variant} className="text-xs">
+                        {getStatusBadge(appointment.status as AppointmentStatus).label}
                       </Badge>
                     </div>
 

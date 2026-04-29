@@ -13,7 +13,7 @@ import {
 import { requireAuth, requireEmailVerified, requirePerson, composeGuards } from '@/utils/guards'
 import { formatRelativeDate } from '@monobase/ui/lib/format-date'
 import { useNotifications, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from '@monobase/sdk/react/hooks/use-notifications'
-import type { Notification, NotificationType } from '@/api/notifications'
+import type { Notification, NotificationType } from '@monobase/sdk/services/notifications'
 import { Button } from '@monobase/ui/components/button'
 import {
   Card,
@@ -36,7 +36,9 @@ export const Route = createFileRoute('/_dashboard/notifications')({
 // Helper functions
 function getNotificationIcon(type: NotificationType): LucideIcon {
   switch (type) {
-    case 'appointment-reminder':
+    case 'booking.created':
+    case 'booking.confirmed':
+    case 'booking.cancelled':
       return Calendar
     case 'billing':
       return CreditCard
@@ -51,7 +53,9 @@ function getNotificationIcon(type: NotificationType): LucideIcon {
 
 function getNotificationColor(type: NotificationType): string {
   switch (type) {
-    case 'appointment-reminder':
+    case 'booking.created':
+    case 'booking.confirmed':
+    case 'booking.cancelled':
       return 'text-blue-500'
     case 'billing':
       return 'text-purple-500'
@@ -67,7 +71,9 @@ function getNotificationColor(type: NotificationType): string {
 function getActionUrl(notification: Notification): string | undefined {
   // Map notification types and related entities to action URLs
   switch (notification.type) {
-    case 'appointment-reminder':
+    case 'booking.created':
+    case 'booking.confirmed':
+    case 'booking.cancelled':
       return '/appointments'
     case 'billing':
       return '/billing'

@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
@@ -19,7 +19,7 @@ import { shouldExpand } from '@/utils/query';
  * 
  * Retrieves a consultation note with optional field expansion
  */
-export async function getConsultation(ctx: Context) {
+export async function getConsultation(ctx: HandlerContext) {
   // Get authenticated user and check authorization
   const user = ctx.get('user') as User;
   const auth = ctx.get('auth');

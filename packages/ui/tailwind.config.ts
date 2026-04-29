@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss"
 
 const config: Config = {
-  // @ts-expect-error - Tailwind v3/v4 compatibility
   darkMode: ["class"],
   content: [
     './src/**/*.{ts,tsx}',

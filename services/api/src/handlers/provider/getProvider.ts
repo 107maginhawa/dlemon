@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { 
@@ -18,7 +18,7 @@ import { ProviderRepository } from './repos/provider.repo';
  * OperationId: getProvider
  * Security: Public endpoint, but supports special /providers/me for authenticated users
  */
-export async function getProvider(ctx: Context) {
+export async function getProvider(ctx: HandlerContext) {
   // Get path parameter and query
   let providerId = ctx.req.param('provider');
   const query = ctx.req.valid('query') as { expand?: string[] };
@@ -74,7 +74,7 @@ export async function getProvider(ctx: Context) {
   
   // For public access, only return active providers
   // For authenticated users accessing their own profile, return regardless of status
-  const personId = typeof provider.person === 'string' ? provider.person : provider.person.id;
+  const personId = typeof provider.person === 'string' ? provider.person : (provider.person as { id: string }).id;
   const isOwner = user && user.id === personId;
   
   // Note: Provider schema doesn't have a status field based on current TypeSpec

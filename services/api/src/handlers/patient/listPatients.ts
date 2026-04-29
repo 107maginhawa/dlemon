@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import {
   NotFoundError,
@@ -17,7 +17,7 @@ import type { User } from '@/types/auth';
  * OperationId: listPatients
  * Security: bearerAuth with role ["admin"]
  */
-export async function listPatients(ctx: Context) {
+export async function listPatients(ctx: HandlerContext) {
   // Get authenticated user (middleware guarantees user exists)
   const user = ctx.get('user') as User;
   

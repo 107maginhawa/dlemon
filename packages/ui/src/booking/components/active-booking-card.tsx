@@ -40,9 +40,10 @@ export interface ActiveBookingCardProps {
 function userNeedsProfile(user: User | null | undefined): boolean {
   if (!user) return false
 
-  // Check if user has 'client' role in CSV format
-  // user.role is a CSV string of roles, e.g., "user,client,provider"
-  return !user.role?.split(',').includes('client')
+  // user.role is a CSV string of roles added by the better-auth admin plugin,
+  // e.g. "user,client,provider". Not part of the base better-auth User type.
+  const role = (user as User & { role?: string }).role
+  return !role?.split(',').includes('client')
 }
 
 /**

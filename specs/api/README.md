@@ -45,7 +45,10 @@ specs/api/
 │       ├── storage.tsp   # File management
 │       ├── email.tsp     # Email delivery
 │       ├── audit.tsp     # Compliance logging
-│       └── reviews.tsp   # NPS reviews
+│       ├── reviews.tsp   # NPS reviews
+│       ├── patient.tsp   # Patient profiles (extends person)
+│       ├── provider.tsp  # Provider profiles (extends person)
+│       └── emr.tsp       # Electronic medical records
 ├── dist/                 # Generated output files
 │   ├── openapi/         # OpenAPI specifications
 │   └── typescript-types/ # TypeScript type definitions

@@ -24,12 +24,12 @@ export type { Patient } from '@monobase/sdk/services/patient'
 export async function requireAuth({ context, location }: { context: RouterContext; location?: any }) {
   if (!context.auth.user) {
     throw redirect({
-      to: '/auth/$authView' as any,
+      to: '/auth/$authView',
       params: { authView: 'sign-in' },
       search: {
         redirect: location?.href || `${window.location.pathname}${window.location.search}`,
       },
-    })
+    } as never)
   }
 
   return {

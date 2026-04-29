@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
@@ -20,7 +20,7 @@ import { type UpdateConsultationRequest } from './repos/emr.schema';
  * Updates a consultation note (only draft status consultations can be updated)
  * Supports explicit null values for field clearing per TypeSpec
  */
-export async function updateConsultation(ctx: Context) {
+export async function updateConsultation(ctx: HandlerContext) {
   // Get authenticated user
   const user = ctx.get('user') as User;
 

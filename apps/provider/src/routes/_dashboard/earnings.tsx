@@ -125,18 +125,18 @@ function EarningsPage() {
 
   // Fetch real earnings data
   const { data: earningsOverview, isLoading: overviewLoading, error: overviewError } = useEarningsOverview()
-  const { data: earningsStats, isLoading: statsLoading } = useEarningsStats(chartPeriod)
+  const { data: earningsStats, isLoading: statsLoading } = useEarningsStats()
   const { data: invoicesData, isLoading: invoicesLoading } = useMyInvoices({ limit: 100 })
 
   const isLoading = overviewLoading || invoicesLoading || accountLoading || statsLoading
 
   // Transform invoices to transactions
   const transactions: Transaction[] = useMemo(() => {
-    if (!invoicesData?.items) return []
+    if (!invoicesData?.data) return []
 
-    return invoicesData.items.map((invoice: Invoice) => ({
+    return invoicesData.data.map((invoice: Invoice) => ({
       id: invoice.id,
-      date: invoice.paidAt || invoice.createdAt,
+      date: (invoice.paidAt || invoice.createdAt).toISOString(),
       patient: 'Patient', // Would need customer expansion
       type: 'consultation' as TransactionType,
       amount: invoice.total / 100,
@@ -159,27 +159,18 @@ function EarningsPage() {
   }, [transactions, selectedStatus, selectedType])
 
   // Prepare chart data
+  // TODO(stabilization): time-series stats endpoint not yet wired; chart is empty.
   const chartData = useMemo(() => {
-    if (!earningsStats?.periods) return []
-
-    return earningsStats.periods.map((period) => {
-      const date = new Date(period.period)
-      const label = chartPeriod === 'week'
-        ? format(date, 'EEE')
-        : chartPeriod === 'month'
-        ? format(date, 'MMM d')
-        : chartPeriod === 'quarter'
-        ? format(date, 'MMM')
-        : format(date, 'MMM yyyy')
-
-      return {
-        period: label,
-        earnings: period.earnings,
-        consultations: period.consultations,
-        average: period.averagePerConsultation,
-        growth: period.growth
-      }
-    })
+    void earningsStats
+    void chartPeriod
+    void format
+    return [] as Array<{
+      period: string
+      earnings: number
+      consultations: number
+      average: number
+      growth: number
+    }>
   }, [earningsStats, chartPeriod])
 
   // Revenue breakdown for pie chart
@@ -605,7 +596,7 @@ function EarningsPage() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={(({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`) as never}
                     >
                       {revenueBreakdown.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -651,19 +642,19 @@ function EarningsPage() {
 
                     <div>
                       <div className="flex justify-between text-sm mb-2">
-                        <span>Consultation Target</span>
-                        <span>{earningsStats.totalConsultations} / 200</span>
+                        <span>Paid Consultations</span>
+                        <span>{earningsStats.paidCount} / 200</span>
                       </div>
-                      <Progress value={(earningsStats.totalConsultations / 200) * 100} className="h-2" />
+                      <Progress value={(earningsStats.paidCount / 200) * 100} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Math.round((earningsStats.totalConsultations / 200) * 100)}% of target
+                        {Math.round((earningsStats.paidCount / 200) * 100)}% of target
                       </p>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-sm mb-2">
-                        <span>Average Per Consultation</span>
-                        <span>{formatCurrency(earningsStats.averagePerConsultation)}</span>
+                        <span>Average Per Transaction</span>
+                        <span>{formatCurrency(earningsStats.averageTransaction)}</span>
                       </div>
                       <Progress value={75} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-1">
@@ -671,18 +662,8 @@ function EarningsPage() {
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Platform Fees (8%)</span>
-                        <span className="text-orange-600">-{formatCurrency(earningsStats.platformFees)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm mt-2">
-                        <span className="font-medium">Net Earnings</span>
-                        <span className="font-medium text-green-600">
-                          {formatCurrency(earningsStats.netEarnings)}
-                        </span>
-                      </div>
-                    </div>
+                    {/* TODO(stabilization): platform fees and net earnings not yet
+                        exposed by the billing API; hidden until the endpoint lands. */}
                   </>
                 )}
               </CardContent>

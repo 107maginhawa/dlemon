@@ -10,7 +10,7 @@ export const Route = createFileRoute('/_dashboard/dashboard')({
 
 function DashboardPage() {
   const { data: patientsData } = useEMRPatients({ limit: 1 })
-  const { data: consultationsData } = useConsultations({ status: 'completed', limit: 1 })
+  const { data: consultationsData } = useConsultations({ status: 'finalized', limit: 1 })
   const { data: earnings } = useEarningsOverview()
 
   const stats = [

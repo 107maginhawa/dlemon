@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
@@ -21,7 +21,7 @@ import { parsePagination, buildPaginationMeta } from '@/utils/query';
  * - Admins/Support see all consultations
  * - Patients are not allowed to use this endpoint (they use patient-specific endpoint)
  */
-export async function listConsultations(ctx: Context) {
+export async function listConsultations(ctx: HandlerContext) {
   // Get authenticated user from Better-Auth
   const user = ctx.get('user') as User;
 

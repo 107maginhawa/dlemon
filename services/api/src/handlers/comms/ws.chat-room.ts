@@ -118,7 +118,7 @@ export const config: WebSocketHandler = {
         ws.send(JSON.stringify({ event: 'pong', payload: { timestamp: new Date().toISOString() } }));
         break;
 
-      case 'chat.message':
+      case 'chat.message': {
         // Persist message to database
         const messageRepo = new ChatMessageRepository(db, logger);
         const roomRepo = new ChatRoomRepository(db, logger);
@@ -137,6 +137,7 @@ export const config: WebSocketHandler = {
 
         logger.debug({ userId: user.id, roomId, messageId: savedMessage.id }, 'Chat message persisted and sent');
         break;
+      }
 
       case 'chat.typing':
         // Relay typing indicator to channel
@@ -148,7 +149,7 @@ export const config: WebSocketHandler = {
 
       case 'video.offer':
       case 'video.answer':
-      case 'video.ice-candidate':
+      case 'video.ice-candidate': {
         // Relay WebRTC signaling to channel participants (exclude sender)
         const signalMessage: SignalMessage = {
           type,
@@ -159,6 +160,7 @@ export const config: WebSocketHandler = {
         await wsService.publishToChannel(channel, type, signalMessage, ws);
         logger.debug({ userId: user.id, roomId, type }, 'Video signaling message relayed');
         break;
+      }
 
       default:
         logger.warn({ userId: user.id, roomId, type }, 'Unknown message type from chat room WebSocket');

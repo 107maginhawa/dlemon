@@ -163,7 +163,7 @@ export function ImageCropperDialog({
               min={1}
               max={3}
               step={0.1}
-              onValueChange={(values) => setZoom(values[0])}
+              onValueChange={(values) => setZoom(values[0] ?? 1)}
               className="w-full"
             />
           </div>

@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import {
   ForbiddenError,
@@ -17,7 +17,7 @@ import type { User } from '@/types/auth';
  * OperationId: updatePatient
  * Security: bearerAuth with role ["owner"]
  */
-export async function updatePatient(ctx: Context) {
+export async function updatePatient(ctx: HandlerContext) {
   // Get authenticated user (middleware guarantees user exists)
   const user = ctx.get('user') as User;
   
@@ -45,7 +45,7 @@ export async function updatePatient(ctx: Context) {
   }
   
   // Check authorization - owner can only update their own record
-  const personId = typeof existingPatient.person === 'string' ? existingPatient.person : existingPatient.person.id;
+  const personId = typeof existingPatient.person === 'string' ? existingPatient.person : (existingPatient.person as { id: string }).id;
   const isOwner = personId === user.id;
 
   if (!isOwner) {

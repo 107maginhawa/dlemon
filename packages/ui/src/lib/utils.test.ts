@@ -8,6 +8,7 @@ describe('cn utility', () => {
   })
 
   test('handles conditional classes', () => {
+    // eslint-disable-next-line no-constant-binary-expression -- intentional test of conditional inputs
     const result = cn('base', true && 'truthy', false && 'falsy')
     expect(result).toBe('base truthy')
   })

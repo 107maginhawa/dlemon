@@ -14,7 +14,7 @@ export const queryKeys = {
   providers: () => [...queryKeys.all, 'providers'] as const,
   providersList: (params?: any) => [...queryKeys.providers(), 'list', params] as const,
   provider: (id: string) => [...queryKeys.providers(), id] as const,
-  providerProfile: (id?: string) => [...queryKeys.provider(), id] as const,
+  providerProfile: (id?: string) => [...queryKeys.providers(), 'profile', id] as const,
 
   // Notifications
   notifications: () => [...queryKeys.all, 'notifications'] as const,

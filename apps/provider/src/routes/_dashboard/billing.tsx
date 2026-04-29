@@ -103,7 +103,7 @@ function BillingPage() {
     limit: 100,
   })
 
-  const invoices = invoicesData?.items || []
+  const invoices = invoicesData?.data || []
 
   // Payment mutation
   const initiatePaymentMutation = useInitiatePayment()

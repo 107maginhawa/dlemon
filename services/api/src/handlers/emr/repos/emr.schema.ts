@@ -247,10 +247,10 @@ export interface PatientHealthSummary {
 }
 
 // Helper types for queries with joined data
-export interface ConsultationNoteWithDetails extends ConsultationNote {
+export type ConsultationNoteWithDetails = Omit<ConsultationNote, 'patient' | 'provider'> & {
   patient?: any;
   provider?: any;
-}
+};
 
 // Response type for paginated consultation lists
 export interface PaginatedConsultationResponse {

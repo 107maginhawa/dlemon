@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
@@ -19,7 +19,7 @@ import { ProviderRepository } from '../provider/repos/provider.repo';
  * Finalizes a consultation note (changes status from draft to finalized)
  * Sets finalizedBy field for audit trail per TypeSpec requirements
  */
-export async function finalizeConsultation(ctx: Context) {
+export async function finalizeConsultation(ctx: HandlerContext) {
   // Get authenticated user
   const user = ctx.get('user') as User;
 

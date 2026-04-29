@@ -151,7 +151,7 @@ function ConsultationsPage() {
               )}
               <Button size="sm" variant="outline" asChild>
                 <Link
-                  to="/appointments/$appointmentId"
+                  to="/booking/$appointmentId/details"
                   params={{ appointmentId: appointment.id }}
                 >
                   View Details

@@ -96,6 +96,6 @@ export interface PatientUpdateRequest {
 }
 
 // Helper type for queries with joined person data
-export interface PatientWithPerson extends Patient {
+export type PatientWithPerson = Omit<Patient, 'person'> & {
   person: PersonData;
-}
+};

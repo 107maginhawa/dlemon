@@ -15,7 +15,8 @@ export const Route = createFileRoute('/verify-email')({
 })
 
 function VerifyEmailPage() {
-  const { user } = Route.useRouteContext()
+  const { auth } = Route.useRouteContext()
+  const user = auth.user!
   const authClient = useAuthClient()
   const [isResending, setIsResending] = useState(false)
 

@@ -6,11 +6,12 @@
 import { eq, and, or, ilike, isNull, inArray, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
-import { 
-  patients, 
-  type Patient, 
+import {
+  patients,
+  type Patient,
   type NewPatient,
-  type PatientWithPerson
+  type PatientWithPerson,
+  type PersonData
 } from './patient.schema';
 import { persons } from '../../person/repos/person.schema';
 
@@ -79,27 +80,28 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       .where(eq(patients.id, patientId))
       .limit(1);
     
-    if (result.length === 0) {
+    const row = result[0];
+    if (!row) {
       return null;
     }
-    
-    const { patient, person } = result[0];
-    
+
+    const { patient, person } = row;
+
     this.logger?.debug({ patientId, found: true }, 'Patient with person data retrieved');
-    
+
     return {
       ...patient,
-      person
+      person: person as unknown as PersonData
     };
   }
 
   /**
    * Delete a patient by ID (hard delete)
    */
-  async deleteOneById(id: string): Promise<void> {
-    this.logger?.debug({ id }, 'Deleting patient by ID');
-    await super.deleteOneById(id);
-    this.logger?.info({ id }, 'Patient deleted successfully');
+  override async deleteOneById(id: string, actorId?: string): Promise<void> {
+    this.logger?.debug({ id, actorId }, 'Deleting patient by ID');
+    await super.deleteOneById(id, actorId);
+    this.logger?.info({ id, actorId }, 'Patient deleted successfully');
   }
 
   /**
@@ -111,14 +113,15 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
   ): Promise<PatientWithPerson[]> {
     this.logger?.debug({ filters, options }, 'Finding patients with person data');
     
-    let query = this.db
+    const query = this.db
       .select({
         patient: patients,
         person: persons
       })
       .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id));
-    
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .$dynamic();
+
     // Apply filters
     const conditions = [];
 
@@ -139,28 +142,28 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
         )
       );
     }
-    
+
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query.where(and(...conditions));
     }
-    
+
     // Apply pagination
     if (options?.pagination) {
       const { limit = 25, offset = 0 } = options.pagination;
-      query = query.limit(limit).offset(offset);
+      query.limit(limit).offset(offset);
     }
-    
+
     const results = await query;
-    
-    this.logger?.debug({ 
-      filters, 
-      resultCount: results.length 
+
+    this.logger?.debug({
+      filters,
+      resultCount: results.length
     }, 'Patients with person data retrieved');
-    
+
     return results.map(({ patient, person }) => ({
       ...patient,
       person
-    }));
+    })) as PatientWithPerson[];
   }
 
 }

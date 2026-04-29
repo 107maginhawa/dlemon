@@ -130,6 +130,8 @@ export interface ProviderWithSlots {
   event?: BookingEvent
 }
 
+export type BookingEventData = BookingEvent
+
 export interface Booking {
   id: string
   version: number
@@ -162,6 +164,10 @@ export interface Booking {
   }
   invoice?: string
 }
+
+export type Appointment = Booking
+export type LocationType = Booking['locationType']
+export type AppointmentStatus = Booking['status']
 
 // ============================================================================
 // API Type Aliases
@@ -618,6 +624,10 @@ export interface ListBookingsParams {
   endDate?: Date
   limit?: number
   offset?: number
+  /** Comma-separated list of relationships to expand, e.g. "provider,client". */
+  expand?: string
+  /** Sort key, e.g. "scheduledAt" or "-scheduledAt" for descending. */
+  sort?: string
 }
 
 /**
