@@ -52,6 +52,7 @@
   "devDependencies": {
     "esbuild": "^0.25.0",
     "@faker-js/faker": "^9.0.0",
+    "@monobase/eslint-config": "workspace:*",
     "@monobase/typescript-config": "workspace:*",
     "@types/bun": "latest",
     "@types/handlebars": "^4.1.0",

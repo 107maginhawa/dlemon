@@ -102,12 +102,15 @@ function PastAppointmentsPage() {
 
   // Appointment card renderer
   const renderAppointmentCard = (appointment: Appointment) => {
-    const provider = typeof appointment.provider === 'object' ? appointment.provider : null
-    const providerName = provider
-      ? `${provider.person.firstName} ${provider.person.lastName}`
-      : 'Provider'
+    const expandedProvider = appointment.provider as unknown as
+      | { providerType?: string; person?: { firstName?: string; lastName?: string } }
+      | string
+    const provider = typeof expandedProvider === 'object' ? expandedProvider : null
+    const personFirst = provider?.person?.firstName ?? ''
+    const personLast = provider?.person?.lastName ?? ''
+    const providerName = provider ? `${personFirst} ${personLast}`.trim() || 'Provider' : 'Provider'
     const providerInitials = provider
-      ? `${provider.person.firstName[0]}${provider.person.lastName[0]}`
+      ? `${personFirst[0] ?? 'P'}${personLast[0] ?? ''}`
       : 'P'
 
     const scheduledDate = new Date(appointment.scheduledAt)

@@ -21,12 +21,14 @@ export function FollowUpDisplay({ followUp }: FollowUpDisplayProps) {
           </Badge>
         </div>
 
-        {followUp.needed && followUp.timeframe && (
+        {followUp.needed && followUp.timeframeDays != null && (
           <div className="flex items-start space-x-2">
             <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
             <div>
               <span className="text-xs text-muted-foreground">Timeframe</span>
-              <p className="text-sm font-medium">{followUp.timeframe}</p>
+              <p className="text-sm font-medium">
+                {followUp.timeframeDays} day{followUp.timeframeDays === 1 ? '' : 's'}
+              </p>
             </div>
           </div>
         )}

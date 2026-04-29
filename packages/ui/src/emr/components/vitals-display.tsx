@@ -7,36 +7,40 @@ interface VitalsDisplayProps {
 }
 
 export function VitalsDisplay({ vitals }: VitalsDisplayProps) {
+  const bloodPressure =
+    vitals.systolicBp && vitals.diastolicBp
+      ? `${vitals.systolicBp}/${vitals.diastolicBp} mmHg`
+      : undefined
   const vitalItems = [
     {
       label: 'Temperature',
-      value: vitals.temperature,
+      value: vitals.temperatureCelsius ? `${vitals.temperatureCelsius} °C` : undefined,
       icon: Thermometer,
-      show: !!vitals.temperature,
+      show: vitals.temperatureCelsius != null,
     },
     {
       label: 'Blood Pressure',
-      value: vitals.bloodPressure,
+      value: bloodPressure,
       icon: Activity,
-      show: !!vitals.bloodPressure,
+      show: !!bloodPressure,
     },
     {
       label: 'Pulse',
-      value: vitals.pulse ? `${vitals.pulse} bpm` : undefined,
+      value: vitals.heartRate ? `${vitals.heartRate} bpm` : undefined,
       icon: Heart,
-      show: !!vitals.pulse,
+      show: vitals.heartRate != null,
     },
     {
       label: 'Weight',
-      value: vitals.weight,
+      value: vitals.weightKg ? `${vitals.weightKg} kg` : undefined,
       icon: Weight,
-      show: !!vitals.weight,
+      show: vitals.weightKg != null,
     },
     {
       label: 'Height',
-      value: vitals.height,
+      value: vitals.heightCm ? `${vitals.heightCm} cm` : undefined,
       icon: Ruler,
-      show: !!vitals.height,
+      show: vitals.heightCm != null,
     },
   ].filter((item) => item.show)
 

@@ -20,8 +20,8 @@
     "build": "bun run build:openapi && bun run build:types",
     "docs": "bun run docs-server.ts",
     "format": "tsp format src/**/*.tsp",
-    "lint": "tsp compile . --no-emit",
-    "validate": "tsp compile . --emit @typespec/openapi3 --no-emit",
+    "lint": "tsp compile src/main.tsp --no-emit",
+    "validate": "tsp compile src/main.tsp --emit @typespec/openapi3 --no-emit",
     "clean": "rimraf dist/ tsp-output/"
   },
   "dependencies": {

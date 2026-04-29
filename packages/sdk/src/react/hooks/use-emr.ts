@@ -77,21 +77,21 @@ export function useCreateConsultation(
 
   return useMutation({
     mutationFn: createConsultation,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.emrConsultations() })
-      
+
       if (options?.toastSuccess !== false) {
         toast.success('Consultation created successfully')
       }
-      
-      options?.onSuccess?.(data, variables, context)
+
+      options?.onSuccess?.(data, variables, onMutateResult, context)
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       if (options?.toastError !== false) {
         toast.error('Failed to create consultation')
       }
-      
-      options?.onError?.(error, variables, context)
+
+      options?.onError?.(error, variables, onMutateResult, context)
     },
     onMutate: options?.onMutate,
     onSettled: options?.onSettled,
@@ -111,22 +111,22 @@ export function useUpdateConsultation(
 
   return useMutation({
     mutationFn: ({ id, data }) => updateConsultation(id, data),
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.emrConsultation(variables.id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.emrConsultations() })
-      
+
       if (options?.toastSuccess !== false) {
         toast.success('Consultation updated successfully')
       }
-      
-      options?.onSuccess?.(data, variables, context)
+
+      options?.onSuccess?.(data, variables, onMutateResult, context)
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       if (options?.toastError !== false) {
         toast.error('Failed to update consultation')
       }
-      
-      options?.onError?.(error, variables, context)
+
+      options?.onError?.(error, variables, onMutateResult, context)
     },
     onMutate: options?.onMutate,
     onSettled: options?.onSettled,

@@ -74,24 +74,22 @@ function getStatusIcon(status: InvoiceStatus) {
 // formatCurrency function removed - now using useFormatCurrency hook
 
 function getInvoiceDescription(invoice: Invoice): string {
-  if (invoice.lineItems.length === 0) {
-    return 'No description'
-  }
-  if (invoice.lineItems.length === 1) {
-    return invoice.lineItems[0].description
-  }
-  return `${invoice.lineItems[0].description} and ${invoice.lineItems.length - 1} more items`
+  // TODO(stabilization): line items are not yet exposed by the billing API.
+  return `Invoice ${invoice.invoiceNumber}`
 }
 
 function BillingPage() {
-  const { profile } = Route.useRouteContext()
+  const ctx = Route.useRouteContext() as unknown as { auth: { patient?: { personId?: string } } }
+  const customerPersonId = ctx.auth?.patient?.personId
   const { formatCurrency } = useFormatCurrency({ symbol: true })
 
   // Fetch invoices from API
-  const { data: invoicesData, isLoading, error } = useMyInvoices({ customer: profile.personId })
+  const { data: invoicesData, isLoading, error } = useMyInvoices(
+    customerPersonId ? { customer: customerPersonId } : undefined
+  )
   const payInvoiceMutation = useInitiatePayment()
 
-  const invoices = invoicesData?.items || []
+  const invoices: Invoice[] = invoicesData?.data || []
 
   // Calculate account summary from real data
   const outstandingBalance = invoices
@@ -228,7 +226,7 @@ function BillingPage() {
                           <div className="flex items-center gap-3">
                             <div className="text-right">
                               <p
-                                className={`font-semibold ${invoice.status === 'overdue' ? 'text-red-600' : ''}`}
+                                className={`font-semibold ${invoice.status === 'uncollectible' ? 'text-red-600' : ''}`}
                               >
                                 {formatCurrency(invoice.total)}
                               </p>

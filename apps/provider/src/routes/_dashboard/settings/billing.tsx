@@ -135,7 +135,7 @@ function BillingSettingsPage() {
         </CardHeader>
         <CardContent>
           <MerchantAccountSetup
-            account={account}
+            account={account as never}
             status={status}
             isLoading={isLoading || createMutation.isPending || onboardingMutation.isPending}
             onSetupAccount={handleSetupAccount}

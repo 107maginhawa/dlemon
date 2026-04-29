@@ -90,14 +90,15 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
       .where(eq(providers.id, providerId))
       .limit(1);
     
-    if (result.length === 0) {
+    const row = result[0];
+    if (!row) {
       return null;
     }
-    
-    const { provider, person } = result[0];
-    
+
+    const { provider, person } = row;
+
     this.logger?.debug({ providerId, found: true }, 'Provider with person data retrieved');
-    
+
     return {
       ...provider,
       person
@@ -119,7 +120,8 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
         person: persons
       })
       .from(providers)
-      .innerJoin(persons, eq(providers.person, persons.id));
+      .innerJoin(persons, eq(providers.person, persons.id))
+      .$dynamic();
 
     // Apply filters
     const conditions: SQL[] = [];
@@ -134,7 +136,7 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
         or(
           ilike(persons.firstName, `%${filters.q}%`),
           ilike(persons.lastName, `%${filters.q}%`)
-        )
+        )!
       );
     }
 
@@ -158,21 +160,21 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
       );
     }
 
-    // Build final query
-    let finalQuery = baseQuery;
-
     // Apply conditions
     if (conditions.length > 0) {
-      finalQuery = finalQuery.where(and(...conditions));
+      const whereCondition = and(...conditions);
+      if (whereCondition) {
+        baseQuery.where(whereCondition);
+      }
     }
 
     // Apply pagination
     if (options?.pagination) {
       const { limit = 25, offset = 0 } = options.pagination;
-      finalQuery = finalQuery.limit(limit).offset(offset);
+      baseQuery.limit(limit).offset(offset);
     }
 
-    const results = await finalQuery;
+    const results = await baseQuery;
 
     this.logger?.debug({
       filters,
@@ -182,7 +184,7 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
     return results.map(({ provider, person }) => ({
       ...provider,
       person
-    }));
+    })) as ProviderWithPerson[];
   }
 
   /**
@@ -203,7 +205,7 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
         or(
           ilike(persons.firstName, `%${filters.q}%`),
           ilike(persons.lastName, `%${filters.q}%`)
-        )
+        )!
       );
     }
 
@@ -226,7 +228,10 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      const whereExpr = and(...conditions);
+      if (whereExpr) {
+        query = query.where(whereExpr);
+      }
     }
 
     const result = await query;
@@ -299,7 +304,7 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
         or(
           ilike(persons.firstName, `%${filters.q}%`),
           ilike(persons.lastName, `%${filters.q}%`)
-        )
+        )!
       );
     }
 
@@ -328,7 +333,10 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
 
     // Apply conditions
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      const whereExpr = and(...conditions);
+      if (whereExpr) {
+        query = query.where(whereExpr);
+      }
     }
 
     // Sort by nextAvailable (available providers first, ordered by soonest availability)
@@ -394,7 +402,7 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
         or(
           ilike(persons.firstName, `%${filters.q}%`),
           ilike(persons.lastName, `%${filters.q}%`)
-        )
+        )!
       );
     }
 
@@ -418,7 +426,10 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
 
     // Apply conditions
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      const whereExpr = and(...conditions);
+      if (whereExpr) {
+        query = query.where(whereExpr);
+      }
     }
 
     // Apply pagination
@@ -465,11 +476,12 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
       .where(eq(providers.id, providerId))
       .limit(1);
 
-    if (result.length === 0) {
+    const row = result[0];
+    if (!row) {
       return null;
     }
 
-    const { provider, person, event } = result[0];
+    const { provider, person, event } = row;
 
     this.logger?.debug({ providerId, hasEvent: !!event }, 'Provider with person and event data retrieved');
 

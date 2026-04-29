@@ -150,7 +150,7 @@ export class ConsultationNoteRepository extends DatabaseRepository<
       return null;
     }
     
-    let result: ConsultationNoteWithDetails = { ...baseResult };
+    const result: ConsultationNoteWithDetails = { ...baseResult };
     
     // Conditional expansion using ternary pattern from existing repos
     const [patientData, providerData] = await Promise.all([
@@ -192,27 +192,29 @@ export class ConsultationNoteRepository extends DatabaseRepository<
     ]);
     
     // Attach expanded data
-    if (patientData && patientData.length > 0) {
-      if (expand?.person && 'patient' in patientData[0]) {
+    const firstPatient = patientData?.[0];
+    if (firstPatient) {
+      if (expand?.person && 'patient' in firstPatient) {
         // Include person data in patient object
         result.patient = {
-          ...patientData[0].patient,
-          person: patientData[0].person
+          ...(firstPatient as { patient: Record<string, unknown>; person: Record<string, unknown> }).patient,
+          person: (firstPatient as { patient: Record<string, unknown>; person: Record<string, unknown> }).person
         };
       } else {
-        result.patient = patientData[0];
+        result.patient = firstPatient;
       }
     }
-    
-    if (providerData && providerData.length > 0) {
-      if (expand?.person && 'provider' in providerData[0]) {
+
+    const firstProvider = providerData?.[0];
+    if (firstProvider) {
+      if (expand?.person && 'provider' in firstProvider) {
         // Include person data in provider object
         result.provider = {
-          ...providerData[0].provider,
-          person: providerData[0].person
+          ...(firstProvider as { provider: Record<string, unknown>; person: Record<string, unknown> }).provider,
+          person: (firstProvider as { provider: Record<string, unknown>; person: Record<string, unknown> }).person
         };
       } else {
-        result.provider = providerData[0];
+        result.provider = firstProvider;
       }
     }
     
@@ -401,7 +403,7 @@ export class ConsultationNoteRepository extends DatabaseRepository<
       draftConsultations: allNotes.filter(note => note.status === 'draft').length,
       finalizedConsultations: allNotes.filter(note => note.status === 'finalized').length,
       amendedConsultations: allNotes.filter(note => note.status === 'amended').length,
-      recentConsultationDate: allNotes.length > 0 ? allNotes[0].createdAt : undefined
+      recentConsultationDate: allNotes[0]?.createdAt
     };
     
     this.logger?.debug({ 
@@ -453,7 +455,7 @@ export class ConsultationNoteRepository extends DatabaseRepository<
     
     const summary = {
       recentConsultations: recentNotes.length,
-      lastConsultation: recentNotes.length > 0 ? recentNotes[0].createdAt : undefined,
+      lastConsultation: recentNotes[0]?.createdAt,
       activePrescriptions: activePrescriptions.slice(0, 10) // Limit to 10 most recent
     };
     

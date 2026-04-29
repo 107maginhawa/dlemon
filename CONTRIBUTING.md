@@ -80,16 +80,31 @@ curl http://localhost:7213/health
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   └── account/              # Vite + TanStack Router account portal
+│   ├── account/              # Self-service account portal (Vite + TanStack)
+│   ├── patient/              # Patient-facing app (Vite + TanStack)
+│   ├── provider/             # Provider portal (Vite + TanStack)
+│   └── website/              # Marketing site (Next.js)
 ├── packages/                  # Shared packages
+│   ├── eslint-config/        # Shared ESLint flat configs
+│   ├── sdk/                  # Type-safe API client + TanStack Query hooks
 │   ├── typescript-config/    # Shared TypeScript configs
-│   ├── ui/                   # Shared UI components
-│   └── sdk/                  # Type-safe API client
+│   └── ui/                   # Shared UI components (Radix + Tailwind)
 ├── services/                  # Backend services
 │   └── api/                  # Main Hono API service
 └── specs/                     # API specifications
     └── api/                  # TypeSpec definitions
 ```
+
+### Linting
+
+Every workspace exposes a `lint` script wired to a flat ESLint v9 config that
+imports from `@monobase/eslint-config`. Pick the right preset:
+
+- `@monobase/eslint-config/base` — Node/TypeScript packages and services
+- `@monobase/eslint-config/react` — Vite/React apps and component libraries
+- `@monobase/eslint-config/next` — Next.js apps
+
+Run `bun --filter '*' lint` from the repo root to lint every workspace.
 
 ### Code Organization Standards
 

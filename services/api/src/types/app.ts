@@ -90,6 +90,19 @@ export type ValidatedContext<
 export type AppContext = BaseContext;
 
 /**
+ * Handler context that allows `ctx.req.valid()` to be called with any of the
+ * standard validator targets without requiring the route's OpenAPI generic to
+ * be threaded into the handler signature. `valid()` returns `unknown`; cast at
+ * the call site to the expected validator output type, e.g.
+ * `ctx.req.valid('json') as CreateThingRequest`.
+ */
+export type HandlerContext = BaseContext & {
+  req: BaseContext['req'] & {
+    valid(target: 'json' | 'query' | 'param' | 'header' | 'cookie' | 'form'): unknown;
+  };
+};
+
+/**
  * Unified App type that includes Hono with Variables and all attached dependencies
  * This is the complete return type of createApp function
  */

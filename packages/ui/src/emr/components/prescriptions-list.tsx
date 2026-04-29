@@ -35,17 +35,27 @@ export function PrescriptionsList({ prescriptions }: PrescriptionsListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {prescriptions.map((prescription, index) => (
-              <TableRow key={prescription.id || index}>
-                <TableCell className="font-medium">{prescription.medication}</TableCell>
-                <TableCell>{prescription.dosage || '-'}</TableCell>
-                <TableCell>{prescription.frequency || '-'}</TableCell>
-                <TableCell>{prescription.duration || '-'}</TableCell>
-                <TableCell className="max-w-xs truncate" title={prescription.instructions}>
-                  {prescription.instructions || '-'}
-                </TableCell>
-              </TableRow>
-            ))}
+            {prescriptions.map((prescription, index) => {
+              const dosage =
+                prescription.dosageAmount != null
+                  ? `${prescription.dosageAmount}${prescription.dosageUnit ? ` ${prescription.dosageUnit}` : ''}`
+                  : '-'
+              const duration =
+                prescription.durationDays != null
+                  ? `${prescription.durationDays} day${prescription.durationDays === 1 ? '' : 's'}`
+                  : '-'
+              return (
+                <TableRow key={prescription.id || index}>
+                  <TableCell className="font-medium">{prescription.medication}</TableCell>
+                  <TableCell>{dosage}</TableCell>
+                  <TableCell>{prescription.frequency || '-'}</TableCell>
+                  <TableCell>{duration}</TableCell>
+                  <TableCell className="max-w-xs truncate" title={prescription.instructions}>
+                    {prescription.instructions || '-'}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </CardContent>

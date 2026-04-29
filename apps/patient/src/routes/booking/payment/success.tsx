@@ -39,7 +39,7 @@ function PaymentSuccessPage() {
 
   const handleViewAllAppointments = () => {
     navigate({
-      to: '/dashboard/appointments',
+      to: '/appointments',
       replace: true
     })
   }

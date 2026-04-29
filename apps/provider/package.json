@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
     "test": "bun test src/",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -43,7 +44,9 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
+    "@monobase/eslint-config": "workspace:*",
     "@monobase/typescript-config": "workspace:*",
+    "eslint": "^9.37.0",
     "@playwright/test": "^1.55.0",
     "@tanstack/react-devtools": "^0.6.2",
     "@tanstack/react-query-devtools": "^5.85.9",

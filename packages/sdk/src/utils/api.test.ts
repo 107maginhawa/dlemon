@@ -131,7 +131,7 @@ describe('sanitizeObject', () => {
   })
 
   test('handles nullable fields - sends null for empty values', () => {
-    const data = {
+    const data: Record<string, unknown> = {
       firstName: 'John',
       lastName: null,
       middleName: ''
@@ -183,7 +183,7 @@ describe('sanitizeObject', () => {
   })
 
   test('recursively processes nested objects', () => {
-    const data = {
+    const data: Record<string, unknown> = {
       name: 'John',
       address: {
         street: '123 Main St',
@@ -207,7 +207,7 @@ describe('sanitizeObject', () => {
   })
 
   test('supports dot notation for nested nullables', () => {
-    const data = {
+    const data: Record<string, unknown> = {
       contactInfo: {
         email: '',
         phone: '555-1234'
@@ -227,7 +227,7 @@ describe('sanitizeObject', () => {
   })
 
   test('handles empty nested objects based on nullable config', () => {
-    const data = {
+    const data: Record<string, unknown> = {
       name: 'John',
       address: {}
     }
@@ -268,7 +268,7 @@ describe('sanitizeObject', () => {
   })
 
   test('handles complex nested structures', () => {
-    const data = {
+    const data: Record<string, unknown> = {
       firstName: 'John',
       lastName: '  Doe  ',
       middleName: '',

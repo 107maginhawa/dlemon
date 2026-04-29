@@ -44,6 +44,8 @@ export interface MerchantAccount {
 /**
  * Frontend representation of Invoice with Date objects
  */
+export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void' | 'uncollectible'
+
 export interface Invoice {
   id: string
   version: number
@@ -55,7 +57,7 @@ export interface Invoice {
   customer: string
   merchant: string
   merchantAccount?: string
-  status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible'
+  status: InvoiceStatus
   subtotal: number
   tax?: number
   total: number

@@ -9,7 +9,7 @@ interface SymptomsDisplayProps {
 export function SymptomsDisplay({ symptoms }: SymptomsDisplayProps) {
   const hasSymptoms =
     symptoms.onset ||
-    symptoms.duration ||
+    symptoms.durationHours != null ||
     symptoms.severity ||
     (symptoms.associated && symptoms.associated.length > 0) ||
     (symptoms.denies && symptoms.denies.length > 0)
@@ -24,18 +24,22 @@ export function SymptomsDisplay({ symptoms }: SymptomsDisplayProps) {
         <CardTitle className="text-sm font-medium">Symptoms</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {(symptoms.onset || symptoms.duration || symptoms.severity) && (
+        {(symptoms.onset || symptoms.durationHours != null || symptoms.severity) && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {symptoms.onset && (
               <div>
                 <span className="text-xs text-muted-foreground">Onset</span>
-                <p className="text-sm font-medium">{symptoms.onset}</p>
+                <p className="text-sm font-medium">
+                  {symptoms.onset instanceof Date
+                    ? symptoms.onset.toLocaleString()
+                    : String(symptoms.onset)}
+                </p>
               </div>
             )}
-            {symptoms.duration && (
+            {symptoms.durationHours != null && (
               <div>
                 <span className="text-xs text-muted-foreground">Duration</span>
-                <p className="text-sm font-medium">{symptoms.duration}</p>
+                <p className="text-sm font-medium">{symptoms.durationHours} hours</p>
               </div>
             )}
             {symptoms.severity && (

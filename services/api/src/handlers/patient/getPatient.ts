@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import {
   ForbiddenError,
@@ -18,7 +18,7 @@ import type { User } from '@/types/auth';
  * Security: bearerAuth with roles ["owner", "admin"]
  * Note: Supports special /patients/me endpoint for current user's profile
  */
-export async function getPatient(ctx: Context) {
+export async function getPatient(ctx: HandlerContext) {
   // Get authenticated user (middleware guarantees user exists)
   const user = ctx.get('user') as User;
   
@@ -68,7 +68,7 @@ export async function getPatient(ctx: Context) {
   }
   
   // Check authorization - owner can only access their own record
-  const personId = typeof patient.person === 'string' ? patient.person : patient.person.id;
+  const personId = typeof patient.person === 'string' ? patient.person : (patient.person as { id: string }).id;
   const isOwner = personId === user.id;
 
   if (!isOwner) {

@@ -23,7 +23,8 @@ export type { Person, CreatePersonData, UpdatePersonData } from '@monobase/sdk/s
 export async function requireAuth({ context, location }: { context: RouterContext; location?: any }) {
   if (!context.auth.user) {
     throw redirect({
-      to: '/auth/sign-in',
+      to: '/auth/$authView',
+      params: { authView: 'sign-in' },
       search: {
         redirect: location?.href || `${window.location.pathname}${window.location.search}`,
       },

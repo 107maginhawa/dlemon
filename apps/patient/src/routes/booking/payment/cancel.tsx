@@ -41,7 +41,7 @@ function PaymentCancelPage() {
     sessionStorage.removeItem('pending_appointment_id')
 
     navigate({
-      to: '/dashboard/appointments',
+      to: '/appointments',
       replace: true
     })
   }
@@ -51,7 +51,7 @@ function PaymentCancelPage() {
     sessionStorage.removeItem('pending_appointment_id')
 
     navigate({
-      to: '/dashboard/providers',
+      to: '/providers',
       replace: true
     })
   }

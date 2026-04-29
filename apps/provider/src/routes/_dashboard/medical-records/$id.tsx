@@ -63,7 +63,7 @@ function MedicalRecordDetailPage() {
     if (!note) return
 
     updateConsultation({
-      consultationId: note.id,
+      id: note.id,
       data: {
         chiefComplaint,
         assessment,
@@ -269,28 +269,30 @@ function MedicalRecordDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {note.vitals.bloodPressure && (
+              {note.vitals.systolicBp != null && note.vitals.diastolicBp != null && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Blood Pressure</Label>
-                  <p className="text-lg font-semibold">{note.vitals.bloodPressure}</p>
+                  <p className="text-lg font-semibold">
+                    {note.vitals.systolicBp}/{note.vitals.diastolicBp} mmHg
+                  </p>
                 </div>
               )}
-              {note.vitals.pulse && (
+              {note.vitals.heartRate != null && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Pulse</Label>
-                  <p className="text-lg font-semibold">{note.vitals.pulse} bpm</p>
+                  <p className="text-lg font-semibold">{note.vitals.heartRate} bpm</p>
                 </div>
               )}
-              {note.vitals.temperature && (
+              {note.vitals.temperatureCelsius != null && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Temperature</Label>
-                  <p className="text-lg font-semibold">{note.vitals.temperature}</p>
+                  <p className="text-lg font-semibold">{note.vitals.temperatureCelsius} °C</p>
                 </div>
               )}
-              {note.vitals.weight && (
+              {note.vitals.weightKg != null && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Weight</Label>
-                  <p className="text-lg font-semibold">{note.vitals.weight}</p>
+                  <p className="text-lg font-semibold">{note.vitals.weightKg} kg</p>
                 </div>
               )}
             </div>
@@ -309,22 +311,30 @@ function MedicalRecordDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {note.prescriptions.map((rx, index) => (
-                <div key={index} className="border rounded-lg p-3">
-                  <div>
-                    <p className="font-semibold">{rx.medication}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {rx.dosage} - {rx.frequency}
-                    </p>
-                    {rx.duration && (
-                      <p className="text-sm text-muted-foreground">Duration: {rx.duration}</p>
-                    )}
-                    {rx.instructions && (
-                      <p className="text-sm mt-1">{rx.instructions}</p>
-                    )}
+              {note.prescriptions.map((rx, index) => {
+                const dosage =
+                  rx.dosageAmount != null
+                    ? `${rx.dosageAmount}${rx.dosageUnit ? ` ${rx.dosageUnit}` : ''}`
+                    : null
+                return (
+                  <div key={index} className="border rounded-lg p-3">
+                    <div>
+                      <p className="font-semibold">{rx.medication}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {dosage ?? '—'}{rx.frequency ? ` - ${rx.frequency}` : ''}
+                      </p>
+                      {rx.durationDays != null && (
+                        <p className="text-sm text-muted-foreground">
+                          Duration: {rx.durationDays} day{rx.durationDays === 1 ? '' : 's'}
+                        </p>
+                      )}
+                      {rx.instructions && (
+                        <p className="text-sm mt-1">{rx.instructions}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -340,9 +350,9 @@ function MedicalRecordDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {note.followUp.timeframe && (
+            {note.followUp.timeframeDays != null && (
               <p className="text-sm font-semibold mb-2">
-                Timeframe: {note.followUp.timeframe}
+                Timeframe: {note.followUp.timeframeDays} day{note.followUp.timeframeDays === 1 ? '' : 's'}
               </p>
             )}
             {note.followUp.instructions && (

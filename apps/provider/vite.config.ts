@@ -30,9 +30,10 @@ export default defineConfig({
     outDir: './dist',
     emptyOutDir: true,
     minify: 'esbuild',
-    esbuild: {
-      // Remove console.log in production, keep console.error/warn for debugging
-      drop: ['console.log'],
-    },
+  },
+  esbuild: {
+    // Mark console.log as side-effect-free so the bundler can drop it in
+    // production while keeping console.error/warn/info intact.
+    pure: ['console.log'],
   },
 })

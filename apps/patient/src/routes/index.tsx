@@ -54,12 +54,13 @@ function HomePage() {
             </div>
             <div className="flex items-center space-x-4">
               <Link
-                to="/auth/sign-in"
+                to="/auth/$authView"
+                params={{ authView: 'sign-in' }}
                 className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Sign In
               </Link>
-              <Link to="/auth/sign-up">
+              <Link to="/auth/$authView" params={{ authView: 'sign-up' }}>
                 <Button>
                   Create Account
                 </Button>
@@ -83,13 +84,13 @@ function HomePage() {
             Access your health records, book appointments, and connect with healthcare providers all in one secure platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth/sign-in">
+            <Link to="/auth/$authView" params={{ authView: 'sign-in' }}>
               <Button size="lg" className="min-w-[200px]">
                 Sign In
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
-            <Link to="/auth/sign-up">
+            <Link to="/auth/$authView" params={{ authView: 'sign-up' }}>
               <Button variant="outline" size="lg" className="min-w-[200px]">
                 Create Account
               </Button>

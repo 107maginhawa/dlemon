@@ -251,17 +251,11 @@ function MedicalRecordsPage() {
             key={note.id}
             record={{
               id: note.id,
-              patientId: note.patient,
-              patientName: 'Patient Name', // This would be fetched from patient data
-              date: note.createdAt,
-              type: 'consultation' as const,
-              chiefComplaint: note.chiefComplaint,
-              assessment: note.assessment,
-              plan: note.plan,
-              status: note.status as 'draft' | 'finalized',
-              vitals: note.vitals,
-              prescriptions: note.prescriptions,
-              followUp: note.followUp,
+              type: 'consultation',
+              title: note.chiefComplaint || 'Consultation',
+              date: note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
+              providerName: 'Patient Name',
+              summary: note.assessment || note.plan || undefined,
             }}
           />
         ))}

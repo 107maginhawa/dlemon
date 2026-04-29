@@ -180,6 +180,8 @@ export function AddressForm({
             control={form.control}
             name="country"
             render={({ field }) => {
+              // react-hook-form invokes this as a component; the hook call is safe.
+              // eslint-disable-next-line react-hooks/rules-of-hooks
               const [open, setOpen] = React.useState(false)
 
               return (

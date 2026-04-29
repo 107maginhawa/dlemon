@@ -6,8 +6,12 @@ A full-stack monorepo platform providing video sessions, messaging, and user man
 
 Monobase is a modern application platform designed to streamline user management and business workflows. The platform provides:
 
-- **Account App** - Self-service account management and video sessions
+- **Account App** - Self-service account management
+- **Patient App** - Patient-facing experience (booking, messaging, EMR access)
+- **Provider App** - Provider/practitioner portal (schedule, billing, consultations)
+- **Marketing Website** - Next.js public site
 - **API Service** - Backend with core business modules
+- **Shared SDK & UI** - Type-safe API client and React component library
 
 ## Key Features
 
@@ -22,10 +26,15 @@ Monobase is a modern application platform designed to streamline user management
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   └── account/              # Account app (Vite + TanStack Router)
+│   ├── account/              # Self-service account app (Vite + TanStack Router)
+│   ├── patient/              # Patient-facing app (Vite + TanStack Router)
+│   ├── provider/             # Provider portal (Vite + TanStack Router)
+│   └── website/              # Marketing site (Next.js)
 ├── packages/                  # Shared libraries
+│   ├── eslint-config/        # Shared ESLint flat configs (base, react, next)
+│   ├── sdk/                  # Type-safe API client + TanStack Query hooks
 │   ├── typescript-config/    # Shared TypeScript configurations
-│   └── ui/                   # Shared UI components
+│   └── ui/                   # Shared UI components (Radix + Tailwind)
 ├── services/                  # Backend services
 │   └── api/                  # Main API service (Hono + Bun)
 ├── specs/                     # API specifications
@@ -159,23 +168,30 @@ bun run test:e2e               # Run Playwright E2E tests
 
 ## Applications
 
-### Account App
+### Frontend Applications
 
-**Technology**: Vite + TanStack Router + React 19
+| App | Stack | Port | Purpose |
+|-----|-------|------|---------|
+| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
+| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
+| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
+| `apps/website` | Next.js 15 | 3000 | Public marketing site |
 
-User-facing application for:
-- Account management and profile
-- Video sessions and messaging
-- File access and management
+All Vite apps share the same stack: TanStack Query for data, Better-Auth for
+auth, the `@monobase/sdk` workspace package for typed API access, and the
+`@monobase/ui` workspace package for components.
 
-**Development**: `cd apps/account && bun dev`
-**Port**: 3002
+**Development**: `cd apps/<name> && bun dev`
 
 ## API Service
 
 ### Business Modules
 
-The API service is organized into domain-specific modules:
+The API service is organized into 13 handler modules. The first nine are the
+core business modules; the latter four are platform-specific modules that
+extend or compose them.
+
+Core modules:
 
 1. **Person** - User profile management and PII safeguard
 2. **Booking** - Professional booking and scheduling system
@@ -186,6 +202,13 @@ The API service is organized into domain-specific modules:
 7. **Storage** - File upload/download (S3/MinIO)
 8. **Email** - Transactional email delivery
 9. **Reviews** - NPS review system
+
+Platform-specific modules:
+
+10. **Patient** - Patient profiles and patient-side workflows (extends Person)
+11. **Provider** - Provider/practitioner profiles and listing (extends Person)
+12. **EMR** - Electronic medical records: consultation notes, vitals, prescriptions, follow-ups
+13. **WS** - WebSocket transport for real-time chat and WebRTC signaling (handler-only)
 
 **Authentication** is handled by Better-Auth (integrated, not a separate module).
 

@@ -28,14 +28,15 @@ function OnboardingPage() {
   const queryClient = useQueryClient()
 
   // Get user from route context - guaranteed to exist because of requireAuth guard
-  const { user } = Route.useRouteContext()
+  const { auth } = Route.useRouteContext()
+  const user = auth.user!
   const [currentStep, setCurrentStep] = useState(1)
   const createPersonMutation = useCreateMyPerson()
 
   // Store form data across steps with proper types
   // Initialize with empty/detected values
   const [formData, setFormData] = useState<{
-    personal?: PersonalInfo
+    personal?: Partial<PersonalInfo>
     address?: OptionalAddress
   }>({
     personal: {
@@ -103,12 +104,13 @@ function OnboardingPage() {
       }
     }
 
+    const personal = formData.personal as PersonalInfo
     const personData: CreatePersonData = {
-      firstName: formData.personal.firstName,
-      lastName: formData.personal.lastName,
-      middleName: formData.personal.middleName || undefined,
-      dateOfBirth: formData.personal.dateOfBirth,
-      gender: formData.personal.gender || undefined,
+      firstName: personal.firstName,
+      lastName: personal.lastName,
+      middleName: personal.middleName || undefined,
+      dateOfBirth: personal.dateOfBirth,
+      gender: personal.gender || undefined,
       primaryAddress,
       contactInfo: {
         email: user.email,
@@ -144,12 +146,13 @@ function OnboardingPage() {
       return
     }
 
+    const personal = formData.personal as PersonalInfo
     const personData: CreatePersonData = {
-      firstName: formData.personal.firstName,
-      lastName: formData.personal.lastName,
-      middleName: formData.personal.middleName || undefined,
-      dateOfBirth: formData.personal.dateOfBirth,
-      gender: formData.personal.gender || undefined,
+      firstName: personal.firstName,
+      lastName: personal.lastName,
+      middleName: personal.middleName || undefined,
+      dateOfBirth: personal.dateOfBirth,
+      gender: personal.gender || undefined,
       contactInfo: {
         email: user.email,
       },
