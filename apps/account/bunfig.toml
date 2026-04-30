@@ -1,4 +1,4 @@
-# Bun configuration for provider app
+# Bun configuration for the account app
 
 [test]
 # Exclude E2E tests from Bun test runner
@@ -7,5 +7,7 @@
 # Playwright runs E2E tests (tests/e2e/**/*.spec.ts)
 ignore = ["**/*.spec.ts"]
 
-# Run unit tests only (colocated *.test.ts files in src/)
-# Example: src/api/billing.test.ts, src/api/notifications.test.ts
+# Preload happy-dom globals so component tests have a `window` and `document`.
+# Without this, anything using @testing-library/react or window.navigator throws
+# `ReferenceError: document is not defined`.
+preload = ["./src/test-setup.ts"]

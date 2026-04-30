@@ -10,7 +10,7 @@ import type { RouterContext } from '@/router'
 import { AuthUIProviderTanstack } from '@daveyplate/better-auth-ui/tanstack'
 import { Toaster } from 'sonner'
 import { useAuthClient } from '@monobase/sdk-ts/react/auth'
-import { getPersonQueryKey } from '@monobase/sdk-ts/generated/@tanstack/react-query.gen'
+import { getPersonQueryKey } from '@monobase/sdk-ts/generated/react-query'
 import '@/styles/globals.css'
 
 export const Route = createRootRouteWithContext<RouterContext>()({

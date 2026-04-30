@@ -6,6 +6,8 @@
     "./client": "./src/client.ts",
     "./transport": "./src/transport.ts",
     "./generated": "./src/generated/index.ts",
+    "./generated/react-query": "./src/generated/@tanstack/react-query.gen.ts",
+    "./generated/@tanstack/react-query.gen": "./src/generated/@tanstack/react-query.gen.ts",
     "./generated/*": "./src/generated/*.ts",
     "./flows": "./src/flows/index.ts",
     "./flows/*": "./src/flows/*.ts",
