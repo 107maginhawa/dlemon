@@ -77,7 +77,7 @@ export function checkUserRole(
  * Check if user can manage a specific booking
  * Users can manage bookings where they are:
  * - The client (client:owner)
- * - The provider (provider:owner)
+ * - The host (host:owner)
  * - The event owner (event:owner)
  * @param db Database instance
  * @param user Authenticated user
@@ -99,8 +99,8 @@ export async function checkBookingOwnership(
     return true;
   }
 
-  // Check if user is the provider
-  if (booking.provider === user.id) {
+  // Check if user is the host
+  if (booking.host === user.id) {
     return true;
   }
 

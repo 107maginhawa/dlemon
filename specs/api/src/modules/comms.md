@@ -26,8 +26,8 @@ The **Comms Module** provides communication capabilities for the Monobase Applic
 │   Appointment   │    │    ChatRoom      │────│   ChatMessage   │
 │   (Booking)     │    │                  │    │                 │
 │                 │    │ • participants[] │    │ • sender        │
-│ • patient       │    │ • admins[]       │    │ • messageType   │
-│ • provider      │    │ • context?       │    │ • message?      │
+│ • client       │    │ • admins[]       │    │ • messageType   │
+│ • host      │    │ • context?       │    │ • message?      │
 │ • consultationType  │ • activeVideo     │    │ • videoCallData?│
 │ • scheduledTime │    │   CallMessage?   │    │                 │
 └─────────────────┘    │                  │    └─────────────────┘
@@ -80,7 +80,7 @@ The **Comms Module** provides communication capabilities for the Monobase Applic
 #### 1. Scheduled Teleconsultation
 ```typescript
 // Booking flow
-1. Patient books appointment with consultationType: "video"
+1. Client books appointment with consultationType: "video"
 2. App creates ChatRoom with context = appointment.id
 3. Pre-consultation messaging available
 4. Video call initiated at appointment time
@@ -89,16 +89,16 @@ The **Comms Module** provides communication capabilities for the Monobase Applic
 // Database relationships
 Appointment.consultationType = "video"
 ChatRoom.context = Appointment.id // Optional association
-ChatRoom.participants = [Appointment.patient, Appointment.provider]
-ChatRoom.admins = [Appointment.provider]
+ChatRoom.participants = [Appointment.client, Appointment.host]
+ChatRoom.admins = [Appointment.host]
 ```
 
 #### 2. In-Person to Video Escalation
 ```typescript
-// Scenario: Provider suggests video follow-up
+// Scenario: Host suggests video follow-up
 1. In-person appointment scheduled
 2. ChatRoom created for coordination
-3. Provider suggests video call for follow-up  
+3. Host suggests video call for follow-up  
 4. Video call initiated from existing chat
 5. No appointment link required for ad-hoc calls
 
@@ -109,9 +109,9 @@ ChatRoom.context = Appointment.id (original in-person)
 
 #### 3. Emergency Video Consultation
 ```typescript
-// Direct provider contact
+// Direct host contact
 1. No scheduled appointment needed
-2. ChatRoom created directly between patient/provider
+2. ChatRoom created directly between client/host
 3. Immediate video call capability
 4. Optional appointment creation afterward
 
@@ -158,10 +158,10 @@ The central entity for 1:1 communication between participants.
 ```typescript
 @doc("Communication room with admin-controlled video calls")
 model ChatRoom extends BaseEntity {
-  @doc("Room participants (e.g., [patient, provider])")
+  @doc("Room participants (e.g., [client, host])")
   participants: UUID[];
 
-  @doc("Room administrators who can control video calls (typically includes the provider)")
+  @doc("Room administrators who can control video calls (typically includes the host)")
   admins: UUID[];
 
   @doc("Optional context ID for contextual associations (e.g., appointment ID, billing session ID)")
@@ -183,7 +183,7 @@ model ChatRoom extends BaseEntity {
 
 **Key Design Decisions:**
 - **Participant arrays**: `participants[]` allows flexible participant management and leverages PostgreSQL's efficient JSONB array operations
-- **Admin arrays**: `admins[]` enables multiple administrators (useful for team-based care or provider groups)
+- **Admin arrays**: `admins[]` enables multiple administrators (useful for team-based care or host groups)
 - **Context field**: Optional UUID for domain-agnostic associations (appointments, billing sessions, etc.)
 - **Unique constraint**: `(participants, context)` ensures one room per unique participant set and context
 - **Null context**: Represents general/ongoing communication between participants
@@ -201,7 +201,7 @@ model ChatMessage extends BaseEntity {
   @doc("Chat room reference")
   chatRoom: UUID;
 
-  @doc("Message sender (patient or provider)")
+  @doc("Message sender (client or host)")
   sender: UUID;
 
   @doc("Message timestamp")
@@ -331,8 +331,8 @@ Response 200 OK (ApiOkResponse<PaginatedResponse<ChatRoom>>):
   "data": [
     {
       "id": "uuid",
-      "participants": ["patient-uuid", "provider-uuid"],
-      "admins": ["provider-uuid"],
+      "participants": ["client-uuid", "host-uuid"],
+      "admins": ["host-uuid"],
       "context": "context-uuid",
       "status": "active",
       "lastMessageAt": "2024-01-15T10:30:00Z",
@@ -356,8 +356,8 @@ Authorization: Bearer {token}
 Response 200 OK (ApiOkResponse<ChatRoom>):
 {
   "id": "uuid",
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "context": "context-uuid",
   "status": "active",
   "createdAt": "2024-01-15T09:00:00Z",
@@ -376,8 +376,8 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "context": "context-uuid", // Optional
   "upsert": true // Return existing if already exists
 }
@@ -385,8 +385,8 @@ Content-Type: application/json
 Response 200 OK (ApiOkResponse<ChatRoom> - Existing room returned):
 {
   "id": "existing-room-uuid",
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "context": "context-uuid",
   "status": "active",
   // ... other fields
@@ -395,8 +395,8 @@ Response 200 OK (ApiOkResponse<ChatRoom> - Existing room returned):
 Response 201 Created (ApiCreatedResponse<ChatRoom> - New room created):
 {
   "id": "new-room-uuid",
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "context": "context-uuid",
   "status": "active",
   // ... other fields
@@ -434,9 +434,9 @@ Response 200 OK (ApiOkResponse<PaginatedResponse<ChatMessage>>):
       "videoCallData": {
         "status": "ended",
         "startedAt": "2024-01-15T10:35:00Z",
-        "startedBy": "provider-uuid",
+        "startedBy": "host-uuid",
         "endedAt": "2024-01-15T10:50:00Z",
-        "endedBy": "provider-uuid",
+        "endedBy": "host-uuid",
         "durationMinutes": 15,
         "participants": [...]
       }
@@ -465,7 +465,7 @@ Content-Type: application/json
     "status": "starting",
     "participants": [
       {
-        "user": "patient-uuid",
+        "user": "client-uuid",
         "displayName": "John Doe",
         "audioEnabled": true,
         "videoEnabled": true
@@ -513,14 +513,14 @@ Response 200 OK (ApiOkResponse<VideoCallJoinResponse>):
   "token": "jwt-token-for-participant",
   "participants": [
     {
-      "user": "patient-uuid",
+      "user": "client-uuid",
       "displayName": "John Doe", 
       "joinedAt": "2024-01-15T10:35:00Z",
       "audioEnabled": true,
       "videoEnabled": true
     },
     {
-      "user": "provider-uuid",
+      "user": "host-uuid",
       "displayName": "Dr. Sarah Johnson",
       "joinedAt": "2024-01-15T10:36:00Z", 
       "audioEnabled": true,
@@ -556,7 +556,7 @@ Response 200 OK (ApiOkResponse<LeaveVideoCallResponse>):
 {
   "participants": [
     {
-      "user": "provider-uuid",
+      "user": "host-uuid",
       "displayName": "Dr. Sarah Johnson",
       "joinedAt": "2024-01-15T10:36:00Z",
       "audioEnabled": true,
@@ -597,24 +597,24 @@ The comms module is domain-agnostic and doesn't know about appointments, billing
 ```typescript
 // App creates appointment
 const appointment = await POST('/appointments', {
-  patient: "patient-123",
-  provider: "provider-456",
+  client: "client-123",
+  host: "host-456",
   consultationType: "video",
   // ...
 });
 
 // App creates/gets chat room for appointment
 const chatRoom = await POST('/chat-rooms', {
-  participants: [appointment.patient, appointment.provider],
-  admins: [appointment.provider],
+  participants: [appointment.client, appointment.host],
+  admins: [appointment.host],
   context: appointment.id,  // Associate with appointment
   upsert: true  // Return existing if already created
 });
 
 // For general chat (no specific context)
 const generalChat = await POST('/chat-rooms', {
-  participants: ["patient-123", "provider-456"],
-  admins: ["provider-456"],
+  participants: ["client-123", "host-456"],
+  admins: ["host-456"],
   // No context - represents general communication
   upsert: true
 });
@@ -628,8 +628,8 @@ const generalChat = await POST('/chat-rooms', {
 // 1. Appointment booking (Booking module)
 POST /appointments
 {
-  "patient": "patient-uuid",
-  "provider": "provider-uuid", 
+  "client": "client-uuid",
+  "host": "host-uuid", 
   "consultationType": "video",
   "scheduledTime": "2024-01-15T14:00:00Z"
 }
@@ -637,8 +637,8 @@ POST /appointments
 // 2. App creates chat room for appointment
 POST /chat-rooms
 {
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "context": "appointment-uuid",
   "upsert": true
 }
@@ -650,7 +650,7 @@ POST /chat-rooms/{roomId}/messages
   "message": "Hi Dr. Johnson, I've been experiencing headaches lately."
 }
 
-// 4. Provider response
+// 4. Host response
 POST /chat-rooms/{roomId}/messages  
 {
   "messageType": "text",
@@ -663,11 +663,11 @@ POST /chat-rooms/{roomId}/messages
   "messageType": "video_call",
   "videoCallData": {
     "status": "starting",
-    "participants": [provider_participant_data]
+    "participants": [host_participant_data]
   }
 }
 
-// 6. Patient joins
+// 6. Client joins
 POST /chat-rooms/{roomId}/video-call/join
 {
   "displayName": "John Doe",
@@ -693,8 +693,8 @@ POST /chat-rooms/{roomId}/messages
 // 1. Direct chat room creation (no specific context)
 POST /chat-rooms
 {
-  "participants": ["patient-uuid", "provider-uuid"],
-  "admins": ["provider-uuid"],
+  "participants": ["client-uuid", "host-uuid"],
+  "admins": ["host-uuid"],
   "upsert": true
   // No context field - general chat
 }
@@ -705,11 +705,11 @@ POST /chat-rooms/{roomId}/messages
   "messageType": "video_call",
   "videoCallData": {
     "status": "starting",
-    "participants": [patient_participant_data]
+    "participants": [client_participant_data]
   }
 }
 
-// 3. Provider joins quickly
+// 3. Host joins quickly
 POST /chat-rooms/{roomId}/video-call/join
 {...}
 
@@ -720,8 +720,8 @@ POST /chat-rooms/{roomId}/video-call/end
 // 6. Optional: Create appointment record for billing
 POST /appointments
 {
-  "patient": "patient-uuid",
-  "provider": "provider-uuid",
+  "client": "client-uuid",
+  "host": "host-uuid",
   "consultationType": "video",
   "scheduledTime": "2024-01-15T11:30:00Z", // actual call time
   "status": "completed"
@@ -792,7 +792,7 @@ CREATE TABLE call_participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   chat_message UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES persons(id),
-  user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('patient', 'provider')),
+  user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('client', 'host')),
   display_name VARCHAR(100) NOT NULL,
   joined_at TIMESTAMPTZ,
   left_at TIMESTAMPTZ,
@@ -851,8 +851,8 @@ SELECT DISTINCT
   MIN(vc.created_at)
 FROM video_call_sessions vc
 JOIN appointments a ON vc.appointment_id = a.id
-JOIN persons p ON a.patient = p.id
-JOIN persons pr ON a.provider = pr.id
+JOIN persons p ON a.client = p.id
+JOIN persons pr ON a.host = pr.id
 GROUP BY p.user_id, pr.user_id, vc.appointment_id;
 
 -- 3. Convert video calls to messages:
@@ -1007,15 +1007,15 @@ describe('Video Consultation Workflow', () => {
   it('should handle full appointment-based video consultation', async () => {
     // 1. Create appointment
     const appointment = await createAppointment({
-      patient: patientId,
-      provider: providerId,
+      client: clientId,
+      host: hostId,
       consultationType: 'video'
     });
 
     // 2. Create/get chat room for appointment
     const chatRoom = await POST(`/chat-rooms`, {
-      participants: [appointment.patient, appointment.provider],
-      admins: [appointment.provider],
+      participants: [appointment.client, appointment.host],
+      admins: [appointment.host],
       context: appointment.id,
       upsert: true
     });
@@ -1032,7 +1032,7 @@ describe('Video Consultation Workflow', () => {
       videoCallData: { status: 'starting' }
     });
 
-    // 5. Provider joins
+    // 5. Host joins
     const joinResult = await POST(`/chat-rooms/${chatRoom.id}/video-call/join`, {
       displayName: 'Dr. Smith'
     });

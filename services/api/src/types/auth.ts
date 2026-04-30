@@ -6,9 +6,10 @@
 import type { User as BetterAuthUser, Session as BetterAuthSession } from 'better-auth';
 
 /**
- * User roles in the healthcare platform
+ * User roles. `user` is the Better-Auth default; `client` and `host` are
+ * application-level roles assigned via `addUserRole`/`removeUserRole`.
  */
-export type UserRole = 'patient' | 'provider' | 'admin' | 'user';
+export type UserRole = 'client' | 'host' | 'admin' | 'user';
 
 /**
  * Admin privilege levels

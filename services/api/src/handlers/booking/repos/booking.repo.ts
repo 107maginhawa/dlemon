@@ -21,9 +21,9 @@ import { InvoiceRepository } from '../../billing/repos/billing.repo';
 
 export interface BookingFilters {
   client?: string;
-  provider?: string;
-  clientOrProvider?: string;
-  status?: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed' | 'no_show_client' | 'no_show_provider';
+  host?: string;
+  clientOrHost?: string;
+  status?: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed' | 'no_show_client' | 'no_show_host';
   dateRange?: { start: Date; end: Date };
   upcoming?: boolean;
   past?: boolean;
@@ -31,7 +31,7 @@ export interface BookingFilters {
 
 export interface BookingWithDetails extends Booking {
   clientDetails?: any;
-  providerDetails?: any;
+  hostDetails?: any;
   slotDetails?: TimeSlot;
 }
 
@@ -54,15 +54,15 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
       conditions.push(eq(bookings.client, filters.client));
     }
 
-    if (filters.provider) {
-      conditions.push(eq(bookings.provider, filters.provider));
+    if (filters.host) {
+      conditions.push(eq(bookings.host, filters.host));
     }
 
-    if (filters.clientOrProvider) {
+    if (filters.clientOrHost) {
       conditions.push(
         or(
-          eq(bookings.client, filters.clientOrProvider),
-          eq(bookings.provider, filters.clientOrProvider)
+          eq(bookings.client, filters.clientOrHost),
+          eq(bookings.host, filters.clientOrHost)
         )
       );
     }
@@ -91,7 +91,7 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
       conditions.push(
         or(
           lte(bookings.scheduledAt, new Date()),
-          inArray(bookings.status, ['completed', 'cancelled', 'no_show_client', 'no_show_provider'])
+          inArray(bookings.status, ['completed', 'cancelled', 'no_show_client', 'no_show_host'])
         )
       );
     }
@@ -172,7 +172,7 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
     const bookingData: NewBooking = {
       id: bookingId,
       client: clientId,
-      provider: slot.owner,
+      host: slot.owner,
       slot: slotId,
       locationType: request.locationType || slot.locationTypes[0],
       reason: request.reason,
@@ -216,7 +216,7 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
    */
   async cancelBooking(
     bookingId: string,
-    cancelledBy: 'client' | 'provider',
+    cancelledBy: 'client' | 'host',
     reason: string
   ): Promise<Booking> {
     this.logger?.debug({ bookingId, cancelledBy, reason }, 'Cancelling booking');
@@ -242,9 +242,9 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
   }
 
   /**
-   * Get upcoming bookings for a person (as client or provider)
+   * Get upcoming bookings for a person (as client or host)
    */
-  async getUpcomingBookings(personId: string, role: 'client' | 'provider'): Promise<Booking[]> {
+  async getUpcomingBookings(personId: string, role: 'client' | 'host'): Promise<Booking[]> {
     this.logger?.debug({ personId, role }, 'Getting upcoming bookings');
 
     const filters: BookingFilters = {
@@ -254,7 +254,7 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
     if (role === 'client') {
       filters.client = personId;
     } else {
-      filters.provider = personId;
+      filters.host = personId;
     }
 
     const bookings = await this.findMany(filters);
@@ -266,10 +266,10 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
   /**
    * Mark booking as no-show
    */
-  async markAsNoShow(bookingId: string, markedBy: 'client' | 'provider'): Promise<Booking> {
+  async markAsNoShow(bookingId: string, markedBy: 'client' | 'host'): Promise<Booking> {
     this.logger?.debug({ bookingId, markedBy }, 'Marking booking as no-show');
 
-    const status = markedBy === 'client' ? 'no_show_client' : 'no_show_provider';
+    const status = markedBy === 'client' ? 'no_show_client' : 'no_show_host';
     
     const updated = await this.updateOneById(bookingId, {
       status,

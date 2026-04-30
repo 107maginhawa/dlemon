@@ -66,7 +66,7 @@ export async function createPerson(
         action: 'create',
         outcome: 'success',
         user: user.id,
-        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
+        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'host' | 'admin' | 'system',
         resourceType: 'person',
         resource: person.id,
         description: 'Person profile created',

@@ -20,7 +20,7 @@ import { bookings, timeSlots } from '../repos/booking.schema';
  * Configuration for confirmation timer job
  */
 export interface ConfirmationTimerConfig {
-  confirmationWindowMinutes: number; // Time window for provider to confirm (default: 15)
+  confirmationWindowMinutes: number; // Time window for host to confirm (default: 15)
   batchSize: number; // Number of bookings to process at once (default: 50)
   includeNotifications: boolean; // Whether to send notifications (default: true)
 }
@@ -119,12 +119,12 @@ export async function confirmationTimerJob(context: ExtendedJobContext): Promise
         logger.info({
           bookingId: booking['id'],
           clientId: booking['client'],
-          providerId: booking['provider'],
+          hostId: booking['host'],
           bookingTime: booking['bookedAt'],
           minutesExpired: differenceInMinutes(new Date(), booking['bookedAt'])
         }, 'Auto-rejected booking');
         
-        // Queue notification for client and provider
+        // Queue notification for client and host
         if (config.includeNotifications) {
           await queueAutoRejectionNotifications(booking, context);
         }
@@ -181,10 +181,10 @@ async function queueAutoRejectionNotifications(
       recipient: booking.client,
       type: 'booking_auto_rejected',
       title: 'Booking Request Expired',
-      message: 'Your booking request has expired as the provider did not confirm within 15 minutes.',
+      message: 'Your booking request has expired as the host did not confirm within 15 minutes.',
       data: {
         bookingId: booking.id,
-        providerId: booking.provider,
+        hostId: booking.host,
         scheduledAt: booking.scheduledAt?.toISOString(),
         autoRejectedAt: new Date().toISOString(),
         reason: 'Provider did not confirm within 15 minutes'
@@ -195,7 +195,7 @@ async function queueAutoRejectionNotifications(
     
     // Provider notification - booking expired
     await notificationService.createNotification({
-      recipient: booking.provider,
+      recipient: booking.host,
       type: 'booking_expired',
       title: 'Booking Request Expired',
       message: 'A booking request has expired due to no confirmation within the time limit.',
@@ -213,7 +213,7 @@ async function queueAutoRejectionNotifications(
     logger.info({
       bookingId: booking.id,
       clientId: booking.client,
-      providerId: booking.provider
+      hostId: booking.host
     }, 'Auto-rejection notifications sent successfully');
     
   } catch (error) {

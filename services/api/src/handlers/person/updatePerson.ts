@@ -90,7 +90,7 @@ export async function updatePerson(
         action: 'update',
         outcome: 'success',
         user: user.id,
-        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
+        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'host' | 'admin' | 'system',
         resourceType: 'person',
         resource: personId,
         description: 'Person profile updated',

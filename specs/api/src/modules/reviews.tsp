@@ -24,9 +24,9 @@ using TypeSpec.OpenAPI;
  * - Role-based access control
  * 
  * Sample Use Cases:
- * - Healthcare: Patient reviews provider/platform after appointment
+ * - Services: Client reviews host/booking experience
  * - E-commerce: Buyer reviews seller/product/shipping
- * - Services: Client reviews professional/booking experience
+ * - Marketplaces: Buyer reviews seller, seller reviews buyer
  */
 
 // ============================================================================
@@ -44,7 +44,7 @@ model Review extends BaseEntity {
   @doc("Person who submits the review")
   reviewer: UUID;
 
-  @doc("Application-defined review type (e.g., 'provider', 'platform', 'product')")
+  @doc("Application-defined review type (e.g., 'host', 'platform', 'product')")
   @maxLength(50)
   reviewType: string;
 

@@ -32,7 +32,7 @@ export const bookingStatusEnum = pgEnum('booking_status', [
   'cancelled',
   'completed',
   'no_show_client',
-  'no_show_provider'
+  'no_show_host'
 ]);
 
 export const slotStatusEnum = pgEnum('slot_status', [
@@ -215,7 +215,7 @@ export const bookings: any = pgTable('booking', {
     .notNull()
     .references(() => persons.id, { onDelete: 'cascade' }),
 
-  provider: uuid('provider_id')
+  host: uuid('host_id')
     .notNull()
     .references(() => persons.id, { onDelete: 'cascade' }),
   
@@ -242,11 +242,11 @@ export const bookings: any = pgTable('booking', {
   
   // Cancellation fields
   cancellationReason: text('cancellation_reason'),
-  cancelledBy: text('cancelled_by'), // 'client' or 'provider'
+  cancelledBy: text('cancelled_by'), // 'client' or 'host'
   cancelledAt: timestamp('cancelled_at'),
   
   // No-show fields
-  noShowMarkedBy: text('no_show_marked_by'), // 'client' or 'provider'
+  noShowMarkedBy: text('no_show_marked_by'), // 'client' or 'host'
   noShowMarkedAt: timestamp('no_show_marked_at'),
   
   // Form responses (data only during creation)
@@ -257,17 +257,18 @@ export const bookings: any = pgTable('booking', {
 }, (table) => ({
   // Performance indexes
   clientIdx: index('bookings_client_id_idx').on(table.client),
-  providerIdx: index('bookings_provider_id_idx').on(table.provider),
+  hostIdx: index('bookings_host_id_idx').on(table.host),
   statusIdx: index('bookings_status_idx').on(table.status),
   scheduledAtIdx: index('bookings_scheduled_at_idx').on(table.scheduledAt),
   slotIdx: index('bookings_slot_id_idx').on(table.slot),
-  
+
   // Compound indexes for common queries
   clientStatusIdx: index('bookings_client_status_idx')
-    .on(table.client, table.status),  providerStatusIdx: index('bookings_provider_status_idx')
-    .on(table.provider, table.status),
-  providerDateIdx: index('bookings_provider_date_idx')
-    .on(table.provider, table.scheduledAt),
+    .on(table.client, table.status),
+  hostStatusIdx: index('bookings_host_status_idx')
+    .on(table.host, table.status),
+  hostDateIdx: index('bookings_host_date_idx')
+    .on(table.host, table.scheduledAt),
   
 
   
@@ -354,7 +355,7 @@ export interface TimeBlock {
   bufferTime?: number; // Minutes (default: 0)
 }// Daily configuration for a specific day of the week
 export interface DailyConfig {
-  enabled: boolean; // Whether provider works this day
+  enabled: boolean; // Whether the host has availability this day
   timeBlocks: TimeBlock[]; // Time blocks for this day
 }
 
@@ -482,7 +483,7 @@ export interface BookingActionRequest {
 // Helper types for queries with joined data
 export interface BookingWithDetails extends Booking {
   client?: any; // Client details
-  provider?: any; // Provider details
+  host?: any; // Host details
   slot?: TimeSlot; // Time slot details
 }
 

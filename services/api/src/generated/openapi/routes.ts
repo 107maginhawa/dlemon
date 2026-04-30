@@ -151,14 +151,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // listBookings
   app.get('/booking/bookings',
-    authMiddleware({ roles: ["client:owner", "provider:owner", "admin", "support"] }),
+    authMiddleware({ roles: ["client:owner", "host:owner", "admin", "support"] }),
     zValidator('query', validators.ListBookingsQuery, validationErrorHandler),
     registry.listBookings as unknown as Handler
   );
 
   // getBooking
   app.get('/booking/bookings/:booking',
-    authMiddleware({ roles: ["client:owner", "provider:owner", "admin", "support"] }),
+    authMiddleware({ roles: ["client:owner", "host:owner", "admin", "support"] }),
     zValidator('param', validators.GetBookingParams, validationErrorHandler),
     zValidator('query', validators.GetBookingQuery, validationErrorHandler),
     createExpandMiddleware("Booking"),
@@ -167,7 +167,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // cancelBooking
   app.post('/booking/bookings/:booking/cancel',
-    authMiddleware({ roles: ["client:owner", "provider:owner", "admin"] }),
+    authMiddleware({ roles: ["client:owner", "host:owner", "admin"] }),
     zValidator('param', validators.CancelBookingParams, validationErrorHandler),
     zValidator('json', validators.CancelBookingBody, validationErrorHandler),
     createExpandMiddleware("Booking"),
@@ -176,7 +176,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // confirmBooking
   app.post('/booking/bookings/:booking/confirm',
-    authMiddleware({ roles: ["provider:owner", "admin"] }),
+    authMiddleware({ roles: ["host:owner", "admin"] }),
     zValidator('param', validators.ConfirmBookingParams, validationErrorHandler),
     zValidator('json', validators.ConfirmBookingBody, validationErrorHandler),
     createExpandMiddleware("Booking"),
@@ -185,7 +185,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // markNoShowBooking
   app.post('/booking/bookings/:booking/no-show',
-    authMiddleware({ roles: ["client:owner", "provider:owner", "admin"] }),
+    authMiddleware({ roles: ["client:owner", "host:owner", "admin"] }),
     zValidator('param', validators.MarkNoShowBookingParams, validationErrorHandler),
     zValidator('json', validators.MarkNoShowBookingBody, validationErrorHandler),
     createExpandMiddleware("Booking"),
@@ -194,7 +194,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // rejectBooking
   app.post('/booking/bookings/:booking/reject',
-    authMiddleware({ roles: ["provider:owner", "admin"] }),
+    authMiddleware({ roles: ["host:owner", "admin"] }),
     zValidator('param', validators.RejectBookingParams, validationErrorHandler),
     zValidator('json', validators.RejectBookingBody, validationErrorHandler),
     createExpandMiddleware("Booking"),

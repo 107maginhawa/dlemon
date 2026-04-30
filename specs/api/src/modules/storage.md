@@ -10,7 +10,7 @@ The Storage Module provides secure file upload, download, and management functio
 - [File Upload Process](#file-upload-process)
 - [File Download Process](#file-download-process)
 - [File Management Operations](#file-management-operations)
-- [Storage Provider Abstraction](#storage-provider-abstraction)
+- [Storage Host Abstraction](#storage-host-abstraction)
 - [API Endpoints](#api-endpoints)
 - [Data Models](#data-models)
 - [Error Handling](#error-handling)
@@ -85,7 +85,7 @@ The upload process consists of three steps: request permission, upload to storag
 2. **Direct Upload to Storage**
    - Client PUTs file directly to presigned URL
    - Bypasses API server completely
-   - Storage provider handles the upload
+   - Storage host handles the upload
 
 3. **Confirm Upload Completion**
    - Client notifies server of successful upload
@@ -219,13 +219,13 @@ Permanently remove file from storage and database.
 
 **Important**: This is a hard delete - the file and all metadata are permanently removed.
 
-## Storage Provider Abstraction
+## Storage Host Abstraction
 
-The API remains consistent regardless of the storage backend. Provider selection is handled through configuration.
+The API remains consistent regardless of the storage backend. Host selection is handled through configuration.
 
-### Supported Providers
+### Supported Hosts
 
-| Provider | Use Case | Configuration |
+| Host | Use Case | Configuration |
 |----------|----------|---------------|
 | AWS S3 | Production, global CDN | Region, bucket, credentials |
 | MinIO | Self-hosted, on-premise | Endpoint, port, bucket, credentials |
@@ -236,7 +236,7 @@ The API remains consistent regardless of the storage backend. Provider selection
 ```json
 {
   "storage": {
-    "provider": "minio",
+    "host": "minio",
     "endpoint": "http://localhost:9000",
     "bucket": "monobase-files",
     "credentials": {
@@ -247,7 +247,7 @@ The API remains consistent regardless of the storage backend. Provider selection
 }
 ```
 
-### Provider Features Comparison
+### Host Features Comparison
 
 | Feature | AWS S3 | MinIO | Local |
 |---------|--------|-------|-------|
@@ -433,7 +433,7 @@ interface FileMetadata {
 ```typescript
 interface FileOwner {
   id: string;
-  type: "patient" | "provider" | "admin" | "system";
+  type: "client" | "host" | "admin" | "system";
   name: string;
 }
 ```

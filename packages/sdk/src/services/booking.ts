@@ -253,14 +253,8 @@ function mapApiBookingEventToFrontend(apiEvent: ApiBookingEvent): BookingEvent {
 
 /**
  * Convert API Booking to frontend Booking with Date objects.
- *
- * The API still names the host-side foreign key `provider` for historical
- * reasons; the SDK exposes it as `host` to keep the surface vertical-neutral.
  */
 function mapApiBookingToFrontend(apiBooking: ApiBooking): Booking {
-  const apiHost = (apiBooking as unknown as { provider?: string | { id: string }; host?: string | { id: string } })
-  const hostRef = apiHost.host ?? apiHost.provider
-  const hostId = typeof hostRef === 'string' ? hostRef : hostRef?.id ?? ''
   return {
     id: apiBooking.id,
     version: apiBooking.version,
@@ -269,7 +263,7 @@ function mapApiBookingToFrontend(apiBooking: ApiBooking): Booking {
     updatedAt: new Date(apiBooking.updatedAt),
     updatedBy: apiBooking.updatedBy,
     client: typeof apiBooking.client === 'string' ? apiBooking.client : apiBooking.client.id,
-    host: hostId,
+    host: typeof apiBooking.host === 'string' ? apiBooking.host : apiBooking.host.id,
     slot: typeof apiBooking.slot === 'string' ? apiBooking.slot : apiBooking.slot.id,
     locationType: apiBooking.locationType,
     reason: apiBooking.reason,

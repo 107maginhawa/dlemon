@@ -19,7 +19,7 @@ import { getBookingUserType } from './utils/ownership';
  * Path: POST /booking/bookings/{booking}/cancel
  * OperationId: cancelBooking
  * 
- * Mutual cancellation - both client and provider can cancel confirmed bookings
+ * Mutual cancellation - both client and host can cancel confirmed bookings
  * Reason required, timing validation, slot release
  */
 export async function cancelBooking(
@@ -80,7 +80,7 @@ export async function cancelBooking(
     userId: user.id,
     userType,
     clientId: booking.client,
-    providerId: booking.provider,
+    hostId: booking.host,
     reason: body.reason.trim(),
     cancelledAt: cancelledBooking.cancelledAt,
     slotReleased: booking.slot,
@@ -92,11 +92,11 @@ export async function cancelBooking(
     const wsService = ctx.get('ws');
 
     // Determine notification details based on who cancelled
-    const cancellerName = userType === 'provider' ? 'provider' : 'client';
-    const otherParty = userType === 'provider' ? 'client' : 'provider';
-    const otherPartyPersonId = userType === 'provider' ? booking.client : booking.provider;
+    const cancellerName = userType === 'host' ? 'host' : 'client';
+    const otherParty = userType === 'host' ? 'client' : 'host';
+    const otherPartyPersonId = userType === 'host' ? booking.client : booking.host;
 
-    // Both booking.client and booking.provider now store person IDs directly
+    // Both booking.client and booking.host store person IDs directly
 
     // Notification for the person who cancelled (confirmation)
     // (automatically sends WebSocket notification via NotificationService)

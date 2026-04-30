@@ -251,7 +251,7 @@ async function archiveOldBookings(
     .from(bookings)
     .where(
       and(
-        inArray(bookings.status, ['completed', 'cancelled', 'no_show_client', 'no_show_provider']),
+        inArray(bookings.status, ['completed', 'cancelled', 'no_show_client', 'no_show_host']),
         lte(bookings.scheduledAt, cutoffDate)
       )
     );

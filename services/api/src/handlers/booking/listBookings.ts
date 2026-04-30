@@ -31,7 +31,7 @@ export async function listBookings(
   // Extract validated query parameters
   const query = ctx.req.valid('query') as {
     client?: string;
-    provider?: string; 
+    host?: string;
     status?: string;
     startDate?: string;
     endDate?: string;
@@ -51,7 +51,7 @@ export async function listBookings(
   
   // Build base filters from query parameters
   const allowedFilters = [
-    'client', 'provider', 'status'
+    'client', 'host', 'status'
   ];
   const filters = parseFilters(query, allowedFilters) as BookingFilters;
 
@@ -64,16 +64,16 @@ export async function listBookings(
   }
 
   // Apply ownership-based filtering - user can only see their own bookings
-  if (query.provider && query.provider !== user.id) {
-    throw new ForbiddenError('You can only access your own provider bookings');
+  if (query.host && query.host !== user.id) {
+    throw new ForbiddenError('You can only access bookings you host');
   }
   if (query.client && query.client !== user.id) {
-    throw new ForbiddenError('You can only access your own client bookings');
+    throw new ForbiddenError('You can only access bookings you booked as a client');
   }
 
-  // If no specific provider/client filter, show all bookings where user is either client OR provider
-  if (!query.provider && !query.client) {
-    filters.clientOrProvider = user.id;
+  // If no specific host/client filter, show all bookings where user is either client OR host
+  if (!query.host && !query.client) {
+    filters.clientOrHost = user.id;
   }
   
   // Parse pagination

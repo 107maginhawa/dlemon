@@ -17,8 +17,8 @@ import { checkBookingOwnership } from './utils/ownership';
  * Path: GET /booking/bookings/{booking}
  * OperationId: getBooking
  *
- * Supports expansion: provider, client, slot
- * Role-based access: clients see own, providers see theirs, admin sees all
+ * Supports expansion: host, client, slot
+ * Role-based access: clients see own, hosts see theirs, admin sees all
  */
 export async function getBooking(
   ctx: ValidatedContext<never, GetBookingQuery, GetBookingParams>

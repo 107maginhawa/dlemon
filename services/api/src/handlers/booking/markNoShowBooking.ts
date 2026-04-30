@@ -20,7 +20,7 @@ import { differenceInMinutes } from 'date-fns';
  * OperationId: markNoShowBooking
  * 
  * Mark no-show with timing rules and exclusivity:
- * - Client: 5 minutes past scheduled time to mark provider no-show
+ * - Client: 5 minutes past scheduled time to mark host no-show
  * - Provider: 10 minutes past scheduled time to mark client no-show  
  * - Only one party can mark no-show (exclusivity)
  */
@@ -60,7 +60,7 @@ export async function markNoShowBooking(
   }
   
   // Validate that no-show hasn't already been marked
-  if (booking.status === 'no_show_client' || booking.status === 'no_show_provider') {
+  if (booking.status === 'no_show_client' || booking.status === 'no_show_host') {
     throw new BusinessLogicError(
       'No-show has already been marked for this booking',
       'NO_SHOW_ALREADY_MARKED'
@@ -97,8 +97,8 @@ export async function markNoShowBooking(
   );
   
   // Determine the other party for logging
-  const otherParty = markerType === 'client' ? 'provider' : 'client';
-  const noShowStatus = markerType === 'client' ? 'no_show_provider' : 'no_show_client';
+  const otherParty = markerType === 'client' ? 'host' : 'client';
+  const noShowStatus = markerType === 'client' ? 'no_show_host' : 'no_show_client';
   
   // Log audit trail
   logger?.info({
@@ -106,7 +106,7 @@ export async function markNoShowBooking(
     userId: user.id,
     markerType,
     clientId: booking.client,
-    providerId: booking.provider,
+    hostId: booking.host,
     scheduledAt: booking.scheduledAt,
     minutesPastScheduled: Math.floor(minutesPastScheduled),
     noShowStatus,

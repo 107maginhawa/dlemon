@@ -11,7 +11,7 @@ import {
 } from '@/core/errors';
 import { BookingRepository } from './repos/booking.repo';
 import type { BookingActionRequest } from './repos/booking.schema';
-import { checkBookingProviderOwnership } from './utils/ownership';
+import { checkBookingHostOwnership } from './utils/ownership';
 
 /**
  * confirmBooking
@@ -20,7 +20,7 @@ import { checkBookingProviderOwnership } from './utils/ownership';
  * OperationId: confirmBooking
  * 
  * Provider confirms booking within 15-minute window
- * Only the provider who owns the booking can confirm it
+ * Only the host who owns the booking can confirm it
  */
 export async function confirmBooking(
   ctx: ValidatedContext<ConfirmBookingBody, never, ConfirmBookingParams>
@@ -52,8 +52,8 @@ export async function confirmBooking(
     });
   }
   
-  // Check provider ownership - user must be the provider for this booking
-  if (!(await checkBookingProviderOwnership(db, logger, user, booking))) {
+  // Check host ownership - user must be the host for this booking
+  if (!(await checkBookingHostOwnership(db, logger, user, booking))) {
     throw new ForbiddenError('You can only confirm your own bookings');
   }
   
@@ -64,17 +64,17 @@ export async function confirmBooking(
   // Log audit trail
   logger?.info({
     bookingId: confirmedBooking.id,
-    providerId: user.id,
+    hostId: user.id,
     clientId: booking.client,
     confirmedAt: confirmedBooking.confirmationTimestamp,
     action: 'booking_confirmed'
-  }, 'Booking confirmed by provider');
+  }, 'Booking confirmed by host');
   
-  // Send notifications and real-time updates to both client and provider
+  // Send notifications and real-time updates to both client and host
   try {
     const wsService = ctx.get('ws');
 
-    // Both booking.client and booking.provider now store person IDs directly
+    // Both booking.client and booking.host now store person IDs directly
 
     // Notification for client - booking confirmed
     // (automatically sends WebSocket notification via NotificationService)
@@ -83,7 +83,7 @@ export async function confirmBooking(
       type: 'booking.confirmed',
       channel: 'in-app',
       title: 'Booking Confirmed',
-      message: 'Your booking has been confirmed by the provider.',
+      message: 'Your booking has been confirmed by the host.',
       relatedEntityType: 'booking',
       relatedEntity: confirmedBooking.id,
       consentValidated: true
@@ -92,11 +92,11 @@ export async function confirmBooking(
     // Send dedicated booking event via WebSocket
     await wsService.publishToUser(booking.client, 'booking.confirmed', {
       bookingId: confirmedBooking.id,
-      providerId: user.id,
+      hostId: user.id,
       confirmedAt: confirmedBooking.confirmationTimestamp,
     });
 
-    // Notification for provider - confirmation acknowledgment
+    // Notification for host - confirmation acknowledgment
     // (automatically sends WebSocket notification via NotificationService)
     await notificationService.createNotification({
       recipient: user.id,
@@ -112,7 +112,7 @@ export async function confirmBooking(
     logger?.info({
       bookingId: confirmedBooking.id,
       clientId: booking.client,
-      providerId: user.id
+      hostId: user.id
     }, 'Booking confirmation notifications sent');
 
   } catch (error) {

@@ -110,7 +110,7 @@ export type AuditCategory = 'hipaa' | 'security' | 'privacy' | 'administrative' 
 export type AuditAction = 'create' | 'read' | 'update' | 'delete' | 'login' | 'logout';
 export type AuditOutcome = 'success' | 'failure' | 'partial' | 'denied';
 export type AuditRetentionStatus = 'active' | 'archived' | 'pending-purge';
-export type UserType = 'client' | 'provider' | 'admin' | 'system';
+export type UserType = 'client' | 'host' | 'admin' | 'system';
 
 // Request interfaces matching TypeSpec definitions
 export interface CreateAuditLogRequest {

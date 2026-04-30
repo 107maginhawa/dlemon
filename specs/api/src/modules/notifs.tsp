@@ -27,10 +27,10 @@ enum NotificationType {
   @doc("Booking created")
   bookingCreated: "booking.created",
 
-  @doc("Booking confirmed by provider")
+  @doc("Booking confirmed by host")
   bookingConfirmed: "booking.confirmed",
 
-  @doc("Booking rejected by provider")
+  @doc("Booking rejected by host")
   bookingRejected: "booking.rejected",
 
   @doc("Booking cancelled")
@@ -39,8 +39,8 @@ enum NotificationType {
   @doc("Client marked as no-show")
   bookingNoShowClient: "booking.no-show-client",
 
-  @doc("Provider marked as no-show")
-  bookingNoShowProvider: "booking.no-show-provider",
+  @doc("Host marked as no-show")
+  bookingNoShowHost: "booking.no-show-host",
 
   // Comms module notifications
   @doc("Video call started")

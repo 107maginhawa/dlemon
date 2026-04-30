@@ -11,7 +11,7 @@ import {
 } from '@/core/errors';
 import { BookingRepository } from './repos/booking.repo';
 import type { BookingActionRequest } from './repos/booking.schema';
-import { checkBookingProviderOwnership } from './utils/ownership';
+import { checkBookingHostOwnership } from './utils/ownership';
 
 /**
  * rejectBooking
@@ -20,7 +20,7 @@ import { checkBookingProviderOwnership } from './utils/ownership';
  * OperationId: rejectBooking
  * 
  * Provider rejects booking, releases slot, triggers notifications
- * Only the provider who owns the booking can reject it
+ * Only the host who owns the booking can reject it
  */
 export async function rejectBooking(
   ctx: ValidatedContext<RejectBookingBody, never, RejectBookingParams>
@@ -52,8 +52,8 @@ export async function rejectBooking(
     });
   }
   
-  // Check provider ownership - user must be the provider for this booking
-  if (!(await checkBookingProviderOwnership(db, logger, user, booking))) {
+  // Check host ownership - user must be the host for this booking
+  if (!(await checkBookingHostOwnership(db, logger, user, booking))) {
     throw new ForbiddenError('You can only reject your own bookings');
   }
   
@@ -74,8 +74,8 @@ export async function rejectBooking(
   // This is done in the repository's updateOneById method with slot release
   const rejectedBooking = await repo.updateOneById(params.booking, {
     status: 'rejected',
-    cancellationReason: body.reason || 'Rejected by provider',
-    cancelledBy: 'provider',
+    cancellationReason: body.reason || 'Rejected by host',
+    cancelledBy: 'host',
     cancelledAt: new Date()
   });
   
@@ -95,20 +95,20 @@ export async function rejectBooking(
   // Log audit trail
   logger?.info({
     bookingId: rejectedBooking.id,
-    providerId: user.id,
+    hostId: user.id,
     clientId: booking.client,
     reason: body.reason,
     rejectedAt: rejectedBooking.cancelledAt,
     slotReleased: booking.slot,
     action: 'booking_rejected'
-  }, 'Booking rejected by provider');
+  }, 'Booking rejected by host');
   
   // Send rejection notifications and real-time updates to both parties
   try {
     const wsService = ctx.get('ws');
-    const rejectionReason = body.reason || 'Rejected by provider';
+    const rejectionReason = body.reason || 'Rejected by host';
 
-    // Both booking.client and booking.provider now store person IDs directly
+    // Both booking.client and booking.host now store person IDs directly
 
     // Notification for client - booking was rejected
     // (automatically sends WebSocket notification via NotificationService)
@@ -117,7 +117,7 @@ export async function rejectBooking(
       type: 'booking.rejected',
       channel: 'in-app',
       title: 'Booking Rejected',
-      message: `Your booking request has been rejected by the provider. Reason: ${rejectionReason}`,
+      message: `Your booking request has been rejected by the host. Reason: ${rejectionReason}`,
       relatedEntityType: 'booking',
       relatedEntity: rejectedBooking.id,
       consentValidated: true
@@ -126,12 +126,12 @@ export async function rejectBooking(
     // Send dedicated booking event via WebSocket
     await wsService.publishToUser(booking.client, 'booking.rejected', {
       bookingId: rejectedBooking.id,
-      providerId: user.id,
+      hostId: user.id,
       reason: rejectionReason,
       rejectedAt: rejectedBooking.cancelledAt,
     });
 
-    // Notification for provider - rejection confirmation
+    // Notification for host - rejection confirmation
     // (automatically sends WebSocket notification via NotificationService)
     await notificationService.createNotification({
       recipient: user.id,
@@ -147,7 +147,7 @@ export async function rejectBooking(
     logger?.info({
       bookingId: rejectedBooking.id,
       clientId: booking.client,
-      providerId: user.id,
+      hostId: user.id,
       slotReleased: booking.slot
     }, 'Booking rejection notifications sent');
 

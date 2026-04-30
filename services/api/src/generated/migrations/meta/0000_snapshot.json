@@ -1,5 +1,5 @@
 {
-  "id": "a92040d3-c25d-4e61-a94f-287ee86d698e",
+  "id": "f711df0a-1f9f-4e4b-a1b4-96fbda3446c9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2044,8 +2044,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "provider_id": {
-          "name": "provider_id",
+        "host_id": {
+          "name": "host_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -2161,11 +2161,11 @@
           "method": "btree",
           "with": {}
         },
-        "bookings_provider_id_idx": {
-          "name": "bookings_provider_id_idx",
+        "bookings_host_id_idx": {
+          "name": "bookings_host_id_idx",
           "columns": [
             {
-              "expression": "provider_id",
+              "expression": "host_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2242,11 +2242,11 @@
           "method": "btree",
           "with": {}
         },
-        "bookings_provider_status_idx": {
-          "name": "bookings_provider_status_idx",
+        "bookings_host_status_idx": {
+          "name": "bookings_host_status_idx",
           "columns": [
             {
-              "expression": "provider_id",
+              "expression": "host_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2263,11 +2263,11 @@
           "method": "btree",
           "with": {}
         },
-        "bookings_provider_date_idx": {
-          "name": "bookings_provider_date_idx",
+        "bookings_host_date_idx": {
+          "name": "bookings_host_date_idx",
           "columns": [
             {
-              "expression": "provider_id",
+              "expression": "host_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2321,12 +2321,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "booking_provider_id_person_id_fk": {
-          "name": "booking_provider_id_person_id_fk",
+        "booking_host_id_person_id_fk": {
+          "name": "booking_host_id_person_id_fk",
           "tableFrom": "booking",
           "tableTo": "person",
           "columnsFrom": [
-            "provider_id"
+            "host_id"
           ],
           "columnsTo": [
             "id"
@@ -4510,7 +4510,7 @@
         "cancelled",
         "completed",
         "no_show_client",
-        "no_show_provider"
+        "no_show_host"
       ]
     },
     "public.location_type": {
@@ -4652,7 +4652,7 @@
         "booking.rejected",
         "booking.cancelled",
         "booking.no-show-client",
-        "booking.no-show-provider",
+        "booking.no-show-host",
         "comms.video-call-started",
         "comms.video-call-joined",
         "comms.video-call-left",

@@ -7,7 +7,7 @@ CREATE TYPE "public"."capture_method" AS ENUM('automatic', 'manual');--> stateme
 CREATE TYPE "public"."invoice_status" AS ENUM('draft', 'open', 'paid', 'void', 'uncollectible');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'requires_capture', 'processing', 'succeeded', 'failed', 'canceled');--> statement-breakpoint
 CREATE TYPE "public"."booking_event_status" AS ENUM('draft', 'active', 'paused', 'archived');--> statement-breakpoint
-CREATE TYPE "public"."booking_status" AS ENUM('pending', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show_client', 'no_show_provider');--> statement-breakpoint
+CREATE TYPE "public"."booking_status" AS ENUM('pending', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show_client', 'no_show_host');--> statement-breakpoint
 CREATE TYPE "public"."location_type" AS ENUM('video', 'phone', 'in-person');--> statement-breakpoint
 CREATE TYPE "public"."recurrence_type" AS ENUM('daily', 'weekly', 'monthly', 'yearly');--> statement-breakpoint
 CREATE TYPE "public"."slot_status" AS ENUM('available', 'booked', 'blocked');--> statement-breakpoint
@@ -21,7 +21,7 @@ CREATE TYPE "public"."template_status" AS ENUM('draft', 'active', 'archived');--
 CREATE TYPE "public"."variable_type" AS ENUM('string', 'number', 'boolean', 'date', 'datetime', 'url', 'email', 'array');--> statement-breakpoint
 CREATE TYPE "public"."notification_channel" AS ENUM('email', 'push', 'in-app');--> statement-breakpoint
 CREATE TYPE "public"."notification_status" AS ENUM('queued', 'sent', 'delivered', 'read', 'failed', 'expired');--> statement-breakpoint
-CREATE TYPE "public"."notification_type" AS ENUM('billing', 'security', 'system', 'booking.created', 'booking.confirmed', 'booking.rejected', 'booking.cancelled', 'booking.no-show-client', 'booking.no-show-provider', 'comms.video-call-started', 'comms.video-call-joined', 'comms.video-call-left', 'comms.video-call-ended', 'comms.chat-message');--> statement-breakpoint
+CREATE TYPE "public"."notification_type" AS ENUM('billing', 'security', 'system', 'booking.created', 'booking.confirmed', 'booking.rejected', 'booking.cancelled', 'booking.no-show-client', 'booking.no-show-host', 'comms.video-call-started', 'comms.video-call-joined', 'comms.video-call-left', 'comms.video-call-ended', 'comms.chat-message');--> statement-breakpoint
 CREATE TYPE "public"."gender" AS ENUM('male', 'female', 'non-binary', 'other', 'prefer-not-to-say');--> statement-breakpoint
 CREATE TYPE "public"."file_status" AS ENUM('uploading', 'processing', 'available', 'failed');--> statement-breakpoint
 CREATE TABLE "account" (
@@ -246,7 +246,7 @@ CREATE TABLE "booking" (
 	"created_by" uuid,
 	"updated_by" uuid,
 	"client_id" uuid NOT NULL,
-	"provider_id" uuid NOT NULL,
+	"host_id" uuid NOT NULL,
 	"slot_id" uuid NOT NULL,
 	"location_type" "location_type" NOT NULL,
 	"reason" text,
@@ -472,7 +472,7 @@ ALTER TABLE "invoice" ADD CONSTRAINT "invoice_merchant_account_merchant_account_
 ALTER TABLE "merchant_account" ADD CONSTRAINT "merchant_account_person_person_id_fk" FOREIGN KEY ("person") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "booking_event" ADD CONSTRAINT "booking_event_owner_id_person_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "booking" ADD CONSTRAINT "booking_client_id_person_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "booking" ADD CONSTRAINT "booking_provider_id_person_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "booking" ADD CONSTRAINT "booking_host_id_person_id_fk" FOREIGN KEY ("host_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "booking" ADD CONSTRAINT "booking_slot_id_time_slot_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."time_slot"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "schedule_exception" ADD CONSTRAINT "schedule_exception_event_id_booking_event_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."booking_event"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "schedule_exception" ADD CONSTRAINT "schedule_exception_owner_id_person_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -516,13 +516,13 @@ CREATE INDEX "booking_events_search_idx" ON "booking_event" USING gin (to_tsvect
 CREATE INDEX "booking_events_keywords_idx" ON "booking_event" USING gin ("keywords");--> statement-breakpoint
 CREATE INDEX "booking_events_tags_idx" ON "booking_event" USING gin ("tags");--> statement-breakpoint
 CREATE INDEX "bookings_client_id_idx" ON "booking" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "bookings_provider_id_idx" ON "booking" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX "bookings_host_id_idx" ON "booking" USING btree ("host_id");--> statement-breakpoint
 CREATE INDEX "bookings_status_idx" ON "booking" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "bookings_scheduled_at_idx" ON "booking" USING btree ("scheduled_at");--> statement-breakpoint
 CREATE INDEX "bookings_slot_id_idx" ON "booking" USING btree ("slot_id");--> statement-breakpoint
 CREATE INDEX "bookings_client_status_idx" ON "booking" USING btree ("client_id","status");--> statement-breakpoint
-CREATE INDEX "bookings_provider_status_idx" ON "booking" USING btree ("provider_id","status");--> statement-breakpoint
-CREATE INDEX "bookings_provider_date_idx" ON "booking" USING btree ("provider_id","scheduled_at");--> statement-breakpoint
+CREATE INDEX "bookings_host_status_idx" ON "booking" USING btree ("host_id","status");--> statement-breakpoint
+CREATE INDEX "bookings_host_date_idx" ON "booking" USING btree ("host_id","scheduled_at");--> statement-breakpoint
 CREATE INDEX "bookings_pending_idx" ON "booking" USING btree ("status","booked_at") WHERE "booking"."status" = 'pending';--> statement-breakpoint
 CREATE INDEX "schedule_exceptions_event_id_idx" ON "schedule_exception" USING btree ("event_id");--> statement-breakpoint
 CREATE INDEX "schedule_exceptions_owner_id_idx" ON "schedule_exception" USING btree ("owner_id");--> statement-breakpoint

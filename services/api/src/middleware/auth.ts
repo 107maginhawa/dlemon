@@ -30,7 +30,7 @@ interface AuthMiddlewareOptions {
   required?: boolean;
   /** 
    * Role requirements - supports role:permission syntax
-   * Examples: ['admin'], ['patient:owner'], ['provider', 'admin']
+   * Examples: ['admin'], ['client:owner'], ['host', 'admin']
    * Uses OR logic - if ANY requirement is satisfied, access is granted
    */
   roles?: RoleRequirement[];
@@ -48,11 +48,11 @@ interface AuthMiddlewareOptions {
  * 
  * ROLE TYPES:
  * - System roles: 'admin', 'support', 'user' (from user.role field in session)
- * - Context roles: 'patient', 'provider' (from session after role assignment)
+ * - Context roles: 'client', 'host' (from session after role assignment)
  * - Special role 'user': any authenticated user
  *
  * ROLE SYNCHRONIZATION:
- * - When roles are added (patient/provider creation), session is invalidated
+ * - When roles are added (client/host role assignment), session is invalidated
  * - User must re-authenticate to get fresh JWT with updated roles
  * - No database queries in middleware - roles come from session token
  *
@@ -66,11 +66,11 @@ interface AuthMiddlewareOptions {
  * 
  * @example
  * // Required authentication (default)
- * app.get('/patients', authMiddleware(), handler);
+ * app.get('/clients', authMiddleware(), handler);
  * 
  * @example
  * // Optional authentication
- * app.get('/providers', authMiddleware({ required: false }), handler);
+ * app.get('/hosts', authMiddleware({ required: false }), handler);
  * 
  * @example
  * // System role authentication
@@ -78,16 +78,16 @@ interface AuthMiddlewareOptions {
  * 
  * @example
  * // Context role authentication (session-based, handlers validate database records)
- * app.get('/patient-dashboard', authMiddleware({ roles: ['patient'] }), handler);
+ * app.get('/client-dashboard', authMiddleware({ roles: ['client'] }), handler);
  * 
  * @example
  * // Multiple roles (OR logic)
- * app.get('/medical-data', authMiddleware({ roles: ['patient', 'provider', 'admin'] }), handler);
+ * app.get('/me', authMiddleware({ roles: ['client', 'host', 'admin'] }), handler);
  * 
  * @example
  * // Role with owner permission syntax (actual ownership checked in handlers)
- * app.get('/patients/:id', authMiddleware({ 
- *   roles: ['patient:owner', 'admin'], 
+ * app.get('/clients/:id', authMiddleware({
+ *   roles: ['client:owner', 'admin'],
  *   resourceId: (ctx) => ctx.req.param('id')
  * }), handler);
  */

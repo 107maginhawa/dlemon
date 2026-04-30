@@ -310,11 +310,11 @@ export const BookingSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   client: z.union([z.string(), PersonSchema]),
-  provider: z.union([z.string(), PersonSchema]),
+  host: z.union([z.string(), PersonSchema]),
   slot: z.union([z.string(), TimeSlotSchema]),
   locationType: z.enum(["video", "phone", "in-person"]),
   reason: z.string().max(500),
-  status: z.enum(["pending", "confirmed", "rejected", "cancelled", "completed", "no_show_client", "no_show_provider"]),
+  status: z.enum(["pending", "confirmed", "rejected", "cancelled", "completed", "no_show_client", "no_show_host"]),
   bookedAt: z.string().datetime().transform((str) => new Date(str)),
   confirmationTimestamp: z.string().datetime().transform((str) => new Date(str)).optional(),
   scheduledAt: z.string().datetime().transform((str) => new Date(str)),
@@ -401,7 +401,7 @@ export const BookingEventUpdateRequestSchema = z.object({
   dailyConfigs: z.record(z.string(), z.unknown()).optional()
 });
 
-export const BookingStatusSchema = z.enum(["pending", "confirmed", "rejected", "cancelled", "completed", "no_show_client", "no_show_provider"]);
+export const BookingStatusSchema = z.enum(["pending", "confirmed", "rejected", "cancelled", "completed", "no_show_client", "no_show_host"]);
 
 export const CallParticipantSchema = z.object({
   user: z.string().uuid(),
@@ -846,7 +846,7 @@ export const NotificationSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   recipient: z.string().uuid(),
-  type: z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-provider", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]),
+  type: z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]),
   channel: z.enum(["email", "push", "in-app"]),
   title: z.string().max(200),
   message: z.string().max(1000),
@@ -865,7 +865,7 @@ export const NotificationChannelSchema = z.enum(["email", "push", "in-app"]);
 
 export const NotificationStatusSchema = z.enum(["queued", "sent", "delivered", "read", "failed", "expired", "unread"]);
 
-export const NotificationTypeSchema = z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-provider", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]);
+export const NotificationTypeSchema = z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]);
 
 export const OffsetPaginationMetaSchema = z.object({
   offset: z.number().int(),
@@ -1395,7 +1395,7 @@ export type CreateBookingBody = z.infer<typeof CreateBookingBody>;
 export const CreateBookingResponse = BookingSchema;
 
 export const ListBookingsQuery = z.object({
-  provider: UUIDSchema.optional(),
+  host: UUIDSchema.optional(),
   client: UUIDSchema.optional(),
   status: BookingStatusSchema.optional(),
   startDate: z.string().datetime().transform((str) => new Date(str)).optional(),

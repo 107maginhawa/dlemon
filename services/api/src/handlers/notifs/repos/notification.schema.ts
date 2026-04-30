@@ -17,7 +17,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'booking.rejected',
   'booking.cancelled',
   'booking.no-show-client',
-  'booking.no-show-provider',
+  'booking.no-show-host',
   // Comms module notifications
   'comms.video-call-started',
   'comms.video-call-joined',
@@ -102,7 +102,7 @@ export interface NotificationResponse {
 // Request type for creating notifications (used by other modules)
 export interface CreateNotificationRequest {
   recipient: string;
-  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-provider' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
+  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
   channel: 'email' | 'push' | 'in-app';
   title: string;
   message: string;

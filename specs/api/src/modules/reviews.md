@@ -10,7 +10,7 @@ The Reviews module provides a lightweight, flexible review system using Net Prom
 
 Unlike traditional review modules with hardcoded review types, this module allows applications to define their own:
 
-- **Review Types**: Application-defined strings (e.g., 'provider', 'platform', 'product', 'seller')
+- **Review Types**: Application-defined strings (e.g., 'host', 'platform', 'product', 'seller')
 - **Context**: Flexible UUID reference to any entity (bookings, sessions, orders, etc.)
 - **Reviewed Entity**: Optional person ID when reviewing individuals
 
@@ -34,17 +34,17 @@ Reviews use the standard Net Promoter Score methodology:
 ### Healthcare/Booking Platform
 
 ```typescript
-// Patient reviews provider after appointment
+// Client reviews host after appointment
 POST /reviews
 {
   "context": "booking-uuid-here",
-  "reviewType": "provider",
-  "reviewedEntity": "provider-person-uuid",
+  "reviewType": "host",
+  "reviewedEntity": "host-person-uuid",
   "npsScore": 9,
   "comment": "Excellent care and very professional"
 }
 
-// Patient reviews platform/call experience
+// Client reviews platform/call experience
 POST /reviews
 {
   "context": "booking-uuid-here",
@@ -54,7 +54,7 @@ POST /reviews
   "comment": "Video call quality was good"
 }
 
-// Provider reviews platform/call experience
+// Host reviews platform/call experience
 POST /reviews
 {
   "context": "booking-uuid-here",
@@ -193,7 +193,7 @@ Soft deletes a review. Only the review owner can delete their own review.
 
 1. **Review Type Naming**
    - Use lowercase with underscores: `booking_experience`, `video_quality`
-   - Be specific: `provider` vs `provider_professionalism`
+   - Be specific: `host` vs `host_professionalism`
    - Keep consistent across your application
 
 2. **Context References**
@@ -224,12 +224,12 @@ async function submitReview(bookingId: string, reviewData: ReviewData) {
   
   // 2. Verify user was a participant
   const userId = getCurrentUserId();
-  if (userId !== booking.client && userId !== booking.provider) {
+  if (userId !== booking.client && userId !== booking.host) {
     throw new Error('Can only review bookings you participated in');
   }
   
-  // 3. Prevent self-reviews for provider reviews
-  if (reviewData.reviewType === 'provider' && 
+  // 3. Prevent self-reviews for host reviews
+  if (reviewData.reviewType === 'host' && 
       reviewData.reviewedEntity === userId) {
     throw new Error('Cannot review yourself');
   }

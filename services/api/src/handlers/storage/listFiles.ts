@@ -63,7 +63,7 @@ export async function listFiles(
         action: 'read',
         outcome: 'success',
         user: user.id,
-        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
+        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'host' | 'admin' | 'system',
         resourceType: 'file',
         resource: 'multiple',
         description: `File listing access by user ${user.id}`,
