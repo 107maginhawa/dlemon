@@ -116,10 +116,15 @@ export function createApp(config: Config): App {
 export async function initializeApp(app: App, config: Config): Promise<void> {
   const { database, logger, jobs } = app;
 
-  // Run database migrations
-  logger.debug('Running database migrations...');
-  await runMigrations(database);
-  logger.debug('Database migrations completed successfully');
+  // Run database migrations (skip when an embedded host injected a pre-built
+  // Drizzle instance — that host owns schema management).
+  if (config.database.instance) {
+    logger.debug('Skipping migrations: pre-built database instance was injected');
+  } else {
+    logger.debug('Running database migrations...');
+    await runMigrations(database);
+    logger.debug('Database migrations completed successfully');
+  }
 
   // Initialize email templates
   logger.debug('Initializing email templates...');

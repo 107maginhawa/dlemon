@@ -32,6 +32,14 @@ export function detectDialect(databaseUrl: string): Dialect {
 
 /**
  * Database configuration
+ *
+ * Two modes:
+ *  1. URL-driven (default): set `url` and `createDatabase` builds a Drizzle
+ *     instance backed by pg.Pool (PostgreSQL).
+ *  2. Pre-built instance (embedded mode): set `instance` to a Drizzle instance
+ *     you've already built (e.g. via `drizzle-orm/sqlite-proxy` with native
+ *     SQLite bindings from a Tauri host). `createApp` will skip `createDatabase`
+ *     entirely and use the instance you provided.
  */
 export interface DatabaseConfig {
   url: string;
@@ -40,10 +48,27 @@ export interface DatabaseConfig {
   idleTimeoutMs?: number;
   ssl?: boolean;
   logging?: boolean;
+  /**
+   * Pre-built Drizzle instance. Used by `services/api-ts-embedded` to inject
+   * a sqlite-proxy backend bridged to the host's native SQLite. When set,
+   * `createApp` does not call `createDatabase` and `runMigrations` is skipped
+   * (the embedded host owns schema management).
+   *
+   * Loosely typed because the injected instance may be a `sqlite-proxy`
+   * Drizzle instance, which has a different concrete type from the default
+   * `NodePgDatabase` but shares the same query interface.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  instance?: any;
 }
 
 /**
  * Database instance type - Drizzle instance with pg.Pool
+ *
+ * Stays narrow (`NodePgDatabase`) so the Bun-side typechecker keeps full
+ * Drizzle inference. The embedded host's sqlite-proxy instance is type-
+ * compatible at runtime via Drizzle's shared interface; embedded code
+ * lives in `services/api-ts-embedded/src-js/` and is checked separately.
  */
 export type DatabaseInstance = NodePgDatabase;
 
@@ -54,17 +79,27 @@ export type DatabaseInstance = NodePgDatabase;
  * Dialect is auto-detected from the URL:
  * - `postgres://` or `postgresql://` → PostgreSQL
  * - `sqlite://` or `:memory:` or `.db`/`.sqlite` → SQLite
+ *
+ * For SQLite, prefer building the Drizzle instance externally with
+ * `drizzle-orm/sqlite-proxy` and passing it via `config.instance` (see
+ * `services/api-ts-embedded/src-js/entry.ts` for the canonical pattern).
  */
 export function createDatabase(config: DatabaseConfig): DatabaseInstance {
+  // Pre-built instance wins.
+  if (config.instance) {
+    return config.instance;
+  }
+
   const dialect = detectDialect(config.url);
 
   if (dialect === 'sqlite') {
-    // SQLite mode - for embedded Boa/Tauri apps
-    // Note: SQLite is handled by Boa's __db native bridge, not here
-    // This branch exists for future Bun-native SQLite support
+    // SQLite mode is reserved for embedded hosts that build their own
+    // Drizzle instance via sqlite-proxy and inject it via `config.instance`.
+    // The Bun server should always use PostgreSQL.
     throw new Error(
-      'SQLite is not yet supported in Bun server mode. ' +
-      'For embedded apps, use the Boa JS engine with native SQLite bridge.'
+      'SQLite is only supported in embedded mode. ' +
+      'Build a Drizzle instance with drizzle-orm/sqlite-proxy ' +
+      'and pass it via config.database.instance.'
     );
   }
 
