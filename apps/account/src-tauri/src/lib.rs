@@ -1,22 +1,28 @@
 //! Monobase Account - Cross-platform reference desktop/mobile app
 //!
-//! Both desktop and mobile use the same embedded Boa JS engine with Hono backend
-//! for offline-first operation. Desktop additionally has tray icon, updater, and
-//! single-instance support. The cadence P2P sync engine is embedded for
-//! offline-first synchronization with the same SQLite store.
+//! Desktop and mobile share an embedded backend for offline-first
+//! operation, plus a cadence P2P sync engine for synchronization with
+//! the cloud and other peers. Desktop additionally has tray icon,
+//! updater, and single-instance support.
 
 use tauri::Manager;
 use serde_json::json;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 // ===== Desktop-only modules =====
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub mod tray;
 
-// ===== Cross-platform modules (embedded backend) =====
+// ===== Cross-platform modules =====
+mod cadence_embed;
+mod commands;
+mod config;
 pub mod mobile;
 pub mod engine;
 pub mod db;
-pub mod sync;  // Sync engine (stubbed until Cadence is added to Monobase)
+
+use commands::CadenceState;
 
 // ===== Desktop-only imports =====
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
@@ -26,17 +32,18 @@ use tauri_plugin_updater::UpdaterExt;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
-// ===== Cross-platform Commands =====
+// ===== Graceful Shutdown =====
 
-/// Get runtime configuration for API endpoints
-///
-/// Both desktop and mobile use the embedded local backend via IPC.
-#[tauri::command]
-async fn get_runtime_config() -> Result<serde_json::Value, String> {
-    Ok(json!({
-        "api_url": "tauri://localhost",
-        "mode": "local",
-    }))
+async fn graceful_shutdown(reason: &str, cadence: Option<CadenceState>) {
+    println!("Graceful shutdown initiated: {}", reason);
+
+    if let Some(cadence) = cadence {
+        if let Some(ref mut c) = *cadence.lock().await {
+            c.stop().await;
+        }
+    }
+
+    std::process::exit(0);
 }
 
 // ===== Desktop-only Functions =====
@@ -198,7 +205,8 @@ pub fn run() {
                         .blocking_show();
 
                     if confirm {
-                        std::process::exit(0);
+                        let cadence = window_clone.try_state::<CadenceState>().map(|s| s.inner().clone());
+                        graceful_shutdown("user confirmation", cadence).await;
                     }
                 });
             }
@@ -229,29 +237,53 @@ pub fn run() {
             }
         }
 
-        // Start embedded backend on ALL platforms
+        // Resolve configuration
+        let data_dir_override = app.path().app_data_dir().ok();
+        let app_config = Arc::new(config::AppConfig::resolve(data_dir_override));
+
+        // Start embedded backend on ALL platforms (Boa-based, until Phase E swaps to api-ts-embedded)
         if let Err(e) = mobile::setup_mobile(app) {
             eprintln!("Failed to setup embedded backend: {} - continuing with degraded functionality", e);
         }
 
-        // Initialize sync engine (stubbed until Cadence is added to Monobase)
+        // Cadence state (started async after a short delay)
+        let cadence: CadenceState = Arc::new(Mutex::new(None));
+
+        // Manage state
+        app.manage(app_config.clone() as commands::AppConfigState);
+        app.manage(cadence.clone());
+
+        // Start cadence in background (200 ms delay so the UI isn't blocked on first paint)
         {
-            let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("./data"));
-            let db_path = app_data_dir.join("account.db").to_string_lossy().to_string();
-            let handle = app.handle().clone();
+            let config_for_setup = app_config.clone();
+            let cadence_for_setup = cadence.clone();
+            let app_handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {
-                match sync::SyncState::init(&db_path).await {
-                    Ok(sync_state) => {
-                        if let Err(e) = sync_state.start().await {
-                            log::warn!("[Sync] Failed to auto-start sync engine: {}", e);
-                        }
-                        handle.manage(sync_state);
-                        log::info!("[Sync] Sync engine initialized and managed by Tauri");
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+                #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                {
+                    let _ = app_handle.emit("service:starting", "Starting services...");
+                }
+
+                match cadence_embed::EmbeddedCadence::start(&config_for_setup).await {
+                    Ok(embedded) => {
+                        *cadence_for_setup.lock().await = Some(embedded);
+                        log::info!("Cadence started (embedded, no API/WS servers)");
                     }
                     Err(e) => {
-                        log::error!("[Sync] Failed to initialize sync state: {}", e);
+                        log::error!("Failed to start cadence: {}", e);
+                        #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                        {
+                            let _ = app_handle.emit("service:error", &format!("Cadence error: {}", e));
+                        }
                     }
+                }
+
+                #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                {
+                    let _ = app_handle.emit("service:ready", "All services started");
                 }
             });
         }
@@ -259,22 +291,27 @@ pub fn run() {
         // Desktop-specific setup (tray, updater, signal handling)
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
         {
-            setup_desktop(app)?;
+            setup_desktop(app, cadence)?;
         }
 
         Ok(())
     });
 
-    // ===== Commands (same on all platforms now) =====
+    // ===== Commands =====
     builder = builder.invoke_handler(tauri::generate_handler![
-        get_runtime_config,
+        commands::get_runtime_config,
+        commands::get_app_config,
+        commands::get_cadence_health,
+        commands::get_cadence_status,
+        commands::set_peer_token,
+        commands::get_peer_token,
+        commands::clear_peer_token,
+        commands::set_peers,
+        commands::get_peers,
+        commands::clear_peers,
+        // Embedded backend commands (Boa-era; replaced in Phase E)
         mobile::api_request,
         mobile::get_backend_status,
-        // Sync commands (stubbed until Cadence is added)
-        sync::sync_get_status,
-        sync::sync_start,
-        sync::sync_stop,
-        sync::sync_configure,
     ]);
 
     builder
@@ -285,10 +322,11 @@ pub fn run() {
 // ===== Desktop Setup =====
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
-fn setup_desktop(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_desktop(app: &tauri::App, cadence: CadenceState) -> Result<(), Box<dyn std::error::Error>> {
     let app_handle = app.handle().clone();
 
     // Signal handling for graceful shutdown
+    let cadence_for_signal = cadence.clone();
     tauri::async_runtime::spawn(async move {
         use tokio::signal;
 
@@ -320,8 +358,7 @@ fn setup_desktop(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         shutdown_signal.await;
-        println!("Graceful shutdown initiated");
-        std::process::exit(0);
+        graceful_shutdown("system signal", Some(cadence_for_signal)).await;
     });
 
     // Setup system tray

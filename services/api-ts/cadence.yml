@@ -1,0 +1,30 @@
+# Cadence collections configuration
+#
+# Single source of truth for collection scope rules. Embedded into the
+# account Tauri app at compile time via include_str! and consumed by the
+# cloud cadence deployment via configmap. Keep both sides reading the
+# same file to eliminate "rejects rows the cloud accepted" drift bugs.
+
+collections:
+  # Wildcard: auto-discover all tables from the primary database
+  "*":
+    strategy: lww
+    scope_rules:
+      organization: organization
+      account: organization
+      created_by: user
+
+  # Explicit: tables where `id` is the user identity
+  accounts:
+    strategy: lww
+    scope_columns:
+      user: id
+
+# Tables to exclude from wildcard auto-discovery
+collections_blacklist:
+  - "__drizzle_migrations"
+  # Better-Auth tables (auth state, not synced peer-to-peer)
+  - "user"
+  - "session"
+  - "account"
+  - "verification"

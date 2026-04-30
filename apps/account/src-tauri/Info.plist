@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Monobase Account uses the camera for in-app capture features (e.g. profile photos, document scanning)</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Monobase Account uses the photo library to upload images you choose</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Monobase Account needs permission to save images to your photo library</string>
+    <key>NSPrintingUsageDescription</key>
+    <string>Monobase Account uses printing for reports and invoices</string>
+</dict>
+</plist>

@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "com.monobase.account.mobile",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3002"
+  },
+  "bundle": {
+    "externalBin": [],
+    "createUpdaterArtifacts": false,
+    "iOS": {
+      "developmentTeam": "",
+      "minimumSystemVersion": "14.0"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": false
+    }
+  }
+}

@@ -34,19 +34,21 @@ tauri-plugin-fs = "2.0"
 tauri-plugin-http = "2.0"
 tauri-plugin-clipboard-manager = "2.0"
 
-# Embedded backend (cross-platform)
+# Embedded backend (Boa-based — Phase E swaps to api-ts-embedded)
 boa_engine = "0.21"
 rusqlite = { version = "0.32", features = ["bundled"] }
-
-# P2P sync engine (embedded, uses same SQLite via WAL mode)
-cadence = { path = "../../../services/cadence" }
 flate2 = "1.0"
 bcrypt = "0.16"
 hmac = "0.12"
 sha2 = "0.10"
 sha1 = "0.10"
-uuid = { version = "1", features = ["v4"] }
 getrandom = "0.2"
+
+# P2P sync engine (embedded, uses same SQLite via WAL mode)
+cadence = { path = "../../../services/cadence" }
+
+# For cadence_embed.rs (peer ID generation)
+uuid = { version = "1", features = ["v4"] }
 
 # ===== Platform-specific dependencies =====
 
@@ -58,7 +60,8 @@ tauri-plugin-updater = "2.0"
 tauri-plugin-shell = "2.0"
 tauri-plugin-process = "2.0"
 tauri-plugin-devtools = "2.0"
+directories = "5.0"
 
-# Mobile: Tauri without desktop features
+# Mobile: Tauri with tray-icon + devtools
 [target.'cfg(any(target_os = "ios", target_os = "android"))'.dependencies]
-tauri = { version = "2.8.5", features = ["devtools"] }
+tauri = { version = "2.8.5", features = ["tray-icon", "devtools"] }
