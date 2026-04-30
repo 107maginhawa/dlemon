@@ -1,16 +1,27 @@
 # CLAUDE.md
 
-This file provides AI-specific guidance for Claude Code when working with the Monobase Application Platform.
+This file provides AI-specific guidance for Claude Code when working with the Monobase Healthcare Platform (a healthcare-focused fork of `mono-js-lf`).
 
 ## Documentation Map
 
 For detailed information, refer to:
 - **[README.md](./README.md)** - Project overview, installation, commands, technology stack
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflows, coding standards, testing guidelines
+- **[specs/api/README.md](./specs/api/README.md)** - Healthcare API spec scope (FHIR R4-informed, 1,500+ operations)
+- **[docs/research/README.md](./docs/research/README.md)** - Healthcare standards audit + reference material (exploratory; not authoritative)
+
+## Upstream Sync
+
+This repo is a fork of `mono-js-lf`. The upstream is tracked as the
+`mono-js-lf-base` git remote. Periodic merges from upstream are expected;
+healthcare-only spec modules under `specs/api/src/healthcare/` and additional
+apps must be preserved during conflict resolution. See
+[`CONTRIBUTING.md > Upstream Sync (mono-js-lf)`](./CONTRIBUTING.md#upstream-sync-mono-js-lf)
+for the merge command template and commit-message convention.
 
 ## Repository Overview
 
-**Monobase Application Platform** - A comprehensive full-stack monorepo platform providing video sessions, service marketplace, and user management. Built with Bun runtime for 3x faster performance than Node.js.
+**Monobase Healthcare Platform** — a healthcare-focused full-stack monorepo. The runtime API service implements 13 platform-level handler modules; the TypeSpec specification additionally describes a global-grade, FHIR R4-informed healthcare API surface (hospital, dental, ancillary, administrative, public-health, analytics).
 
 **Key Technologies**: Bun, PostgreSQL, Drizzle ORM, Hono API, TypeSpec, TanStack Router, Better-Auth, OneSignal, S3/MinIO
 
@@ -55,6 +66,15 @@ Platform-specific modules:
 
 TypeSpec definitions exist for modules 1-12 (12 `.tsp` files under
 `specs/api/src/modules/`). Module 13 (`ws`) is transport-level only.
+
+**Healthcare extensions (spec-only, no handlers yet):** The `specs/api/src/healthcare/` tree adds a global-grade healthcare API surface — clinical (encounters, conditions, allergies, medications, observations, procedures), hospital specialties (ED, ICU, oncology, dialysis, behavioral health, etc.), administrative (scheduling, claims, prior auth, fee schedules), ancillary (lab, pharmacy, radiology, dental), operational (patient portal, telehealth), analytics, compliance, and public health. These modules ship in the OpenAPI contract; backend implementations are out of scope for now. When adding handlers for them, mirror the existing module pattern under `services/api/src/handlers/`.
+
+**Discovery commands** (run before claiming the module list):
+```bash
+ls services/api/src/handlers          # active handler modules
+ls specs/api/src/modules               # platform spec modules (.tsp + .md companions)
+ls specs/api/src/healthcare/*/         # healthcare extension specs
+```
 
 **Note**: Authentication is handled by Better-Auth (integrated, not a separate module). Consent management is implemented as JSONB fields on the Person model (not a standalone module).
 

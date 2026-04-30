@@ -1,16 +1,20 @@
-# Monobase Application Platform
+# Monobase Healthcare Platform
 
-A full-stack monorepo platform providing video sessions, messaging, and user management. Built with Bun runtime for 3x faster performance than Node.js.
+A healthcare-focused fork of the Monobase Application Platform. The runtime API surface is the 13 platform handler modules (person, booking, billing, audit, notifs, comms, storage, email, reviews, patient, provider, emr, ws). The TypeSpec specification additionally defines a global-grade, FHIR R4-informed healthcare API covering hospital, dental, ancillary, administrative, public-health, and analytics domains — see `specs/api/README.md` for the full surface (1,500+ operations, 1,100+ schemas).
+
+This repo is a **fork of `mono-js-lf`**. Periodic upstream merges flow from
+`mono-js-lf-base` — see [`CONTRIBUTING.md`](./CONTRIBUTING.md#upstream-sync-mono-js-lf).
 
 ## Overview
 
-Monobase is a modern application platform designed to streamline user management and business workflows. The platform provides:
+The platform provides:
 
 - **Account App** - Self-service account management
 - **Patient App** - Patient-facing experience (booking, messaging, EMR access)
 - **Provider App** - Provider/practitioner portal (schedule, billing, consultations)
 - **Marketing Website** - Next.js public site
-- **API Service** - Backend with core business modules
+- **API Service** - Backend with 13 handler modules (Hono + Drizzle)
+- **API Spec** - TypeSpec definitions for both the runtime API and the broader healthcare-domain spec
 - **Shared SDK & UI** - Type-safe API client and React component library
 
 ## Key Features
@@ -39,6 +43,8 @@ monobase/
 │   └── api/                  # Main API service (Hono + Bun)
 ├── specs/                     # API specifications
 │   └── api/                  # TypeSpec source definitions
+├── docs/
+│   └── research/             # Healthcare standards audit + reference material
 ├── CLAUDE.md                 # AI assistant project guide
 └── package.json              # Monorepo workspace configuration
 ```

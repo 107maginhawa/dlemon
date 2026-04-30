@@ -12,6 +12,7 @@ Thank you for your interest in contributing to Monobase! This guide will help yo
 - [Database Workflow](#database-workflow)
 - [Testing Requirements](#testing-requirements)
 - [Git Workflow](#git-workflow)
+- [Upstream Sync (mono-js-lf)](#upstream-sync-mono-js-lf)
 - [Pull Request Process](#pull-request-process)
 - [Code Review Guidelines](#code-review-guidelines)
 - [Debugging Tips](#debugging-tips)
@@ -1533,6 +1534,54 @@ bun run build
 # 4. Lint (if configured)
 bun run lint
 ```
+
+## Upstream Sync (mono-js-lf)
+
+`mono-js-lfh` is a healthcare-flavored fork of `mono-js-lf`. Periodic
+updates flow downstream via merge commits (no rebase, no squash).
+
+**Remote** — `mono-js-lf-base` -> `/home/freyr/Projects/monobaselabs/mono-js-lf`
+(configured in `.git/config`; mirrors how `mono-js-lf` consumes `mono-js`).
+Set up with:
+
+```bash
+git remote add mono-js-lf-base /home/freyr/Projects/monobaselabs/mono-js-lf
+git fetch mono-js-lf-base
+```
+
+**Sync command template:**
+
+```bash
+git fetch mono-js-lf-base
+git merge --no-ff mono-js-lf-base/main
+```
+
+**Commit message format** (block-form, matches mono-js-lf's upstream merges):
+
+```
+Merge mono-js-lf (N commits): <one-line theme>
+
+Adopt:
+  <oldsha>..<newsha> -> mono-js-lf-base/main
+
+- <sha> <subject>. <1-3 line rationale>.
+
+Conflicts:
+- <path>: <resolution choice>.
+
+Verified: <typecheck/build/test summary>.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+```
+
+The three repos (`mono-js`, `mono-js-lf`, `mono-js-lfh`) share root commit
+`4eb768d`, so `--allow-unrelated-histories` is **not** needed.
+
+**Things mono-js-lfh keeps that mono-js-lf has trimmed**: the four-app
+structure (`apps/{account,patient,provider,website}`), the healthcare
+TypeSpec modules under `specs/api/src/healthcare/`, the legacy `provider`
+naming in SDK/handlers (mono-js-lf renamed to `host`). Conflict resolution
+should preserve these.
 
 ## Pull Request Process
 
