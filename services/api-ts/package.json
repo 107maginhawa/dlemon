@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "Monobase Application Platform API Service",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts",
+    "./core/config": "./src/core/config.ts",
+    "./core/database": "./src/core/database.ts"
+  },
   "scripts": {
     "dev": "bun src/index.ts",
     "dev:deps:up": "docker compose -f docker-compose.deps.yml up -d --wait",

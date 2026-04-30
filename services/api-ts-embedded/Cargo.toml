@@ -1,0 +1,38 @@
+[package]
+name = "api-ts-embedded"
+version = "0.1.0"
+description = "Embedded api-ts runtime — QuickJS engine + SQLite bridge for offline-first Tauri apps"
+edition = "2021"
+rust-version = "1.77.2"
+
+[dependencies]
+# JS engine - rquickjs (QuickJS bindings)
+rquickjs = { version = "0.11", features = [
+    "bindgen",      # Generate bindings at build time (required for iOS)
+    "futures",      # Promise/async support
+    "rust-alloc",   # Use Rust allocator (better iOS compatibility)
+    "classes",      # ES6 class support
+    "macro",        # Attribute macros for cleaner bindings
+] }
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Serialization
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+# Bundle decompression
+flate2 = "1.0"
+
+# Crypto (native bindings for QuickJS)
+bcrypt = "0.16"
+hmac = "0.12"
+sha2 = "0.10"
+sha1 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+getrandom = "0.2"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
