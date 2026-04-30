@@ -1626,11 +1626,13 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 The three repos (`mono-js`, `mono-js-lf`, `mono-js-lfh`) share root commit
 `4eb768d`, so `--allow-unrelated-histories` is **not** needed.
 
-**Things mono-js-lfh keeps that mono-js-lf has trimmed**: the four-app
-structure (`apps/{account,patient,provider,website}`), the healthcare
-TypeSpec modules under `specs/api/src/healthcare/`, the legacy `provider`
-naming in SDK/handlers (mono-js-lf renamed to `host`). Conflict resolution
-should preserve these.
+**Things mono-js-lfh keeps that aren't in upstream**: the FHIR-aligned
+healthcare TypeSpec modules under `specs/api/src/healthcare/` and the
+healthcare-specific platform modules `specs/api/src/modules/{patient,
+provider,emr}.tsp` (with their corresponding handlers under
+`services/api-ts/src/handlers/{patient,provider,emr}/`). Conflict resolution
+should preserve these. Everything else (apps layout, services/api-ts,
+packages/sdk-ts) follows upstream.
 
 ## Pull Request Process
 

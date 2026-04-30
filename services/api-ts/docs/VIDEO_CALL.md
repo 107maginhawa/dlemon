@@ -87,7 +87,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph "Frontend (apps/provider)"
+    subgraph "Frontend (apps/account)"
         A[VideoPeerConnection] --> B[SignalingClient]
         A --> C[RTCPeerConnection]
         D[MediaDevices] --> A
@@ -673,7 +673,7 @@ webrtc: {
   - `src/handlers/comms/repos/chatMessage.repo.ts`
 - **Schema:** `src/handlers/comms/repos/comms.schema.ts`
 
-### Frontend (apps/provider)
+### Frontend (apps/account)
 - **WebRTC Client:** `src/lib/webrtc/peer-connection.ts`
 - **Signaling Client:** `src/lib/webrtc/signaling-client.ts`
 - **Media Devices:** `src/lib/webrtc/media-devices.ts`

@@ -145,7 +145,7 @@ interface CapabilityStatementInterface {
 ### Handler Implementation
 
 ```typescript
-// services/api/src/handlers/healthcare/foundation/capability-statement.handler.ts
+// services/api-ts/src/handlers/healthcare/foundation/capability-statement.handler.ts
 import { Hono } from "hono";
 import { logger } from "@/core/logger";
 
@@ -635,7 +635,7 @@ validateFHIRResources().catch((error) => {
 ### Validation Endpoint
 
 ```typescript
-// services/api/src/handlers/healthcare/fhir/validate.handler.ts
+// services/api-ts/src/handlers/healthcare/fhir/validate.handler.ts
 import { Hono } from "hono";
 import { logger } from "@/core/logger";
 import * as Ajv from "ajv";
@@ -829,7 +829,7 @@ export default app;
 ## 3. Consent Enforcement
 
 ```typescript
-// services/api/src/handlers/healthcare/support/consent-enforcer.ts
+// services/api-ts/src/handlers/healthcare/support/consent-enforcer.ts
 import { logger } from "@/core/logger";
 
 export enum ConsentAction {
@@ -1189,7 +1189,7 @@ app.get(
 ## 5. Audit Event Logging
 
 ```typescript
-// services/api/src/handlers/healthcare/support/audit-event.handler.ts
+// services/api-ts/src/handlers/healthcare/support/audit-event.handler.ts
 import { logger } from "@/core/logger";
 
 interface AuditEvent {
@@ -1447,7 +1447,7 @@ async getPatient(@path id: string) {
 ## 6. IPS (International Patient Summary) Generation
 
 ```typescript
-// services/api/src/handlers/healthcare/support/ips.handler.ts
+// services/api-ts/src/handlers/healthcare/support/ips.handler.ts
 import { Hono } from "hono";
 
 interface IPSBundle {

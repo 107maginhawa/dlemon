@@ -211,7 +211,7 @@ Extensions:
    ```
 2. Implement $validate endpoint in your API
    ```typescript
-   // services/api/src/handlers/healthcare/validate.ts
+   // services/api-ts/src/handlers/healthcare/validate.ts
    POST /healthcare/validate
    - Input: FHIR resource + profile URL
    - Uses: FHIR Validator library or terminology service
@@ -585,7 +585,7 @@ Response:
 
 **Option A: Lightweight - ValueSet Registry (Recommended for MVP)**
 ```typescript
-// services/api/src/handlers/healthcare/terminology/repos/value-set.repo.ts
+// services/api-ts/src/handlers/healthcare/terminology/repos/value-set.repo.ts
 export class ValueSetRepository {
   async getValueSet(url: string): Promise<ValueSet> {
     // Return ValueSet definition for binding validation
@@ -604,7 +604,7 @@ export class ValueSetRepository {
   }
 }
 
-// services/api/src/handlers/healthcare/terminology/terminology.handler.ts
+// services/api-ts/src/handlers/healthcare/terminology/terminology.handler.ts
 @post("/terminology/$validate-code")
 async validateCode(@body req: ValidateCodeRequest): Promise<OperationOutcome> {
   const isValid = await valueSetRepo.validateCode(
@@ -934,7 +934,7 @@ await auditLog.record({
 ### 6.1 Current State
 
 **What Exists:**
-- Audit module (location: `/services/api/src/handlers/audit/`)
+- Audit module (location: `/services/api-ts/src/handlers/audit/`)
 - Pino structured logging
 - Likely basic audit logging
 
@@ -1033,7 +1033,7 @@ enum AuditEventAction {
 ### 6.5 Implementation
 
 ```typescript
-// services/api/src/handlers/healthcare/audit/audit.handler.ts
+// services/api-ts/src/handlers/healthcare/audit/audit.handler.ts
 export class AuditHandler {
   async recordDataAccess(
     patientId: string,
@@ -1461,7 +1461,7 @@ W3C PROV is a formal ontology for representing provenance information:
 Whenever a clinical resource is created, generate a Provenance record:
 
 ```typescript
-// services/api/src/handlers/healthcare/clinical/encounter.handler.ts
+// services/api-ts/src/handlers/healthcare/clinical/encounter.handler.ts
 @post("/encounters")
 async createEncounter(@body encounter: Encounter) {
   const userId = extractUserId();
