@@ -5,28 +5,10 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useMediaStream } from './use-media-stream'
+import type { VideoPeerConnection } from '@monobase/sdk-ts/utils/webrtc/peer-connection'
+import type { ChatMessage } from '@monobase/sdk-ts/utils/webrtc/signaling-client'
 
-// Type definitions for VideoPeerConnection interface
-// These match the SDK implementation but are defined here for type safety
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'failed'
-
-interface ChatMessage {
-  id: string
-  text: string
-  senderId: string
-  timestamp: number
-  type: 'chat'
-}
-
-interface VideoPeerConnection {
-  onRemoteStream: (handler: (stream: MediaStream) => void) => void
-  onConnectionStateChange: (handler: (state: string) => void) => void
-  onChatMessage: (handler: (message: ChatMessage) => void) => void
-  replaceVideoTrack: (track: MediaStreamTrack) => Promise<void>
-  restoreVideoTrack: (track: MediaStreamTrack) => Promise<void>
-  sendChatMessage: (text: string) => void
-  close: () => void
-}
 
 interface UseVideoCallReturn {
   localStream: MediaStream | null

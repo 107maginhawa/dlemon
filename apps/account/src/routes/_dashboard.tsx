@@ -11,10 +11,16 @@ import {
   User,
   Shield,
   Bell,
+  Calendar,
+  Clock,
+  CreditCard,
 } from 'lucide-react'
 import { UserButton } from '@daveyplate/better-auth-ui'
 import { useQuery } from '@tanstack/react-query'
-import { listNotificationsOptions } from '@monobase/sdk-ts/generated/@tanstack/react-query.gen'
+import {
+  listNotificationsOptions,
+  listBookingsOptions,
+} from '@monobase/sdk-ts/generated/react-query'
 
 export const Route = createFileRoute('/_dashboard')({
   beforeLoad: composeGuards(requireAuth, requireEmailVerified, requirePerson),
@@ -30,6 +36,17 @@ function DashboardLayout() {
   })
   const unreadCount = unreadData?.pagination?.totalCount || 0
 
+  // Pending-as-host count: bookings someone has requested but the user hasn't
+  // confirmed/rejected yet. The spec needs the person UUID (no 'me' shortcut).
+  const { auth } = Route.useRouteContext()
+  const myPersonId = auth.person?.id
+  const { data: pendingHostData } = useQuery({
+    ...listBookingsOptions({ query: { host: myPersonId!, status: 'pending', limit: 50 } }),
+    enabled: !!myPersonId,
+    staleTime: 30_000,
+  })
+  const pendingHostCount = pendingHostData?.pagination?.totalCount || 0
+
   // Define navigation structure for the account dashboard
   const navGroups: NavGroup[] = [
     {
@@ -40,6 +57,12 @@ function DashboardLayout() {
           url: "/dashboard",
           icon: Home,
           badge: null,
+        },
+        {
+          title: "Bookings",
+          url: "/bookings",
+          icon: Calendar,
+          badge: pendingHostCount > 0 ? pendingHostCount : null,
         },
         {
           title: "Notifications",
@@ -53,9 +76,19 @@ function DashboardLayout() {
       label: "Settings",
       items: [
         {
-          title: "Account Settings",
+          title: "Account",
           url: "/settings/account",
           icon: User,
+        },
+        {
+          title: "Schedule",
+          url: "/settings/schedule",
+          icon: Clock,
+        },
+        {
+          title: "Billing",
+          url: "/settings/billing",
+          icon: CreditCard,
         },
         {
           title: "Security",

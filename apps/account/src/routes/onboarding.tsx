@@ -9,7 +9,7 @@ import { useMutation } from '@tanstack/react-query'
 import {
   createPersonMutation,
   getPersonQueryKey,
-} from '@monobase/sdk-ts/generated/@tanstack/react-query.gen'
+} from '@monobase/sdk-ts/generated/react-query'
 import { Logo } from '@/components/logo'
 import { composeGuards, requireAuth, requireEmailVerified, requireNoPerson } from '@/utils/guards'
 import { detectTimezone } from '@/lib/detect-timezone'

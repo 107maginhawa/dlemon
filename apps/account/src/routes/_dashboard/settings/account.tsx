@@ -9,7 +9,7 @@ import {
   getPersonOptions,
   getPersonQueryKey,
   updatePersonMutation,
-} from '@monobase/sdk-ts/generated/@tanstack/react-query.gen'
+} from '@monobase/sdk-ts/generated/react-query'
 import { buildPatch } from '@monobase/sdk-ts/utils/patch'
 import { useFileUpload } from '@monobase/sdk-ts/flows'
 import type { PersonUpdateRequest } from '@monobase/sdk-ts/generated/types.gen'
