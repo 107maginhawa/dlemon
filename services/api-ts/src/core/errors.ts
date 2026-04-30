@@ -355,6 +355,18 @@ export function createErrorHandler(config: Config) {
       return c.json(applySecurity(validationResponse, config), 400);
     }
 
+    // Handle Postgres encoding errors (e.g. null bytes in input). pg
+    // wraps these in DrizzleQueryError; we map to 400 because the input
+    // is fundamentally invalid rather than the server being broken.
+    const pgCode = (err as any)?.cause?.code ?? (err as any)?.code;
+    if (pgCode === '22021') {
+      log?.warn({ error: { message: err.message, pgCode } }, 'Postgres encoding error');
+      const validationResponse = {
+        ...createBaseErrorFields(c, { message: 'Input contains invalid byte sequence', code: 'VALIDATION_ERROR' }, 400, config),
+      };
+      return c.json(applySecurity(validationResponse, config), 400);
+    }
+
     // Handle errors with statusCode property (but not HTTPException or AppError)
     if ('statusCode' in err && typeof (err as any).statusCode === 'number') {
       const statusCode = (err as any).statusCode;
@@ -400,17 +412,65 @@ export function createErrorHandler(config: Config) {
 }
 
 /**
+ * Build the registered-paths -> allowed-methods map from a Hono app.
+ * Used by the not-found handler to distinguish "route doesn't exist" (404)
+ * from "route exists but with a different method" (405).
+ */
+function buildPathMethodIndex(app: App): Map<RegExp, Set<string>> {
+  const index = new Map<string, Set<string>>();
+  for (const r of app.routes) {
+    const methods = index.get(r.path) ?? new Set<string>();
+    methods.add(r.method.toUpperCase());
+    index.set(r.path, methods);
+  }
+  // Convert each path pattern to a regex once. Hono path params look like
+  // ":param", optionally followed by a regex constraint in braces; treat
+  // them all as "match any non-slash segment".
+  const compiled = new Map<RegExp, Set<string>>();
+  for (const [pattern, methods] of index) {
+    const regexSrc = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, '[^/]+');
+    compiled.set(new RegExp(`^${regexSrc}$`), methods);
+  }
+  return compiled;
+}
+
+/**
  * Register error handlers with the Hono app
- * Includes 404 handler and global error handler
+ * Includes 404/405 handler and global error handler
  * MUST be called last after all other route registrations
  */
 export function registerHandlers(app: App, config: Config): void {
-  // 404 handler for unmatched routes - returns NotFoundError matching TypeSpec model
+  const pathMethodIndex = buildPathMethodIndex(app);
+
+  // Catch-all for unmatched (path, method) pairs: 405 when the path is
+  // registered with a different method, 404 otherwise.
   app.notFound((c) => {
+    const reqPath = c.req.path;
+    const reqMethod = c.req.method.toUpperCase();
+    let allowed: Set<string> | null = null;
+    for (const [pattern, methods] of pathMethodIndex) {
+      if (pattern.test(reqPath)) {
+        allowed = methods;
+        break;
+      }
+    }
+
+    if (allowed && !allowed.has(reqMethod)) {
+      const allowHeader = [...allowed].sort().join(', ');
+      c.header('Allow', allowHeader);
+      const methodNotAllowedResponse = {
+        ...createBaseErrorFields(c, { message: `Method ${reqMethod} not allowed`, code: 'METHOD_NOT_ALLOWED' }, 405, config),
+        allowed: [...allowed].sort(),
+      };
+      return c.json(applySecurity(methodNotAllowedResponse, config), 405);
+    }
+
     const notFoundResponse = {
       ...createBaseErrorFields(c, { message: 'Route not found', code: 'NOT_FOUND' }, 404, config),
       resourceType: 'route',
-      resource: c.req.path,
+      resource: reqPath,
       suggestions: undefined, // Could be enhanced with common route suggestions
     };
 

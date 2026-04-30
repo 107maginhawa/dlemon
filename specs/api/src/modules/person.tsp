@@ -121,6 +121,7 @@ namespace PersonModule {
     getPerson(
       @path @doc("Person ID (UUID) or 'me' for current user's profile") person: UUID | "me"
     ): ApiOkResponse<Person>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse
       | ApiForbiddenResponse;
 
@@ -134,6 +135,7 @@ namespace PersonModule {
       @path person: UUID,
       @body updates: PersonUpdateRequest
     ): ApiOkResponse<Person>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse
       | ApiForbiddenResponse
       | ApiBadRequestResponse;

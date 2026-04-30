@@ -25,6 +25,7 @@ pub fn start_pg_applier(
     reconnect_base_delay_ms: u64,
     reconnect_max_delay_ms: u64,
     query_batch_size: usize,
+    local_peer_id: String,
 ) -> tokio::task::JoinHandle<()> {
     // Pre-normalize blacklist entries to kebab-case once at startup.
     let blacklisted_normalized: Vec<String> = blacklisted_collections
@@ -54,7 +55,7 @@ pub fn start_pg_applier(
 
             // Apply loop — runs until connection error
             match run_apply_loop(
-                &client, &storage, &collections, &blacklisted_normalized, poll_interval, &tracker, &mut last_applied_seq, query_batch_size,
+                &client, &storage, &collections, &blacklisted_normalized, poll_interval, &tracker, &mut last_applied_seq, query_batch_size, &local_peer_id,
             ).await {
                 Ok(()) => {
                     // Clean exit (shouldn't happen in practice)
@@ -101,6 +102,7 @@ async fn run_apply_loop(
     tracker: &ApplierTracker,
     last_applied_seq: &mut u64,
     query_batch_size: usize,
+    local_peer_id: &str,
 ) -> Result<()> {
     let mut _consecutive_failures = 0u32;
 
@@ -142,6 +144,27 @@ async fn run_apply_loop(
             if !collections.contains(&change.collection) {
                 max_seq = std::cmp::max(max_seq, change.seq);
                 continue;
+            }
+
+            // Skip changes whose origin is THIS cadence instance — i.e.
+            // entries the local watcher emitted by reading the primary DB.
+            // Re-applying them is a no-op at best and corrupts the audit
+            // trail at worst (PG's audit trigger fires on every UPDATE,
+            // generating a duplicate history-table PK on the no-op write
+            // — that's the loop we observed in the change-log replay
+            // hot path producing thousands of `medical_records_history_pkey`
+            // duplicate-key violations and starving the send loop).
+            //
+            // Remote-peer changes have origin = remote peer_id, so they
+            // still apply. The watcher's own re-emits land here with
+            // `peer_id = local_peer_id` and get skipped.
+            if let SyncPayload::Fields(fields) = &change.payload {
+                if let Some(origin) = fields.first().map(|f| f.peer_id.as_str()) {
+                    if origin == local_peer_id {
+                        max_seq = std::cmp::max(max_seq, change.seq);
+                        continue;
+                    }
+                }
             }
 
             let pg_table = change.collection.replace('-', "_");

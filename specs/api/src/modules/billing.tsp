@@ -474,7 +474,7 @@ namespace BillingModule {
       @query customer?: UUID,
       @query merchant?: UUID,
       @query status?: InvoiceStatus,
-      @query context?: string,
+      @query context?: SafeQueryString,
       ...PaginationQuery
     ): ApiOkResponse<PaginatedResponse<Invoice>>
       | ApiUnauthorizedResponse;
@@ -563,7 +563,12 @@ namespace BillingModule {
     @post
     @route("/webhooks/stripe")
     handleStripeWebhook(
-      @header("stripe-signature") signature: string,
+      // Stripe signs webhooks as `t=<timestamp>,v1=<hex>` (with optional
+      // legacy v0 entries). The pattern keeps the spec aligned with what
+      // the SDK validates so schemathesis doesn't generate trivially
+      // invalid signatures and flag the resulting 400 as a contract
+      // violation.
+      @header("stripe-signature") @pattern("^t=\\d+(,v\\d+=[0-9a-f]+)+$") signature: string,
       @body body: unknown
     ): ApiOkResponse<unknown>
       | ApiBadRequestResponse;

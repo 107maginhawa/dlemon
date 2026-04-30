@@ -50,6 +50,7 @@ model OffsetPaginationParams {
   @doc("Number of items to skip")
   @query
   @minValue(0)
+  @maxValue(2147483647)
   offset?: int32 = 0;
 
   @doc("Number of items to return (1-100)")
@@ -61,6 +62,7 @@ model OffsetPaginationParams {
   @doc("Page number (1-based) - alternative to offset")
   @query
   @minValue(1)
+  @maxValue(2147483647)
   page?: int32;
 
   @doc("Items per page (1-100) - alternative to limit")
@@ -89,7 +91,7 @@ enum SortDirection {
 model SortingParams {
   @doc("Sort specifications (comma-separated field:direction pairs)")
   @query
-  sort?: string;
+  sort?: SafeQueryString;
 }
 
 /**
@@ -177,6 +179,5 @@ model OffsetPaginationMeta {
 model SearchFilterParams {
   @doc("Search query string")
   @query
-  @maxLength(500)
-  q?: string;
+  q?: SafeQueryString;
 }

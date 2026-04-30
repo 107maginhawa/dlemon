@@ -501,9 +501,9 @@ namespace EmailModule {
       @doc("Filter by recipient email address")
       @query recipientEmail?: Email,
       @doc("Start date for filtering queue items (inclusive)")
-      @query dateFrom?: utcDateTime,
+      @query dateFrom?: StrictUtcDateTime,
       @doc("End date for filtering queue items (inclusive)")
-      @query dateTo?: utcDateTime,
+      @query dateTo?: StrictUtcDateTime,
       @doc("Filter by priority level (1-10, lower is higher priority)")
       @query priority?: int32,
       @doc("Filter to show only scheduled emails")

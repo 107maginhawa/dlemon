@@ -450,6 +450,7 @@ async fn build_pg_peer(db_url: String, mut config: CadenceConfig) -> Peer {
         Duration::from_millis(APPLIER_POLL_MS),
         applier_tracker,
         10, 1000, 60000, 5_000,
+        "test-peer".to_string(),
     );
 
     Peer {
@@ -563,6 +564,7 @@ async fn build_sqlite_peer(
         Duration::from_millis(APPLIER_POLL_MS),
         applier_tracker,
         10, 1000, 60000, 5_000,
+        "test-peer".to_string(),
     );
 
     Peer {

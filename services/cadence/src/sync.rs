@@ -206,6 +206,21 @@ impl SyncEngine {
 
         // 2. Validate JWT
         let claims = self.jwt_validator.validate(&jwt).await?;
+        // Per-session diagnostic. Fires once per inbound connection. Silent at
+        // default INFO; enable via `RUST_LOG=cadence::sync=debug` (or per-pod
+        // configmap) when investigating peer auth, scope drift, or catch-up
+        // totals on a specific connection.
+        tracing::debug!(
+            session_key,
+            remote_peer_id = %remote_peer_id,
+            remote_since_seq,
+            resume_after_seq = ?resume_after_seq,
+            jwt_sub = %claims.sub,
+            jwt_peer_id = ?claims.peer_id,
+            jwt_read_only = claims.read_only,
+            jwt_scopes = ?claims.scopes,
+            "handle_incoming_stream: Hello received + JWT validated"
+        );
 
         // Register peer as syncing
         self.peer_tracker.register(session_key, &remote_peer_id, "inbound", transport_type);
@@ -236,6 +251,15 @@ impl SyncEngine {
             total
         };
         self.peer_tracker.set_send_total(session_key, catch_up_total);
+        // Pairs with the Hello-received log above. Per-session, debug-level.
+        tracing::debug!(
+            session_key,
+            remote_peer_id,
+            remote_since_seq,
+            our_since_seq,
+            catch_up_total,
+            "handle_incoming_stream: sending HelloAck"
+        );
 
         let ack = SyncMessage::HelloAck {
             peer_id: self.peer_id.clone(),
@@ -748,6 +772,22 @@ impl SyncEngine {
         let baseline_seq = self.state.baseline_completion_seq();
         let needs_snapshot = effective_since_seq < baseline_seq;
         let mut primary_reader_did_emit = false;
+        // Per-session diagnostic. Fires once per build_catchup_frames call.
+        // Captures the decision tree (snapshot vs change-log replay) and the
+        // peer's scope — primary input when investigating "everything got
+        // dropped" or "wrong code path" issues. Silent at default INFO.
+        tracing::debug!(
+            since_seq,
+            effective_since_seq,
+            resume_after_seq = ?resume_after_seq,
+            baseline_seq,
+            needs_snapshot,
+            catchup_from_primary_db = self.config.catchup_from_primary_db,
+            num_collections = self.config.collections.len(),
+            remote_peer_id,
+            peer_scopes = ?claims.scopes,
+            "build_catchup_frames: entry"
+        );
         if needs_snapshot && self.config.catchup_from_primary_db {
             // Build a per-doc max-lamport map once. Used to attach
             // meaningful lamports to primary-reader output so receiving
@@ -777,6 +817,16 @@ impl SyncEngine {
                 let mut offset = 0u64;
                 let mut collection_rows = 0u64;
                 let mut collection_sent = 0u64;
+                let scope_cols_for_collection = self.config.scope_columns_for(collection).clone();
+                // Per-collection trace. With ~100+ collections per session
+                // this is too chatty for debug; use trace and filter to
+                // specific tables when needed (e.g.
+                // `RUST_LOG=cadence::sync=trace`).
+                tracing::trace!(
+                    collection = %collection,
+                    scope_cols = ?scope_cols_for_collection,
+                    "build_catchup_frames: collection start"
+                );
                 loop {
                     let mut rows = self.primary_reader.read_rows_page(
                         collection, &self.state, offset, page_size,
@@ -804,10 +854,26 @@ impl SyncEngine {
                     }
 
                     let filtered = self.filter_changes(rows, claims);
+                    let filtered_len = filtered.len();
                     let to_send: Vec<_> = match resume_after_seq {
                         Some(skip_seq) => filtered.into_iter().filter(|c| c.seq > skip_seq).collect(),
                         None => filtered,
                     };
+                    let to_send_len = to_send.len();
+                    // Per-page trace: shows the primary→filtered→to_send
+                    // funnel so we can spot whether scope filter or
+                    // resume_after_seq is the row-loss point.
+                    if filtered_len > 0 || page_len > 0 {
+                        tracing::trace!(
+                            collection = %collection,
+                            page_offset = offset,
+                            page_len,
+                            filtered_len,
+                            to_send_len,
+                            resume_after_seq = ?resume_after_seq,
+                            "build_catchup_frames: page (primary -> filtered -> to_send)"
+                        );
+                    }
                     if !to_send.is_empty() {
                         if let Some(seq) = to_send.iter().map(|c| c.seq).max() {
                             max_seq = std::cmp::max(max_seq, seq);
@@ -846,6 +912,16 @@ impl SyncEngine {
                         collection_rows
                     );
                 }
+                // Per-collection done summary at trace level. Pairs with
+                // the collection-start log; useful when reading per-page
+                // traces in context.
+                tracing::trace!(
+                    collection = %collection,
+                    collection_rows,
+                    collection_sent,
+                    scope_cols = ?scope_cols_for_collection,
+                    "build_catchup_frames: collection done"
+                );
             }
 
             tracing::debug!(
@@ -900,6 +976,9 @@ impl SyncEngine {
         let snapshot_pass_ran =
             needs_snapshot && self.config.catchup_from_primary_db && primary_reader_did_emit;
         let mut cursor = effective_since_seq;
+        let mut changelog_pages = 0u64;
+        let mut changelog_total_in = 0usize;
+        let mut changelog_total_out = 0usize;
         loop {
             // When the snapshot pass ran, query *only* tombstones from the
             // change log. Otherwise (incremental sync above the baseline
@@ -915,6 +994,7 @@ impl SyncEngine {
                     .await?
             };
             if batch.is_empty() { break; }
+            let batch_in = batch.len();
             let batch_max = batch.iter().map(|c| c.seq).max().unwrap_or(cursor);
             max_seq = std::cmp::max(max_seq, batch_max);
             cursor = batch_max;
@@ -923,8 +1003,25 @@ impl SyncEngine {
                 .filter(|c| !Self::change_originated_from(c, remote_peer_id))
                 .filter(|c| !snapshot_pass_ran || c.deleted)
                 .collect();
+            let non_echo_len = non_echo.len();
             let filtered = self.filter_changes(non_echo, claims);
             total_count += filtered.len();
+            changelog_pages += 1;
+            changelog_total_in += batch_in;
+            changelog_total_out += filtered.len();
+            // Per-page change-log replay trace. Shows the
+            // raw → non-echo → scope-filtered funnel so we can see whether
+            // echo suppression or scope filter is the row-loss point.
+            tracing::trace!(
+                page = changelog_pages,
+                cursor,
+                batch_in,
+                non_echo_len,
+                filtered_len = filtered.len(),
+                has_more,
+                snapshot_pass_ran,
+                "build_catchup_frames: change-log replay page"
+            );
 
             for chunk in filtered.chunks(batch_size) {
                 let msg = SyncMessage::SyncData {
@@ -935,6 +1032,17 @@ impl SyncEngine {
             }
             if !has_more { break; }
         }
+        // Per-session summary of the change-log replay phase. Pairs with
+        // the per-page traces above; useful even without trace logging
+        // when correlating with cloud-side behavior.
+        tracing::debug!(
+            changelog_pages,
+            changelog_total_in,
+            changelog_total_out,
+            total_count,
+            max_seq,
+            "build_catchup_frames: change-log replay done"
+        );
 
         tracing::debug!(
             since_seq = effective_since_seq,
@@ -984,6 +1092,19 @@ impl SyncEngine {
             match msg {
                 SyncMessage::SyncData { changes, done } => {
                     let count = changes.len() as u64;
+                    // Per-frame trace. With a busy session this fires once
+                    // per ~100-row batch — usually fine at debug, but
+                    // promote to trace on hot loops if needed. This is the
+                    // single most useful "did the receiver actually see
+                    // anything?" log when diagnosing 0%-progress sessions.
+                    tracing::debug!(
+                        session_key,
+                        remote_peer_id,
+                        count,
+                        done,
+                        first_collection = ?changes.first().map(|c| c.collection.as_str()),
+                        "receive_and_merge: SyncData frame arrived"
+                    );
                     // Collect changes that pass blacklist + scope + LWW into a
                     // batch, then append them to the change log in ONE
                     // storage transaction. This is the dominant catch-up
@@ -1275,7 +1396,15 @@ impl SyncEngine {
 
     /// Filter changes by scope dimensions (OR logic).
     fn filter_changes(&self, changes: Vec<RowChange>, claims: &SyncClaims) -> Vec<RowChange> {
-        changes
+        let input_len = changes.len();
+        // Capture one sample of a dropped row per call so trace logs can
+        // show *why* rows are being dropped (collection name, scope cols,
+        // and the actual row field values that didn't match). Without this,
+        // diagnosing scope-filter drops requires guessing.
+        let mut sample_collection: Option<String> = None;
+        let mut sample_scope_cols: Option<BTreeMap<String, String>> = None;
+        let mut sample_row_fields: Option<HashMap<String, String>> = None;
+        let result: Vec<RowChange> = changes
             .into_iter()
             .filter(|c| {
                 let scope_cols = self.config.scope_columns_for(&c.collection);
@@ -1283,9 +1412,41 @@ impl SyncEngine {
                     return true;
                 }
                 let row_fields = Self::extract_row_fields(c);
-                claims.row_in_scope(scope_cols, &row_fields)
+                let in_scope = claims.row_in_scope(scope_cols, &row_fields);
+                if !in_scope && sample_collection.is_none() {
+                    sample_collection = Some(c.collection.clone());
+                    sample_scope_cols = Some(scope_cols.clone());
+                    let mut narrowed = HashMap::new();
+                    for col in scope_cols.values() {
+                        if let Some(v) = row_fields.get(col) {
+                            narrowed.insert(col.clone(), v.clone());
+                        }
+                    }
+                    sample_row_fields = Some(narrowed);
+                }
+                in_scope
             })
-            .collect()
+            .collect();
+        // Per-batch trace. Fires once per filter_changes() call (which
+        // happens per page during catch-up and per frame during streaming).
+        // Trace level keeps it silent in prod; enable with
+        // `RUST_LOG=cadence::sync=trace` when investigating scope drops.
+        if input_len > 0 {
+            let kept = result.len();
+            let kept_collection = result.first().map(|c| c.collection.clone());
+            tracing::trace!(
+                input_len,
+                kept,
+                dropped = input_len - kept,
+                kept_collection = ?kept_collection,
+                sample_dropped_collection = ?sample_collection,
+                sample_dropped_scope_cols = ?sample_scope_cols,
+                sample_dropped_row_fields = ?sample_row_fields,
+                peer_scopes = ?claims.scopes,
+                "filter_changes: scope check completed"
+            );
+        }
+        result
     }
 
     /// Check if an incoming change is within the peer's scope.

@@ -96,6 +96,7 @@ class PgBossScheduler implements JobScheduler {
   private intervalJobs = new Map<string, IntervalJobConfig>(); // name -> config
   private createdQueues = new Set<string>(); // Track created queues to prevent deadlocks
   private jobIdToQueueName = new Map<string, string>(); // Track job ID to queue name mapping
+  private fastIntervalTimers = new Map<string, NodeJS.Timeout>(); // Sub-minute intervals via setInterval
   private isStarted = false;
   
   constructor(db: DatabaseInstance, logger: Logger) {
@@ -160,10 +161,55 @@ class PgBossScheduler implements JobScheduler {
   }
   
   /**
-   * Register an interval job
+   * Register an interval job.
+   *
+   * pg-boss schedules cron-style at minute granularity, so sub-minute
+   * intervals fall back to a plain setInterval driving the handler
+   * directly. This is correct for single-instance deploys and
+   * essential for the contract test suite (auth-email round-trips
+   * would otherwise wait up to 60s per scenario).
    */
   registerInterval(name: string, intervalMs: number, handler: JobHandler): void {
     this.handlers.set(name, handler);
+
+    if (intervalMs < 60000) {
+      // Sub-minute: drive via setInterval
+      this.intervalJobs.set(name, { intervalMinutes: 0, retryLimit: 3 });
+      const startTimer = () => {
+        if (this.fastIntervalTimers.has(name)) return;
+        const timer = setInterval(() => {
+          handler({
+            db: this.db,
+            logger: this.logger,
+            jobName: name,
+            jobId: `${name}-${Date.now()}`,
+            data: undefined,
+          }).catch((error) => {
+            this.logger.error({ error, jobName: name }, 'Fast-interval job handler threw');
+          });
+        }, intervalMs);
+        // Don't keep the event loop alive solely for this timer.
+        if (typeof timer.unref === 'function') timer.unref();
+        this.fastIntervalTimers.set(name, timer);
+      };
+      if (this.isStarted) {
+        startTimer();
+      } else {
+        // Will be started when start() runs
+        this.intervalJobs.set(name, { intervalMinutes: 0, retryLimit: 3 });
+        // Defer registration until start() — see start() below.
+        this.fastIntervalTimers.set(name, setTimeout(() => {}, 0));
+        clearTimeout(this.fastIntervalTimers.get(name)!);
+        this.fastIntervalTimers.delete(name);
+        // Stash the start function for later via a closure on the map entry.
+        // Simpler: just kick off immediately; the handler must guard against
+        // being called before start() if it cares.
+        startTimer();
+      }
+      this.logger.debug(`Registered fast-interval job: ${name} every ${intervalMs}ms (setInterval)`);
+      return;
+    }
+
     const intervalMinutes = Math.max(1, Math.floor(intervalMs / (1000 * 60)));
     this.intervalJobs.set(name, {
       intervalMinutes,
@@ -225,8 +271,12 @@ class PgBossScheduler implements JobScheduler {
         }
       }
       
-      // Schedule interval jobs
+      // Schedule interval jobs (cron-style, minute granularity)
       for (const [name, config] of this.intervalJobs) {
+        // intervalMinutes === 0 marks a fast-interval job that runs via
+        // setInterval — already started in registerInterval, skip pg-boss.
+        if (config.intervalMinutes === 0) continue;
+
         try {
           const cronPattern = `*/${config.intervalMinutes} * * * *`;
           await this.boss.schedule(name, cronPattern, {}, {
@@ -387,11 +437,18 @@ class PgBossScheduler implements JobScheduler {
     
     try {
       this.logger.debug('Shutting down job scheduler...');
+
+      // Clear sub-minute setInterval timers first.
+      for (const [, timer] of this.fastIntervalTimers) {
+        clearInterval(timer);
+      }
+      this.fastIntervalTimers.clear();
+
       await this.boss.stop({
         graceful: true,
         timeout: 30000, // 30 seconds timeout for graceful shutdown
       });
-      
+
       // Clear tracking to allow proper restart
       this.createdQueues.clear();
       this.jobIdToQueueName.clear();

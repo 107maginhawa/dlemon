@@ -81,6 +81,7 @@ async fn test_sqlite_applier_inserts_row() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     // Wait for applier to process
@@ -132,6 +133,7 @@ async fn test_sqlite_applier_updates_existing_row() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(300)).await;
@@ -189,6 +191,7 @@ async fn test_sqlite_applier_deletes_row() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     // Give the applier enough time to process both changes
@@ -241,6 +244,7 @@ async fn test_sqlite_applier_ignores_non_matching_collections() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -282,6 +286,7 @@ async fn test_sqlite_applier_maps_hyphens_to_underscores() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -326,6 +331,7 @@ async fn test_sqlite_applier_handles_json_objects() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -369,6 +375,7 @@ async fn test_sqlite_applier_handles_null_values() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -414,6 +421,7 @@ async fn test_sqlite_applier_skips_reserved_fields() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -462,6 +470,7 @@ async fn test_sqlite_applier_handles_multiple_collections() {
         vec![],
         Duration::from_millis(50), cadence::applier::tracker::ApplierTracker::new(),
         10, 100, 1000, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -497,7 +506,7 @@ fn test_pg_applier_public_api_exists() {
         Vec<String>,
         Vec<String>,
         Duration, cadence::applier::tracker::ApplierTracker,
-        u32, u64, u64, usize,
+        u32, u64, u64, usize, String,
     ) -> tokio::task::JoinHandle<()> = cadence::applier::pg::start_pg_applier;
 }
 
@@ -509,6 +518,6 @@ fn test_sqlite_applier_public_api_exists() {
         Vec<String>,
         Vec<String>,
         Duration, cadence::applier::tracker::ApplierTracker,
-        u32, u64, u64, usize,
+        u32, u64, u64, usize, String,
     ) -> tokio::task::JoinHandle<()> = cadence::applier::sqlite::start_sqlite_applier;
 }
