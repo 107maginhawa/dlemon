@@ -1,6 +1,6 @@
-# Auto-Updater Setup for Monobase Patient
+# Auto-Updater Setup for Monobase Account
 
-This document describes how to set up the auto-updater for Monobase Patient desktop builds.
+This document describes how to set up the auto-updater for Monobase Account desktop builds.
 
 ## Overview
 
@@ -46,7 +46,7 @@ Add the public key to `tauri.conf.json`:
       "active": true,
       "dialog": false,
       "endpoints": [
-        "https://downloads.monobase.com/patient/{{target}}_{{arch}}/latest.json"
+        "https://downloads.monobase.com/account/{{target}}_{{arch}}/latest.json"
       ],
       "pubkey": "YOUR_PUBLIC_KEY_HERE"
     }
@@ -59,22 +59,22 @@ Add the public key to `tauri.conf.json`:
 Set up the following structure on your CDN:
 
 ```
-https://downloads.monobase.com/patient/
+https://downloads.monobase.com/account/
 ├── darwin_aarch64/
 │   ├── latest.json
-│   └── Monobase_Patient_x.x.x_aarch64.app.tar.gz
+│   └── Monobase_Account_x.x.x_aarch64.app.tar.gz
 │       └── .sig (signature file)
 ├── darwin_x86_64/
 │   ├── latest.json
-│   └── Monobase_Patient_x.x.x_x64.app.tar.gz
+│   └── Monobase_Account_x.x.x_x64.app.tar.gz
 │       └── .sig
 ├── windows_x86_64/
 │   ├── latest.json
-│   └── Monobase_Patient_x.x.x_x64_en-US.msi
+│   └── Monobase_Account_x.x.x_x64_en-US.msi
 │       └── .sig
 └── linux_x86_64/
     ├── latest.json
-    └── Monobase_Patient_x.x.x_amd64.AppImage
+    └── Monobase_Account_x.x.x_amd64.AppImage
         └── .sig
 ```
 
@@ -88,7 +88,7 @@ https://downloads.monobase.com/patient/
   "platforms": {
     "darwin-aarch64": {
       "signature": "BASE64_SIGNATURE_HERE",
-      "url": "https://downloads.monobase.com/patient/darwin_aarch64/Monobase_Patient_1.0.0_aarch64.app.tar.gz"
+      "url": "https://downloads.monobase.com/account/darwin_aarch64/Monobase_Account_1.0.0_aarch64.app.tar.gz"
     }
   }
 }
@@ -105,7 +105,7 @@ In your CI/CD pipeline, sign the built artifacts:
 export MINISIGN_PASSWORD="your_secret_key_password"
 
 # Sign the artifact (creates .sig file)
-minisign -S -s tauri.key -m Monobase_Patient_1.0.0_aarch64.app.tar.gz
+minisign -S -s tauri.key -m Monobase_Account_1.0.0_aarch64.app.tar.gz
 ```
 
 ### GitHub Actions Example
@@ -145,7 +145,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Monobase Patient v__VERSION__'
+          releaseName: 'Monobase Account v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false

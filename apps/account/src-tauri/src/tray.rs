@@ -11,7 +11,7 @@ pub fn setup_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
         .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("Monobase Patient")
+        .tooltip("Monobase Account")
         .on_menu_event(move |app, event| {
             handle_tray_menu_event(app, event);
         })

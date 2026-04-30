@@ -1,8 +1,9 @@
-//! Monobase Patient - Cross-platform healthcare patient portal
+//! Monobase Account - Cross-platform reference desktop/mobile app
 //!
 //! Both desktop and mobile use the same embedded Boa JS engine with Hono backend
 //! for offline-first operation. Desktop additionally has tray icon, updater, and
-//! single-instance support.
+//! single-instance support. The cadence P2P sync engine is embedded for
+//! offline-first synchronization with the same SQLite store.
 
 use tauri::Manager;
 use serde_json::json;
@@ -190,7 +191,7 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     let confirm = window_clone
                         .dialog()
-                        .message("Are you sure you want to close Monobase Patient?")
+                        .message("Are you sure you want to close Monobase Account?")
                         .title("Confirm Exit")
                         .kind(MessageDialogKind::Warning)
                         .buttons(MessageDialogButtons::YesNo)
@@ -236,7 +237,7 @@ pub fn run() {
         // Initialize sync engine (stubbed until Cadence is added to Monobase)
         {
             let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("./data"));
-            let db_path = app_data_dir.join("patient.db").to_string_lossy().to_string();
+            let db_path = app_data_dir.join("account.db").to_string_lossy().to_string();
             let handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {

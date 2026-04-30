@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Monobase Patient",
+  "productName": "Monobase Account",
   "version": "../package.json",
-  "identifier": "com.monobase.patient",
+  "identifier": "com.monobase.account",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:3003",
+    "devUrl": "http://localhost:3002",
     "beforeDevCommand": "bun dev",
     "beforeBuildCommand": "bun run build"
   },
   "app": {
     "windows": [
       {
-        "title": "Monobase Patient",
+        "title": "Monobase Account",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,
@@ -48,9 +48,9 @@
     },
     "resources": [],
     "copyright": "2025 Monobase Labs",
-    "category": "Healthcare and Fitness",
-    "shortDescription": "Monobase Patient Portal",
-    "longDescription": "Patient portal for healthcare management - offline-first",
+    "category": "Productivity",
+    "shortDescription": "Monobase Account App",
+    "longDescription": "Self-service account app — offline-first reference implementation with embedded P2P sync",
     "iOS": {
       "developmentTeam": "",
       "minimumSystemVersion": "14.0"
@@ -61,7 +61,7 @@
       "active": true,
       "dialog": false,
       "endpoints": [
-        "https://downloads.monobase.com/patient/{{target}}_{{arch}}/latest.json"
+        "https://downloads.monobase.com/account/{{target}}_{{arch}}/latest.json"
       ],
       "pubkey": ""
     }

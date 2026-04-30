@@ -1,4 +1,4 @@
-//! Cadence sync engine integration for Monobase Patient Portal
+//! Cadence sync engine integration for Monobase Account App
 //!
 //! Embeds the Cadence P2P sync engine in-process, sharing the same SQLite
 //! database (WAL mode) as the Boa/Hono backend. Exposes Tauri commands for

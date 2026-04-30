@@ -1,6 +1,6 @@
 //! Mobile-specific setup for iOS/iPadOS with embedded Hono backend
 //!
-//! This module sets up the mobile version of the patient app with an embedded
+//! This module sets up the mobile version of the account app with an embedded
 //! Boa JS engine running a Hono HTTP server for offline-first operation.
 //! Requests are routed through IPC as HTTP method + path + body + headers.
 
@@ -67,7 +67,7 @@ pub fn get_backend_status(
 /// This function is designed to NEVER crash the app - all errors are logged
 /// and the app continues with degraded functionality.
 pub fn setup_mobile(app: &App) -> Result<(), Box<dyn std::error::Error>> {
-    log::info!("Monobase Patient initializing in local mode...");
+    log::info!("Monobase Account initializing in local mode...");
 
     // Initialize error state
     let error_state = InitErrorState(std::sync::Arc::new(Mutex::new(None)));
@@ -97,7 +97,7 @@ pub fn setup_mobile(app: &App) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let db_path = app_data_dir.join("patient.db");
+    let db_path = app_data_dir.join("account.db");
     let db_path_str = db_path.to_string_lossy().to_string();
 
     log::info!("Database path: {}", db_path_str);
@@ -114,7 +114,7 @@ pub fn setup_mobile(app: &App) -> Result<(), Box<dyn std::error::Error>> {
             app.manage(state);
             app.manage(error_state);
 
-            log::info!("Monobase Patient ready in local mode");
+            log::info!("Monobase Account ready in local mode");
         }
         Err(e) => {
             let err_msg = format!("Boa engine initialization failed: {}", e);
@@ -129,7 +129,7 @@ pub fn setup_mobile(app: &App) -> Result<(), Box<dyn std::error::Error>> {
             // The error will be shown in the UI via get_backend_status
             app.manage(error_state);
 
-            log::warn!("Monobase Patient starting with degraded functionality");
+            log::warn!("Monobase Account starting with degraded functionality");
         }
     }
 
