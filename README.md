@@ -46,16 +46,19 @@ for the playbook to add a new impl/SDK in any language.
 monobase/
 ├── apps/                      # Frontend applications
 │   └── account/              # Reference app (Vite + TanStack Router)
+│       └── src-tauri/        # Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
 ├── packages/                  # Shared libraries
 │   ├── eslint-config/        # Shared ESLint flat configs (base, react, next)
-│   ├── sdk-ts/               # Reference TypeScript SDK (generated from OpenAPI)
+│   ├── sdk-ts/               # Reference TypeScript SDK (generated from OpenAPI + hand-written client/flows)
 │   └── typescript-config/    # Shared TypeScript configurations
-├── services/                  # Backend services (per-language)
-│   └── api-ts/               # Reference TypeScript impl (Hono + Bun)
+├── services/                  # Backend services
+│   ├── api-ts/               # Reference TypeScript impl (Hono + Bun)
+│   └── cadence/              # P2P sync engine (Rust + Iroh) — embedded in account Tauri, also runs as a hub
 ├── specs/                     # API contract
 │   └── api/                  # TypeSpec source + CONTRACT.md + IMPLEMENTING.md + tests/
 ├── scripts/                   # Repo-level scripts (contract test runner, etc.)
 ├── .github/workflows/         # CI (contract.yml runs Hurl + Schemathesis)
+├── .claude/skills/            # 16 Claude Code skills for end-to-end development
 ├── CLAUDE.md                 # AI assistant project guide
 └── package.json              # Monorepo workspace configuration
 ```
@@ -70,11 +73,14 @@ documented in `specs/api/IMPLEMENTING.md` but not yet scaffolded.
 - **PostgreSQL** >= 14
 - **Node.js** >= 18 (for some tooling compatibility)
 - **Git** for version control
+- **Rust** (1.90+) — only required to build `services/cadence` or the account Tauri desktop wrapper
 
 ### Optional Services
 - **AWS S3** or **MinIO** for file storage
 - **SMTP** server or **Postmark** for email delivery
 - **OneSignal** for push notifications
+- **Valkey/Redis** — only for cadence's distributed metadata backend (SQLite backend works without it)
+- **Hurl** + **Schemathesis** — for `bun run test:contract` and `:fuzz` (CI uses both)
 
 ## Quick Start
 

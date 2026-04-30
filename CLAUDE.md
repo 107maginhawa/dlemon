@@ -25,15 +25,20 @@ workspace.
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
   - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
-- `services/api-ts/` - Reference TypeScript API impl (Hono + Drizzle)
-  - `services/api-rs/`, `services/api-go/` etc. would be siblings; documented in `specs/api/IMPLEMENTING.md` but not yet present
-- `specs/api/` - TypeSpec API definitions; compiled to OpenAPI + TypeScript types. Also home of the contract docs and Hurl contract tests under `tests/contract/`
+  - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds the Boa JS engine + cadence P2P sync for offline-first operation. Optional — only built when packaging desktop/mobile.
+- `services/` - Backend services:
+  - `api-ts/` - Reference TypeScript API impl (Hono + Drizzle). Sibling impls (`api-rs`, `api-go`, …) are documented in `specs/api/IMPLEMENTING.md` but not yet present.
+  - `cadence/` - P2P sync engine (Rust + Iroh transport, SQLite/Valkey metadata backends, JWT scope auth). Embedded into `apps/account/src-tauri` for offline-first sync; can also run as a standalone hub. See `services/cadence/README.md`.
+- `specs/api/` - TypeSpec API definitions; compiled to OpenAPI + TypeScript types. Also home of the contract docs and Hurl contract tests under `tests/contract/`.
 - `packages/` - Shared packages:
   - `eslint-config/` - Shared ESLint flat configs (`base`, `react`, `next`)
-  - `sdk-ts/` - Reference TypeScript client SDK (generated from OpenAPI via `@hey-api/openapi-ts`)
+  - `sdk-ts/` - Reference TypeScript client SDK (generated from OpenAPI via `@hey-api/openapi-ts`). Hand-written extras: client/transport, flows, utils/patch, react/use-optimistic-mutation.
   - `typescript-config/` - Shared TypeScript configs
+
+  Note: `@monobase/api-spec` (consumed by SDK + apps for generated OpenAPI types) lives at `specs/api/`, not under `packages/`.
 - `scripts/run-contract-tests.ts` - Runs the Hurl contract suite against `$API_URL`
 - `.github/workflows/contract.yml` - CI: boots the impl, runs Hurl + Schemathesis
+- `.claude/skills/` - 16 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
 
 ## Business Domain Modules
 
@@ -243,9 +248,15 @@ cd apps/account && bun run test:e2e     # E2E tests
 
 ### What Exists
 - ✅ **apps/account** - Reference Vite + TanStack Router app
-- ✅ **apps/account/src/components/** - Shared UI component library
-- ✅ **packages/sdk-ts/** - Type-safe API client + TanStack Query hooks
+- ✅ **apps/account/src/components/** - Inlined shadcn/ui primitives
+- ✅ **apps/account/src-tauri/** - Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
+- ✅ **services/api-ts/** - Reference Hono + Drizzle API
+- ✅ **services/cadence/** - Rust P2P sync engine (compiles standalone; embedded by account Tauri)
+- ✅ **specs/api/** (`@monobase/api-spec`) - TypeSpec sources + generated OpenAPI + TS types
+- ✅ **packages/sdk-ts/** - Auto-generated TanStack Query hooks + hand-written client/flows/utils
 - ✅ **packages/eslint-config/** - Shared ESLint flat configs
+- ✅ **specs/api/tests/contract/** - Hurl contract suite (22 scenarios, ~5s)
+- ✅ **.claude/skills/** - 16 Claude Code skills (curated for the post-merge structure)
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
 - ✅ **9 API handler modules** (person, booking, billing, audit, notifs, comms, storage, email, reviews)
@@ -253,6 +264,24 @@ cd apps/account && bun run test:e2e     # E2E tests
 ### What's Intentionally Absent
 - This template ships **no domain-vertical apps or modules**. Add your own
   (e.g., `apps/admin`, `services/api-ts/src/handlers/tenant/`) on top of the base.
+
+### Known In-Progress Areas
+- `apps/account/src-tauri/src/sync.rs` wires the cadence imports but the
+  `SyncEngine`/`SqliteBackend` integration in `init`/`start` is still a
+  stub (see `TODO` comments). `cargo check` is green; runtime sync is
+  not yet activated end-to-end.
+
+### Working with Cadence (Rust)
+- Cadence lives at `services/cadence/` and is a Cargo crate independent of
+  the Bun workspaces. Build with `cd services/cadence && cargo check
+  --all-targets`. Full test suite (`cargo test`) needs Postgres + Valkey via
+  `services/cadence/docker-compose.deps.yml`.
+- The account Tauri wrapper consumes cadence via a `path = "../../../services/cadence"`
+  dependency in `apps/account/src-tauri/Cargo.toml`. Run
+  `cd apps/account/src-tauri && cargo check` after touching either crate.
+- Tauri icons live in `apps/account/src-tauri/icons/` and are committed.
+  Regenerate from the SVG via:
+  `bunx tauri icon apps/account/public/favicon.svg --output apps/account/src-tauri/icons`
 
 ## When in Doubt
 
