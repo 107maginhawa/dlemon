@@ -841,7 +841,7 @@ function VideoCallManager({ roomId }: { roomId: string }) {
 }
 ```
 
-**Note**: The SDK provides the **network layer** for comms. For UI components and browser media APIs, see `@monobase/ui/comms`.
+**Note**: The SDK provides the **network layer** for comms. UI components live inside the consuming app (e.g. `apps/account/src/features/comms/`) — there is no shared UI package.
 
 ### Utilities
 
@@ -884,7 +884,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for type mapping patterns.
 ### Form Integration
 
 ```tsx
-import { PersonalInfoForm } from "@monobase/ui/person/components/personal-info-form"
+import { PersonalInfoForm } from "@/features/person/components/personal-info-form"
 import { useUpdateMyPersonalInfo } from "@monobase/sdk/react/hooks/use-person"
 
 function EditProfile() {

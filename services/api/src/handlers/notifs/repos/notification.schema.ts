@@ -110,7 +110,7 @@ export interface CreateNotificationRequest {
   relatedEntityType?: string;
   relatedEntity?: string;
   consentValidated?: boolean;
-  targetApp?: string; // Optional: Filter push notifications by app tag (e.g., 'patient', 'provider')
+  targetApp?: string; // Optional: Filter push notifications by app tag (e.g., 'web', 'mobile')
 }
 
 // Filter interface for querying notifications

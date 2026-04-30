@@ -17,7 +17,7 @@ using TypeSpec.OpenAPI;
  * embedded video calls and direct booking integration.
  * 
  * Key Features:
- * - Client-provider chat rooms with booking linking
+ * - Client-host chat rooms with booking linking
  * - Video calls as special message types in chat history
  * - One active video call per room with efficient state management
  * - Immutable messages with action-based video call control
@@ -33,10 +33,10 @@ using TypeSpec.OpenAPI;
  */
 @doc("Communication room with admin-controlled video calls")
 model ChatRoom extends BaseEntity {
-  @doc("Room participants (e.g., [client, service_provider])")
+  @doc("Room participants (e.g., [client, host])")
   participants: UUID[];
 
-  @doc("Room administrators who can control video calls (typically includes the service provider)")
+  @doc("Room administrators who can control video calls (typically includes the host)")
   admins: UUID[];
 
   @doc("Optional context ID for contextual associations (e.g., booking ID, billing session ID)")
@@ -75,7 +75,7 @@ model ChatMessage extends BaseEntity {
   @doc("Chat room reference")
   chatRoom: UUID;
 
-  @doc("Message sender (client or service provider)")
+  @doc("Message sender (client or host)")
   sender: UUID;
 
   @doc("Message timestamp")
@@ -326,7 +326,7 @@ model IceServersResponse {
  */
 @doc("Create chat room request")
 model CreateChatRoomRequest {
-  @doc("Participant IDs (e.g., [client, service_provider])")
+  @doc("Participant IDs (e.g., [client, host])")
   participants: UUID[];
 
   @doc("Admin IDs (users who can control video calls). Defaults to all participants if not specified.")

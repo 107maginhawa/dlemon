@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1760423941663,
-      "tag": "0000_goofy_captain_cross",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1760514485189,
-      "tag": "0001_fine_skreet",
+      "when": 1777510958956,
+      "tag": "0000_square_changeling",
       "breakpoints": true
     }
   ]

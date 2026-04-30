@@ -61,7 +61,7 @@
     "@types/pg": "^8.15.5",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
-    "drizzle-kit": "^0.28.0",
+    "drizzle-kit": "^0.31.0",
     "eslint": "^9.0.0",
     "msw": "^2.11.3",
     "nanoid": "^5.1.6",

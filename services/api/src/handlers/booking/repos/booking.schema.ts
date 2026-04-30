@@ -39,10 +39,6 @@ export const slotStatusEnum = pgEnum('slot_status', [
   'available',
   'booked',
   'blocked'
-]);export const consultationModeEnum = pgEnum('consultation_mode', [
-  'video',
-  'phone',
-  'in-person'
 ]);
 
 // New enums for BookingEvent system
@@ -209,7 +205,7 @@ export const timeSlots: any = pgTable('time_slot', {
     .on(table.event, table.startTime),
 }));
 
-// Bookings - Booked consultations between client and provider
+// Bookings - Confirmed booking instances between client and host
 export const bookings: any = pgTable('booking', {
   // Base entity fields
   ...baseEntityFields,

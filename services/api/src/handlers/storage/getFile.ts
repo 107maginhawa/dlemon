@@ -81,7 +81,7 @@ export async function getFile(
         action: 'read',
         outcome: 'success',
         user: user.id,
-        userType: (user.role === 'user' || user.role === 'patient' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
+        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
         resourceType: 'file',
         resource: fileId,
         description: `File accessed: ${file.filename}`,

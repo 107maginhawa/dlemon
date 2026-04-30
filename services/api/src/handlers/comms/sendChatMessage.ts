@@ -127,7 +127,7 @@ export async function sendChatMessage(
     // User type is determined by room context (participant role)
     const initiatorParticipant: CallParticipant = {
       user: user.id,
-      userType: 'provider', // Monobase uses person-centric model
+      userType: 'host', // Monobase uses person-centric model
       displayName: user.name || 'User',
       audioEnabled: true,
       videoEnabled: true

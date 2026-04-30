@@ -427,49 +427,6 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.testEmailTemplate as unknown as Handler
   );
 
-  // createConsultation
-  app.post('/emr/consultations',
-    authMiddleware({ roles: ["provider"] }),
-    zValidator('json', validators.CreateConsultationBody, validationErrorHandler),
-    registry.createConsultation as unknown as Handler
-  );
-
-  // listConsultations
-  app.get('/emr/consultations',
-    authMiddleware({ roles: ["provider", "admin", "patient"] }),
-    zValidator('query', validators.ListConsultationsQuery, validationErrorHandler),
-    registry.listConsultations as unknown as Handler
-  );
-
-  // getConsultation
-  app.get('/emr/consultations/:consultation',
-    authMiddleware({ roles: ["admin", "provider:owner", "patient:owner"] }),
-    zValidator('param', validators.GetConsultationParams, validationErrorHandler),
-    registry.getConsultation as unknown as Handler
-  );
-
-  // updateConsultation
-  app.patch('/emr/consultations/:consultation',
-    authMiddleware({ roles: ["provider:owner"] }),
-    zValidator('param', validators.UpdateConsultationParams, validationErrorHandler),
-    zValidator('json', validators.UpdateConsultationBody, validationErrorHandler),
-    registry.updateConsultation as unknown as Handler
-  );
-
-  // finalizeConsultation
-  app.post('/emr/consultations/:consultation/finalize',
-    authMiddleware({ roles: ["provider:owner"] }),
-    zValidator('param', validators.FinalizeConsultationParams, validationErrorHandler),
-    registry.finalizeConsultation as unknown as Handler
-  );
-
-  // listEMRPatients
-  app.get('/emr/patients',
-    authMiddleware({ roles: ["provider", "admin"] }),
-    zValidator('query', validators.ListEMRPatientsQuery, validationErrorHandler),
-    registry.listEMRPatients as unknown as Handler
-  );
-
   // listNotifications
   app.get('/notifs',
     authMiddleware({ roles: ["user", "admin"] }),
@@ -496,46 +453,6 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.MarkNotificationAsReadParams, validationErrorHandler),
     registry.markNotificationAsRead as unknown as Handler
-  );
-
-  // listPatients
-  app.get('/patients',
-    authMiddleware({ roles: ["admin", "support"] }),
-    zValidator('query', validators.ListPatientsQuery, validationErrorHandler),
-    registry.listPatients as unknown as Handler
-  );
-
-  // createPatient
-  app.post('/patients',
-    authMiddleware({ roles: ["user"] }),
-    zValidator('json', validators.CreatePatientBody, validationErrorHandler),
-    createExpandMiddleware("Patient"),
-    registry.createPatient as unknown as Handler
-  );
-
-  // getPatient
-  app.get('/patients/:patient',
-    authMiddleware({ roles: ["admin", "support", "patient:owner"] }),
-    zValidator('param', validators.GetPatientParams, validationErrorHandler),
-    zValidator('query', validators.GetPatientQuery, validationErrorHandler),
-    createExpandMiddleware("Patient"),
-    registry.getPatient as unknown as Handler
-  );
-
-  // updatePatient
-  app.patch('/patients/:patient',
-    authMiddleware({ roles: ["patient:owner"] }),
-    zValidator('param', validators.UpdatePatientParams, validationErrorHandler),
-    zValidator('json', validators.UpdatePatientBody, validationErrorHandler),
-    createExpandMiddleware("Patient"),
-    registry.updatePatient as unknown as Handler
-  );
-
-  // deletePatient
-  app.delete('/patients/:patient',
-    authMiddleware({ roles: ["patient:owner"] }),
-    zValidator('param', validators.DeletePatientParams, validationErrorHandler),
-    registry.deletePatient as unknown as Handler
   );
 
   // createPerson
@@ -565,46 +482,6 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.UpdatePersonParams, validationErrorHandler),
     zValidator('json', validators.UpdatePersonBody, validationErrorHandler),
     registry.updatePerson as unknown as Handler
-  );
-
-  // listProviders
-  app.get('/providers',
-    authMiddleware(),
-    zValidator('query', validators.ListProvidersQuery, validationErrorHandler),
-    registry.listProviders as unknown as Handler
-  );
-
-  // createProvider
-  app.post('/providers',
-    authMiddleware({ roles: ["user"] }),
-    zValidator('json', validators.CreateProviderBody, validationErrorHandler),
-    createExpandMiddleware("Provider"),
-    registry.createProvider as unknown as Handler
-  );
-
-  // getProvider
-  app.get('/providers/:provider',
-    authMiddleware(),
-    zValidator('param', validators.GetProviderParams, validationErrorHandler),
-    zValidator('query', validators.GetProviderQuery, validationErrorHandler),
-    createExpandMiddleware("Provider"),
-    registry.getProvider as unknown as Handler
-  );
-
-  // updateProvider
-  app.patch('/providers/:provider',
-    authMiddleware({ roles: ["provider:owner"] }),
-    zValidator('param', validators.UpdateProviderParams, validationErrorHandler),
-    zValidator('json', validators.UpdateProviderBody, validationErrorHandler),
-    createExpandMiddleware("Provider"),
-    registry.updateProvider as unknown as Handler
-  );
-
-  // deleteProvider
-  app.delete('/providers/:provider',
-    authMiddleware({ roles: ["provider:owner"] }),
-    zValidator('param', validators.DeleteProviderParams, validationErrorHandler),
-    registry.deleteProvider as unknown as Handler
   );
 
   // createReview

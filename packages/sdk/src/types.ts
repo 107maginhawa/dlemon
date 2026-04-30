@@ -8,39 +8,24 @@ export type {
   Booking,
   BookingEvent,
   BookingEventData,
-  BookingProvider,
+  BookingHost,
   BookingTimeSlot,
   CreateBookingEventData,
   DailyConfig,
   FormConfig,
   FormFieldConfig,
   GetAvailabilityParams,
+  HostWithSlots,
   ListBookingEventsParams,
   ListBookingsParams,
   LocationType,
-  ProviderWithSlots,
-  SearchProvidersParams,
+  SearchHostsParams,
   TimeBlock,
 } from './services/booking'
 
 export type { Invoice, InvoiceStatus, InvoiceListParams } from './services/billing'
 
 export type { Notification, NotificationType } from './services/notifications'
-
-export type {
-  ConsultationNote,
-  ConsultationStatus,
-  CreateConsultationRequest,
-  UpdateConsultationRequest,
-  VitalsData,
-  SymptomsData,
-  PrescriptionData,
-  FollowUpData,
-} from './services/emr'
-
-export type { Patient } from './services/patient'
-
-export type { Provider } from './services/provider'
 
 export type { Person } from './services/person'
 

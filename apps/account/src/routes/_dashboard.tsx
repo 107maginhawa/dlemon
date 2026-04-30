@@ -5,7 +5,7 @@ import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger
-} from "@monobase/ui/components/sidebar"
+} from "@/components/sidebar"
 import {
   Home,
   User,

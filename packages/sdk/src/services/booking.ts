@@ -46,23 +46,23 @@ export interface FormFieldConfig {
 }
 
 /**
- * Form configuration for booking event
+ * Form configuration for a booking event
  */
 export interface FormConfig {
   fields?: FormFieldConfig[]
 }
 
 /**
- * Time slot for appointments
+ * Time slot offered by a host
  */
 export interface BookingTimeSlot {
   id: string
-  providerId: string
+  hostId: string
   date: Date
   startTime: Date
   endTime: Date
   status: 'available' | 'booked' | 'blocked'
-  consultationModes: ('video' | 'phone' | 'in-person')[]
+  locationTypes: ('video' | 'phone' | 'in-person')[]
   price: number
   billingOverride?: {
     price?: number
@@ -73,24 +73,23 @@ export interface BookingTimeSlot {
 }
 
 /**
- * Provider information for booking display
+ * Public host information shown alongside a booking event.
+ * A host is any person publishing availability — coach, consultant, advisor,
+ * trainer, mechanic, instructor, etc.
  */
-export interface BookingProvider {
+export interface BookingHost {
   id: string
   name: string
   email?: string
   avatar?: string
-  biography?: string
-  yearsOfExperience?: number
-  specialties?: string[]
-  serviceLocations?: string[]
+  bio?: string
   city?: string
   state?: string
   languages?: string[]
 }
 
 /**
- * Booking event - defines provider availability and booking configuration
+ * Booking event - defines a host's availability and booking configuration
  */
 export interface BookingEvent {
   // BaseEntity fields
@@ -100,7 +99,7 @@ export interface BookingEvent {
   updatedAt: Date
   createdBy?: string
   updatedBy?: string
-  
+
   // BookingEvent fields
   owner: string  // person ID
   context?: string
@@ -124,8 +123,8 @@ export interface BookingEvent {
   dailyConfigs: Record<string, DailyConfig>  // Keys: "sun", "mon", "tue", "wed", "thu", "fri", "sat"
 }
 
-export interface ProviderWithSlots {
-  provider: BookingProvider
+export interface HostWithSlots {
+  host: BookingHost
   slots: BookingTimeSlot[]
   event?: BookingEvent
 }
@@ -140,11 +139,11 @@ export interface Booking {
   updatedAt: Date
   updatedBy?: string
   client: string
-  provider: string
+  host: string
   slot: string
   locationType: 'video' | 'phone' | 'in-person'
   reason: string
-  status: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed' | 'no_show_client' | 'no_show_provider'
+  status: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed' | 'no_show_client' | 'no_show_host'
   bookedAt: Date
   confirmationTimestamp?: Date
   scheduledAt: Date
@@ -178,18 +177,12 @@ type ApiBooking = components["schemas"]["Booking"]
 type ApiTimeSlot = components["schemas"]["TimeSlot"]
 type ApiBookingEvent = components["schemas"]["BookingEvent"]
 
-// Extended Person type for provider responses (Person + slots + event)
-type ApiPersonWithSlots = ApiPerson & {
-  slots?: ApiTimeSlot[]
-  event?: ApiBookingEvent
-}
-
 // ============================================================================
 // Mapper Functions
 // ============================================================================
 
 /**
- * Convert API TimeSlot to Frontend TimeSlot with Date objects
+ * Convert API TimeSlot to a frontend BookingTimeSlot with Date objects
  */
 function mapApiTimeSlotToFrontend(apiSlot: ApiTimeSlot): BookingTimeSlot {
   const startTime = new Date(apiSlot.startTime)
@@ -197,12 +190,12 @@ function mapApiTimeSlotToFrontend(apiSlot: ApiTimeSlot): BookingTimeSlot {
 
   return {
     id: apiSlot.id,
-    providerId: apiSlot.owner,
-    date: startTime, // Use startTime as date
+    hostId: apiSlot.owner,
+    date: startTime,
     startTime,
     endTime,
     status: apiSlot.status as 'available' | 'booked' | 'blocked',
-    consultationModes: apiSlot.locationTypes as ('video' | 'phone' | 'in-person')[],
+    locationTypes: apiSlot.locationTypes as ('video' | 'phone' | 'in-person')[],
     price: apiSlot.billingConfig?.price || 0,
     billingOverride: apiSlot.billingConfig ? {
       price: apiSlot.billingConfig.price,
@@ -214,19 +207,14 @@ function mapApiTimeSlotToFrontend(apiSlot: ApiTimeSlot): BookingTimeSlot {
 }
 
 /**
- * Convert API Person to Frontend BookingProvider
- * In monobase, providers are Person entities with provider role
+ * Convert API Person to a frontend BookingHost.
  */
-function mapApiPersonToProvider(apiPerson: ApiPerson): BookingProvider {
+function mapApiPersonToHost(apiPerson: ApiPerson): BookingHost {
   return {
     id: apiPerson.id,
     name: `${apiPerson.firstName} ${apiPerson.lastName || ''}`.trim(),
     email: apiPerson.contactInfo?.email,
     avatar: apiPerson.avatar?.url,
-    biography: undefined, // TODO: Add when provider-specific fields exist
-    yearsOfExperience: undefined,
-    specialties: [],
-    serviceLocations: [],
     city: apiPerson.primaryAddress?.city,
     state: apiPerson.primaryAddress?.state,
     languages: apiPerson.languagesSpoken,
@@ -234,19 +222,16 @@ function mapApiPersonToProvider(apiPerson: ApiPerson): BookingProvider {
 }
 
 /**
- * Convert API BookingEvent to Frontend BookingEvent
+ * Convert API BookingEvent to frontend BookingEvent
  */
 function mapApiBookingEventToFrontend(apiEvent: ApiBookingEvent): BookingEvent {
   return {
-    // BaseEntity fields
     id: apiEvent.id,
     version: apiEvent.version,
     createdAt: new Date(apiEvent.createdAt),
     updatedAt: new Date(apiEvent.updatedAt),
     createdBy: apiEvent.createdBy,
     updatedBy: apiEvent.updatedBy,
-    
-    // BookingEvent fields
     owner: typeof apiEvent.owner === 'string' ? apiEvent.owner : apiEvent.owner.id,
     context: apiEvent.context,
     title: apiEvent.title,
@@ -267,9 +252,15 @@ function mapApiBookingEventToFrontend(apiEvent: ApiBookingEvent): BookingEvent {
 }
 
 /**
- * Convert API Booking to Frontend Booking with Date objects
+ * Convert API Booking to frontend Booking with Date objects.
+ *
+ * The API still names the host-side foreign key `provider` for historical
+ * reasons; the SDK exposes it as `host` to keep the surface vertical-neutral.
  */
 function mapApiBookingToFrontend(apiBooking: ApiBooking): Booking {
+  const apiHost = (apiBooking as unknown as { provider?: string | { id: string }; host?: string | { id: string } })
+  const hostRef = apiHost.host ?? apiHost.provider
+  const hostId = typeof hostRef === 'string' ? hostRef : hostRef?.id ?? ''
   return {
     id: apiBooking.id,
     version: apiBooking.version,
@@ -278,11 +269,11 @@ function mapApiBookingToFrontend(apiBooking: ApiBooking): Booking {
     updatedAt: new Date(apiBooking.updatedAt),
     updatedBy: apiBooking.updatedBy,
     client: typeof apiBooking.client === 'string' ? apiBooking.client : apiBooking.client.id,
-    provider: typeof apiBooking.provider === 'string' ? apiBooking.provider : apiBooking.provider.id,
+    host: hostId,
     slot: typeof apiBooking.slot === 'string' ? apiBooking.slot : apiBooking.slot.id,
     locationType: apiBooking.locationType,
     reason: apiBooking.reason,
-    status: apiBooking.status,
+    status: apiBooking.status as Booking['status'],
     bookedAt: new Date(apiBooking.bookedAt),
     confirmationTimestamp: apiBooking.confirmationTimestamp ? new Date(apiBooking.confirmationTimestamp) : undefined,
     scheduledAt: new Date(apiBooking.scheduledAt),
@@ -357,12 +348,10 @@ export async function getBookingEvent(eventId: string, params?: { expand?: strin
 }
 
 /**
- * Search providers with filters
- * @deprecated Use listBookingEvents() instead - this endpoint no longer exists
+ * Search params for host discovery via the booking event endpoint.
  */
-export interface SearchProvidersParams {
+export interface SearchHostsParams {
   q?: string
-  specialty?: string
   location?: string
   language?: string
   availableFrom?: Date
@@ -371,53 +360,12 @@ export interface SearchProvidersParams {
   limit?: number
 }
 
-export async function searchProviders(params: SearchProvidersParams): Promise<PaginatedResponse<BookingProvider>> {
-  const queryParams = sanitizeObject({
-    q: params.q,
-    specialty: params.specialty,
-    location: params.location,
-    language: params.language,
-    availableFrom: params.availableFrom ? formatDate(params.availableFrom, { format: 'iso' }) : undefined,
-    availableTo: params.availableTo ? formatDate(params.availableTo, { format: 'iso' }) : undefined,
-    offset: params.offset,
-    limit: params.limit,
-    expand: 'person',
-  }, { nullable: [] })
-
-  const response = await apiGet<PaginatedResponse<ApiPerson>>('/booking/providers', queryParams)
-
-  return {
-    data: response.data.map(mapApiPersonToProvider),
-    pagination: response.pagination,
-  }
-}
-
-/**
- * Get provider (Person) with available slots and event data
- * @deprecated Use getBookingEvent() instead - /booking/providers endpoint no longer exists
- */
-export async function getProviderWithSlots(providerId: string): Promise<ProviderWithSlots> {
-  const response = await apiGet<ApiPersonWithSlots>(`/booking/providers/${providerId}`, {
-    expand: 'person,slots,event',
-  })
-
-  const provider = mapApiPersonToProvider(response)
-  const slots = (response.slots || []).map(mapApiTimeSlotToFrontend)
-  const event = response.event ? mapApiBookingEventToFrontend(response.event) : undefined
-
-  return {
-    provider,
-    slots,
-    event,
-  }
-}
-
 // ============================================================================
-// Provider Availability Management
+// Host's own booking event management
 // ============================================================================
 
 /**
- * Get provider's own booking event configuration
+ * Get the caller's own booking event configuration
  */
 export async function getMyBookingEvent(): Promise<BookingEvent | null> {
   try {
@@ -457,19 +405,17 @@ export interface CreateBookingEventData {
 }
 
 /**
- * Create a new booking event
+ * Create a new booking event.
  * POST /booking/events
  */
 export async function createBookingEvent(data: CreateBookingEventData): Promise<BookingEvent> {
-  const sanitized = sanitizeObject(data, {
-    nullable: []  // CREATE operation: empty fields omitted, not sent as null
-  })
+  const sanitized = sanitizeObject(data, { nullable: [] })
   const response = await apiPost<ApiBookingEvent>('/booking/events', sanitized)
   return mapApiBookingEventToFrontend(response)
 }
 
 /**
- * Update an existing booking event
+ * Update an existing booking event.
  * PATCH /booking/events/{event}
  */
 export async function updateBookingEvent(
@@ -484,7 +430,7 @@ export async function updateBookingEvent(
 }
 
 /**
- * Get provider's availability slots
+ * Get the caller's own availability slots
  */
 export interface GetAvailabilityParams {
   startDate?: Date
@@ -504,7 +450,7 @@ export async function getMyAvailability(params?: GetAvailabilityParams): Promise
   }, { nullable: [] })
 
   const response = await apiGet<PaginatedResponse<ApiTimeSlot>>('/booking/availability/me', queryParams)
-  
+
   return {
     data: response.data.map(mapApiTimeSlotToFrontend),
     pagination: response.pagination,
@@ -512,7 +458,7 @@ export async function getMyAvailability(params?: GetAvailabilityParams): Promise
 }
 
 /**
- * Create availability slot
+ * Create an availability slot
  */
 export async function createAvailabilitySlot(data: {
   date: Date
@@ -528,18 +474,16 @@ export async function createAvailabilitySlot(data: {
     locationTypes: data.locationTypes,
     billingConfig: data.price ? {
       price: data.price,
-      currency: data.currency || 'CAD',
-      cancellationThresholdMinutes: 24 * 60, // 24 hours default
+      currency: data.currency || 'USD',
+      cancellationThresholdMinutes: 24 * 60,
     } : undefined,
-  }, {
-    nullable: []  // CREATE operation: empty fields omitted, not sent as null
-  })
+  }, { nullable: [] })
   const response = await apiPost<ApiTimeSlot>('/booking/availability', sanitized)
   return mapApiTimeSlotToFrontend(response)
 }
 
 /**
- * Update availability slot
+ * Update an availability slot
  */
 export async function updateAvailabilitySlot(
   slotId: string,
@@ -559,30 +503,27 @@ export async function updateAvailabilitySlot(
     status: data.status,
     billingConfig: data.price !== undefined ? {
       price: data.price,
-      currency: data.currency || 'CAD',
+      currency: data.currency || 'USD',
       cancellationThresholdMinutes: 24 * 60,
     } : undefined,
   }, {
-    nullable: ['billingConfig']  // PATCH operation: allow clearing billing config
+    nullable: ['billingConfig']
   })
-  const response = await apiGet<ApiTimeSlot>(`/booking/availability/${slotId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(sanitized),
-  })
+  const response = await apiPatch<ApiTimeSlot>(`/booking/availability/${slotId}`, sanitized)
   return mapApiTimeSlotToFrontend(response)
 }
 
 /**
- * Delete availability slot
+ * Delete an availability slot
  */
 export async function deleteAvailabilitySlot(slotId: string): Promise<void> {
   await apiGet(`/booking/availability/${slotId}`, {
     method: 'DELETE',
-  })
+  } as never)
 }
 
 /**
- * Bulk create availability slots (recurring schedule)
+ * Bulk-create availability slots on a recurring schedule
  */
 export async function createRecurringAvailability(data: {
   startDate: Date
@@ -604,34 +545,32 @@ export async function createRecurringAvailability(data: {
     locationTypes: data.locationTypes,
     billingConfig: data.price ? {
       price: data.price,
-      currency: data.currency || 'CAD',
+      currency: data.currency || 'USD',
       cancellationThresholdMinutes: 24 * 60,
     } : undefined,
-  }, {
-    nullable: []  // CREATE operation: empty fields omitted, not sent as null
-  })
+  }, { nullable: [] })
   const response = await apiPost<{ created: number }>('/booking/availability/bulk', sanitized)
   return response
 }
 
 // ============================================================================
-// Booking Instance CRUD Operations (Provider Side)
+// Booking Instance CRUD Operations
 // ============================================================================
 
 export interface ListBookingsParams {
-  status?: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected' | 'no_show_client' | 'no_show_provider'
+  status?: Booking['status']
   startDate?: Date
   endDate?: Date
   limit?: number
   offset?: number
-  /** Comma-separated list of relationships to expand, e.g. "provider,client". */
+  /** Comma-separated list of relationships to expand, e.g. "host,client". */
   expand?: string
   /** Sort key, e.g. "scheduledAt" or "-scheduledAt" for descending. */
   sort?: string
 }
 
 /**
- * List bookings for provider
+ * List bookings the caller hosts
  */
 export async function listBookings(params?: ListBookingsParams): Promise<PaginatedResponse<Booking>> {
   const queryParams = sanitizeObject({
@@ -643,7 +582,7 @@ export async function listBookings(params?: ListBookingsParams): Promise<Paginat
   }, { nullable: [] })
 
   const response = await apiGet<PaginatedResponse<ApiBooking>>('/booking/bookings', queryParams)
-  
+
   return {
     data: response.data.map(mapApiBookingToFrontend),
     pagination: response.pagination,
@@ -651,7 +590,7 @@ export async function listBookings(params?: ListBookingsParams): Promise<Paginat
 }
 
 /**
- * Get single booking by ID
+ * Get a single booking by ID
  */
 export async function getBooking(bookingId: string): Promise<Booking> {
   const response = await apiGet<ApiBooking>(`/booking/bookings/${bookingId}`)
@@ -659,7 +598,7 @@ export async function getBooking(bookingId: string): Promise<Booking> {
 }
 
 /**
- * Confirm a booking request (provider action)
+ * Confirm a booking request (host action)
  */
 export async function confirmBooking(bookingId: string, reason?: string): Promise<Booking> {
   const response = await apiPost<ApiBooking>(`/booking/bookings/${bookingId}/confirm`, { reason })
@@ -667,7 +606,7 @@ export async function confirmBooking(bookingId: string, reason?: string): Promis
 }
 
 /**
- * Reject a booking request (provider action)
+ * Reject a booking request (host action)
  */
 export async function rejectBooking(bookingId: string, reason?: string): Promise<Booking> {
   const response = await apiPost<ApiBooking>(`/booking/bookings/${bookingId}/reject`, { reason })
@@ -683,7 +622,7 @@ export async function cancelBooking(bookingId: string, reason?: string): Promise
 }
 
 /**
- * Mark booking as no-show (provider action)
+ * Mark a booking as no-show (host action)
  */
 export async function markBookingNoShow(bookingId: string): Promise<Booking> {
   const response = await apiPost<ApiBooking>(`/booking/bookings/${bookingId}/no-show`, {})
@@ -691,7 +630,7 @@ export async function markBookingNoShow(bookingId: string): Promise<Booking> {
 }
 
 // ============================================================================
-// Patient-Side Booking Creation
+// Client-Side Booking Creation
 // ============================================================================
 
 export interface CreateBookingData {
@@ -702,7 +641,7 @@ export interface CreateBookingData {
 }
 
 /**
- * Create a new booking (patient action)
+ * Create a new booking (client action)
  */
 export async function createBooking(data: CreateBookingData): Promise<Booking> {
   const sanitized = sanitizeObject({
@@ -710,9 +649,9 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     locationType: data.locationType,
     reason: data.reason,
     formResponses: data.formResponses ? { data: data.formResponses } : undefined,
-  }, {
-    nullable: []  // CREATE operation: empty fields omitted, not sent as null
-  })
+  }, { nullable: [] })
   const response = await apiPost<ApiBooking>('/booking/bookings', sanitized)
   return mapApiBookingToFrontend(response)
 }
+
+void mapApiPersonToHost

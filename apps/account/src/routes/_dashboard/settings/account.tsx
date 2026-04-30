@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@monobase/ui/components/card"
-import { PersonalInfoForm } from '@monobase/ui/person/components/personal-info-form'
-import { AddressForm } from '@monobase/ui/person/components/address-form'
-import { ContactInfoForm } from '@monobase/ui/person/components/contact-info-form'
-import { PreferencesForm } from '@monobase/ui/person/components/preferences-form'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/card"
+import { PersonalInfoForm } from '@/features/person/components/personal-info-form'
+import { AddressForm } from '@/features/person/components/address-form'
+import { ContactInfoForm } from '@/features/person/components/contact-info-form'
+import { PreferencesForm } from '@/features/person/components/preferences-form'
 import {
   useMyPerson,
   useUpdateMyPersonalInfo,

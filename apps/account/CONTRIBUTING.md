@@ -205,14 +205,15 @@ All API types are automatically generated from the OpenAPI specification:
 
 ## Adding shadcn/ui Components
 
-New shadcn components should be added to the **shared UI package** at `packages/ui`:
+shadcn components live inside this app at `apps/account/src/components/`:
 
 ```bash
-cd packages/ui
+cd apps/account
 bunx shadcn@latest add [component-name]
 ```
 
-**Never** edit generated shadcn components manually. All UI components are shared via `@monobase/ui/components/*`.
+Components are imported via the `@/components/*` path alias. Each app owns
+its own copy — there is no shared UI package.
 
 **For component patterns**, see [Root CONTRIBUTING.md > Component Patterns](../../CONTRIBUTING.md#component-patterns).
 

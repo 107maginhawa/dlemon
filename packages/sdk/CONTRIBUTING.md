@@ -151,7 +151,7 @@ export function mapApiBookingToFrontend(api: ApiBooking): Booking {
 // src/services/booking.ts
 import { apiGet, apiPost, ApiError } from '../api'
 import { sanitizeObject } from '../utils/api'
-import { formatDate } from '@monobase/ui/lib/format-date'
+import { formatDate } from '@/lib/format-date'
 
 /**
  * Get user's bookings
@@ -180,7 +180,7 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
 
 **Best Practices**:
 - Use `sanitizeObject` to clean form data (see [Type Mapping Pattern](#type-mapping-pattern))
-- Use `formatDate` from `@monobase/ui` for date formatting
+- Use `formatDate` from `@/components` for date formatting
 - Handle 404s gracefully (return `null` instead of throwing)
 - Add JSDoc comments for better IDE autocomplete
 
@@ -356,7 +356,7 @@ Use `sanitizeObject` to clean form data before API submission:
 
 ```typescript
 import { sanitizeObject } from '../utils/api'
-import { formatDate } from '@monobase/ui/lib/format-date'
+import { formatDate } from '@/lib/format-date'
 
 const apiRequest = sanitizeObject({
   firstName: data.firstName,

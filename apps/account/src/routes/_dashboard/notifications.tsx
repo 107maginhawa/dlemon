@@ -17,24 +17,24 @@ import {
   Shield,
 } from 'lucide-react'
 import { useNotifications, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from '@monobase/sdk/react/hooks/use-notifications'
-import { useFormatDate } from '@monobase/ui/hooks/use-format-date'
-import { Button } from "@monobase/ui/components/button"
+import { useFormatDate } from '@/hooks/use-format-date'
+import { Button } from "@/components/button"
 import { 
   Card, 
   CardContent, 
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@monobase/ui/components/card"
-import { Badge } from "@monobase/ui/components/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@monobase/ui/components/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@monobase/ui/components/tabs"
+} from "@/components/card"
+import { Badge } from "@/components/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/tabs"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@monobase/ui/components/dropdown-menu"
+} from "@/components/dropdown-menu"
 
 export const Route = createFileRoute('/_dashboard/notifications')({
   component: NotificationsPage,

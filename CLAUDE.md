@@ -10,51 +10,37 @@ For detailed information, refer to:
 
 ## Repository Overview
 
-**Monobase Application Platform** - A comprehensive full-stack monorepo platform providing video sessions, service marketplace, and user management. Built with Bun runtime for 3x faster performance than Node.js.
+**Monobase Application Platform** — a vertical-neutral monorepo template for SaaS products. Provides identity, billing, scheduling, communications, storage, and notifications as composable primitives. Built on Bun for ~3× faster execution than Node.js.
 
 **Key Technologies**: Bun, PostgreSQL, Drizzle ORM, Hono API, TypeSpec, TanStack Router, Better-Auth, OneSignal, S3/MinIO
 
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
-  - `account/` - Vite + TanStack Router app for self-service account management
-  - `patient/` - Vite + TanStack Router app for the patient-facing experience
-  - `provider/` - Vite + TanStack Router app for the provider/practitioner portal
-  - `website/` - Next.js public marketing site
-- `services/api/` - Backend API service (Hono + Drizzle) with business modules
+  - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
+- `services/api/` - Backend API service (Hono + Drizzle)
 - `specs/api/` - TypeSpec API definitions (compiled to OpenAPI + TypeScript types)
 - `packages/` - Shared packages:
   - `eslint-config/` - Shared ESLint flat configs (`base`, `react`, `next`)
   - `sdk/` - Type-safe API client + TanStack Query hooks
   - `typescript-config/` - Shared TypeScript configs
-  - `ui/` - Shared UI component library (Radix primitives, Tailwind)
 
 ## Business Domain Modules
 
-The API service implements 13 handler modules. The first nine are documented as
-core business modules; the latter four (`patient`, `provider`, `emr`, `ws`)
-are platform-specific modules that compose them and may evolve independently.
-
-Core modules:
+The API service ships nine vertical-neutral handler modules. Build your product
+on top of these — add a `patient`, `tenant`, `student`, `merchant`, etc. module
+under `services/api/src/handlers/` for each domain you need.
 
 1. **person** - User profile management and central PII safeguard
-2. **booking** - Professional booking and scheduling system
-3. **billing** - Invoice-based payments (Stripe integration)
+2. **booking** - Generic time-based scheduling (hosts, slots, bookings, events)
+3. **billing** - Invoice-based payments via Stripe Connect
 4. **audit** - Compliance logging (Pino structured logging)
 5. **notifs** - Multi-channel notifications (email, push via OneSignal)
-6. **comms** - Video/chat sessions (WebRTC) and messaging
+6. **comms** - Real-time chat rooms with embedded video calls (WebRTC)
 7. **storage** - File upload/download (S3/MinIO)
 8. **email** - Transactional emails (SMTP/Postmark)
 9. **reviews** - NPS review system
 
-Platform-specific modules:
-
-10. **patient** - Patient profile and patient-side workflows (extends `person`)
-11. **provider** - Provider/practitioner profile and listing (extends `person`)
-12. **emr** - Electronic medical records: consultation notes, vitals, prescriptions, follow-ups
-13. **ws** - WebSocket transport for real-time chat and WebRTC signaling (handler-only; no TypeSpec/REST surface)
-
-TypeSpec definitions exist for modules 1-12 (12 `.tsp` files under
-`specs/api/src/modules/`). Module 13 (`ws`) is transport-level only.
+All nine have matching TypeSpec definitions under `specs/api/src/modules/`.
 
 **Note**: Authentication is handled by Better-Auth (integrated, not a separate module). Consent management is implemented as JSONB fields on the Person model (not a standalone module).
 
@@ -99,7 +85,7 @@ Always follow this workflow:
 **✅ Only Edit**:
 - TypeSpec files (`specs/api/src/modules/*.tsp`)
 - Handler implementations (`services/api/src/handlers/{module}/*.ts`)
-- Database schemas (`services/api/src/db/schema/*.ts`)
+- Database schemas (`services/api/src/handlers/{module}/repos/*.schema.ts`)
 
 See [CONTRIBUTING.md#code-generation](./CONTRIBUTING.md#code-generation---do-not-edit) for complete details.
 
@@ -110,37 +96,36 @@ Environment variables are parsed into typed configuration objects (see `services
 OneSignal follows an **app-agnostic pattern** like other services (Storage, Email, Billing):
 
 **Single App ID Approach**:
-- Use the **same** `ONESIGNAL_APP_ID` across all frontends (client, service provider, website)
+- Use the **same** `ONESIGNAL_APP_ID` across all frontends
 - Frontend apps: Set `VITE_ONESIGNAL_APP_ID` to the same value
 - Backend API: Uses same app ID to send notifications
 
 **Optional App Tagging**:
-- Set `VITE_ONESIGNAL_APP_TAG=client` or `service_provider` in frontend .env (optional)
+- Set `VITE_ONESIGNAL_APP_TAG=web` (or `mobile`, etc.) in frontend `.env` (optional)
 - Apps auto-tag themselves on initialization
 - Most notifications ignore tags (app-agnostic)
 - Use `targetApp` parameter only for app-specific announcements
 
 **Why This Works**:
 - OneSignal uses `external_id` (person ID) to target users across devices/apps
-- Users with both client/service provider roles receive notifications in whichever app they're using
-- Production deployment should use subdomains: `user.example.com`, `admin.example.com`
+- Users with multiple roles receive notifications in whichever app they're using
 
 **API Pattern**:
 ```typescript
 // Send to user (app-agnostic - default)
 notificationRepo.createNotificationForModule({
   recipient: personId,
-  type: 'booking-reminder',
+  type: 'booking.confirmed',
   channel: 'push',
   // No targetApp - reaches user in any app
 });
 
-// Send only to specific app (rare)
+// Send only to a specific app (rare)
 notificationRepo.createNotificationForModule({
   recipient: personId,
   type: 'system',
   channel: 'push',
-  targetApp: 'client', // Only if VITE_ONESIGNAL_APP_TAG is configured
+  targetApp: 'web', // Only if VITE_ONESIGNAL_APP_TAG is configured
 });
 ```
 
@@ -149,16 +134,16 @@ Backend handlers follow: **Router → Validators → Service → Handlers**
 
 Each handler directory contains:
 - Handler files (CRUD operations)
-- `repos/` - Database repositories
+- `repos/` - Database repositories + schema
 - `jobs/` - Background job definitions
 - `utils/` - Module-specific utilities
 
-## Enterprise Compliance Requirements
+## Compliance Considerations
 
-When working with sensitive data:
+When working with regulated data:
 
-### Data Privacy Compliance
-- **Audit Trails**: All user data access must be logged with Pino
+### Data Privacy
+- **Audit Trails**: All user data access is logged with Pino
 - **Consent Validation**: Check JSONB consent fields before processing
 - **Role-Based Access**: Verify user roles via Better-Auth
 - **Correlation IDs**: Include in all log entries for traceability
@@ -189,7 +174,7 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 - Reference existing patterns in `services/api/src/handlers/*/repos/`
 
 ### Migration Workflow
-1. Modify schema in `services/api/src/db/schema/`
+1. Modify schema in `services/api/src/handlers/{module}/repos/*.schema.ts`
 2. Generate migration: `cd services/api && bun run db:generate`
 3. Review generated SQL in `src/generated/migrations/`
 4. Migrations run automatically on server start
@@ -198,16 +183,14 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 
 ## Frontend Development
 
-The repo has four frontend apps. The Vite-based ones share the same stack
-(TanStack Router file-based routing, TanStack Query, Better-Auth, Radix UI
-primitives via shadcn/ui patterns); the website is Next.js.
+### Account App (Vite + TanStack Router)
+- **Port**: 3002
+- **Routing**: File-based in `src/routes/`
+- **Auth**: Better-Auth with TanStack integration
+- **Data Fetching**: TanStack Query
+- **UI Components**: Radix UI primitives via `@/components` (shadcn/ui patterns)
 
-| App | Framework | Port | Purpose |
-|-----|-----------|------|---------|
-| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
-| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
-| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
-| `apps/website` | Next.js | 3000 | Public marketing site |
+To scaffold a new app, copy `apps/account/` and update `package.json` name + `vite.config.ts` port.
 
 **Standards**: See [CONTRIBUTING.md#coding-standards](./CONTRIBUTING.md#coding-standards)
 
@@ -248,21 +231,17 @@ cd apps/account && bun run test:e2e     # E2E tests
 ## Important Notes
 
 ### What Exists
-- ✅ **apps/account, apps/patient, apps/provider** - Vite + TanStack Router apps
-- ✅ **apps/website** - Next.js marketing site
-- ✅ **packages/ui/** - Shared UI component library
+- ✅ **apps/account** - Reference Vite + TanStack Router app
+- ✅ **apps/account/src/components/** - Shared UI component library
 - ✅ **packages/sdk/** - Type-safe API client + TanStack Query hooks
 - ✅ **packages/eslint-config/** - Shared ESLint flat configs
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
-- ✅ **13 API handler modules**: 9 core (person, booking, billing, audit, notifs, comms, storage, email, reviews) plus 4 platform-specific (patient, provider, emr, ws)
+- ✅ **9 API handler modules** (person, booking, billing, audit, notifs, comms, storage, email, reviews)
 
-### Known In-Progress Areas
-- The `patient` and `provider` apps have routes that consume API surfaces
-  still being aligned with the SDK; expect typecheck drift in those apps
-  (lint and build are clean).
-- Billing module schema fields (line items, platform fees, line-level audit)
-  are stubbed in handlers — see in-file `TODO` comments.
+### What's Intentionally Absent
+- This template ships **no domain-vertical apps or modules**. Add your own
+  (e.g., `apps/admin`, `services/api/src/handlers/tenant/`) on top of the base.
 
 ## When in Doubt
 

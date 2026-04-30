@@ -11,7 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@monobase/ui/components/sidebar"
+} from "@/components/sidebar"
 import { Logo } from "@/components/logo"
 
 export interface NavItem {

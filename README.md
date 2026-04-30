@@ -1,40 +1,44 @@
 # Monobase Application Platform
 
-A full-stack monorepo platform providing video sessions, messaging, and user management. Built with Bun runtime for 3x faster performance than Node.js.
+A vertical-neutral monorepo template for SaaS products. Ships identity,
+billing, scheduling, communications, storage, and notification primitives
+that any product domain can compose into its own workflows. Built on Bun for
+~3× faster execution than Node.js.
 
 ## Overview
 
-Monobase is a modern application platform designed to streamline user management and business workflows. The platform provides:
+Monobase gives you a production-shaped starting point — not a finished app.
+Out of the box you get:
 
-- **Account App** - Self-service account management
-- **Patient App** - Patient-facing experience (booking, messaging, EMR access)
-- **Provider App** - Provider/practitioner portal (schedule, billing, consultations)
-- **Marketing Website** - Next.js public site
-- **API Service** - Backend with core business modules
-- **Shared SDK & UI** - Type-safe API client and React component library
+- **Account app** - reference Vite + TanStack Router app with auth, profile,
+  and settings flows; ships its own Radix-based component library inline
+  under `apps/account/src/components`
+- **API service** - Hono + Drizzle backend with nine vertical-neutral modules
+- **Shared SDK** - typed API client with TanStack Query hooks
+- **TypeSpec spec** - the source of truth for the API; OpenAPI and TS types
+  are generated from it
+
+Add your domain modules (e.g. `services/api/src/handlers/tenant/`) and your
+product apps (e.g. `apps/admin/`) on top of this base.
 
 ## Key Features
 
-- **Video Sessions** - Real-time video calls and secure messaging (WebRTC)
-- **User Management** - Comprehensive user profiles and role management
-- **Enterprise Compliance** - Audit trails, consent management, and secure data handling
-- **Real-time Notifications** - Multi-channel delivery (email, push via OneSignal)
-- **File Storage** - Secure file upload and download (S3/MinIO)
+- **Real-time chat + video** - chat rooms with embedded WebRTC video calls
+- **Identity** - Better-Auth integrated; person model is the PII safeguard
+- **Compliance-friendly** - audit trails, JSONB consent fields, structured logs
+- **Multi-channel notifications** - email and push (OneSignal)
+- **File storage** - S3/MinIO with presigned URLs
 
 ## Monorepo Structure
 
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   ├── account/              # Self-service account app (Vite + TanStack Router)
-│   ├── patient/              # Patient-facing app (Vite + TanStack Router)
-│   ├── provider/             # Provider portal (Vite + TanStack Router)
-│   └── website/              # Marketing site (Next.js)
+│   └── account/              # Reference app (Vite + TanStack Router)
 ├── packages/                  # Shared libraries
 │   ├── eslint-config/        # Shared ESLint flat configs (base, react, next)
 │   ├── sdk/                  # Type-safe API client + TanStack Query hooks
-│   ├── typescript-config/    # Shared TypeScript configurations
-│   └── ui/                   # Shared UI components (Radix + Tailwind)
+│   └── typescript-config/    # Shared TypeScript configurations
 ├── services/                  # Backend services
 │   └── api/                  # Main API service (Hono + Bun)
 ├── specs/                     # API specifications
@@ -172,43 +176,32 @@ bun run test:e2e               # Run Playwright E2E tests
 
 | App | Stack | Port | Purpose |
 |-----|-------|------|---------|
-| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
-| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
-| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
-| `apps/website` | Next.js 15 | 3000 | Public marketing site |
+| `apps/account` | Vite + TanStack Router | 3002 | Reference app: auth + profile + settings |
 
-All Vite apps share the same stack: TanStack Query for data, Better-Auth for
-auth, the `@monobase/sdk` workspace package for typed API access, and the
-`@monobase/ui` workspace package for components.
+The account app keeps its own components, hooks, and feature directories
+under `apps/account/src/`. To scaffold a new app, copy `apps/account/` and
+update `package.json` name and `vite.config.ts` port — each app owns its
+UI; nothing is shared between apps except the SDK.
 
 **Development**: `cd apps/<name> && bun dev`
 
 ## API Service
 
-### Business Modules
+### Modules
 
-The API service is organized into 13 handler modules. The first nine are the
-core business modules; the latter four are platform-specific modules that
-extend or compose them.
-
-Core modules:
+The API service ships nine vertical-neutral handler modules. Build product
+domains (e.g. `tenant`, `merchant`, `student`) as new modules under
+`services/api/src/handlers/` plus matching `specs/api/src/modules/*.tsp`.
 
 1. **Person** - User profile management and PII safeguard
-2. **Booking** - Professional booking and scheduling system
-3. **Billing** - Invoice-based payments (Stripe integration)
+2. **Booking** - Generic time-based scheduling (hosts, slots, bookings, events)
+3. **Billing** - Invoice-based payments via Stripe Connect
 4. **Audit** - Compliance logging and activity tracking
-5. **Comms** - Video/chat sessions (WebRTC) and messaging
+5. **Comms** - Real-time chat rooms with embedded video calls (WebRTC)
 6. **Notifs** - Multi-channel notifications (email, push via OneSignal)
 7. **Storage** - File upload/download (S3/MinIO)
 8. **Email** - Transactional email delivery
 9. **Reviews** - NPS review system
-
-Platform-specific modules:
-
-10. **Patient** - Patient profiles and patient-side workflows (extends Person)
-11. **Provider** - Provider/practitioner profiles and listing (extends Person)
-12. **EMR** - Electronic medical records: consultation notes, vitals, prescriptions, follow-ups
-13. **WS** - WebSocket transport for real-time chat and WebRTC signaling (handler-only)
 
 **Authentication** is handled by Better-Auth (integrated, not a separate module).
 
@@ -241,7 +234,6 @@ Platform-specific modules:
 - **Radix UI** - Accessible component primitives
 - **Tailwind CSS** - Utility-first styling
 - **shadcn/ui** - Component library
-- **Framer Motion** - Animations
 - **React Hook Form** + **Zod** - Form validation
 
 ### Backend
@@ -289,12 +281,11 @@ cd apps/account && bun run typecheck
 - **CLAUDE.md** - Comprehensive project guide for AI assistants and developers
 - **CONTRIBUTING.md** - Developer contribution guidelines
 
-## Enterprise Compliance
+## Compliance Toolkit
 
-- **Audit Trails** - All data access includes comprehensive audit logging
-- **Consent** - Granular consent management for all data operations
-- **Security** - TLS 1.3, field-level encryption, role-based access
-- **Audit** - Structured logging with correlation IDs
+- **Audit Trails** - All data access includes structured audit logging
+- **Consent** - JSONB consent fields on the Person model for granular tracking
+- **Security** - role-based access via Better-Auth, server-side input validation
 - **Data Integrity** - ACID-compliant PostgreSQL transactions
 
 ## Performance

@@ -57,30 +57,14 @@ import { createEmailTemplate } from '../../handlers/email/createEmailTemplate';
 import { getEmailTemplate } from '../../handlers/email/getEmailTemplate';
 import { updateEmailTemplate } from '../../handlers/email/updateEmailTemplate';
 import { testEmailTemplate } from '../../handlers/email/testEmailTemplate';
-import { createConsultation } from '../../handlers/emr/createConsultation';
-import { listConsultations } from '../../handlers/emr/listConsultations';
-import { getConsultation } from '../../handlers/emr/getConsultation';
-import { updateConsultation } from '../../handlers/emr/updateConsultation';
-import { finalizeConsultation } from '../../handlers/emr/finalizeConsultation';
-import { listEMRPatients } from '../../handlers/emr/listEMRPatients';
 import { listNotifications } from '../../handlers/notifs/listNotifications';
 import { markAllNotificationsAsRead } from '../../handlers/notifs/markAllNotificationsAsRead';
 import { getNotification } from '../../handlers/notifs/getNotification';
 import { markNotificationAsRead } from '../../handlers/notifs/markNotificationAsRead';
-import { listPatients } from '../../handlers/patient/listPatients';
-import { createPatient } from '../../handlers/patient/createPatient';
-import { getPatient } from '../../handlers/patient/getPatient';
-import { updatePatient } from '../../handlers/patient/updatePatient';
-import { deletePatient } from '../../handlers/patient/deletePatient';
 import { createPerson } from '../../handlers/person/createPerson';
 import { listPersons } from '../../handlers/person/listPersons';
 import { getPerson } from '../../handlers/person/getPerson';
 import { updatePerson } from '../../handlers/person/updatePerson';
-import { listProviders } from '../../handlers/provider/listProviders';
-import { createProvider } from '../../handlers/provider/createProvider';
-import { getProvider } from '../../handlers/provider/getProvider';
-import { updateProvider } from '../../handlers/provider/updateProvider';
-import { deleteProvider } from '../../handlers/provider/deleteProvider';
 import { createReview } from '../../handlers/reviews/createReview';
 import { listReviews } from '../../handlers/reviews/listReviews';
 import { getReview } from '../../handlers/reviews/getReview';
@@ -157,39 +141,17 @@ export const registry = {
   updateEmailTemplate,
   testEmailTemplate,
 
-  // Emr handlers
-  createConsultation,
-  listConsultations,
-  getConsultation,
-  updateConsultation,
-  finalizeConsultation,
-  listEMRPatients,
-
   // Notifs handlers
   listNotifications,
   markAllNotificationsAsRead,
   getNotification,
   markNotificationAsRead,
 
-  // Patient handlers
-  listPatients,
-  createPatient,
-  getPatient,
-  updatePatient,
-  deletePatient,
-
   // Person handlers
   createPerson,
   listPersons,
   getPerson,
   updatePerson,
-
-  // Provider handlers
-  listProviders,
-  createProvider,
-  getProvider,
-  updateProvider,
-  deleteProvider,
 
   // Reviews handlers
   createReview,

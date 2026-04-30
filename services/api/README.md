@@ -259,11 +259,13 @@ For detailed development patterns, handler implementation, database operations, 
 
 ### Handler Modules
 
-`src/handlers/` contains 13 modules: 9 core (`person`, `booking`, `billing`,
-`audit`, `comms`, `email`, `notifs`, `storage`, `reviews`) and 4
-platform-specific (`patient`, `provider`, `emr`, `ws`). The first 12 have
-matching TypeSpec definitions under `specs/api/src/modules/`; `ws` is
-WebSocket transport with no REST surface.
+`src/handlers/` contains nine vertical-neutral modules: `person`, `booking`,
+`billing`, `audit`, `comms`, `email`, `notifs`, `storage`, `reviews`. Every
+module has a matching TypeSpec definition under `specs/api/src/modules/`.
+
+Add new domain modules (e.g. `tenant`, `student`, `merchant`) by creating a
+new TypeSpec file plus a handler folder; `bun run generate` will wire them
+into the routes registry.
 
 ### Quick Reference
 

@@ -161,7 +161,7 @@ model BillingConfig {
  */
 @doc("Booking event with configurable availability schedule")
 model BookingEvent extends BaseEntity {
-  @doc("Event owner (provider, organization, etc.)")
+  @doc("Event owner (host person ID, e.g. coach, advisor, instructor)")
   @extension("x-expandable-field", #{ opId: "getPerson" })
   owner: string | Person;
 
@@ -279,13 +279,13 @@ model TimeSlot extends BaseEntity {
   booking?: UUID;
 }
 
-@doc("Booking between client and provider")
+@doc("Confirmed booking instance between a client and a host")
 model Booking extends BaseEntity {
   @doc("Client user ID (person.id)")
   @extension("x-expandable-field", #{ opId: "getPerson" })
   client: string | Person;
 
-  @doc("Provider user ID (person.id)")
+  @doc("Host user ID (person.id) -- field is named `provider` for historical compatibility")
   @extension("x-expandable-field", #{ opId: "getPerson" })
   provider: string | Person;
 
@@ -306,7 +306,7 @@ model Booking extends BaseEntity {
   @doc("When booking was created (UTC)")
   bookedAt: utcDateTime;
 
-  @doc("When provider confirmed (UTC)")
+  @doc("When host confirmed (UTC)")
   confirmationTimestamp?: utcDateTime;
 
   @doc("Scheduled booking date/time (UTC)")
@@ -424,13 +424,13 @@ enum BookingEventStatus {
 
 @doc("Booking status throughout lifecycle")
 enum BookingStatus {
-  @doc("Booking pending provider confirmation")
+  @doc("Booking pending host confirmation")
   pending: "pending",
 
-  @doc("Booking confirmed by provider")
+  @doc("Booking confirmed by host")
   confirmed: "confirmed",
 
-  @doc("Booking rejected by provider")
+  @doc("Booking rejected by host")
   rejected: "rejected",
 
   @doc("Booking cancelled")
@@ -442,7 +442,7 @@ enum BookingStatus {
   @doc("Client marked as no-show")
   no_show_client: "no_show_client",
 
-  @doc("Provider marked as no-show")
+  @doc("Host marked as no-show")
   no_show_provider: "no_show_provider",
 }
 

@@ -1,16 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  searchProviders,
-  getProviderWithSlots,
   listBookingEvents,
   getBookingEvent,
-  type SearchProvidersParams,
   type ListBookingEventsParams,
-  type ProviderWithSlots,
-  type BookingTimeSlot,
 } from '../../services/booking'
-import { queryKeys } from '../query-keys'
 import { ApiError, apiGet } from '../../api'
 import type { components } from '@monobase/api-spec/types'
 
@@ -61,61 +55,6 @@ export function useBookingEvent(eventId: string, options?: {
           toast.error(error.message || 'Failed to load booking event')
         } else {
           toast.error('Failed to load booking event. Please try again.')
-        }
-        options?.onError?.(error)
-      },
-    },
-  })
-}
-
-// ============================================================================
-// Provider Search Hooks (Deprecated)
-// ============================================================================
-
-/**
- * Hook to search providers with filters
- * @deprecated Use useListBookingEvents() instead - /booking/providers endpoint no longer exists
- */
-export function useSearchProviders(params: SearchProvidersParams) {
-  return useQuery({
-    queryKey: queryKeys.bookingProviders(params as Record<string, unknown>),
-    queryFn: () => searchProviders(params),
-    retry: (failureCount, error) => {
-      // Don't retry on client errors (4xx)
-      if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
-        return false
-      }
-      return failureCount < 3
-    },
-  })
-}
-
-/**
- * Hook to get provider with available slots and event data
- * @deprecated Use useBookingEvent() instead - /booking/providers endpoint no longer exists
- */
-export function useProviderWithSlots(providerId: string, options?: {
-  enabled?: boolean
-  onError?: (error: Error) => void
-}) {
-  return useQuery({
-    queryKey: queryKeys.bookingProviderSlots(providerId),
-    queryFn: () => getProviderWithSlots(providerId),
-    enabled: options?.enabled !== false && !!providerId,
-    retry: (failureCount, error) => {
-      // Don't retry on 404 (provider not found)
-      if (error instanceof ApiError && error.status === 404) {
-        return false
-      }
-      return failureCount < 3
-    },
-    meta: {
-      onError: (error: Error) => {
-        console.error('Failed to fetch provider slots:', error)
-        if (error instanceof ApiError) {
-          toast.error(error.message || 'Failed to load provider availability')
-        } else {
-          toast.error('Failed to load provider availability. Please try again.')
         }
         options?.onError?.(error)
       },
@@ -571,13 +510,13 @@ export function useMarkBookingNoShow(options?: {
 }
 
 // ============================================================================
-// Patient-Side Booking Creation Hooks
+// Client-Side Booking Creation Hooks
 // ============================================================================
 
-import { createBooking, type CreateBookingData } from '../../services/booking'
+import { createBooking } from '../../services/booking'
 
 /**
- * Create a new booking (patient action)
+ * Create a new booking (client action)
  */
 export function useCreateBooking(options?: {
   toastSuccess?: boolean,

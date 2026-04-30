@@ -80,15 +80,12 @@ curl http://localhost:7213/health
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   ├── account/              # Self-service account portal (Vite + TanStack)
-│   ├── patient/              # Patient-facing app (Vite + TanStack)
-│   ├── provider/             # Provider portal (Vite + TanStack)
-│   └── website/              # Marketing site (Next.js)
+│   └── account/              # Reference app (Vite + TanStack)
+│                              # — owns its own components/hooks/lib/features
 ├── packages/                  # Shared packages
 │   ├── eslint-config/        # Shared ESLint flat configs
 │   ├── sdk/                  # Type-safe API client + TanStack Query hooks
-│   ├── typescript-config/    # Shared TypeScript configs
-│   └── ui/                   # Shared UI components (Radix + Tailwind)
+│   └── typescript-config/    # Shared TypeScript configs
 ├── services/                  # Backend services
 │   └── api/                  # Main Hono API service
 └── specs/                     # API specifications
@@ -120,9 +117,12 @@ Run `bun --filter '*' lint` from the repo root to lint every workspace.
 - `src/middleware/` - Express-style middleware
 - `src/utils/` - Shared utilities
 
-**Shared UI Package**:
-- `src/components/` - Reusable shadcn/ui components
-- `src/lib/` - Utility functions (cn, etc.)
+**Per-app UI Layout**:
+- `src/components/` - shadcn/ui-style primitives (Button, Card, Form, ...)
+- `src/lib/` - utility functions (`cn`, `formatDate`, ...)
+- `src/hooks/` - app-level React hooks
+- `src/features/` - larger feature modules (booking, billing, comms, person)
+- Each app owns this tree; nothing is shared across apps except the SDK.
 
 ## API-First Development
 
@@ -267,14 +267,14 @@ Running `cd services/api && bun run generate` creates these files automatically:
 The generator creates handler stub files **only if they don't exist**:
 
 ```typescript
-// src/handlers/patient/createPatient.ts
-import { Context } from 'hono';
+// src/handlers/booking/createBooking.ts
+import type { HandlerContext } from '@/types/app';
 
-export async function createPatient(ctx: Context) {
+export async function createBooking(ctx: HandlerContext) {
   const body = ctx.req.valid('json');
 
   // TODO: Implement business logic
-  throw new Error('Not implemented: createPatient');
+  throw new Error('Not implemented: createBooking');
 }
 ```
 
@@ -303,8 +303,8 @@ You should **only** edit these files:
 ### Code Generation Workflow
 
 ```bash
-# 1. Modify TypeSpec definitions
-vim specs/api/src/modules/patient.tsp
+# 1. Modify TypeSpec definitions (or add a new module file)
+vim specs/api/src/modules/booking.tsp
 
 # 2. Generate OpenAPI spec and types
 cd specs/api && bun run build
@@ -313,7 +313,7 @@ cd specs/api && bun run build
 cd ../../services/api && bun run generate
 
 # 4. Implement business logic in handlers
-vim src/handlers/patient/createPatient.ts
+vim src/handlers/booking/createBooking.ts
 
 # 5. Test your changes
 bun test
@@ -499,11 +499,11 @@ logger.info('User action', {
 - Use appropriate log levels
 - Add structured context (objects, not strings)
 - Log errors with full error objects
-- Sanitize PHI before logging (never log sensitive patient data)
+- Sanitize PII before logging (e.g. phone numbers, emails, free-text)
 
 ❌ **DON'T:**
 - Use console.* methods in backend code
-- Log sensitive patient information (PHI)
+- Log sensitive personal information (PII)
 - Log passwords, tokens, or credentials
 - Use string concatenation for structured data
 
@@ -644,7 +644,7 @@ console.log('Video call joined successfully')
 
 **⚠️ All component files MUST use kebab-case naming.**
 
-This is a strict requirement across all apps (account, website). Inconsistent file naming causes confusion and maintenance issues.
+This is a strict requirement across all apps. Inconsistent file naming causes confusion and maintenance issues.
 
 **Correct** ✅:
 ```
@@ -686,7 +686,7 @@ src/components/documents/DocumentList.tsx          // PascalCase - wrong
 
 #### The Two-Utility Pattern
 
-1. **Formatting** → Use `@monobase/ui/lib/format-date`
+1. **Formatting** → Use `@/lib/format-date`
 2. **Manipulation/Logic** → Use `date-fns` directly
 
 #### Formatting Dates
@@ -694,7 +694,7 @@ src/components/documents/DocumentList.tsx          // PascalCase - wrong
 Always use the centralized `formatDate()` and `formatRelativeDate()` utilities:
 
 ```typescript
-import { formatDate, formatRelativeDate } from '@monobase/ui/lib/format-date'
+import { formatDate, formatRelativeDate } from '@/lib/format-date'
 
 // Date formatting
 formatDate(new Date(), { format: 'short' })      // "10/5/23"
@@ -713,7 +713,7 @@ formatRelativeDate(date, { style: 'short' })      // "3h ago"
 
 **React Components**:
 ```typescript
-import { useFormatDate } from '@monobase/ui/hooks/use-format-date'
+import { useFormatDate } from '@/hooks/use-format-date'
 
 function MyComponent({ date }: { date: Date }) {
   const { formatDate, formatRelativeDate } = useFormatDate()
@@ -788,7 +788,7 @@ const tomorrow = addDays(date, 1)
 
 **ISO Date Strings (API Requests)**:
 ```typescript
-import { formatDate } from '@monobase/ui/lib/format-date'
+import { formatDate } from '@/lib/format-date'
 
 const payload = {
   scheduledAt: formatDate(appointmentDate, { format: 'iso' }),
@@ -826,7 +826,7 @@ const isInRange = isWithinInterval(date, {
 
 When working with language, country, and timezone data, strict casing standards MUST be followed for system interoperability.
 
-**Constants Location**: `packages/ui/src/constants/`
+**Constants Location**: `apps/account/src/constants/`
 
 #### Language Codes (ISO 639-1)
 
@@ -844,7 +844,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **HTML lang Attributes**: `<html lang="en">`
 - **i18n Libraries**: Most expect lowercase ISO 639-1 codes
 
-**Reference**: `packages/ui/src/constants/languages.ts`
+**Reference**: `apps/account/src/constants/languages.ts`
 
 #### Country Codes (ISO 3166-1 alpha-2)
 
@@ -862,7 +862,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **Banking Standards**: IBAN, SWIFT use uppercase country codes
 - **Geographic APIs**: Most expect uppercase ISO 3166-1 alpha-2
 
-**Reference**: `packages/ui/src/constants/countries.ts`
+**Reference**: `apps/account/src/constants/countries.ts`
 
 #### Timezone Identifiers (IANA)
 
@@ -880,7 +880,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **Backend Libraries**: dayjs, date-fns, luxon expect IANA format
 - **Cross-platform Consistency**: Works across all environments
 
-**Reference**: `packages/ui/src/constants/timezones.ts`
+**Reference**: `apps/account/src/constants/timezones.ts`
 
 #### Validation in Code Reviews
 
@@ -1207,7 +1207,7 @@ Frontend apps use **two separate test runners**:
 
 #### Frontend Apps (Using Both Bun + Playwright)
 
-Frontend apps (account, website) use:
+Frontend apps (e.g. account) use:
 - **Bun test runner** for unit tests (colocated in `src/`)
 - **Playwright** for E2E tests (in `tests/e2e/`)
 
@@ -1399,7 +1399,7 @@ describe('ClientService', () => {
 ### E2E Tests (Frontend Apps)
 
 ```bash
-cd apps/patient
+cd apps/account
 bun run test:e2e
 ```
 
@@ -1421,7 +1421,7 @@ test('client can book appointment', async ({ page }) => {
   await page.fill('[name="password"]', 'password');
   await page.click('button[type="submit"]');
   
-  await page.goto('/service-providers');
+  await page.goto('/hosts');
   await page.click('text=John Smith Consulting');
   await page.click('text=Book Appointment');
   await page.click('[data-testid="time-slot-9am"]');
@@ -1457,14 +1457,14 @@ cd apps/account && bun run typecheck
 ```bash
 main                    # Production-ready code
 ├── develop            # Integration branch (if using)
-├── feature/add-video consultations
+├── feature/add-video-calls
 ├── fix/booking-timezone-bug
 └── chore/update-dependencies
 ```
 
 ### Branch Naming Conventions
 
-- `feature/` - New features (e.g., `feature/video-consultations`)
+- `feature/` - New features (e.g., `feature/video-calls`)
 - `fix/` - Bug fixes (e.g., `fix/appointment-reminder-timing`)
 - `chore/` - Maintenance tasks (e.g., `chore/upgrade-react-19`)
 - `docs/` - Documentation updates (e.g., `docs/add-api-examples`)
@@ -1493,9 +1493,9 @@ Follow Conventional Commits specification:
 
 **Examples**:
 ```bash
-feat(booking): add service provider availability search filters
+feat(booking): add host availability search filters
 
-Add specialty, language, and service tier filters to provider search.
+Add specialty, language, and service tier filters to host search.
 Includes backend API updates and frontend UI components.
 
 Closes #123
@@ -1849,7 +1849,7 @@ bun run build  # Errors will show TypeSpec compilation issues
 
 ## Frontend Development Patterns
 
-This section covers shared patterns for all frontend applications (account, website, etc.). These patterns apply to apps built with TanStack Router, React 19, and Bun runtime.
+This section covers patterns for frontend applications built with TanStack Router, React 19, and the Bun runtime — including the reference `apps/account` and any new app you scaffold.
 
 **Note**: For app-specific details (domain modules, routes, features), see each app's individual CONTRIBUTING.md file.
 

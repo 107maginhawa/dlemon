@@ -479,64 +479,6 @@ export const ConflictErrorSchema = z.object({
   resolution: z.array(z.string()).optional()
 });
 
-export const PrescriptionDataSchema = z.object({
-  id: z.string().optional(),
-  medication: z.string(),
-  dosageAmount: z.number().optional(),
-  dosageUnit: z.string().optional(),
-  frequency: z.string().optional(),
-  durationDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  notes: z.string().optional()
-});
-
-export const ConsultationNoteSchema = z.object({
-  id: z.string().uuid(),
-  version: z.number().int(),
-  createdAt: z.string().datetime().transform((str) => new Date(str)),
-  createdBy: z.string().uuid().optional(),
-  updatedAt: z.string().datetime().transform((str) => new Date(str)),
-  updatedBy: z.string().uuid().optional(),
-  patient: z.string().uuid(),
-  provider: z.string().uuid(),
-  context: z.string().max(255).optional(),
-  chiefComplaint: z.string().min(1).max(500).optional(),
-  assessment: z.string().min(1).max(2000).optional(),
-  plan: z.string().min(1).max(2000).optional(),
-  vitals: z.object({
-  temperatureCelsius: z.number().optional(),
-  systolicBp: z.number().int().optional(),
-  diastolicBp: z.number().int().optional(),
-  heartRate: z.number().int().optional(),
-  weightKg: z.number().optional(),
-  heightCm: z.number().optional(),
-  respiratoryRate: z.number().int().optional(),
-  oxygenSaturation: z.number().int().optional(),
-  notes: z.string().optional()
-}).optional(),
-  symptoms: z.object({
-  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
-  durationHours: z.number().int().optional(),
-  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
-  description: z.string().optional(),
-  associated: z.array(z.string()).optional(),
-  denies: z.array(z.string()).optional()
-}).optional(),
-  prescriptions: z.array(PrescriptionDataSchema).optional(),
-  followUp: z.object({
-  needed: z.boolean(),
-  timeframeDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  specialistReferral: z.string().optional()
-}).optional(),
-  externalDocumentation: z.record(z.string(), z.unknown()).optional(),
-  status: z.union([z.string(), z.enum(["draft", "finalized", "amended"])]),
-  finalizedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  finalizedBy: z.string().uuid().optional()
-});
-
-export const ConsultationStatusSchema = z.union([z.string(), z.enum(["draft", "finalized", "amended"])]);
-
 export const ContactInfoSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
@@ -549,41 +491,6 @@ export const CreateChatRoomRequestSchema = z.object({
   admins: z.array(UUIDSchema).optional(),
   context: z.string().uuid().optional(),
   upsert: z.boolean().optional()
-});
-
-export const CreateConsultationRequestSchema = z.object({
-  patient: z.string().uuid(),
-  provider: z.string().uuid(),
-  context: z.string().max(255).optional(),
-  chiefComplaint: z.string().min(1).max(500).optional(),
-  assessment: z.string().min(1).max(2000).optional(),
-  plan: z.string().min(1).max(2000).optional(),
-  vitals: z.object({
-  temperatureCelsius: z.number().optional(),
-  systolicBp: z.number().int().optional(),
-  diastolicBp: z.number().int().optional(),
-  heartRate: z.number().int().optional(),
-  weightKg: z.number().optional(),
-  heightCm: z.number().optional(),
-  respiratoryRate: z.number().int().optional(),
-  oxygenSaturation: z.number().int().optional(),
-  notes: z.string().optional()
-}).optional(),
-  symptoms: z.object({
-  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
-  durationHours: z.number().int().optional(),
-  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
-  description: z.string().optional(),
-  associated: z.array(z.string()).optional(),
-  denies: z.array(z.string()).optional()
-}).optional(),
-  prescriptions: z.array(PrescriptionDataSchema).optional(),
-  followUp: z.object({
-  needed: z.boolean(),
-  timeframeDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  specialistReferral: z.string().optional()
-}).optional()
 });
 
 export const CreateLineItemRequestSchema = z.object({
@@ -725,8 +632,6 @@ export const ErrorDetailSchema = z.object({
   helpUrl: z.string().url().optional()
 });
 
-export const FaxNumberSchema = z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50);
-
 export const FieldErrorSchema = z.object({
   field: z.string(),
   value: z.unknown().optional(),
@@ -767,20 +672,6 @@ export const FileUploadResponseSchema = z.object({
   uploadUrl: z.string().url(),
   uploadMethod: z.enum(["PUT"]),
   expiresAt: z.string().datetime().transform((str) => new Date(str))
-});
-
-export const FollowUpDataSchema = z.object({
-  needed: z.boolean(),
-  timeframeDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  specialistReferral: z.string().optional()
-});
-
-export const FollowUpDataUpdateSchema = z.object({
-  needed: z.boolean().optional(),
-  timeframeDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  specialistReferral: z.string().optional()
 });
 
 export const FormConfigSchema = z.object({
@@ -997,88 +888,6 @@ export const OnboardingResponseSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
-export const PatientSchema = z.object({
-  id: z.string().uuid(),
-  version: z.number().int(),
-  createdAt: z.string().datetime().transform((str) => new Date(str)),
-  createdBy: z.string().uuid().optional(),
-  updatedAt: z.string().datetime().transform((str) => new Date(str)),
-  updatedBy: z.string().uuid().optional(),
-  person: z.union([UUIDSchema, PersonSchema]),
-  primaryProvider: z.object({
-  name: z.string().min(1).max(100),
-  specialty: z.string().max(100).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-}).optional(),
-  primaryPharmacy: z.object({
-  name: z.string().min(1).max(100),
-  address: z.string().max(500).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-}).optional()
-});
-
-export const PatientCreateRequestSchema = z.object({
-  person: z.object({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50).optional(),
-  middleName: z.string().max(50).optional(),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  gender: z.enum(["male", "female", "non-binary", "other", "prefer-not-to-say"]).optional(),
-  primaryAddress: z.object({
-  street1: z.string().min(1).max(100),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50),
-  state: z.string().min(1).max(50),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}).optional(),
-  contactInfo: z.object({
-  email: z.string().email().optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
-}).optional(),
-  avatar: z.object({
-  file: z.string().uuid().optional(),
-  url: z.string().url()
-}).optional(),
-  languagesSpoken: z.array(LanguageCodeSchema).optional(),
-  timezone: z.string().regex(/^[A-Za-z_]+\/[A-Za-z_]+$/).refine(val => validateTimezone(val), { message: "Invalid IANA timezone identifier" }).optional()
-}).optional(),
-  primaryProvider: z.object({
-  name: z.string().min(1).max(100),
-  specialty: z.string().max(100).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-}).optional(),
-  primaryPharmacy: z.object({
-  name: z.string().min(1).max(100),
-  address: z.string().max(500).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-}).optional()
-});
-
-export const PatientUpdateRequestSchema = z.object({
-  primaryProvider: z.union([z.object({
-  name: z.string().min(1).max(100).optional(),
-  specialty: z.union([z.string().max(100), z.null()]).optional(),
-  phone: z.union([z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }), z.null()]).optional(),
-  fax: z.union([z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50), z.null()]).optional()
-}), z.null()]).optional(),
-  primaryPharmacy: z.union([z.object({
-  name: z.string().min(1).max(100).optional(),
-  address: z.union([z.string().max(500), z.null()]).optional(),
-  phone: z.union([z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }), z.null()]).optional(),
-  fax: z.union([z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50), z.null()]).optional()
-}), z.null()]).optional()
-});
-
 export const PaymentRequestSchema = z.object({
   paymentMethod: z.string().max(255).optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
@@ -1153,97 +962,7 @@ export const PersonUpdateRequestSchema = z.object({
   timezone: z.union([z.string().regex(/^[A-Za-z_]+\/[A-Za-z_]+$/).refine(val => validateTimezone(val), { message: "Invalid IANA timezone identifier" }), z.null()]).optional()
 });
 
-export const PharmacyInfoSchema = z.object({
-  name: z.string().min(1).max(100),
-  address: z.string().max(500).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-});
-
-export const PharmacyInfoUpdateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  address: z.union([z.string().max(500), z.null()]).optional(),
-  phone: z.union([z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }), z.null()]).optional(),
-  fax: z.union([z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50), z.null()]).optional()
-});
-
 export const PhoneNumberSchema = z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" });
-
-export const ProviderSchema = z.object({
-  id: z.string().uuid(),
-  version: z.number().int(),
-  createdAt: z.string().datetime().transform((str) => new Date(str)),
-  createdBy: z.string().uuid().optional(),
-  updatedAt: z.string().datetime().transform((str) => new Date(str)),
-  updatedBy: z.string().uuid().optional(),
-  person: z.union([UUIDSchema, PersonSchema]),
-  providerType: z.enum(["pharmacist", "other"]),
-  yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
-  biography: z.string().max(2000).optional(),
-  minorAilmentsSpecialties: z.array(z.string()).optional(),
-  minorAilmentsPracticeLocations: z.array(z.string()).optional()
-});
-
-export const ProviderCreateRequestSchema = z.object({
-  person: z.object({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50).optional(),
-  middleName: z.string().max(50).optional(),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  gender: z.enum(["male", "female", "non-binary", "other", "prefer-not-to-say"]).optional(),
-  primaryAddress: z.object({
-  street1: z.string().min(1).max(100),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50),
-  state: z.string().min(1).max(50),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}).optional(),
-  contactInfo: z.object({
-  email: z.string().email().optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
-}).optional(),
-  avatar: z.object({
-  file: z.string().uuid().optional(),
-  url: z.string().url()
-}).optional(),
-  languagesSpoken: z.array(LanguageCodeSchema).optional(),
-  timezone: z.string().regex(/^[A-Za-z_]+\/[A-Za-z_]+$/).refine(val => validateTimezone(val), { message: "Invalid IANA timezone identifier" }).optional()
-}).optional(),
-  providerType: z.enum(["pharmacist", "other"]),
-  yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
-  biography: z.string().max(2000).optional(),
-  minorAilmentsSpecialties: z.array(z.string()).optional(),
-  minorAilmentsPracticeLocations: z.array(z.string()).optional()
-});
-
-export const ProviderInfoSchema = z.object({
-  name: z.string().min(1).max(100),
-  specialty: z.string().max(100).optional(),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional(),
-  fax: z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50).optional()
-});
-
-export const ProviderInfoUpdateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  specialty: z.union([z.string().max(100), z.null()]).optional(),
-  phone: z.union([z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }), z.null()]).optional(),
-  fax: z.union([z.string().regex(/^\+?[0-9\s\-\(\)\,\.ext]+$/).max(50), z.null()]).optional()
-});
-
-export const ProviderTypeSchema = z.enum(["pharmacist", "other"]);
-
-export const ProviderUpdateRequestSchema = z.object({
-  yearsOfExperience: z.union([z.number().int().gte(0).lte(70), z.null()]).optional(),
-  biography: z.union([z.string().max(2000), z.null()]).optional(),
-  minorAilmentsSpecialties: z.union([z.array(z.string()), z.null()]).optional(),
-  minorAilmentsPracticeLocations: z.union([z.array(z.string()), z.null()]).optional()
-});
 
 export const RateLimitErrorSchema = z.object({
   code: z.string(),
@@ -1378,17 +1097,6 @@ export const StoredFileSchema = z.object({
   uploadedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
-export const SymptomSeveritySchema = z.union([z.string(), z.enum(["mild", "moderate", "severe"])]);
-
-export const SymptomsDataSchema = z.object({
-  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
-  durationHours: z.number().int().optional(),
-  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
-  description: z.string().optional(),
-  associated: z.array(z.string()).optional(),
-  denies: z.array(z.string()).optional()
-});
-
 export const TemplateStatusSchema = z.enum(["draft", "active", "archived"]);
 
 export const TestTemplateRequestSchema = z.object({
@@ -1428,39 +1136,6 @@ export const TestTemplateResultSchema = z.object({
 });
 
 export const TimezoneIdSchema = z.string().regex(/^[A-Za-z_]+\/[A-Za-z_]+$/).refine(val => validateTimezone(val), { message: "Invalid IANA timezone identifier" });
-
-export const UpdateConsultationRequestSchema = z.object({
-  chiefComplaint: z.union([z.string().max(500), z.null()]).optional(),
-  assessment: z.union([z.string().max(2000), z.null()]).optional(),
-  plan: z.union([z.string().max(2000), z.null()]).optional(),
-  vitals: z.union([z.object({
-  temperatureCelsius: z.number().optional(),
-  systolicBp: z.number().int().optional(),
-  diastolicBp: z.number().int().optional(),
-  heartRate: z.number().int().optional(),
-  weightKg: z.number().optional(),
-  heightCm: z.number().optional(),
-  respiratoryRate: z.number().int().optional(),
-  oxygenSaturation: z.number().int().optional(),
-  notes: z.string().optional()
-}), z.null()]).optional(),
-  symptoms: z.union([z.object({
-  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
-  durationHours: z.number().int().optional(),
-  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
-  description: z.string().optional(),
-  associated: z.array(z.string()).optional(),
-  denies: z.array(z.string()).optional()
-}), z.null()]).optional(),
-  prescriptions: z.union([z.array(PrescriptionDataSchema), z.null()]).optional(),
-  followUp: z.union([z.object({
-  needed: z.boolean().optional(),
-  timeframeDays: z.number().int().optional(),
-  instructions: z.string().optional(),
-  specialistReferral: z.string().optional()
-}), z.null()]).optional(),
-  externalDocumentation: z.union([z.record(z.string(), z.unknown()), z.null()]).optional()
-});
 
 export const UpdateInvoiceRequestSchema = z.object({
   paymentCaptureMethod: z.enum(["automatic", "manual"]).optional(),
@@ -1533,18 +1208,6 @@ export const VideoCallJoinResponseSchema = z.object({
 });
 
 export const VideoCallStatusSchema = z.enum(["starting", "active", "ended", "cancelled"]);
-
-export const VitalsDataSchema = z.object({
-  temperatureCelsius: z.number().optional(),
-  systolicBp: z.number().int().optional(),
-  diastolicBp: z.number().int().optional(),
-  heartRate: z.number().int().optional(),
-  weightKg: z.number().optional(),
-  heightCm: z.number().optional(),
-  respiratoryRate: z.number().int().optional(),
-  oxygenSaturation: z.number().int().optional(),
-  notes: z.string().optional()
-});
 
 export const ListAuditLogsQuery = z.object({
   resourceType: z.string().optional(),
@@ -2188,86 +1851,6 @@ export type TestEmailTemplateBody = z.infer<typeof TestEmailTemplateBody>;
 
 export const TestEmailTemplateResponse = TestTemplateResultSchema;
 
-export const CreateConsultationBody = CreateConsultationRequestSchema;
-export type CreateConsultationBody = z.infer<typeof CreateConsultationBody>;
-
-export const CreateConsultationResponse = ConsultationNoteSchema;
-
-export const ListConsultationsQuery = z.object({
-  patient: UUIDSchema.optional(),
-  status: ConsultationStatusSchema.optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
-  limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
-  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
-});
-export type ListConsultationsQuery = z.infer<typeof ListConsultationsQuery>;
-
-export const ListConsultationsResponse = z.object({
-  data: z.array(ConsultationNoteSchema),
-  pagination: z.object({
-  offset: z.number().int(),
-  limit: z.number().int(),
-  count: z.number().int(),
-  totalCount: z.number().int(),
-  totalPages: z.number().int(),
-  currentPage: z.number().int(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean()
-})
-});
-
-export const GetConsultationParams = z.object({
-  consultation: UUIDSchema,
-});
-export type GetConsultationParams = z.infer<typeof GetConsultationParams>;
-
-export const GetConsultationResponse = ConsultationNoteSchema;
-
-export const UpdateConsultationParams = z.object({
-  consultation: UUIDSchema,
-});
-export type UpdateConsultationParams = z.infer<typeof UpdateConsultationParams>;
-
-export const UpdateConsultationBody = UpdateConsultationRequestSchema;
-export type UpdateConsultationBody = z.infer<typeof UpdateConsultationBody>;
-
-export const UpdateConsultationResponse = ConsultationNoteSchema;
-
-export const FinalizeConsultationParams = z.object({
-  consultation: UUIDSchema,
-});
-export type FinalizeConsultationParams = z.infer<typeof FinalizeConsultationParams>;
-
-export const FinalizeConsultationResponse = ConsultationNoteSchema;
-
-export const ListEMRPatientsQuery = z.object({
-  expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
-  limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
-  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
-});
-export type ListEMRPatientsQuery = z.infer<typeof ListEMRPatientsQuery>;
-
-export const ListEMRPatientsResponse = z.object({
-  data: z.array(PatientSchema),
-  pagination: z.object({
-  offset: z.number().int(),
-  limit: z.number().int(),
-  count: z.number().int(),
-  totalCount: z.number().int(),
-  totalPages: z.number().int(),
-  currentPage: z.number().int(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean()
-})
-});
-
 export const ListNotificationsQuery = z.object({
   type: NotificationTypeSchema.optional(),
   channel: NotificationChannelSchema.optional(),
@@ -2320,65 +1903,6 @@ export type MarkNotificationAsReadParams = z.infer<typeof MarkNotificationAsRead
 
 export const MarkNotificationAsReadResponse = NotificationSchema;
 
-export const ListPatientsQuery = z.object({
-  expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
-  limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
-  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
-});
-export type ListPatientsQuery = z.infer<typeof ListPatientsQuery>;
-
-export const ListPatientsResponse = z.object({
-  data: z.array(PatientSchema),
-  pagination: z.object({
-  offset: z.number().int(),
-  limit: z.number().int(),
-  count: z.number().int(),
-  totalCount: z.number().int(),
-  totalPages: z.number().int(),
-  currentPage: z.number().int(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean()
-})
-});
-
-export const CreatePatientBody = PatientCreateRequestSchema;
-export type CreatePatientBody = z.infer<typeof CreatePatientBody>;
-
-export const CreatePatientResponse = PatientSchema;
-
-export const GetPatientParams = z.object({
-  patient: z.union([UUIDSchema, z.enum(["me"])]),
-});
-export type GetPatientParams = z.infer<typeof GetPatientParams>;
-
-export const GetPatientQuery = z.object({
-  expand: z.string().optional(),
-});
-export type GetPatientQuery = z.infer<typeof GetPatientQuery>;
-
-export const GetPatientResponse = PatientSchema;
-
-export const UpdatePatientParams = z.object({
-  patient: UUIDSchema,
-});
-export type UpdatePatientParams = z.infer<typeof UpdatePatientParams>;
-
-export const UpdatePatientBody = PatientUpdateRequestSchema;
-export type UpdatePatientBody = z.infer<typeof UpdatePatientBody>;
-
-export const UpdatePatientResponse = PatientSchema;
-
-export const DeletePatientParams = z.object({
-  patient: UUIDSchema,
-});
-export type DeletePatientParams = z.infer<typeof DeletePatientParams>;
-
-export const DeletePatientResponse = z.void();
-
 export const CreatePersonBody = PersonCreateRequestSchema;
 export type CreatePersonBody = z.infer<typeof CreatePersonBody>;
 
@@ -2424,68 +1948,6 @@ export const UpdatePersonBody = PersonUpdateRequestSchema;
 export type UpdatePersonBody = z.infer<typeof UpdatePersonBody>;
 
 export const UpdatePersonResponse = PersonSchema;
-
-export const ListProvidersQuery = z.object({
-  minorAilmentsSpecialty: z.string().optional(),
-  minorAilmentsPracticeLocation: z.string().optional(),
-  languageSpoken: LanguageCodeSchema.optional(),
-  expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
-  limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
-  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
-});
-export type ListProvidersQuery = z.infer<typeof ListProvidersQuery>;
-
-export const ListProvidersResponse = z.object({
-  data: z.array(ProviderSchema),
-  pagination: z.object({
-  offset: z.number().int(),
-  limit: z.number().int(),
-  count: z.number().int(),
-  totalCount: z.number().int(),
-  totalPages: z.number().int(),
-  currentPage: z.number().int(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean()
-})
-});
-
-export const CreateProviderBody = ProviderCreateRequestSchema;
-export type CreateProviderBody = z.infer<typeof CreateProviderBody>;
-
-export const CreateProviderResponse = ProviderSchema;
-
-export const GetProviderParams = z.object({
-  provider: z.union([UUIDSchema, z.enum(["me"])]),
-});
-export type GetProviderParams = z.infer<typeof GetProviderParams>;
-
-export const GetProviderQuery = z.object({
-  expand: z.string().optional(),
-});
-export type GetProviderQuery = z.infer<typeof GetProviderQuery>;
-
-export const GetProviderResponse = ProviderSchema;
-
-export const UpdateProviderParams = z.object({
-  provider: UUIDSchema,
-});
-export type UpdateProviderParams = z.infer<typeof UpdateProviderParams>;
-
-export const UpdateProviderBody = ProviderUpdateRequestSchema;
-export type UpdateProviderBody = z.infer<typeof UpdateProviderBody>;
-
-export const UpdateProviderResponse = ProviderSchema;
-
-export const DeleteProviderParams = z.object({
-  provider: UUIDSchema,
-});
-export type DeleteProviderParams = z.infer<typeof DeleteProviderParams>;
-
-export const DeleteProviderResponse = z.void();
 
 export const CreateReviewBody = CreateReviewRequestSchema;
 export type CreateReviewBody = z.infer<typeof CreateReviewBody>;

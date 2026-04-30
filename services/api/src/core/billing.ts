@@ -322,8 +322,8 @@ export class BillingService {
   }
 
   /**
-   * Capture a previously authorized payment intent
-   * Provider decision: capture payment after consultation
+   * Capture a previously authorized payment intent.
+   * Host decision: capture payment after the service is delivered.
    */
   async capturePaymentIntent(
     paymentIntentId: string, 
@@ -381,8 +381,8 @@ export class BillingService {
   }
 
   /**
-   * Cancel a payment intent instead of capturing it
-   * Provider decision: waive payment after consultation
+   * Cancel a payment intent instead of capturing it.
+   * Host decision: waive payment after the service is delivered.
    */
   async cancelPaymentIntent(
     paymentIntentId: string, 

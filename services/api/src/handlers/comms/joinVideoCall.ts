@@ -106,7 +106,7 @@ export async function joinVideoCall(
 
   const participant: CallParticipant = {
     user: user.id,
-    userType: 'provider', // Monobase uses person-centric model
+    userType: 'host', // Monobase uses person-centric model
     displayName: body.displayName.trim(),
     audioEnabled: body.audioEnabled ?? true,
     videoEnabled: body.videoEnabled ?? true,

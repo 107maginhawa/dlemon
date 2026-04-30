@@ -40,8 +40,8 @@ export const videoCallStatusEnum = pgEnum('video_call_status', [
 ]);
 
 export const participantTypeEnum = pgEnum('participant_type', [
-  'patient',
-  'provider'
+  'client',
+  'host'
 ]);
 
 // Chat Rooms - Flexible communication rooms supporting any number of participants
@@ -145,7 +145,7 @@ export interface VideoCallData {
 
 export interface CallParticipant {
   user: string; // UUID
-  userType: 'patient' | 'provider';
+  userType: 'client' | 'host';
   displayName: string;
   joinedAt?: string;
   leftAt?: string;
@@ -239,5 +239,5 @@ export interface ChatRoomWithLastMessage extends ChatRoom {
 
 export interface ChatMessageWithSender extends ChatMessage {
   senderName?: string;
-  senderType?: 'patient' | 'provider';
+  senderType?: 'client' | 'host';
 }
