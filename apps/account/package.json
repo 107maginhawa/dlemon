@@ -82,7 +82,6 @@
     "@happy-dom/global-registrator": "^20.9.0",
     "@monobase/eslint-config": "workspace:*",
     "@monobase/typescript-config": "workspace:*",
-    "eslint": "^9.37.0",
     "@playwright/test": "^1.55.0",
     "@tanstack/react-devtools": "^0.6.2",
     "@tanstack/react-query-devtools": "^5.85.9",

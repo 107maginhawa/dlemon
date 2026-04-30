@@ -1,6 +1,3 @@
-// Generated file. Recursive Zod schemas (e.g. CompositionSection,
-// QuestionnaireItem) reference themselves via z.lazy() and carry an explicit
-// `: z.ZodTypeAny` annotation so TypeScript can break the cycle.
 import { z } from 'zod';
 import ISO6391 from 'iso-639-1';
 import countries from 'i18n-iso-countries';
@@ -87,20 +84,6 @@ export const AddressPatchInputSchema = z.object({
   longitude: z.number().gte(-180).lte(180).optional(),
   accuracy: z.number().gte(0).optional()
 }), z.null()]).optional()
-});
-
-export const AddressUpdateSchema = z.object({
-  street1: z.string().min(1).max(100).optional(),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50).optional(),
-  state: z.string().min(1).max(50).optional(),
-  postalCode: z.string().min(1).max(20).optional(),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }).optional(),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90).optional(),
-  longitude: z.number().gte(-180).lte(180).optional(),
-  accuracy: z.number().gte(0).optional()
-}).optional()
 });
 
 export const AuditActionSchema = z.enum(["create", "read", "update", "delete", "login", "logout"]);
@@ -503,6 +486,64 @@ export const ConflictErrorSchema = z.object({
   resolution: z.array(z.string()).optional()
 });
 
+export const PrescriptionDataSchema = z.object({
+  id: z.string().optional(),
+  medication: z.string(),
+  dosageAmount: z.number().optional(),
+  dosageUnit: z.string().optional(),
+  frequency: z.string().optional(),
+  durationDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const ConsultationNoteSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patient: z.string().uuid(),
+  provider: z.string().uuid(),
+  context: z.string().max(255).optional(),
+  chiefComplaint: z.string().min(1).max(500).optional(),
+  assessment: z.string().min(1).max(2000).optional(),
+  plan: z.string().min(1).max(2000).optional(),
+  vitals: z.object({
+  temperatureCelsius: z.number().optional(),
+  systolicBp: z.number().int().optional(),
+  diastolicBp: z.number().int().optional(),
+  heartRate: z.number().int().optional(),
+  weightKg: z.number().optional(),
+  heightCm: z.number().optional(),
+  respiratoryRate: z.number().int().optional(),
+  oxygenSaturation: z.number().int().optional(),
+  notes: z.string().optional()
+}).optional(),
+  symptoms: z.object({
+  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
+  durationHours: z.number().int().optional(),
+  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
+  description: z.string().optional(),
+  associated: z.array(z.string()).optional(),
+  denies: z.array(z.string()).optional()
+}).optional(),
+  prescriptions: z.array(PrescriptionDataSchema).optional(),
+  followUp: z.object({
+  needed: z.boolean(),
+  timeframeDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  specialistReferral: z.string().optional()
+}).optional(),
+  externalDocumentation: z.record(z.string(), z.unknown()).optional(),
+  status: z.union([z.string(), z.enum(["draft", "finalized", "amended"])]),
+  finalizedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  finalizedBy: z.string().uuid().optional()
+});
+
+export const ConsultationStatusSchema = z.union([z.string(), z.enum(["draft", "finalized", "amended"])]);
+
 export const ContactInfoSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
@@ -515,6 +556,41 @@ export const CreateChatRoomRequestSchema = z.object({
   admins: z.array(UUIDSchema).optional(),
   context: z.string().uuid().optional(),
   upsert: z.boolean().optional()
+});
+
+export const CreateConsultationRequestSchema = z.object({
+  patient: z.string().uuid(),
+  provider: z.string().uuid(),
+  context: z.string().max(255).optional(),
+  chiefComplaint: z.string().min(1).max(500).optional(),
+  assessment: z.string().min(1).max(2000).optional(),
+  plan: z.string().min(1).max(2000).optional(),
+  vitals: z.object({
+  temperatureCelsius: z.number().optional(),
+  systolicBp: z.number().int().optional(),
+  diastolicBp: z.number().int().optional(),
+  heartRate: z.number().int().optional(),
+  weightKg: z.number().optional(),
+  heightCm: z.number().optional(),
+  respiratoryRate: z.number().int().optional(),
+  oxygenSaturation: z.number().int().optional(),
+  notes: z.string().optional()
+}).optional(),
+  symptoms: z.object({
+  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
+  durationHours: z.number().int().optional(),
+  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
+  description: z.string().optional(),
+  associated: z.array(z.string()).optional(),
+  denies: z.array(z.string()).optional()
+}).optional(),
+  prescriptions: z.array(PrescriptionDataSchema).optional(),
+  followUp: z.object({
+  needed: z.boolean(),
+  timeframeDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  specialistReferral: z.string().optional()
+}).optional()
 });
 
 export const CreateLineItemRequestSchema = z.object({
@@ -536,126 +612,11 @@ export const CreateInvoiceRequestSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
-export const HealthcareCoreCodeableConceptSchema = z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-});
-
-export const HealthcareCoreContactPointSchema = z.object({
-  system: z.enum(["phone", "fax", "email", "pager", "url", "sms", "other"]),
-  value: z.string(),
-  use: z.enum(["home", "work", "temp", "old", "mobile"]).optional(),
-  rank: z.number().int().gte(1).optional(),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional()
-});
-
-export const LocationHoursSchema = z.object({
-  daysOfWeek: z.array(z.string()).optional(),
-  allDay: z.boolean().optional(),
-  openingTime: z.string().optional(),
-  closingTime: z.string().optional()
-});
-
-export const CreateLocationRequestSchema = z.object({
-  name: z.string(),
-  managingOrganization: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["active", "suspended", "inactive"]).optional(),
-  mode: z.enum(["instance", "kind"]).optional(),
-  aliases: z.array(z.string()).optional(),
-  description: z.string().optional(),
-  type: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
-  address: z.object({
-  street1: z.string().min(1).max(100),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50),
-  state: z.string().min(1).max(50),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}).optional(),
-  physicalType: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  position: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional(),
-  partOf: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  hoursOfOperation: z.array(LocationHoursSchema).optional()
-});
-
 export const CreateMerchantAccountRequestSchema = z.object({
   person: z.string().uuid().optional(),
   refreshUrl: z.string().url(),
   returnUrl: z.string().url(),
   metadata: z.record(z.string(), z.unknown()).optional()
-});
-
-export const OrganizationContactSchema = z.object({
-  purpose: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  name: z.object({
-  use: z.enum(["usual", "official", "temp", "nickname", "anonymous", "old", "maiden"]).optional(),
-  text: z.string().optional(),
-  family: z.string().optional(),
-  given: z.array(z.string()).optional(),
-  prefix: z.array(z.string()).optional(),
-  suffix: z.array(z.string()).optional(),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional()
-}).optional(),
-  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
-  address: z.object({
-  street1: z.string().min(1).max(100),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50),
-  state: z.string().min(1).max(50),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}).optional()
-});
-
-export const CreateOrganizationRequestSchema = z.object({
-  name: z.string(),
-  type: z.array(HealthcareCoreCodeableConceptSchema),
-  active: z.boolean().optional(),
-  aliases: z.array(z.string()).optional(),
-  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
-  address: z.array(AddressSchema).optional(),
-  partOf: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  contact: z.array(OrganizationContactSchema).optional(),
-  endpoint: z.array(z.string()).optional()
 });
 
 export const HealthcareCoreHumanNameSchema = z.object({
@@ -665,6 +626,25 @@ export const HealthcareCoreHumanNameSchema = z.object({
   given: z.array(z.string()).optional(),
   prefix: z.array(z.string()).optional(),
   suffix: z.array(z.string()).optional(),
+  period: z.object({
+  start: z.string().datetime().transform((str) => new Date(str)),
+  end: z.string().datetime().transform((str) => new Date(str)).optional()
+}).optional()
+});
+
+export const HealthcareCoreCodingSchema = z.object({
+  system: z.string().url(),
+  code: z.string(),
+  display: z.string().optional(),
+  version: z.string().optional(),
+  userSelected: z.boolean().optional()
+});
+
+export const HealthcareCoreContactPointSchema = z.object({
+  system: z.enum(["phone", "fax", "email", "pager", "url", "sms", "other"]),
+  value: z.string(),
+  use: z.enum(["home", "work", "temp", "old", "mobile"]).optional(),
+  rank: z.number().int().gte(1).optional(),
   period: z.object({
   start: z.string().datetime().transform((str) => new Date(str)),
   end: z.string().datetime().transform((str) => new Date(str)).optional()
@@ -694,6 +674,11 @@ export const HealthcareCoreAttachmentSchema = z.object({
   size: z.number().int().gte(0).optional(),
   hash: z.string().optional(),
   creation: z.string().datetime().transform((str) => new Date(str)).optional()
+});
+
+export const HealthcareCoreCodeableConceptSchema = z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
 });
 
 export const EmergencyContactSchema = z.object({
@@ -1067,6 +1052,20 @@ export const FileUploadResponseSchema = z.object({
   expiresAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const FollowUpDataSchema = z.object({
+  needed: z.boolean(),
+  timeframeDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  specialistReferral: z.string().optional()
+});
+
+export const FollowUpDataUpdateSchema = z.object({
+  needed: z.boolean().optional(),
+  timeframeDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  specialistReferral: z.string().optional()
+});
+
 export const FormConfigSchema = z.object({
   fields: z.array(FormFieldConfigSchema).optional()
 });
@@ -1141,42 +1140,52 @@ export const HealthcareAdministrativeBedManagementBedSchema = z.object({
 }).optional()
 });
 
-export const HealthcareAdministrativeBedManagementBedAssignRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-})
-});
-
-export const HealthcareAdministrativeBedManagementBedOccupancySchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  bed: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
 export const HealthcareAdministrativeBedManagementBedStatusSchema = z.enum(["available", "occupied", "housekeeping", "contaminated", "closed", "blocked"]);
 
 export const HealthcareAdministrativeBedManagementBedTypeSchema = z.enum(["icu", "general", "surgical", "maternity", "pediatric", "psychiatric", "isolation", "stepDown"]);
+
+export const HealthcareAdministrativeChargeCaptureChargeComponentSchema = z.object({
+  type: z.string(),
+  code: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}),
+  factor: z.number().optional(),
+  amount: z.object({
+  value: z.number().gte(0),
+  currency: z.string().regex(/^[A-Z]{3}$/)
+}).optional()
+});
+
+export const HealthcareAdministrativeChargeCaptureChargeDefinitionSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  description: z.string(),
+  code: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}),
+  status: z.enum(["active", "retired", "draft"]),
+  effectivePeriod: z.object({
+  start: z.string().datetime().transform((str) => new Date(str)),
+  end: z.string().datetime().transform((str) => new Date(str)).optional()
+}).optional(),
+  unitPrice: z.object({
+  value: z.number().gte(0),
+  currency: z.string().regex(/^[A-Z]{3}$/)
+}),
+  component: z.array(HealthcareAdministrativeChargeCaptureChargeComponentSchema).optional()
+});
+
+export const HealthcareAdministrativeChargeCaptureChargeDefinitionStatusSchema = z.enum(["active", "retired", "draft"]);
 
 export const HealthcareCoreAnnotationSchema = z.object({
   authorReference: z.object({
@@ -1248,63 +1257,7 @@ export const HealthcareAdministrativeChargeCaptureChargeItemSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAdministrativeChargeCaptureChargeBulkCreateRequestSchema = z.object({
-  items: z.array(HealthcareAdministrativeChargeCaptureChargeItemSchema)
-});
-
-export const HealthcareAdministrativeChargeCaptureChargeComponentSchema = z.object({
-  type: z.string(),
-  code: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  factor: z.number().optional(),
-  amount: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional()
-});
-
-export const HealthcareAdministrativeChargeCaptureChargeDefinitionSchema = z.object({
-  id: z.string().uuid(),
-  version: z.number().int(),
-  createdAt: z.string().datetime().transform((str) => new Date(str)),
-  createdBy: z.string().uuid().optional(),
-  updatedAt: z.string().datetime().transform((str) => new Date(str)),
-  updatedBy: z.string().uuid().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  description: z.string(),
-  code: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  status: z.enum(["active", "retired", "draft"]),
-  effectivePeriod: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  unitPrice: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}),
-  component: z.array(HealthcareAdministrativeChargeCaptureChargeComponentSchema).optional()
-});
-
-export const HealthcareAdministrativeChargeCaptureChargeDefinitionStatusSchema = z.enum(["active", "retired", "draft"]);
-
 export const HealthcareAdministrativeChargeCaptureChargeItemStatusSchema = z.enum(["planned", "billable", "notBillable", "aborted", "billed", "enteredInError"]);
-
-export const HealthcareAdministrativeChargeCaptureChargeVerificationRequestSchema = z.object({
-  encounterIds: z.array(z.string()).optional(),
-  dateRange: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  status: z.string().optional()
-});
 
 export const HealthcareAdministrativeClaimsClaimCareTeamSchema = z.object({
   sequence: z.number().int().gte(1),
@@ -1663,10 +1616,6 @@ export const HealthcareAdministrativeClaimsClaimResponseSchema = z.object({
 
 export const HealthcareAdministrativeClaimsClaimStatusSchema = z.enum(["active", "cancelled", "draft", "enteredInError"]);
 
-export const HealthcareAdministrativeClaimsClaimSubmitRequestSchema = z.object({
-  claimId: z.string()
-});
-
 export const HealthcareAdministrativeClaimsClaimUseSchema = z.enum(["claim", "preauthorization", "predetermination"]);
 
 export const HealthcareAdministrativeCredentialingClinicalPrivilegeSchema = z.object({
@@ -1823,12 +1772,6 @@ export const HealthcareAdministrativeFeeScheduleFeeScheduleItemSchema = z.object
   start: z.string().datetime().transform((str) => new Date(str)),
   end: z.string().datetime().transform((str) => new Date(str)).optional()
 }).optional()
-});
-
-export const HealthcareAdministrativeFeeScheduleFeeScheduleItemBulkImportRequestSchema = z.object({
-  feeScheduleId: z.string(),
-  items: z.array(HealthcareAdministrativeFeeScheduleFeeScheduleItemSchema),
-  replaceExisting: z.boolean().optional()
 });
 
 export const HealthcareAdministrativeFeeScheduleInsuranceContractRateSchema = z.object({
@@ -2040,14 +1983,6 @@ export const HealthcareAdministrativeHospitalCostAccountingGLExportSchema = z.ob
 });
 
 export const HealthcareAdministrativeHospitalCostAccountingGLExportStatusSchema = z.enum(["pending", "generated", "exported", "reconciled"]);
-
-export const HealthcareAdministrativeHospitalCostAccountingGLGenerateRequestSchema = z.object({
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}),
-  costCenters: z.array(HealthcareCoreReferenceSchema).optional()
-});
 
 export const HealthcareAdministrativeHospitalGMEAccreditationStatusSchema = z.enum(["fullAccreditation", "provisionalAccreditation", "warning", "probation", "withdrawn"]);
 
@@ -2316,22 +2251,6 @@ export const HealthcareAdministrativeHospitalHIMROIMedicalRecordRequestSchema = 
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAdministrativeHospitalHIMROIROIDenyParamsSchema = z.object({
-  reason: z.string(),
-  policyReference: z.string().optional()
-});
-
-export const HealthcareAdministrativeHospitalHIMROIROIReleaseParamsSchema = z.object({
-  releasedDate: z.string().datetime().transform((str) => new Date(str)),
-  releasedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  deliveryMethod: z.enum(["mail", "fax", "electronicPortal", "secureEmail", "inPerson"]),
-  note: z.string().optional()
-});
-
 export const HealthcareAdministrativeHospitalHIMROIROIRequestSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -2476,61 +2395,6 @@ export const HealthcareAdministrativeInsuranceCoverageSchema = z.object({
 });
 
 export const HealthcareAdministrativeInsuranceCoverageStatusSchema = z.enum(["active", "cancelled", "draft", "enteredInError"]);
-
-export const HealthcareAdministrativeInsuranceEligibilityRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  coverage: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  serviceDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  serviceType: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
-
-export const HealthcareAdministrativeInsuranceEligibilityResponseSchema = z.object({
-  status: z.string(),
-  eligible: z.boolean(),
-  coverage: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  inNetwork: z.boolean(),
-  copay: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  deductible: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  deductibleRemaining: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  outOfPocketMax: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  outOfPocketRemaining: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  notes: z.string().max(2000).optional()
-});
 
 export const HealthcareAdministrativePatientFinancialCounselingOutcomeSchema = z.enum(["paymentArranged", "financialAssistance", "selfPay", "referred"]);
 
@@ -2749,31 +2613,6 @@ export const HealthcareAdministrativePriorAuthPriorAuthDecisionSchema = z.enum([
 
 export const HealthcareAdministrativePriorAuthPriorAuthStatusSchema = z.enum(["draft", "submitted", "pending", "approved", "partiallyApproved", "denied", "cancelled", "expired"]);
 
-export const HealthcareAdministrativePriorAuthPriorAuthStatusTransitionRequestSchema = z.object({
-  status: z.enum(["draft", "submitted", "pending", "approved", "partiallyApproved", "denied", "cancelled", "expired"]),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  decision: z.enum(["approved", "partiallyApproved", "denied", "deferred"]).optional(),
-  decisionReason: z.string().max(2000).optional(),
-  authorizationNumber: z.string().max(50).optional(),
-  validPeriod: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  approvedQuantity: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional()
-});
-
-export const HealthcareAdministrativePriorAuthPriorAuthSubmitRequestSchema = z.object({
-  priorAuthorizationId: z.string()
-});
-
 export const HealthcareAdministrativePriorAuthPriorAuthorizationSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -2898,14 +2737,6 @@ export const HealthcareAdministrativeSchedulingAppointmentSchema = z.object({
 });
 
 export const HealthcareAdministrativeSchedulingAppointmentStatusSchema = z.enum(["proposed", "pending", "booked", "arrived", "fulfilled", "cancelled", "noShow", "enteredInError", "waitlist", "checkedIn"]);
-
-export const HealthcareAdministrativeSchedulingAppointmentStatusTransitionRequestSchema = z.object({
-  status: z.enum(["proposed", "pending", "booked", "arrived", "fulfilled", "cancelled", "noShow", "enteredInError", "waitlist", "checkedIn"]),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
 
 export const HealthcareAdministrativeSchedulingParticipantRequiredSchema = z.enum(["required", "optional", "informationOnly"]);
 
@@ -3045,22 +2876,7 @@ export const HealthcareAdministrativeWorkforceSchedulingShiftAssignmentSchema = 
 
 export const HealthcareAdministrativeWorkforceSchedulingShiftStatusSchema = z.enum(["scheduled", "confirmed", "inProgress", "completed", "noShow", "swapped", "cancelled"]);
 
-export const HealthcareAdministrativeWorkforceSchedulingShiftSwapRequestSchema = z.object({
-  fromShiftId: z.string(),
-  swapWithPractitioner: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  reason: z.string().max(500).optional()
-});
-
 export const HealthcareAdministrativeWorkforceSchedulingShiftTypeSchema = z.enum(["day", "evening", "night", "oncall", "split"]);
-
-export const HealthcareAdministrativeWorkforceSchedulingTimeOffDecisionRequestSchema = z.object({
-  decision: z.enum(["pending", "approved", "denied", "cancelled"]),
-  reason: z.string().max(500).optional()
-});
 
 export const HealthcareAdministrativeWorkforceSchedulingTimeOffRequestSchema = z.object({
   id: z.string().uuid(),
@@ -3175,16 +2991,6 @@ export const HealthcareAnalyticsAIMetadataAIOutputMetadataSchema = z.object({
   disclaimers: z.array(z.string()).optional()
 });
 
-export const HealthcareAnalyticsAIMetadataAIOutputReviewRequestSchema = z.object({
-  reviewOutcome: z.enum(["accepted", "modified", "rejected", "pending"]),
-  reviewedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  reviewNote: z.string().optional()
-});
-
 export const HealthcareAnalyticsAIMetadataAIOutputTypeSchema = z.enum(["prediction", "classification", "recommendation", "summary", "extraction", "translation", "riskScore", "other"]);
 
 export const HealthcareAnalyticsAIMetadataAIRegulatoryStatusSchema = z.enum(["researchOnly", "clinicalDecisionSupport", "fdaCleared", "fdaApproved", "ceMarked", "notRegulated"]);
@@ -3225,17 +3031,6 @@ export const HealthcareAnalyticsCohortsCohortDefinitionSchema = z.object({
   display: z.string().optional()
 }).optional(),
   purpose: z.string().optional()
-});
-
-export const HealthcareAnalyticsCohortsCohortEvaluateRequestSchema = z.object({
-  includeSubjectIds: z.boolean().optional(),
-  maxResults: z.number().int().optional()
-});
-
-export const HealthcareAnalyticsCohortsCohortEvaluateResponseSchema = z.object({
-  count: z.number().int(),
-  subjectIds: z.array(z.string()).optional(),
-  evaluatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
 export const HealthcareAnalyticsCohortsCohortStatusSchema = z.enum(["draft", "active", "retired"]);
@@ -3329,24 +3124,6 @@ export const HealthcareAnalyticsDeIdentificationDeIdRuleSchema = z.object({
   parameters: z.record(z.string(), z.unknown()).optional()
 });
 
-export const HealthcareAnalyticsDeIdentificationDeIdentificationExecuteRequestSchema = z.object({
-  profileId: z.string(),
-  resourceType: z.string(),
-  resource: z.record(z.string(), z.unknown()),
-  persistMappings: z.boolean().optional()
-});
-
-export const HealthcareAnalyticsDeIdentificationDeIdentificationExecuteResponseSchema = z.object({
-  resource: z.record(z.string(), z.unknown()),
-  pseudonymizationMapIds: z.array(z.string()).optional(),
-  summary: z.object({
-  fieldsProcessed: z.number().int(),
-  fieldsRemoved: z.number().int(),
-  fieldsTransformed: z.number().int(),
-  mappingsCreated: z.number().int()
-})
-});
-
 export const HealthcareAnalyticsDeIdentificationDeIdentificationProfileSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -3365,13 +3142,6 @@ export const HealthcareAnalyticsDeIdentificationDeIdentificationProfileSchema = 
   rules: z.array(HealthcareAnalyticsDeIdentificationDeIdRuleSchema),
   retainedElements: z.array(z.string()).optional(),
   removedElements: z.array(z.string()).optional()
-});
-
-export const HealthcareAnalyticsDeIdentificationDeIdentificationSummarySchema = z.object({
-  fieldsProcessed: z.number().int(),
-  fieldsRemoved: z.number().int(),
-  fieldsTransformed: z.number().int(),
-  mappingsCreated: z.number().int()
 });
 
 export const HealthcareAnalyticsDeIdentificationProfileStatusSchema = z.enum(["draft", "active", "retired"]);
@@ -3395,15 +3165,6 @@ export const HealthcareAnalyticsDeIdentificationPseudonymizationMapSchema = z.ob
   sourceIdentifier: z.string(),
   pseudonym: z.string(),
   expiresAt: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareAnalyticsReportingCancelReportRunRequestSchema = z.object({
-  reason: z.string().max(500).optional()
-});
-
-export const HealthcareAnalyticsReportingCreateReportRunRequestSchema = z.object({
-  definitionId: z.string(),
-  parameters: z.record(z.string(), z.unknown()).optional()
 });
 
 export const HealthcareAnalyticsReportingDashboardWidgetSchema = z.object({
@@ -3772,11 +3533,6 @@ export const HealthcareAncillaryCosmeticDentalCosmeticCaseSchema = z.object({
 
 export const HealthcareAncillaryCosmeticDentalCosmeticCaseStatusSchema = z.enum(["consultation", "designApproved", "inTreatment", "completed", "cancelled"]);
 
-export const HealthcareAncillaryCosmeticDentalCosmeticCaseStatusTransitionRequestSchema = z.object({
-  status: z.enum(["consultation", "designApproved", "inTreatment", "completed", "cancelled"]),
-  note: z.string().optional()
-});
-
 export const HealthcareAncillaryCosmeticDentalPhotoTypeSchema = z.enum(["before", "during", "after"]);
 
 export const HealthcareAncillaryCosmeticDentalSmileDesignSchema = z.object({
@@ -3955,56 +3711,6 @@ export const HealthcareAncillaryDentalDentalTreatmentPlanSchema = z.object({
   notes: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryDentalDentalTreatmentPlanCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["draft", "proposed", "accepted", "inProgress", "completed", "cancelled"]),
-  description: z.string().optional(),
-  items: z.array(HealthcareAncillaryDentalDentalTreatmentPlanItemSchema),
-  totalEstimate: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  insuranceEstimate: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  patientEstimate: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  notes: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryDentalTreatmentPlanStatusSchema = z.enum(["draft", "proposed", "accepted", "inProgress", "completed", "cancelled"]);
-
-export const HealthcareAncillaryDentalDentalTreatmentPlanSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  status: HealthcareAncillaryDentalTreatmentPlanStatusSchema.optional(),
-  providerId: z.string().optional()
-});
-
 export const HealthcareAncillaryDentalToothConditionSchema = z.object({
   code: z.object({
   coding: z.array(HealthcareCoreCodingSchema),
@@ -4069,37 +3775,11 @@ export const HealthcareAncillaryDentalOdontogramSchema = z.object({
   teeth: z.array(HealthcareAncillaryDentalToothRecordSchema)
 });
 
-export const HealthcareAncillaryDentalOdontogramCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  capturedAt: z.string().datetime().transform((str) => new Date(str)),
-  capturedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  teeth: z.array(HealthcareAncillaryDentalToothRecordSchema),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryDentalOdontogramSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
 export const HealthcareAncillaryDentalToothNotationSystemSchema = z.enum(["fdi", "universal", "palmer"]);
 
 export const HealthcareAncillaryDentalTreatmentItemStatusSchema = z.enum(["planned", "scheduled", "inProgress", "completed", "cancelled"]);
+
+export const HealthcareAncillaryDentalTreatmentPlanStatusSchema = z.enum(["draft", "proposed", "accepted", "inProgress", "completed", "cancelled"]);
 
 export const HealthcareAncillaryDentalLabDentalLabCaseSchema = z.object({
   id: z.string().uuid(),
@@ -4151,66 +3831,7 @@ export const HealthcareAncillaryDentalLabDentalLabCaseSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryDentalLabDentalLabCaseCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  labProvider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  treatmentPlanItem: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  type: z.enum(["crown", "bridge", "denture", "partial", "veneer", "implantAbutment", "nightGuard", "retainer", "splint", "other"]),
-  status: z.enum(["draft", "sent", "inFabrication", "shippedToClinic", "received", "delivered", "returned"]),
-  shade: z.string().optional(),
-  material: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  units: z.number().int(),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
-  sentDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  receivedDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  deliveredDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  cost: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryDentalLabLabCaseTypeSchema = z.enum(["crown", "bridge", "denture", "partial", "veneer", "implantAbutment", "nightGuard", "retainer", "splint", "other"]);
-
 export const HealthcareAncillaryDentalLabDentalLabCaseStatusSchema = z.enum(["draft", "sent", "inFabrication", "shippedToClinic", "received", "delivered", "returned"]);
-
-export const HealthcareAncillaryDentalLabDentalLabCaseSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  providerId: z.string().optional(),
-  labProviderId: z.string().optional(),
-  type: HealthcareAncillaryDentalLabLabCaseTypeSchema.optional(),
-  status: HealthcareAncillaryDentalLabDentalLabCaseStatusSchema.optional(),
-  dueDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  dueDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
 
 export const HealthcareAncillaryDentalLabDentalLabProviderSchema = z.object({
   id: z.string().uuid(),
@@ -4243,45 +3864,6 @@ export const HealthcareAncillaryDentalLabDentalLabProviderSchema = z.object({
   avgTurnaroundDays: z.number().int().optional()
 });
 
-export const HealthcareAncillaryDentalLabDentalLabProviderCreateRequestSchema = z.object({
-  name: z.string(),
-  address: z.object({
-  street1: z.string().min(1).max(100),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50),
-  state: z.string().min(1).max(50),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90),
-  longitude: z.number().gte(-180).lte(180),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}).optional(),
-  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
-  specialties: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  active: z.boolean(),
-  avgTurnaroundDays: z.number().int().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryDentalLabDentalLabProviderSearchParamsSchema = z.object({
-  name: z.string().optional(),
-  active: z.boolean().optional(),
-  specialty: z.string().optional()
-});
-
-export const HealthcareAncillaryDentalLabLabCaseReceiveRequestSchema = z.object({
-  receivedDate: z.string().datetime().transform((str) => new Date(str)),
-  note: z.string().optional()
-});
-
 export const HealthcareAncillaryDentalLabLabCaseReturnSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -4308,28 +3890,7 @@ export const HealthcareAncillaryDentalLabLabCaseReturnSchema = z.object({
   remakeRequired: z.boolean()
 });
 
-export const HealthcareAncillaryDentalLabLabCaseReturnCreateRequestSchema = z.object({
-  labCase: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  returnedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  returnedDate: z.string().datetime().transform((str) => new Date(str)),
-  reason: z.string(),
-  remakeRequired: z.boolean(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
+export const HealthcareAncillaryDentalLabLabCaseTypeSchema = z.enum(["crown", "bridge", "denture", "partial", "veneer", "implantAbutment", "nightGuard", "retainer", "splint", "other"]);
 
 export const HealthcareAncillaryDentalLabLabCommunicationNoteSchema = z.object({
   id: z.string().uuid(),
@@ -4356,30 +3917,6 @@ export const HealthcareAncillaryDentalLabLabCommunicationNoteSchema = z.object({
   sentAt: z.string().datetime().transform((str) => new Date(str)),
   readAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   attachments: z.array(HealthcareCoreReferenceSchema).optional()
-});
-
-export const HealthcareAncillaryDentalLabLabCommunicationNoteCreateRequestSchema = z.object({
-  labCase: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  author: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  message: z.string(),
-  sentAt: z.string().datetime().transform((str) => new Date(str)),
-  readAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  attachments: z.array(HealthcareCoreReferenceSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryEndodonticCanalRecordSchema = z.object({
@@ -4438,47 +3975,7 @@ export const HealthcareAncillaryEndodonticEndoRecordSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryEndodonticEndoRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  toothNumber: z.number().int(),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["initiated", "accessOpened", "canalsShaped", "obturated", "completed", "referredOut"]),
-  startDate: z.string().datetime().transform((str) => new Date(str)),
-  completionDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  canals: z.array(HealthcareAncillaryEndodonticCanalRecordSchema),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryEndodonticEndoRecordStatusSchema = z.enum(["initiated", "accessOpened", "canalsShaped", "obturated", "completed", "referredOut"]);
-
-export const HealthcareAncillaryEndodonticEndoRecordSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  providerId: z.string().optional(),
-  status: HealthcareAncillaryEndodonticEndoRecordStatusSchema.optional(),
-  toothNumber: z.number().int().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryEndodonticEndoRetreatmentSchema = z.object({
   id: z.string().uuid(),
@@ -4510,46 +4007,6 @@ export const HealthcareAncillaryEndodonticEndoRetreatmentSchema = z.object({
   startDate: z.string().datetime().transform((str) => new Date(str))
 });
 
-export const HealthcareAncillaryEndodonticEndoRetreatmentCreateRequestSchema = z.object({
-  originalEndoRecord: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  reason: z.string(),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  startDate: z.string().datetime().transform((str) => new Date(str)),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryEndodonticEndoRetreatmentSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  providerId: z.string().optional(),
-  originalEndoRecordId: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareAncillaryEndodonticEndoStatusTransitionRequestSchema = z.object({
-  status: HealthcareAncillaryEndodonticEndoRecordStatusSchema,
-  note: z.string().optional()
-});
-
 export const HealthcareAncillaryEndodonticIrrigationRecordSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -4579,34 +4036,6 @@ export const HealthcareAncillaryEndodonticIrrigationRecordSchema = z.object({
 }).optional(),
   technique: z.string().optional(),
   note: z.string().optional()
-});
-
-export const HealthcareAncillaryEndodonticIrrigationRecordCreateRequestSchema = z.object({
-  endoRecord: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  irrigant: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  concentration: z.string().optional(),
-  volume: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  technique: z.string().optional(),
-  note: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryEndodonticObturationMethodSchema = z.enum(["lateralCondensation", "warmVertical", "singleCone", "carrierBased"]);
@@ -4665,58 +4094,7 @@ export const HealthcareAncillaryLaboratoryDiagnosticReportSchema = z.object({
   presentedForm: z.array(HealthcareCoreAttachmentSchema).optional()
 });
 
-export const HealthcareAncillaryLaboratoryDiagnosticReportCreateRequestSchema = z.object({
-  basedOn: z.array(HealthcareCoreReferenceSchema).optional(),
-  status: z.enum(["registered", "partial", "preliminary", "final", "amended", "corrected", "appended", "cancelled", "enteredInError", "unknown"]),
-  category: z.array(HealthcareCoreCodeableConceptSchema),
-  code: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  effectiveDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  effectivePeriod: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  issued: z.string().datetime().transform((str) => new Date(str)).optional(),
-  performer: z.array(HealthcareCoreReferenceSchema).optional(),
-  resultsInterpreter: z.array(HealthcareCoreReferenceSchema).optional(),
-  specimen: z.array(HealthcareCoreReferenceSchema).optional(),
-  result: z.array(HealthcareCoreReferenceSchema).optional(),
-  imagingStudy: z.array(HealthcareCoreReferenceSchema).optional(),
-  media: z.array(HealthcareAncillaryLaboratoryDiagnosticReportMediaSchema).optional(),
-  conclusion: z.string().optional(),
-  conclusionCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  presentedForm: z.array(HealthcareCoreAttachmentSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryLaboratoryDiagnosticReportStatusSchema = z.enum(["registered", "partial", "preliminary", "final", "amended", "corrected", "appended", "cancelled", "enteredInError", "unknown"]);
-
-export const HealthcareAncillaryLaboratoryDiagnosticReportSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  category: z.string().optional(),
-  code: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: HealthcareAncillaryLaboratoryDiagnosticReportStatusSchema.optional()
-});
 
 export const HealthcareAncillaryLaboratoryLabResultVerificationSchema = z.object({
   id: z.string().uuid(),
@@ -4747,34 +4125,6 @@ export const HealthcareAncillaryLaboratoryLabResultVerificationSchema = z.object
 }).optional(),
   comments: z.string().optional(),
   previousStatus: z.enum(["unverified", "preliminaryReview", "verified", "amended", "corrected"]).optional()
-});
-
-export const HealthcareAncillaryLaboratoryLabResultVerificationRequestSchema = z.object({
-  report: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["unverified", "preliminaryReview", "verified", "amended", "corrected"]),
-  verifiedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  verifiedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  verificationMethod: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  comments: z.string().optional(),
-  previousStatus: z.enum(["unverified", "preliminaryReview", "verified", "amended", "corrected"]).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryLaboratoryResultPanelSchema = z.object({
@@ -4918,69 +4268,7 @@ export const HealthcareAncillaryLaboratorySpecimenCollectionSchema = z.object({
 }).optional()
 });
 
-export const HealthcareAncillaryLaboratorySpecimenCreateRequestSchema = z.object({
-  accessionIdentifier: z.string().optional(),
-  status: z.enum(["available", "unavailable", "unsatisfactory", "enteredInError"]).optional(),
-  type: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  receivedTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  parent: z.array(HealthcareCoreReferenceSchema).optional(),
-  request: z.array(HealthcareCoreReferenceSchema).optional(),
-  collection: z.object({
-  collector: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  collectedDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  quantity: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  method: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  bodySite: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  fastingStatus: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-}).optional(),
-  processing: z.array(HealthcareAncillaryLaboratorySpecimenProcessingSchema).optional(),
-  container: z.array(HealthcareAncillaryLaboratorySpecimenContainerSchema).optional(),
-  condition: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryLaboratorySpecimenStatusSchema = z.enum(["available", "unavailable", "unsatisfactory", "enteredInError"]);
-
-export const HealthcareAncillaryLaboratorySpecimenSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  type: z.string().optional(),
-  status: HealthcareAncillaryLaboratorySpecimenStatusSchema.optional(),
-  receivedFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  receivedTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryLaboratoryVerificationStatusSchema = z.enum(["unverified", "preliminaryReview", "verified", "amended", "corrected"]);
 
@@ -5092,99 +4380,6 @@ export const HealthcareAncillaryMedicationAdministrationsMedicationAdministratio
   eventHistory: z.array(HealthcareCoreReferenceSchema).optional()
 });
 
-export const HealthcareAncillaryMedicationAdministrationsMedicationAdministrationCreateRequestSchema = z.object({
-  status: z.enum(["inProgress", "notDone", "onHold", "completed", "enteredInError", "stopped", "unknown"]),
-  statusReason: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  category: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  medicationCode: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  medicationReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  supportingInformation: z.array(HealthcareCoreReferenceSchema).optional(),
-  effectiveDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  effectivePeriod: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  performer: z.array(HealthcareAncillaryMedicationAdministrationsMedicationAdministrationPerformerSchema).optional(),
-  reasonCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  reasonReference: z.array(HealthcareCoreReferenceSchema).optional(),
-  request: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  device: z.array(HealthcareCoreReferenceSchema).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  dosage: z.object({
-  text: z.string().optional(),
-  site: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  route: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  method: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  dose: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  rateRatio: z.object({
-  numerator: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  denominator: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional()
-}).optional(),
-  rateQuantity: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional()
-}).optional(),
-  eventHistory: z.array(HealthcareCoreReferenceSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryMedicationAdministrationsMedicationAdministrationDosageSchema = z.object({
   text: z.string().optional(),
   site: z.object({
@@ -5227,15 +4422,6 @@ export const HealthcareAncillaryMedicationAdministrationsMedicationAdministratio
 }).optional()
 });
 
-export const HealthcareAncillaryMedicationAdministrationsMedicationAdministrationSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  medication: z.string().optional(),
-  status: z.enum(["inProgress", "notDone", "onHold", "completed", "enteredInError", "stopped", "unknown"]).optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  performer: z.string().optional()
-});
-
 export const HealthcareAncillaryMedicationsFormularyItemSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -5272,48 +4458,6 @@ export const HealthcareAncillaryMedicationsFormularyItemSchema = z.object({
   stepTherapyRequired: z.boolean().optional(),
   genericAvailable: z.boolean().optional(),
   notes: z.string().optional()
-});
-
-export const HealthcareAncillaryMedicationsFormularyItemCreateRequestSchema = z.object({
-  medication: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["active", "inactive", "enteredInError"]),
-  organization: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  tier: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  priorAuthRequired: z.boolean().optional(),
-  quantityLimit: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  stepTherapyRequired: z.boolean().optional(),
-  genericAvailable: z.boolean().optional(),
-  notes: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryMedicationsFormularyItemSearchParamsSchema = z.object({
-  medication: z.string().optional(),
-  organization: z.string().optional(),
-  status: z.enum(["active", "inactive", "enteredInError"]).optional(),
-  tier: z.string().optional()
 });
 
 export const HealthcareAncillaryMedicationsFormularyItemStatusSchema = z.enum(["active", "inactive", "enteredInError"]);
@@ -5394,56 +4538,6 @@ export const HealthcareAncillaryMedicationsMedicationSchema = z.object({
 export const HealthcareAncillaryMedicationsMedicationBatchSchema = z.object({
   lotNumber: z.string().optional(),
   expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
-
-export const HealthcareAncillaryMedicationsMedicationCreateRequestSchema = z.object({
-  code: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  status: z.enum(["active", "inactive", "enteredInError"]).optional(),
-  manufacturer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  form: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  amount: z.object({
-  numerator: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  denominator: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional()
-}).optional(),
-  ingredient: z.array(HealthcareAncillaryMedicationsMedicationIngredientSchema).optional(),
-  batch: z.object({
-  lotNumber: z.string().optional(),
-  expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-}).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryMedicationsMedicationSearchParamsSchema = z.object({
-  code: z.string().optional(),
-  form: z.string().optional(),
-  manufacturer: z.string().optional(),
-  status: z.enum(["active", "inactive", "enteredInError"]).optional()
 });
 
 export const HealthcareAncillaryMedicationsMedicationStatusSchema = z.enum(["active", "inactive", "enteredInError"]);
@@ -5623,10 +4717,6 @@ export const HealthcareAncillaryOralSurgeryDentalPostOpInstructionSchema = z.obj
   signedByPatient: z.boolean().optional()
 });
 
-export const HealthcareAncillaryOrthodonticAdvanceTrayRequestSchema = z.object({
-  notes: z.string().optional()
-});
-
 export const HealthcareAncillaryOrthodonticAlignerTraySchema = z.object({
   trayNumber: z.number().int(),
   status: z.enum(["pending", "active", "completed", "skipped"]),
@@ -5655,24 +4745,6 @@ export const HealthcareAncillaryOrthodonticAlignerSeriesSchema = z.object({
   totalTrays: z.number().int(),
   currentTray: z.number().int(),
   trays: z.array(HealthcareAncillaryOrthodonticAlignerTraySchema)
-});
-
-export const HealthcareAncillaryOrthodonticAlignerSeriesCreateRequestSchema = z.object({
-  orthoCase: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  totalTrays: z.number().int(),
-  currentTray: z.number().int(),
-  trays: z.array(HealthcareAncillaryOrthodonticAlignerTraySchema),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryOrthodonticApplianceTypeSchema = z.enum(["fixedBraces", "clearAligners", "functionalAppliance", "retainer", "other"]);
@@ -5710,50 +4782,7 @@ export const HealthcareAncillaryOrthodonticOrthoCaseSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryOrthodonticOrthoCaseCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  status: z.enum(["assessment", "activeTreatment", "retention", "completed", "discontinued"]),
-  startDate: z.string().datetime().transform((str) => new Date(str)),
-  estimatedEndDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  actualEndDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  diagnosis: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  treatmentObjectives: z.array(z.string()).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryOrthodonticOrthoCaseStatusSchema = z.enum(["assessment", "activeTreatment", "retention", "completed", "discontinued"]);
-
-export const HealthcareAncillaryOrthodonticOrthoCaseSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  providerId: z.string().optional(),
-  status: HealthcareAncillaryOrthodonticOrthoCaseStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareAncillaryOrthodonticOrthoCaseStatusTransitionRequestSchema = z.object({
-  status: HealthcareAncillaryOrthodonticOrthoCaseStatusSchema,
-  reason: z.string().optional()
-});
 
 export const HealthcareAncillaryOrthodonticOrthoProgressRecordSchema = z.object({
   id: z.string().uuid(),
@@ -5788,36 +4817,6 @@ export const HealthcareAncillaryOrthodonticOrthoProgressRecordSchema = z.object(
   nextVisitPlan: z.string().optional()
 });
 
-export const HealthcareAncillaryOrthodonticOrthoProgressRecordCreateRequestSchema = z.object({
-  orthoCase: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  date: z.string().datetime().transform((str) => new Date(str)),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  findings: z.string(),
-  photosReference: z.array(HealthcareCoreReferenceSchema).optional(),
-  adjustmentsMade: z.string().optional(),
-  nextVisitPlan: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryOrthodonticOrthoStageSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -5840,27 +4839,6 @@ export const HealthcareAncillaryOrthodonticOrthoStageSchema = z.object({
   endDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   description: z.string().optional(),
   applianceType: z.enum(["fixedBraces", "clearAligners", "functionalAppliance", "retainer", "other"]).optional()
-});
-
-export const HealthcareAncillaryOrthodonticOrthoStageCreateRequestSchema = z.object({
-  orthoCase: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  name: z.string(),
-  sequence: z.number().int(),
-  startDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  endDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  description: z.string().optional(),
-  applianceType: z.enum(["fixedBraces", "clearAligners", "functionalAppliance", "retainer", "other"]).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryOrthodonticTrayStatusSchema = z.enum(["pending", "active", "completed", "skipped"]);
@@ -5898,45 +4876,7 @@ export const HealthcareAncillaryPediatricDentalBehaviorAssessmentSchema = z.obje
   managementTechniques: z.array(z.string()).optional()
 });
 
-export const HealthcareAncillaryPediatricDentalBehaviorAssessmentCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  scale: z.enum(["frankl", "adpbrs"]),
-  score: z.number().int(),
-  description: z.string().optional(),
-  assessedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  assessedAt: z.string().datetime().transform((str) => new Date(str)),
-  managementTechniques: z.array(z.string()).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPediatricDentalBehaviorScaleSchema = z.enum(["frankl", "adpbrs"]);
-
-export const HealthcareAncillaryPediatricDentalBehaviorAssessmentSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  encounterId: z.string().optional(),
-  scale: HealthcareAncillaryPediatricDentalBehaviorScaleSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryPediatricDentalEruptionRecordSchema = z.object({
   id: z.string().uuid(),
@@ -5965,30 +4905,6 @@ export const HealthcareAncillaryPediatricDentalEruptionRecordSchema = z.object({
   notes: z.string().optional()
 });
 
-export const HealthcareAncillaryPediatricDentalEruptionRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  toothNumber: z.number().int(),
-  notation: z.enum(["fdi", "universal", "palmer"]),
-  eruptionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
-  recordedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  notes: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPediatricDentalExfoliationRecordSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -6013,29 +4929,6 @@ export const HealthcareAncillaryPediatricDentalExfoliationRecordSchema = z.objec
   id: z.string().uuid(),
   display: z.string().optional()
 })
-});
-
-export const HealthcareAncillaryPediatricDentalExfoliationRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  toothNumber: z.number().int(),
-  notation: z.enum(["fdi", "universal", "palmer"]),
-  exfoliationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
-  recordedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryPediatricDentalFluorideApplicationSchema = z.object({
@@ -6071,45 +4964,7 @@ export const HealthcareAncillaryPediatricDentalFluorideApplicationSchema = z.obj
   note: z.string().optional()
 });
 
-export const HealthcareAncillaryPediatricDentalFluorideApplicationCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  product: z.string(),
-  concentration: z.string().optional(),
-  method: z.enum(["varnish", "tray", "rinse", "foam"]),
-  performedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  performedAt: z.string().datetime().transform((str) => new Date(str)),
-  note: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPediatricDentalFluorideMethodSchema = z.enum(["varnish", "tray", "rinse", "foam"]);
-
-export const HealthcareAncillaryPediatricDentalFluorideApplicationSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  encounterId: z.string().optional(),
-  method: HealthcareAncillaryPediatricDentalFluorideMethodSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryPediatricDentalSealantRecordSchema = z.object({
   id: z.string().uuid(),
@@ -6144,45 +4999,7 @@ export const HealthcareAncillaryPediatricDentalSealantRecordSchema = z.object({
   material: z.string().optional()
 });
 
-export const HealthcareAncillaryPediatricDentalSealantRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  toothNumber: z.number().int(),
-  surface: z.string(),
-  status: z.enum(["placed", "intact", "repaired", "lost"]),
-  placedDate: z.string().datetime().transform((str) => new Date(str)),
-  placedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  material: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPediatricDentalSealantStatusSchema = z.enum(["placed", "intact", "repaired", "lost"]);
-
-export const HealthcareAncillaryPediatricDentalSealantSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  toothNumber: z.number().int().optional(),
-  status: HealthcareAncillaryPediatricDentalSealantStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryPediatricDentalSpaceMaintainerSchema = z.object({
   id: z.string().uuid(),
@@ -6217,46 +5034,9 @@ export const HealthcareAncillaryPediatricDentalSpaceMaintainerSchema = z.object(
   removedDate: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
-export const HealthcareAncillaryPediatricDentalSpaceMaintainerCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  type: z.enum(["bandAndLoop", "distalShoe", "lingual", "nance", "transpalatal"]),
-  extractedTooth: z.number().int(),
-  status: z.enum(["placed", "active", "removed"]),
-  placedDate: z.string().datetime().transform((str) => new Date(str)),
-  placedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  removedDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryPediatricDentalSpaceMaintainerTypeSchema = z.enum(["bandAndLoop", "distalShoe", "lingual", "nance", "transpalatal"]);
-
 export const HealthcareAncillaryPediatricDentalSpaceMaintainerStatusSchema = z.enum(["placed", "active", "removed"]);
 
-export const HealthcareAncillaryPediatricDentalSpaceMaintainerSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  type: HealthcareAncillaryPediatricDentalSpaceMaintainerTypeSchema.optional(),
-  status: HealthcareAncillaryPediatricDentalSpaceMaintainerStatusSchema.optional(),
-  extractedTooth: z.number().int().optional()
-});
+export const HealthcareAncillaryPediatricDentalSpaceMaintainerTypeSchema = z.enum(["bandAndLoop", "distalShoe", "lingual", "nance", "transpalatal"]);
 
 export const HealthcareAncillaryPediatricDentalToothNotationSystemSchema = z.enum(["fdi", "universal", "palmer"]);
 
@@ -6288,29 +5068,6 @@ export const HealthcareAncillaryPeriodontalFurcationRecordSchema = z.object({
   location: z.string().optional()
 });
 
-export const HealthcareAncillaryPeriodontalFurcationRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  perioExam: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  toothNumber: z.number().int(),
-  grade: z.enum(["gradeI", "gradeII", "gradeIII"]),
-  location: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPeriodontalMobilityGradeSchema = z.enum(["grade0", "gradeI", "gradeII", "gradeIII"]);
 
 export const HealthcareAncillaryPeriodontalMobilityRecordSchema = z.object({
@@ -6336,28 +5093,6 @@ export const HealthcareAncillaryPeriodontalMobilityRecordSchema = z.object({
 }).optional(),
   toothNumber: z.number().int(),
   grade: z.enum(["grade0", "gradeI", "gradeII", "gradeIII"])
-});
-
-export const HealthcareAncillaryPeriodontalMobilityRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  perioExam: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  toothNumber: z.number().int(),
-  grade: z.enum(["grade0", "gradeI", "gradeII", "gradeIII"]),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryPeriodontalPerioSiteSchema = z.object({
@@ -6404,50 +5139,7 @@ export const HealthcareAncillaryPeriodontalPerioExamSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryPeriodontalPerioExamCompareParamsSchema = z.object({
-  examIdA: z.string(),
-  examIdB: z.string()
-});
-
-export const HealthcareAncillaryPeriodontalPerioExamCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  performer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  examDate: z.string().datetime().transform((str) => new Date(str)),
-  status: z.enum(["inProgress", "completed", "locked"]),
-  sites: z.array(HealthcareAncillaryPeriodontalPerioSiteSchema),
-  summary: z.string().optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPeriodontalPerioExamStatusSchema = z.enum(["inProgress", "completed", "locked"]);
-
-export const HealthcareAncillaryPeriodontalPerioExamSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  performerId: z.string().optional(),
-  status: HealthcareAncillaryPeriodontalPerioExamStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryPeriodontalPerioSiteLocationSchema = z.enum(["mesialBuccal", "buccal", "distalBuccal", "mesialLingual", "lingual", "distalLingual"]);
 
@@ -6494,34 +5186,6 @@ export const HealthcareAncillaryPharmacyDispenseSubstitutionSchema = z.object({
   reason: z.array(HealthcareCoreCodeableConceptSchema).optional(),
   responsibleParty: z.array(HealthcareCoreReferenceSchema).optional()
 });
-
-export const HealthcareAncillaryPharmacyDrugInteractionSchema = z.object({
-  drugA: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  drugB: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  severity: z.enum(["contraindicated", "major", "moderate", "minor", "unknown"]),
-  description: z.string(),
-  clinicalSignificance: z.string(),
-  managementRecommendation: z.string().optional()
-});
-
-export const HealthcareAncillaryPharmacyDrugInteractionCheckSchema = z.object({
-  medications: z.array(HealthcareCoreCodeableConceptSchema),
-  interactions: z.array(HealthcareAncillaryPharmacyDrugInteractionSchema),
-  checkedAt: z.string().datetime().transform((str) => new Date(str)),
-  checkedBy: z.string()
-});
-
-export const HealthcareAncillaryPharmacyDrugInteractionCheckRequestSchema = z.object({
-  medications: z.array(HealthcareCoreCodeableConceptSchema)
-});
-
-export const HealthcareAncillaryPharmacyInteractionSeveritySchema = z.enum(["contraindicated", "major", "moderate", "minor", "unknown"]);
 
 export const HealthcareAncillaryPharmacyMedicationDispensePerformerSchema = z.object({
   function: z.object({
@@ -6721,101 +5385,7 @@ export const HealthcareAncillaryPharmacyMedicationDispenseSchema = z.object({
 }).optional()
 });
 
-export const HealthcareAncillaryPharmacyMedicationDispenseCreateRequestSchema = z.object({
-  status: z.enum(["preparation", "inProgress", "cancelled", "onHold", "completed", "enteredInError", "stopped", "declined", "unknown"]),
-  statusReason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  category: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  medicationCode: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  medicationReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  performer: z.array(HealthcareAncillaryPharmacyMedicationDispensePerformerSchema).optional(),
-  location: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  authorizingPrescription: z.array(HealthcareCoreReferenceSchema).optional(),
-  type: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  quantity: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  daysSupply: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  whenPrepared: z.string().datetime().transform((str) => new Date(str)).optional(),
-  whenHandedOver: z.string().datetime().transform((str) => new Date(str)).optional(),
-  destination: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  receiver: z.array(HealthcareCoreReferenceSchema).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  dosageInstruction: z.array(HealthcareCoreDosageSchema).optional(),
-  substitution: z.object({
-  wasSubstituted: z.boolean(),
-  type: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  reason: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  responsibleParty: z.array(HealthcareCoreReferenceSchema).optional()
-}).optional(),
-  lotNumber: z.string().optional(),
-  expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  copayAmount: z.object({
-  value: z.number().gte(0),
-  currency: z.string().regex(/^[A-Z]{3}$/)
-}).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryPharmacyMedicationDispenseStatusSchema = z.enum(["preparation", "inProgress", "cancelled", "onHold", "completed", "enteredInError", "stopped", "declined", "unknown"]);
-
-export const HealthcareAncillaryPharmacyMedicationDispenseSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  medication: z.string().optional(),
-  status: HealthcareAncillaryPharmacyMedicationDispenseStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareAncillaryPharmacyReconciliationItemSchema = z.object({
   medication: z.object({
@@ -6865,43 +5435,6 @@ export const HealthcareAncillaryPharmacyMedicationReconciliationSchema = z.objec
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryPharmacyMedicationReconciliationCreateRequestSchema = z.object({
-  status: z.enum(["inProgress", "completed", "cancelled"]),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  performer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  performedAt: z.string().datetime().transform((str) => new Date(str)),
-  type: z.enum(["admission", "discharge", "transfer"]),
-  items: z.array(HealthcareAncillaryPharmacyReconciliationItemSchema),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryPharmacyMedicationReconciliationSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  encounterId: z.string().optional(),
-  type: z.enum(["admission", "discharge", "transfer"]).optional(),
-  status: z.enum(["inProgress", "completed", "cancelled"]).optional()
-});
-
 export const HealthcareAncillaryPharmacyReconciliationActionSchema = z.enum(["continue", "discontinue", "modify", "add", "hold"]);
 
 export const HealthcareAncillaryPharmacyReconciliationMedStatusSchema = z.enum(["active", "discontinued", "changed", "noChange", "new"]);
@@ -6936,29 +5469,6 @@ export const HealthcareAncillaryProsthodonticImpressionSchema = z.object({
 })
 });
 
-export const HealthcareAncillaryProsthodonticImpressionCreateRequestSchema = z.object({
-  prosthoRecord: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  type: z.enum(["conventional", "digital", "alginate", "pvs", "polyether"]),
-  material: z.string().optional(),
-  date: z.string().datetime().transform((str) => new Date(str)),
-  performer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryProsthodonticImpressionTypeSchema = z.enum(["conventional", "digital", "alginate", "pvs", "polyether"]);
 
 export const HealthcareAncillaryProsthodonticLabCaseLinkSchema = z.object({
@@ -6989,40 +5499,7 @@ export const HealthcareAncillaryProsthodonticLabCaseLinkSchema = z.object({
   status: z.enum(["pending", "inFabrication", "shipped", "received", "returned"])
 });
 
-export const HealthcareAncillaryProsthodonticLabCaseLinkCreateRequestSchema = z.object({
-  prosthoRecord: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  labCaseId: z.string(),
-  labProvider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  sentDate: z.string().datetime().transform((str) => new Date(str)),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  receivedDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["pending", "inFabrication", "shipped", "received", "returned"]),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryProsthodonticLabCaseLinkStatusSchema = z.enum(["pending", "inFabrication", "shipped", "received", "returned"]);
-
-export const HealthcareAncillaryProsthodonticLabCaseLinkSearchParamsSchema = z.object({
-  prosthoRecordId: z.string().optional(),
-  labProviderId: z.string().optional(),
-  status: HealthcareAncillaryProsthodonticLabCaseLinkStatusSchema.optional(),
-  dueDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  dueDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
 
 export const HealthcareAncillaryProsthodonticProsthoRecordSchema = z.object({
   id: z.string().uuid(),
@@ -7060,56 +5537,9 @@ export const HealthcareAncillaryProsthodonticProsthoRecordSchema = z.object({
   note: z.array(HealthcareCoreAnnotationSchema).optional()
 });
 
-export const HealthcareAncillaryProsthodonticProsthoRecordCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  toothNumber: z.number().int().optional(),
-  type: z.enum(["crown", "bridge", "denture", "partialDenture", "veneer", "inlay", "onlay", "implantSupported"]),
-  status: z.enum(["planned", "impressionTaken", "labSent", "tryIn", "delivered", "remade"]),
-  material: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryProsthodonticProsthoTypeSchema = z.enum(["crown", "bridge", "denture", "partialDenture", "veneer", "inlay", "onlay", "implantSupported"]);
-
 export const HealthcareAncillaryProsthodonticProsthoStatusSchema = z.enum(["planned", "impressionTaken", "labSent", "tryIn", "delivered", "remade"]);
 
-export const HealthcareAncillaryProsthodonticProsthoRecordSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  providerId: z.string().optional(),
-  type: HealthcareAncillaryProsthodonticProsthoTypeSchema.optional(),
-  status: HealthcareAncillaryProsthodonticProsthoStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareAncillaryProsthodonticProsthoStatusTransitionRequestSchema = z.object({
-  status: HealthcareAncillaryProsthodonticProsthoStatusSchema,
-  note: z.string().optional()
-});
+export const HealthcareAncillaryProsthodonticProsthoTypeSchema = z.enum(["crown", "bridge", "denture", "partialDenture", "veneer", "inlay", "onlay", "implantSupported"]);
 
 export const HealthcareAncillaryProsthodonticShadeGuideSystemSchema = z.enum(["vitaClassical", "vita3dMaster", "chromascop", "other"]);
 
@@ -7138,30 +5568,6 @@ export const HealthcareAncillaryProsthodonticShadeSelectionSchema = z.object({
 }),
   selectedDate: z.string().datetime().transform((str) => new Date(str)),
   notes: z.string().optional()
-});
-
-export const HealthcareAncillaryProsthodonticShadeSelectionCreateRequestSchema = z.object({
-  prosthoRecord: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  guideSystem: z.enum(["vitaClassical", "vita3dMaster", "chromascop", "other"]),
-  shadeValue: z.string(),
-  selectedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  selectedDate: z.string().datetime().transform((str) => new Date(str)),
-  notes: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
 });
 
 export const HealthcareAncillaryRadiologyImagingStudyPerformerSchema = z.object({
@@ -7264,71 +5670,7 @@ export const HealthcareAncillaryRadiologyImagingStudySchema = z.object({
 }).optional()
 });
 
-export const HealthcareAncillaryRadiologyImagingStudyCreateRequestSchema = z.object({
-  status: z.enum(["registered", "available", "cancelled", "enteredInError", "unknown"]),
-  modality: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  started: z.string().datetime().transform((str) => new Date(str)).optional(),
-  basedOn: z.array(HealthcareCoreReferenceSchema).optional(),
-  referrer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  interpreter: z.array(HealthcareCoreReferenceSchema).optional(),
-  endpoint: z.array(z.string()).optional(),
-  numberOfSeries: z.number().int().optional(),
-  numberOfInstances: z.number().int().optional(),
-  procedureReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  procedureCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  location: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  reasonCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  reasonReference: z.array(HealthcareCoreReferenceSchema).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  description: z.string().optional(),
-  series: z.array(HealthcareAncillaryRadiologyImagingStudySeriesSchema).optional(),
-  pacsUrl: z.string().optional(),
-  reportReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareAncillaryRadiologyImagingStudyStatusSchema = z.enum(["registered", "available", "cancelled", "enteredInError", "unknown"]);
-
-export const HealthcareAncillaryRadiologyImagingStudySearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  modality: z.string().optional(),
-  status: HealthcareAncillaryRadiologyImagingStudyStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  bodySite: z.string().optional()
-});
 
 export const HealthcareAncillaryRadiologyRadiologyAddendumSchema = z.object({
   author: z.object({
@@ -7393,49 +5735,6 @@ export const HealthcareAncillaryRadiologyRadiologyReportSchema = z.object({
   conclusionCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
   presentedForm: z.array(HealthcareCoreAttachmentSchema).optional(),
   addendum: z.array(HealthcareAncillaryRadiologyRadiologyAddendumSchema).optional()
-});
-
-export const HealthcareAncillaryRadiologyRadiologyReportCreateRequestSchema = z.object({
-  status: z.enum(["registered", "partial", "preliminary", "final", "amended", "corrected", "appended", "cancelled", "enteredInError", "unknown"]),
-  study: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  issued: z.string().datetime().transform((str) => new Date(str)),
-  performer: z.array(HealthcareCoreReferenceSchema),
-  resultsInterpreter: z.array(HealthcareCoreReferenceSchema).optional(),
-  impression: z.string().optional(),
-  findings: z.array(HealthcareAncillaryRadiologyRadiologyFindingSchema),
-  conclusion: z.string().optional(),
-  conclusionCode: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  presentedForm: z.array(HealthcareCoreAttachmentSchema).optional(),
-  addendum: z.array(HealthcareAncillaryRadiologyRadiologyAddendumSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareAncillaryRadiologyRadiologyReportSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  studyId: z.string().optional(),
-  status: z.enum(["registered", "partial", "preliminary", "final", "amended", "corrected", "appended", "cancelled", "enteredInError", "unknown"]).optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const HealthcareClinicalADTEventsADTEventSchema = z.object({
@@ -7594,16 +5893,6 @@ export const HealthcareClinicalAllergiesAllergyIntoleranceSchema = z.object({
   lastOccurrence: z.string().datetime().transform((str) => new Date(str)).optional(),
   note: z.array(HealthcareCoreAnnotationSchema).optional(),
   reaction: z.array(HealthcareClinicalAllergiesAllergyReactionSchema).optional()
-});
-
-export const HealthcareClinicalAllergiesAllergySearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  code: z.string().optional(),
-  type: z.enum(["allergy", "intolerance"]).optional(),
-  category: z.enum(["food", "medication", "environment", "biologic"]).optional(),
-  criticality: z.enum(["low", "high", "unableToAssess"]).optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
 });
 
 export const HealthcareClinicalAllergiesAllergyTypeSchema = z.enum(["allergy", "intolerance"]);
@@ -7804,87 +6093,11 @@ export const HealthcareClinicalCompositionsCompositionSchema = z.object({
   section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema))
 });
 
-export const HealthcareClinicalCompositionsCompositionSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  type: z.string().optional(),
-  encounter: z.string().optional(),
-  status: z.enum(["preliminary", "final", "amended", "enteredInError"]).optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  author: z.string().optional(),
-  custodian: z.string().optional(),
-  confidentiality: z.enum(["U", "L", "M", "N", "R", "V"]).optional()
-});
-
 export const HealthcareClinicalCompositionsCompositionStatusSchema = z.enum(["preliminary", "final", "amended", "enteredInError"]);
-
-export const HealthcareClinicalCompositionsCreateCompositionRequestSchema = z.object({
-  status: z.enum(["preliminary", "final", "amended", "enteredInError"]),
-  type: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  category: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  date: z.string().datetime().transform((str) => new Date(str)),
-  author: z.array(HealthcareCoreReferenceSchema),
-  title: z.string(),
-  confidentiality: z.enum(["U", "L", "M", "N", "R", "V"]).optional(),
-  attester: z.array(HealthcareClinicalCompositionsCompositionAttesterSchema).optional(),
-  custodian: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  relatesTo: z.array(HealthcareClinicalCompositionsCompositionRelatesToSchema).optional(),
-  event: z.array(HealthcareClinicalCompositionsCompositionEventSchema).optional(),
-  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema))
-});
 
 export const HealthcareClinicalCompositionsDocumentRelationshipTypeSchema = z.enum(["replaces", "transforms", "signs", "appends"]);
 
 export const HealthcareClinicalCompositionsSectionModeSchema = z.enum(["working", "snapshot", "changes"]);
-
-export const HealthcareClinicalCompositionsUpdateCompositionRequestSchema = z.object({
-  status: z.enum(["preliminary", "final", "amended", "enteredInError"]).optional(),
-  type: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  category: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  date: z.string().datetime().transform((str) => new Date(str)).optional(),
-  author: z.array(HealthcareCoreReferenceSchema).optional(),
-  title: z.string().optional(),
-  confidentiality: z.enum(["U", "L", "M", "N", "R", "V"]).optional(),
-  attester: z.array(HealthcareClinicalCompositionsCompositionAttesterSchema).optional(),
-  custodian: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  relatesTo: z.array(HealthcareClinicalCompositionsCompositionRelatesToSchema).optional(),
-  event: z.array(HealthcareClinicalCompositionsCompositionEventSchema).optional(),
-  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema)).optional()
-});
 
 export const HealthcareClinicalConditionsConditionStageSchema = z.object({
   summary: z.object({
@@ -7966,15 +6179,6 @@ export const HealthcareClinicalConditionsConditionSchema = z.object({
   stage: z.array(HealthcareClinicalConditionsConditionStageSchema).optional(),
   evidence: z.array(HealthcareClinicalConditionsConditionEvidenceSchema).optional(),
   note: z.array(HealthcareCoreAnnotationSchema).optional()
-});
-
-export const HealthcareClinicalConditionsConditionSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  code: z.string().optional(),
-  clinicalStatus: z.string().optional(),
-  category: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
 });
 
 export const HealthcareClinicalDocumentReferencesClinicalNoteTypeSchema = z.enum(["soapNote", "progressNote", "admissionNote", "dischargeNote", "consultNote", "operativeNote", "nursingNote", "therapyNote"]);
@@ -8071,17 +6275,6 @@ export const HealthcareClinicalDocumentReferencesDocumentReferenceSchema = z.obj
   assessment: z.string().optional(),
   plan: z.string().optional()
 }).optional()
-});
-
-export const HealthcareClinicalDocumentReferencesDocumentReferenceSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  type: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  category: z.string().optional(),
-  author: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
 });
 
 export const HealthcareClinicalDocumentReferencesDocumentReferenceStatusSchema = z.enum(["current", "superseded", "enteredInError"]);
@@ -8240,26 +6433,7 @@ export const HealthcareClinicalEncountersEncounterHospitalizationSchema = z.obje
 
 export const HealthcareClinicalEncountersEncounterLocationStatusSchema = z.enum(["planned", "active", "reserved", "completed"]);
 
-export const HealthcareClinicalEncountersEncounterSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  status: z.enum(["planned", "arrived", "triaged", "inProgress", "onLeave", "finished", "cancelled", "enteredInError", "unknown"]).optional(),
-  class: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  practitioner: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalEncountersEncounterStatusSchema = z.enum(["planned", "arrived", "triaged", "inProgress", "onLeave", "finished", "cancelled", "enteredInError", "unknown"]);
-
-export const HealthcareClinicalEncountersEncounterStatusTransitionRequestSchema = z.object({
-  status: z.enum(["planned", "arrived", "triaged", "inProgress", "onLeave", "finished", "cancelled", "enteredInError", "unknown"]),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
 
 export const HealthcareClinicalEpisodesOfCareEpisodeOfCareStatusHistorySchema = z.object({
   status: z.enum(["planned", "waitlist", "active", "onhold", "finished", "cancelled", "enteredInError"]),
@@ -8319,64 +6493,6 @@ export const HealthcareClinicalEpisodesOfCareEpisodeOfCareSchema = z.object({
 }).optional(),
   team: z.array(HealthcareCoreReferenceSchema).optional(),
   account: z.array(HealthcareCoreReferenceSchema).optional()
-});
-
-export const HealthcareClinicalEpisodesOfCareEpisodeOfCareCreateRequestSchema = z.object({
-  status: z.enum(["planned", "waitlist", "active", "onhold", "finished", "cancelled", "enteredInError"]),
-  statusHistory: z.array(HealthcareClinicalEpisodesOfCareEpisodeOfCareStatusHistorySchema).optional(),
-  type: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  diagnosis: z.array(HealthcareClinicalEpisodesOfCareEpisodeOfCareDiagnosisSchema).optional(),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  managingOrganization: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  referralRequest: z.array(HealthcareCoreReferenceSchema).optional(),
-  careManager: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  team: z.array(HealthcareCoreReferenceSchema).optional(),
-  account: z.array(HealthcareCoreReferenceSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareClinicalEpisodesOfCareEpisodeOfCareSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  status: z.enum(["planned", "waitlist", "active", "onhold", "finished", "cancelled", "enteredInError"]).optional(),
-  type: z.string().optional(),
-  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
-
-export const HealthcareClinicalEpisodesOfCareEpisodeOfCareStatusTransitionSchema = z.object({
-  status: z.enum(["planned", "waitlist", "active", "onhold", "finished", "cancelled", "enteredInError"]),
-  reason: z.string().optional(),
-  transitionedAt: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareClinicalFamilyHistoryFamilyHistorySearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  relationship: z.string().optional(),
-  condition: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
 });
 
 export const HealthcareClinicalFamilyHistoryFamilyHistoryStatusSchema = z.enum(["partial", "completed", "enteredInError", "healthUnknown"]);
@@ -8487,51 +6603,6 @@ export const HealthcareClinicalFlagsFlagSchema = z.object({
   priority: z.enum(["high", "medium", "low"]).optional(),
   description: z.string().optional(),
   mitigation: z.string().optional()
-});
-
-export const HealthcareClinicalFlagsFlagCreateRequestSchema = z.object({
-  status: z.enum(["active", "inactive", "enteredInError"]),
-  category: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  code: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  subject: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  author: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  priority: z.enum(["high", "medium", "low"]).optional(),
-  description: z.string().optional(),
-  mitigation: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareClinicalFlagsFlagSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  status: z.enum(["active", "inactive", "enteredInError"]).optional(),
-  category: z.string().optional(),
-  priority: z.enum(["high", "medium", "low"]).optional()
 });
 
 export const HealthcareClinicalHospitalBehavioralHealthBehavioralHealthPlanSchema = z.object({
@@ -8982,29 +7053,6 @@ export const HealthcareClinicalHospitalDialysisSessionStatusSchema = z.enum(["sc
 export const HealthcareClinicalHospitalEmergencyDepartmentAcuityLevelSchema = z.enum(["resuscitation", "emergent", "urgent", "lessUrgent", "nonUrgent"]);
 
 export const HealthcareClinicalHospitalEmergencyDepartmentArrivalModeSchema = z.enum(["ambulance", "walkIn", "transferIn", "policeEscort", "other"]);
-
-export const HealthcareClinicalHospitalEmergencyDepartmentEDBoardSchema = z.object({
-  edVisit: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  bed: z.string().optional(),
-  acuity: z.enum(["resuscitation", "emergent", "urgent", "lessUrgent", "nonUrgent"]),
-  status: z.enum(["registered", "triaged", "inTreatment", "pendingDisposition", "discharged", "admitted"]),
-  waitTimeMinutes: z.number().int().optional(),
-  provider: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  chiefComplaint: z.string()
-});
 
 export const HealthcareClinicalHospitalEmergencyDepartmentEDDispositionSchema = z.enum(["admitted", "discharged", "transferred", "lwbs", "lama", "expired", "observation"]);
 
@@ -9844,21 +7892,6 @@ export const HealthcareClinicalHospitalOncologyTNMStageSchema = z.object({
   groupStage: z.string().optional()
 });
 
-export const HealthcareClinicalHospitalOrderManagementApplyOrderSetRequestSchema = z.object({
-  orderSetId: z.string(),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  encounter: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  includeOptionalItems: z.array(z.number().int()).optional()
-});
-
 export const HealthcareClinicalHospitalOrderManagementClinicalOrderSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -9911,11 +7944,6 @@ export const HealthcareClinicalHospitalOrderManagementClinicalOrderSchema = z.ob
 export const HealthcareClinicalHospitalOrderManagementClinicalOrderStatusSchema = z.enum(["draft", "pending", "active", "onHold", "completed", "cancelled", "discontinued", "enteredInError"]);
 
 export const HealthcareClinicalHospitalOrderManagementClinicalOrderTypeSchema = z.enum(["medication", "laboratory", "imaging", "diet", "activity", "nursing", "respiratory", "consultation", "procedure", "supply"]);
-
-export const HealthcareClinicalHospitalOrderManagementCoSignRequestSchema = z.object({
-  coSignedBy: z.string(),
-  note: z.string().max(500).optional()
-});
 
 export const HealthcareClinicalHospitalOrderManagementOrderSetItemSchema = z.object({
   sequence: z.number().int(),
@@ -11487,16 +9515,6 @@ export const HealthcareClinicalImmunizationsImmunizationSchema = z.object({
   protocolApplied: z.array(HealthcareClinicalImmunizationsImmunizationProtocolSchema).optional()
 });
 
-export const HealthcareClinicalImmunizationsImmunizationSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  vaccineCode: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["completed", "enteredInError", "notDone"]).optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalImmunizationsImmunizationStatusSchema = z.enum(["completed", "enteredInError", "notDone"]);
 
 export const HealthcareClinicalMedicationRequestsMedicationDispenseRequestSchema = z.object({
@@ -11629,24 +9647,7 @@ export const HealthcareClinicalMedicationRequestsMedicationRequestSchema = z.obj
 
 export const HealthcareClinicalMedicationRequestsMedicationRequestIntentSchema = z.enum(["proposal", "plan", "order", "originalOrder", "reflexOrder", "fillerOrder", "instanceOrder", "option"]);
 
-export const HealthcareClinicalMedicationRequestsMedicationRequestSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  status: z.enum(["active", "onHold", "cancelled", "completed", "enteredInError", "stopped", "draft", "unknown"]).optional(),
-  medication: z.string().optional(),
-  requester: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalMedicationRequestsMedicationRequestStatusSchema = z.enum(["active", "onHold", "cancelled", "completed", "enteredInError", "stopped", "draft", "unknown"]);
-
-export const HealthcareClinicalMedicationRequestsMedicationRequestStatusTransitionSchema = z.object({
-  status: z.enum(["active", "onHold", "cancelled", "completed", "enteredInError", "stopped", "draft", "unknown"]),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
 
 export const HealthcareClinicalMedicationRequestsMedicationSubstitutionSchema = z.object({
   allowed: z.boolean(),
@@ -11808,26 +9809,6 @@ export const HealthcareClinicalObservationsObservationSchema = z.object({
   component: z.array(HealthcareClinicalObservationsObservationComponentSchema).optional()
 });
 
-export const HealthcareClinicalObservationsObservationBulkCreateRequestSchema = z.object({
-  observations: z.array(HealthcareClinicalObservationsObservationSchema)
-});
-
-export const HealthcareClinicalObservationsObservationBulkCreateResponseSchema = z.object({
-  created: z.array(HealthcareClinicalObservationsObservationSchema),
-  errors: z.record(z.string(), z.unknown())
-});
-
-export const HealthcareClinicalObservationsObservationSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  code: z.string().optional(),
-  category: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["registered", "preliminary", "final", "amended", "corrected", "cancelled", "enteredInError", "unknown"]).optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalObservationsObservationStatusSchema = z.enum(["registered", "preliminary", "final", "amended", "corrected", "cancelled", "enteredInError", "unknown"]);
 
 export const HealthcareClinicalProceduresProcedurePerformerSchema = z.object({
@@ -11916,16 +9897,6 @@ export const HealthcareClinicalProceduresProcedureSchema = z.object({
   usedCode: z.array(HealthcareCoreCodeableConceptSchema).optional()
 });
 
-export const HealthcareClinicalProceduresProcedureSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  code: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["preparation", "inProgress", "notDone", "onHold", "stopped", "completed", "enteredInError", "unknown"]).optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalProceduresProcedureStatusSchema = z.enum(["preparation", "inProgress", "notDone", "onHold", "stopped", "completed", "enteredInError", "unknown"]);
 
 export const HealthcareClinicalRelatedPersonsRelatedPersonCommunicationSchema = z.object({
@@ -11965,41 +9936,6 @@ export const HealthcareClinicalRelatedPersonsRelatedPersonSchema = z.object({
   end: z.string().datetime().transform((str) => new Date(str)).optional()
 }).optional(),
   communication: z.array(HealthcareClinicalRelatedPersonsRelatedPersonCommunicationSchema).optional()
-});
-
-export const HealthcareClinicalRelatedPersonsRelatedPersonCreateRequestSchema = z.object({
-  active: z.boolean(),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  relationship: z.array(HealthcareCoreCodeableConceptSchema),
-  name: z.array(HealthcareCoreHumanNameSchema).optional(),
-  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
-  gender: z.enum(["male", "female", "other", "unknown"]).optional(),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  address: z.array(AddressSchema).optional(),
-  photo: z.array(HealthcareCoreAttachmentSchema).optional(),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  communication: z.array(HealthcareClinicalRelatedPersonsRelatedPersonCommunicationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareClinicalRelatedPersonsRelatedPersonSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  relationship: z.string().optional(),
-  name: z.string().optional(),
-  active: z.boolean().optional()
 });
 
 export const HealthcareClinicalServiceRequestsServiceRequestSchema = z.object({
@@ -12070,25 +10006,7 @@ export const HealthcareClinicalServiceRequestsServiceRequestSchema = z.object({
 
 export const HealthcareClinicalServiceRequestsServiceRequestIntentSchema = z.enum(["proposal", "plan", "directive", "order", "originalOrder", "reflexOrder", "fillerOrder", "instanceOrder", "option"]);
 
-export const HealthcareClinicalServiceRequestsServiceRequestSearchParamsSchema = z.object({
-  patient: z.string().optional(),
-  category: z.string().optional(),
-  code: z.string().optional(),
-  status: z.enum(["draft", "active", "onHold", "revoked", "completed", "enteredInError", "unknown"]).optional(),
-  requester: z.string().optional(),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional()
-});
-
 export const HealthcareClinicalServiceRequestsServiceRequestStatusSchema = z.enum(["draft", "active", "onHold", "revoked", "completed", "enteredInError", "unknown"]);
-
-export const HealthcareClinicalServiceRequestsServiceRequestStatusTransitionSchema = z.object({
-  status: z.enum(["draft", "active", "onHold", "revoked", "completed", "enteredInError", "unknown"]),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
 
 export const HealthcareClinicalSurgicalAnesthesiaRecordSchema = z.object({
   id: z.string().uuid(),
@@ -12667,200 +10585,6 @@ export const HealthcareCompliancePrivacyWorkflowPrivacyComplaintStatusSchema = z
 
 export const HealthcareCompliancePrivacyWorkflowPurposeOfUseSchema = z.enum(["treatment", "payment", "operations", "publicHealth", "research", "legal", "marketing", "other"]);
 
-export const HealthcareConformanceBulkExportBulkExportOutputFileSchema = z.object({
-  type: z.string(),
-  url: z.string().url(),
-  count: z.number().int().optional()
-});
-
-export const HealthcareConformanceBulkExportBulkExportManifestSchema = z.object({
-  transactionTime: z.string().datetime().transform((str) => new Date(str)),
-  request: z.string().url(),
-  requiresAccessToken: z.boolean(),
-  output: z.array(HealthcareConformanceBulkExportBulkExportOutputFileSchema),
-  error: z.array(HealthcareConformanceBulkExportBulkExportOutputFileSchema)
-});
-
-export const HealthcareConformanceBulkExportBulkExportStatusSchema = z.enum(["accepted", "inProgress", "complete", "error", "cancelled"]);
-
-export const HealthcareConformanceBulkExportBulkExportStatusResponseSchema = z.object({
-  status: z.enum(["accepted", "inProgress", "complete", "error", "cancelled"]),
-  progress: z.string().optional(),
-  manifest: z.object({
-  transactionTime: z.string().datetime().transform((str) => new Date(str)),
-  request: z.string().url(),
-  requiresAccessToken: z.boolean(),
-  output: z.array(HealthcareConformanceBulkExportBulkExportOutputFileSchema),
-  error: z.array(HealthcareConformanceBulkExportBulkExportOutputFileSchema)
-}).optional()
-});
-
-export const HealthcareConformanceBulkExportBulkImportErrorSchema = z.object({
-  type: z.string(),
-  url: z.string(),
-  count: z.number().int(),
-  details: z.string().optional()
-});
-
-export const HealthcareConformanceBulkExportBulkImportInputFileSchema = z.object({
-  type: z.string(),
-  url: z.string()
-});
-
-export const HealthcareConformanceBulkExportBulkImportKickoffParamsSchema = z.object({
-  inputFormat: z.string().optional(),
-  inputSource: z.array(HealthcareConformanceBulkExportBulkImportInputFileSchema),
-  storageDetail: z.record(z.string(), z.unknown()).optional()
-});
-
-export const HealthcareConformanceBulkExportBulkImportStatusSchema = z.enum(["accepted", "inProgress", "complete", "error", "cancelled"]);
-
-export const HealthcareConformanceBulkExportBulkImportStatusResponseSchema = z.object({
-  status: z.enum(["accepted", "inProgress", "complete", "error", "cancelled"]),
-  progress: z.string().optional(),
-  resourcesImported: z.number().int().optional(),
-  resourcesFailed: z.number().int().optional(),
-  errors: z.array(HealthcareConformanceBulkExportBulkImportErrorSchema).optional()
-});
-
-export const HealthcareConformanceCapabilitiesCapabilityOperationSchema = z.object({
-  name: z.string(),
-  definition: z.string().url(),
-  documentation: z.string().optional()
-});
-
-export const HealthcareConformanceCapabilitiesResourceInteractionCodeSchema = z.enum(["read", "vread", "update", "patch", "delete", "historyInstance", "historyType", "create", "searchType"]);
-
-export const HealthcareConformanceCapabilitiesCapabilitySearchParamSchema = z.object({
-  name: z.string(),
-  type: z.enum(["number", "date", "string", "token", "reference", "composite", "quantity", "uri", "special"]),
-  documentation: z.string().optional()
-});
-
-export const HealthcareConformanceCapabilitiesCapabilityRestResourceSchema = z.object({
-  type: z.string(),
-  profile: z.string().url().optional(),
-  supportedProfile: z.array(z.string()).optional(),
-  interaction: z.array(HealthcareConformanceCapabilitiesResourceInteractionCodeSchema),
-  searchParam: z.array(HealthcareConformanceCapabilitiesCapabilitySearchParamSchema).optional(),
-  operation: z.array(HealthcareConformanceCapabilitiesCapabilityOperationSchema).optional(),
-  versioning: z.string().optional(),
-  readHistory: z.boolean().optional(),
-  updateCreate: z.boolean().optional(),
-  conditionalCreate: z.boolean().optional(),
-  conditionalRead: z.string().optional(),
-  conditionalUpdate: z.boolean().optional(),
-  conditionalDelete: z.string().optional()
-});
-
-export const HealthcareConformanceCapabilitiesSystemInteractionCodeSchema = z.enum(["transaction", "batch", "searchSystem", "historySystem"]);
-
-export const HealthcareConformanceCapabilitiesCapabilityStatementRestSchema = z.object({
-  mode: z.enum(["client", "server"]),
-  documentation: z.string().optional(),
-  resource: z.array(HealthcareConformanceCapabilitiesCapabilityRestResourceSchema),
-  interaction: z.array(HealthcareConformanceCapabilitiesSystemInteractionCodeSchema).optional(),
-  operation: z.array(HealthcareConformanceCapabilitiesCapabilityOperationSchema).optional()
-});
-
-export const HealthcareConformanceCapabilitiesCapabilityStatementSchema = z.object({
-  status: z.enum(["draft", "active", "retired", "unknown"]),
-  kind: z.enum(["instance", "capability", "requirements"]),
-  fhirVersion: z.string(),
-  format: z.array(z.string()),
-  patchFormat: z.array(z.string()).optional(),
-  implementationGuide: z.array(z.string()).optional(),
-  rest: z.array(HealthcareConformanceCapabilitiesCapabilityStatementRestSchema),
-  name: z.string().optional(),
-  title: z.string().optional(),
-  date: z.string().datetime().transform((str) => new Date(str)),
-  publisher: z.string().optional(),
-  description: z.string().optional(),
-  purpose: z.string().optional(),
-  copyright: z.string().optional()
-});
-
-export const HealthcareConformanceCapabilitiesCapabilityStatementKindSchema = z.enum(["instance", "capability", "requirements"]);
-
-export const HealthcareConformanceCapabilitiesRestfulCapabilityModeSchema = z.enum(["client", "server"]);
-
-export const HealthcareConformanceCapabilitiesSearchParamTypeSchema = z.enum(["number", "date", "string", "token", "reference", "composite", "quantity", "uri", "special"]);
-
-export const HealthcareConformanceIPSGenerateIPSRequestSchema = z.object({
-  patientId: z.string(),
-  includeOptional: z.boolean().optional()
-});
-
-export const HealthcareConformanceIPSIPSSectionSchema = z.object({
-  code: z.enum(["10160-0", "48765-2", "11450-4", "11369-6", "47519-4", "46264-8", "30954-2", "8716-3", "10162-6", "29762-2", "18776-5", "47420-5", "42348-3"]),
-  title: z.string(),
-  required: z.boolean(),
-  entries: z.array(HealthcareCoreReferenceSchema).optional()
-});
-
-export const HealthcareConformanceIPSIPSSectionCodeSchema = z.enum(["10160-0", "48765-2", "11450-4", "11369-6", "47519-4", "46264-8", "30954-2", "8716-3", "10162-6", "29762-2", "18776-5", "47420-5", "42348-3"]);
-
-export const HealthcareConformanceIPSInternationalPatientSummarySchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  author: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  date: z.string().datetime().transform((str) => new Date(str)),
-  title: z.string(),
-  sections: z.array(HealthcareConformanceIPSIPSSectionSchema)
-});
-
-export const HealthcareConformanceOperationsDocumentBundleRequestSchema = z.object({
-  id: z.string(),
-  persist: z.boolean().optional()
-});
-
-export const HealthcareConformanceOperationsIssueSeveritySchema = z.enum(["fatal", "error", "warning", "information"]);
-
-export const HealthcareConformanceOperationsPatientMatchEntrySchema = z.object({
-  resource: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  search: z.object({
-  score: z.number().gte(0).lte(1)
-})
-});
-
-export const HealthcareConformanceOperationsPatientMatchRequestSchema = z.object({
-  resource: z.record(z.string(), z.unknown()),
-  onlyCertainMatches: z.boolean().optional(),
-  count: z.number().int().optional()
-});
-
-export const HealthcareConformanceOperationsPatientMatchResponseSchema = z.object({
-  entry: z.array(HealthcareConformanceOperationsPatientMatchEntrySchema)
-});
-
-export const HealthcareConformanceOperationsValidationIssueSchema = z.object({
-  severity: z.enum(["fatal", "error", "warning", "information"]),
-  code: z.string(),
-  details: z.string().optional(),
-  expression: z.array(z.string()).optional()
-});
-
-export const HealthcareConformanceOperationsValidationRequestSchema = z.object({
-  resource: z.record(z.string(), z.unknown()),
-  profile: z.string().url().optional(),
-  mode: z.string().optional()
-});
-
-export const HealthcareConformanceOperationsValidationResponseSchema = z.object({
-  issues: z.array(HealthcareConformanceOperationsValidationIssueSchema)
-});
-
 export const HealthcareConformanceSubscriptionsChannelTypeSchema = z.enum(["restHook", "websocket", "email"]);
 
 export const HealthcareConformanceSubscriptionsSubscriptionFilterBySchema = z.object({
@@ -12908,14 +10632,6 @@ export const HealthcareConformanceSubscriptionsSubscriptionChannelSchema = z.obj
   timeout: z.number().int().optional(),
   contentType: z.string().optional(),
   content: z.string().optional()
-});
-
-export const HealthcareConformanceSubscriptionsSubscriptionNotificationSchema = z.object({
-  subscriptionId: z.string(),
-  topic: z.string().url(),
-  type: z.string(),
-  eventsSinceLastDelivery: z.number().int().optional(),
-  entry: z.array(HealthcareCoreReferenceSchema).optional()
 });
 
 export const HealthcareConformanceSubscriptionsSubscriptionStatusSchema = z.enum(["requested", "active", "error", "off", "enteredInError"]);
@@ -13035,59 +10751,6 @@ export const HealthcareConformanceTerminologyConceptMapResourceSchema = z.object
   sourceUri: z.string().url().optional(),
   targetUri: z.string().url().optional(),
   group: z.array(HealthcareConformanceTerminologyConceptMapGroupSchema)
-});
-
-export const HealthcareConformanceTerminologyExpandRequestSchema = z.object({
-  url: z.string().url(),
-  filter: z.string().optional(),
-  count: z.number().int().optional(),
-  offset: z.number().int().optional()
-});
-
-export const HealthcareConformanceTerminologyLookupRequestSchema = z.object({
-  system: z.string().url(),
-  code: z.string(),
-  version: z.string().optional()
-});
-
-export const HealthcareConformanceTerminologyLookupResponseSchema = z.object({
-  name: z.string(),
-  display: z.string(),
-  designation: z.array(HealthcareConformanceTerminologyDesignationSchema).optional(),
-  property: z.array(HealthcareConformanceTerminologyConceptPropertySchema).optional()
-});
-
-export const HealthcareConformanceTerminologyTranslateMatchSchema = z.object({
-  equivalence: z.string(),
-  concept: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-})
-});
-
-export const HealthcareConformanceTerminologyTranslateRequestSchema = z.object({
-  url: z.string().url(),
-  system: z.string().url(),
-  code: z.string(),
-  targetSystem: z.string().url()
-});
-
-export const HealthcareConformanceTerminologyTranslateResponseSchema = z.object({
-  result: z.boolean(),
-  match: z.array(HealthcareConformanceTerminologyTranslateMatchSchema).optional()
-});
-
-export const HealthcareConformanceTerminologyValidateCodeRequestSchema = z.object({
-  url: z.string().url(),
-  code: z.string(),
-  system: z.string().url().optional(),
-  display: z.string().optional()
-});
-
-export const HealthcareConformanceTerminologyValidateCodeResponseSchema = z.object({
-  result: z.boolean(),
-  message: z.string().optional(),
-  display: z.string().optional()
 });
 
 export const HealthcareConformanceTerminologyValueSetConceptSchema = z.object({
@@ -13509,17 +11172,6 @@ export const HealthcareOperationalExternalConnectorsConnectorCredentialSchema = 
   note: z.string().max(500).optional()
 });
 
-export const HealthcareOperationalExternalConnectorsConnectorHealthResponseSchema = z.object({
-  connector: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  healthStatus: z.enum(["healthy", "degraded", "unreachable", "unknown"]),
-  lastCheckedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  message: z.string().max(500).optional()
-});
-
 export const HealthcareOperationalExternalConnectorsConnectorHealthStatusSchema = z.enum(["healthy", "degraded", "unreachable", "unknown"]);
 
 export const HealthcareOperationalExternalConnectorsConnectorStatusSchema = z.enum(["configured", "testing", "active", "degraded", "disabled", "error"]);
@@ -13549,35 +11201,7 @@ export const HealthcareOperationalExternalConnectorsConnectorSyncLogSchema = z.o
   errorDetails: z.string().max(5000).optional()
 });
 
-export const HealthcareOperationalExternalConnectorsConnectorTestRequestSchema = z.object({
-  extended: z.boolean().optional()
-});
-
-export const HealthcareOperationalExternalConnectorsConnectorTestResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string().max(500),
-  latencyMs: z.number().int().optional()
-});
-
 export const HealthcareOperationalExternalConnectorsConnectorTypeSchema = z.enum(["paymentGateway", "smsProvider", "emailProvider", "imagingPacs", "ePrescribing", "clearinghouse", "videoConference", "laboratoryLis", "hl7Interface", "fhirEndpoint", "cloudStorage", "other"]);
-
-export const HealthcareOperationalExternalConnectorsCreateConnectorCredentialRequestSchema = z.object({
-  connector: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  credentialType: z.string().max(100),
-  secretValue: z.string().max(4096),
-  expiresAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  note: z.string().max(500).optional()
-});
-
-export const HealthcareOperationalExternalConnectorsRotateConnectorCredentialRequestSchema = z.object({
-  newSecretValue: z.string().max(4096),
-  expiresAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  note: z.string().max(500).optional()
-});
 
 export const HealthcareOperationalExternalConnectorsSyncStatusSchema = z.enum(["running", "completed", "failed", "cancelled"]);
 
@@ -13820,31 +11444,6 @@ export const HealthcareOperationalHospitalEmergencyPreparednessEmergencyActivati
 }).optional(),
   afterActionReportDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
   note: z.array(HealthcareCoreAnnotationSchema).optional()
-});
-
-export const HealthcareOperationalHospitalEmergencyPreparednessEmergencyActivationRequestSchema = z.object({
-  plan: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  level: z.enum(["advisory", "partial", "full"]),
-  incidentCommander: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  note: z.string().optional()
-});
-
-export const HealthcareOperationalHospitalEmergencyPreparednessEmergencyDeactivationRequestSchema = z.object({
-  deactivatedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  afterActionReportDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  note: z.string().optional()
 });
 
 export const HealthcareOperationalHospitalEmergencyPreparednessEmergencyDrillSchema = z.object({
@@ -14144,11 +11743,6 @@ export const HealthcareOperationalHospitalPeerReviewPeerReviewPrioritySchema = z
 
 export const HealthcareOperationalHospitalPeerReviewPeerReviewStatusSchema = z.enum(["referred", "underReview", "committeeReview", "actionRequired", "resolved", "closed"]);
 
-export const HealthcareOperationalHospitalPeerReviewPeerReviewStatusTransitionRequestSchema = z.object({
-  status: z.enum(["referred", "underReview", "committeeReview", "actionRequired", "resolved", "closed"]),
-  note: z.string().optional()
-});
-
 export const HealthcareOperationalHospitalSterileProcessingBiologicalIndicatorSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -14369,10 +11963,6 @@ export const HealthcareOperationalHospitalTransportTransportTeamSchema = z.objec
   active: z.boolean()
 });
 
-export const HealthcareOperationalImplantRegistryAffectedPatientsParamsSchema = z.object({
-  recallId: z.string()
-});
-
 export const HealthcareOperationalImplantRegistryImplantSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -14452,69 +12042,6 @@ export const HealthcareOperationalImplantRegistryImplantAbutmentSchema = z.objec
   angulation: z.number().int().optional()
 });
 
-export const HealthcareOperationalImplantRegistryImplantCreateRequestSchema = z.object({
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  toothNumber: z.number().int(),
-  fixture: z.object({
-  manufacturer: z.string(),
-  system: z.string(),
-  lotNumber: z.string(),
-  diameter: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}),
-  length: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}),
-  platform: z.string().optional(),
-  surface: z.string().optional(),
-  torqueAtPlacement: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional()
-}),
-  abutment: z.object({
-  manufacturer: z.string().optional(),
-  type: z.string(),
-  material: z.string().optional(),
-  height: z.object({
-  value: z.number(),
-  unit: z.string(),
-  system: z.string().url().optional(),
-  code: z.string().optional()
-}).optional(),
-  angulation: z.number().int().optional()
-}).optional(),
-  status: z.enum(["placed", "osseointegrating", "restored", "failed", "explanted"]),
-  placedDate: z.string().datetime().transform((str) => new Date(str)),
-  placedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  restoredDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  failedDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  note: z.array(HealthcareCoreAnnotationSchema).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
 export const HealthcareOperationalImplantRegistryImplantFixtureSchema = z.object({
   manufacturer: z.string(),
   system: z.string(),
@@ -14541,11 +12068,6 @@ export const HealthcareOperationalImplantRegistryImplantFixtureSchema = z.object
 }).optional()
 });
 
-export const HealthcareOperationalImplantRegistryImplantLotNumberParamsSchema = z.object({
-  lotNumber: z.string(),
-  manufacturer: z.string().optional()
-});
-
 export const HealthcareOperationalImplantRegistryImplantRecallSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -14569,44 +12091,7 @@ export const HealthcareOperationalImplantRegistryImplantRecallSchema = z.object(
   affectedPatients: z.number().int().optional()
 });
 
-export const HealthcareOperationalImplantRegistryImplantRecallCreateRequestSchema = z.object({
-  implant: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  lotNumber: z.string(),
-  manufacturer: z.string(),
-  reason: z.string(),
-  recallDate: z.string().datetime().transform((str) => new Date(str)),
-  affectedPatients: z.number().int().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalImplantRegistryImplantRecallSearchParamsSchema = z.object({
-  lotNumber: z.string().optional(),
-  manufacturer: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
 export const HealthcareOperationalImplantRegistryImplantStatusSchema = z.enum(["placed", "osseointegrating", "restored", "failed", "explanted"]);
-
-export const HealthcareOperationalImplantRegistryImplantSearchParamsSchema = z.object({
-  patientId: z.string().optional(),
-  placedById: z.string().optional(),
-  status: HealthcareOperationalImplantRegistryImplantStatusSchema.optional(),
-  toothNumber: z.number().int().optional(),
-  manufacturer: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
 
 export const HealthcareOperationalImplantRegistryOsseointegrationCheckSchema = z.object({
   id: z.string().uuid(),
@@ -14639,43 +12124,6 @@ export const HealthcareOperationalImplantRegistryOsseointegrationCheckSchema = z
 }).optional(),
   outcome: z.string(),
   nextCheckDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
-
-export const HealthcareOperationalImplantRegistryOsseointegrationCheckCreateRequestSchema = z.object({
-  implant: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  checkDate: z.string().datetime().transform((str) => new Date(str)),
-  performer: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  stabilityValue: z.number().optional(),
-  method: z.string().optional(),
-  xrayReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  outcome: z.string(),
-  nextCheckDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalImplantRegistryOsseointegrationCheckSearchParamsSchema = z.object({
-  implantId: z.string().optional(),
-  performerId: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const HealthcareOperationalInventoryBatchStatusSchema = z.enum(["available", "quarantine", "expired", "recalled", "consumed"]);
@@ -14885,43 +12333,6 @@ export const HealthcareOperationalOperatoryChairTimeBlockSchema = z.object({
   status: z.enum(["scheduled", "checkedIn", "inProgress", "completed", "noShow"])
 });
 
-export const HealthcareOperationalOperatoryChairTimeBlockCreateRequestSchema = z.object({
-  operatory: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  appointment: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  patient: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  startTime: z.string().datetime().transform((str) => new Date(str)),
-  endTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["scheduled", "checkedIn", "inProgress", "completed", "noShow"]),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalOperatoryChairTimeBlockSearchParamsSchema = z.object({
-  operatoryId: z.string().optional(),
-  patientId: z.string().optional(),
-  appointmentId: z.string().optional(),
-  status: HealthcareOperationalOperatoryChairBlockStatusSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
 export const HealthcareOperationalOperatoryOperatorySchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -14972,87 +12383,9 @@ export const HealthcareOperationalOperatoryOperatoryAssignmentSchema = z.object(
   shiftType: z.string().optional()
 });
 
-export const HealthcareOperationalOperatoryOperatoryAssignmentCreateRequestSchema = z.object({
-  operatory: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  practitioner: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
-  startTime: z.string(),
-  endTime: z.string(),
-  shiftType: z.string().optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalOperatoryOperatoryAssignmentSearchParamsSchema = z.object({
-  operatoryId: z.string().optional(),
-  practitionerId: z.string().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
-
-export const HealthcareOperationalOperatoryOperatoryCreateRequestSchema = z.object({
-  name: z.string(),
-  location: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  type: z.enum(["general", "hygiene", "surgical", "pediatric", "orthodontic"]),
-  status: z.enum(["available", "occupied", "turnover", "maintenance", "closed"]),
-  equipment: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  features: z.array(z.string()).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalOperatoryOperatoryMetricsSchema = z.object({
-  operatoryId: z.string(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
-  totalMinutesAvailable: z.number().int(),
-  totalMinutesOccupied: z.number().int(),
-  utilizationPercent: z.number(),
-  turnoverCount: z.number().int(),
-  avgTurnoverMinutes: z.number()
-});
-
-export const HealthcareOperationalOperatoryOperatoryMetricsParamsSchema = z.object({
-  operatoryId: z.string(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" })
-});
-
-export const HealthcareOperationalOperatoryOperatoryTypeSchema = z.enum(["general", "hygiene", "surgical", "pediatric", "orthodontic"]);
-
 export const HealthcareOperationalOperatoryOperatoryStatusSchema = z.enum(["available", "occupied", "turnover", "maintenance", "closed"]);
 
-export const HealthcareOperationalOperatoryOperatorySearchParamsSchema = z.object({
-  locationId: z.string().optional(),
-  type: HealthcareOperationalOperatoryOperatoryTypeSchema.optional(),
-  status: HealthcareOperationalOperatoryOperatoryStatusSchema.optional()
-});
-
-export const HealthcareOperationalOperatoryStatusBoardParamsSchema = z.object({
-  locationId: z.string().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional()
-});
+export const HealthcareOperationalOperatoryOperatoryTypeSchema = z.enum(["general", "hygiene", "surgical", "pediatric", "orthodontic"]);
 
 export const HealthcareOperationalOperatoryTurnoverEventSchema = z.object({
   id: z.string().uuid(),
@@ -15082,47 +12415,6 @@ export const HealthcareOperationalOperatoryTurnoverEventSchema = z.object({
   id: z.string().uuid(),
   display: z.string().optional()
 }).optional()
-});
-
-export const HealthcareOperationalOperatoryTurnoverEventCreateRequestSchema = z.object({
-  operatory: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  previousAppointment: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  startTime: z.string().datetime().transform((str) => new Date(str)),
-  endTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  performedBy: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  tenantId: z.string(),
-  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
-  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
-  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
-  version: z.number().int(),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional()
-});
-
-export const HealthcareOperationalOperatoryTurnoverSearchParamsSchema = z.object({
-  operatoryId: z.string().optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional()
-});
-
-export const HealthcareOperationalPatientPortalConfirmBookingRequestSchema = z.object({
-  appointmentId: z.string()
-});
-
-export const HealthcareOperationalPatientPortalDeclineBookingRequestSchema = z.object({
-  reason: z.string().max(500)
 });
 
 export const HealthcareOperationalPatientPortalIntakeFormStatusSchema = z.enum(["sent", "inProgress", "submitted", "expired"]);
@@ -15288,14 +12580,6 @@ export const HealthcareOperationalPatientPortalPortalPaymentStatusSchema = z.enu
 
 export const HealthcareOperationalPatientPortalPortalSenderTypeSchema = z.enum(["patient", "provider", "system"]);
 
-export const HealthcareOperationalPatientPortalSendIntakeFormRequestSchema = z.object({
-  expiresAt: z.string().datetime().transform((str) => new Date(str))
-});
-
-export const HealthcareOperationalRecallCampaignRunRequestSchema = z.object({
-  sendOutreach: z.boolean().optional()
-});
-
 export const HealthcareOperationalRecallCampaignStatusSchema = z.enum(["draft", "active", "paused", "completed"]);
 
 export const HealthcareOperationalRecallRecallCampaignSchema = z.object({
@@ -15317,15 +12601,6 @@ export const HealthcareOperationalRecallRecallCampaignSchema = z.object({
   patientsTargeted: z.number().int(),
   patientsContacted: z.number().int().optional(),
   patientsBooked: z.number().int().optional()
-});
-
-export const HealthcareOperationalRecallRecallContactRequestSchema = z.object({
-  contactDate: z.string().datetime().transform((str) => new Date(str)),
-  note: z.string().max(500).optional()
-});
-
-export const HealthcareOperationalRecallRecallDismissRequestSchema = z.object({
-  reason: z.string().max(500)
 });
 
 export const HealthcareOperationalRecallRecallPrioritySchema = z.enum(["routine", "urgent"]);
@@ -15438,111 +12713,6 @@ export const HealthcareSupportBreakGlassBreakGlassOverrideSchema = z.object({
 export const HealthcareSupportBreakGlassBreakGlassReasonSchema = z.enum(["emergencyTreatment", "immediateThreatToLife", "patientUnavailableForConsent", "publicHealthEmergency", "other"]);
 
 export const HealthcareSupportBreakGlassBreakGlassStatusSchema = z.enum(["active", "expired", "reviewed", "flaggedForReview"]);
-
-export const HealthcareSupportCDSCDSActionSchema = z.object({
-  type: z.string(),
-  description: z.string(),
-  resource: z.record(z.string(), z.unknown()).optional()
-});
-
-export const HealthcareSupportCDSCDSSuggestionSchema = z.object({
-  label: z.string(),
-  uuid: z.string().optional(),
-  isRecommended: z.boolean().optional(),
-  actions: z.array(HealthcareSupportCDSCDSActionSchema).optional()
-});
-
-export const HealthcareSupportCDSCDSLinkSchema = z.object({
-  label: z.string(),
-  url: z.string(),
-  type: z.string(),
-  appContext: z.string().optional()
-});
-
-export const HealthcareSupportCDSCDSCardSchema = z.object({
-  uuid: z.string().optional(),
-  summary: z.string(),
-  detail: z.string().optional(),
-  indicator: z.enum(["info", "warning", "critical"]),
-  source: z.object({
-  label: z.string(),
-  url: z.string().optional(),
-  icon: z.string().optional(),
-  topic: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-}),
-  suggestions: z.array(HealthcareSupportCDSCDSSuggestionSchema).optional(),
-  selectionBehavior: z.string().optional(),
-  overrideReasons: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  links: z.array(HealthcareSupportCDSCDSLinkSchema).optional()
-});
-
-export const HealthcareSupportCDSCDSContextSchema = z.object({
-  userId: z.string(),
-  patientId: z.string(),
-  encounterId: z.string().optional(),
-  selections: z.array(z.string()).optional(),
-  draftOrders: z.record(z.string(), z.unknown()).optional()
-});
-
-export const HealthcareSupportCDSCDSFhirAuthorizationSchema = z.object({
-  accessToken: z.string(),
-  tokenType: z.string(),
-  expiresIn: z.number().int(),
-  scope: z.string(),
-  subject: z.string()
-});
-
-export const HealthcareSupportCDSCDSHookRequestSchema = z.object({
-  hook: z.string(),
-  hookInstance: z.string(),
-  context: z.object({
-  userId: z.string(),
-  patientId: z.string(),
-  encounterId: z.string().optional(),
-  selections: z.array(z.string()).optional(),
-  draftOrders: z.record(z.string(), z.unknown()).optional()
-}),
-  prefetch: z.record(z.string(), z.unknown()).optional(),
-  fhirServer: z.string().optional(),
-  fhirAuthorization: z.object({
-  accessToken: z.string(),
-  tokenType: z.string(),
-  expiresIn: z.number().int(),
-  scope: z.string(),
-  subject: z.string()
-}).optional()
-});
-
-export const HealthcareSupportCDSCDSHookResponseSchema = z.object({
-  cards: z.array(HealthcareSupportCDSCDSCardSchema)
-});
-
-export const HealthcareSupportCDSCDSIndicatorSchema = z.enum(["info", "warning", "critical"]);
-
-export const HealthcareSupportCDSCDSServiceDescriptorSchema = z.object({
-  hook: z.string(),
-  title: z.string().optional(),
-  description: z.string(),
-  id: z.string(),
-  prefetch: z.record(z.string(), z.unknown()).optional()
-});
-
-export const HealthcareSupportCDSCDSServicesResponseSchema = z.object({
-  services: z.array(HealthcareSupportCDSCDSServiceDescriptorSchema)
-});
-
-export const HealthcareSupportCDSCDSSourceSchema = z.object({
-  label: z.string(),
-  url: z.string().optional(),
-  icon: z.string().optional(),
-  topic: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
 
 export const HealthcareSupportCarePlanningCarePlanActivitySchema = z.object({
   outcomeCodeableConcept: z.array(HealthcareCoreCodeableConceptSchema).optional(),
@@ -15827,23 +12997,6 @@ export const HealthcareSupportClinicalOutcomesClinicalBenchmarkSchema = z.object
 
 export const HealthcareSupportClinicalOutcomesComplicationSeveritySchema = z.enum(["mild", "moderate", "severe"]);
 
-export const HealthcareSupportClinicalOutcomesGenerateOutcomeReportRequestSchema = z.object({
-  procedureCode: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  period: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}),
-  organization: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  benchmarkId: z.string().optional()
-});
-
 export const HealthcareSupportClinicalOutcomesOutcomeRecordSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -16056,30 +13209,12 @@ export const HealthcareSupportConsentManagementConsentProvisionSchema = z.object
 
 export const HealthcareSupportConsentManagementConsentProvisionTypeSchema = z.enum(["deny", "permit"]);
 
-export const HealthcareSupportDataImportCancelImportJobRequestSchema = z.object({
-  reason: z.string().max(500).optional()
-});
-
-export const HealthcareSupportDataImportExecuteImportJobRequestSchema = z.object({
-  dryRun: z.boolean().optional(),
-  mappingId: z.string().optional()
-});
-
 export const HealthcareSupportDataImportFieldMappingSchema = z.object({
   sourceField: z.string().max(200),
   targetField: z.string().max(200),
   required: z.boolean(),
   defaultValue: z.string().max(500).optional(),
   transformRule: z.string().max(100).optional()
-});
-
-export const HealthcareSupportDataImportImportErrorSchema = z.object({
-  rowNumber: z.number().int().gte(1),
-  field: z.string().max(200).optional(),
-  value: z.string().max(1000).optional(),
-  errorCode: z.string().max(100),
-  message: z.string().max(1000),
-  severity: z.string().max(20)
 });
 
 export const HealthcareSupportDataImportImportFormatSchema = z.enum(["csv", "json", "ndjson", "hl7v2", "fhir", "xml"]);
@@ -16151,16 +13286,6 @@ export const HealthcareSupportDataImportImportMappingSchema = z.object({
 });
 
 export const HealthcareSupportDataImportImportTypeSchema = z.enum(["patient", "encounter", "observation", "medication", "claim", "custom"]);
-
-export const HealthcareSupportDataImportUploadImportFileRequestSchema = z.object({
-  fileReference: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  contentType: z.string().max(100),
-  fileSizeBytes: z.number().int().gte(0)
-});
 
 export const HealthcareSupportIncidentReportingIncidentReportSchema = z.object({
   id: z.string().uuid(),
@@ -16414,6 +13539,8 @@ export const HealthcareSupportMandatoryReportingReportStatusSchema = z.enum(["dr
 
 export const HealthcareSupportMandatoryReportingSubmissionMethodSchema = z.enum(["electronic", "phone", "fax", "inPerson"]);
 
+export const HealthcareSupportProvenanceProvenanceActivityTypeSchema = z.enum(["create", "update", "delete", "access", "transmit", "verify", "sign", "amend", "merge", "deidentify", "reidentify"]);
+
 export const HealthcareSupportProvenanceProvenanceAgentSchema = z.object({
   role: z.enum(["author", "performer", "verifier", "approver", "custodian", "assembler", "informant", "onBehalfOf"]),
   who: z.object({
@@ -16428,6 +13555,8 @@ export const HealthcareSupportProvenanceProvenanceAgentSchema = z.object({
 }).optional()
 });
 
+export const HealthcareSupportProvenanceProvenanceAgentRoleSchema = z.enum(["author", "performer", "verifier", "approver", "custodian", "assembler", "informant", "onBehalfOf"]);
+
 export const HealthcareSupportProvenanceProvenanceEntitySchema = z.object({
   role: z.enum(["derivation", "revision", "quotation", "source", "removal"]),
   what: z.object({
@@ -16436,30 +13565,6 @@ export const HealthcareSupportProvenanceProvenanceEntitySchema = z.object({
   display: z.string().optional()
 })
 });
-
-export const HealthcareSupportProvenanceCreateProvenanceRequestSchema = z.object({
-  target: z.array(HealthcareCoreReferenceSchema),
-  occurredDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  occurredPeriod: z.object({
-  start: z.string().datetime().transform((str) => new Date(str)),
-  end: z.string().datetime().transform((str) => new Date(str)).optional()
-}).optional(),
-  policy: z.array(z.string()).optional(),
-  location: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  reason: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  activity: z.enum(["create", "update", "delete", "access", "transmit", "verify", "sign", "amend", "merge", "deidentify", "reidentify"]).optional(),
-  agent: z.array(HealthcareSupportProvenanceProvenanceAgentSchema),
-  entity: z.array(HealthcareSupportProvenanceProvenanceEntitySchema).optional(),
-  purposeOfUse: z.array(HealthcareCorePurposeOfUseSchema).optional()
-});
-
-export const HealthcareSupportProvenanceProvenanceActivityTypeSchema = z.enum(["create", "update", "delete", "access", "transmit", "verify", "sign", "amend", "merge", "deidentify", "reidentify"]);
-
-export const HealthcareSupportProvenanceProvenanceAgentRoleSchema = z.enum(["author", "performer", "verifier", "approver", "custodian", "assembler", "informant", "onBehalfOf"]);
 
 export const HealthcareSupportProvenanceProvenanceEntityRoleSchema = z.enum(["derivation", "revision", "quotation", "source", "removal"]);
 
@@ -16725,20 +13830,6 @@ export const HealthcareSupportPublicHealthECRReportabilityResponseSchema = z.obj
   jurisdiction: z.string(),
   receivedAt: z.string().datetime().transform((str) => new Date(str))
 });
-
-export const HealthcareSupportPublicHealthImmunizationRegistryForecastRecommendationSchema = z.object({
-  vaccineGroup: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}),
-  forecastStatus: z.enum(["dueNow", "overdue", "immune", "contraindicated", "notRecommended", "complete"]),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  overdueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  latestDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
-  doseNumber: z.number().int().optional()
-});
-
-export const HealthcareSupportPublicHealthImmunizationRegistryForecastStatusSchema = z.enum(["dueNow", "overdue", "immune", "contraindicated", "notRecommended", "complete"]);
 
 export const HealthcareSupportPublicHealthImmunizationRegistryIISQuerySchema = z.object({
   id: z.string().uuid(),
@@ -17435,28 +14526,6 @@ export const HealthcareSupportSDOHSDOHScreeningStatusSchema = z.enum(["planned",
 
 export const HealthcareSupportSignaturesSignatureTypeSchema = z.enum(["1.2.840.10065.1.12.1.1", "1.2.840.10065.1.12.1.2", "1.2.840.10065.1.12.1.3", "1.2.840.10065.1.12.1.4", "1.2.840.10065.1.12.1.5", "1.2.840.10065.1.12.1.6", "1.2.840.10065.1.12.1.7", "1.2.840.10065.1.12.1.8", "1.2.840.10065.1.12.1.9", "1.2.840.10065.1.12.1.10", "1.2.840.10065.1.12.1.14", "1.2.840.10065.1.12.1.15", "1.2.840.10065.1.12.1.16"]);
 
-export const HealthcareSupportSignaturesCreateSignatureRequestSchema = z.object({
-  type: z.array(HealthcareSupportSignaturesSignatureTypeSchema),
-  who: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}),
-  onBehalfOf: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-}).optional(),
-  targetFormat: z.string().optional(),
-  sigFormat: z.string().optional(),
-  data: z.string().optional(),
-  target: z.array(HealthcareCoreReferenceSchema),
-  reason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional()
-});
-
 export const HealthcareSupportSignaturesElectronicSignatureSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -17618,19 +14687,6 @@ export const HealthcareSupportTasksTaskRestrictionSchema = z.object({
   recipient: z.array(HealthcareCoreReferenceSchema).optional()
 });
 
-export const HealthcareSupportTasksTaskStatusTransitionRequestSchema = z.object({
-  status: z.enum(["draft", "requested", "received", "accepted", "rejected", "ready", "cancelled", "inProgress", "onHold", "failed", "completed", "enteredInError"]),
-  statusReason: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  businessStatus: z.object({
-  coding: z.array(HealthcareCoreCodingSchema),
-  text: z.string().optional()
-}).optional(),
-  note: z.string().optional()
-});
-
 export const HealthcareSupportTelehealthAlertThresholdSchema = z.object({
   parameter: z.object({
   coding: z.array(HealthcareCoreCodingSchema),
@@ -17681,21 +14737,7 @@ export const HealthcareSupportTelehealthAsyncConsultationSchema = z.object({
   escalationReason: z.string().max(500).optional()
 });
 
-export const HealthcareSupportTelehealthAsyncConsultationEscalateRequestSchema = z.object({
-  escalationReason: z.string().max(500)
-});
-
-export const HealthcareSupportTelehealthAsyncConsultationRespondRequestSchema = z.object({
-  response: z.string().max(5000)
-});
-
 export const HealthcareSupportTelehealthAsyncStatusSchema = z.enum(["submitted", "inReview", "responded", "escalatedToSync", "closed"]);
-
-export const HealthcareSupportTelehealthEndSessionRequestSchema = z.object({
-  endedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  status: z.enum(["scheduled", "waiting", "inProgress", "completed", "cancelled", "noShow", "technicalFailure"]),
-  technicalIssues: z.string().max(500).optional()
-});
 
 export const HealthcareSupportTelehealthEnrollmentStatusSchema = z.enum(["active", "paused", "completed", "withdrawn"]);
 
@@ -17754,11 +14796,6 @@ export const HealthcareSupportTelehealthRemoteMonitoringEnrollmentSchema = z.obj
   alertThresholds: z.array(HealthcareSupportTelehealthAlertThresholdSchema).optional()
 });
 
-export const HealthcareSupportTelehealthStartSessionRequestSchema = z.object({
-  startedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  meetingUrl: z.string().max(2048).optional()
-});
-
 export const HealthcareSupportTelehealthTelehealthSessionSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -17802,14 +14839,6 @@ export const HealthcareSupportTelehealthTelehealthSessionTypeSchema = z.enum(["s
 export const HealthcareSupportTelehealthTelehealthStatusSchema = z.enum(["scheduled", "waiting", "inProgress", "completed", "cancelled", "noShow", "technicalFailure"]);
 
 export const HealthcareSupportWorkflowAutomationExecutionStatusSchema = z.enum(["pending", "running", "completed", "failed", "skipped"]);
-
-export const HealthcareSupportWorkflowAutomationQueueItemClaimRequestSchema = z.object({
-  assignedTo: z.object({
-  resourceType: z.string(),
-  id: z.string().uuid(),
-  display: z.string().optional()
-})
-});
 
 export const HealthcareSupportWorkflowAutomationQueueItemStatusSchema = z.enum(["waiting", "claimed", "inProgress", "completed", "returned"]);
 
@@ -17884,14 +14913,6 @@ export const HealthcareSupportWorkflowAutomationWorkflowConditionSchema = z.obje
 
 export const HealthcareSupportWorkflowAutomationWorkflowConditionOperatorSchema = z.enum(["equals", "notEquals", "greaterThan", "lessThan", "contains", "in", "exists"]);
 
-export const HealthcareSupportWorkflowAutomationWorkflowConditionResultSchema = z.object({
-  field: z.string(),
-  operator: z.enum(["equals", "notEquals", "greaterThan", "lessThan", "contains", "in", "exists"]),
-  expectedValue: z.string(),
-  actualValue: z.string().optional(),
-  passed: z.boolean()
-});
-
 export const HealthcareSupportWorkflowAutomationWorkflowExecutionSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -17942,17 +14963,6 @@ export const HealthcareSupportWorkflowAutomationWorkflowRuleSchema = z.object({
   id: z.string().uuid(),
   display: z.string().optional()
 }).optional()
-});
-
-export const HealthcareSupportWorkflowAutomationWorkflowRuleTestRequestSchema = z.object({
-  eventPayload: z.record(z.string(), z.unknown()),
-  dryRun: z.boolean()
-});
-
-export const HealthcareSupportWorkflowAutomationWorkflowRuleTestResultSchema = z.object({
-  conditionsMet: z.boolean(),
-  actionsToExecute: z.array(HealthcareSupportWorkflowAutomationWorkflowActionSchema),
-  conditionResults: z.array(HealthcareSupportWorkflowAutomationWorkflowConditionResultSchema)
 });
 
 export const IceServerSchema = z.object({
@@ -18043,6 +15053,13 @@ export const LeaveVideoCallResponseSchema = z.object({
   message: z.string(),
   callStillActive: z.boolean(),
   remainingParticipants: z.number().int()
+});
+
+export const LocationHoursSchema = z.object({
+  daysOfWeek: z.array(z.string()).optional(),
+  allDay: z.boolean().optional(),
+  openingTime: z.string().optional(),
+  closingTime: z.string().optional()
 });
 
 export const LocationSchema = z.object({
@@ -18179,6 +15196,200 @@ export const OnboardingResponseSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+export const OrganizationContactSchema = z.object({
+  purpose: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}).optional(),
+  name: z.object({
+  use: z.enum(["usual", "official", "temp", "nickname", "anonymous", "old", "maiden"]).optional(),
+  text: z.string().optional(),
+  family: z.string().optional(),
+  given: z.array(z.string()).optional(),
+  prefix: z.array(z.string()).optional(),
+  suffix: z.array(z.string()).optional(),
+  period: z.object({
+  start: z.string().datetime().transform((str) => new Date(str)),
+  end: z.string().datetime().transform((str) => new Date(str)).optional()
+}).optional()
+}).optional(),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  address: z.object({
+  street1: z.string().min(1).max(100),
+  street2: z.string().max(100).optional(),
+  city: z.string().min(1).max(50),
+  state: z.string().min(1).max(50),
+  postalCode: z.string().min(1).max(20),
+  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }),
+  coordinates: z.object({
+  latitude: z.number().gte(-90).lte(90),
+  longitude: z.number().gte(-180).lte(180),
+  accuracy: z.number().gte(0).optional()
+}).optional()
+}).optional()
+});
+
+export const OrganizationSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  active: z.boolean(),
+  type: z.array(HealthcareCoreCodeableConceptSchema),
+  name: z.string(),
+  aliases: z.array(z.string()).optional(),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  address: z.array(AddressSchema).optional(),
+  partOf: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}).optional(),
+  contact: z.array(OrganizationContactSchema).optional(),
+  endpoint: z.array(z.string()).optional()
+});
+
+export const PatientLinkSchema = z.object({
+  other: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}),
+  type: z.enum(["replaced-by", "replaces", "refer", "seealso"])
+});
+
+export const PatientSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  active: z.boolean(),
+  name: z.array(HealthcareCoreHumanNameSchema),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
+  gender: z.enum(["male", "female", "other", "unknown"]),
+  genderIdentity: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}).optional(),
+  pronouns: z.string().optional(),
+  maritalStatus: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}).optional(),
+  deceased: z.boolean().optional(),
+  deceasedDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
+  address: z.array(AddressSchema).optional(),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  language: z.string().optional(),
+  communication: z.array(PatientCommunicationSchema).optional(),
+  generalPractitioner: z.array(HealthcareCoreReferenceSchema).optional(),
+  managingOrganization: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}).optional(),
+  link: z.array(PatientLinkSchema).optional(),
+  photo: z.array(HealthcareCoreAttachmentSchema).optional(),
+  emergencyContact: z.array(EmergencyContactSchema).optional(),
+  mrn: z.string().optional(),
+  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional(),
+  primaryProvider: z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+}).optional(),
+  primaryPharmacy: z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+}).optional()
+});
+
+export const PatientLinkTypeSchema = z.enum(["replaced-by", "replaces", "refer", "seealso"]);
+
+export const PatientMergeRequestSchema = z.object({
+  targetPatientId: z.string().uuid(),
+  sourcePatientId: z.string().uuid(),
+  reason: z.string(),
+  dryRun: z.boolean().optional()
+});
+
+export const PatientMergeResultSchema = z.object({
+  success: z.boolean(),
+  targetPatient: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  active: z.boolean(),
+  name: z.array(HealthcareCoreHumanNameSchema),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }),
+  gender: z.enum(["male", "female", "other", "unknown"]),
+  genderIdentity: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}).optional(),
+  pronouns: z.string().optional(),
+  maritalStatus: z.object({
+  coding: z.array(HealthcareCoreCodingSchema),
+  text: z.string().optional()
+}).optional(),
+  deceased: z.boolean().optional(),
+  deceasedDateTime: z.string().datetime().transform((str) => new Date(str)).optional(),
+  address: z.array(AddressSchema).optional(),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  language: z.string().optional(),
+  communication: z.array(PatientCommunicationSchema).optional(),
+  generalPractitioner: z.array(HealthcareCoreReferenceSchema).optional(),
+  managingOrganization: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}).optional(),
+  link: z.array(PatientLinkSchema).optional(),
+  photo: z.array(HealthcareCoreAttachmentSchema).optional(),
+  emergencyContact: z.array(EmergencyContactSchema).optional(),
+  mrn: z.string().optional(),
+  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional(),
+  primaryProvider: z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+}).optional(),
+  primaryPharmacy: z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+}).optional()
+}),
+  recordsUpdated: z.number().int(),
+  details: z.string().optional()
+});
+
+export const PatientUnmergeRequestSchema = z.object({
+  targetPatientId: z.string().uuid(),
+  sourcePatientId: z.string().uuid(),
+  reason: z.string()
+});
+
 export const PaymentRequestSchema = z.object({
   paymentMethod: z.string().max(255).optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
@@ -18254,6 +15465,94 @@ export const PersonUpdateRequestSchema = z.object({
 });
 
 export const PhoneNumberSchema = z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" });
+
+export const PractitionerSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  active: z.boolean(),
+  name: z.array(HealthcareCoreHumanNameSchema),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  address: z.array(AddressSchema).optional(),
+  gender: z.enum(["male", "female", "other", "unknown"]).optional(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
+  photo: z.array(HealthcareCoreAttachmentSchema).optional(),
+  qualification: z.array(PractitionerQualificationSchema),
+  credential: z.array(PractitionerCredentialSchema),
+  specialties: z.array(HealthcareCoreCodeableConceptSchema),
+  languages: z.array(HealthcareCoreCodeableConceptSchema).optional()
+});
+
+export const PractitionerRoleSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string(),
+  identifiers: z.array(HealthcareCoreIdentifierSchema).optional(),
+  extensions: z.array(HealthcareCoreResourceExtensionSchema).optional(),
+  sensitivityLabels: z.array(HealthcareCoreSensitivityLabelSchema).optional(),
+  active: z.boolean(),
+  period: z.object({
+  start: z.string().datetime().transform((str) => new Date(str)),
+  end: z.string().datetime().transform((str) => new Date(str)).optional()
+}).optional(),
+  practitioner: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}),
+  organization: z.object({
+  resourceType: z.string(),
+  id: z.string().uuid(),
+  display: z.string().optional()
+}),
+  code: z.array(HealthcareCoreCodeableConceptSchema),
+  specialty: z.array(HealthcareCoreCodeableConceptSchema),
+  location: z.array(HealthcareCoreReferenceSchema).optional(),
+  healthcareService: z.array(HealthcareCoreReferenceSchema).optional(),
+  telecom: z.array(HealthcareCoreContactPointSchema).optional(),
+  availableTime: z.array(AvailableTimeSchema).optional(),
+  notAvailable: z.array(NotAvailableTimeSchema).optional()
+});
+
+export const PrimaryPharmacyInfoSchema = z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+});
+
+export const PrimaryProviderInfoSchema = z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+});
+
+export const ProviderSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  person: z.union([UUIDSchema, PersonSchema]),
+  providerType: z.enum(["pharmacist", "other"]),
+  yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
+  biography: z.string().max(2000).optional(),
+  minorAilmentsSpecialties: z.array(z.string()).optional(),
+  minorAilmentsPracticeLocations: z.array(z.string()).optional()
+});
+
+export const ProviderTypeSchema = z.enum(["pharmacist", "other"]);
 
 export const RateLimitErrorSchema = z.object({
   code: z.string(),
@@ -18388,6 +15687,17 @@ export const StoredFileSchema = z.object({
   uploadedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const SymptomSeveritySchema = z.union([z.string(), z.enum(["mild", "moderate", "severe"])]);
+
+export const SymptomsDataSchema = z.object({
+  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
+  durationHours: z.number().int().optional(),
+  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
+  description: z.string().optional(),
+  associated: z.array(z.string()).optional(),
+  denies: z.array(z.string()).optional()
+});
+
 export const TemplateStatusSchema = z.enum(["draft", "active", "archived"]);
 
 export const TestTemplateRequestSchema = z.object({
@@ -18428,71 +15738,45 @@ export const TestTemplateResultSchema = z.object({
 
 export const TimezoneIdSchema = z.string().regex(/^[A-Za-z_]+\/[A-Za-z_]+$/).refine(val => validateTimezone(val), { message: "Invalid IANA timezone identifier" });
 
+export const UpdateConsultationRequestSchema = z.object({
+  chiefComplaint: z.union([z.string().max(500), z.null()]).optional(),
+  assessment: z.union([z.string().max(2000), z.null()]).optional(),
+  plan: z.union([z.string().max(2000), z.null()]).optional(),
+  vitals: z.union([z.object({
+  temperatureCelsius: z.number().optional(),
+  systolicBp: z.number().int().optional(),
+  diastolicBp: z.number().int().optional(),
+  heartRate: z.number().int().optional(),
+  weightKg: z.number().optional(),
+  heightCm: z.number().optional(),
+  respiratoryRate: z.number().int().optional(),
+  oxygenSaturation: z.number().int().optional(),
+  notes: z.string().optional()
+}), z.null()]).optional(),
+  symptoms: z.union([z.object({
+  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
+  durationHours: z.number().int().optional(),
+  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
+  description: z.string().optional(),
+  associated: z.array(z.string()).optional(),
+  denies: z.array(z.string()).optional()
+}), z.null()]).optional(),
+  prescriptions: z.union([z.array(PrescriptionDataSchema), z.null()]).optional(),
+  followUp: z.union([z.object({
+  needed: z.boolean().optional(),
+  timeframeDays: z.number().int().optional(),
+  instructions: z.string().optional(),
+  specialistReferral: z.string().optional()
+}), z.null()]).optional(),
+  externalDocumentation: z.union([z.record(z.string(), z.unknown()), z.null()]).optional()
+});
+
 export const UpdateInvoiceRequestSchema = z.object({
   paymentCaptureMethod: z.enum(["automatic", "manual"]).optional(),
   paymentDueAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]).optional(),
   voidThresholdMinutes: z.number().int().optional(),
   lineItems: z.array(CreateLineItemRequestSchema).optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
-});
-
-export const UpdateLocationRequestSchema = z.object({
-  name: z.union([z.string(), z.null()]).optional(),
-  status: z.union([z.enum(["active", "suspended", "inactive"]), z.null()]).optional(),
-  aliases: z.union([z.array(z.string()), z.null()]).optional(),
-  description: z.union([z.string(), z.null()]).optional(),
-  mode: z.union([z.enum(["instance", "kind"]), z.null()]).optional(),
-  type: z.union([z.array(HealthcareCoreCodeableConceptSchema), z.null()]).optional(),
-  telecom: z.union([z.array(HealthcareCoreContactPointSchema), z.null()]).optional(),
-  address: z.union([z.object({
-  street1: z.string().min(1).max(100).optional(),
-  street2: z.string().max(100).optional(),
-  city: z.string().min(1).max(50).optional(),
-  state: z.string().min(1).max(50).optional(),
-  postalCode: z.string().min(1).max(20).optional(),
-  country: z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" }).optional(),
-  coordinates: z.object({
-  latitude: z.number().gte(-90).lte(90).optional(),
-  longitude: z.number().gte(-180).lte(180).optional(),
-  accuracy: z.number().gte(0).optional()
-}).optional()
-}), z.null()]).optional(),
-  physicalType: z.union([z.object({
-  coding: z.array(HealthcareCoreCodingSchema).optional(),
-  text: z.string().optional()
-}), z.null()]).optional(),
-  position: z.union([z.object({
-  latitude: z.number().gte(-90).lte(90).optional(),
-  longitude: z.number().gte(-180).lte(180).optional(),
-  accuracy: z.number().gte(0).optional()
-}), z.null()]).optional(),
-  managingOrganization: z.union([z.object({
-  resourceType: z.string().optional(),
-  id: z.string().uuid().optional(),
-  display: z.string().optional()
-}), z.null()]).optional(),
-  partOf: z.union([z.object({
-  resourceType: z.string().optional(),
-  id: z.string().uuid().optional(),
-  display: z.string().optional()
-}), z.null()]).optional(),
-  hoursOfOperation: z.union([z.array(LocationHoursSchema), z.null()]).optional()
-});
-
-export const UpdateOrganizationRequestSchema = z.object({
-  name: z.union([z.string(), z.null()]).optional(),
-  type: z.union([z.array(HealthcareCoreCodeableConceptSchema), z.null()]).optional(),
-  active: z.union([z.boolean(), z.null()]).optional(),
-  aliases: z.union([z.array(z.string()), z.null()]).optional(),
-  telecom: z.union([z.array(HealthcareCoreContactPointSchema), z.null()]).optional(),
-  address: z.union([z.array(AddressSchema), z.null()]).optional(),
-  partOf: z.union([z.object({
-  resourceType: z.string().optional(),
-  id: z.string().uuid().optional(),
-  display: z.string().optional()
-}), z.null()]).optional(),
-  contact: z.union([z.array(OrganizationContactSchema), z.null()]).optional(),
-  endpoint: z.union([z.array(z.string()), z.null()]).optional()
 });
 
 export const UpdateParticipantRequestSchema = z.object({
@@ -18619,6 +15903,18 @@ export const VideoCallJoinResponseSchema = z.object({
 });
 
 export const VideoCallStatusSchema = z.enum(["starting", "active", "ended", "cancelled"]);
+
+export const VitalsDataSchema = z.object({
+  temperatureCelsius: z.number().optional(),
+  systolicBp: z.number().int().optional(),
+  diastolicBp: z.number().int().optional(),
+  heartRate: z.number().int().optional(),
+  weightKg: z.number().optional(),
+  heightCm: z.number().optional(),
+  respiratoryRate: z.number().int().optional(),
+  oxygenSaturation: z.number().int().optional(),
+  notes: z.string().optional()
+});
 
 export const ListAuditLogsQuery = z.object({
   resourceType: z.string().optional(),
@@ -19262,6 +16558,86 @@ export type TestEmailTemplateBody = z.infer<typeof TestEmailTemplateBody>;
 
 export const TestEmailTemplateResponse = TestTemplateResultSchema;
 
+export const CreateConsultationBody = CreateConsultationRequestSchema;
+export type CreateConsultationBody = z.infer<typeof CreateConsultationBody>;
+
+export const CreateConsultationResponse = ConsultationNoteSchema;
+
+export const ListConsultationsQuery = z.object({
+  patient: UUIDSchema.optional(),
+  status: ConsultationStatusSchema.optional(),
+  offset: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).lte(100).optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
+  q: z.string().max(500).optional(),
+  sort: z.string().optional(),
+});
+export type ListConsultationsQuery = z.infer<typeof ListConsultationsQuery>;
+
+export const ListConsultationsResponse = z.object({
+  data: z.array(ConsultationNoteSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const GetConsultationParams = z.object({
+  consultation: UUIDSchema,
+});
+export type GetConsultationParams = z.infer<typeof GetConsultationParams>;
+
+export const GetConsultationResponse = ConsultationNoteSchema;
+
+export const UpdateConsultationParams = z.object({
+  consultation: UUIDSchema,
+});
+export type UpdateConsultationParams = z.infer<typeof UpdateConsultationParams>;
+
+export const UpdateConsultationBody = UpdateConsultationRequestSchema;
+export type UpdateConsultationBody = z.infer<typeof UpdateConsultationBody>;
+
+export const UpdateConsultationResponse = ConsultationNoteSchema;
+
+export const FinalizeConsultationParams = z.object({
+  consultation: UUIDSchema,
+});
+export type FinalizeConsultationParams = z.infer<typeof FinalizeConsultationParams>;
+
+export const FinalizeConsultationResponse = ConsultationNoteSchema;
+
+export const ListEMRPatientsQuery = z.object({
+  expand: z.string().optional(),
+  offset: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).lte(100).optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
+  q: z.string().max(500).optional(),
+  sort: z.string().optional(),
+});
+export type ListEMRPatientsQuery = z.infer<typeof ListEMRPatientsQuery>;
+
+export const ListEMRPatientsResponse = z.object({
+  data: z.array(PatientSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
 export const ListNotificationsQuery = z.object({
   type: NotificationTypeSchema.optional(),
   channel: NotificationChannelSchema.optional(),
@@ -19314,6 +16690,74 @@ export type MarkNotificationAsReadParams = z.infer<typeof MarkNotificationAsRead
 
 export const MarkNotificationAsReadResponse = NotificationSchema;
 
+export const CreatePatientBody = CreatePatientRequestSchema;
+export type CreatePatientBody = z.infer<typeof CreatePatientBody>;
+
+export const CreatePatientResponse = PatientSchema;
+
+export const ListPatientsQuery = z.object({
+  offset: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).lte(100).optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
+  q: z.string().max(500).optional(),
+  sort: z.string().optional(),
+  name: z.string().optional(),
+  birthDate: z.string().optional(),
+  gender: z.string().optional(),
+  mrn: z.string().optional(),
+  active: z.coerce.boolean().optional(),
+});
+export type ListPatientsQuery = z.infer<typeof ListPatientsQuery>;
+
+export const ListPatientsResponse = z.object({
+  data: z.array(PatientSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const MergePatientsBody = PatientMergeRequestSchema;
+export type MergePatientsBody = z.infer<typeof MergePatientsBody>;
+
+export const MergePatientsResponse = PatientMergeResultSchema;
+
+export const UnmergePatientsBody = PatientUnmergeRequestSchema;
+export type UnmergePatientsBody = z.infer<typeof UnmergePatientsBody>;
+
+export const UnmergePatientsResponse = PatientMergeResultSchema;
+
+export const GetPatientParams = z.object({
+  id: UUIDSchema,
+});
+export type GetPatientParams = z.infer<typeof GetPatientParams>;
+
+export const GetPatientResponse = PatientSchema;
+
+export const UpdatePatientParams = z.object({
+  id: UUIDSchema,
+});
+export type UpdatePatientParams = z.infer<typeof UpdatePatientParams>;
+
+export const UpdatePatientBody = UpdatePatientRequestSchema;
+export type UpdatePatientBody = z.infer<typeof UpdatePatientBody>;
+
+export const UpdatePatientResponse = PatientSchema;
+
+export const DeactivatePatientParams = z.object({
+  id: UUIDSchema,
+});
+export type DeactivatePatientParams = z.infer<typeof DeactivatePatientParams>;
+
+export const DeactivatePatientResponse = z.void();
+
 export const CreatePersonBody = PersonCreateRequestSchema;
 export type CreatePersonBody = z.infer<typeof CreatePersonBody>;
 
@@ -19359,6 +16803,121 @@ export const UpdatePersonBody = PersonUpdateRequestSchema;
 export type UpdatePersonBody = z.infer<typeof UpdatePersonBody>;
 
 export const UpdatePersonResponse = PersonSchema;
+
+export const CreatePractitionerRoleBody = CreatePractitionerRoleRequestSchema;
+export type CreatePractitionerRoleBody = z.infer<typeof CreatePractitionerRoleBody>;
+
+export const CreatePractitionerRoleResponse = PractitionerRoleSchema;
+
+export const ListPractitionerRolesQuery = z.object({
+  offset: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).lte(100).optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
+  q: z.string().max(500).optional(),
+  sort: z.string().optional(),
+  practitioner: UUIDSchema.optional(),
+  organization: UUIDSchema.optional(),
+  specialty: z.string().optional(),
+  location: UUIDSchema.optional(),
+  active: z.coerce.boolean().optional(),
+});
+export type ListPractitionerRolesQuery = z.infer<typeof ListPractitionerRolesQuery>;
+
+export const ListPractitionerRolesResponse = z.object({
+  data: z.array(PractitionerRoleSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const GetPractitionerRoleParams = z.object({
+  id: UUIDSchema,
+});
+export type GetPractitionerRoleParams = z.infer<typeof GetPractitionerRoleParams>;
+
+export const GetPractitionerRoleResponse = PractitionerRoleSchema;
+
+export const UpdatePractitionerRoleParams = z.object({
+  id: UUIDSchema,
+});
+export type UpdatePractitionerRoleParams = z.infer<typeof UpdatePractitionerRoleParams>;
+
+export const UpdatePractitionerRoleBody = UpdatePractitionerRoleRequestSchema;
+export type UpdatePractitionerRoleBody = z.infer<typeof UpdatePractitionerRoleBody>;
+
+export const UpdatePractitionerRoleResponse = PractitionerRoleSchema;
+
+export const DeactivatePractitionerRoleParams = z.object({
+  id: UUIDSchema,
+});
+export type DeactivatePractitionerRoleParams = z.infer<typeof DeactivatePractitionerRoleParams>;
+
+export const DeactivatePractitionerRoleResponse = z.void();
+
+export const CreatePractitionerBody = CreatePractitionerRequestSchema;
+export type CreatePractitionerBody = z.infer<typeof CreatePractitionerBody>;
+
+export const CreatePractitionerResponse = PractitionerSchema;
+
+export const ListPractitionersQuery = z.object({
+  offset: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).lte(100).optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
+  q: z.string().max(500).optional(),
+  sort: z.string().optional(),
+  name: z.string().optional(),
+  specialty: z.string().optional(),
+  npi: z.string().optional(),
+  active: z.coerce.boolean().optional(),
+});
+export type ListPractitionersQuery = z.infer<typeof ListPractitionersQuery>;
+
+export const ListPractitionersResponse = z.object({
+  data: z.array(PractitionerSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const GetPractitionerParams = z.object({
+  id: UUIDSchema,
+});
+export type GetPractitionerParams = z.infer<typeof GetPractitionerParams>;
+
+export const GetPractitionerResponse = PractitionerSchema;
+
+export const UpdatePractitionerParams = z.object({
+  id: UUIDSchema,
+});
+export type UpdatePractitionerParams = z.infer<typeof UpdatePractitionerParams>;
+
+export const UpdatePractitionerBody = UpdatePractitionerRequestSchema;
+export type UpdatePractitionerBody = z.infer<typeof UpdatePractitionerBody>;
+
+export const UpdatePractitionerResponse = PractitionerSchema;
+
+export const DeactivatePractitionerParams = z.object({
+  id: UUIDSchema,
+});
+export type DeactivatePractitionerParams = z.infer<typeof DeactivatePractitionerParams>;
+
+export const DeactivatePractitionerResponse = z.void();
 
 export const CreateReviewBody = CreateReviewRequestSchema;
 export type CreateReviewBody = z.infer<typeof CreateReviewBody>;

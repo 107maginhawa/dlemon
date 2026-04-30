@@ -12,6 +12,7 @@ import "./common/security.tsp";
 // ============================================================================
 import "./modules/person.tsp";
 import "./modules/billing.tsp";
+import "./modules/booking.tsp";
 import "./modules/audit.tsp";
 import "./modules/notifs.tsp";
 import "./modules/comms.tsp";
@@ -30,6 +31,7 @@ import "./healthcare/core/terminology.tsp";
 // Foundation — patients, providers, organizations, locations
 import "./modules/patient.tsp";
 import "./modules/provider.tsp";
+import "./modules/emr.tsp";
 import "./healthcare/foundation/organization.tsp";
 import "./healthcare/foundation/location.tsp";
 
@@ -217,8 +219,6 @@ using TypeSpec.OpenAPI;
 @tagMetadata("Reviews", #{
   description: "NPS review system for feedback collection across appointments, sessions, and services."
 })
-namespace MonobaseAPI {
-
 // ============================================================================
 // TAG METADATA — Healthcare Foundation
 // ============================================================================
@@ -231,123 +231,72 @@ namespace MonobaseAPI {
 @tagMetadata("Healthcare:Foundation", #{
   description: "Organizations and locations. Manages healthcare facilities (hospitals, clinics, pharmacies, labs), departments, rooms, beds, and virtual locations."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Clinical
 // ============================================================================
 @tagMetadata("Healthcare:Clinical", #{
   description: "Core clinical domain. Encounters (outpatient, inpatient, emergency, virtual), conditions/problem lists, allergies, medications/prescriptions, observations (vitals, lab results), procedures, immunizations, orders (lab, imaging, referral), clinical documents (SOAP notes, discharge summaries), and family history. All FHIR R4-aligned with ICD-10, SNOMED CT, LOINC, CPT, RxNorm coding."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Administrative
 // ============================================================================
 @tagMetadata("Healthcare:Administrative", #{
   description: "Healthcare administration. Scheduling (FHIR Schedule/Slot/Appointment), bed management, insurance coverage and eligibility verification, claims submission and adjudication, and prior authorization workflows (CMS-mandated)."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Ancillary
 // ============================================================================
 @tagMetadata("Healthcare:Ancillary", #{
   description: "Ancillary healthcare services. Laboratory (specimens, diagnostic reports), pharmacy (medication dispensing, drug interaction checking), radiology (imaging studies, DICOM/PACS), and dental (odontogram, treatment plans, CDT codes)."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Support
 // ============================================================================
 @tagMetadata("Healthcare:Support", #{
   description: "Healthcare support services. Care planning, consent, CDS Hooks, SDOH, provenance, electronic signatures, questionnaires, and task/workflow management."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Operational
 // ============================================================================
 @tagMetadata("Healthcare:Operational", #{
   description: "Operational resource management. Inventory tracking (items, batches, lots, expiry), medical devices (assignment, metrics, calibration), supply consumption, and storage locations."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Analytics
 // ============================================================================
 @tagMetadata("Healthcare:Analytics", #{
   description: "Analytics, research, and AI. De-identification profiles, cohort definitions, research data extracts, data lineage tracking, and AI output metadata with confidence scores and evidence sources."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Conformance
 // ============================================================================
 @tagMetadata("Healthcare:Conformance", #{
   description: "FHIR conformance and interoperability. CapabilityStatement, FHIR operations ($match, $everything, $validate, $document), terminology services ($lookup, $expand, $validate-code, $translate), bulk data export ($export), FHIR subscriptions, and International Patient Summary (IPS) generation."
 })
-
 // ============================================================================
 // TAG METADATA — Healthcare Hospital
 // ============================================================================
 @tagMetadata("Healthcare:Hospital", #{
   description: "Hospital-specific clinical specialties and operational services. Emergency department, nursing assessments, clinical order management, ICU/critical care, labor and delivery, oncology, dialysis, behavioral health, environmental services, patient transport, dietary services, sterile processing, and mortuary services."
 })
-
 @tagMetadata("Healthcare:Compliance", #{
   description: "Compliance and governance. Policy management, attestations, BAA lifecycle, CAPA tracking, data retention, legal holds, privacy workflows (amendment requests, accounting of disclosures, breach assessment/notification, privacy complaints)."
 })
-
 @tagMetadata("Healthcare:PublicHealth", #{
   description: "Public health reporting and surveillance. Electronic case reporting (eCR), immunization registry integration (IIS), vital records (birth/death certificates), cancer registry abstraction, syndromic surveillance, electronic lab reporting (ELR), trauma registry."
 })
-
-namespace MonobaseHealthcareAPI {
+namespace MonobaseAPI {
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE
   // ========================================================================
 
+  // Person
   @tag("Person")
   @route("/persons")
   interface PersonManagement extends PersonModule.PersonManagement {}
 
-  // Billing Management
-  @tag("Billing")
-  @route("/billing")
-  interface BillingInvoiceManagement extends BillingModule.InvoiceManagement {}
-  
-  @tag("Billing")
-  @route("/billing")
-  interface BillingPaymentProcessing extends BillingModule.PaymentProcessing {}
-  
-  @tag("Billing")
-  @route("/billing")
-  interface BillingMerchantAccountManagement extends BillingModule.MerchantAccountManagement {}
-  
-  // Audit Management
-  @tag("Audit")
-  @route("/audit")
-  interface AuditManagement extends AuditModule.AuditManagement {}
-
-  @tag("Notifs")
-  @route("/notifs")
-  interface NotificationManagement extends Notifs.NotificationManagement {}
-
-  @tag("Comms")
-  @route("/comms")
-  interface CommsManagement extends CommsModule.CommsManagement {}
-
-  @tag("Storage")
-  interface StorageManagement extends StorageModule.StorageManagement {}
-
-  @tag("Email")
-  @route("/email")
-  interface EmailTemplateManagement extends EmailModule.EmailTemplateManagement {}
-
-  @tag("Email")
-  @route("/email")
-  interface EmailQueueManagement extends EmailModule.EmailQueueManagement {}
-
-  @tag("Reviews")
-  @route("/reviews")
-  interface ReviewsManagement extends ReviewsModule.ReviewsManagement {}
-
-  // Billing — invoice, payment, and merchant account management
+  // Billing
   @tag("Billing")
   @route("/billing")
   interface InvoiceManagement extends BillingModule.InvoiceManagement {}
@@ -360,7 +309,35 @@ namespace MonobaseHealthcareAPI {
   @route("/billing")
   interface MerchantAccountManagement extends BillingModule.MerchantAccountManagement {}
 
-  // Booking — events, slots, bookings, and schedule exceptions
+  // Audit
+  @tag("Audit")
+  @route("/audit")
+  interface AuditManagement extends AuditModule.AuditManagement {}
+
+  // Notifs
+  @tag("Notifs")
+  @route("/notifs")
+  interface NotificationManagement extends Notifs.NotificationManagement {}
+
+  // Comms
+  @tag("Comms")
+  @route("/comms")
+  interface CommsManagement extends CommsModule.CommsManagement {}
+
+  // Storage
+  @tag("Storage")
+  interface StorageManagement extends StorageModule.StorageManagement {}
+
+  // Email
+  @tag("Email")
+  @route("/email")
+  interface EmailTemplateManagement extends EmailModule.EmailTemplateManagement {}
+
+  @tag("Email")
+  @route("/email")
+  interface EmailQueueManagement extends EmailModule.EmailQueueManagement {}
+
+  // Booking
   @tag("Booking")
   @route("/booking")
   interface BookingEventManagement extends BookingModule.BookingEventManagement {}
@@ -377,11 +354,33 @@ namespace MonobaseHealthcareAPI {
   @route("/booking")
   interface ScheduleExceptionManagement extends BookingModule.ScheduleExceptionManagement {}
 
-  // Reviews Management
+  // Reviews
   @tag("Reviews")
   @route("/reviews")
   interface ReviewsManagement extends ReviewsModule.ReviewsManagement {}
 
+  // ========================================================================
+  // HEALTHCARE FOUNDATION
+  // ========================================================================
+
+  // Patient
+  @tag("Patient")
+  @route("/patients")
+  interface PatientManagement extends PatientModule.PatientManagement {}
+
+  // Provider
+  @tag("Provider")
+  @route("/providers")
+  interface PractitionerManagement extends ProviderModule.PractitionerManagement {}
+
+  @tag("Provider")
+  @route("/providers")
+  interface PractitionerRoleManagement extends ProviderModule.PractitionerRoleManagement {}
+
+  // EMR
+  @tag("EMR")
+  @route("/emr")
+  interface EMRManagement extends EMRModule.EMRManagement {}
 }
 
 /**

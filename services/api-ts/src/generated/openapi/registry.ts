@@ -57,14 +57,37 @@ import { createEmailTemplate } from '../../handlers/email/createEmailTemplate';
 import { getEmailTemplate } from '../../handlers/email/getEmailTemplate';
 import { updateEmailTemplate } from '../../handlers/email/updateEmailTemplate';
 import { testEmailTemplate } from '../../handlers/email/testEmailTemplate';
+import { createConsultation } from '../../handlers/emr/createConsultation';
+import { listConsultations } from '../../handlers/emr/listConsultations';
+import { getConsultation } from '../../handlers/emr/getConsultation';
+import { updateConsultation } from '../../handlers/emr/updateConsultation';
+import { finalizeConsultation } from '../../handlers/emr/finalizeConsultation';
+import { listEMRPatients } from '../../handlers/emr/listEMRPatients';
 import { listNotifications } from '../../handlers/notifs/listNotifications';
 import { markAllNotificationsAsRead } from '../../handlers/notifs/markAllNotificationsAsRead';
 import { getNotification } from '../../handlers/notifs/getNotification';
 import { markNotificationAsRead } from '../../handlers/notifs/markNotificationAsRead';
+import { createPatient } from '../../handlers/patient/createPatient';
+import { listPatients } from '../../handlers/patient/listPatients';
+import { mergePatients } from '../../handlers/patient/mergePatients';
+import { unmergePatients } from '../../handlers/patient/unmergePatients';
+import { getPatient } from '../../handlers/patient/getPatient';
+import { updatePatient } from '../../handlers/patient/updatePatient';
+import { deactivatePatient } from '../../handlers/patient/deactivatePatient';
 import { createPerson } from '../../handlers/person/createPerson';
 import { listPersons } from '../../handlers/person/listPersons';
 import { getPerson } from '../../handlers/person/getPerson';
 import { updatePerson } from '../../handlers/person/updatePerson';
+import { createPractitionerRole } from '../../handlers/provider/createPractitionerRole';
+import { listPractitionerRoles } from '../../handlers/provider/listPractitionerRoles';
+import { getPractitionerRole } from '../../handlers/provider/getPractitionerRole';
+import { updatePractitionerRole } from '../../handlers/provider/updatePractitionerRole';
+import { deactivatePractitionerRole } from '../../handlers/provider/deactivatePractitionerRole';
+import { createPractitioner } from '../../handlers/provider/createPractitioner';
+import { listPractitioners } from '../../handlers/provider/listPractitioners';
+import { getPractitioner } from '../../handlers/provider/getPractitioner';
+import { updatePractitioner } from '../../handlers/provider/updatePractitioner';
+import { deactivatePractitioner } from '../../handlers/provider/deactivatePractitioner';
 import { createReview } from '../../handlers/reviews/createReview';
 import { listReviews } from '../../handlers/reviews/listReviews';
 import { getReview } from '../../handlers/reviews/getReview';
@@ -141,17 +164,46 @@ export const registry = {
   updateEmailTemplate,
   testEmailTemplate,
 
+  // Emr handlers
+  createConsultation,
+  listConsultations,
+  getConsultation,
+  updateConsultation,
+  finalizeConsultation,
+  listEMRPatients,
+
   // Notifs handlers
   listNotifications,
   markAllNotificationsAsRead,
   getNotification,
   markNotificationAsRead,
 
+  // Patient handlers
+  createPatient,
+  listPatients,
+  mergePatients,
+  unmergePatients,
+  getPatient,
+  updatePatient,
+  deactivatePatient,
+
   // Person handlers
   createPerson,
   listPersons,
   getPerson,
   updatePerson,
+
+  // Provider handlers
+  createPractitionerRole,
+  listPractitionerRoles,
+  getPractitionerRole,
+  updatePractitionerRole,
+  deactivatePractitionerRole,
+  createPractitioner,
+  listPractitioners,
+  getPractitioner,
+  updatePractitioner,
+  deactivatePractitioner,
 
   // Reviews handlers
   createReview,
