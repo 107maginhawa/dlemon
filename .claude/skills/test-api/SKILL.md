@@ -19,19 +19,19 @@ Run API unit tests.
 ### Run All Tests
 
 ```bash
-cd services/api && bun test
+cd services/api-ts && bun test
 ```
 
 ### Run Specific Test File
 
 ```bash
-cd services/api && bun test src/handlers/{module}/{operationId}.test.ts
+cd services/api-ts && bun test src/handlers/{module}/{operationId}.test.ts
 ```
 
 ### Run Tests in Watch Mode
 
 ```bash
-cd services/api && bun test --watch
+cd services/api-ts && bun test --watch
 ```
 
 ## Test Conventions

@@ -19,7 +19,7 @@ Run TypeScript type checking.
 ### Check API Service
 
 ```bash
-cd services/api && bun run typecheck
+cd services/api-ts && bun run typecheck
 ```
 
 ### Check Account App
@@ -31,7 +31,7 @@ cd apps/account && bun run typecheck
 ### Check Both (Pre-Commit)
 
 ```bash
-cd services/api && bun run typecheck && cd ../../apps/account && bun run typecheck
+cd services/api-ts && bun run typecheck && cd ../../apps/account && bun run typecheck
 ```
 
 ## Troubleshooting
@@ -39,7 +39,7 @@ cd services/api && bun run typecheck && cd ../../apps/account && bun run typeche
 - **Type errors after TypeSpec changes**: Regenerate types first:
   ```bash
   cd specs/api && bun run build
-  cd ../../services/api && bun run generate
+  cd ../../services/api-ts && bun run generate
   ```
   Then restart the dev server.
 

@@ -32,7 +32,7 @@ Identify and list:
 
 ### 3. Map to Repo Patterns
 
-Reference existing modules in `services/api/src/handlers/` to understand what already exists. For each requirement:
+Reference existing modules in `services/api-ts/src/handlers/` to understand what already exists. For each requirement:
 
 - **New module?** → needs TypeSpec + DB schema + handlers + frontend
 - **Extends existing module?** → identify which files to modify
@@ -54,8 +54,8 @@ Key architectural patterns to apply:
 
 ## Implementation Order
 1. TypeSpec definitions (specs/api/src/modules/{module}.tsp)
-2. Database schema (services/api/src/core/database.schema.ts)
-3. Handler implementations (services/api/src/handlers/{module}/)
+2. Database schema (services/api-ts/src/core/database.schema.ts)
+3. Handler implementations (services/api-ts/src/handlers/{module}/)
 4. Frontend module (apps/{app}/src/)
 5. Tests
 

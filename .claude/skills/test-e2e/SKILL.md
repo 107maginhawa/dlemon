@@ -5,13 +5,15 @@ description: Run Playwright E2E tests for frontend apps. Use after implementing 
 
 # test-e2e
 
-Run Playwright E2E tests for frontend apps.
+Run Playwright E2E tests for the account app (UI/browser flows).
+
+For **API contract / wire-shape verification**, use `/test-contract` instead — the Hurl suite under `specs/api/tests/contract/` is the source of truth for API behavior and runs in seconds.
 
 ## Triggers
 
 - After implementing a frontend feature
 - Before shipping UI changes
-- When verifying user flows end-to-end
+- When verifying user flows end-to-end (browser-rendered)
 
 ## Workflow
 

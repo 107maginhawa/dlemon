@@ -18,7 +18,7 @@ Modify database schema and generate migrations.
 
 ### 1. Edit Schema
 
-Modify `services/api/src/core/database.schema.ts`:
+Modify `services/api-ts/src/core/database.schema.ts`:
 
 ```typescript
 import { pgTable, uuid, text, timestamp, jsonb, boolean, index } from 'drizzle-orm/pg-core';
@@ -68,12 +68,12 @@ Conventions:
 ### 2. Generate Migration
 
 ```bash
-cd services/api && bun run db:generate
+cd services/api-ts && bun run db:generate
 ```
 
 ### 3. Review Generated SQL
 
-Check the generated migration in `services/api/src/generated/migrations/`. Verify:
+Check the generated migration in `services/api-ts/src/generated/migrations/`. Verify:
 - Correct table/column names
 - Proper types
 - Foreign key constraints
@@ -84,13 +84,13 @@ Check the generated migration in `services/api/src/generated/migrations/`. Verif
 Migrations apply automatically on server start, or manually:
 
 ```bash
-cd services/api && bun run db:migrate
+cd services/api-ts && bun run db:migrate
 ```
 
 ### 5. Inspect Database (Optional)
 
 ```bash
-cd services/api && bun run db:studio
+cd services/api-ts && bun run db:studio
 # Opens http://localhost:4983
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: handler
-description: Implement API handler business logic and database repository for a module. Use after /typespec has generated handler stubs. Follows the exact pattern from services/api/src/handlers/person/createPerson.ts.
+description: Implement API handler business logic and database repository for a module. Use after /typespec has generated handler stubs. Follows the exact pattern from services/api-ts/src/handlers/person/createPerson.ts.
 ---
 
 # handler
@@ -17,11 +17,11 @@ Implement API handler business logic and repository layer.
 
 ### 1. Check Generated Stub
 
-Open the stub at `services/api/src/handlers/{module}/{operationId}.ts`. It will have a `throw new Error('Not implemented')` placeholder.
+Open the stub at `services/api-ts/src/handlers/{module}/{operationId}.ts`. It will have a `throw new Error('Not implemented')` placeholder.
 
 ### 2. Implement Handler
 
-Follow the pattern from `services/api/src/handlers/person/createPerson.ts`:
+Follow the pattern from `services/api-ts/src/handlers/person/createPerson.ts`:
 
 ```typescript
 import type { ValidatedContext } from '@/types/app';
@@ -60,7 +60,7 @@ export async function createMyEntity(
         action: 'create',
         outcome: 'success',
         user: user.id,
-        userType: (user.role === 'user' || user.role === 'patient' ? 'client' : user.role || 'client') as 'client' | 'provider' | 'admin' | 'system',
+        userType: (user.role === 'user' ? 'client' : user.role || 'client') as 'client' | 'host' | 'admin' | 'system',
         resourceType: 'my-entity',
         resource: entity.id,
         description: 'Entity created',
@@ -86,7 +86,7 @@ Key patterns:
 
 ### 3. Create Repository
 
-Create `services/api/src/handlers/{module}/repos/{module}.repo.ts`:
+Create `services/api-ts/src/handlers/{module}/repos/{module}.repo.ts`:
 
 ```typescript
 import type { DatabaseInstance } from '@/core/database';
@@ -140,11 +140,11 @@ export class MyEntityRepository {
 }
 ```
 
-Reference: `services/api/src/handlers/person/repos/person.repo.ts`
+Reference: `services/api-ts/src/handlers/person/repos/person.repo.ts`
 
 ### 4. Write Unit Test
 
-Create colocated test `services/api/src/handlers/{module}/{operationId}.test.ts`:
+Create colocated test `services/api-ts/src/handlers/{module}/{operationId}.test.ts`:
 
 ```typescript
 import { describe, test, expect } from 'bun:test';
@@ -154,7 +154,7 @@ import { describe, test, expect } from 'bun:test';
 ### 5. Verify
 
 ```bash
-cd services/api && bun test
+cd services/api-ts && bun test
 ```
 
 ## Critical Rules

@@ -97,7 +97,7 @@ If errors: check imports, namespace references, circular dependencies.
 ### 4. Generate API Code
 
 ```bash
-cd services/api && bun run generate
+cd services/api-ts && bun run generate
 ```
 
 This generates:
@@ -110,7 +110,7 @@ This generates:
 ### 5. Verify
 
 - No compilation errors from either command
-- Handler stubs created in `services/api/src/handlers/{module}/`
+- Handler stubs created in `services/api-ts/src/handlers/{module}/`
 - Check generated OpenAPI: `cat specs/api/dist/openapi/openapi.json | jq '.paths'`
 
 ## Troubleshooting
@@ -122,6 +122,6 @@ This generates:
 
 ## Critical Rules
 
-- NEVER edit files in `services/api/src/generated/` — they are regenerated every time
+- NEVER edit files in `services/api-ts/src/generated/` — they are regenerated every time
 - Handler stubs are only created if the file doesn't already exist
 - Always build specs before generating API code

@@ -20,7 +20,7 @@ Run all checks in order. Stop on first failure.
 ### 1. Type Check API
 
 ```bash
-cd services/api && bun run typecheck
+cd services/api-ts && bun run typecheck
 ```
 
 ### 2. Type Check Account App
@@ -32,25 +32,51 @@ cd apps/account && bun run typecheck
 ### 3. Run API Tests
 
 ```bash
-cd services/api && bun test
+cd services/api-ts && bun test
 ```
 
-### 4. Build API
+### 4. Type Check SDK
 
 ```bash
-cd services/api && bun run build
+cd packages/sdk-ts && bun run typecheck
 ```
 
-### 5. Build Account App
+### 5. Build API
+
+```bash
+cd services/api-ts && bun run build
+```
+
+### 6. Build Account App
 
 ```bash
 cd apps/account && bun run build
 ```
 
-### 6. Lint (if configured)
+### 7. Lint per workspace
 
 ```bash
-bun run lint
+bun run --filter '*' lint
+```
+
+### 8. Cargo Check (if Rust touched)
+
+If you modified `services/cadence/` or `apps/account/src-tauri/`:
+
+```bash
+cd services/cadence && cargo check --all-targets
+cd apps/account/src-tauri && cargo check
+```
+
+### 9. Contract Suite (if API surface touched)
+
+If you modified handlers or TypeSpec:
+
+```bash
+cd services/api-ts && bun dev &       # boot in background
+sleep 3
+bun run test:contract                  # 22 scenarios in ~5s
+kill %1                                # stop dev server
 ```
 
 ## On Failure

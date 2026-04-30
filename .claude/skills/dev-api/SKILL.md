@@ -12,7 +12,7 @@ Start the API development server.
 ### Start Server
 
 ```bash
-cd services/api && bun dev
+cd services/api-ts && bun dev
 ```
 
 - **Port**: 7213
@@ -34,7 +34,7 @@ echo $DATABASE_URL
 ```
 
 **Missing environment variables**:
-Check `services/api/.env` exists with:
+Check `services/api-ts/.env` exists with:
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/monobase
 PORT=7213

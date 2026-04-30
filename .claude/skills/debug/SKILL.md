@@ -33,13 +33,13 @@ pg_isready
 echo $DATABASE_URL
 ```
 
-If PostgreSQL is not running, start it. If `DATABASE_URL` is wrong, fix `services/api/.env`.
+If PostgreSQL is not running, start it. If `DATABASE_URL` is wrong, fix `services/api-ts/.env`.
 
 ### Stale Types After TypeSpec Changes
 
 ```bash
 cd specs/api && bun run build
-cd ../../services/api && bun run generate
+cd ../../services/api-ts && bun run generate
 ```
 
 Then restart dev servers.
@@ -76,7 +76,7 @@ cat specs/api/dist/openapi/openapi.json | jq '.paths'
 ### Database Inspection
 
 ```bash
-cd services/api && bun run db:studio
+cd services/api-ts && bun run db:studio
 # Opens http://localhost:4983
 ```
 
@@ -92,12 +92,12 @@ psql $DATABASE_URL
 ```bash
 dropdb monobase
 createdb monobase
-cd services/api && bun run db:generate
+cd services/api-ts && bun run db:generate
 ```
 
 ### Enable Debug Logging
 
-Set `LOG_LEVEL=debug` in `services/api/.env`, then restart the server.
+Set `LOG_LEVEL=debug` in `services/api-ts/.env`, then restart the server.
 
 ### TypeSpec Compilation Errors
 
