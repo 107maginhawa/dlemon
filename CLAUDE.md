@@ -17,16 +17,19 @@ For detailed information, refer to:
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
   - `account/` - Vite + TanStack Router app for self-service account management
-  - `patient/` - Vite + TanStack Router app for the patient-facing experience
+  - `patient/` - Vite + TanStack Router app for the patient-facing experience (also ships as a Tauri desktop app via `apps/patient/src-tauri/`)
   - `provider/` - Vite + TanStack Router app for the provider/practitioner portal
   - `website/` - Next.js public marketing site
-- `services/api/` - Backend API service (Hono + Drizzle) with business modules
+- `services/` - Backend services:
+  - `api/` - HTTP API (Hono + Drizzle) with business modules
+  - `cadence/` - Rust P2P sync engine (Iroh transport, SQLite/Valkey metadata backends, JWT scope auth). Embedded into the patient Tauri app for offline-first sync; can also run as a standalone hub. See `services/cadence/README.md`.
 - `specs/api/` - TypeSpec API definitions (compiled to OpenAPI + TypeScript types)
 - `packages/` - Shared packages:
   - `eslint-config/` - Shared ESLint flat configs (`base`, `react`, `next`)
   - `sdk/` - Type-safe API client + TanStack Query hooks
   - `typescript-config/` - Shared TypeScript configs
   - `ui/` - Shared UI component library (Radix primitives, Tailwind)
+- `.claude/skills/` - 15 Claude Code skills for end-to-end development workflow (typespec, handler, frontend-module, db-migrate, dev-api, dev-app, test-api, test-e2e, typecheck, pre-commit, commit, debug, prd, develop, shadcn). Surface as `/skill-name` in Claude Code sessions.
 
 ## Business Domain Modules
 
@@ -250,9 +253,13 @@ cd apps/account && bun run test:e2e     # E2E tests
 ### What Exists
 - ✅ **apps/account, apps/patient, apps/provider** - Vite + TanStack Router apps
 - ✅ **apps/website** - Next.js marketing site
+- ✅ **apps/patient/src-tauri/** - Tauri 2 desktop wrapper with embedded Boa runtime + SQLite + cadence P2P sync
+- ✅ **services/api/** - Hono + Drizzle API with 13 handler modules
+- ✅ **services/cadence/** - Rust P2P sync engine (compiles standalone; consumed by patient Tauri)
 - ✅ **packages/ui/** - Shared UI component library
 - ✅ **packages/sdk/** - Type-safe API client + TanStack Query hooks
 - ✅ **packages/eslint-config/** - Shared ESLint flat configs
+- ✅ **.claude/skills/** - 15 Claude Code skills for development workflow
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
 - ✅ **13 API handler modules**: 9 core (person, booking, billing, audit, notifs, comms, storage, email, reviews) plus 4 platform-specific (patient, provider, emr, ws)
@@ -263,6 +270,22 @@ cd apps/account && bun run test:e2e     # E2E tests
   (lint and build are clean).
 - Billing module schema fields (line items, platform fees, line-level audit)
   are stubbed in handlers — see in-file `TODO` comments.
+- `apps/patient/src-tauri/src/sync.rs` wires the cadence imports but the
+  `SyncEngine`/`SqliteBackend` integration in `init`/`start` is still a
+  stub (see `TODO` comments in that file). `cargo check` is green; runtime
+  sync is not yet activated end-to-end.
+
+### Working with Cadence (Rust)
+- Cadence lives at `services/cadence/` and is a Cargo crate independent of
+  the Bun workspaces. Build with `cd services/cadence && cargo check
+  --all-targets`. Full test suite (`cargo test`) needs Postgres + Valkey via
+  the bundled `docker-compose.deps.yml`.
+- The patient Tauri wrapper consumes cadence via a `path = "../../../services/cadence"`
+  dependency in `apps/patient/src-tauri/Cargo.toml`. Run
+  `cd apps/patient/src-tauri && cargo check` after touching either crate.
+- Tauri icons live in `apps/patient/src-tauri/icons/` and are generated
+  from `apps/patient/public/favicon.svg` via
+  `bunx tauri icon apps/patient/public/favicon.svg --output apps/patient/src-tauri/icons`.
 
 ## When in Doubt
 

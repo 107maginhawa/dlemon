@@ -82,6 +82,7 @@ monobase/
 ├── apps/                      # Frontend applications
 │   ├── account/              # Self-service account portal (Vite + TanStack)
 │   ├── patient/              # Patient-facing app (Vite + TanStack)
+│   │   └── src-tauri/        # Tauri 2 desktop wrapper (Rust) — embeds Boa runtime + cadence sync
 │   ├── provider/             # Provider portal (Vite + TanStack)
 │   └── website/              # Marketing site (Next.js)
 ├── packages/                  # Shared packages
@@ -90,9 +91,11 @@ monobase/
 │   ├── typescript-config/    # Shared TypeScript configs
 │   └── ui/                   # Shared UI components (Radix + Tailwind)
 ├── services/                  # Backend services
-│   └── api/                  # Main Hono API service
-└── specs/                     # API specifications
-    └── api/                  # TypeSpec definitions
+│   ├── api/                  # Main Hono API service
+│   └── cadence/              # P2P sync engine (Rust + Iroh + SQLite/Valkey)
+├── specs/                     # API specifications
+│   └── api/                  # TypeSpec definitions
+└── .claude/skills/            # 15 Claude Code skills for development workflow
 ```
 
 ### Linting
@@ -123,6 +126,34 @@ Run `bun --filter '*' lint` from the repo root to lint every workspace.
 **Shared UI Package**:
 - `src/components/` - Reusable shadcn/ui components
 - `src/lib/` - Utility functions (cn, etc.)
+
+### Working with Cadence (Rust)
+
+`services/cadence/` is a standalone Cargo crate that lives outside the Bun
+workspaces. It is not built by `bun install` or any JS-side script.
+
+```bash
+# Compile-check the engine
+cd services/cadence && cargo check --all-targets
+
+# Compile-check the patient Tauri wrapper that consumes it
+cd apps/patient/src-tauri && cargo check
+```
+
+The patient Tauri wrapper depends on cadence via a relative path
+(`apps/patient/src-tauri/Cargo.toml`: `cadence = { path = "../../../services/cadence" }`),
+so any cadence API change must round-trip through both crates. Run both
+`cargo check` commands when you touch either side.
+
+Tauri icons live in `apps/patient/src-tauri/icons/` and are committed.
+If they ever go missing, regenerate from the existing SVG:
+
+```bash
+bunx tauri icon apps/patient/public/favicon.svg --output apps/patient/src-tauri/icons
+```
+
+The full cadence test matrix (`cargo test`) requires Postgres + Valkey;
+spin them up with `services/cadence/docker-compose.deps.yml`.
 
 ## API-First Development
 

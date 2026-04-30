@@ -28,6 +28,7 @@ monobase/
 ├── apps/                      # Frontend applications
 │   ├── account/              # Self-service account app (Vite + TanStack Router)
 │   ├── patient/              # Patient-facing app (Vite + TanStack Router)
+│   │   └── src-tauri/        # Tauri 2 desktop wrapper (Rust) — embeds Boa runtime + cadence sync
 │   ├── provider/             # Provider portal (Vite + TanStack Router)
 │   └── website/              # Marketing site (Next.js)
 ├── packages/                  # Shared libraries
@@ -36,9 +37,11 @@ monobase/
 │   ├── typescript-config/    # Shared TypeScript configurations
 │   └── ui/                   # Shared UI components (Radix + Tailwind)
 ├── services/                  # Backend services
-│   └── api/                  # Main API service (Hono + Bun)
+│   ├── api/                  # Main API service (Hono + Bun)
+│   └── cadence/              # P2P sync engine (Rust + Iroh) — embedded in patient Tauri, also runs as a hub
 ├── specs/                     # API specifications
 │   └── api/                  # TypeSpec source definitions
+├── .claude/skills/            # 15 Claude Code skills for end-to-end development
 ├── CLAUDE.md                 # AI assistant project guide
 └── package.json              # Monorepo workspace configuration
 ```
@@ -49,11 +52,13 @@ monobase/
 - **PostgreSQL** >= 14
 - **Node.js** >= 18 (for some tooling compatibility)
 - **Git** for version control
+- **Rust** (1.90+) — only required to build `services/cadence` or the patient Tauri desktop wrapper
 
 ### Optional Services
 - **AWS S3** or **MinIO** for file storage
 - **SMTP** server or **Postmark** for email delivery
 - **OneSignal** for push notifications
+- **Valkey/Redis** — only for cadence's distributed metadata backend (SQLite backend works without it)
 
 ## Quick Start
 
