@@ -319,11 +319,11 @@ const appointment = await BookingModule.createAppointment(appointmentData);
 
 // Internal service call to create notifications
 await NotificationService.createNotification({
-  recipient: patient.person,
+  recipient: client.person,
   type: "appointment-reminder",
   channel: "push",
   title: "Appointment Reminder",
-  message: `You have an appointment with ${provider.name} tomorrow at ${time}`,
+  message: `You have an appointment with ${host.name} tomorrow at ${time}`,
   scheduledAt: appointmentDate - 24_hours,
   relatedEntityType: "appointment",
   relatedEntityId: appointment.id
@@ -338,7 +338,7 @@ const invoice = await BillingModule.generateInvoice(invoiceData);
 
 // Internal service call to create notification
 await NotificationService.createNotification({
-  recipient: patient.person,
+  recipient: client.person,
   type: "billing", 
   channel: "email",
   title: "Invoice Available",
@@ -486,8 +486,8 @@ The implementation **must support** privacy regulations:
 ```typescript
 // Booking module creates appointment
 const appointment = await BookingModule.createAppointment({
-  patient: patientId,
-  provider: providerId, 
+  client: clientId,
+  host: hostId, 
   scheduledAt: "2024-01-20T14:00:00Z"
 });
 
@@ -495,7 +495,7 @@ const appointment = await BookingModule.createAppointment({
 await Promise.all([
   // Push notification for immediate awareness
   NotificationModule.createNotification({
-    recipient: patient.person,
+    recipient: client.person,
     type: "appointment-reminder",
     channel: "push", 
     title: "Appointment Reminder",
@@ -507,7 +507,7 @@ await Promise.all([
   
   // Email for detailed information
   NotificationModule.createNotification({
-    recipient: patient.person,
+    recipient: client.person,
     type: "appointment-reminder", 
     channel: "email",
     title: "Appointment Reminder - Dr. Smith",
@@ -519,7 +519,7 @@ await Promise.all([
   
   // In-app for persistent reference
   NotificationModule.createNotification({
-    recipient: patient.person,
+    recipient: client.person,
     type: "appointment-reminder",
     channel: "inApp",
     title: "Upcoming Appointment", 
@@ -532,19 +532,19 @@ await Promise.all([
 ```
 
 ### Billing Notification Use Case
-**Scenario**: Invoice generated, patient receives payment due notification
+**Scenario**: Invoice generated, client receives payment due notification
 
 ```typescript
 // Billing module generates invoice
 const invoice = await BillingModule.generateInvoice({
-  patient: patientId,
+  client: clientId,
   amount: 150.00,
   dueDate: "2024-02-01T00:00:00Z"
 });
 
 // Create immediate notification
 await NotificationModule.createNotification({
-  recipient: patient.person,
+  recipient: client.person,
   type: "billing",
   channel: "email",
   title: "Invoice Available",
@@ -557,7 +557,7 @@ await NotificationModule.createNotification({
 
 // Create payment reminder for 3 days before due date
 await NotificationModule.createNotification({
-  recipient: patient.person, 
+  recipient: client.person, 
   type: "billing",
   channel: "push",
   title: "Payment Reminder", 
@@ -799,11 +799,11 @@ class BookingModule {
     
     // Send confirmation notification via internal service
     await NotificationService.createNotification({
-      recipient: appointment.patient,
+      recipient: booking.client,
       type: 'appointment-reminder',
       channel: 'inApp',
       title: 'Appointment Confirmed',
-      message: `Your appointment with ${appointment.provider.name} is confirmed for ${appointment.scheduledAt}`,
+      message: `Your appointment with ${booking.host.name} is confirmed for ${appointment.scheduledAt}`,
       scheduledAt: null, // immediate
       relatedEntityType: 'appointment',
       relatedEntityId: appointment.id
@@ -814,7 +814,7 @@ class BookingModule {
     reminderTime.setHours(reminderTime.getHours() - 24); // 24 hours before
     
     await NotificationService.createNotification({
-      recipient: appointment.patient,
+      recipient: booking.client,
       type: 'appointment-reminder', 
       channel: 'push',
       title: 'Appointment Reminder',

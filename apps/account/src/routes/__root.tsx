@@ -9,8 +9,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { RouterContext } from '@/router'
 import { AuthUIProviderTanstack } from '@daveyplate/better-auth-ui/tanstack'
 import { Toaster } from 'sonner'
-import { useAuthClient } from '@monobase/sdk/react/auth'
-import { queryKeys } from '@monobase/sdk/react/query-keys'
+import { useAuthClient } from '@monobase/sdk-ts/react/auth'
+import { getPersonQueryKey } from '@monobase/sdk-ts/generated/@tanstack/react-query.gen'
 import '@/styles/globals.css'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -31,8 +31,10 @@ function RootComponent() {
       onSessionChange={async () => {
         // Invalidate session and person queries to trigger refetch after auth state changes
         await queryClient.invalidateQueries({ queryKey: ['session'] })
-        await queryClient.invalidateQueries({ queryKey: queryKeys.personProfile('me') })
-        
+        await queryClient.invalidateQueries({
+          queryKey: getPersonQueryKey({ path: { person: 'me' } }),
+        })
+
         // Force router to re-evaluate guards after auth state changes
         router.invalidate()
       }}

@@ -10,7 +10,7 @@ import {
   Settings,
   Loader2
 } from 'lucide-react'
-import { Button } from "@monobase/ui/components/button"
+import { Button } from "@/components/button"
 import {
   Card,
   CardContent,
@@ -18,11 +18,11 @@ import {
   CardHeader,
   CardTitle,
   CardFooter
-} from "@monobase/ui/components/card"
-import { Badge } from "@monobase/ui/components/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@monobase/ui/components/avatar"
-import { Separator } from "@monobase/ui/components/separator"
-import { useListSessions, useListPasskeys, useEmailVerification } from '@monobase/sdk/react/hooks/use-auth'
+} from "@/components/card"
+import { Badge } from "@/components/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar"
+import { Separator } from "@/components/separator"
+import { useListSessions, useListPasskeys, useEmailVerification } from '@monobase/sdk-ts/react/hooks/use-auth'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/_dashboard/dashboard')({

@@ -7,57 +7,51 @@ This file provides AI-specific guidance for Claude Code when working with the Mo
 For detailed information, refer to:
 - **[README.md](./README.md)** - Project overview, installation, commands, technology stack
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflows, coding standards, testing guidelines
+- **[specs/api/CONTRACT.md](./specs/api/CONTRACT.md)** - Wire-level API contract every implementation must satisfy
+- **[specs/api/IMPLEMENTING.md](./specs/api/IMPLEMENTING.md)** - Playbook for adding a new server impl or client SDK in any language
 
 ## Repository Overview
 
-**Monobase Application Platform** - A comprehensive full-stack monorepo platform providing video sessions, service marketplace, and user management. Built with Bun runtime for 3x faster performance than Node.js.
+**Monobase Application Platform** — a vertical-neutral monorepo template for SaaS products. Provides identity, billing, scheduling, communications, storage, and notifications as composable primitives. Built on Bun for ~3× faster execution than Node.js.
 
 **Key Technologies**: Bun, PostgreSQL, Drizzle ORM, Hono API, TypeSpec, TanStack Router, Better-Auth, OneSignal, S3/MinIO
 
+**Spec-first, polyglot-ready monorepo.** The OpenAPI document at
+`specs/api/dist/openapi/openapi.json` is the single source of truth.
+Every server implementation and every client SDK is generated from it,
+and any language can have its own (`-ts`, `-rs`, `-go`, …) sibling
+workspace.
+
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
-  - `account/` - Vite + TanStack Router app for self-service account management
-  - `patient/` - Vite + TanStack Router app for the patient-facing experience (also ships as a Tauri desktop app via `apps/patient/src-tauri/`)
-  - `provider/` - Vite + TanStack Router app for the provider/practitioner portal
-  - `website/` - Next.js public marketing site
-- `services/` - Backend services:
-  - `api/` - HTTP API (Hono + Drizzle) with business modules
-  - `cadence/` - Rust P2P sync engine (Iroh transport, SQLite/Valkey metadata backends, JWT scope auth). Embedded into the patient Tauri app for offline-first sync; can also run as a standalone hub. See `services/cadence/README.md`.
-- `specs/api/` - TypeSpec API definitions (compiled to OpenAPI + TypeScript types)
+  - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
+- `services/api-ts/` - Reference TypeScript API impl (Hono + Drizzle)
+  - `services/api-rs/`, `services/api-go/` etc. would be siblings; documented in `specs/api/IMPLEMENTING.md` but not yet present
+- `specs/api/` - TypeSpec API definitions; compiled to OpenAPI + TypeScript types. Also home of the contract docs and Hurl contract tests under `tests/contract/`
 - `packages/` - Shared packages:
   - `eslint-config/` - Shared ESLint flat configs (`base`, `react`, `next`)
-  - `sdk/` - Type-safe API client + TanStack Query hooks
+  - `sdk-ts/` - Reference TypeScript client SDK (generated from OpenAPI via `@hey-api/openapi-ts`)
   - `typescript-config/` - Shared TypeScript configs
-  - `ui/` - Shared UI component library (Radix primitives, Tailwind)
-- `.claude/skills/` - 15 Claude Code skills for end-to-end development workflow (typespec, handler, frontend-module, db-migrate, dev-api, dev-app, test-api, test-e2e, typecheck, pre-commit, commit, debug, prd, develop, shadcn). Surface as `/skill-name` in Claude Code sessions.
+- `scripts/run-contract-tests.ts` - Runs the Hurl contract suite against `$API_URL`
+- `.github/workflows/contract.yml` - CI: boots the impl, runs Hurl + Schemathesis
 
 ## Business Domain Modules
 
-The API service implements 13 handler modules. The first nine are documented as
-core business modules; the latter four (`patient`, `provider`, `emr`, `ws`)
-are platform-specific modules that compose them and may evolve independently.
-
-Core modules:
+The API service ships nine vertical-neutral handler modules. Build your product
+on top of these — add a `patient`, `tenant`, `student`, `merchant`, etc. module
+under `services/api-ts/src/handlers/` for each domain you need.
 
 1. **person** - User profile management and central PII safeguard
-2. **booking** - Professional booking and scheduling system
-3. **billing** - Invoice-based payments (Stripe integration)
+2. **booking** - Generic time-based scheduling (hosts, slots, bookings, events)
+3. **billing** - Invoice-based payments via Stripe Connect
 4. **audit** - Compliance logging (Pino structured logging)
 5. **notifs** - Multi-channel notifications (email, push via OneSignal)
-6. **comms** - Video/chat sessions (WebRTC) and messaging
+6. **comms** - Real-time chat rooms with embedded video calls (WebRTC)
 7. **storage** - File upload/download (S3/MinIO)
 8. **email** - Transactional emails (SMTP/Postmark)
 9. **reviews** - NPS review system
 
-Platform-specific modules:
-
-10. **patient** - Patient profile and patient-side workflows (extends `person`)
-11. **provider** - Provider/practitioner profile and listing (extends `person`)
-12. **emr** - Electronic medical records: consultation notes, vitals, prescriptions, follow-ups
-13. **ws** - WebSocket transport for real-time chat and WebRTC signaling (handler-only; no TypeSpec/REST surface)
-
-TypeSpec definitions exist for modules 1-12 (12 `.tsp` files under
-`specs/api/src/modules/`). Module 13 (`ws`) is transport-level only.
+All nine have matching TypeSpec definitions under `specs/api/src/modules/`.
 
 **Note**: Authentication is handled by Better-Auth (integrated, not a separate module). Consent management is implemented as JSONB fields on the Person model (not a standalone module).
 
@@ -88,62 +82,61 @@ Consent types on Person:
 Always follow this workflow:
 1. Define APIs in TypeSpec (`specs/api/src/modules/`)
 2. Generate OpenAPI + TypeScript types (`cd specs/api && bun run build`)
-3. Generate routes/validators/handlers (`cd services/api && bun run generate`)
-4. Implement handler business logic (`services/api/src/handlers/`)
+3. Generate routes/validators/handlers (`cd services/api-ts && bun run generate`)
+4. Implement handler business logic (`services/api-ts/src/handlers/`)
 5. Use generated types from `@monobase/api-spec` in frontends
 
 **Why**: Type safety across frontend/backend, single source of truth, auto-generated docs
 
 **⚠️ CRITICAL - Never Edit Generated Files**:
-- `services/api/src/generated/openapi/*` - Routes, validators, registry (regenerated every time)
-- `services/api/src/generated/better-auth/*` - Auth schema and specs
-- `services/api/src/generated/migrations/*` - Database migrations
+- `services/api-ts/src/generated/openapi/*` - Routes, validators, registry (regenerated every time)
+- `services/api-ts/src/generated/better-auth/*` - Auth schema and specs
+- `services/api-ts/src/generated/migrations/*` - Database migrations
 
 **✅ Only Edit**:
 - TypeSpec files (`specs/api/src/modules/*.tsp`)
-- Handler implementations (`services/api/src/handlers/{module}/*.ts`)
-- Database schemas (`services/api/src/db/schema/*.ts`)
+- Handler implementations (`services/api-ts/src/handlers/{module}/*.ts`)
+- Database schemas (`services/api-ts/src/handlers/{module}/repos/*.schema.ts`)
 
 See [CONTRIBUTING.md#code-generation](./CONTRIBUTING.md#code-generation---do-not-edit) for complete details.
 
 ### Configuration Approach
-Environment variables are parsed into typed configuration objects (see `services/api/src/core/config.ts`). Not file-based configuration.
+Environment variables are parsed into typed configuration objects (see `services/api-ts/src/core/config.ts`). Not file-based configuration.
 
 ### OneSignal Multi-App Architecture
 OneSignal follows an **app-agnostic pattern** like other services (Storage, Email, Billing):
 
 **Single App ID Approach**:
-- Use the **same** `ONESIGNAL_APP_ID` across all frontends (client, service provider, website)
+- Use the **same** `ONESIGNAL_APP_ID` across all frontends
 - Frontend apps: Set `VITE_ONESIGNAL_APP_ID` to the same value
 - Backend API: Uses same app ID to send notifications
 
 **Optional App Tagging**:
-- Set `VITE_ONESIGNAL_APP_TAG=client` or `service_provider` in frontend .env (optional)
+- Set `VITE_ONESIGNAL_APP_TAG=web` (or `mobile`, etc.) in frontend `.env` (optional)
 - Apps auto-tag themselves on initialization
 - Most notifications ignore tags (app-agnostic)
 - Use `targetApp` parameter only for app-specific announcements
 
 **Why This Works**:
 - OneSignal uses `external_id` (person ID) to target users across devices/apps
-- Users with both client/service provider roles receive notifications in whichever app they're using
-- Production deployment should use subdomains: `user.example.com`, `admin.example.com`
+- Users with multiple roles receive notifications in whichever app they're using
 
 **API Pattern**:
 ```typescript
 // Send to user (app-agnostic - default)
 notificationRepo.createNotificationForModule({
   recipient: personId,
-  type: 'booking-reminder',
+  type: 'booking.confirmed',
   channel: 'push',
   // No targetApp - reaches user in any app
 });
 
-// Send only to specific app (rare)
+// Send only to a specific app (rare)
 notificationRepo.createNotificationForModule({
   recipient: personId,
   type: 'system',
   channel: 'push',
-  targetApp: 'client', // Only if VITE_ONESIGNAL_APP_TAG is configured
+  targetApp: 'web', // Only if VITE_ONESIGNAL_APP_TAG is configured
 });
 ```
 
@@ -152,16 +145,16 @@ Backend handlers follow: **Router → Validators → Service → Handlers**
 
 Each handler directory contains:
 - Handler files (CRUD operations)
-- `repos/` - Database repositories
+- `repos/` - Database repositories + schema
 - `jobs/` - Background job definitions
 - `utils/` - Module-specific utilities
 
-## Enterprise Compliance Requirements
+## Compliance Considerations
 
-When working with sensitive data:
+When working with regulated data:
 
-### Data Privacy Compliance
-- **Audit Trails**: All user data access must be logged with Pino
+### Data Privacy
+- **Audit Trails**: All user data access is logged with Pino
 - **Consent Validation**: Check JSONB consent fields before processing
 - **Role-Based Access**: Verify user roles via Better-Auth
 - **Correlation IDs**: Include in all log entries for traceability
@@ -189,11 +182,11 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 - Use prepared statements for performance
 - Leverage type inference from schema definitions
 - Use transactions for multi-table operations
-- Reference existing patterns in `services/api/src/handlers/*/repos/`
+- Reference existing patterns in `services/api-ts/src/handlers/*/repos/`
 
 ### Migration Workflow
-1. Modify schema in `services/api/src/db/schema/`
-2. Generate migration: `cd services/api && bun run db:generate`
+1. Modify schema in `services/api-ts/src/handlers/{module}/repos/*.schema.ts`
+2. Generate migration: `cd services/api-ts && bun run db:generate`
 3. Review generated SQL in `src/generated/migrations/`
 4. Migrations run automatically on server start
 
@@ -201,22 +194,20 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 
 ## Frontend Development
 
-The repo has four frontend apps. The Vite-based ones share the same stack
-(TanStack Router file-based routing, TanStack Query, Better-Auth, Radix UI
-primitives via shadcn/ui patterns); the website is Next.js.
+### Account App (Vite + TanStack Router)
+- **Port**: 3002
+- **Routing**: File-based in `src/routes/`
+- **Auth**: Better-Auth with TanStack integration
+- **Data Fetching**: TanStack Query
+- **UI Components**: Radix UI primitives via `@/components` (shadcn/ui patterns)
 
-| App | Framework | Port | Purpose |
-|-----|-----------|------|---------|
-| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
-| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
-| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
-| `apps/website` | Next.js | 3000 | Public marketing site |
+To scaffold a new app, copy `apps/account/` and update `package.json` name + `vite.config.ts` port.
 
 **Standards**: See [CONTRIBUTING.md#coding-standards](./CONTRIBUTING.md#coding-standards)
 
 ## Testing Approach
 
-- **API**: Bun test framework (`cd services/api && bun test`)
+- **API**: Bun test framework (`cd services/api-ts && bun test`)
 - **Frontend**: Playwright E2E tests (`cd apps/account && bun run test:e2e`)
 - **Type Safety**: TypeScript checking across all workspaces
 
@@ -233,63 +224,39 @@ bun install
 
 # API-first workflow
 cd specs/api && bun run build              # Generate OpenAPI + types
-cd ../../services/api && bun run generate  # Generate routes/validators
+cd ../../services/api-ts && bun run generate  # Generate routes/validators
 
 # Start development
-cd services/api && bun dev        # API on port 7213
+cd services/api-ts && bun dev        # API on port 7213
 cd apps/account && bun dev        # Account app on port 3002
 
 # Database
-cd services/api && bun run db:generate  # Generate migration
-cd services/api && bun run db:studio    # Open Drizzle Studio
+cd services/api-ts && bun run db:generate  # Generate migration
+cd services/api-ts && bun run db:studio    # Open Drizzle Studio
 
 # Testing
-cd services/api && bun test             # API tests
+cd services/api-ts && bun test             # API tests
 cd apps/account && bun run test:e2e     # E2E tests
 ```
 
 ## Important Notes
 
 ### What Exists
-- ✅ **apps/account, apps/patient, apps/provider** - Vite + TanStack Router apps
-- ✅ **apps/website** - Next.js marketing site
-- ✅ **apps/patient/src-tauri/** - Tauri 2 desktop wrapper with embedded Boa runtime + SQLite + cadence P2P sync
-- ✅ **services/api/** - Hono + Drizzle API with 13 handler modules
-- ✅ **services/cadence/** - Rust P2P sync engine (compiles standalone; consumed by patient Tauri)
-- ✅ **packages/ui/** - Shared UI component library
-- ✅ **packages/sdk/** - Type-safe API client + TanStack Query hooks
+- ✅ **apps/account** - Reference Vite + TanStack Router app
+- ✅ **apps/account/src/components/** - Shared UI component library
+- ✅ **packages/sdk-ts/** - Type-safe API client + TanStack Query hooks
 - ✅ **packages/eslint-config/** - Shared ESLint flat configs
-- ✅ **.claude/skills/** - 15 Claude Code skills for development workflow
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
-- ✅ **13 API handler modules**: 9 core (person, booking, billing, audit, notifs, comms, storage, email, reviews) plus 4 platform-specific (patient, provider, emr, ws)
+- ✅ **9 API handler modules** (person, booking, billing, audit, notifs, comms, storage, email, reviews)
 
-### Known In-Progress Areas
-- The `patient` and `provider` apps have routes that consume API surfaces
-  still being aligned with the SDK; expect typecheck drift in those apps
-  (lint and build are clean).
-- Billing module schema fields (line items, platform fees, line-level audit)
-  are stubbed in handlers — see in-file `TODO` comments.
-- `apps/patient/src-tauri/src/sync.rs` wires the cadence imports but the
-  `SyncEngine`/`SqliteBackend` integration in `init`/`start` is still a
-  stub (see `TODO` comments in that file). `cargo check` is green; runtime
-  sync is not yet activated end-to-end.
-
-### Working with Cadence (Rust)
-- Cadence lives at `services/cadence/` and is a Cargo crate independent of
-  the Bun workspaces. Build with `cd services/cadence && cargo check
-  --all-targets`. Full test suite (`cargo test`) needs Postgres + Valkey via
-  the bundled `docker-compose.deps.yml`.
-- The patient Tauri wrapper consumes cadence via a `path = "../../../services/cadence"`
-  dependency in `apps/patient/src-tauri/Cargo.toml`. Run
-  `cd apps/patient/src-tauri && cargo check` after touching either crate.
-- Tauri icons live in `apps/patient/src-tauri/icons/` and are generated
-  from `apps/patient/public/favicon.svg` via
-  `bunx tauri icon apps/patient/public/favicon.svg --output apps/patient/src-tauri/icons`.
+### What's Intentionally Absent
+- This template ships **no domain-vertical apps or modules**. Add your own
+  (e.g., `apps/admin`, `services/api-ts/src/handlers/tenant/`) on top of the base.
 
 ## When in Doubt
 
 1. Check [README.md](./README.md) for commands and setup
 2. Check [CONTRIBUTING.md](./CONTRIBUTING.md) for development patterns
-3. Reference existing handlers in `services/api/src/handlers/` for implementation patterns
+3. Reference existing handlers in `services/api-ts/src/handlers/` for implementation patterns
 4. Check OpenAPI spec at `specs/api/dist/openapi/openapi.json` for API contracts

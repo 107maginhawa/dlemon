@@ -161,7 +161,7 @@ model BillingConfig {
  */
 @doc("Booking event with configurable availability schedule")
 model BookingEvent extends BaseEntity {
-  @doc("Event owner (provider, organization, etc.)")
+  @doc("Event owner (host person ID, e.g. coach, advisor, instructor)")
   @extension("x-expandable-field", #{ opId: "getPerson" })
   owner: string | Person;
 
@@ -279,15 +279,15 @@ model TimeSlot extends BaseEntity {
   booking?: UUID;
 }
 
-@doc("Booking between client and provider")
+@doc("Confirmed booking instance between a client and a host")
 model Booking extends BaseEntity {
   @doc("Client user ID (person.id)")
   @extension("x-expandable-field", #{ opId: "getPerson" })
   client: string | Person;
 
-  @doc("Provider user ID (person.id)")
+  @doc("Host user ID (person.id)")
   @extension("x-expandable-field", #{ opId: "getPerson" })
-  provider: string | Person;
+  host: string | Person;
 
   @doc("Time slot")
   @extension("x-expandable-field", #{ opId: "getTimeSlot" })
@@ -306,7 +306,7 @@ model Booking extends BaseEntity {
   @doc("When booking was created (UTC)")
   bookedAt: utcDateTime;
 
-  @doc("When provider confirmed (UTC)")
+  @doc("When host confirmed (UTC)")
   confirmationTimestamp?: utcDateTime;
 
   @doc("Scheduled booking date/time (UTC)")
@@ -424,13 +424,13 @@ enum BookingEventStatus {
 
 @doc("Booking status throughout lifecycle")
 enum BookingStatus {
-  @doc("Booking pending provider confirmation")
+  @doc("Booking pending host confirmation")
   pending: "pending",
 
-  @doc("Booking confirmed by provider")
+  @doc("Booking confirmed by host")
   confirmed: "confirmed",
 
-  @doc("Booking rejected by provider")
+  @doc("Booking rejected by host")
   rejected: "rejected",
 
   @doc("Booking cancelled")
@@ -442,8 +442,8 @@ enum BookingStatus {
   @doc("Client marked as no-show")
   no_show_client: "no_show_client",
 
-  @doc("Provider marked as no-show")
-  no_show_provider: "no_show_provider",
+  @doc("Host marked as no-show")
+  no_show_host: "no_show_host",
 }
 
 @doc("Time slot availability status")
@@ -855,15 +855,15 @@ namespace BookingModule {
       | ApiUnauthorizedResponse
       | ApiConflictResponse;
 
-    @doc("List bookings with role-based filtering. Both client and provider filters use user IDs (person.id).")
+    @doc("List bookings with role-based filtering. Both client and host filters use user IDs (person.id).")
     @operationId("listBookings")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["client:owner", "provider:owner", "admin", "support"])
+    @extension("x-security-required-roles", #["client:owner", "host:owner", "admin", "support"])
     @route("/bookings")
     listBookings(
-      @doc("Filter by provider user ID (person.id)")
-      @query provider?: UUID,
+      @doc("Filter by host user ID (person.id)")
+      @query host?: UUID,
       @doc("Filter by client user ID (person.id)")
       @query client?: UUID,
       @doc("Filter by booking status (pending, confirmed, cancelled, completed, etc.)")
@@ -882,7 +882,7 @@ namespace BookingModule {
     @operationId("getBooking")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["client:owner", "provider:owner", "admin", "support"])
+    @extension("x-security-required-roles", #["client:owner", "host:owner", "admin", "support"])
     @route("/bookings/{booking}")
     getBooking(
       @path booking: UUID,
@@ -896,7 +896,7 @@ namespace BookingModule {
     @operationId("confirmBooking")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["provider:owner", "admin"])
+    @extension("x-security-required-roles", #["host:owner", "admin"])
     @route("/bookings/{booking}/confirm")
     confirmBooking(
       @path booking: UUID,
@@ -910,7 +910,7 @@ namespace BookingModule {
     @operationId("rejectBooking")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["provider:owner", "admin"])
+    @extension("x-security-required-roles", #["host:owner", "admin"])
     @route("/bookings/{booking}/reject")
     rejectBooking(
       @path booking: UUID,
@@ -924,7 +924,7 @@ namespace BookingModule {
     @operationId("cancelBooking")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["client:owner", "provider:owner", "admin"])
+    @extension("x-security-required-roles", #["client:owner", "host:owner", "admin"])
     @route("/bookings/{booking}/cancel")
     cancelBooking(
       @path booking: UUID,
@@ -938,7 +938,7 @@ namespace BookingModule {
     @operationId("markNoShowBooking")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["client:owner", "provider:owner", "admin"])
+    @extension("x-security-required-roles", #["client:owner", "host:owner", "admin"])
     @route("/bookings/{booking}/no-show")
     markNoShowBooking(
       @path booking: UUID,

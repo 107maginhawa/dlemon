@@ -38,7 +38,7 @@ createdb monobase
 
 Each service/app requires its own `.env` file:
 
-**API Service** (`services/api/.env`):
+**API Service** (`services/api-ts/.env`):
 ```bash
 DATABASE_URL=postgresql://user:password@localhost:5432/monobase
 PORT=7213
@@ -56,7 +56,7 @@ VITE_API_URL=http://localhost:7213
 ### 3. Database Initialization
 
 ```bash
-cd services/api
+cd services/api-ts
 bun run db:generate  # Generate initial schema
 ```
 
@@ -64,7 +64,7 @@ bun run db:generate  # Generate initial schema
 
 ```bash
 # Start API service
-cd services/api && bun dev
+cd services/api-ts && bun dev
 
 # In another terminal, start account app
 cd apps/account && bun dev
@@ -80,22 +80,16 @@ curl http://localhost:7213/health
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   ├── account/              # Self-service account portal (Vite + TanStack)
-│   ├── patient/              # Patient-facing app (Vite + TanStack)
-│   │   └── src-tauri/        # Tauri 2 desktop wrapper (Rust) — embeds Boa runtime + cadence sync
-│   ├── provider/             # Provider portal (Vite + TanStack)
-│   └── website/              # Marketing site (Next.js)
+│   └── account/              # Reference app (Vite + TanStack)
+│                              # — owns its own components/hooks/lib/features
 ├── packages/                  # Shared packages
 │   ├── eslint-config/        # Shared ESLint flat configs
 │   ├── sdk/                  # Type-safe API client + TanStack Query hooks
-│   ├── typescript-config/    # Shared TypeScript configs
-│   └── ui/                   # Shared UI components (Radix + Tailwind)
+│   └── typescript-config/    # Shared TypeScript configs
 ├── services/                  # Backend services
-│   ├── api/                  # Main Hono API service
-│   └── cadence/              # P2P sync engine (Rust + Iroh + SQLite/Valkey)
-├── specs/                     # API specifications
-│   └── api/                  # TypeSpec definitions
-└── .claude/skills/            # 15 Claude Code skills for development workflow
+│   └── api/                  # Main Hono API service
+└── specs/                     # API specifications
+    └── api/                  # TypeSpec definitions
 ```
 
 ### Linting
@@ -123,37 +117,12 @@ Run `bun --filter '*' lint` from the repo root to lint every workspace.
 - `src/middleware/` - Express-style middleware
 - `src/utils/` - Shared utilities
 
-**Shared UI Package**:
-- `src/components/` - Reusable shadcn/ui components
-- `src/lib/` - Utility functions (cn, etc.)
-
-### Working with Cadence (Rust)
-
-`services/cadence/` is a standalone Cargo crate that lives outside the Bun
-workspaces. It is not built by `bun install` or any JS-side script.
-
-```bash
-# Compile-check the engine
-cd services/cadence && cargo check --all-targets
-
-# Compile-check the patient Tauri wrapper that consumes it
-cd apps/patient/src-tauri && cargo check
-```
-
-The patient Tauri wrapper depends on cadence via a relative path
-(`apps/patient/src-tauri/Cargo.toml`: `cadence = { path = "../../../services/cadence" }`),
-so any cadence API change must round-trip through both crates. Run both
-`cargo check` commands when you touch either side.
-
-Tauri icons live in `apps/patient/src-tauri/icons/` and are committed.
-If they ever go missing, regenerate from the existing SVG:
-
-```bash
-bunx tauri icon apps/patient/public/favicon.svg --output apps/patient/src-tauri/icons
-```
-
-The full cadence test matrix (`cargo test`) requires Postgres + Valkey;
-spin them up with `services/cadence/docker-compose.deps.yml`.
+**Per-app UI Layout**:
+- `src/components/` - shadcn/ui-style primitives (Button, Card, Form, ...)
+- `src/lib/` - utility functions (`cn`, `formatDate`, ...)
+- `src/hooks/` - app-level React hooks
+- `src/features/` - larger feature modules (booking, billing, comms, person)
+- Each app owns this tree; nothing is shared across apps except the SDK.
 
 ## API-First Development
 
@@ -211,10 +180,10 @@ This generates:
 
 #### 3. Implement Backend Handler
 
-Create or update the handler in `services/api/src/handlers/`:
+Create or update the handler in `services/api-ts/src/handlers/`:
 
 ```typescript
-// services/api/src/handlers/person.ts
+// services/api-ts/src/handlers/person.ts
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Person } from '@monobase/api-spec';
@@ -270,7 +239,7 @@ export async function createPerson(data: CreatePersonRequest): Promise<Person> {
 
 ### Generated Files (Never Edit)
 
-Running `cd services/api && bun run generate` creates these files automatically:
+Running `cd services/api-ts && bun run generate` creates these files automatically:
 
 #### 1. OpenAPI Code (`src/generated/openapi/`)
 - **`types.ts`** - TypeScript types (re-exported from `@monobase/api-spec`)
@@ -298,14 +267,14 @@ Running `cd services/api && bun run generate` creates these files automatically:
 The generator creates handler stub files **only if they don't exist**:
 
 ```typescript
-// src/handlers/patient/createPatient.ts
-import { Context } from 'hono';
+// src/handlers/booking/createBooking.ts
+import type { HandlerContext } from '@/types/app';
 
-export async function createPatient(ctx: Context) {
+export async function createBooking(ctx: HandlerContext) {
   const body = ctx.req.valid('json');
 
   // TODO: Implement business logic
-  throw new Error('Not implemented: createPatient');
+  throw new Error('Not implemented: createBooking');
 }
 ```
 
@@ -334,17 +303,17 @@ You should **only** edit these files:
 ### Code Generation Workflow
 
 ```bash
-# 1. Modify TypeSpec definitions
-vim specs/api/src/modules/patient.tsp
+# 1. Modify TypeSpec definitions (or add a new module file)
+vim specs/api/src/modules/booking.tsp
 
 # 2. Generate OpenAPI spec and types
 cd specs/api && bun run build
 
 # 3. Generate API code (routes, validators, handlers)
-cd ../../services/api && bun run generate
+cd ../../services/api-ts && bun run generate
 
 # 4. Implement business logic in handlers
-vim src/handlers/patient/createPatient.ts
+vim src/handlers/booking/createBooking.ts
 
 # 5. Test your changes
 bun test
@@ -370,7 +339,7 @@ The generation script (`scripts/generate.ts`):
 **Solution**:
 ```bash
 cd specs/api && bun run build  # Regenerate OpenAPI
-cd ../../services/api && bun run generate  # Regenerate routes
+cd ../../services/api-ts && bun run generate  # Regenerate routes
 ```
 
 **Problem**: Handler not found error
@@ -501,7 +470,7 @@ The Monobase platform uses different logging approaches for backend and frontend
 
 **Technology**: [Pino](https://getpino.io/) for structured, high-performance logging
 
-**Location**: `/services/api/src/core/logger.ts`
+**Location**: `/services/api-ts/src/core/logger.ts`
 
 **Usage**:
 ```typescript
@@ -530,11 +499,11 @@ logger.info('User action', {
 - Use appropriate log levels
 - Add structured context (objects, not strings)
 - Log errors with full error objects
-- Sanitize PHI before logging (never log sensitive patient data)
+- Sanitize PII before logging (e.g. phone numbers, emails, free-text)
 
 ❌ **DON'T:**
 - Use console.* methods in backend code
-- Log sensitive patient information (PHI)
+- Log sensitive personal information (PII)
 - Log passwords, tokens, or credentials
 - Use string concatenation for structured data
 
@@ -675,7 +644,7 @@ console.log('Video call joined successfully')
 
 **⚠️ All component files MUST use kebab-case naming.**
 
-This is a strict requirement across all apps (account, website). Inconsistent file naming causes confusion and maintenance issues.
+This is a strict requirement across all apps. Inconsistent file naming causes confusion and maintenance issues.
 
 **Correct** ✅:
 ```
@@ -717,7 +686,7 @@ src/components/documents/DocumentList.tsx          // PascalCase - wrong
 
 #### The Two-Utility Pattern
 
-1. **Formatting** → Use `@monobase/ui/lib/format-date`
+1. **Formatting** → Use `@/lib/format-date`
 2. **Manipulation/Logic** → Use `date-fns` directly
 
 #### Formatting Dates
@@ -725,7 +694,7 @@ src/components/documents/DocumentList.tsx          // PascalCase - wrong
 Always use the centralized `formatDate()` and `formatRelativeDate()` utilities:
 
 ```typescript
-import { formatDate, formatRelativeDate } from '@monobase/ui/lib/format-date'
+import { formatDate, formatRelativeDate } from '@/lib/format-date'
 
 // Date formatting
 formatDate(new Date(), { format: 'short' })      // "10/5/23"
@@ -744,7 +713,7 @@ formatRelativeDate(date, { style: 'short' })      // "3h ago"
 
 **React Components**:
 ```typescript
-import { useFormatDate } from '@monobase/ui/hooks/use-format-date'
+import { useFormatDate } from '@/hooks/use-format-date'
 
 function MyComponent({ date }: { date: Date }) {
   const { formatDate, formatRelativeDate } = useFormatDate()
@@ -819,7 +788,7 @@ const tomorrow = addDays(date, 1)
 
 **ISO Date Strings (API Requests)**:
 ```typescript
-import { formatDate } from '@monobase/ui/lib/format-date'
+import { formatDate } from '@/lib/format-date'
 
 const payload = {
   scheduledAt: formatDate(appointmentDate, { format: 'iso' }),
@@ -857,7 +826,7 @@ const isInRange = isWithinInterval(date, {
 
 When working with language, country, and timezone data, strict casing standards MUST be followed for system interoperability.
 
-**Constants Location**: `packages/ui/src/constants/`
+**Constants Location**: `apps/account/src/constants/`
 
 #### Language Codes (ISO 639-1)
 
@@ -875,7 +844,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **HTML lang Attributes**: `<html lang="en">`
 - **i18n Libraries**: Most expect lowercase ISO 639-1 codes
 
-**Reference**: `packages/ui/src/constants/languages.ts`
+**Reference**: `apps/account/src/constants/languages.ts`
 
 #### Country Codes (ISO 3166-1 alpha-2)
 
@@ -893,7 +862,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **Banking Standards**: IBAN, SWIFT use uppercase country codes
 - **Geographic APIs**: Most expect uppercase ISO 3166-1 alpha-2
 
-**Reference**: `packages/ui/src/constants/countries.ts`
+**Reference**: `apps/account/src/constants/countries.ts`
 
 #### Timezone Identifiers (IANA)
 
@@ -911,7 +880,7 @@ When working with language, country, and timezone data, strict casing standards 
 - **Backend Libraries**: dayjs, date-fns, luxon expect IANA format
 - **Cross-platform Consistency**: Works across all environments
 
-**Reference**: `packages/ui/src/constants/timezones.ts`
+**Reference**: `apps/account/src/constants/timezones.ts`
 
 #### Validation in Code Reviews
 
@@ -946,7 +915,7 @@ const language = 'EN'  // ❌ uppercase language
 - Zod validators reject invalid formats at runtime
 - Returns 400 error for casing violations
 
-**Test Coverage** (`services/api/tests/e2e/person/person.test.ts`):
+**Test Coverage** (`services/api-ts/tests/e2e/person/person.test.ts`):
 - "International Data Validation" suite tests casing enforcement
 - Validates rejection of incorrect formats
 - Ensures acceptance of correct formats
@@ -958,7 +927,7 @@ Each business module follows a consistent structure for maintainability:
 ### Backend Module Structure
 
 ```
-services/api/src/handlers/person/
+services/api-ts/src/handlers/person/
 ├── createPerson.ts         # Handler: Create person
 ├── getPerson.ts            # Handler: Get person by ID
 ├── updatePerson.ts         # Handler: Update person
@@ -1082,7 +1051,7 @@ export const clients = pgTable('clients', {
 
 1. **Modify Drizzle Schema**:
 ```typescript
-// services/api/src/core/database.schema.ts
+// services/api-ts/src/core/database.schema.ts
 export const persons = pgTable('persons', {
   id: uuid('id').defaultRandom().primaryKey(),
   firstName: text('first_name').notNull(),
@@ -1096,7 +1065,7 @@ export const persons = pgTable('persons', {
 
 2. **Generate Migration**:
 ```bash
-cd services/api
+cd services/api-ts
 bun run db:generate
 ```
 
@@ -1116,7 +1085,7 @@ bun run db:migrate
 Use Drizzle Studio for visual database exploration:
 
 ```bash
-cd services/api
+cd services/api-ts
 bun run db:studio
 ```
 
@@ -1238,7 +1207,7 @@ Frontend apps use **two separate test runners**:
 
 #### Frontend Apps (Using Both Bun + Playwright)
 
-Frontend apps (account, website) use:
+Frontend apps (e.g. account) use:
 - **Bun test runner** for unit tests (colocated in `src/`)
 - **Playwright** for E2E tests (in `tests/e2e/`)
 
@@ -1397,7 +1366,7 @@ export async function signInAsUser(page: Page, email: string, password: string) 
 ### Unit Tests (API Service)
 
 ```bash
-cd services/api
+cd services/api-ts
 bun test
 ```
 
@@ -1409,7 +1378,7 @@ Write tests for:
 
 **Example Test**:
 ```typescript
-// services/api/src/handlers/client/__tests__/service.test.ts
+// services/api-ts/src/handlers/client/__tests__/service.test.ts
 import { describe, test, expect } from 'bun:test';
 import { ClientService } from '../service';
 
@@ -1430,7 +1399,7 @@ describe('ClientService', () => {
 ### E2E Tests (Frontend Apps)
 
 ```bash
-cd apps/patient
+cd apps/account
 bun run test:e2e
 ```
 
@@ -1452,7 +1421,7 @@ test('client can book appointment', async ({ page }) => {
   await page.fill('[name="password"]', 'password');
   await page.click('button[type="submit"]');
   
-  await page.goto('/service-providers');
+  await page.goto('/hosts');
   await page.click('text=John Smith Consulting');
   await page.click('text=Book Appointment');
   await page.click('[data-testid="time-slot-9am"]');
@@ -1468,7 +1437,7 @@ Always run type checking before committing:
 
 ```bash
 # Check API service
-cd services/api && bun run typecheck
+cd services/api-ts && bun run typecheck
 
 # Check account app
 cd apps/account && bun run typecheck
@@ -1488,14 +1457,14 @@ cd apps/account && bun run typecheck
 ```bash
 main                    # Production-ready code
 ├── develop            # Integration branch (if using)
-├── feature/add-video consultations
+├── feature/add-video-calls
 ├── fix/booking-timezone-bug
 └── chore/update-dependencies
 ```
 
 ### Branch Naming Conventions
 
-- `feature/` - New features (e.g., `feature/video-consultations`)
+- `feature/` - New features (e.g., `feature/video-calls`)
 - `fix/` - Bug fixes (e.g., `fix/appointment-reminder-timing`)
 - `chore/` - Maintenance tasks (e.g., `chore/upgrade-react-19`)
 - `docs/` - Documentation updates (e.g., `docs/add-api-examples`)
@@ -1524,9 +1493,9 @@ Follow Conventional Commits specification:
 
 **Examples**:
 ```bash
-feat(booking): add service provider availability search filters
+feat(booking): add host availability search filters
 
-Add specialty, language, and service tier filters to provider search.
+Add specialty, language, and service tier filters to host search.
 Includes backend API updates and frontend UI components.
 
 Closes #123
@@ -1737,7 +1706,7 @@ Before requesting review:
 
 **Enable Debug Logging**:
 ```typescript
-// services/api/src/utils/logger.ts
+// services/api-ts/src/utils/logger.ts
 export const logger = pino({
   level: process.env.LOG_LEVEL || 'debug', // Set to 'debug'
 });
@@ -1829,7 +1798,7 @@ bun dev
 
 **Drizzle Studio**:
 ```bash
-cd services/api
+cd services/api-ts
 bun run db:studio
 # Opens http://localhost:4983
 ```
@@ -1854,7 +1823,7 @@ SELECT * FROM clients LIMIT 10;
 # Reset database (CAUTION: deletes all data)
 dropdb monobase
 createdb monobase
-cd services/api
+cd services/api-ts
 bun run db:generate
 ```
 
@@ -1880,7 +1849,7 @@ bun run build  # Errors will show TypeSpec compilation issues
 
 ## Frontend Development Patterns
 
-This section covers shared patterns for all frontend applications (account, website, etc.). These patterns apply to apps built with TanStack Router, React 19, and Bun runtime.
+This section covers patterns for frontend applications built with TanStack Router, React 19, and the Bun runtime — including the reference `apps/account` and any new app you scaffold.
 
 **Note**: For app-specific details (domain modules, routes, features), see each app's individual CONTRIBUTING.md file.
 

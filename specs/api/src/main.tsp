@@ -10,8 +10,6 @@ import "./common/security.tsp";
 // Import all module definitions
 // Note: identity/auth is handled by Better-Auth, not TypeSpec
 import "./modules/person.tsp";
-import "./modules/patient.tsp";
-import "./modules/provider.tsp";
 import "./modules/billing.tsp";
 import "./modules/audit.tsp";
 import "./modules/notifs.tsp";
@@ -20,7 +18,6 @@ import "./modules/storage.tsp";
 import "./modules/email.tsp";
 import "./modules/booking.tsp";
 import "./modules/reviews.tsp";
-import "./modules/emr.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Versioning;
@@ -28,10 +25,10 @@ using TypeSpec.OpenAPI;
 
 /**
  * Monobase Application API
- * 
- * Comprehensive API for application platform.
- * Provides secure, enterprise-grade endpoints for clients, service providers,
- * and business partners.
+ *
+ * Generic API for SaaS application platforms. Provides identity, billing,
+ * scheduling, communications, storage, and notification primitives that
+ * any product can compose into its own domain workflows.
  */
 @server("https://api.example.com", "Production server")
 @server("https://stg.api.example.com", "Staging server")
@@ -41,13 +38,7 @@ using TypeSpec.OpenAPI;
 })
 // Tag Metadata Definitions
 @tagMetadata("Person", #{
-  description: "Central person management module serving as the foundation for all user types in the platform. Handles core PII (Personally Identifiable Information) with strict data protection, supporting both client and service provider roles. Manages identity verification, profile updates, consent preferences (marketing, data sharing, SMS, email), and serves as the single source of truth for user information across the platform ecosystem."
-})
-@tagMetadata("Patient", #{
-  description: "Patient profile management extending the Person module with healthcare-specific information. Manages primary care provider relationships and pharmacy preferences for individuals receiving medical services. Provides streamlined patient profile system with essential provider and pharmacy information management for basic healthcare service coordination."
-})
-@tagMetadata("Provider", #{
-  description: "Healthcare provider profile management extending the Person module. Manages professional credentials, practice information, and minor ailment specialties. Features public provider directory with optional authentication for patient discovery. Supports pharmacists and other healthcare providers with search by specialty, location, and experience."
+  description: "Central person management module serving as the foundation for all user types in the platform. Handles core PII (Personally Identifiable Information) with strict data protection. Manages identity verification, profile updates, consent preferences (marketing, data sharing, SMS, email), and serves as the single source of truth for user information across the platform ecosystem."
 })
 @tagMetadata("Billing", #{
   description: "Invoice-based payment processing with Stripe integration. Manages invoices, merchant accounts, payment processing, and refunds. Supports both automatic and manual payment capture flows with comprehensive authorization controls. Any person can become a merchant and receive payments through Stripe Connect."
@@ -59,7 +50,7 @@ using TypeSpec.OpenAPI;
   description: "Multi-channel notification delivery system for user engagement and communications. Manages email, push notifications, and in-app messaging with delivery tracking. Handles booking reminders, billing notifications, security alerts, and system announcements. Provides read-only API for users with internal service-based creation."
 })
 @tagMetadata("Comms", #{
-  description: "Communication module providing focused video call and chat functionality for professional video sessions. Features Facebook Messenger-style chat with embedded video calls, direct booking integration, immutable message history, and action-based video call management. Supports one active video call per chat room with efficient state management and WebRTC integration for secure video sessions."
+  description: "Real-time communication module providing chat rooms and embedded video calls. Features Messenger-style chat with immutable message history, direct booking integration, and action-based video call management with WebRTC signaling. Supports one active video call per chat room with efficient state management."
 })
 @tagMetadata("Storage", #{
   description: "Secure document and file management system with AWS S3 integration. Handles documents, reports, files, and consent forms with encryption at rest and in transit. Provides presigned URLs for secure uploads/downloads, automatic file type validation, virus scanning, PDF generation, and retention policy enforcement with enterprise-grade access controls."
@@ -71,13 +62,10 @@ using TypeSpec.OpenAPI;
   description: "Runtime-configurable email service with dynamic template management. Enables administrators to create and modify email templates without code deployments, with changes taking effect immediately. Features template tag-based referencing, Handlebars variable substitution, JSON Schema validation, multi-provider support (SMTP/Postmark), asynchronous job-based processing, and comprehensive queue management with retry logic and admin controls."
 })
 @tagMetadata("Booking", #{
-  description: "Professional booking and scheduling system for time-based services. Enables service providers to define booking events with flexible availability patterns, location options (in-person, virtual, or hybrid), and automated time slot generation. Supports booking lifecycle management with confirmation workflows, mutual cancellation, no-show tracking, and schedule exception handling. Features public event discovery for seamless booking experiences."
+  description: "Booking and scheduling system for time-based services. Hosts define booking events with flexible availability patterns, location options (in-person, virtual, or hybrid), and automated time slot generation. Supports booking lifecycle management with confirmation workflows, mutual cancellation, no-show tracking, and schedule exception handling. Features public event discovery for seamless booking experiences."
 })
 @tagMetadata("Reviews", #{
   description: "Flexible NPS review system for feedback collection. Enables users to submit Net Promoter Score (0-10) reviews with optional comments for any context (appointments, sessions, orders). Supports application-defined review types and optional reviewed entities for maximum flexibility. Features immutable reviews, role-based access control, and duplicate prevention."
-})
-@tagMetadata("EMR", #{
-  description: "Electronic Medical Records for telemedicine consultations. Simplified documentation system for minor ailment consultations with structured clinical data capture. Manages consultation notes with chief complaints, clinical assessments, treatment plans, vital signs, symptoms, prescriptions, and follow-up instructions. Features draft/finalized workflow, role-based access control (provider creates/updates, patient views own records), and flexible integration support for external documentation systems."
 })
 namespace MonobaseAPI {
 
@@ -88,17 +76,7 @@ namespace MonobaseAPI {
   @tag("Person")
   @route("/persons")
   interface PersonManagement extends PersonModule.PersonManagement {}
-  
-  // Patient Management
-  @tag("Patient")
-  @route("/patients")
-  interface PatientManagement extends PatientModule.PatientManagement {}
-  
-  // Provider Management
-  @tag("Provider")
-  @route("/providers")
-  interface ProviderManagement extends ProviderModule.ProviderManagement {}
-  
+
   // Billing Management
   @tag("Billing")
   @route("/billing")
@@ -161,11 +139,6 @@ namespace MonobaseAPI {
   @tag("Reviews")
   @route("/reviews")
   interface ReviewsManagement extends ReviewsModule.ReviewsManagement {}
-
-  // EMR Management
-  @tag("EMR")
-  @route("/emr")
-  interface EMRManagement extends EMRModule.EMRManagement {}
 
 }
 
