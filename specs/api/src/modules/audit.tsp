@@ -193,7 +193,7 @@ namespace AuditModule {
      @route("/logs")
      listAuditLogs(
         @doc("Filter by resource type (e.g., 'booking', 'client', 'service_provider')")
-        @query resourceType?: string,
+        @query resourceType?: SafeQueryString,
         @doc("Filter by specific resource UUID")
         @query resource?: UUID,
         @doc("Filter by user UUID who performed the action")
@@ -201,11 +201,11 @@ namespace AuditModule {
         @doc("Filter by action type (create, read, update, delete, login, logout)")
         @query action?: AuditAction,
         @doc("Start date for filtering audit logs (inclusive)")
-        @query startDate?: utcDateTime,
+        @query startDate?: StrictUtcDateTime,
         @doc("End date for filtering audit logs (inclusive)")
-        @query endDate?: utcDateTime,
+        @query endDate?: StrictUtcDateTime,
         @doc("Order by field (e.g., 'desc(created_at)', 'asc(created_at)')")
-        @query orderBy?: string,
+        @query orderBy?: SafeQueryString,
         ...PaginationQuery
      ): ApiOkResponse<PaginatedResponse<AuditLogEntry>> | ApiUnauthorizedResponse | ApiForbiddenResponse;
 

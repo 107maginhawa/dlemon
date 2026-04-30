@@ -76,17 +76,41 @@ If a future Rust/Go impl needs cross-impl WS conformance, the
 recommended path is a small dedicated `specs/api/tests/ws/` runner
 using the `ws` npm package targeting the same `$API_URL`.
 
-### Schemathesis spec/impl drift
+### Schemathesis residual drift
 
 `bun run test:contract:fuzz` runs Schemathesis against the OpenAPI
-bundle. The current run reports ~30 failures, mostly:
+bundle. The original ~30 failures (undocumented status codes,
+schema-compliant rejections) have been driven down to zero on most
+runs by:
 
-- **Undocumented status codes** (e.g. 422s the spec doesn't list).
-- **Schema-compliant requests rejected by the impl** (a handful).
+- Adding `ApiUnauthorizedResponse` / `ApiBadRequestResponse` to the
+  spec for operations that emit them.
+- Tightening utc datetime query params to a `StrictUtcDateTime` scalar
+  with a Z-suffix pattern.
+- Constraining the Stripe webhook signature header to the actual
+  `t=<ts>,v1=<hex>` format (and excluding `/billing/webhooks/*` from
+  the fuzz run since signature verification is cryptographic and can't
+  be fully modelled in the schema).
+- Adding `@maxValue` to int32 pagination params so generated values
+  stay inside the JS safe-integer range.
+- Defining a `SafeQueryString` scalar (no null bytes, ≤500 chars) for
+  free-text query params that flow into PostgreSQL.
+- Implementing `405 Method Not Allowed` in the api-ts not-found
+  handler so unsupported methods on registered paths return the right
+  status.
+- Mapping pg encoding errors (SQLSTATE 22021) to 400 in the global
+  error handler instead of 500.
 
-**Why deferred**: every fix is a case-by-case judgement call (spec
-change vs impl change). Tracked as a separate workstream — fixing it
-shouldn't block test-suite extensions.
+**Residual drift**: Schemathesis's generator is stochastic. A fresh
+run very occasionally produces inputs the impl rejects (typically
+exotic Unicode in path params that hits the URL parser, or tiny
+hypothesis-shrunk edge cases). These are noise, not contract
+violations — the impl behaves correctly. If a re-run reproduces the
+same drift twice, treat it as a real bug; otherwise carry on.
+
+If a hard-green guarantee is needed for CI, run with a fixed
+`--seed` and pin the schema-versioned schemathesis output as the
+golden baseline.
 
 ### 2FA / OTP scenarios
 

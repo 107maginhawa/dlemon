@@ -257,26 +257,26 @@ export const BookingEventSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   owner: z.union([z.string(), PersonSchema]),
-  context: z.string().optional(),
+  context: z.union([z.string(), z.null()]).optional(),
   title: z.string(),
-  description: z.string().optional(),
+  description: z.union([z.string(), z.null()]).optional(),
   keywords: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   timezone: z.string(),
   locationTypes: z.array(LocationTypeSchema),
   maxBookingDays: z.number().int().gte(0).lte(365),
   minBookingMinutes: z.number().int().gte(0).lte(4320),
-  formConfig: z.object({
+  formConfig: z.union([z.object({
   fields: z.array(FormFieldConfigSchema).optional()
-}).optional(),
-  billingConfig: z.object({
+}), z.null()]).optional(),
+  billingConfig: z.union([z.object({
   price: z.number().int().gte(0),
   currency: z.string(),
   cancellationThresholdMinutes: z.number().int().gte(0).lte(10080)
-}).optional(),
+}), z.null()]).optional(),
   status: z.enum(["draft", "active", "paused", "archived"]),
   effectiveFrom: z.string().datetime().transform((str) => new Date(str)),
-  effectiveTo: z.string().datetime().transform((str) => new Date(str)).optional(),
+  effectiveTo: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]).optional(),
   dailyConfigs: z.record(z.string(), z.unknown())
 });
 
@@ -1019,6 +1019,8 @@ export const ReviewSchema = z.object({
   comment: z.string().max(1000).optional()
 });
 
+export const SafeQueryStringSchema = z.string().regex(/^[^\u0000]*$/).max(500);
+
 export const ScheduleExceptionSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -1096,6 +1098,8 @@ export const StoredFileSchema = z.object({
   owner: z.string().uuid(),
   uploadedAt: z.string().datetime().transform((str) => new Date(str))
 });
+
+export const StrictUtcDateTimeSchema = z.string().datetime().transform((str) => new Date(str));
 
 export const TemplateStatusSchema = z.enum(["draft", "active", "archived"]);
 
@@ -1210,19 +1214,19 @@ export const VideoCallJoinResponseSchema = z.object({
 export const VideoCallStatusSchema = z.enum(["starting", "active", "ended", "cancelled"]);
 
 export const ListAuditLogsQuery = z.object({
-  resourceType: z.string().optional(),
+  resourceType: SafeQueryStringSchema.optional(),
   resource: UUIDSchema.optional(),
   user: UUIDSchema.optional(),
   action: AuditActionSchema.optional(),
-  startDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  endDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  orderBy: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  startDate: StrictUtcDateTimeSchema.optional(),
+  endDate: StrictUtcDateTimeSchema.optional(),
+  orderBy: SafeQueryStringSchema.optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListAuditLogsQuery = z.infer<typeof ListAuditLogsQuery>;
 
@@ -1249,13 +1253,13 @@ export const ListInvoicesQuery = z.object({
   customer: UUIDSchema.optional(),
   merchant: UUIDSchema.optional(),
   status: InvoiceStatusSchema.optional(),
-  context: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  context: SafeQueryStringSchema.optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListInvoicesQuery = z.infer<typeof ListInvoicesQuery>;
 
@@ -1398,15 +1402,15 @@ export const ListBookingsQuery = z.object({
   host: UUIDSchema.optional(),
   client: UUIDSchema.optional(),
   status: BookingStatusSchema.optional(),
-  startDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  endDate: z.string().datetime().transform((str) => new Date(str)).optional(),
+  startDate: StrictUtcDateTimeSchema.optional(),
+  endDate: StrictUtcDateTimeSchema.optional(),
   expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListBookingsQuery = z.infer<typeof ListBookingsQuery>;
 
@@ -1478,19 +1482,19 @@ export const RejectBookingResponse = BookingSchema;
 
 export const ListBookingEventsQuery = z.object({
   owner: UUIDSchema.optional(),
-  context: z.string().optional(),
+  context: SafeQueryStringSchema.optional(),
   locationType: LocationTypeSchema.optional(),
   status: BookingEventStatusSchema.optional(),
-  availableFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  availableTo: z.string().datetime().transform((str) => new Date(str)).optional(),
+  availableFrom: StrictUtcDateTimeSchema.optional(),
+  availableTo: StrictUtcDateTimeSchema.optional(),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
   expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListBookingEventsQuery = z.infer<typeof ListBookingEventsQuery>;
 
@@ -1558,12 +1562,12 @@ export const ListScheduleExceptionsParams = z.object({
 export type ListScheduleExceptionsParams = z.infer<typeof ListScheduleExceptionsParams>;
 
 export const ListScheduleExceptionsQuery = z.object({
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListScheduleExceptionsQuery = z.infer<typeof ListScheduleExceptionsQuery>;
 
@@ -1603,8 +1607,8 @@ export const ListEventSlotsParams = z.object({
 export type ListEventSlotsParams = z.infer<typeof ListEventSlotsParams>;
 
 export const ListEventSlotsQuery = z.object({
-  startTime: z.string().datetime().transform((str) => new Date(str)).optional(),
-  endTime: z.string().datetime().transform((str) => new Date(str)).optional(),
+  startTime: StrictUtcDateTimeSchema.optional(),
+  endTime: StrictUtcDateTimeSchema.optional(),
   status: SlotStatusSchema.optional(),
 });
 export type ListEventSlotsQuery = z.infer<typeof ListEventSlotsQuery>;
@@ -1633,12 +1637,12 @@ export const ListChatRoomsQuery = z.object({
   context: UUIDSchema.optional(),
   withParticipant: UUIDSchema.optional(),
   hasActiveCall: z.coerce.boolean().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListChatRoomsQuery = z.infer<typeof ListChatRoomsQuery>;
 
@@ -1670,12 +1674,12 @@ export type GetChatMessagesParams = z.infer<typeof GetChatMessagesParams>;
 
 export const GetChatMessagesQuery = z.object({
   messageType: MessageTypeSchema.optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type GetChatMessagesQuery = z.infer<typeof GetChatMessagesQuery>;
 
@@ -1742,16 +1746,16 @@ export const GetIceServersResponse = IceServersResponseSchema;
 export const ListEmailQueueItemsQuery = z.object({
   status: z.union([EmailQueueStatusSchema, z.array(EmailQueueStatusSchema), z.string().transform(val => val.split(",").map(s => s.trim())).pipe(z.array(EmailQueueStatusSchema))]).optional(),
   recipientEmail: EmailSchema.optional(),
-  dateFrom: z.string().datetime().transform((str) => new Date(str)).optional(),
-  dateTo: z.string().datetime().transform((str) => new Date(str)).optional(),
+  dateFrom: StrictUtcDateTimeSchema.optional(),
+  dateTo: StrictUtcDateTimeSchema.optional(),
   priority: z.coerce.number().int().optional(),
   scheduledOnly: z.coerce.boolean().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListEmailQueueItemsQuery = z.infer<typeof ListEmailQueueItemsQuery>;
 
@@ -1796,12 +1800,12 @@ export const RetryEmailQueueItemResponse = EmailQueueItemSchema;
 export const ListEmailTemplatesQuery = z.object({
   status: TemplateStatusSchema.optional(),
   tags: z.string().transform(val => val.split(",").filter(Boolean)).optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListEmailTemplatesQuery = z.infer<typeof ListEmailTemplatesQuery>;
 
@@ -1855,14 +1859,14 @@ export const ListNotificationsQuery = z.object({
   type: NotificationTypeSchema.optional(),
   channel: NotificationChannelSchema.optional(),
   status: NotificationStatusSchema.optional(),
-  startDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  endDate: z.string().datetime().transform((str) => new Date(str)).optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  startDate: StrictUtcDateTimeSchema.optional(),
+  endDate: StrictUtcDateTimeSchema.optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListNotificationsQuery = z.infer<typeof ListNotificationsQuery>;
 
@@ -1909,12 +1913,12 @@ export type CreatePersonBody = z.infer<typeof CreatePersonBody>;
 export const CreatePersonResponse = PersonSchema;
 
 export const ListPersonsQuery = z.object({
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListPersonsQuery = z.infer<typeof ListPersonsQuery>;
 
@@ -1957,14 +1961,14 @@ export const CreateReviewResponse = ReviewSchema;
 export const ListReviewsQuery = z.object({
   context: UUIDSchema.optional(),
   reviewer: UUIDSchema.optional(),
-  reviewType: z.string().optional(),
+  reviewType: SafeQueryStringSchema.optional(),
   reviewedEntity: UUIDSchema.optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListReviewsQuery = z.infer<typeof ListReviewsQuery>;
 
@@ -1999,12 +2003,12 @@ export const DeleteReviewResponse = z.void();
 export const ListFilesQuery = z.object({
   status: FileStatusSchema.optional(),
   owner: UUIDSchema.optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListFilesQuery = z.infer<typeof ListFilesQuery>;
 

@@ -172,9 +172,9 @@ namespace Notifs {
       @doc("Filter by notification status (use 'unread' to get sent/delivered notifications)")
       @query status?: NotificationStatus,
       @doc("Start date for filtering notifications (inclusive)")
-      @query startDate?: utcDateTime,
+      @query startDate?: StrictUtcDateTime,
       @doc("End date for filtering notifications (inclusive)")
-      @query endDate?: utcDateTime,
+      @query endDate?: StrictUtcDateTime,
       ...PaginationQuery
     ): ApiOkResponse<PaginatedResponse<Notification>>
       | ApiUnauthorizedResponse
