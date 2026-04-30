@@ -345,7 +345,7 @@ impl FullStackPeer {
         let engine = Arc::new(engine);
 
         let collections: Vec<String> = pg_config.collections.keys().cloned().collect();
-        let scope_columns = pg_config.all_scope_column_names();
+        let scope_columns = pg_config.scope_columns_by_collection();
 
         // Spawn PG watcher
         let _watcher_handle = {
@@ -406,9 +406,10 @@ impl FullStackPeer {
             storage.clone(),
             db_url.clone(),
             collections,
+            Vec::new(), // blacklisted_collections
             Duration::from_millis(APPLIER_POLL_MS),
             applier_tracker,
-            10, 1000, 60000,
+            10, 1000, 60000, 5_000,
         );
 
         FullStackPeer {
@@ -467,7 +468,7 @@ impl FullStackPeer {
         let engine = Arc::new(engine);
 
         let collections: Vec<String> = config.collections.keys().cloned().collect();
-        let scope_columns = config.all_scope_column_names();
+        let scope_columns = config.scope_columns_by_collection();
 
         // Spawn SQLite watcher (mirrors main.rs lines 216-258)
         let _watcher_handle = {
@@ -532,9 +533,10 @@ impl FullStackPeer {
             storage.clone(),
             db_path,
             collections,
+            Vec::new(), // blacklisted_collections
             Duration::from_millis(APPLIER_POLL_MS),
             applier_tracker,
-            10, 1000, 60000,
+            10, 1000, 60000, 5_000,
         );
 
         FullStackPeer {

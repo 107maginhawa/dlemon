@@ -171,8 +171,11 @@ async fn get_peer_token(State(state): State<Arc<ApiState>>) -> impl IntoResponse
 
 /// DELETE /peer-token — clear the token.
 async fn clear_peer_token(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
-    state.sync_engine.clear_peer_token().await;
-    (StatusCode::NO_CONTENT, cors_headers())
+    if let Err(e) = state.sync_engine.clear_peer_token().await {
+        tracing::error!("Failed to clear peer token: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, cors_headers()).into_response();
+    }
+    (StatusCode::NO_CONTENT, cors_headers()).into_response()
 }
 
 // ── Peers endpoints ─────────────────────────────────────────────

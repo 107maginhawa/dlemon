@@ -15,12 +15,17 @@ use super::common::{aggregate_raw_rows, base64_encode, RawChangeRow};
 const VALKEY_OP_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Lua script for atomic append_change.
-/// For each field-change: INCR seq counter, HSET the change hash, ZADD to both sorted sets.
-/// KEYS[1] = seq counter key, KEYS[2] = by_seq sorted set key
+/// For each field-change: INCR seq counter, HSET the change hash, ZADD to the
+/// relevant sorted sets. Tombstones (deleted='1') are also ZADDed to
+/// `tombstones:by_seq` so snapshot catch-up can iterate just those without
+/// scanning the full change log.
+/// KEYS[1] = seq counter key, KEYS[2] = by_seq sorted set key,
+/// KEYS[3] = tombstones:by_seq sorted set key
 /// ARGV layout: [n_fields, then per field: collection, doc_id, field, value, lamport, peer_id, deleted, by_doc_key]
 const APPEND_SCRIPT: &str = r#"
 local seq_key = KEYS[1]
 local by_seq_key = KEYS[2]
+local tombstones_key = KEYS[3]
 local prefix = ARGV[1]
 local n = tonumber(ARGV[2])
 local last_seq = 0
@@ -50,6 +55,9 @@ for i = 1, n do
 
     redis.call('ZADD', by_seq_key, seq, tostring(seq))
     redis.call('ZADD', by_doc_key, seq, tostring(seq))
+    if deleted == '1' then
+        redis.call('ZADD', tombstones_key, seq, tostring(seq))
+    end
 
     last_seq = seq
 end
@@ -175,9 +183,10 @@ impl MetadataBackend for ValkeyBackend {
                     args.push(by_doc_key);
                 }
 
+                let tombstones_key = self.key("changes:tombstones:by_seq");
                 self.timed(async {
                     let last_seq: u64 = self.append_script
-                        .evalsha(&self.client, vec![seq_key, by_seq_key], args)
+                        .evalsha(&self.client, vec![seq_key.clone(), by_seq_key.clone(), tombstones_key.clone()], args)
                         .await
                         .context("Valkey append_change script failed")?;
                     Ok(last_seq)
@@ -200,9 +209,10 @@ impl MetadataBackend for ValkeyBackend {
                     by_doc_key,
                 ];
 
+                let tombstones_key = self.key("changes:tombstones:by_seq");
                 self.timed(async {
                     let last_seq: u64 = self.append_script
-                        .evalsha(&self.client, vec![seq_key, by_seq_key], args)
+                        .evalsha(&self.client, vec![seq_key, by_seq_key, tombstones_key], args)
                         .await
                         .context("Valkey append_change CRDT script failed")?;
                     Ok(last_seq)
@@ -217,7 +227,7 @@ impl MetadataBackend for ValkeyBackend {
 
         let seq_strings: Vec<String> = self.timed(async {
             Ok(self.client
-                .zrangebyscore(&by_seq_key, min, f64::INFINITY, false, None)
+                .zrangebyscore(&by_seq_key, min, f64::INFINITY, false, Some((0, 10000)))
                 .await
                 .context("Valkey zrangebyscore failed")?)
         }).await?;
@@ -225,6 +235,68 @@ impl MetadataBackend for ValkeyBackend {
         let seqs: Vec<u64> = seq_strings.iter().filter_map(|s| s.parse().ok()).collect();
         let rows = self.fetch_changes_by_seqs(seqs).await?;
         Ok(aggregate_raw_rows(rows))
+    }
+
+    async fn query_since_batched(
+        &self,
+        since_seq: u64,
+        limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let by_seq_key = self.key("changes:by_seq");
+        let min = (since_seq + 1) as f64;
+        let fetch_count = limit.saturating_add(1);
+
+        let seq_strings: Vec<String> = self.timed(async {
+            Ok(self.client
+                .zrangebyscore(
+                    &by_seq_key,
+                    min,
+                    f64::INFINITY,
+                    false,
+                    Some((0i64, fetch_count as i64)),
+                )
+                .await
+                .context("Valkey zrangebyscore batched failed")?)
+        }).await?;
+
+        let has_more = seq_strings.len() > limit;
+        let seqs: Vec<u64> = seq_strings.iter()
+            .take(limit)
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        let rows = self.fetch_changes_by_seqs(seqs).await?;
+        Ok((aggregate_raw_rows(rows), has_more))
+    }
+
+    async fn query_tombstones_since_batched(
+        &self,
+        since_seq: u64,
+        limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let tombstones_key = self.key("changes:tombstones:by_seq");
+        let min = (since_seq + 1) as f64;
+        let fetch_count = limit.saturating_add(1);
+
+        let seq_strings: Vec<String> = self.timed(async {
+            Ok(self.client
+                .zrangebyscore(
+                    &tombstones_key,
+                    min,
+                    f64::INFINITY,
+                    false,
+                    Some((0i64, fetch_count as i64)),
+                )
+                .await
+                .context("Valkey zrangebyscore tombstones failed")?)
+        }).await?;
+
+        let has_more = seq_strings.len() > limit;
+        let seqs: Vec<u64> = seq_strings.iter()
+            .take(limit)
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        let rows = self.fetch_changes_by_seqs(seqs).await?;
+        Ok((aggregate_raw_rows(rows), has_more))
     }
 
     async fn query_by_doc(&self, collection: &str, doc_id: &str) -> Result<Vec<RowChange>> {
@@ -330,6 +402,14 @@ impl MetadataBackend for ValkeyBackend {
         let k = self.key(&format!("token:{}", key));
         self.timed(async {
             self.client.set::<(), _, _>(&k, jwt, None, None, false).await?;
+            Ok(())
+        }).await
+    }
+
+    async fn delete_peer_token(&self, key: &str) -> Result<()> {
+        let k = self.key(&format!("token:{}", key));
+        self.timed(async {
+            self.client.del::<(), _>(&k).await?;
             Ok(())
         }).await
     }

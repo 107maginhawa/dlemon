@@ -355,8 +355,6 @@ struct PrimaryDbPeer {
     endpoint: Endpoint,
     storage: Arc<Storage>,
     state: Arc<SyncState>,
-    jwt: String,
-    peer_tracker: Arc<PeerTracker>,
     primary_conn: Arc<std::sync::Mutex<rusqlite::Connection>>,
 }
 
@@ -398,26 +396,6 @@ impl PrimaryDbPeer {
         let key = jsonwebtoken::DecodingKey::from_secret(b"test-secret");
         let validator = Arc::new(JwtValidator::permissive(key));
 
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        let claims = serde_json::json!({
-            "sub": "test",
-            "aud": "cadence-sync",
-            "exp": now + 3600,
-            "scopes": {"facility_id": ["*"]},
-            "read_only": false
-        });
-
-        let jwt = jsonwebtoken::encode(
-            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
-            &claims,
-            &jsonwebtoken::EncodingKey::from_secret(b"test-secret"),
-        )
-        .unwrap();
-
         let token_store = Arc::new(TokenStore::new(storage.clone(), validator.clone()));
         let peer_tracker = Arc::new(PeerTracker::new());
         let (engine, _peer_change_rx) = SyncEngine::new(
@@ -429,7 +407,7 @@ impl PrimaryDbPeer {
             peer_id,
             SchemaFingerprint::empty(),
             token_store,
-            peer_tracker.clone(),
+            peer_tracker,
         );
         let engine = Arc::new(engine);
 
@@ -438,8 +416,6 @@ impl PrimaryDbPeer {
             endpoint,
             storage,
             state,
-            jwt,
-            peer_tracker,
             primary_conn,
         }
     }

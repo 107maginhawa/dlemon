@@ -189,7 +189,7 @@ impl MixedPeer {
         let engine = Arc::new(engine);
 
         let collections: Vec<String> = config.collections.keys().cloned().collect();
-        let scope_columns = config.all_scope_column_names();
+        let scope_columns = config.scope_columns_by_collection();
 
         // Spawn SQLite watcher
         let _watcher_handle = {
@@ -251,11 +251,13 @@ impl MixedPeer {
             storage.clone(),
             path,
             collections,
+            Vec::new(), // blacklisted_collections
             Duration::from_millis(APPLIER_POLL_MS),
             applier_tracker,
             10,
             1000,
             60000,
+            5_000,
         );
 
         MixedPeer {

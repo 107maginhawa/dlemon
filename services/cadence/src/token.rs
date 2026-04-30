@@ -51,10 +51,13 @@ impl TokenStore {
         self.claims.read().await.clone()
     }
 
-    /// Clear the current token.
-    pub async fn clear(&self) {
+    /// Clear the current token. Deletes the persisted row from the metadata
+    /// DB so a subsequent `load_from_storage()` does not resurrect it.
+    pub async fn clear(&self) -> Result<()> {
+        self.storage.delete_peer_token("default").await?;
         *self.token.write().await = None;
         *self.claims.write().await = None;
+        Ok(())
     }
 
     /// Load a persisted token from the metadata DB.

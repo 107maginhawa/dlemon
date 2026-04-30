@@ -39,6 +39,20 @@ pub struct SyncState {
     local_seq: AtomicU64,
     /// Per remote peer: last sequence number we've synced up to.
     peer_watermarks: DashMap<String, u64>,
+    /// Local seq value at the moment this peer's watcher finished its
+    /// baseline scan (the first poll that absorbs pre-existing primary-DB
+    /// rows into the watcher's LRU cache without writing them to the
+    /// change log).
+    ///
+    /// Default `u64::MAX` means "baseline not yet known"; any peer
+    /// `since_seq < u64::MAX` is treated as "below the threshold" and
+    /// triggers a primary-reader catch-up. This is conservative on
+    /// purpose — we'd rather over-snapshot than silently miss rows.
+    ///
+    /// `build_catchup_frames` reads this to decide whether the change
+    /// log is sufficient for a reconnecting peer or whether
+    /// primary-reader needs to fill in baseline-absorbed rows.
+    baseline_completion_seq: AtomicU64,
 }
 
 impl SyncState {
@@ -47,6 +61,7 @@ impl SyncState {
             lamport: AtomicU64::new(0),
             local_seq: AtomicU64::new(0),
             peer_watermarks: DashMap::new(),
+            baseline_completion_seq: AtomicU64::new(u64::MAX),
         }
     }
 
@@ -56,6 +71,7 @@ impl SyncState {
             lamport: AtomicU64::new(lamport),
             local_seq: AtomicU64::new(local_seq),
             peer_watermarks: DashMap::new(),
+            baseline_completion_seq: AtomicU64::new(u64::MAX),
         }
     }
 
@@ -105,6 +121,36 @@ impl SyncState {
     /// Set the watermark for a remote peer.
     pub fn set_watermark(&self, peer_id: &str, seq: u64) {
         self.peer_watermarks.insert(peer_id.to_string(), seq);
+    }
+
+    /// Get the local-seq value at which the watcher's baseline scan
+    /// completed. `u64::MAX` if baseline has not yet completed (or no
+    /// watcher has reported a baseline — e.g. a peer that doesn't run a
+    /// primary-DB watcher).
+    pub fn baseline_completion_seq(&self) -> u64 {
+        self.baseline_completion_seq.load(Ordering::SeqCst)
+    }
+
+    /// Mark the baseline scan as complete at the given local seq value.
+    /// Idempotent: subsequent calls only lower the value (the *first*
+    /// baseline-completion is what matters for catch-up correctness; any
+    /// later silent absorption shouldn't push the threshold up because
+    /// reconnecting peers' since_seq could legitimately exceed it).
+    pub fn set_baseline_completion_seq(&self, seq: u64) {
+        // CAS down-only: keep the lowest non-MAX value seen so far.
+        loop {
+            let current = self.baseline_completion_seq.load(Ordering::SeqCst);
+            if current != u64::MAX && seq >= current {
+                return;
+            }
+            if self
+                .baseline_completion_seq
+                .compare_exchange(current, seq, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                return;
+            }
+        }
     }
 }
 

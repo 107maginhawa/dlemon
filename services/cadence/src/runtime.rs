@@ -7,27 +7,41 @@
 //!
 //! ```ignore
 //! let config = CadenceConfig::from_yaml_file("cadence.yml")?;
-//! let endpoint = Arc::new(transport::create_endpoint().await?);
 //!
 //! let cadence = Cadence::builder()
 //!     .config(config)
-//!     .iroh_endpoint(endpoint)
+//!     .resolve_wildcards()  // ← connects to the primary DB; only call if you need schema discovery
+//!     .await?
 //!     .build()
 //!     .await?;
-//!
-//! cadence.accept_loop().await?;
 //! ```
 //!
-//! # Example (Embedded with builder)
+//! # Example (Embedded with builder, full sync)
 //!
 //! ```ignore
-//! let cadence = Cadence::builder()
+//! let mut cadence = Cadence::builder()
 //!     .primary_db("sqlite:///path/to/db.sqlite")
 //!     .metadata_db("/path/to/metadata.db")
 //!     .scope_rules([("facility", "organization"), ("created_by", "user")])
 //!     .api_server(false)
+//!     .resolve_wildcards()  // ← discover wildcard tables from the primary DB
+//!     .await?
 //!     .build()
 //!     .await?;
+//! cadence.start_sync().await?;
+//! ```
+//!
+//! # Example (Embedded, metadata-only — no primary DB connection)
+//!
+//! ```ignore
+//! // Short-lived CLI invocation: peer-token / peers / local-identity CRUD.
+//! // `.build()` performs no network I/O — the primary DB may be unreachable.
+//! let cadence = Cadence::builder()
+//!     .primary_db("postgres://...")
+//!     .metadata_db("/path/to/metadata.db")
+//!     .build()
+//!     .await?;
+//! cadence.sync_engine().set_peer_token(jwt).await?;
 //! ```
 
 use anyhow::{Context, Result};
@@ -45,7 +59,7 @@ use crate::identity::load_or_create_identity;
 use crate::peer_status::PeerTracker;
 use crate::primary_reader::{PgPrimaryReader, PrimaryDbReader, SqlitePrimaryReader};
 use crate::schema::SchemaFingerprint;
-use crate::state::{ChangeBroadcaster, SyncPayload, SyncState};
+use crate::state::{ChangeBroadcaster, RowChange, SyncPayload, SyncState};
 use crate::storage::{self, MetadataBackend, SqliteBackend, ValkeyBackend};
 use crate::sync::SyncEngine;
 use crate::token::TokenStore;
@@ -81,8 +95,27 @@ impl DbType {
 
 /// High-level Cadence runtime with all components wired up.
 ///
-/// Created via `Cadence::builder()`. Manages sync engine, watchers, appliers,
-/// and connection management automatically.
+/// Created via `Cadence::builder()`. The lifecycle is:
+///
+/// 1. **`builder().resolve_wildcards()`** *(optional)* — connects to the
+///    primary DB to expand any `"*"` wildcard collection into the discovered
+///    table list. **This is the only builder step that opens a primary-DB
+///    connection.** Omit it for short-lived metadata-only operations
+///    (peer/token CRUD, local-identity inspection) where the primary DB may
+///    not be reachable.
+/// 2. **`build()`** — pure construction: opens metadata storage, constructs
+///    the sync engine, loads the persisted peer token / peers / local
+///    identity. **No background tasks are spawned and no primary-DB
+///    connection is opened.** The returned instance is fully functional for
+///    metadata reads/writes, making it suitable for short-lived CLI
+///    invocations that just want to mutate state and exit.
+/// 3. **`start_sync()`** — spawns all background sync tasks (primary DB
+///    watcher, change log watcher, applier, peer-tracker reaper, connection
+///    manager). After this call the instance is actively syncing.
+///
+/// Long-running embedders (servers, desktop apps) call all three in
+/// sequence:
+/// `Cadence::builder()....resolve_wildcards().await?.build().await?.start_sync().await?`.
 pub struct Cadence {
     config: Arc<CadenceConfig>,
     sync_engine: Arc<SyncEngine>,
@@ -91,9 +124,17 @@ pub struct Cadence {
     broadcaster: Arc<ChangeBroadcaster>,
     peer_tracker: Arc<PeerTracker>,
     iroh_endpoint: Option<Arc<iroh::Endpoint>>,
+    // Fields needed by `start_sync()` — populated by `build()`.
+    storage: Arc<dyn MetadataBackend>,
+    db_type: DbType,
+    peer_id: String,
+    applier_tracker: ApplierTracker,
+    peer_change_rx: Option<tokio::sync::watch::Receiver<Vec<String>>>,
+    // Task handles, populated by `start_sync()`. Empty after `build()`.
     handles: Vec<JoinHandle<()>>,
-    #[allow(dead_code)]
     conn_handle: Option<AbortHandle>,
+    reaper_handle: Option<AbortHandle>,
+    started: bool,
 }
 
 impl Cadence {
@@ -137,8 +178,104 @@ impl Cadence {
         self.iroh_endpoint.as_ref()
     }
 
-    /// Stop all background tasks.
+    /// Get the persistent local peer ID (created on first build, stable across
+    /// restarts).
+    pub fn peer_id(&self) -> &str {
+        &self.peer_id
+    }
+
+    /// Get the metadata storage backend. Useful for short-lived CLI invocations
+    /// that want to read/write metadata without touching the sync engine.
+    pub fn storage(&self) -> &Arc<dyn MetadataBackend> {
+        &self.storage
+    }
+
+    /// Spawn all background sync tasks: primary DB watcher, change log watcher,
+    /// applier, peer-tracker reaper, and connection manager. After this call
+    /// the instance is actively syncing.
+    ///
+    /// Calling this method is optional: a `Cadence` instance from `build()`
+    /// alone is fully functional for metadata reads/writes (token store,
+    /// peers list, change-log queries) — useful for short-lived CLI
+    /// invocations that just want to mutate state and exit.
+    ///
+    /// Idempotent: calling `start_sync()` on an already-started instance is a
+    /// no-op and logs a warning.
+    pub async fn start_sync(&mut self) -> Result<()> {
+        if self.started {
+            tracing::warn!("Cadence::start_sync() called on already-started instance; ignoring");
+            return Ok(());
+        }
+
+        let peer_change_rx = self
+            .peer_change_rx
+            .take()
+            .context("peer_change_rx missing; start_sync() already consumed it")?;
+
+        // Start peer tracker reaper
+        if self.config.peer_idle_timeout_ms > 0 {
+            self.reaper_handle = Some(self.peer_tracker.start_reaper(
+                self.config.peer_idle_timeout_ms,
+                self.config.peer_idle_timeout_ms / 2,
+            ));
+        }
+
+        // Start primary DB watcher
+        self.handles.push(start_primary_watcher(
+            self.db_type,
+            &self.config,
+            &self.peer_id,
+            self.state.clone(),
+            self.storage.clone(),
+            self.broadcaster.clone(),
+            self.applier_tracker.clone(),
+        )?);
+
+        // Start change log watcher (bookkeeping)
+        self.handles.push(start_changelog_watcher(
+            self.storage.clone(),
+            self.config.poll_interval_ms,
+        ));
+
+        // Start applier
+        self.handles.push(start_applier(
+            self.db_type,
+            &self.config,
+            self.storage.clone(),
+            self.applier_tracker.clone(),
+        ));
+
+        // Start connection manager
+        let conn_manager = ConnectionManager::new(
+            self.sync_engine.clone(),
+            self.token_store.clone(),
+            self.broadcaster.clone(),
+            &self.config,
+            self.iroh_endpoint.clone(),
+        );
+        self.conn_handle = Some(conn_manager.start(peer_change_rx));
+
+        // Merge bootstrap peers
+        if !self.config.bootstrap_peers.is_empty() {
+            let mut all = self.sync_engine.get_peers().await;
+            for bp in &self.config.bootstrap_peers {
+                if !all.contains(bp) {
+                    all.push(bp.clone());
+                }
+            }
+            self.sync_engine.set_peers(all).await?;
+        }
+
+        self.started = true;
+        tracing::info!("Cadence sync started");
+        Ok(())
+    }
+
+    /// Stop all background tasks. No-op if `start_sync()` was never called.
     pub async fn stop(&mut self) {
+        if !self.started && self.handles.is_empty() && self.conn_handle.is_none() {
+            return;
+        }
         tracing::info!("Stopping cadence...");
         for handle in self.handles.drain(..) {
             handle.abort();
@@ -146,6 +283,10 @@ impl Cadence {
         if let Some(handle) = self.conn_handle.take() {
             handle.abort();
         }
+        if let Some(handle) = self.reaper_handle.take() {
+            handle.abort();
+        }
+        self.started = false;
     }
 
     /// Run the accept loop for incoming QUIC connections.
@@ -222,6 +363,7 @@ pub struct CadenceBuilder {
     api_server_enabled: Option<bool>,
     apply_env_overrides: bool,
     poll_interval_ms: Option<u64>,
+    jwks_urls: Option<Vec<String>>,
 
     // P2P configuration
     p2p_enabled: Option<bool>,
@@ -329,7 +471,54 @@ impl CadenceBuilder {
         self
     }
 
-    /// Build and start the Cadence instance.
+    /// Set JWKS URLs for JWT signature verification.
+    ///
+    /// **Authoritative**: applied AFTER `apply_env_overrides()`, so a
+    /// builder-set value cannot be overridden by `CADENCE_JWKS_URL`. This
+    /// is intentional — embedders that hardcode a JWKS URL (e.g. desktop
+    /// apps shipped to end users) must not allow runtime override, or any
+    /// user could mint tokens validated against their own keys.
+    pub fn jwks_urls(mut self, urls: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.jwks_urls = Some(urls.into_iter().map(Into::into).collect());
+        self
+    }
+
+    /// Resolve `"*"` wildcard collection patterns by querying the primary
+    /// database schema.
+    ///
+    /// **This is the only builder step that connects to the primary database.**
+    /// Call it before `.build()` if any collection uses the `"*"` wildcard
+    /// (which `scope_rules(...)` adds implicitly); omit it for short-lived
+    /// metadata-only invocations (peer/token CRUD, local-identity inspection)
+    /// where the primary DB may be unreachable.
+    ///
+    /// No-op when no wildcard entry is configured — safe to call defensively.
+    ///
+    /// After this returns, the in-progress config is cached on the builder
+    /// and subsequent collection-mutating builder methods will not affect
+    /// the resolved set.
+    pub async fn resolve_wildcards(mut self) -> Result<Self> {
+        // Materialise the in-progress config so we can mutate it. This mirrors
+        // the same `config.take().or_else(|| build_config())` shape that
+        // `build()` performs internally — ensures `.config(...)` and the
+        // fluent setters both work as the source.
+        let mut config = match self.config.take() {
+            Some(c) => c,
+            None => self.build_config()?,
+        };
+        // CadenceConfig::resolve_wildcard already short-circuits when there's
+        // no `"*"` entry, so this is safe to call defensively.
+        config.resolve_wildcard().await?;
+        self.config = Some(config);
+        Ok(self)
+    }
+
+    /// Build the Cadence instance.
+    ///
+    /// **Pure construction.** Opens the metadata storage backend, builds the
+    /// sync engine, loads persisted peer / token / identity state. Performs
+    /// **no primary-DB I/O** — if any collections use the `"*"` wildcard and
+    /// you need them expanded, call [`Self::resolve_wildcards`] first.
     #[allow(deprecated)]
     pub async fn build(mut self) -> Result<Cadence> {
         // Resolve config
@@ -349,6 +538,14 @@ impl CadenceBuilder {
         if self.apply_env_overrides {
             config.apply_env_overrides();
         }
+        // jwks_urls is applied AFTER env overrides on purpose: when an
+        // embedder (e.g. maestroapp) hardcodes a JWKS URL via the builder,
+        // it must be authoritative. Otherwise a malicious user could set
+        // CADENCE_JWKS_URL to their own endpoint and mint tokens signed
+        // with their own keys.
+        if let Some(urls) = self.jwks_urls.take() {
+            config.jwks_urls = urls;
+        }
 
         // Validate required config
         if config.primary_db_url.is_empty() {
@@ -357,8 +554,11 @@ impl CadenceBuilder {
             );
         }
 
-        // Resolve wildcard collections
-        config.resolve_wildcard().await?;
+        // NOTE: wildcard collection expansion is intentionally NOT performed
+        // here. It opens a primary-DB connection, which would make `build()`
+        // unusable for metadata-only callers. Callers that need wildcard
+        // expansion must call `CadenceBuilder::resolve_wildcards().await?`
+        // explicitly before `.build()`.
 
         // Resolve metadata DB path
         let metadata_db_path = if let Some(ref path) = self.metadata_db_path {
@@ -457,14 +657,8 @@ impl CadenceBuilder {
             None
         };
 
-        // Create peer tracker
+        // Create peer tracker (reaper is started later in `start_sync()`)
         let peer_tracker = Arc::new(PeerTracker::new());
-        if config.peer_idle_timeout_ms > 0 {
-            peer_tracker.start_reaper(
-                config.peer_idle_timeout_ms,
-                config.peer_idle_timeout_ms / 2,
-            );
-        }
 
         // Create primary DB reader
         let primary_reader = create_primary_reader(&config, &peer_id)?;
@@ -491,56 +685,7 @@ impl CadenceBuilder {
         // Create applier tracker for echo suppression
         let applier_tracker = ApplierTracker::new();
 
-        // Start background tasks
-        let mut handles = Vec::new();
-
-        // Start primary DB watcher
-        handles.push(start_primary_watcher(
-            db_type,
-            &config,
-            &peer_id,
-            state.clone(),
-            storage.clone(),
-            broadcaster.clone(),
-            applier_tracker.clone(),
-        )?);
-
-        // Start change log watcher (bookkeeping)
-        handles.push(start_changelog_watcher(
-            storage.clone(),
-            config.poll_interval_ms,
-        ));
-
-        // Start applier
-        handles.push(start_applier(
-            db_type,
-            &config,
-            storage.clone(),
-            applier_tracker,
-        ));
-
-        // Start connection manager
-        let conn_manager = ConnectionManager::new(
-            sync_engine.clone(),
-            token_store.clone(),
-            broadcaster.clone(),
-            &config,
-            iroh_endpoint.clone(),
-        );
-        let conn_handle = conn_manager.start(peer_change_rx);
-
-        // Merge bootstrap peers
-        if !config.bootstrap_peers.is_empty() {
-            let mut all = sync_engine.get_peers().await;
-            for bp in &config.bootstrap_peers {
-                if !all.contains(bp) {
-                    all.push(bp.clone());
-                }
-            }
-            sync_engine.set_peers(all).await?;
-        }
-
-        tracing::info!("Cadence started");
+        tracing::info!("Cadence built (background tasks not yet started)");
 
         Ok(Cadence {
             config,
@@ -550,8 +695,15 @@ impl CadenceBuilder {
             broadcaster,
             peer_tracker,
             iroh_endpoint,
-            handles,
-            conn_handle: Some(conn_handle),
+            storage,
+            db_type,
+            peer_id,
+            applier_tracker,
+            peer_change_rx: Some(peer_change_rx),
+            handles: Vec::new(),
+            conn_handle: None,
+            reaper_handle: None,
+            started: false,
         })
     }
 
@@ -630,7 +782,7 @@ fn start_primary_watcher(
 ) -> Result<JoinHandle<()>> {
     let poll_interval = Duration::from_millis(config.poll_interval_ms);
     let collections: Vec<String> = config.collections.keys().cloned().collect();
-    let scope_columns = config.all_scope_column_names();
+    let scope_columns = config.scope_columns_by_collection();
     let max_failures = config.max_reconnect_attempts;
     let lru_capacity = config.watcher_lru_capacity;
 
@@ -700,31 +852,76 @@ async fn run_watcher_loop<W: ChangeWatcher + 'static>(
                     output.is_incremental
                 );
 
-                let mut changes = output.changes;
-
-                // Re-tag applier-written changes with origin peer_id for echo suppression
-                for change in &mut changes {
-                    if let Some(origin_peer_id) =
-                        tracker.take_origin(&change.collection, &change.document_id)
-                    {
-                        if let SyncPayload::Fields(ref mut fields) = change.payload {
-                            for fc in fields.iter_mut() {
-                                fc.peer_id = origin_peer_id.clone();
+                // Re-tag applier-written changes with the origin peer_id and
+                // remember which are applier-writes so we can skip logging
+                // their non-tombstone form below (applier writes are echoes
+                // of what an upstream peer pushed — the upstream peer already
+                // logged them, and the row is now in our primary DB so future
+                // reconnecting peers will see it via primary-reader catch-up;
+                // re-logging here causes write amplification that bloats the
+                // change log unboundedly under normal traffic).
+                let changes_with_origin: Vec<(RowChange, bool)> = output
+                    .changes
+                    .into_iter()
+                    .map(|mut change| {
+                        let origin = tracker.take_origin(&change.collection, &change.document_id);
+                        let is_applier_write = origin.is_some();
+                        if let Some(origin_peer_id) = origin {
+                            if let SyncPayload::Fields(ref mut fields) = change.payload {
+                                for fc in fields.iter_mut() {
+                                    fc.peer_id = origin_peer_id.clone();
+                                }
                             }
                         }
-                    }
-                }
+                        (change, is_applier_write)
+                    })
+                    .collect();
 
-                // Persist incremental changes to change log
+                // Persist incremental changes to change log AND broadcast
+                // them to peers. The non-incremental baseline scan is neither
+                // persisted nor broadcast — broadcasting a baseline (which can
+                // be 100k+ rows on a fresh node) instantly overflows the
+                // broadcast channel and leaves every subscriber permanently
+                // `Lagged`, silently starving the live-phase send loop. Peers
+                // receive baseline state via `send_catchup_batch`'s primary-DB
+                // path instead.
+                //
+                // Skip rule: applier-written non-tombstone changes are
+                // already covered by primary-reader catch-up. Tombstones
+                // ALWAYS log — primary-reader's `SELECT *` cannot see deleted
+                // rows, so the change log is the only place reconnecting
+                // peers can learn about them.
                 if output.is_incremental {
-                    for change in &changes {
+                    let mut appended = 0usize;
+                    let mut skipped_echoes = 0usize;
+                    for (change, is_applier_write) in &changes_with_origin {
+                        if *is_applier_write && !change.deleted {
+                            skipped_echoes += 1;
+                            continue;
+                        }
                         if let Err(e) = storage.append_change(change).await {
                             tracing::error!("Failed to append change to log: {}", e);
+                        } else {
+                            appended += 1;
                         }
                     }
+                    if skipped_echoes > 0 {
+                        tracing::debug!(
+                            appended,
+                            skipped_echoes,
+                            "Watcher: appended local + tombstone changes; skipped applier-echo non-tombstones"
+                        );
+                    }
+                    let changes: Vec<RowChange> =
+                        changes_with_origin.into_iter().map(|(c, _)| c).collect();
+                    broadcaster.broadcast(changes);
+                } else {
+                    tracing::info!(
+                        count = changes_with_origin.len(),
+                        "watcher baseline scan complete; not broadcasting or \
+                         persisting to change log (peers catch up via primary DB)"
+                    );
                 }
-
-                broadcaster.broadcast(changes);
             }
             Ok(_) => {
                 consecutive_failures = 0;
@@ -757,16 +954,14 @@ fn start_changelog_watcher(storage: Arc<dyn MetadataBackend>, poll_interval_ms: 
         loop {
             tokio::time::sleep(poll_interval).await;
 
-            match storage.query_since(last_known_seq).await {
-                Ok(changes) if !changes.is_empty() => {
-                    let max_seq = changes.iter().map(|c| c.seq).max().unwrap_or(last_known_seq);
+            match storage.max_seq().await {
+                Ok(seq) if seq > last_known_seq => {
                     tracing::debug!(
-                        "Change log watcher: seq {}..{} ({} changes)",
+                        "Change log watcher: seq advanced {}..{}",
                         last_known_seq + 1,
-                        max_seq,
-                        changes.len(),
+                        seq,
                     );
-                    last_known_seq = max_seq;
+                    last_known_seq = seq;
                 }
                 Ok(_) => {}
                 Err(e) => {
@@ -784,6 +979,7 @@ fn start_applier(
     tracker: ApplierTracker,
 ) -> JoinHandle<()> {
     let collections: Vec<String> = config.collections.keys().cloned().collect();
+    let blacklisted_collections: Vec<String> = config.collections_blacklist.clone();
     let poll_interval = Duration::from_millis(500);
 
     match db_type {
@@ -793,22 +989,26 @@ fn start_applier(
                 storage,
                 PathBuf::from(db_path),
                 collections,
+                blacklisted_collections,
                 poll_interval,
                 tracker,
                 config.max_reconnect_attempts,
                 config.reconnect_base_delay_ms,
                 config.reconnect_max_delay_ms,
+                config.query_batch_size,
             )
         }
         DbType::Postgres => crate::applier::pg::start_pg_applier(
             storage,
             config.primary_db_url.clone(),
             collections,
+            blacklisted_collections,
             poll_interval,
             tracker,
             config.max_reconnect_attempts,
             config.reconnect_base_delay_ms,
             config.reconnect_max_delay_ms,
+            config.query_batch_size,
         ),
     }
 }

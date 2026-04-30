@@ -104,7 +104,7 @@ async fn test_token_store_clear() {
     store.set_token(jwt).await.unwrap();
     assert!(store.token().await.is_some());
 
-    store.clear().await;
+    store.clear().await.unwrap();
     assert!(store.token().await.is_none());
     assert!(store.claims().await.is_none());
 }
@@ -226,6 +226,53 @@ async fn test_storage_peer_token_multiple_keys() {
     assert_eq!(storage.get_peer_token("key-a").await.unwrap(), Some("jwt-a".to_string()));
     assert_eq!(storage.get_peer_token("key-b").await.unwrap(), Some("jwt-b".to_string()));
     assert!(storage.get_peer_token("key-c").await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn test_storage_delete_peer_token() {
+    let storage = SqliteBackend::in_memory().unwrap();
+
+    storage.set_peer_token("default", "jwt-value").await.unwrap();
+    assert_eq!(
+        storage.get_peer_token("default").await.unwrap(),
+        Some("jwt-value".to_string())
+    );
+
+    storage.delete_peer_token("default").await.unwrap();
+    assert!(storage.get_peer_token("default").await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn test_storage_delete_peer_token_idempotent() {
+    let storage = SqliteBackend::in_memory().unwrap();
+
+    // Deleting a non-existent key must not error.
+    storage.delete_peer_token("missing").await.unwrap();
+    // Second delete is also a no-op.
+    storage.delete_peer_token("missing").await.unwrap();
+}
+
+/// Regression test for the `TokenStore::clear()` persistence bug.
+///
+/// Before the fix, `clear()` only wiped the in-memory cache — the row remained
+/// in the `peer_tokens` table, and a subsequent `load_from_storage()` would
+/// resurrect the cleared token on the next launch.
+#[tokio::test]
+async fn test_token_store_clear_persists_deletion() {
+    let (store, storage) = make_store();
+
+    let jwt = make_test_jwt(HashMap::new());
+    store.set_token(jwt).await.unwrap();
+    assert!(storage.get_peer_token("default").await.unwrap().is_some());
+
+    store.clear().await.unwrap();
+
+    // Disk row must be gone — not just the in-memory cache.
+    assert!(storage.get_peer_token("default").await.unwrap().is_none());
+
+    // A fresh load_from_storage() on a hypothetical next launch sees nothing.
+    assert!(!store.load_from_storage().await.unwrap());
+    assert!(store.token().await.is_none());
 }
 
 // ── TokenStore: token replacement ───────────────────────────────

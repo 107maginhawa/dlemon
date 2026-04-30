@@ -3,7 +3,7 @@ use cadence::storage::MetadataBackend;
 use cadence::watcher::sqlite::SqliteWatcher;
 use cadence::watcher::ChangeWatcher;
 use rusqlite::Connection;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
 
@@ -53,7 +53,7 @@ async fn test_sqlite_watcher_detects_insert() {
         vec!["medical_patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Initial poll — no changes
@@ -89,7 +89,7 @@ async fn test_sqlite_watcher_detects_update() {
         vec!["medical_encounters".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Insert an encounter
@@ -134,7 +134,7 @@ async fn test_sqlite_watcher_detects_delete() {
         vec!["bookings".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Insert and detect
@@ -174,7 +174,7 @@ async fn test_sqlite_watcher_bumps_lamport_and_seq() {
         vec!["medical_patients".to_string()],
         "test-peer".to_string(),
         state.clone(),
-        HashSet::new(),
+        HashMap::new(),
     );
 
     assert_eq!(state.lamport(), 0);
@@ -208,7 +208,7 @@ async fn test_sqlite_watcher_records_to_change_log() {
         vec!["medical_patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Insert
@@ -242,7 +242,7 @@ async fn test_sqlite_watcher_poll_interval() {
         vec!["medical_patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     let changes1 = watcher.poll_changes().await.unwrap().changes;

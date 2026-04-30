@@ -222,3 +222,83 @@ async fn test_storage_reopen_preserves_data() {
         assert_eq!(storage.get_watermark("peer-a").await.unwrap(), 99);
     }
 }
+
+#[tokio::test]
+async fn test_query_since_batched_limits_results() {
+    let storage = SqliteBackend::in_memory().unwrap();
+
+    // Insert 20 changes (each with 1 field = 1 raw row)
+    for i in 1..=20 {
+        let change = make_row_change(
+            "medical_patients",
+            &format!("patient-{}", i),
+            vec![make_field_change("name", json!(format!("Patient {}", i)), i)],
+        );
+        storage.append_change(&change).await.unwrap();
+    }
+
+    // Batch of 5 raw rows — should get at most 5 RowChanges and has_more=true
+    let (changes, has_more) = storage.query_since_batched(0, 5).await.unwrap();
+    assert!(changes.len() <= 5, "Should return at most 5 changes, got {}", changes.len());
+    assert!(has_more, "Should indicate more data available");
+}
+
+#[tokio::test]
+async fn test_query_since_batched_exhaustion() {
+    let storage = SqliteBackend::in_memory().unwrap();
+
+    // Insert 3 changes
+    for i in 1..=3 {
+        let change = make_row_change(
+            "medical_patients",
+            &format!("patient-{}", i),
+            vec![make_field_change("name", json!(format!("Patient {}", i)), i)],
+        );
+        storage.append_change(&change).await.unwrap();
+    }
+
+    // Batch of 100 — should get all 3 and has_more=false
+    let (changes, has_more) = storage.query_since_batched(0, 100).await.unwrap();
+    assert_eq!(changes.len(), 3);
+    assert!(!has_more, "Should indicate no more data");
+}
+
+#[tokio::test]
+async fn test_query_since_batched_cursor_pagination() {
+    let storage = SqliteBackend::in_memory().unwrap();
+
+    // Insert 50 changes (1 field each = 1 raw row each)
+    for i in 1..=50 {
+        let change = make_row_change(
+            "medical_patients",
+            &format!("patient-{}", i),
+            vec![make_field_change("name", json!(format!("Patient {}", i)), i)],
+        );
+        storage.append_change(&change).await.unwrap();
+    }
+
+    // Page through with batch size 10
+    let mut cursor = 0u64;
+    let mut all_doc_ids: Vec<String> = Vec::new();
+    let mut pages = 0;
+
+    loop {
+        let (changes, has_more) = storage.query_since_batched(cursor, 10).await.unwrap();
+        if changes.is_empty() { break; }
+
+        for change in &changes {
+            all_doc_ids.push(change.document_id.clone());
+            cursor = std::cmp::max(cursor, change.seq);
+        }
+        pages += 1;
+
+        if !has_more { break; }
+    }
+
+    assert_eq!(all_doc_ids.len(), 50, "Should retrieve all 50 documents across pages");
+    assert!(pages >= 5, "Should take at least 5 pages with batch size 10");
+
+    // Verify no duplicates
+    let unique: std::collections::HashSet<&String> = all_doc_ids.iter().collect();
+    assert_eq!(unique.len(), 50, "Should have no duplicate documents");
+}
