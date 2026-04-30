@@ -41,6 +41,7 @@
     "@hey-api/openapi-ts": "^0.97.0",
     "@monobase/eslint-config": "workspace:*",
     "@monobase/typescript-config": "workspace:*",
+    "@tauri-apps/api": "^2.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "bun-types": "^1.2.21",

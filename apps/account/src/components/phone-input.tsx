@@ -2,7 +2,7 @@ import * as React from "react"
 import * as RPNInput from "react-phone-number-input"
 import flags from "react-phone-number-input/flags"
 
-import { Button } from "@monobase/ui/components/button"
+import { Button } from "@/components/button"
 import {
   Command,
   CommandEmpty,
@@ -10,15 +10,15 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@monobase/ui/components/command"
-import { Input, InputProps } from "@monobase/ui/components/input"
+} from "@/components/command"
+import { Input, InputProps } from "@/components/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@monobase/ui/components/popover"
-import { ScrollArea } from "@monobase/ui/components/scroll-area"
-import { cn } from "@monobase/ui/lib/utils"
+} from "@/components/popover"
+import { ScrollArea } from "@/components/scroll-area"
+import { cn } from "@/lib/utils"
 import { CheckIcon, ChevronsUpDown } from "lucide-react"
 
 type PhoneInputProps = Omit<
