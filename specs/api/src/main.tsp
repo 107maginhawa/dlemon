@@ -17,6 +17,9 @@ import "./modules/comms.tsp";
 import "./modules/storage.tsp";
 import "./modules/email.tsp";
 import "./modules/reviews.tsp";
+import "./modules/billing.tsp";
+import "./modules/booking.tsp";
+import "./modules/emr.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -325,6 +328,41 @@ namespace MonobaseHealthcareAPI {
   @tag("Reviews")
   @route("/reviews")
   interface ReviewsManagement extends ReviewsModule.ReviewsManagement {}
+
+  // Billing — invoice, payment, and merchant account management
+  @tag("Billing")
+  @route("/billing")
+  interface InvoiceManagement extends BillingModule.InvoiceManagement {}
+
+  @tag("Billing")
+  @route("/billing")
+  interface PaymentProcessing extends BillingModule.PaymentProcessing {}
+
+  @tag("Billing")
+  @route("/billing")
+  interface MerchantAccountManagement extends BillingModule.MerchantAccountManagement {}
+
+  // Booking — events, slots, bookings, and schedule exceptions
+  @tag("Booking")
+  @route("/booking")
+  interface BookingEventManagement extends BookingModule.BookingEventManagement {}
+
+  @tag("Booking")
+  @route("/booking")
+  interface SlotDiscovery extends BookingModule.SlotDiscovery {}
+
+  @tag("Booking")
+  @route("/booking")
+  interface BookingManagement extends BookingModule.BookingManagement {}
+
+  @tag("Booking")
+  @route("/booking")
+  interface ScheduleExceptionManagement extends BookingModule.ScheduleExceptionManagement {}
+
+  // EMR — electronic medical records (consultations, vitals, notes)
+  @tag("EMR")
+  @route("/emr")
+  interface EMRManagement extends EMRModule.EMRManagement {}
 
   // ========================================================================
   // HEALTHCARE FOUNDATION

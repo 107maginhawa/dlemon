@@ -21,7 +21,8 @@
           },
           "emailVerified": {
             "type": "boolean",
-            "default": false
+            "default": false,
+            "readOnly": true
           },
           "image": {
             "type": "string"
@@ -60,7 +61,6 @@
         "required": [
           "name",
           "email",
-          "emailVerified",
           "createdAt",
           "updatedAt"
         ]
@@ -5348,13 +5348,13 @@
                     },
                     "user": {
                       "$ref": "#/components/schemas/User"
-                    },
-                    "required": [
-                      "status",
-                      "token",
-                      "user"
-                    ]
-                  }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "token",
+                    "user"
+                  ]
                 }
               }
             }
@@ -10703,7 +10703,8 @@
                 "type": "object",
                 "properties": {
                   "email": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Email address to send the magic link"
                   },
                   "name": {
                     "type": "string",
@@ -11048,6 +11049,7 @@
                   },
                   "prefix": {
                     "type": "string",
+                    "description": "Prefix of the Api Key",
                     "nullable": true
                   },
                   "remaining": {
@@ -11059,6 +11061,7 @@
                   },
                   "refillAmount": {
                     "type": "number",
+                    "description": "Amount to refill the remaining count of the Api Key. server-only. Eg: 100",
                     "nullable": true
                   },
                   "refillInterval": {
@@ -11608,6 +11611,7 @@
                   },
                   "remaining": {
                     "type": "number",
+                    "description": "The number of remaining requests",
                     "nullable": true
                   },
                   "refillAmount": {

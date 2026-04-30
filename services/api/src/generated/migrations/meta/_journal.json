@@ -15,6 +15,13 @@
       "when": 1760514485189,
       "tag": "0001_fine_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777533686897,
+      "tag": "0002_chilly_micromax",
+      "breakpoints": true
     }
   ]
 }
