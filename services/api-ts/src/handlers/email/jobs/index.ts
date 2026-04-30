@@ -15,8 +15,11 @@ export function registerEmailJobs(
   scheduler: JobScheduler,
   emailService: EmailService
 ): void {
-  // Email processor job - runs every 30 seconds
-  scheduler.registerInterval('email.processor', 30000, async (context: JobContext) => {
+  // Email processor job - default 30s, override via EMAIL_PROCESSOR_INTERVAL_MS
+  // (the contract test suite uses a tighter interval to keep auth-email
+  // round-trip scenarios fast).
+  const intervalMs = Number(process.env['EMAIL_PROCESSOR_INTERVAL_MS']) || 30000;
+  scheduler.registerInterval('email.processor', intervalMs, async (context: JobContext) => {
     const { emailProcessorJob } = await import('./processor');
     await emailProcessorJob(context, emailService);
   });
