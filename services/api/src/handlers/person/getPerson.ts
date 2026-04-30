@@ -27,7 +27,7 @@ export async function getPerson(
   const user = ctx.get('user') as User | undefined;
 
   // Get path parameter
-  let personId = ctx.req.param('person');
+  let personId = ctx.req.param('person') as string;
 
   // Handle special "me" case - convert to current user's ID
   if (personId === 'me') {

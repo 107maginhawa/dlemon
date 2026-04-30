@@ -22,7 +22,7 @@ export async function updateProvider(ctx: Context) {
   const user = ctx.get('user') as User;
   
   // Get path parameter
-  const providerId = ctx.req.param('provider');
+  const providerId = ctx.req.param('provider') as string;
   
   // Get validated request body
   const body = await ctx.req.json() as ProviderUpdateRequest;

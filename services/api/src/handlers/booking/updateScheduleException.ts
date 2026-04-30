@@ -11,6 +11,9 @@ export async function updateScheduleException(c: ValidatedContext<any, any, any>
   const db = c.get('database') as DatabaseInstance;
   const user = c.get('user') as User;
   const exceptionId = c.req.param('exceptionId');
+  if (!exceptionId) {
+    return c.json({ error: 'exceptionId path parameter is required' }, 400);
+  }
   const body = await c.req.json();
 
   const personId = user?.id;

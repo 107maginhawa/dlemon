@@ -371,6 +371,49 @@ model UpdatePractitionerRoleRequest {
  * and PractitionerRoles (role/location/availability assignments within organizations).
  * Supports credentialing workflows, specialty search, and schedule management.
  */
+/**
+ * ProviderType — pre-FHIR enumeration kept for SDK compatibility.
+ */
+@doc("Type of provider (pre-FHIR enumeration)")
+enum ProviderType {
+  pharmacist: "pharmacist",
+  other: "other",
+}
+
+/**
+ * Provider — pre-FHIR provider model kept for SDK compatibility.
+ *
+ * The runtime "provider" terminology predates the FHIR-aligned Practitioner
+ * rename. This model carries the original SDK fields (providerType,
+ * yearsOfExperience, biography, minorAilmentsSpecialties,
+ * minorAilmentsPracticeLocations) plus a `person` reference. New code should
+ * prefer the FHIR-style Practitioner above.
+ */
+@doc("Pre-FHIR provider model kept for SDK compatibility")
+model Provider extends BaseEntity {
+  @doc("Reference to person record ID or expanded person object")
+  @extension("x-expandable-field", #{ opId: "getPerson" })
+  person: UUID | Person;
+
+  @doc("Provider type")
+  providerType: ProviderType;
+
+  @doc("Years of experience")
+  @minValue(0)
+  @maxValue(70)
+  yearsOfExperience?: int32;
+
+  @doc("Professional biography")
+  @maxLength(2000)
+  biography?: string;
+
+  @doc("Minor ailments specialties")
+  minorAilmentsSpecialties?: string[];
+
+  @doc("Minor ailment practice locations")
+  minorAilmentsPracticeLocations?: string[];
+}
+
 @route("/providers")
 @tag("Provider")
 namespace ProviderModule {

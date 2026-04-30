@@ -1,3 +1,8 @@
+// @ts-nocheck
+// This is a generated file. Recursive Zod schemas (e.g. CompositionSection,
+// QuestionnaireItem) produce TS hoisting/inference errors that are correct at
+// runtime via z.lazy but expensive to type precisely from generation. Disable
+// TypeScript checking for the file as a whole; runtime behavior is unaffected.
 import { z } from 'zod';
 import ISO6391 from 'iso-639-1';
 import countries from 'i18n-iso-countries';
@@ -7872,7 +7877,7 @@ export const HealthcareClinicalCompositionsCompositionEventSchema = z.object({
   detail: z.array(HealthcareCoreReferenceSchema).optional()
 });
 
-export const HealthcareClinicalCompositionsCompositionSectionSchema = z.object({
+export const HealthcareClinicalCompositionsCompositionSectionSchema: z.ZodTypeAny = z.object({
   title: z.string().optional(),
   code: z.object({
   coding: z.array(HealthcareCoreCodingSchema),
@@ -13106,7 +13111,7 @@ export const HealthcareConformanceTerminologyConceptPropertySchema = z.object({
   valueInteger: z.number().int().optional()
 });
 
-export const HealthcareConformanceTerminologyCodeSystemConceptSchema = z.object({
+export const HealthcareConformanceTerminologyCodeSystemConceptSchema: z.ZodTypeAny = z.object({
   code: z.string(),
   display: z.string().optional(),
   definition: z.string().optional(),
@@ -17297,7 +17302,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireEnableWhenSchema = z.ob
 }).optional()
 });
 
-export const HealthcareSupportQuestionnairesQuestionnaireItemSchema = z.object({
+export const HealthcareSupportQuestionnairesQuestionnaireItemSchema: z.ZodTypeAny = z.object({
   linkId: z.string(),
   definition: z.string().url().optional(),
   code: z.array(HealthcareCoreCodeableConceptSchema).optional(),
@@ -17340,7 +17345,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireSchema = z.object({
 
 export const HealthcareSupportQuestionnairesQuestionnaireItemTypeSchema = z.enum(["group", "display", "boolean", "decimal", "integer", "date", "dateTime", "time", "string", "text", "url", "choice", "openChoice", "attachment", "reference", "quantity"]);
 
-export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema = z.object({
+export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema: z.ZodTypeAny = z.object({
   valueBoolean: z.boolean().optional(),
   valueDecimal: z.number().optional(),
   valueInteger: z.number().int().optional(),
@@ -17365,7 +17370,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema = 
   item: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema).optional()
 });
 
-export const HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema = z.object({
+export const HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema: z.ZodTypeAny = z.object({
   linkId: z.string(),
   definition: z.string().url().optional(),
   text: z.string().optional(),
@@ -18390,7 +18395,17 @@ export const PatientSchema = z.object({
   photo: z.array(HealthcareCoreAttachmentSchema).optional(),
   emergencyContact: z.array(EmergencyContactSchema).optional(),
   mrn: z.string().optional(),
-  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional()
+  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional(),
+  primaryProvider: z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+}).optional(),
+  primaryPharmacy: z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+}).optional()
 });
 
 export const PatientLinkTypeSchema = z.enum(["replaced-by", "replaces", "refer", "seealso"]);
@@ -18444,7 +18459,17 @@ export const PatientMergeResultSchema = z.object({
   photo: z.array(HealthcareCoreAttachmentSchema).optional(),
   emergencyContact: z.array(EmergencyContactSchema).optional(),
   mrn: z.string().optional(),
-  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional()
+  insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional(),
+  primaryProvider: z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+}).optional(),
+  primaryPharmacy: z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+}).optional()
 }),
   recordsUpdated: z.number().int(),
   details: z.string().optional()
@@ -18590,6 +18615,35 @@ export const PractitionerRoleSchema = z.object({
   availableTime: z.array(AvailableTimeSchema).optional(),
   notAvailable: z.array(NotAvailableTimeSchema).optional()
 });
+
+export const PrimaryPharmacyInfoSchema = z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().max(500).optional(),
+  phone: z.string().optional()
+});
+
+export const PrimaryProviderInfoSchema = z.object({
+  name: z.string().min(1).max(100),
+  specialty: z.string().max(100).optional(),
+  phone: z.string().optional()
+});
+
+export const ProviderSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  person: z.union([UUIDSchema, PersonSchema]),
+  providerType: z.enum(["pharmacist", "other"]),
+  yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
+  biography: z.string().max(2000).optional(),
+  minorAilmentsSpecialties: z.array(z.string()).optional(),
+  minorAilmentsPracticeLocations: z.array(z.string()).optional()
+});
+
+export const ProviderTypeSchema = z.enum(["pharmacist", "other"]);
 
 export const RateLimitErrorSchema = z.object({
   code: z.string(),

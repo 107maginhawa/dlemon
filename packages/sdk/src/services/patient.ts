@@ -89,7 +89,7 @@ export function mapApiPatientToFrontend(api: ApiPatient & { person: ApiPerson | 
  */
 export async function getMyPatientProfile(): Promise<Patient | null> {
   try {
-    const apiPatient = await apiGet<ApiPatient & { person?: ApiPerson }>('/patients/me', { expand: 'person' })
+    const apiPatient = await apiGet<ApiPatient & { person: ApiPerson | string }>('/patients/me', { expand: 'person' })
     return mapApiPatientToFrontend(apiPatient)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {

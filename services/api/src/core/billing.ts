@@ -88,7 +88,7 @@ export class BillingService {
     this.logger.debug('Initializing Stripe SDK with lazy loading');
     
     const stripeOptions: Stripe.StripeConfig = {
-      apiVersion: '2025-09-30.clover',
+      apiVersion: '2025-10-29.clover',
       typescript: true,
       timeout: 10000, // 10 second timeout
     };

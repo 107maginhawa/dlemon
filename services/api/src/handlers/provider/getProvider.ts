@@ -20,7 +20,7 @@ import { ProviderRepository } from './repos/provider.repo';
  */
 export async function getProvider(ctx: HandlerContext) {
   // Get path parameter and query
-  let providerId = ctx.req.param('provider');
+  let providerId = ctx.req.param('provider') as string;
   const query = ctx.req.valid('query') as { expand?: string[] };
   
   // Get dependencies from context

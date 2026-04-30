@@ -22,7 +22,7 @@ export async function deleteProvider(ctx: HandlerContext) {
   const user = ctx.get('user') as User;
   
   // Get path parameter
-  const providerId = ctx.req.param('provider');
+  const providerId = ctx.req.param('provider') as string;
   
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;

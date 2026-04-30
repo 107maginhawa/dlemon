@@ -22,7 +22,7 @@ export async function updatePatient(ctx: HandlerContext) {
   const user = ctx.get('user') as User;
   
   // Extract patient ID from path
-  const patientId = ctx.req.param('patient');
+  const patientId = ctx.req.param('patient') as string;
   
   // Extract validated request body
   const body = ctx.req.valid('json') as PatientUpdateRequest;

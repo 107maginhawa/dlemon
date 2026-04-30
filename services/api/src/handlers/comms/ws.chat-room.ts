@@ -46,7 +46,7 @@ export const config: WebSocketHandler = {
   middleware: [authMiddleware()],
 
   async onConnect(ctx: Context, ws: WSContext) {
-    const roomId = ctx.req.param('room');
+    const roomId = ctx.req.param('room')!;
     const user = ctx.get('user') as User;
     const db = ctx.get('database') as DatabaseInstance;
     const wsService = ctx.get('ws');
@@ -100,7 +100,7 @@ export const config: WebSocketHandler = {
   },
 
   async onMessage(ctx: Context, ws: WSContext, message: any) {
-    const roomId = ctx.req.param('room');
+    const roomId = ctx.req.param('room')!;
     const user = ctx.get('user') as User;
     const db = ctx.get('database') as DatabaseInstance;
     const wsService = ctx.get('ws');
@@ -168,7 +168,7 @@ export const config: WebSocketHandler = {
   },
 
   async onClose(ctx: Context, ws: WSContext) {
-    const roomId = ctx.req.param('room');
+    const roomId = ctx.req.param('room')!;
     const user = ctx.get('user') as User;
     const wsService = ctx.get('ws');
     const logger = ctx.get('logger');

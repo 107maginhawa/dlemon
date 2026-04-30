@@ -23,7 +23,7 @@ export async function getPatient(ctx: HandlerContext) {
   const user = ctx.get('user') as User;
   
   // Get path parameter and query
-  let patientId = ctx.req.param('patient');
+  let patientId = ctx.req.param('patient') as string;
   const query = ctx.req.valid('query') as { expand?: string[] };
   
   // Get dependencies from context

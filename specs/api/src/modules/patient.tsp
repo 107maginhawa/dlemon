@@ -147,6 +147,50 @@ model Patient extends HealthcareBaseEntity {
 
   @doc("Insurance coverage references for the patient")
   insuranceCoverage?: Reference[];
+
+  @doc("Patient's primary care provider (free-form, kept for SDK compatibility)")
+  primaryProvider?: PrimaryProviderInfo;
+
+  @doc("Patient's primary pharmacy (free-form, kept for SDK compatibility)")
+  primaryPharmacy?: PrimaryPharmacyInfo;
+}
+
+/**
+ * Lightweight free-form description of a primary care provider.
+ * Distinct from the FHIR-style Practitioner resource — used only by the
+ * SDK convenience field `Patient.primaryProvider`.
+ */
+model PrimaryProviderInfo {
+  @doc("Provider name")
+  @minLength(1)
+  @maxLength(100)
+  name: string;
+
+  @doc("Provider specialty")
+  @maxLength(100)
+  specialty?: string;
+
+  @doc("Provider contact phone")
+  phone?: string;
+}
+
+/**
+ * Lightweight free-form description of a pharmacy.
+ * Distinct from the FHIR-style Organization resource — used only by the
+ * SDK convenience field `Patient.primaryPharmacy`.
+ */
+model PrimaryPharmacyInfo {
+  @doc("Pharmacy name")
+  @minLength(1)
+  @maxLength(100)
+  name: string;
+
+  @doc("Pharmacy address")
+  @maxLength(500)
+  address?: string;
+
+  @doc("Pharmacy contact phone")
+  phone?: string;
 }
 
 /**

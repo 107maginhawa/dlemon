@@ -715,13 +715,12 @@ function generateHandlerStub(operation: OpenAPIOperation, path: string, method: 
     : 'BaseContext';
 
   return `import type { ${contextImport} } from '@/types/app';
-import { db } from '@/core/database';
-import { 
+import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-  BusinessLogicError
+  BusinessLogicError,
 } from '@/core/errors';
 ${hasBody || hasQuery || hasParams ? `import type { ${[
     hasBody && `${capitalize(operation.operationId)}Body`,
@@ -1342,7 +1341,7 @@ export function registerRoutes(app: App) {
   for (const [name, config] of Object.entries(wsRegistry)) {
     const handlers = config.middleware || [];
 
-    app.get(config.path, ...handlers, ws.upgradeWebSocket((ctx: Context) => ({
+    (app as any).get(config.path, ...handlers, ws.upgradeWebSocket((ctx: Context) => ({
       async onOpen(event: MessageEvent, wsCtx: any) {
         const logger = ctx.get('logger');
         try {
