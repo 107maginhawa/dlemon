@@ -266,3 +266,8 @@ The `specs/api/tests/contract/` Hurl scenarios drive against a single
 
 `bun run test:contract` runs Hurl; `bun run test:contract:fuzz` runs
 schemathesis. CI runs both against the TS impl on every PR.
+
+See `specs/api/tests/contract/COVERAGE.md` for what the suite covers
+and what is intentionally deferred (auth-email round trips, billing
+end-to-end, audit side effects, WebSocket signalling). New impls do
+NOT have to satisfy the deferred items to be compliant.
