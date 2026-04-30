@@ -14295,7 +14295,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireSchema = z.object({
 
 export const HealthcareSupportQuestionnairesQuestionnaireItemTypeSchema = z.enum(["group", "display", "boolean", "decimal", "integer", "date", "dateTime", "time", "string", "text", "url", "choice", "openChoice", "attachment", "reference", "quantity"]);
 
-export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema: z.ZodTypeAny = z.object({
+export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema = z.object({
   valueBoolean: z.boolean().optional(),
   valueDecimal: z.number().optional(),
   valueInteger: z.number().int().optional(),
@@ -14324,7 +14324,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema: z.Z
   linkId: z.string(),
   definition: z.string().url().optional(),
   text: z.string().optional(),
-  answer: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema)).optional(),
+  answer: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema).optional(),
   item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema)).optional()
 });
 
@@ -15691,6 +15691,17 @@ export const StoredFileSchema = z.object({
 
 export const StrictUtcDateTimeSchema = z.string().datetime().transform((str) => new Date(str));
 
+export const SymptomSeveritySchema = z.union([z.string(), z.enum(["mild", "moderate", "severe"])]);
+
+export const SymptomsDataSchema = z.object({
+  onset: z.string().datetime().transform((str) => new Date(str)).optional(),
+  durationHours: z.number().int().optional(),
+  severity: z.union([z.string(), z.enum(["mild", "moderate", "severe"])]).optional(),
+  description: z.string().optional(),
+  associated: z.array(z.string()).optional(),
+  denies: z.array(z.string()).optional()
+});
+
 export const TemplateStatusSchema = z.enum(["draft", "active", "archived"]);
 
 export const TestTemplateRequestSchema = z.object({
@@ -16559,12 +16570,12 @@ export const CreateConsultationResponse = ConsultationNoteSchema;
 export const ListConsultationsQuery = z.object({
   patient: UUIDSchema.optional(),
   status: ConsultationStatusSchema.optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListConsultationsQuery = z.infer<typeof ListConsultationsQuery>;
 
@@ -16608,12 +16619,12 @@ export const FinalizeConsultationResponse = ConsultationNoteSchema;
 
 export const ListEMRPatientsQuery = z.object({
   expand: z.string().optional(),
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
 });
 export type ListEMRPatientsQuery = z.infer<typeof ListEMRPatientsQuery>;
 
@@ -16689,12 +16700,12 @@ export type CreatePatientBody = z.infer<typeof CreatePatientBody>;
 export const CreatePatientResponse = PatientSchema;
 
 export const ListPatientsQuery = z.object({
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
   name: z.string().optional(),
   birthDate: z.string().optional(),
   gender: z.string().optional(),
@@ -16803,12 +16814,12 @@ export type CreatePractitionerRoleBody = z.infer<typeof CreatePractitionerRoleBo
 export const CreatePractitionerRoleResponse = PractitionerRoleSchema;
 
 export const ListPractitionerRolesQuery = z.object({
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
   practitioner: UUIDSchema.optional(),
   organization: UUIDSchema.optional(),
   specialty: z.string().optional(),
@@ -16861,12 +16872,12 @@ export type CreatePractitionerBody = z.infer<typeof CreatePractitionerBody>;
 export const CreatePractitionerResponse = PractitionerSchema;
 
 export const ListPractitionersQuery = z.object({
-  offset: z.coerce.number().int().gte(0).optional(),
+  offset: z.coerce.number().int().gte(0).lte(2147483647).optional(),
   limit: z.coerce.number().int().gte(1).lte(100).optional(),
-  page: z.coerce.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(1).lte(2147483647).optional(),
   pageSize: z.coerce.number().int().gte(1).lte(100).optional(),
-  q: z.string().max(500).optional(),
-  sort: z.string().optional(),
+  q: SafeQueryStringSchema.optional(),
+  sort: SafeQueryStringSchema.optional(),
   name: z.string().optional(),
   specialty: z.string().optional(),
   npi: z.string().optional(),

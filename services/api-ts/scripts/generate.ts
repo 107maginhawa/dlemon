@@ -469,8 +469,39 @@ async function generateValidators(spec: any) {
     }
   }
 
-  await writeFile(path.join(GENERATED_DIR, 'validators.ts'), validators.join('\n'));
-  console.log('   ✓ Generated validators.ts');
+  // Post-process recursive schemas: any schema that references itself within
+  // its own definition needs (a) an explicit z.ZodTypeAny annotation to break
+  // the type cycle and (b) z.lazy() around the self-reference so the constant
+  // exists at evaluation time. Without this, the file fails typecheck (TS7022/
+  // TS2448) and crashes at runtime with "Cannot access X before initialization".
+  let validatorsText = validators.join('\n');
+  const recursiveSchemas = findRecursiveSchemas(validatorsText);
+  for (const name of recursiveSchemas) {
+    validatorsText = validatorsText.replace(
+      new RegExp(`^export const ${name} = z\\.object`, 'm'),
+      `export const ${name}: z.ZodTypeAny = z.object`
+    );
+    validatorsText = validatorsText.replace(
+      new RegExp(`z\\.array\\(${name}\\)`, 'g'),
+      `z.array(z.lazy(() => ${name}))`
+    );
+  }
+
+  await writeFile(path.join(GENERATED_DIR, 'validators.ts'), validatorsText);
+  console.log(`   ✓ Generated validators.ts${recursiveSchemas.length ? ` (wrapped ${recursiveSchemas.length} recursive schemas in z.lazy)` : ''}`);
+}
+
+function findRecursiveSchemas(text: string): string[] {
+  // Walk each `export const NAME = z.object({ ... });` block and collect the
+  // names that appear inside their own body.
+  const out: string[] = [];
+  const re = /^export const (\w+) = z\.object\(\{([\s\S]*?)\n\}\);/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const [, name, body] = m;
+    if (body.includes(name)) out.push(name);
+  }
+  return out;
 }
 
 async function generateRoutes(paths: Record<string, PathItem>, spec: any) {
