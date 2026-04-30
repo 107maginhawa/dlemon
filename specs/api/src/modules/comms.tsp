@@ -396,6 +396,7 @@ namespace CommsModule {
     getChatRoom(
       @path room: UUID
     ): ApiOkResponse<ChatRoom>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse
       | ApiForbiddenResponse;
 
@@ -411,6 +412,7 @@ namespace CommsModule {
       @query messageType?: MessageType,
       ...PaginationQuery
     ): ApiOkResponse<PaginatedResponse<ChatMessage>>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse
       | ApiForbiddenResponse;
 
@@ -425,6 +427,7 @@ namespace CommsModule {
       @body message: SendTextMessageRequest | StartVideoCallRequest
     ): ApiCreatedResponse<ChatMessage>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
       | ApiConflictResponse // Active video call already exists
       | ApiForbiddenResponse; // Not participant or non-admin trying to start video call
 
@@ -442,6 +445,7 @@ namespace CommsModule {
       @path room: UUID,
       @body request: JoinVideoCallRequest
     ): ApiOkResponse<VideoCallJoinResponse>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse // No active video call
       | ApiConflictResponse // Already in call
       | ApiForbiddenResponse;
@@ -455,6 +459,7 @@ namespace CommsModule {
     endVideoCall(
       @path room: UUID
     ): ApiOkResponse<VideoCallEndResponse>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse // No active video call
       | ApiForbiddenResponse; // Not room admin
 
@@ -467,6 +472,7 @@ namespace CommsModule {
     leaveVideoCall(
       @path room: UUID
     ): ApiOkResponse<LeaveVideoCallResponse>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse // No active call or user not in call
       | ApiForbiddenResponse;
 
@@ -480,6 +486,7 @@ namespace CommsModule {
       @path room: UUID,
       @body update: UpdateParticipantRequest
     ): ApiOkResponse<CallParticipant>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse // No active call or user not in call
       | ApiForbiddenResponse;
 

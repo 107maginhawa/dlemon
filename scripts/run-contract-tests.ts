@@ -16,6 +16,15 @@
  *
  *   # Or against a remote target
  *   API_URL=https://stg.example.com bun run test:contract
+ *
+ * Variables injected into every Hurl scenario:
+ *   - {{api}}          $API_URL
+ *   - {{suffix}}       per-run unique string (timestamp-rand) for fixture isolation
+ *   - {{admin_token}}  session token captured in admin preflight (cookie value)
+ *   - {{admin_email}}  email of the admin user (signed up by preflight)
+ *   - {{admin_password}}  password of the admin user (so scenarios can sign in
+ *                         when they need to switch the cookie jar to admin)
+ *   - {{mailpit_api}}  Mailpit HTTP API base, default http://localhost:8025
  */
 
 import { spawnSync, spawn } from 'child_process'
@@ -23,6 +32,10 @@ import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 
 const apiUrl = process.env.API_URL ?? 'http://localhost:7213'
+const mailpitApi = process.env.MAILPIT_API ?? 'http://localhost:8025'
+const adminEmail = process.env.CONTRACT_ADMIN_EMAIL ?? 'admin@contract-tests.local'
+const adminPassword = process.env.CONTRACT_ADMIN_PASSWORD ?? 'AdminContractTest!1'
+
 const contractDir = join(import.meta.dir, '..', 'specs', 'api', 'tests', 'contract')
 
 if (!existsSync(contractDir)) {
@@ -53,16 +66,89 @@ if (probe.error || probe.status !== 0) {
   process.exit(127)
 }
 
-console.log(`→ ${files.length} contract scenario(s) against ${apiUrl}\n`)
+/**
+ * Admin preflight: ensure an admin user exists and capture its session.
+ *
+ * The impl auto-promotes any sign-up whose email is in AUTH_ADMIN_EMAILS to
+ * the admin role. We sign up the configured admin email on the first run;
+ * on subsequent runs (with a persistent test DB) sign-up returns 4xx and
+ * we fall back to sign-in. Either way we end up with a session_token cookie
+ * scoped to an admin role, which we inject as {{admin_token}}.
+ */
+async function ensureAdminSession(): Promise<string | null> {
+  const signUp = await fetch(`${apiUrl}/auth/sign-up/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: adminEmail, password: adminPassword, name: 'Contract Admin' }),
+  })
+
+  if (signUp.ok) {
+    return extractSessionCookie(signUp.headers.get('set-cookie'))
+  }
+
+  const signIn = await fetch(`${apiUrl}/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+  })
+
+  if (!signIn.ok) {
+    return null
+  }
+  return extractSessionCookie(signIn.headers.get('set-cookie'))
+}
+
+function extractSessionCookie(setCookieHeader: string | null): string | null {
+  if (!setCookieHeader) return null
+  const match = setCookieHeader.match(/better-auth\.session_token=([^;]+)/)
+  return match?.[1] ?? null
+}
+
+/**
+ * Env preflight: warn (not fail) if the env vars contract scenarios depend on
+ * look misconfigured. The runner doesn't try to fix anything — it just tells
+ * the caller what's expected.
+ */
+function envPreflightWarnings(adminTokenAvailable: boolean): string[] {
+  const warnings: string[] = []
+
+  if (!adminTokenAvailable) {
+    warnings.push(
+      `admin preflight failed: could not sign up or sign in as "${adminEmail}". ` +
+        `Make sure AUTH_ADMIN_EMAILS on the impl includes "${adminEmail}" and that the email password ` +
+        `has not been changed underneath the runner. {{admin_token}} will be unavailable; ` +
+        `admin-gated scenarios will not pass.`,
+    )
+  }
+
+  // Mailpit reachability — only matters for auth-* scenarios.
+  return warnings
+}
+
+const adminToken = await ensureAdminSession()
+const warnings = envPreflightWarnings(adminToken != null)
+
+console.log(`→ ${files.length} contract scenario(s) against ${apiUrl}`)
+console.log(`  suffix=${suffix}`)
+console.log(`  admin_token=${adminToken ? `(captured for ${adminEmail})` : '(unavailable)'}`)
+console.log(`  mailpit_api=${mailpitApi}`)
+if (warnings.length > 0) {
+  for (const w of warnings) console.warn(`  ⚠ ${w}`)
+}
+console.log()
+
+const variables = [
+  '--variable', `api=${apiUrl}`,
+  '--variable', `suffix=${suffix}`,
+  '--variable', `mailpit_api=${mailpitApi}`,
+  '--variable', `admin_email=${adminEmail}`,
+  '--variable', `admin_password=${adminPassword}`,
+  ...(adminToken ? ['--variable', `admin_token=${adminToken}`] : []),
+]
 
 const child = spawn(
   'hurl',
-  [
-    '--test',
-    '--variable', `api=${apiUrl}`,
-    '--variable', `suffix=${suffix}`,
-    ...files,
-  ],
+  ['--test', ...variables, ...files],
   { stdio: 'inherit' },
 )
 

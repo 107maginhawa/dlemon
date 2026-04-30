@@ -53,6 +53,14 @@ services:
     networks:
       - test-network
 
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    container_name: monobase-test-stripe-mock
+    ports:
+      - "12111:12111"  # HTTP
+    networks:
+      - test-network
+
   # Optional, takes too much time to start, take resources
   # coturn:
   #   image: coturn/coturn:latest

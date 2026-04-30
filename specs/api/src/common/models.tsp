@@ -61,6 +61,33 @@ scalar FaxNumber extends string;
 scalar Url extends string;
 
 /**
+ * Strict UTC ISO 8601 timestamp with the Z suffix.
+ *
+ * The built-in `utcDateTime` is emitted to OpenAPI as `format: date-time`,
+ * which RFC 3339 readers interpret permissively (any TZ offset is allowed).
+ * The reference implementation uses Zod's strict `.datetime()` validator
+ * which only accepts Z-suffixed strings, so query parameters that carry
+ * datetimes use this scalar to keep the spec aligned with what the impl
+ * actually accepts.
+ */
+@doc("ISO 8601 UTC timestamp with millisecond precision and Z suffix (e.g. 2026-04-30T14:25:31.000Z)")
+@format("date-time")
+@pattern("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$")
+scalar StrictUtcDateTime extends string;
+
+/**
+ * Free-text query parameter that the impl forwards into a SQL string
+ * comparison. PostgreSQL rejects null bytes (0x00) in UTF-8 input, so
+ * the spec excludes them at the contract layer. Use this for any
+ * string-typed @query param that ultimately becomes a LIKE / equality
+ * SQL filter.
+ */
+@doc("Free-text query string. Null bytes (\\u0000) are not permitted.")
+@pattern("^[^\\u0000]*$")
+@maxLength(500)
+scalar SafeQueryString extends string;
+
+/**
  * Currency amount in cents
  */
 @doc("Monetary amount in cents to avoid floating point precision issues")

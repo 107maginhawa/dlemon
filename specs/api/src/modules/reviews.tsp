@@ -126,7 +126,7 @@ namespace ReviewsModule {
       @doc("Filter by reviewer person ID")
       @query reviewer?: UUID,
       @doc("Filter by review type")
-      @query reviewType?: string,
+      @query reviewType?: SafeQueryString,
       @doc("Filter by reviewed entity person ID")
       @query reviewedEntity?: UUID,
       ...PaginationQuery

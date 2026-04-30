@@ -166,13 +166,13 @@ model BookingEvent extends BaseEntity {
   owner: string | Person;
 
   @doc("Optional context for domain associations")
-  context?: string;
+  context?: string | null;
 
   @doc("Event title")
   title: string;
 
   @doc("Event description")
-  description?: string;
+  description?: string | null;
 
   @doc("Searchable keywords for discovery (e.g., 'therapy', 'massage', 'counseling')")
   keywords?: string[];
@@ -197,10 +197,10 @@ model BookingEvent extends BaseEntity {
   minBookingMinutes: int32;
 
   @doc("Optional form configuration")
-  formConfig?: FormConfig;
+  formConfig?: FormConfig | null;
 
   @doc("Optional billing configuration")
-  billingConfig?: BillingConfig;
+  billingConfig?: BillingConfig | null;
 
   @doc("Event status")
   status: BookingEventStatus;
@@ -209,7 +209,7 @@ model BookingEvent extends BaseEntity {
   effectiveFrom: utcDateTime;
 
   @doc("Schedule effective to date and time (optional)")
-  effectiveTo?: utcDateTime;
+  effectiveTo?: utcDateTime | null;
 
   @doc("Daily configurations mapped by day name (sun, mon, tue, wed, thu, fri, sat)")
   dailyConfigs: Record<DailyConfig>;
@@ -676,15 +676,15 @@ namespace BookingModule {
       @doc("Filter by event owner (person ID)")
       @query owner?: UUID,
       @doc("Filter by context")
-      @query context?: string,
+      @query context?: SafeQueryString,
       @doc("Filter by location type")
       @query locationType?: LocationType,
       @doc("Filter by event status")
       @query status?: BookingEventStatus,
       @doc("Filter by availability start time (UTC, ISO 8601 format)")
-      @query availableFrom?: utcDateTime,
+      @query availableFrom?: StrictUtcDateTime,
       @doc("Filter by availability end time (UTC, ISO 8601 format)")
-      @query availableTo?: utcDateTime,
+      @query availableTo?: StrictUtcDateTime,
       @doc("Filter by tags. Supports OR filtering (comma-separated: 'tag1,tag2') or AND filtering (repeated parameter: ?tags=tag1&tags=tag2)")
       @query tags?: string | string[],
       ...ExpandParams,
@@ -714,6 +714,8 @@ namespace BookingModule {
       @path event: UUID | "me",
       ...ExpandParams
     ): ApiOkResponse<BookingEvent>
+      | ApiBadRequestResponse  // Invalid path UUID format
+      | ApiUnauthorizedResponse  // 'me' requires authentication
       | ApiNotFoundResponse;
 
     @doc("List available time slots for a booking event. Default: available slots from now to +7 days.")
@@ -723,10 +725,11 @@ namespace BookingModule {
     @route("/events/{event}/slots")
     listEventSlots(
       @path event: UUID,
-      @query startTime?: utcDateTime,
-      @query endTime?: utcDateTime,
+      @query startTime?: StrictUtcDateTime,
+      @query endTime?: StrictUtcDateTime,
       @query status?: SlotStatus
     ): ApiOkResponse<TimeSlot[]>
+      | ApiBadRequestResponse  // Invalid query params (e.g. unparseable datetime)
       | ApiNotFoundResponse;
 
     @doc("Update booking event (partial updates supported).")
@@ -834,6 +837,7 @@ namespace BookingModule {
       @path slotId: UUID,
       ...ExpandParams
     ): ApiOkResponse<TimeSlot>
+      | ApiUnauthorizedResponse
       | ApiNotFoundResponse;
   }
 
@@ -869,9 +873,9 @@ namespace BookingModule {
       @doc("Filter by booking status (pending, confirmed, cancelled, completed, etc.)")
       @query status?: BookingStatus,
       @doc("Start date for filtering bookings (inclusive)")
-      @query startDate?: utcDateTime,
+      @query startDate?: StrictUtcDateTime,
       @doc("End date for filtering bookings (inclusive)")
-      @query endDate?: utcDateTime,
+      @query endDate?: StrictUtcDateTime,
       ...ExpandParams,
       ...PaginationQuery
     ): ApiOkResponse<PaginatedResponse<Booking>>
