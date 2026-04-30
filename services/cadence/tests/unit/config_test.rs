@@ -126,7 +126,7 @@ fn test_config_persistent_sync_defaults() {
     assert_eq!(config.liveness_timeout_secs, 30);
     assert_eq!(config.reconnect_base_delay_ms, 1000);
     assert_eq!(config.reconnect_max_delay_ms, 60000);
-    assert_eq!(config.broadcast_channel_capacity, 256);
+    assert_eq!(config.broadcast_channel_capacity, 8192);
 }
 
 #[test]

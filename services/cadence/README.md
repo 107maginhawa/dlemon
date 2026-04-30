@@ -171,7 +171,7 @@ jwks_url: "https://hapihub.example.com/.well-known/jwks.json"
 
 ### Wildcard Auto-Discovery
 
-Instead of manually listing every table, use `"*"` to auto-discover all tables from the primary database at startup:
+Instead of manually listing every table, use `"*"` to auto-discover all tables from the primary database. Callers must invoke `.resolve_wildcards().await?` on the builder **before** `.build()` — this is the only step in the chain that opens a connection to the primary DB, so short-lived metadata-only invocations (peer-token / peers / local-identity CRUD) can simply omit it and run without a reachable primary DB. See `CadenceBuilder::resolve_wildcards` rustdoc for the rationale.
 
 ```yaml
 collections:
@@ -195,7 +195,29 @@ collections_blacklist:
 
 **How it works:**
 
-1. On startup, if `collections` contains a `"*"` key, cadence queries the primary DB for all tables
+```rust
+// Full sync path: explicit wildcard resolution, then build, then start_sync.
+let mut cadence = Cadence::builder()
+    .primary_db("postgres://...")
+    .metadata_db("/path/to/metadata.db")
+    // ...collections, scope rules, etc...
+    .resolve_wildcards()   // ← connects to the primary DB here (and ONLY here)
+    .await?
+    .build()
+    .await?;
+cadence.start_sync().await?;
+
+// Metadata-only path: no primary DB connection ever.
+let cadence = Cadence::builder()
+    .primary_db("postgres://...")
+    .metadata_db("/path/to/metadata.db")
+    // ...
+    .build()               // ← no resolve_wildcards → pure metadata construction
+    .await?;
+cadence.sync_engine().set_peer_token(jwt).await?;  // works with primary DB unreachable
+```
+
+1. When the caller invokes `.resolve_wildcards()`, if `collections` contains a `"*"` key, cadence queries the primary DB for all tables
    - PostgreSQL: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
    - SQLite: `SELECT name FROM sqlite_master WHERE type = 'table'`
 2. For each discovered table (converted from `snake_case` to `kebab-case`):
@@ -203,7 +225,8 @@ collections_blacklist:
    - Skip if already has an explicit entry in `collections`
    - Auto-detect scope columns: for each `scope_rules` entry, check if the table has that DB column
    - Create a collection entry with the wildcard's `strategy` and detected scope columns
-3. The `"*"` key is removed after resolution — the rest of startup sees a flat collection map
+3. The `"*"` key is removed after resolution — subsequent `.build()` sees a flat collection map
+4. If the caller never invokes `.resolve_wildcards()`, the `"*"` entry is preserved but ignored by the runtime components that don't need table-level discovery (token store, peer list, local identity) — allowing short-lived CLI tools to function without the primary DB.
 
 **Key difference: `scope_rules` vs `scope_columns`:**
 - `scope_columns` — the resolved per-table mapping used at runtime (e.g., "this table's `facility_id` column maps to the `facility` scope dimension")

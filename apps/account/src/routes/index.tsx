@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Button } from "@monobase/ui/components/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@monobase/ui/components/card"
-import { Badge } from "@monobase/ui/components/badge"
+import { Button } from "@/components/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/card"
+import { Badge } from "@/components/badge"
 import { Logo } from "@/components/logo"
 import {
   Shield,

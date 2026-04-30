@@ -10,3 +10,5 @@ mod sqlite_postgres_test;
 mod ws_sqlite_test;
 mod mixed_transport_test;
 mod pg_watcher_null_updated_at_test;
+mod cloud_to_onprem_catchup_test;
+mod staging_iterate_test;

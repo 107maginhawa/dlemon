@@ -1,21 +1,53 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@monobase/ui/components/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@monobase/ui/components/card'
-import { Progress } from '@monobase/ui/components/progress'
+import { Button } from '@/components/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/card'
+import { Progress } from '@/components/progress'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCreateMyPerson } from '@monobase/sdk/react/hooks/use-person'
-import { queryKeys } from '@monobase/sdk/react/query-keys'
+import { useMutation } from '@tanstack/react-query'
+import {
+  createPersonMutation,
+  getPersonQueryKey,
+} from '@monobase/sdk-ts/generated/react-query'
 import { Logo } from '@/components/logo'
 import { composeGuards, requireAuth, requireEmailVerified, requireNoPerson } from '@/utils/guards'
-import { detectTimezone } from '@monobase/ui/lib/detect-timezone'
-import { detectCountry } from '@monobase/ui/lib/detect-country'
-import { detectLanguage } from '@monobase/ui/lib/detect-language'
-import { PersonalInfoForm } from '@monobase/ui/person/components/personal-info-form'
-import { AddressForm } from '@monobase/ui/person/components/address-form'
-import type { PersonalInfo, OptionalAddress } from '@monobase/ui/person/schemas'
-import type { CreatePersonData } from '@monobase/sdk/services/person'
+import { detectTimezone } from '@/lib/detect-timezone'
+import { detectCountry } from '@/lib/detect-country'
+import { detectLanguage } from '@/lib/detect-language'
+import { PersonalInfoForm } from '@/features/person/components/personal-info-form'
+import { AddressForm } from '@/features/person/components/address-form'
+import type { PersonalInfo, OptionalAddress } from '@/features/person/schemas'
+import type { PersonCreateRequest } from '@monobase/sdk-ts/generated/types.gen'
+
+/**
+ * Format a Date as YYYY-MM-DD. The OpenAPI spec marks `dateOfBirth` as
+ * TypeSpec `plainDate`, which serializes as `YYYY-MM-DD`. The generated types
+ * are `Date` (from @hey-api/transformers handling response shape), but on the
+ * request side JSON.stringify produces the full ISO datetime — which the
+ * server-side validator rejects. We have to format manually before sending
+ * and cast around the generated type.
+ */
+function toPlainDateString(d: Date | undefined): string | undefined {
+  if (!d) return undefined
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const VALID_GENDERS: ReadonlyArray<NonNullable<PersonCreateRequest['gender']>> = [
+  'male',
+  'female',
+  'non-binary',
+  'other',
+  'prefer-not-to-say',
+]
+
+function normalizeGender(value: string | undefined): PersonCreateRequest['gender'] | undefined {
+  if (!value) return undefined
+  return VALID_GENDERS.includes(value as never) ? (value as PersonCreateRequest['gender']) : undefined
+}
 
 export const Route = createFileRoute('/onboarding')({
   beforeLoad: composeGuards(requireAuth, requireEmailVerified, requireNoPerson),
@@ -31,7 +63,16 @@ function OnboardingPage() {
   const { auth } = Route.useRouteContext()
   const user = auth.user!
   const [currentStep, setCurrentStep] = useState(1)
-  const createPersonMutation = useCreateMyPerson()
+  const createPerson = useMutation({
+    ...createPersonMutation(),
+    meta: {
+      toast: {
+        success: 'Profile created!',
+        error: (err: unknown) =>
+          err instanceof Error ? err.message : 'Failed to create profile',
+      },
+    },
+  })
 
   // Store form data across steps with proper types
   // Initialize with empty/detected values
@@ -91,7 +132,7 @@ function OnboardingPage() {
     }
 
     // Build address if provided
-    let primaryAddress: CreatePersonData['primaryAddress'] | undefined
+    let primaryAddress: PersonCreateRequest['primaryAddress'] | undefined
     if (data && data.street1 && data.city &&
         data.state && data.postalCode && data.country) {
       primaryAddress = {
@@ -105,33 +146,30 @@ function OnboardingPage() {
     }
 
     const personal = formData.personal as PersonalInfo
-    const personData: CreatePersonData = {
+    const personData: PersonCreateRequest = {
       firstName: personal.firstName,
       lastName: personal.lastName,
       middleName: personal.middleName || undefined,
-      dateOfBirth: personal.dateOfBirth,
-      gender: personal.gender || undefined,
+      // Cast: the generated type says Date, but the wire format must be
+      // YYYY-MM-DD per the spec's `plainDate` mapping. See toPlainDateString.
+      dateOfBirth: toPlainDateString(personal.dateOfBirth) as unknown as Date,
+      gender: normalizeGender(personal.gender),
       primaryAddress,
       contactInfo: {
         email: user.email,
-        // Phone will be added later from contact info form
       },
       languagesSpoken: [detectLanguage()],
       timezone: detectTimezone(),
     }
 
-    createPersonMutation.mutate(personData, {
+    createPerson.mutate({ body: personData }, {
       onSuccess: async () => {
-        // Wait for person query to refetch
         await queryClient.refetchQueries({
-          queryKey: queryKeys.personProfile('me')
+          queryKey: getPersonQueryKey({ path: { person: 'me' } }),
         })
-
-        // Small delay to ensure React re-renders with new context
         await new Promise(resolve => setTimeout(resolve, 100))
-
         navigate({ to: '/dashboard' })
-      }
+      },
     })
   }
 
@@ -147,12 +185,12 @@ function OnboardingPage() {
     }
 
     const personal = formData.personal as PersonalInfo
-    const personData: CreatePersonData = {
+    const personData: PersonCreateRequest = {
       firstName: personal.firstName,
       lastName: personal.lastName,
       middleName: personal.middleName || undefined,
-      dateOfBirth: personal.dateOfBirth,
-      gender: personal.gender || undefined,
+      dateOfBirth: toPlainDateString(personal.dateOfBirth) as unknown as Date,
+      gender: normalizeGender(personal.gender),
       contactInfo: {
         email: user.email,
       },
@@ -160,18 +198,14 @@ function OnboardingPage() {
       timezone: detectTimezone(),
     }
 
-    createPersonMutation.mutate(personData, {
+    createPerson.mutate({ body: personData }, {
       onSuccess: async () => {
-        // Wait for person query to refetch
         await queryClient.refetchQueries({
-          queryKey: queryKeys.personProfile('me')
+          queryKey: getPersonQueryKey({ path: { person: 'me' } }),
         })
-
-        // Small delay to ensure React re-renders with new context
         await new Promise(resolve => setTimeout(resolve, 100))
-
         navigate({ to: '/dashboard' })
-      }
+      },
     })
   }
 
@@ -233,7 +267,7 @@ function OnboardingPage() {
                   type="button"
                   variant="outline"
                   onClick={goBack}
-                  disabled={createPersonMutation.isPending}
+                  disabled={createPerson.isPending}
                 >
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Back
@@ -263,13 +297,13 @@ function OnboardingPage() {
                     variant="outline"
                     className="ml-auto mr-2"
                     onClick={handleSkipAddress}
-                    disabled={createPersonMutation.isPending}
+                    disabled={createPerson.isPending}
                   >
                     Skip for now
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createPersonMutation.isPending}
+                    disabled={createPerson.isPending}
                     onClick={() => {
                       // Trigger form submission for final step
                       const forms = document.querySelectorAll('form')
@@ -278,7 +312,7 @@ function OnboardingPage() {
                       }
                     }}
                   >
-                    {createPersonMutation.isPending ? 'Creating Profile...' : 'Complete Setup'}
+                    {createPerson.isPending ? 'Creating Profile...' : 'Complete Setup'}
                     <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </>

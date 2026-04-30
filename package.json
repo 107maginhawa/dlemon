@@ -13,7 +13,9 @@
   "packageManager": "bun@1.2.21",
   "scripts": {
     "build": "bun run --filter '*' build",
-    "clean": "rm -rf node_modules bun.lock && find . -name 'node_modules' -type d -prune -exec rm -rf {} +"
+    "clean": "rm -rf node_modules bun.lock && find . -name 'node_modules' -type d -prune -exec rm -rf {} +",
+    "test:contract": "bun scripts/run-contract-tests.ts",
+    "test:contract:fuzz": "schemathesis run --base-url ${API_URL:-http://localhost:7213} specs/api/dist/openapi/openapi.json"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -24,6 +26,8 @@
     "@esbuild/linux-x64": "^0.25.0",
     "@rollup/rollup-darwin-arm64": "^4.52.3",
     "@rollup/rollup-linux-x64-gnu": "^4.52.3",
+    "@tauri-apps/cli-darwin-arm64": "^2.10.1",
+    "@tauri-apps/cli-linux-x64-gnu": "^2.10.1",
     "pg-cloudflare": "^1.2.7"
   }
 }

@@ -16,6 +16,16 @@ pub trait PrimaryDbReader: Send + Sync + 'static {
         state: &SyncState,
     ) -> Result<Vec<RowChange>>;
 
+    /// Read a page of rows from a collection using LIMIT/OFFSET pagination.
+    /// Returns an empty Vec when there are no more rows.
+    async fn read_rows_page(
+        &self,
+        collection: &str,
+        state: &SyncState,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<RowChange>>;
+
     /// Fast row count across all collections for progress estimation.
     async fn count_all_rows(&self, config: &crate::config::CadenceConfig) -> Result<u64>;
 }
@@ -70,6 +80,30 @@ impl PrimaryDbReader for PgPrimaryReader {
         collection: &str,
         state: &SyncState,
     ) -> Result<Vec<RowChange>> {
+        // Paginate internally to avoid loading the entire table into a
+        // single Vec<Row> from tokio_postgres (which is the main memory hog).
+        let mut all_changes = Vec::new();
+        let mut offset = 0u64;
+        let page_size = 1000u64;
+        loop {
+            let page = self.read_rows_page(collection, state, offset, page_size).await?;
+            let n = page.len();
+            all_changes.extend(page);
+            if (n as u64) < page_size {
+                break;
+            }
+            offset += page_size;
+        }
+        Ok(all_changes)
+    }
+
+    async fn read_rows_page(
+        &self,
+        collection: &str,
+        state: &SyncState,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<RowChange>> {
         let (client, connection) =
             tokio_postgres::connect(&self.conn_str, tokio_postgres::NoTls).await?;
         tokio::spawn(async move {
@@ -79,11 +113,33 @@ impl PrimaryDbReader for PgPrimaryReader {
         });
 
         let table = collection.replace('-', "_");
-        let query = format!("SELECT * FROM \"{}\"", table);
+        let query = format!(
+            "SELECT * FROM \"{}\" ORDER BY id LIMIT {} OFFSET {}",
+            table, limit, offset
+        );
         let rows = match client.query(&query, &[]).await {
             Ok(r) => r,
             Err(e) => {
-                tracing::trace!("PgPrimaryReader: skipping {}: {}", collection, e);
+                // Silently dropping a whole collection from initial catch-up
+                // (because `SELECT *` failed on a single problematic column,
+                // or because the table is missing an `id` column, or because
+                // tokio_postgres can't deserialize a column type we don't
+                // explicitly handle in `pg_column_to_json`) used to be
+                // invisible at TRACE level. New peers would simply never
+                // receive that collection's data and would have no way to know
+                // why. WARN with structured fields makes this self-diagnose.
+                let pg_err = e.as_db_error();
+                tracing::warn!(
+                    collection = %collection,
+                    table = %table,
+                    offset,
+                    sqlstate = ?pg_err.map(|d| d.code().code()),
+                    column = ?pg_err.and_then(|d| d.column()),
+                    pg_table = ?pg_err.and_then(|d| d.table()),
+                    message = ?pg_err.map(|d| d.message()),
+                    error = %e,
+                    "PrimaryReader (PG): dropping collection — SELECT failed"
+                );
                 return Ok(Vec::new());
             }
         };
@@ -171,6 +227,90 @@ impl PrimaryDbReader for SqlitePrimaryReader {
         }
     }
 
+    async fn read_rows_page(
+        &self,
+        collection: &str,
+        state: &SyncState,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<RowChange>> {
+        let conn = self.conn.lock().unwrap();
+        let table = collection.replace('-', "_");
+        let query = format!(
+            "SELECT * FROM \"{}\" ORDER BY id LIMIT {} OFFSET {}",
+            table, limit, offset
+        );
+
+        let mut stmt = match conn.prepare(&query) {
+            Ok(s) => s,
+            Err(e) => {
+                // See PgPrimaryReader::read_rows_page for the rationale —
+                // dropping a whole collection silently is exactly the class of
+                // failure that should never sit at TRACE.
+                tracing::warn!(
+                    collection = %collection,
+                    table = %table,
+                    offset,
+                    error = %e,
+                    "PrimaryReader (SQLite): dropping collection — prepare failed (page)"
+                );
+                return Ok(Vec::new());
+            }
+        };
+
+        let column_names: Vec<String> = stmt
+            .column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        let mut changes = Vec::new();
+        let mut rows = stmt.query(rusqlite::params![])?;
+
+        while let Some(row) = rows.next()? {
+            let mut doc_id = String::new();
+            let mut field_changes = Vec::new();
+            let lamport = state.increment_lamport();
+            let seq = state.next_seq();
+
+            for (i, col_name) in column_names.iter().enumerate() {
+                let value = sqlite_column_to_json(row, i);
+
+                if col_name == "id" {
+                    doc_id = match &value {
+                        serde_json::Value::String(s) => s.clone(),
+                        _ => value.to_string(),
+                    };
+                }
+
+                if col_name == "updatedAt" || col_name == "createdAt" {
+                    continue;
+                }
+
+                field_changes.push(FieldChange {
+                    field: col_name.clone(),
+                    value,
+                    lamport,
+                    peer_id: self.peer_id.clone(),
+                });
+            }
+
+            if doc_id.is_empty() {
+                continue;
+            }
+
+            changes.push(RowChange {
+                collection: collection.to_string(),
+                document_id: doc_id,
+                payload: SyncPayload::Fields(field_changes),
+                deleted: false,
+                seq,
+            });
+        }
+
+        Ok(changes)
+    }
+
     async fn read_all_rows(
         &self,
         collection: &str,
@@ -183,7 +323,12 @@ impl PrimaryDbReader for SqlitePrimaryReader {
         let mut stmt = match conn.prepare(&query) {
             Ok(s) => s,
             Err(e) => {
-                tracing::trace!("SqlitePrimaryReader: skipping {}: {}", collection, e);
+                tracing::warn!(
+                    collection = %collection,
+                    table = %table,
+                    error = %e,
+                    "PrimaryReader (SQLite): dropping collection — prepare failed (full scan)"
+                );
                 return Ok(Vec::new());
             }
         };
@@ -328,6 +473,16 @@ impl PrimaryDbReader for NoPrimaryReader {
         &self,
         _collection: &str,
         _state: &SyncState,
+    ) -> Result<Vec<RowChange>> {
+        Ok(Vec::new())
+    }
+
+    async fn read_rows_page(
+        &self,
+        _collection: &str,
+        _state: &SyncState,
+        _offset: u64,
+        _limit: u64,
     ) -> Result<Vec<RowChange>> {
         Ok(Vec::new())
     }

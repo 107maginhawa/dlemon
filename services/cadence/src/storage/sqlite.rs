@@ -160,13 +160,91 @@ impl MetadataBackend for SqliteBackend {
         .await?
     }
 
+    async fn append_changes_batch(&self, changes: &[RowChange]) -> Result<u64> {
+        if changes.is_empty() {
+            return Ok(0);
+        }
+        let conn = self.conn.clone();
+        let owned: Vec<RowChange> = changes.to_vec();
+        tokio::task::spawn_blocking(move || -> Result<u64> {
+            let conn = conn.blocking_lock();
+            // Wrap all inserts in a single immediate-mode transaction so
+            // we pay one fsync (the COMMIT) instead of N. Without this,
+            // a 100-row SyncData frame with ~13 fields per row generates
+            // 1300 fsync'd commits, dominating receive-side latency.
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            let result: Result<u64> = (|| {
+                let mut max_seq = 0u64;
+                for change in &owned {
+                    match &change.payload {
+                        SyncPayload::Fields(fields) => {
+                            if fields.is_empty() && change.deleted {
+                                conn.execute(
+                                    "INSERT INTO changes (collection, doc_id, field, value, lamport, peer_id, deleted)
+                                     VALUES (?1, ?2, '__deleted__', 'null', 0, '', ?3)",
+                                    params![change.collection, change.document_id, true],
+                                )?;
+                                max_seq = std::cmp::max(max_seq, conn.last_insert_rowid() as u64);
+                            } else {
+                                for fc in fields {
+                                    let value_str = serde_json::to_string(&fc.value)?;
+                                    conn.execute(
+                                        "INSERT INTO changes (collection, doc_id, field, value, lamport, peer_id, deleted)
+                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                                        params![
+                                            change.collection,
+                                            change.document_id,
+                                            fc.field,
+                                            value_str,
+                                            fc.lamport as i64,
+                                            fc.peer_id,
+                                            change.deleted,
+                                        ],
+                                    )?;
+                                    max_seq = std::cmp::max(max_seq, conn.last_insert_rowid() as u64);
+                                }
+                            }
+                        }
+                        SyncPayload::CrdtDoc(bytes) => {
+                            let encoded = base64_encode(bytes);
+                            conn.execute(
+                                "INSERT INTO changes (collection, doc_id, field, value, lamport, peer_id, deleted)
+                                 VALUES (?1, ?2, '__crdt__', ?3, 0, ?4, ?5)",
+                                params![
+                                    change.collection,
+                                    change.document_id,
+                                    encoded,
+                                    "crdt",
+                                    change.deleted,
+                                ],
+                            )?;
+                            max_seq = std::cmp::max(max_seq, conn.last_insert_rowid() as u64);
+                        }
+                    }
+                }
+                Ok(max_seq)
+            })();
+            match result {
+                Ok(max_seq) => {
+                    conn.execute_batch("COMMIT")?;
+                    Ok(max_seq)
+                }
+                Err(e) => {
+                    let _ = conn.execute_batch("ROLLBACK");
+                    Err(e)
+                }
+            }
+        })
+        .await?
+    }
+
     async fn query_since(&self, since_seq: u64) -> Result<Vec<RowChange>> {
         let conn = self.conn.clone();
         tokio::task::spawn_blocking(move || {
             let conn = conn.blocking_lock();
             let mut stmt = conn.prepare(
                 "SELECT seq, collection, doc_id, field, value, lamport, peer_id, deleted
-                 FROM changes WHERE seq > ?1 ORDER BY seq ASC",
+                 FROM changes WHERE seq > ?1 ORDER BY seq ASC LIMIT 10000",
             )?;
 
             let rows = stmt.query_map(params![since_seq as i64], |row| {
@@ -184,6 +262,83 @@ impl MetadataBackend for SqliteBackend {
 
             let raw_rows: Vec<RawChangeRow> = rows.collect::<std::result::Result<_, _>>()?;
             Ok(aggregate_raw_rows(raw_rows))
+        })
+        .await?
+    }
+
+    async fn query_since_batched(
+        &self,
+        since_seq: u64,
+        limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let conn = self.conn.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.blocking_lock();
+            // Fetch limit+1 to detect has_more without a separate COUNT query
+            let fetch_count = limit.saturating_add(1);
+            let mut stmt = conn.prepare(
+                "SELECT seq, collection, doc_id, field, value, lamport, peer_id, deleted
+                 FROM changes WHERE seq > ?1 ORDER BY seq ASC LIMIT ?2",
+            )?;
+
+            let rows = stmt.query_map(params![since_seq as i64, fetch_count as i64], |row| {
+                Ok(RawChangeRow {
+                    seq: row.get::<_, i64>(0)? as u64,
+                    collection: row.get(1)?,
+                    doc_id: row.get(2)?,
+                    field: row.get(3)?,
+                    value: row.get(4)?,
+                    lamport: row.get::<_, i64>(5)? as u64,
+                    peer_id: row.get(6)?,
+                    deleted: row.get(7)?,
+                })
+            })?;
+
+            let raw_rows: Vec<RawChangeRow> = rows.collect::<std::result::Result<_, _>>()?;
+            let has_more = raw_rows.len() > limit;
+            let to_aggregate: Vec<RawChangeRow> = if has_more {
+                raw_rows.into_iter().take(limit).collect()
+            } else {
+                raw_rows
+            };
+            Ok((aggregate_raw_rows(to_aggregate), has_more))
+        })
+        .await?
+    }
+
+    async fn query_tombstones_since_batched(
+        &self,
+        since_seq: u64,
+        limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let conn = self.conn.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.blocking_lock();
+            let fetch_count = limit.saturating_add(1);
+            let mut stmt = conn.prepare(
+                "SELECT seq, collection, doc_id, field, value, lamport, peer_id, deleted
+                 FROM changes WHERE seq > ?1 AND deleted = 1 ORDER BY seq ASC LIMIT ?2",
+            )?;
+            let rows = stmt.query_map(params![since_seq as i64, fetch_count as i64], |row| {
+                Ok(RawChangeRow {
+                    seq: row.get::<_, i64>(0)? as u64,
+                    collection: row.get(1)?,
+                    doc_id: row.get(2)?,
+                    field: row.get(3)?,
+                    value: row.get(4)?,
+                    lamport: row.get::<_, i64>(5)? as u64,
+                    peer_id: row.get(6)?,
+                    deleted: row.get(7)?,
+                })
+            })?;
+            let raw_rows: Vec<RawChangeRow> = rows.collect::<std::result::Result<_, _>>()?;
+            let has_more = raw_rows.len() > limit;
+            let to_aggregate: Vec<RawChangeRow> = if has_more {
+                raw_rows.into_iter().take(limit).collect()
+            } else {
+                raw_rows
+            };
+            Ok((aggregate_raw_rows(to_aggregate), has_more))
         })
         .await?
     }
@@ -214,6 +369,31 @@ impl MetadataBackend for SqliteBackend {
 
             let raw_rows: Vec<RawChangeRow> = rows.collect::<std::result::Result<_, _>>()?;
             Ok(aggregate_raw_rows(raw_rows))
+        })
+        .await?
+    }
+
+    async fn max_lamports_by_doc(
+        &self,
+    ) -> Result<std::collections::HashMap<(String, String), u64>> {
+        let conn = self.conn.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.blocking_lock();
+            let mut stmt = conn.prepare(
+                "SELECT collection, doc_id, MAX(lamport) FROM changes GROUP BY collection, doc_id",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                let coll: String = row.get(0)?;
+                let doc: String = row.get(1)?;
+                let lam: i64 = row.get(2)?;
+                Ok(((coll, doc), lam as u64))
+            })?;
+            let mut out = std::collections::HashMap::new();
+            for r in rows {
+                let (key, lam) = r?;
+                out.insert(key, lam);
+            }
+            Ok(out)
         })
         .await?
     }
@@ -314,6 +494,17 @@ impl MetadataBackend for SqliteBackend {
                  ON CONFLICT(key) DO UPDATE SET jwt = ?2, updated_at = ?3",
                 params![key, jwt, now],
             )?;
+            Ok(())
+        })
+        .await?
+    }
+
+    async fn delete_peer_token(&self, key: &str) -> Result<()> {
+        let conn = self.conn.clone();
+        let key = key.to_string();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.blocking_lock();
+            conn.execute("DELETE FROM peer_tokens WHERE key = ?1", params![key])?;
             Ok(())
         })
         .await?

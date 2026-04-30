@@ -1,53 +1,71 @@
 # Monobase Healthcare Platform
 
-A healthcare-focused fork of the Monobase Application Platform. The runtime API surface is the 13 platform handler modules (person, booking, billing, audit, notifs, comms, storage, email, reviews, patient, provider, emr, ws). The TypeSpec specification additionally defines a global-grade, FHIR R4-informed healthcare API covering hospital, dental, ancillary, administrative, public-health, and analytics domains — see `specs/api/README.md` for the full surface (1,500+ operations, 1,100+ schemas).
-
-This repo is a **fork of `mono-js-lf`**. Periodic upstream merges flow from
-`mono-js-lf-base` — see [`CONTRIBUTING.md`](./CONTRIBUTING.md#upstream-sync-mono-js-lf).
+A vertical-neutral monorepo template for SaaS products. Ships identity,
+billing, scheduling, communications, storage, and notification primitives
+that any product domain can compose into its own workflows. Built on Bun for
+~3× faster execution than Node.js.
 
 ## Overview
 
-The platform provides:
+Monobase gives you a production-shaped starting point — not a finished app.
+Out of the box you get:
 
-- **Account App** - Self-service account management
-- **Patient App** - Patient-facing experience (booking, messaging, EMR access)
-- **Provider App** - Provider/practitioner portal (schedule, billing, consultations)
-- **Marketing Website** - Next.js public site
-- **API Service** - Backend with 13 handler modules (Hono + Drizzle)
-- **API Spec** - TypeSpec definitions for both the runtime API and the broader healthcare-domain spec
-- **Shared SDK & UI** - Type-safe API client and React component library
+- **Account app** - reference Vite + TanStack Router app with auth, profile,
+  and settings flows; ships its own Radix-based component library inline
+  under `apps/account/src/components`
+- **API service** - Hono + Drizzle backend with nine vertical-neutral modules
+- **Shared SDK** - typed API client with TanStack Query hooks
+- **TypeSpec spec** - the source of truth for the API; OpenAPI and TS types
+  are generated from it
+
+Add your domain modules (e.g. `services/api-ts/src/handlers/tenant/`) and your
+product apps (e.g. `apps/admin/`) on top of this base.
 
 ## Key Features
 
-- **Video Sessions** - Real-time video calls and secure messaging (WebRTC)
-- **User Management** - Comprehensive user profiles and role management
-- **Enterprise Compliance** - Audit trails, consent management, and secure data handling
-- **Real-time Notifications** - Multi-channel delivery (email, push via OneSignal)
-- **File Storage** - Secure file upload and download (S3/MinIO)
+- **Real-time chat + video** - chat rooms with embedded WebRTC video calls
+- **Identity** - Better-Auth integrated; person model is the PII safeguard
+- **Compliance-friendly** - audit trails, JSONB consent fields, structured logs
+- **Multi-channel notifications** - email and push (OneSignal)
+- **File storage** - S3/MinIO with presigned URLs
+
+## Spec-first, polyglot-ready
+
+The OpenAPI document at `specs/api/dist/openapi/openapi.json` is the
+single source of truth. Every server implementation and every client SDK
+is generated from it. The TypeScript stack in this repo (`services/api-ts`,
+`packages/sdk-ts`, `apps/account`) is the reference; any language can ship
+its own sibling workspace and stay interchangeable behind the same
+`$API_URL`. See [`specs/api/CONTRACT.md`](./specs/api/CONTRACT.md) for the
+wire contract and [`specs/api/IMPLEMENTING.md`](./specs/api/IMPLEMENTING.md)
+for the playbook to add a new impl/SDK in any language.
 
 ## Monorepo Structure
 
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   ├── account/              # Self-service account app (Vite + TanStack Router)
-│   ├── patient/              # Patient-facing app (Vite + TanStack Router)
-│   ├── provider/             # Provider portal (Vite + TanStack Router)
-│   └── website/              # Marketing site (Next.js)
+│   └── account/              # Reference app (Vite + TanStack Router)
+│       └── src-tauri/        # Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
 ├── packages/                  # Shared libraries
 │   ├── eslint-config/        # Shared ESLint flat configs (base, react, next)
-│   ├── sdk/                  # Type-safe API client + TanStack Query hooks
-│   ├── typescript-config/    # Shared TypeScript configurations
-│   └── ui/                   # Shared UI components (Radix + Tailwind)
+│   ├── sdk-ts/               # Reference TypeScript SDK (generated from OpenAPI + hand-written client/flows)
+│   └── typescript-config/    # Shared TypeScript configurations
 ├── services/                  # Backend services
-│   └── api/                  # Main API service (Hono + Bun)
-├── specs/                     # API specifications
-│   └── api/                  # TypeSpec source definitions
-├── docs/
-│   └── research/             # Healthcare standards audit + reference material
+│   ├── api-ts/               # Reference TypeScript impl (Hono + Bun)
+│   └── cadence/              # P2P sync engine (Rust + Iroh) — embedded in account Tauri, also runs as a hub
+├── specs/                     # API contract
+│   └── api/                  # TypeSpec source + CONTRACT.md + IMPLEMENTING.md + tests/
+├── scripts/                   # Repo-level scripts (contract test runner, etc.)
+├── .github/workflows/         # CI (contract.yml runs Hurl + Schemathesis)
+├── .claude/skills/            # 16 Claude Code skills for end-to-end development
 ├── CLAUDE.md                 # AI assistant project guide
 └── package.json              # Monorepo workspace configuration
 ```
+
+Future Rust / Go / Python impls would live alongside `api-ts` (e.g.
+`services/api-rs`) and the matching SDK alongside `sdk-ts`. They're
+documented in `specs/api/IMPLEMENTING.md` but not yet scaffolded.
 
 ## Prerequisites
 
@@ -55,11 +73,14 @@ monobase/
 - **PostgreSQL** >= 14
 - **Node.js** >= 18 (for some tooling compatibility)
 - **Git** for version control
+- **Rust** (1.90+) — only required to build `services/cadence` or the account Tauri desktop wrapper
 
 ### Optional Services
 - **AWS S3** or **MinIO** for file storage
 - **SMTP** server or **Postmark** for email delivery
 - **OneSignal** for push notifications
+- **Valkey/Redis** — only for cadence's distributed metadata backend (SQLite backend works without it)
+- **Hurl** + **Schemathesis** — for `bun run test:contract` and `:fuzz` (CI uses both)
 
 ## Quick Start
 
@@ -78,7 +99,7 @@ bun install
 createdb monobase
 
 # Generate database schema
-cd services/api
+cd services/api-ts
 bun run db:generate
 ```
 
@@ -87,7 +108,7 @@ bun run db:generate
 Create `.env` files in each service/app directory (see individual READMEs for required variables):
 
 ```bash
-# services/api/.env
+# services/api-ts/.env
 DATABASE_URL=postgresql://user:password@localhost:5432/monobase
 PORT=7213
 AUTH_SECRET=your-secret-key-here
@@ -97,7 +118,7 @@ AUTH_SECRET=your-secret-key-here
 
 ```bash
 # Terminal 1 - API Service
-cd services/api
+cd services/api-ts
 bun dev
 
 # Terminal 2 - Account App
@@ -111,8 +132,8 @@ bun dev
 
 1. **Define API** - Create/modify TypeSpec definitions in `specs/api/src/modules/`
 2. **Generate** - Run `cd specs/api && bun run build`
-3. **Implement** - Build Hono handlers in `services/api/src/handlers/`
-4. **Test** - Write tests and run `cd services/api && bun test`
+3. **Implement** - Build Hono handlers in `services/api-ts/src/handlers/`
+4. **Test** - Write tests and run `cd services/api-ts && bun test`
 5. **Integrate** - Use generated TypeScript types in frontend apps
 
 ### Working with the Monorepo
@@ -141,7 +162,7 @@ bun run --filter '*' build    # Build all packages
 bun run clean                  # Clean build artifacts
 ```
 
-### API Service (`services/api/`)
+### API Service (`services/api-ts/`)
 
 ```bash
 bun dev                        # Start development server (port 7213)
@@ -178,32 +199,28 @@ bun run test:e2e               # Run Playwright E2E tests
 
 | App | Stack | Port | Purpose |
 |-----|-------|------|---------|
-| `apps/account` | Vite + TanStack Router | 3002 | Self-service account management |
-| `apps/patient` | Vite + TanStack Router | 3003 | Patient-facing experience |
-| `apps/provider` | Vite + TanStack Router | 3004 | Provider/practitioner portal |
-| `apps/website` | Next.js 15 | 3000 | Public marketing site |
+| `apps/account` | Vite + TanStack Router | 3002 | Reference app: auth + profile + settings |
 
-All Vite apps share the same stack: TanStack Query for data, Better-Auth for
-auth, the `@monobase/sdk` workspace package for typed API access, and the
-`@monobase/ui` workspace package for components.
+The account app keeps its own components, hooks, and feature directories
+under `apps/account/src/`. To scaffold a new app, copy `apps/account/` and
+update `package.json` name and `vite.config.ts` port — each app owns its
+UI; nothing is shared between apps except the SDK.
 
 **Development**: `cd apps/<name> && bun dev`
 
 ## API Service
 
-### Business Modules
+### Modules
 
-The API service is organized into 13 handler modules. The first nine are the
-core business modules; the latter four are platform-specific modules that
-extend or compose them.
-
-Core modules:
+The API service ships nine vertical-neutral handler modules. Build product
+domains (e.g. `tenant`, `merchant`, `student`) as new modules under
+`services/api-ts/src/handlers/` plus matching `specs/api/src/modules/*.tsp`.
 
 1. **Person** - User profile management and PII safeguard
-2. **Booking** - Professional booking and scheduling system
-3. **Billing** - Invoice-based payments (Stripe integration)
+2. **Booking** - Generic time-based scheduling (hosts, slots, bookings, events)
+3. **Billing** - Invoice-based payments via Stripe Connect
 4. **Audit** - Compliance logging and activity tracking
-5. **Comms** - Video/chat sessions (WebRTC) and messaging
+5. **Comms** - Real-time chat rooms with embedded video calls (WebRTC)
 6. **Notifs** - Multi-channel notifications (email, push via OneSignal)
 7. **Storage** - File upload/download (S3/MinIO)
 8. **Email** - Transactional email delivery
@@ -247,7 +264,6 @@ Platform-specific modules:
 - **Radix UI** - Accessible component primitives
 - **Tailwind CSS** - Utility-first styling
 - **shadcn/ui** - Component library
-- **Framer Motion** - Animations
 - **React Hook Form** + **Zod** - Form validation
 
 ### Backend
@@ -270,24 +286,39 @@ Platform-specific modules:
 
 ## Testing
 
-### Unit & Integration Tests
+### Contract tests (any implementation)
+
+Black-box HTTP scenarios that target the OpenAPI contract, not any
+specific impl. Same suite runs against the TS impl today and a Rust impl
+tomorrow.
+
 ```bash
-cd services/api
+# Boot the impl in one terminal
+cd services/api-ts && bun dev
+
+# Run Hurl scenarios in another
+bun run test:contract              # required check
+bun run test:contract:fuzz         # Schemathesis fuzz; shadow check
+```
+
+Hurl files live under `specs/api/tests/contract/`. CI runs both layers
+on every PR (`.github/workflows/contract.yml`).
+
+### Unit & Integration Tests (TypeScript impl)
+```bash
+cd services/api-ts
 bun test
 ```
 
-### End-to-End Tests
+### End-to-End Tests (account app)
 ```bash
-# Account app E2E tests
 cd apps/account
 bun run test:e2e
 ```
 
 ### Type Checking
 ```bash
-# Check all TypeScript types
-cd services/api && bun run typecheck
-cd apps/account && bun run typecheck
+bun --filter '*' typecheck
 ```
 
 ## Documentation
@@ -295,12 +326,11 @@ cd apps/account && bun run typecheck
 - **CLAUDE.md** - Comprehensive project guide for AI assistants and developers
 - **CONTRIBUTING.md** - Developer contribution guidelines
 
-## Enterprise Compliance
+## Compliance Toolkit
 
-- **Audit Trails** - All data access includes comprehensive audit logging
-- **Consent** - Granular consent management for all data operations
-- **Security** - TLS 1.3, field-level encryption, role-based access
-- **Audit** - Structured logging with correlation IDs
+- **Audit Trails** - All data access includes structured audit logging
+- **Consent** - JSONB consent fields on the Person model for granular tracking
+- **Security** - role-based access via Better-Auth, server-side input validation
 - **Data Integrity** - ACID-compliant PostgreSQL transactions
 
 ## Performance

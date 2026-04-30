@@ -1,0 +1,5 @@
+# Cargo build output
+target/
+
+# JS bundle artifacts (built by `cargo build` via build.rs -> src-js/build.ts)
+dist/

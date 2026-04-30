@@ -53,7 +53,7 @@ interface AuditLogEntry {
   
   // Context Information
   user?: string;                 // User who performed the action
-  userType?: "patient" | "provider" | "admin" | "system";
+  userType?: "client" | "host" | "admin" | "system";
   resourceType: string;          // Type of affected resource
   resource: string;              // Resource identifier
   
@@ -231,13 +231,13 @@ sequenceDiagram
     participant Database
     participant Audit
     
-    User->>API: Request patient data
+    User->>API: Request client data
     API->>API: Validate permissions
     API->>Audit: Log access attempt
     
     alt Authorized
         API->>Database: Fetch data
-        Database-->>API: Patient data
+        Database-->>API: Client data
         Audit->>Audit: Record successful access
         API-->>User: Return data
     else Denied
@@ -275,7 +275,7 @@ sequenceDiagram
 
 ### Alerting Thresholds
 - Multiple failed login attempts from same IP
-- Access to large volumes of patient records
+- Access to large volumes of client records
 - Unauthorized access attempts
 - System configuration modifications
 - Integrity verification failures

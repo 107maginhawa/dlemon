@@ -27,11 +27,11 @@ model bearerAuth is Http.BearerAuth;
  * 
  * Role Syntax:
  * - ["admin"] - Requires admin role only
- * - ["patient:owner"] - Requires patient role AND owner permission
- * - ["admin", "provider:owner"] - Requires admin OR (provider AND owner)
- * 
+ * - ["client:owner"] - Requires client role AND owner permission
+ * - ["admin", "host:owner"] - Requires admin OR (host AND owner)
+ *
  * The format is "role:permission" where:
- * - role: The user's role (e.g., admin, patient, provider, user, support)
+ * - role: The user's role (e.g., admin, client, host, user, support)
  * - permission: Additional permission requirement (e.g., owner, read, write)
  * - When both are specified with ":", both conditions must be met
  * - Multiple array elements represent OR conditions

@@ -58,13 +58,19 @@ async fn main() -> Result<()> {
         );
     }
 
-    // Build cadence with all components
+    // Build cadence with all components, then spawn background sync tasks.
     // Note: P2P endpoint is created internally using persistent identity from metadata DB
-    let cadence = Cadence::builder()
+    let mut cadence = Cadence::builder()
         .config(config)
         .apply_env_overrides()
+        // The standalone daemon always wants full sync, so it always needs
+        // wildcard expansion. This is the explicit step that connects to the
+        // primary DB.
+        .resolve_wildcards()
+        .await?
         .build()
         .await?;
+    cadence.start_sync().await?;
 
     // Start API server if enabled (includes WS sync endpoint when ws_enabled is true)
     if cadence.config().api_server.enabled {

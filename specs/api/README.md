@@ -45,11 +45,108 @@ bun run docs                   # Start interactive API documentation server
 
 **Generated outputs:**
 
-| File | Description |
-|------|-------------|
-| `dist/openapi/openapi.json` | OpenAPI 3.0 specification |
-| `dist/openapi/openapi.yaml` | OpenAPI 3.0 specification (YAML format) |
-| `dist/typescript-types/api.d.ts` | TypeScript type definitions |
+```
+specs/api/
+├── src/                   # TypeSpec source files
+│   ├── main.tsp          # Main API entry point
+│   ├── common/           # Shared models and utilities
+│   └── modules/          # Domain-specific API modules
+│       ├── person.tsp    # User profiles and PII
+│       ├── booking.tsp   # Appointments & scheduling
+│       ├── billing.tsp   # Payments & invoicing
+│       ├── notifs.tsp    # Multi-channel notifications
+│       ├── comms.tsp     # Video/chat sessions
+│       ├── storage.tsp   # File management
+│       ├── email.tsp     # Email delivery
+│       ├── audit.tsp     # Compliance logging
+│       ├── reviews.tsp   # NPS reviews
+│       ├── patient.tsp   # Patient profiles (extends person)
+│       ├── provider.tsp  # Provider profiles (extends person)
+│       └── emr.tsp       # Electronic medical records
+├── dist/                 # Generated output files
+│   ├── openapi/         # OpenAPI specifications
+│   └── typescript-types/ # TypeScript type definitions
+└── tspconfig.yaml        # TypeSpec configuration
+```
+
+## Essential Scripts
+
+```bash
+# Development
+bun run build            # Compile TypeSpec definitions
+bun run watch           # Compile in watch mode
+
+# Generation
+bun run build:openapi       # Generate OpenAPI JSON
+bun run build:types         # Generate TypeScript types
+
+# Quality
+bun run lint            # Validate TypeSpec syntax
+bun run format          # Format TypeSpec files
+bun run clean           # Clean output directory
+```
+
+## API Modules
+
+| Module | Endpoint | Purpose |
+|--------|----------|---------|
+| **Person** | `/persons` | User profiles and central PII safeguard |
+| **Booking** | `/booking` | Professional booking and scheduling |
+| **Billing** | `/billing` | Invoice-based payments (Stripe) |
+| **Notifs** | `/notifs` | Multi-channel notifications (email, push) |
+| **Comms** | `/comms` | Video calls and messaging (WebRTC) |
+| **Storage** | `/storage` | Secure file upload/download (S3) |
+| **Email** | `/email` | Transactional email delivery |
+| **Audit** | `/audit` | Compliance audit logging |
+| **Reviews** | `/reviews` | NPS review system |
+
+**Note**: Authentication is handled by Better-Auth (integrated, not a separate TypeSpec module).
+
+## Generated Outputs
+
+### OpenAPI Specification
+- **Location**: `dist/openapi/openapi.json`
+- **Purpose**: REST API documentation and client generation
+- **Used by**: API services, frontend apps, API testing tools
+
+### TypeScript Types
+- **Location**: `dist/typescript-types/api.d.ts`
+- **Purpose**: Type-safe API contracts for TypeScript
+- **Used by**: Frontend apps, API service handlers
+
+## Usage in Applications
+
+### Frontend Apps
+```typescript
+import type { Person, CreatePersonRequest } from '@monobase/api-spec/types';
+
+async function createPerson(data: CreatePersonRequest): Promise<Person> {
+  // Type-safe API call
+}
+```
+
+### API Service
+```typescript
+import type { Person } from '@monobase/api-spec';
+
+async function getPerson(id: string): Promise<Person> {
+  // Type-safe handler implementation
+}
+```
+
+## Development
+
+For detailed development guidelines, patterns, and best practices, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### Quick Reference
+
+**Before implementing API features:**
+1. Define endpoints in TypeSpec (`src/modules/`)
+2. Run `bun run build` to generate OpenAPI + types
+3. Implement backend handlers in `services/api-ts/`
+4. Use generated types in frontend apps
+
+**For complete API-First workflow**, see [Root CONTRIBUTING.md > API-First Development](../../CONTRIBUTING.md#api-first-development).
 
 ---
 

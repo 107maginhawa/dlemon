@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::state::RowChange;
+use crate::state::{RowChange, SyncPayload};
 
 /// TTL for stale catchup checkpoints (24 hours).
 pub const CATCHUP_CHECKPOINT_TTL_SECS: i64 = 24 * 60 * 60;
@@ -59,11 +59,107 @@ pub trait MetadataBackend: Send + Sync + 'static {
     /// Append a row change to the change log. Returns the assigned sequence number.
     async fn append_change(&self, change: &RowChange) -> Result<u64>;
 
+    /// Append a batch of row changes to the change log atomically. Returns
+    /// the highest assigned sequence number across all writes (or 0 if
+    /// `changes` is empty).
+    ///
+    /// Backends that support transactions (SQLite) MUST wrap the writes in
+    /// one transaction so the per-call fsync cost is amortized. The default
+    /// implementation falls back to N independent `append_change` calls —
+    /// correct but slow under heavy receive traffic. Use
+    /// `append_change` for a single-change call site; reach for the batch
+    /// form when applying a whole `SyncData` frame.
+    async fn append_changes_batch(&self, changes: &[RowChange]) -> Result<u64> {
+        let mut max_seq = 0u64;
+        for change in changes {
+            let s = self.append_change(change).await?;
+            max_seq = std::cmp::max(max_seq, s);
+        }
+        Ok(max_seq)
+    }
+
     /// Query changes with seq > since_seq.
+    /// **Warning**: loads all matching rows into memory. Prefer `query_since_batched`
+    /// for production code paths where the result set may be large.
     async fn query_since(&self, since_seq: u64) -> Result<Vec<RowChange>>;
+
+    /// Paginated query: returns changes with seq > `since_seq`, up to `limit`
+    /// raw rows. Returns `(changes, has_more)` where `has_more` indicates
+    /// additional rows exist beyond this batch. Callers should advance
+    /// `since_seq` to the max seq of the returned batch and call again.
+    ///
+    /// Default implementation delegates to `query_since` (unbounded) for
+    /// backward compatibility with custom backends.
+    async fn query_since_batched(
+        &self,
+        since_seq: u64,
+        _limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let all = self.query_since(since_seq).await?;
+        Ok((all, false))
+    }
 
     /// Query changes for a specific collection and document.
     async fn query_by_doc(&self, collection: &str, doc_id: &str) -> Result<Vec<RowChange>>;
+
+    /// Paginated query that returns ONLY tombstones (`deleted == true`)
+    /// with `seq > since_seq`, up to `limit` rows. Returns
+    /// `(tombstones, has_more)` where `has_more` indicates additional
+    /// tombstones exist beyond this batch.
+    ///
+    /// Used by snapshot catch-up: when primary-reader has already
+    /// streamed current row state, the change-log replay only needs
+    /// tombstones (the one thing primary-reader's `SELECT *` cannot
+    /// see). Without this, replay scans every entry just to filter
+    /// non-tombstones in process — under heavy traffic that's the
+    /// dominant Phase 1 latency cost (e.g. 100k+ activity-logs entries
+    /// scanned to deliver zero rows).
+    ///
+    /// Default implementation delegates to `query_since_batched` and
+    /// filters in-process. Backends with native filtering (SQLite via
+    /// `WHERE deleted = 1`, Valkey via a separate tombstones-only
+    /// zset) should override.
+    async fn query_tombstones_since_batched(
+        &self,
+        since_seq: u64,
+        limit: usize,
+    ) -> Result<(Vec<RowChange>, bool)> {
+        let (batch, has_more) = self.query_since_batched(since_seq, limit).await?;
+        let tombstones: Vec<RowChange> = batch.into_iter().filter(|c| c.deleted).collect();
+        Ok((tombstones, has_more))
+    }
+
+    /// For every (collection, doc_id) pair that has at least one entry in
+    /// the change log, return the maximum lamport seen across all that
+    /// doc's field changes.
+    ///
+    /// Used by primary-reader catch-up to attach a meaningful lamport to
+    /// rows it emits — so receiving peers' LWW comparisons give correct
+    /// answers (cloud's last-known-edit-time vs. peer's local edit time)
+    /// instead of always-wins fresh lamports. Rows that don't appear in
+    /// this map were silently absorbed by the watcher's baseline scan
+    /// and the caller should fall back to lamport=1.
+    ///
+    /// Default implementation reuses `query_since(0)` and aggregates
+    /// in-process. Backends with a native group-by (SQLite) override.
+    async fn max_lamports_by_doc(
+        &self,
+    ) -> Result<std::collections::HashMap<(String, String), u64>> {
+        let all = self.query_since(0).await?;
+        let mut out: std::collections::HashMap<(String, String), u64> =
+            std::collections::HashMap::new();
+        for change in all {
+            if let SyncPayload::Fields(fields) = &change.payload {
+                let max = fields.iter().map(|f| f.lamport).max().unwrap_or(0);
+                let key = (change.collection.clone(), change.document_id.clone());
+                let entry = out.entry(key).or_insert(0);
+                if max > *entry {
+                    *entry = max;
+                }
+            }
+        }
+        Ok(out)
+    }
 
     /// Compact the change log: keep only the latest entry per (collection, doc_id, field).
     async fn compact(&self) -> Result<u64>;
@@ -86,6 +182,10 @@ pub trait MetadataBackend: Send + Sync + 'static {
 
     /// Persist a peer token by key.
     async fn set_peer_token(&self, key: &str, jwt: &str) -> Result<()>;
+
+    /// Delete a persisted peer token by key. Idempotent: succeeds when the key
+    /// is absent.
+    async fn delete_peer_token(&self, key: &str) -> Result<()>;
 
     // ── Peers ──────────────────────────────────────────────────
 

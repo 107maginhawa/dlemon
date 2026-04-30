@@ -146,6 +146,21 @@ pub struct CadenceConfig {
     #[serde(default)]
     pub collections_blacklist: Vec<String>,
 
+    /// Per-collection sync priority. Higher values are sent earlier during
+    /// catch-up; the queue is FIFO so frames pushed first reach the wire
+    /// first. The special key `"*"` sets a default for any collection not
+    /// explicitly listed. Collections with no priority entry (and no
+    /// wildcard) sort to 0 — the same tier as `activity-logs` in the
+    /// recommended config — and ship after everything else.
+    ///
+    /// Decoupled from `CollectionConfig` on purpose: setting a priority
+    /// on a wildcard-resolved collection (e.g. `activity-logs`) via an
+    /// explicit `CollectionConfig` entry would skip wildcard scope-rule
+    /// resolution and silently void scope filtering. Keeping priority in
+    /// its own map avoids that trap.
+    #[serde(default)]
+    pub priorities: BTreeMap<String, i32>,
+
     /// Default conflict strategy for unconfigured collections.
     #[serde(default)]
     pub default_strategy: ConflictStrategy,
@@ -248,6 +263,36 @@ pub struct CadenceConfig {
     /// Lower values provide finer resume granularity but more storage writes.
     #[serde(default = "default_checkpoint_interval")]
     pub checkpoint_interval: usize,
+
+    /// Maximum number of raw change-log rows to fetch per batch in
+    /// `query_since_batched`. Controls peak memory usage during change-log
+    /// reads. Each raw row is one field of one document.
+    /// Default: 5000 (~1 MB). Lower values reduce peak memory on constrained
+    /// devices (e.g., iOS); higher values reduce round-trips.
+    #[serde(default = "default_query_batch_size")]
+    pub query_batch_size: usize,
+
+    /// When a peer connects with `since_seq == 0`, should `send_catchup_batch`
+    /// bootstrap them by reading the entire primary DB and pushing it over
+    /// the WebSocket?
+    ///
+    /// - **`true` (default)**: primary-DB-scan path runs for `since_seq == 0`.
+    ///   Required on "cloud" / "hub" peers whose primary DB is the source of
+    ///   truth and may hold more historical data than the change log can
+    ///   retain. A brand-new client peer connecting for the first time
+    ///   depends on this to receive baseline state.
+    ///
+    /// - **`false`**: `send_catchup_batch(since_seq == 0)` skips the primary
+    ///   DB scan and uses `storage.query_since(0)` (the change log) only.
+    ///   Appropriate for "client" / "local" peers whose primary DB is itself
+    ///   a cached subset of a cloud peer's data — those peers should not
+    ///   re-push hundreds of thousands of rows they previously received from
+    ///   a cloud peer (the send path saturates the remote's TCP receive
+    ///   window and stalls both directions). Client peers' change log
+    ///   contains only their genuinely-local-origin writes, which is exactly
+    ///   what the cloud peer needs from them.
+    #[serde(default = "default_catchup_from_primary_db")]
+    pub catchup_from_primary_db: bool,
 }
 
 fn default_metadata_path() -> String {
@@ -295,7 +340,26 @@ fn default_max_reconnect_attempts() -> u32 {
 }
 
 fn default_broadcast_channel_capacity() -> usize {
-    256
+    // A single watcher poll can legitimately emit hundreds of
+    // RowChanges across 100+ collections (e.g. a burst of incremental
+    // updates from a large primary DB). At 256 the channel lags easily
+    // under moderate write load, and once a broadcast::Receiver is
+    // `Lagged` the send loop in sync.rs silently drops all subsequent
+    // live-phase changes until the next full catch-up.
+    //
+    // 8192 gives ~30 seconds of headroom at 250 rows/s sustained and
+    // accommodates spikes up to a few thousand rows per poll without
+    // triggering Lagged. Memory cost is negligible (~few hundred KB
+    // per subscriber, since each slot is a Vec<RowChange> pointer).
+    8192
+}
+
+fn default_catchup_from_primary_db() -> bool {
+    // Preserve pre-existing behavior: cloud/hub peers bootstrap new clients
+    // from their primary DB. Client peers should set this to `false` in
+    // their config to avoid shoving their (usually subset-of-cloud) primary
+    // DB back to the cloud peer on every fresh connection.
+    true
 }
 
 fn default_peer_idle_timeout_ms() -> u64 {
@@ -310,11 +374,16 @@ fn default_checkpoint_interval() -> usize {
     100
 }
 
+fn default_query_batch_size() -> usize {
+    5_000
+}
+
 impl Default for CadenceConfig {
     fn default() -> Self {
         Self {
             collections: BTreeMap::new(),
             collections_blacklist: Vec::new(),
+            priorities: BTreeMap::new(),
             default_strategy: ConflictStrategy::default(),
             bootstrap_peers: Vec::new(),
             p2p: P2pConfig::default(),
@@ -335,9 +404,11 @@ impl Default for CadenceConfig {
             reconnect_max_delay_ms: default_reconnect_max_delay_ms(),
             max_reconnect_attempts: default_max_reconnect_attempts(),
             broadcast_channel_capacity: default_broadcast_channel_capacity(),
+            catchup_from_primary_db: default_catchup_from_primary_db(),
             peer_idle_timeout_ms: default_peer_idle_timeout_ms(),
             change_log_retention_ms: default_change_log_retention_ms(),
             checkpoint_interval: default_checkpoint_interval(),
+            query_batch_size: default_query_batch_size(),
         }
     }
 }
@@ -389,6 +460,32 @@ impl CadenceConfig {
             .unwrap_or_else(|| EMPTY.get_or_init(BTreeMap::new))
     }
 
+    /// Get the sync priority for a collection. Higher = sent first.
+    /// Lookup order: explicit `priorities[collection]` → `priorities["*"]` → `0`.
+    pub fn priority_for(&self, collection: &str) -> i32 {
+        if let Some(p) = self.priorities.get(collection) {
+            return *p;
+        }
+        self.priorities.get("*").copied().unwrap_or(0)
+    }
+
+    /// Return collection names ordered for catch-up: priority DESC, then
+    /// name ASC for a stable tiebreaker. Skips the wildcard `"*"` entry.
+    /// Used at the two catch-up iteration sites in `sync.rs`
+    /// (`build_catchup_frames` and `send_catchup_batch`) so high-value
+    /// collections (auth, identity, medical) ship before low-value ones
+    /// (activity-logs, notifications) within Phase 1.
+    pub fn collections_in_priority_order(&self) -> Vec<&String> {
+        let mut entries: Vec<(&String, i32)> = self
+            .collections
+            .keys()
+            .filter(|k| k.as_str() != "*")
+            .map(|k| (k, self.priority_for(k)))
+            .collect();
+        entries.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        entries.into_iter().map(|(k, _)| k).collect()
+    }
+
     /// Apply environment variable overrides after loading YAML config.
     /// Supports: CADENCE_PEER_TOKEN, CADENCE_BOOTSTRAP_PEERS, CADENCE_JWKS_URL,
     /// CADENCE_PRIMARY_DB_URL, CADENCE_DATA_DIR, CADENCE_METADATA_BACKEND,
@@ -424,6 +521,11 @@ impl CadenceConfig {
                 self.api_server.enabled = true;
             }
         }
+        if let Ok(val) = std::env::var("CADENCE_QUERY_BATCH_SIZE") {
+            if let Ok(n) = val.parse::<usize>() {
+                self.query_batch_size = n;
+            }
+        }
         // Backward compat: CADENCE_HEALTH_PORT still works
         if let Ok(port) = std::env::var("CADENCE_HEALTH_PORT") {
             if let Ok(p) = port.parse::<u16>() {
@@ -434,10 +536,30 @@ impl CadenceConfig {
     }
 
     /// Collect all unique DB column names used as scope columns across all collections.
+    ///
+    /// **Deprecated for watcher use.** Watchers must scope-filter per-collection;
+    /// flattening this across collections caused one collection's scope rule to
+    /// bleed into another's watcher (e.g. `accounts.scope_columns = {"user": "id"}`
+    /// forced "id" to be emitted on every other table's watcher, producing
+    /// PK-only changes that broke pg upserts on tables with NOT NULL columns).
+    /// Use [`scope_columns_by_collection`](Self::scope_columns_by_collection) instead.
     pub fn all_scope_column_names(&self) -> std::collections::HashSet<String> {
         self.collections
             .values()
             .flat_map(|c| c.scope_columns.values().cloned())
+            .collect()
+    }
+
+    /// Per-collection map of DB column names used as scope columns. The watcher
+    /// uses this to know which columns (per table) must always be re-emitted so
+    /// the receiving side can re-evaluate scope membership — without leaking one
+    /// collection's scope rules into another collection's emission policy.
+    pub fn scope_columns_by_collection(
+        &self,
+    ) -> std::collections::HashMap<String, std::collections::HashSet<String>> {
+        self.collections
+            .iter()
+            .map(|(name, c)| (name.clone(), c.scope_columns.values().cloned().collect()))
             .collect()
     }
 
@@ -486,7 +608,7 @@ impl CadenceConfig {
         for table in &tables {
             let collection_name = table_to_collection(table);
 
-            if self.collections_blacklist.contains(&collection_name) {
+            if self.is_blacklisted(&collection_name) {
                 continue;
             }
             if self.collections.contains_key(&collection_name) {
@@ -531,7 +653,7 @@ impl CadenceConfig {
         for table in &tables {
             let collection_name = table_to_collection(table);
 
-            if self.collections_blacklist.contains(&collection_name) {
+            if self.is_blacklisted(&collection_name) {
                 continue;
             }
             if self.collections.contains_key(&collection_name) {
@@ -567,4 +689,23 @@ impl CadenceConfig {
 /// e.g., `medical_patients` → `medical-patients`
 pub fn table_to_collection(table: &str) -> String {
     table.replace('_', "-")
+}
+
+/// Normalize a collection name to kebab-case for consistent blacklist comparison.
+/// Accepts either kebab-case (`personal-details-history`) or snake_case
+/// (`personal_details_history`) and always returns kebab-case.
+pub fn normalize_collection(name: &str) -> String {
+    name.replace('_', "-")
+}
+
+impl CadenceConfig {
+    /// Check whether a collection is blacklisted, normalizing both sides to
+    /// kebab-case so that entries in either `snake_case` or `kebab-case` form
+    /// match regardless of how the incoming change was named.
+    pub fn is_blacklisted(&self, collection: &str) -> bool {
+        let normalized = normalize_collection(collection);
+        self.collections_blacklist
+            .iter()
+            .any(|entry| normalize_collection(entry) == normalized)
+    }
 }

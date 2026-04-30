@@ -33,7 +33,7 @@ The primary model for defining bookable availability:
 ```typescript
 {
   id: UUID                    // Unique identifier
-  owner: UUID                 // Event owner (service provider, organization, etc.)
+  owner: UUID                 // Event owner (host (coach, advisor, organization), etc.)
   context?: UUID              // Optional domain association
   timezone: string            // Event timezone (e.g., "America/New_York")
   locationTypes: LocationType[] // Available location types
@@ -76,13 +76,13 @@ Confirmed bookings between clients and service providers:
 {
   id: UUID                    // Unique identifier
   client: UUID                // Client (person.id)
-  provider: UUID              // Provider (person.id)
+  host: UUID              // Host (person.id)
   slot: UUID                  // Time slot
   locationType: LocationType  // Selected location type
   reason: string              // Booking reason (max 500 chars)
   status: BookingStatus       // Booking status
   bookedAt: DateTime          // When booking was created
-  confirmationTimestamp?: DateTime // When provider confirmed
+  confirmationTimestamp?: DateTime // When host confirmed
   scheduledAt: DateTime       // Scheduled booking time
   durationMinutes: number     // Duration (15-480 minutes)
   cancellationReason?: string // If cancelled
@@ -212,9 +212,9 @@ enum BookingEventStatus {
 #### BookingStatus
 ```typescript
 enum BookingStatus {
-  pending = "pending"         // Pending provider confirmation
-  confirmed = "confirmed"     // Confirmed by provider
-  rejected = "rejected"       // Rejected by provider
+  pending = "pending"         // Pending host confirmation
+  confirmed = "confirmed"     // Confirmed by host
+  rejected = "rejected"       // Rejected by host
   cancelled = "cancelled"     // Cancelled
   completed = "completed"     // Completed
   no_show_client = "no_show_client"     // Client no-show
@@ -252,7 +252,7 @@ enum RecurrenceType {
 ## Use Cases
 
 ### Service Provider Setting Up Availability
-1. Service provider creates a BookingEvent with weekly schedule
+1. Host creates a BookingEvent with weekly schedule
 2. System generates TimeSlots based on the schedule
 3. Provider can add ScheduleExceptions for vacations/breaks
 4. Clients can discover and book available slots
@@ -318,7 +318,7 @@ stateDiagram-v2
     CONFIRMED --> CANCELLED: Either party cancels
     CONFIRMED --> COMPLETED: Booking occurs
     CONFIRMED --> NO_SHOW_CLIENT: Provider marks client no-show
-    CONFIRMED --> NO_SHOW_PROVIDER: Client marks provider no-show
+    CONFIRMED --> NO_SHOW_HOST: Client marks host no-show
     
     REJECTED --> [*]
     CANCELLED --> [*]
@@ -443,7 +443,7 @@ For daily configurations and time blocks:
 2. **Complex Schedules**: Support for breaks, split shifts, and varying slot durations
 3. **Consistent Configuration**: Week-level settings apply uniformly
 4. **Flexible Time Blocks**: Different hours and slot durations throughout the day
-5. **True Weekly Editor UX**: Matches provider mental model of weekly planning
+5. **True Weekly Editor UX**: Matches host mental model of weekly planning
 
 ### Event Owner Management Flow
 
@@ -1091,7 +1091,7 @@ Response: 201 Created
 {
   id: UUID,
   client: UUID,               // Auto-set to authenticated user
-  provider: UUID,             // From slot
+  host: UUID,             // From slot
   status: "pending",          // Initial status
   // ... full Booking object
 }
@@ -1101,7 +1101,7 @@ Response: 201 Created
 ```http
 GET /booking/bookings
 Authorization: Bearer <token>
-Required Role: client:owner, provider:owner, admin, support
+Required Role: client:owner, host:owner, admin, support
 
 Query Parameters:
 - provider?: UUID             // Filter by provider
@@ -1124,7 +1124,7 @@ Response: 200 OK
 ```http
 GET /booking/bookings/{booking}
 Authorization: Bearer <token>
-Required Role: client:owner, provider:owner, admin, support
+Required Role: client:owner, host:owner, admin, support
 
 Query Parameters:
 - expand?: string             // Expand related resources
@@ -1139,7 +1139,7 @@ Response: 200 OK
 ```http
 POST /booking/bookings/{booking}/confirm
 Authorization: Bearer <token>
-Required Role: provider:owner, admin
+Required Role: host:owner, admin
 
 Request:
 {
@@ -1156,7 +1156,7 @@ Response: 200 OK
 ```http
 POST /booking/bookings/{booking}/reject
 Authorization: Bearer <token>
-Required Role: provider:owner, admin
+Required Role: host:owner, admin
 
 Request:
 {
@@ -1173,7 +1173,7 @@ Response: 200 OK
 ```http
 POST /booking/bookings/{booking}/cancel
 Authorization: Bearer <token>
-Required Role: client:owner, provider:owner, admin
+Required Role: client:owner, host:owner, admin
 
 Request:
 {
@@ -1190,7 +1190,7 @@ Response: 200 OK
 ```http
 POST /booking/bookings/{booking}/no-show
 Authorization: Bearer <token>
-Required Role: client:owner, provider:owner, admin
+Required Role: client:owner, host:owner, admin
 
 Request:
 {
@@ -1228,12 +1228,12 @@ All booking endpoints follow the established security patterns from the platform
 | `/booking/slots/{slotId}` | GET | None | Public | Slot details |
 | **Booking Management** | | | | |
 | `/booking/bookings` | POST | Bearer | `user` | Create booking |
-| `/booking/bookings` | GET | Bearer | `client:owner`, `provider:owner`, `admin`, `support` | List bookings (filtered by role) |
-| `/booking/bookings/{booking}` | GET | Bearer | `client:owner`, `provider:owner`, `admin`, `support` | View booking |
-| `/booking/bookings/{booking}/confirm` | POST | Bearer | `provider:owner`, `admin` | Confirm booking |
-| `/booking/bookings/{booking}/reject` | POST | Bearer | `provider:owner`, `admin` | Reject booking |
-| `/booking/bookings/{booking}/cancel` | POST | Bearer | `client:owner`, `provider:owner`, `admin` | Cancel booking |
-| `/booking/bookings/{booking}/no-show` | POST | Bearer | `client:owner`, `provider:owner`, `admin` | Mark no-show |
+| `/booking/bookings` | GET | Bearer | `client:owner`, `host:owner`, `admin`, `support` | List bookings (filtered by role) |
+| `/booking/bookings/{booking}` | GET | Bearer | `client:owner`, `host:owner`, `admin`, `support` | View booking |
+| `/booking/bookings/{booking}/confirm` | POST | Bearer | `host:owner`, `admin` | Confirm booking |
+| `/booking/bookings/{booking}/reject` | POST | Bearer | `host:owner`, `admin` | Reject booking |
+| `/booking/bookings/{booking}/cancel` | POST | Bearer | `client:owner`, `host:owner`, `admin` | Cancel booking |
+| `/booking/bookings/{booking}/no-show` | POST | Bearer | `client:owner`, `host:owner`, `admin` | Mark no-show |
 
 ### Role-Based Filtering
 
@@ -1246,7 +1246,7 @@ Authorization: Bearer <client-token>
 # Returns only the client's bookings
 ```
 
-**Provider Access** (`provider:owner`):
+**Provider Access** (`host:owner`):
 ```http
 GET /booking/bookings?provider=<provider-id>
 Authorization: Bearer <provider-token>
@@ -1279,7 +1279,7 @@ GET /booking/slots/abc123
 ### Owner Permission Logic
 
 - **`client:owner`**: Client can only access their own bookings
-- **`provider:owner`**: Provider can only access bookings where they are the provider
+- **`host:owner`**: Provider can only access bookings where they are the provider
 - **`event:owner`**: Event owner can only manage their own events
 - **Resource ownership** is determined by comparing the authenticated user's ID with the resource's client/provider/owner fields
 - **Admin/Support** roles bypass ownership checks and can access any resource

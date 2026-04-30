@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Button } from '@monobase/ui/components/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@monobase/ui/components/card'
-import { Alert, AlertDescription } from '@monobase/ui/components/alert'
+import { Button } from '@/components/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/card'
+import { Alert, AlertDescription } from '@/components/alert'
 import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { composeGuards, requireAuth, requireNotEmailVerified } from '@/utils/guards'
-import { useAuthClient } from '@monobase/sdk/react/auth'
+import { useAuthClient } from '@monobase/sdk-ts/react/auth'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/verify-email')({

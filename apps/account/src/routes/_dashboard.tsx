@@ -5,15 +5,22 @@ import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger
-} from "@monobase/ui/components/sidebar"
+} from "@/components/sidebar"
 import {
   Home,
   User,
   Shield,
   Bell,
+  Calendar,
+  Clock,
+  CreditCard,
 } from 'lucide-react'
 import { UserButton } from '@daveyplate/better-auth-ui'
-import { useUnreadNotifications } from '@monobase/sdk/react/hooks/use-notifications'
+import { useQuery } from '@tanstack/react-query'
+import {
+  listNotificationsOptions,
+  listBookingsOptions,
+} from '@monobase/sdk-ts/generated/react-query'
 
 export const Route = createFileRoute('/_dashboard')({
   beforeLoad: composeGuards(requireAuth, requireEmailVerified, requirePerson),
@@ -22,8 +29,23 @@ export const Route = createFileRoute('/_dashboard')({
 
 function DashboardLayout() {
   // Fetch unread notifications count for badge
-  const { data: unreadData } = useUnreadNotifications()
+  const { data: unreadData } = useQuery({
+    ...listNotificationsOptions({ query: { status: 'unread' } }),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
   const unreadCount = unreadData?.pagination?.totalCount || 0
+
+  // Pending-as-host count: bookings someone has requested but the user hasn't
+  // confirmed/rejected yet. The spec needs the person UUID (no 'me' shortcut).
+  const { auth } = Route.useRouteContext()
+  const myPersonId = auth.person?.id
+  const { data: pendingHostData } = useQuery({
+    ...listBookingsOptions({ query: { host: myPersonId!, status: 'pending', limit: 50 } }),
+    enabled: !!myPersonId,
+    staleTime: 30_000,
+  })
+  const pendingHostCount = pendingHostData?.pagination?.totalCount || 0
 
   // Define navigation structure for the account dashboard
   const navGroups: NavGroup[] = [
@@ -37,6 +59,12 @@ function DashboardLayout() {
           badge: null,
         },
         {
+          title: "Bookings",
+          url: "/bookings",
+          icon: Calendar,
+          badge: pendingHostCount > 0 ? pendingHostCount : null,
+        },
+        {
           title: "Notifications",
           url: "/notifications",
           icon: Bell,
@@ -48,9 +76,19 @@ function DashboardLayout() {
       label: "Settings",
       items: [
         {
-          title: "Account Settings",
+          title: "Account",
           url: "/settings/account",
           icon: User,
+        },
+        {
+          title: "Schedule",
+          url: "/settings/schedule",
+          icon: Clock,
+        },
+        {
+          title: "Billing",
+          url: "/settings/billing",
+          icon: CreditCard,
         },
         {
           title: "Security",

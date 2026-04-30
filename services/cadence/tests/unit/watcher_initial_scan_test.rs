@@ -3,7 +3,7 @@ use cadence::storage::MetadataBackend;
 use cadence::watcher::sqlite::SqliteWatcher;
 use cadence::watcher::ChangeWatcher;
 use rusqlite::Connection;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 fn setup_sqlite_db() -> Arc<Mutex<Connection>> {
@@ -39,7 +39,7 @@ async fn test_initial_scan_is_not_incremental() {
         vec!["patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // First poll picks up pre-existing data — should NOT be incremental
@@ -71,7 +71,7 @@ async fn test_subsequent_changes_are_incremental() {
         vec!["patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // First poll: initial scan
@@ -107,7 +107,7 @@ async fn test_empty_initial_scan_does_not_set_incremental() {
         vec!["patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // First poll with no data: empty, not incremental
@@ -183,7 +183,7 @@ async fn test_change_log_only_gets_incremental_changes() {
         vec!["patients".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Initial scan — should NOT be written to change log
@@ -256,7 +256,7 @@ async fn test_watcher_detects_new_records_with_null_updated_at() {
         vec!["counters".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Insert an existing record with proper updated_at (simulates initial sync data)
@@ -393,7 +393,7 @@ async fn test_watcher_integration_null_updated_at_after_initial_sync() {
         vec!["counters".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Phase 1: Populate with synced data (applier sets both timestamps)
@@ -471,7 +471,7 @@ async fn test_watcher_detects_records_with_both_timestamps() {
         vec!["counters".to_string()],
         "test-peer".to_string(),
         state,
-        HashSet::new(),
+        HashMap::new(),
     );
 
     // Initial scan (empty)

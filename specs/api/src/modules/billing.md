@@ -96,7 +96,7 @@ When creating a paid service booking:
 if (serviceSchedule.price) {
   const invoice = await billingAPI.createInvoice({
     customer: booking.clientId,
-    merchant: serviceProvider.personId,  // Merchant account found via provider.personId
+    merchant: serviceProvider.personId,  // Merchant account found via host.personId
     context: `booking:${booking.id}`, // Prevents duplicates
     total: serviceSchedule.price,
     lineItems: [{
