@@ -243,6 +243,7 @@ impl Cadence {
             &self.config,
             self.storage.clone(),
             self.applier_tracker.clone(),
+            self.peer_id.clone(),
         ));
 
         // Start connection manager
@@ -977,6 +978,7 @@ fn start_applier(
     config: &Arc<CadenceConfig>,
     storage: Arc<dyn MetadataBackend>,
     tracker: ApplierTracker,
+    local_peer_id: String,
 ) -> JoinHandle<()> {
     let collections: Vec<String> = config.collections.keys().cloned().collect();
     let blacklisted_collections: Vec<String> = config.collections_blacklist.clone();
@@ -996,6 +998,7 @@ fn start_applier(
                 config.reconnect_base_delay_ms,
                 config.reconnect_max_delay_ms,
                 config.query_batch_size,
+                local_peer_id,
             )
         }
         DbType::Postgres => crate::applier::pg::start_pg_applier(
@@ -1009,6 +1012,7 @@ fn start_applier(
             config.reconnect_base_delay_ms,
             config.reconnect_max_delay_ms,
             config.query_batch_size,
+            local_peer_id,
         ),
     }
 }

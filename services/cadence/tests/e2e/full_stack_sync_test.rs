@@ -410,6 +410,7 @@ impl FullStackPeer {
             Duration::from_millis(APPLIER_POLL_MS),
             applier_tracker,
             10, 1000, 60000, 5_000,
+        "test-peer".to_string(),
         );
 
         FullStackPeer {
@@ -537,6 +538,7 @@ impl FullStackPeer {
             Duration::from_millis(APPLIER_POLL_MS),
             applier_tracker,
             10, 1000, 60000, 5_000,
+        "test-peer".to_string(),
         );
 
         FullStackPeer {

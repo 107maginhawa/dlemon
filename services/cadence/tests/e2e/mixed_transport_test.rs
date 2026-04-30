@@ -258,6 +258,7 @@ impl MixedPeer {
             1000,
             60000,
             5_000,
+        "test-peer".to_string(),
         );
 
         MixedPeer {

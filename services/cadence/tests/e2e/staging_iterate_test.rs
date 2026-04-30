@@ -247,6 +247,7 @@ async fn staging_iterate() {
         1000,
         60_000,
         5_000,
+        "test-peer".to_string(),
     );
 
     // ── Connect and run ────────────────────────────────────────────

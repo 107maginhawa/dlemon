@@ -78,6 +78,7 @@ async fn test_pg_applier_upsert_boolean_column_via_integer_value() {
         Duration::from_millis(50),
         ApplierTracker::new(),
         3, 100, 500, 5_000,
+        "test-peer".to_string(),
     );
 
     // Give the applier a few poll cycles to apply the change
@@ -154,6 +155,7 @@ async fn test_pg_applier_mixed_bool_representations() {
         Duration::from_millis(50),
         ApplierTracker::new(),
         3, 100, 500, 5_000,
+        "test-peer".to_string(),
     );
 
     tokio::time::sleep(Duration::from_millis(400)).await;

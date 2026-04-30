@@ -223,6 +223,7 @@ impl EmbeddedCadence {
                 config.reconnect_base_delay_ms,
                 config.reconnect_max_delay_ms,
                 config.query_batch_size,
+                peer_id.clone(),
             );
             handles.push(handle);
         }

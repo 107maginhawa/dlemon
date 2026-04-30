@@ -21,6 +21,7 @@ pub fn start_sqlite_applier(
     reconnect_base_delay_ms: u64,
     reconnect_max_delay_ms: u64,
     query_batch_size: usize,
+    local_peer_id: String,
 ) -> tokio::task::JoinHandle<()> {
     // Pre-normalize blacklist entries to kebab-case once at startup.
     let blacklisted_normalized: Vec<String> = blacklisted_collections
@@ -122,6 +123,22 @@ pub fn start_sqlite_applier(
                         if !collections.contains(&change.collection) {
                             last_applied_seq = std::cmp::max(last_applied_seq, change.seq);
                             continue;
+                        }
+
+                        // Skip changes whose origin is THIS cadence instance
+                        // — i.e. entries the local watcher emitted by reading
+                        // the primary DB. Re-applying them is a no-op at best
+                        // and pathological at worst (the cloud's PG audit
+                        // trigger fires on every UPDATE, generating a
+                        // duplicate `<table>_history_pkey` violation per
+                        // row). Mirrors the same skip in `applier::pg`.
+                        if let SyncPayload::Fields(fields) = &change.payload {
+                            if let Some(origin) = fields.first().map(|f| f.peer_id.as_str()) {
+                                if origin == local_peer_id {
+                                    last_applied_seq = std::cmp::max(last_applied_seq, change.seq);
+                                    continue;
+                                }
+                            }
                         }
 
                         let table = change.collection.replace('-', "_");
