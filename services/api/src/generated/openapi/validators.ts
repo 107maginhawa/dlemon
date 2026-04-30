@@ -1,8 +1,6 @@
-// @ts-nocheck
-// This is a generated file. Recursive Zod schemas (e.g. CompositionSection,
-// QuestionnaireItem) produce TS hoisting/inference errors that are correct at
-// runtime via z.lazy but expensive to type precisely from generation. Disable
-// TypeScript checking for the file as a whole; runtime behavior is unaffected.
+// Generated file. Recursive Zod schemas (e.g. CompositionSection,
+// QuestionnaireItem) reference themselves via z.lazy() and carry an explicit
+// `: z.ZodTypeAny` annotation so TypeScript can break the cycle.
 import { z } from 'zod';
 import ISO6391 from 'iso-639-1';
 import countries from 'i18n-iso-countries';
@@ -7900,7 +7898,7 @@ export const HealthcareClinicalCompositionsCompositionSectionSchema: z.ZodTypeAn
   coding: z.array(HealthcareCoreCodingSchema),
   text: z.string().optional()
 }).optional(),
-  section: z.array(HealthcareClinicalCompositionsCompositionSectionSchema).optional()
+  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema)).optional()
 });
 
 export const HealthcareClinicalCompositionsCompositionSchema = z.object({
@@ -7942,7 +7940,7 @@ export const HealthcareClinicalCompositionsCompositionSchema = z.object({
 }).optional(),
   relatesTo: z.array(HealthcareClinicalCompositionsCompositionRelatesToSchema).optional(),
   event: z.array(HealthcareClinicalCompositionsCompositionEventSchema).optional(),
-  section: z.array(HealthcareClinicalCompositionsCompositionSectionSchema)
+  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema))
 });
 
 export const HealthcareClinicalCompositionsCompositionSearchParamsSchema = z.object({
@@ -7988,7 +7986,7 @@ export const HealthcareClinicalCompositionsCreateCompositionRequestSchema = z.ob
 }).optional(),
   relatesTo: z.array(HealthcareClinicalCompositionsCompositionRelatesToSchema).optional(),
   event: z.array(HealthcareClinicalCompositionsCompositionEventSchema).optional(),
-  section: z.array(HealthcareClinicalCompositionsCompositionSectionSchema)
+  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema))
 });
 
 export const HealthcareClinicalCompositionsDocumentRelationshipTypeSchema = z.enum(["replaces", "transforms", "signs", "appends"]);
@@ -8024,7 +8022,7 @@ export const HealthcareClinicalCompositionsUpdateCompositionRequestSchema = z.ob
 }).optional(),
   relatesTo: z.array(HealthcareClinicalCompositionsCompositionRelatesToSchema).optional(),
   event: z.array(HealthcareClinicalCompositionsCompositionEventSchema).optional(),
-  section: z.array(HealthcareClinicalCompositionsCompositionSectionSchema).optional()
+  section: z.array(z.lazy(() => HealthcareClinicalCompositionsCompositionSectionSchema)).optional()
 });
 
 export const HealthcareClinicalConditionsConditionStageSchema = z.object({
@@ -13117,7 +13115,7 @@ export const HealthcareConformanceTerminologyCodeSystemConceptSchema: z.ZodTypeA
   definition: z.string().optional(),
   designation: z.array(HealthcareConformanceTerminologyDesignationSchema).optional(),
   property: z.array(HealthcareConformanceTerminologyConceptPropertySchema).optional(),
-  concept: z.array(HealthcareConformanceTerminologyCodeSystemConceptSchema).optional()
+  concept: z.array(z.lazy(() => HealthcareConformanceTerminologyCodeSystemConceptSchema)).optional()
 });
 
 export const HealthcareConformanceTerminologyCodeSystemResourceSchema = z.object({
@@ -13138,7 +13136,7 @@ export const HealthcareConformanceTerminologyCodeSystemResourceSchema = z.object
   description: z.string().optional(),
   content: z.string(),
   count: z.number().int().optional(),
-  concept: z.array(HealthcareConformanceTerminologyCodeSystemConceptSchema).optional()
+  concept: z.array(z.lazy(() => HealthcareConformanceTerminologyCodeSystemConceptSchema)).optional()
 });
 
 export const HealthcareConformanceTerminologyConceptMapTargetSchema = z.object({
@@ -17318,7 +17316,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireItemSchema: z.ZodTypeAn
   initial: z.array(HealthcareSupportQuestionnairesQuestionnaireInitialValueSchema).optional(),
   enableWhen: z.array(HealthcareSupportQuestionnairesQuestionnaireEnableWhenSchema).optional(),
   enableBehavior: z.enum(["all", "any"]).optional(),
-  item: z.array(HealthcareSupportQuestionnairesQuestionnaireItemSchema).optional()
+  item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireItemSchema)).optional()
 });
 
 export const HealthcareSupportQuestionnairesQuestionnaireSchema = z.object({
@@ -17340,7 +17338,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireSchema = z.object({
   purpose: z.string().optional(),
   subjectType: z.array(z.string()).optional(),
   code: z.array(HealthcareCoreCodeableConceptSchema).optional(),
-  item: z.array(HealthcareSupportQuestionnairesQuestionnaireItemSchema)
+  item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireItemSchema))
 });
 
 export const HealthcareSupportQuestionnairesQuestionnaireItemTypeSchema = z.enum(["group", "display", "boolean", "decimal", "integer", "date", "dateTime", "time", "string", "text", "url", "choice", "openChoice", "attachment", "reference", "quantity"]);
@@ -17367,15 +17365,15 @@ export const HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema: z
   id: z.string().uuid(),
   display: z.string().optional()
 }).optional(),
-  item: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema).optional()
+  item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema)).optional()
 });
 
 export const HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema: z.ZodTypeAny = z.object({
   linkId: z.string(),
   definition: z.string().url().optional(),
   text: z.string().optional(),
-  answer: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema).optional(),
-  item: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema).optional()
+  answer: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseAnswerSchema)).optional(),
+  item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema)).optional()
 });
 
 export const HealthcareSupportQuestionnairesQuestionnaireResponseSchema = z.object({
@@ -17416,7 +17414,7 @@ export const HealthcareSupportQuestionnairesQuestionnaireResponseSchema = z.obje
   id: z.string().uuid(),
   display: z.string().optional()
 }).optional(),
-  item: z.array(HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema).optional()
+  item: z.array(z.lazy(() => HealthcareSupportQuestionnairesQuestionnaireResponseItemSchema)).optional()
 });
 
 export const HealthcareSupportQuestionnairesQuestionnaireResponseStatusSchema = z.enum(["inProgress", "completed", "amended", "enteredInError", "stopped"]);
