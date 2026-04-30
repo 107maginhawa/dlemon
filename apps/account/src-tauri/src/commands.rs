@@ -1,10 +1,12 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
 
 use crate::cadence_embed::EmbeddedCadence;
 use crate::config::AppConfig;
+use api_ts_embedded::{ApiTsEmbedded, ApiTsResponse};
 
 // ── Response types ──────────────────────────────────────────────
 
@@ -32,6 +34,15 @@ pub struct PeersResponse {
 
 pub type CadenceState = Arc<Mutex<Option<EmbeddedCadence>>>;
 pub type AppConfigState = Arc<AppConfig>;
+
+/// Wraps the embedded api-ts in a restartable container.
+pub struct ApiTsContainer {
+    pub api: Option<ApiTsEmbedded>,
+    pub db_path: String,
+}
+
+pub type ApiTsState = std::sync::Mutex<ApiTsContainer>;
+pub type InitErrorState = Arc<std::sync::Mutex<Option<String>>>;
 
 // ── Cross-platform Commands ────────────────────────────────────
 
@@ -176,4 +187,82 @@ pub async fn get_app_config(
     config: State<'_, AppConfigState>,
 ) -> Result<AppConfig, String> {
     Ok(config.inner().as_ref().clone())
+}
+
+// ── Embedded api-ts commands ───────────────────────────────────
+
+#[tauri::command]
+pub fn api_request(
+    method: String,
+    path: String,
+    body: Option<String>,
+    headers: Option<HashMap<String, String>>,
+    state: State<'_, ApiTsState>,
+) -> Result<ApiTsResponse, String> {
+    let header_pairs: Vec<(String, String)> = headers
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    let header_refs: Vec<(&str, &str)> = header_pairs
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
+    let guard = state.lock().map_err(|e| e.to_string())?;
+    let api = guard.api.as_ref().ok_or("api-ts not initialized")?;
+    api.request(&method, &path, body.as_deref(), header_refs)
+}
+
+#[tauri::command]
+pub fn get_backend_status(
+    error_state: State<'_, InitErrorState>,
+    api_state: State<'_, ApiTsState>,
+) -> Result<serde_json::Value, String> {
+    let initialized = api_state
+        .lock()
+        .map_err(|e| e.to_string())?
+        .api
+        .is_some();
+    let error = error_state.lock().map_err(|e| e.to_string())?.clone();
+
+    Ok(serde_json::json!({
+        "status": if initialized { "pass" } else { "fail" },
+        "mode": "embedded",
+        "initialized": initialized,
+        "error": error,
+    }))
+}
+
+/// Restart the embedded api-ts (e.g., after a schema reset).
+#[tauri::command]
+pub fn restart_engine(state: State<'_, ApiTsState>) -> Result<(), String> {
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
+    guard.api = None;
+    let db_path = guard.db_path.clone();
+    let new_api = ApiTsEmbedded::new(&db_path).map_err(|e| format!("Failed to restart api-ts: {}", e))?;
+    guard.api = Some(new_api);
+    log::info!("Embedded api-ts restarted successfully");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reset_databases(
+    app: tauri::AppHandle,
+    config: State<'_, AppConfigState>,
+) -> Result<(), String> {
+    // Delete embedded backend DB (strip sqlite:// prefix to get file path)
+    let db_url = &config.embedded_database_url;
+    if let Some(path) = db_url.strip_prefix("sqlite://") {
+        let _ = std::fs::remove_file(path);
+        let _ = std::fs::remove_file(format!("{}-wal", path));
+        let _ = std::fs::remove_file(format!("{}-shm", path));
+    }
+
+    // Delete cadence metadata DB
+    let meta_path = &config.cadence_metadata_path;
+    let _ = std::fs::remove_file(meta_path);
+    let _ = std::fs::remove_file(format!("{}-wal", meta_path.display()));
+    let _ = std::fs::remove_file(format!("{}-shm", meta_path.display()));
+
+    // Restart the entire app to reinitialize
+    app.restart();
 }

@@ -1,137 +1,56 @@
-//! Mobile-specific setup for iOS/iPadOS with embedded Hono backend
+//! api-ts-embedded setup for the offline-first backend.
 //!
-//! This module sets up the mobile version of the account app with an embedded
-//! Boa JS engine running a Hono HTTP server for offline-first operation.
-//! Requests are routed through IPC as HTTP method + path + body + headers.
+//! Initializes the embedded api-ts runtime with SQLite storage.
+//! Commands are in commands.rs; this module only handles initialization.
 
-use tauri::{App, Manager};
-use std::sync::Mutex;
+use crate::commands::{ApiTsContainer, ApiTsState, InitErrorState};
+use api_ts_embedded::ApiTsEmbedded;
+use std::sync::Arc;
 
-use crate::engine::{EngineResponse, JsEngine};
-
-/// Managed state for the JS engine
-pub struct EngineState {
-    pub engine: Box<dyn JsEngine>,
-}
-
-/// Store initialization error for diagnostics
-pub struct InitErrorState(pub std::sync::Arc<Mutex<Option<String>>>);
-
-/// Handle API requests from the frontend via Tauri IPC
+/// Set up the embedded api-ts runtime and return the Tauri state.
 ///
-/// This replaces the old HTTP-based API with an IPC interface.
-/// The frontend sends method/path/body/headers and gets back a full HTTP response.
-#[tauri::command]
-pub fn api_request(
-    method: String,
-    path: String,
-    body: Option<String>,
-    headers: Option<std::collections::HashMap<String, String>>,
-    state: tauri::State<'_, Mutex<EngineState>>,
-) -> Result<EngineResponse, String> {
-    let url = format!("http://localhost{}", path);
-    let header_pairs: Vec<(String, String)> = headers
-        .unwrap_or_default()
-        .into_iter()
-        .collect();
-    let header_refs: Vec<(&str, &str)> = header_pairs
-        .iter()
-        .map(|(k, v)| (k.as_str(), v.as_str()))
-        .collect();
-    let state = state.lock().map_err(|e| e.to_string())?;
-    state.engine.handle_request(&method, &url, body.as_deref(), header_refs)
-}
+/// Designed to NEVER crash the app — all errors are logged and the app
+/// continues with degraded functionality (commands return an error and
+/// `get_backend_status` reports the init failure).
+pub fn setup_api_ts(_app: &tauri::App, db_path: &str) -> (ApiTsState, InitErrorState) {
+    log::info!("Initializing embedded api-ts (background thread)...");
 
-/// Get backend initialization status and any error
-#[tauri::command]
-pub fn get_backend_status(
-    error_state: tauri::State<'_, InitErrorState>,
-) -> Result<serde_json::Value, String> {
-    let error = {
-        let guard = error_state.0.lock().map_err(|e| format!("Lock error: {}", e))?;
-        guard.clone()
-    };
+    let error_state: InitErrorState = Arc::new(std::sync::Mutex::new(None));
 
-    Ok(serde_json::json!({
-        "initialized": error.is_none(),
-        "error": error
-    }))
-}
+    // QuickJS needs ~64 MB stack space; running on the main thread blocks the UI.
+    // We join() here but the thread has its own stack so the main thread's
+    // stack isn't consumed. Wall-clock time is ~2–5 s on device.
+    let db_path_owned = db_path.to_string();
+    let error_clone = error_state.clone();
 
-/// Set up the mobile application with embedded Hono backend
-///
-/// On iOS, we run an embedded Boa JS engine with a Hono HTTP server
-/// and plain SQLite storage. The frontend communicates via IPC using
-/// HTTP-style requests (method + path + body + headers).
-///
-/// This function is designed to NEVER crash the app - all errors are logged
-/// and the app continues with degraded functionality.
-pub fn setup_mobile(app: &App) -> Result<(), Box<dyn std::error::Error>> {
-    log::info!("Monobase Account initializing in local mode...");
-
-    // Initialize error state
-    let error_state = InitErrorState(std::sync::Arc::new(Mutex::new(None)));
-
-    // Get the app data directory for the database
-    let app_data_dir = match app.path().app_data_dir() {
-        Ok(dir) => {
-            log::info!("App data dir: {:?}", dir);
-            dir
-        }
-        Err(e) => {
-            let err_msg = format!("Failed to get app data dir: {}", e);
-            log::error!("{}", err_msg);
-            if let Ok(mut guard) = error_state.0.lock() {
-                *guard = Some(err_msg);
+    let handle = std::thread::Builder::new()
+        .name("api-ts-init".into())
+        .stack_size(64 * 1024 * 1024)
+        .spawn(move || -> Option<ApiTsEmbedded> {
+            match ApiTsEmbedded::new(&db_path_owned) {
+                Ok(api) => {
+                    log::info!("Embedded api-ts initialized successfully");
+                    Some(api)
+                }
+                Err(e) => {
+                    let err_msg = format!("api-ts initialization failed: {}", e);
+                    log::error!("{}", err_msg);
+                    if let Ok(mut guard) = error_clone.lock() {
+                        *guard = Some(err_msg);
+                    }
+                    log::warn!("Monobase Account starting with degraded functionality");
+                    None
+                }
             }
-            std::path::PathBuf::from("./data")
-        }
-    };
+        })
+        .expect("Failed to spawn api-ts-init thread");
 
-    // Create the directory if it doesn't exist
-    if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
-        let err_msg = format!("Failed to create app data dir: {}", e);
-        log::error!("{}", err_msg);
-        if let Ok(mut guard) = error_state.0.lock() {
-            *guard = Some(err_msg);
-        }
-    }
+    let api = handle.join().unwrap_or(None);
 
-    let db_path = app_data_dir.join("account.db");
-    let db_path_str = db_path.to_string_lossy().to_string();
+    let api_state = std::sync::Mutex::new(ApiTsContainer {
+        api,
+        db_path: db_path.to_string(),
+    });
 
-    log::info!("Database path: {}", db_path_str);
-
-    // Initialize the Boa engine with Hono backend
-    use crate::engine::boa::BoaEngine;
-    match BoaEngine::new(&db_path_str) {
-        Ok(engine) => {
-            log::info!("Boa engine initialized successfully");
-
-            let state = Mutex::new(EngineState {
-                engine: Box::new(engine),
-            });
-            app.manage(state);
-            app.manage(error_state);
-
-            log::info!("Monobase Account ready in local mode");
-        }
-        Err(e) => {
-            let err_msg = format!("Boa engine initialization failed: {}", e);
-            log::error!("{}", err_msg);
-
-            // Store the error
-            if let Ok(mut guard) = error_state.0.lock() {
-                *guard = Some(err_msg);
-            }
-
-            // Store a dummy engine state so the app can still launch
-            // The error will be shown in the UI via get_backend_status
-            app.manage(error_state);
-
-            log::warn!("Monobase Account starting with degraded functionality");
-        }
-    }
-
-    Ok(())
+    (api_state, error_state)
 }

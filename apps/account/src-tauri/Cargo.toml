@@ -34,15 +34,9 @@ tauri-plugin-fs = "2.0"
 tauri-plugin-http = "2.0"
 tauri-plugin-clipboard-manager = "2.0"
 
-# Embedded backend (Boa-based — Phase E swaps to api-ts-embedded)
-boa_engine = "0.21"
+# Embedded backend (api-ts wrapped in QuickJS via the api-ts-embedded crate)
+api-ts-embedded = { path = "../../../services/api-ts-embedded" }
 rusqlite = { version = "0.32", features = ["bundled"] }
-flate2 = "1.0"
-bcrypt = "0.16"
-hmac = "0.12"
-sha2 = "0.10"
-sha1 = "0.10"
-getrandom = "0.2"
 
 # P2P sync engine (embedded, uses same SQLite via WAL mode)
 cadence = { path = "../../../services/cadence" }

@@ -19,8 +19,6 @@ mod cadence_embed;
 mod commands;
 mod config;
 pub mod mobile;
-pub mod engine;
-pub mod db;
 
 use commands::CadenceState;
 
@@ -241,16 +239,23 @@ pub fn run() {
         let data_dir_override = app.path().app_data_dir().ok();
         let app_config = Arc::new(config::AppConfig::resolve(data_dir_override));
 
-        // Start embedded backend on ALL platforms (Boa-based, until Phase E swaps to api-ts-embedded)
-        if let Err(e) = mobile::setup_mobile(app) {
-            eprintln!("Failed to setup embedded backend: {} - continuing with degraded functionality", e);
-        }
+        // Extract database path from config (strip sqlite:// prefix)
+        let db_path = app_config
+            .embedded_database_url
+            .strip_prefix("sqlite://")
+            .unwrap_or(&app_config.embedded_database_url)
+            .to_string();
+
+        // Initialize embedded api-ts (QuickJS bundle + native SQLite bridge)
+        let (api_state, init_error_state) = mobile::setup_api_ts(app, &db_path);
 
         // Cadence state (started async after a short delay)
         let cadence: CadenceState = Arc::new(Mutex::new(None));
 
         // Manage state
         app.manage(app_config.clone() as commands::AppConfigState);
+        app.manage(api_state);
+        app.manage(init_error_state);
         app.manage(cadence.clone());
 
         // Start cadence in background (200 ms delay so the UI isn't blocked on first paint)
@@ -301,6 +306,7 @@ pub fn run() {
     builder = builder.invoke_handler(tauri::generate_handler![
         commands::get_runtime_config,
         commands::get_app_config,
+        // Cadence
         commands::get_cadence_health,
         commands::get_cadence_status,
         commands::set_peer_token,
@@ -309,9 +315,11 @@ pub fn run() {
         commands::set_peers,
         commands::get_peers,
         commands::clear_peers,
-        // Embedded backend commands (Boa-era; replaced in Phase E)
-        mobile::api_request,
-        mobile::get_backend_status,
+        // Embedded api-ts backend
+        commands::api_request,
+        commands::get_backend_status,
+        commands::restart_engine,
+        commands::reset_databases,
     ]);
 
     builder
