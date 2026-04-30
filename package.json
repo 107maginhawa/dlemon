@@ -24,6 +24,8 @@
     "@esbuild/linux-x64": "^0.25.0",
     "@rollup/rollup-darwin-arm64": "^4.52.3",
     "@rollup/rollup-linux-x64-gnu": "^4.52.3",
+    "@tauri-apps/cli-darwin-arm64": "^2.10.1",
+    "@tauri-apps/cli-linux-x64-gnu": "^2.10.1",
     "pg-cloudflare": "^1.2.7"
   }
 }

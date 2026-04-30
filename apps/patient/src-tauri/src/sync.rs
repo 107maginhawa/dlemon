@@ -4,8 +4,9 @@
 //! database (WAL mode) as the Boa/Hono backend. Exposes Tauri commands for
 //! the React frontend to control sync and monitor status.
 //!
-//! NOTE: Cadence integration is currently stubbed. Once Cadence is added to
-//! the Monobase monorepo, uncomment the imports and implementation.
+//! NOTE: Cadence integration is currently stubbed. Imports below are wired
+//! ahead of the in-progress implementation (see TODOs in `init`/`start`).
+#![allow(unused_imports)]
 
 use cadence::storage::{MetadataBackend, SqliteBackend};
 use cadence::sync::SyncEngine;
