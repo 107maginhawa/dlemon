@@ -302,7 +302,7 @@ All handlers that create notifications follow this pattern:
 import type { NotificationService } from '@/core/notifs';
 
 // Get service from context
-const notificationService = ctx.get('notificationService') as NotificationService;
+const notificationService = ctx.get('notifs') as NotificationService;
 ```
 
 ### 2. Notification Creation

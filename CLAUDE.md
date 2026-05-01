@@ -25,9 +25,10 @@ workspace.
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
   - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
-  - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds the Boa JS engine + cadence P2P sync for offline-first operation. Optional — only built when packaging desktop/mobile.
+  - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds api-ts (via the `api-ts-embedded` crate / QuickJS runtime) + the cadence P2P sync engine for offline-first operation. Optional — only built when packaging desktop/mobile.
 - `services/` - Backend services:
   - `api-ts/` - Reference TypeScript API impl (Hono + Drizzle). Sibling impls (`api-rs`, `api-go`, …) are documented in `specs/api/IMPLEMENTING.md` but not yet present.
+  - `api-ts-embedded/` - Rust crate that bundles `api-ts` into a QuickJS runtime (via `rquickjs` + esbuild) for offline-first Tauri embedding. Exposes `ApiTsEmbedded::new(db_path).request(method, path, body, headers) -> ApiTsResponse` to the host. JS bundle (`dist/bundle.js.gz`) is built by `cargo build` via `build.rs`.
   - `cadence/` - P2P sync engine (Rust + Iroh transport, SQLite/Valkey metadata backends, JWT scope auth). Embedded into `apps/account/src-tauri` for offline-first sync; can also run as a standalone hub. See `services/cadence/README.md`.
 - `specs/api/` - TypeSpec API definitions; compiled to OpenAPI + TypeScript types. Also home of the contract docs and Hurl contract tests under `tests/contract/`.
 - `packages/` - Shared packages:
@@ -249,8 +250,9 @@ cd apps/account && bun run test:e2e     # E2E tests
 ### What Exists
 - ✅ **apps/account** - Reference Vite + TanStack Router app
 - ✅ **apps/account/src/components/** - Inlined shadcn/ui primitives
-- ✅ **apps/account/src-tauri/** - Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
+- ✅ **apps/account/src-tauri/** - Tauri 2 desktop/mobile wrapper (Rust + QuickJS via api-ts-embedded + cadence)
 - ✅ **services/api-ts/** - Reference Hono + Drizzle API
+- ✅ **services/api-ts-embedded/** - Rust crate that bundles api-ts into QuickJS for offline Tauri (consumed by account/src-tauri)
 - ✅ **services/cadence/** - Rust P2P sync engine (compiles standalone; embedded by account Tauri)
 - ✅ **specs/api/** (`@monobase/api-spec`) - TypeSpec sources + generated OpenAPI + TS types
 - ✅ **packages/sdk-ts/** - Auto-generated TanStack Query hooks + hand-written client/flows/utils

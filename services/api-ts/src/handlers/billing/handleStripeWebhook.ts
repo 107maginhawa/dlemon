@@ -23,7 +23,7 @@ export async function handleStripeWebhook(
   const database = ctx.get('database');
   const logger = ctx.get('logger');
   const billing = ctx.get('billing');
-  const notificationService = (ctx.get as any)('notificationService') as NotificationService;
+  const notificationService = ctx.get('notifs') as NotificationService;
   
   // Get the raw body and signature for webhook verification
   const signature = ctx.req.header('stripe-signature');

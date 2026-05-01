@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for standalone usage
-# Build from services/api directory: docker build -t monobase-api .
-# Build from monorepo root: docker build -f services/api/Dockerfile -t monobase-api .
+# Build from services/api-ts directory: docker build -t monobase-api .
+# Build from monorepo root: docker build -f services/api-ts/Dockerfile -t monobase-api .
 # Note: Automatic Bun package caching is enabled via BuildKit cache mounts for faster builds
 
 ARG BUILD_CONTEXT=monorepo
@@ -32,7 +32,7 @@ COPY --from=spec-builder /specs/dist ./specs/api/dist
 COPY --from=spec-builder /specs/package.json ./specs/api/
 
 # Copy API service files (assumes build from monorepo root)
-COPY services/api/package.json ./
+COPY services/api-ts/package.json ./
 RUN cat package.json | \
     sed 's/"@monobase\/api-spec": "workspace:\*"/"@monobase\/api-spec": "file:specs\/api"/' > package.temp.json && \
     mv package.temp.json package.json
@@ -41,10 +41,10 @@ RUN cat package.json | \
 RUN --mount=type=cache,target=/home/bun/.bun/install/cache bun install --production
 
 # Copy source code
-COPY services/api/src ./src
-COPY services/api/scripts ./scripts
-COPY services/api/tsconfig.json ./
-COPY services/api/drizzle.config.ts ./
+COPY services/api-ts/src ./src
+COPY services/api-ts/scripts ./scripts
+COPY services/api-ts/tsconfig.json ./
+COPY services/api-ts/drizzle.config.ts ./
 
 # Expose port (default production port)
 EXPOSE 7213
