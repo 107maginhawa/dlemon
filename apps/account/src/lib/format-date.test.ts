@@ -71,6 +71,16 @@ describe('formatDate utility', () => {
     const result = formatDate(testDate, { format: 'invalid-format-xyz' as any })
     expect(result).toBe('October 5, 2023')
   })
+
+  test('returns empty string for null input', () => {
+    const result = formatDate(null)
+    expect(result).toBe('')
+  })
+
+  test('returns empty string for undefined input', () => {
+    const result = formatDate(undefined)
+    expect(result).toBe('')
+  })
 })
 
 describe('formatRelativeDate utility', () => {
@@ -139,5 +149,15 @@ describe('formatRelativeDate utility', () => {
     const isoString = new Date(Date.now() - 3600000).toISOString()
     const result = formatRelativeDate(isoString, { style: 'short' })
     expect(result).toMatch(/\d+h ago/)
+  })
+
+  test('returns empty string for null input', () => {
+    const result = formatRelativeDate(null)
+    expect(result).toBe('')
+  })
+
+  test('returns empty string for undefined input', () => {
+    const result = formatRelativeDate(undefined)
+    expect(result).toBe('')
   })
 })

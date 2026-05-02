@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — New Staff Member</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+      --system-blue: #007AFF;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* SIDEBAR (background, blurred) */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      filter: blur(1px);
+      opacity: 0.5;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .logo-icon { font-size: 20px; line-height: 1; }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--gold-text);
+    }
+
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 14px 16px 4px;
+    }
+
+    .nav-item {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      border-left: 3px solid transparent;
+      text-decoration: none;
+    }
+
+    .nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+    .nav-item.active .nav-label { color: var(--gold-text); font-weight: 600; }
+    .nav-item.active .nav-icon svg { stroke: var(--gold-text); }
+
+    .nav-icon {
+      width: 20px; height: 20px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-icon svg {
+      width: 18px; height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .sidebar-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .user-mini {
+      display: flex; align-items: center; gap: 8px;
+      min-height: 36px;
+    }
+
+    .user-mini-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .user-mini-name {
+      font-size: 12px; font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    /* MAIN (blurred background) */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+      filter: blur(2px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .top-bar {
+      height: 56px;
+      background: rgba(255,255,255,0.72);
+      border-bottom: 0.5px solid var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .top-bar-title { font-size: 17px; font-weight: 600; }
+    .license-indicator { font-size: 13px; color: var(--text-secondary); margin-left: 12px; }
+
+    /* MODAL OVERLAY */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Modal header */
+    .modal-header {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.022em;
+    }
+
+    .close-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--fill-tertiary);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .close-btn:hover { background: var(--separator-opaque); }
+
+    /* Modal body */
+    .modal-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Photo upload */
+    .photo-upload {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .photo-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 2px dashed var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      background: var(--bg);
+      font-size: 24px;
+      transition: border-color 0.15s ease;
+    }
+
+    .photo-circle:hover { border-color: var(--gold-text); }
+
+    .photo-caption {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Form rows */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+    }
+
+    .form-input {
+      height: 44px;
+      background: var(--bg);
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 10px;
+      padding: 0 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text-primary);
+      letter-spacing: -0.014em;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--system-blue);
+      background: var(--surface);
+    }
+
+    .form-select {
+      height: 44px;
+      background: var(--bg);
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 10px;
+      padding: 0 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text-primary);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238E8E93' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    /* Section header within modal */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    /* Role cards grid */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .role-card {
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.12s ease, background 0.12s ease;
+      position: relative;
+    }
+
+    .role-card:hover {
+      border-color: var(--system-blue);
+      background: rgba(0,122,255,0.04);
+    }
+
+    .role-card.selected {
+      border: 1.5px solid var(--system-blue);
+      background: rgba(0,122,255,0.06);
+    }
+
+    .role-card.gold {
+      border-color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .role-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .role-card-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .icon-gold { background: var(--gold); }
+    .icon-blue { background: rgba(0,122,255,0.12); }
+    .icon-teal { background: rgba(90,200,250,0.15); }
+    .icon-gray { background: var(--fill-tertiary); }
+
+    .role-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.014em;
+      margin-bottom: 2px;
+    }
+
+    .role-card-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: -0.008em;
+    }
+
+    .role-card-badge {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--system-blue);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .role-card-badge svg {
+      width: 10px; height: 10px;
+      stroke: white;
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    /* PIN inputs */
+    .pin-row {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+    }
+
+    .pin-circle {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid var(--separator-opaque);
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      color: var(--text-tertiary);
+    }
+
+    .pin-circle.filled {
+      border-color: var(--system-blue);
+      background: var(--system-blue);
+    }
+
+    .pin-circle.filled::after {
+      content: '●';
+      color: white;
+      font-size: 10px;
+    }
+
+    /* Access preview table */
+    .access-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 0.5px solid var(--separator-opaque);
+    }
+
+    .access-table th {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      background: var(--bg);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 0.5px solid var(--separator-opaque);
+    }
+
+    .access-table td {
+      padding: 10px 12px;
+      font-size: 12px;
+      border-bottom: 0.5px solid var(--separator);
+    }
+
+    .access-table tr:last-child td { border-bottom: none; }
+
+    .access-check { color: var(--system-green); font-weight: 600; font-size: 14px; }
+    .access-deny { color: var(--system-red); font-weight: 600; font-size: 14px; }
+    .access-level { color: var(--text-secondary); font-size: 11px; margin-left: 4px; }
+
+    /* Modal footer */
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 0.5px solid var(--separator-opaque);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .btn-cancel {
+      background: var(--fill-tertiary);
+      color: var(--text-primary);
+      border: none;
+      border-radius: 10px;
+      padding: 0 18px;
+      min-height: 44px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-cancel:hover { background: var(--separator-opaque); }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--gold-text);
+      border: none;
+      border-radius: 10px;
+      padding: 0 20px;
+      min-height: 44px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: -0.016em;
+    }
+
+    .btn-primary:hover { background: var(--gold-hover); }
+  </style>
+</head>
+<body>
+
+<!-- BLURRED BACKGROUND: Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">🍋</span>
+    <span class="logo-text">Dentalemon</span>
+  </div>
+  <div class="nav-scroll">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nav-label">Dashboard</span></a>
+    <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span class="nav-label">Calendar</span></a>
+    <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span class="nav-label">Patients</span></a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="nav-label">Reports</span></a>
+    <div class="nav-section-label">Admin</div>
+    <a class="nav-item active" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg></span><span class="nav-label">Staff</span></a>
+    <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></span><span class="nav-label">Settings</span></a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-mini">
+      <div class="user-mini-avatar">RC</div>
+      <span class="user-mini-name">Dr. Ramon Cruz</span>
+    </div>
+  </div>
+</nav>
+
+<!-- BLURRED BACKGROUND: Main content -->
+<div class="main">
+  <div class="top-bar">
+    <div style="display:flex; align-items:center;">
+      <span class="top-bar-title">Staff</span>
+      <span class="license-indicator">3 of 5 licenses used</span>
+    </div>
+  </div>
+  <div style="padding: 24px; color: var(--text-tertiary); font-size: 13px;">Staff list content is behind the modal...</div>
+</div>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay">
+  <div class="modal">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <span class="modal-title">New Staff Member</span>
+      <button class="close-btn" onclick="window.history.back()">✕</button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- Photo -->
+      <div class="photo-upload">
+        <div class="photo-circle">+</div>
+        <span class="photo-caption">Add photo</span>
+      </div>
+
+      <!-- Name -->
+      <div>
+        <div class="section-label" style="margin-bottom: 8px;">Name</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">First Name</label>
+            <input class="form-input" type="text" placeholder="e.g. Maria">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" type="text" placeholder="e.g. Santos">
+          </div>
+        </div>
+      </div>
+
+      <!-- Role selector -->
+      <div>
+        <div class="section-label" style="margin-bottom: 8px;">Role</div>
+        <div class="role-grid">
+
+          <div class="role-card gold disabled">
+            <div class="role-card-icon icon-gold">👑</div>
+            <div class="role-card-name">Dentist-Owner</div>
+            <div class="role-card-desc">Full access · Already assigned</div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-card-icon icon-blue">🦷</div>
+            <div class="role-card-name">Associate Dentist</div>
+            <div class="role-card-desc">Clinical + own patients' billing</div>
+          </div>
+
+          <div class="role-card selected">
+            <div class="role-card-badge">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="role-card-icon icon-teal">🗂</div>
+            <div class="role-card-name">Staff · Full Operations</div>
+            <div class="role-card-desc">Scheduling, patients, record payments</div>
+          </div>
+
+          <div class="role-card">
+            <div class="role-card-icon icon-gray">📅</div>
+            <div class="role-card-name">Staff · Scheduling Only</div>
+            <div class="role-card-desc">Calendar access only</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PIN Setup -->
+      <div>
+        <div class="section-label" style="margin-bottom: 8px;">PIN Setup</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">Create 6-digit PIN</div>
+        <div class="pin-row">
+          <div class="pin-circle filled"></div>
+          <div class="pin-circle filled"></div>
+          <div class="pin-circle filled"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-tertiary); margin: 10px 0 8px;">Repeat PIN</div>
+        <div class="pin-row">
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+          <div class="pin-circle"></div>
+        </div>
+      </div>
+
+      <!-- Security question -->
+      <div>
+        <div class="section-label" style="margin-bottom: 8px;">Security Question</div>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Used if PIN is forgotten</div>
+        <div class="form-field" style="margin-bottom: 10px;">
+          <label class="form-label">Question</label>
+          <select class="form-select">
+            <option>What was the name of your first pet?</option>
+            <option>What city were you born in?</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the make of your first car?</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Answer</label>
+          <input class="form-input" type="text" placeholder="Your answer">
+        </div>
+      </div>
+
+      <!-- Role access preview -->
+      <div>
+        <div class="section-label" style="margin-bottom: 8px;">Access Preview — Staff · Full Operations</div>
+        <table class="access-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>Access Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Dashboard</td>
+              <td><span class="access-check">✓</span><span class="access-level">Summary View</span></td>
+            </tr>
+            <tr>
+              <td>Workspace</td>
+              <td><span class="access-check">✓</span><span class="access-level">View Only</span></td>
+            </tr>
+            <tr>
+              <td>Patients</td>
+              <td><span class="access-check">✓</span><span class="access-level">Read + Register</span></td>
+            </tr>
+            <tr>
+              <td>Calendar</td>
+              <td><span class="access-check">✓</span><span class="access-level">Full Access</span></td>
+            </tr>
+            <tr>
+              <td>Billing</td>
+              <td><span class="access-check">✓</span><span class="access-level">Record Payments</span></td>
+            </tr>
+            <tr>
+              <td>Reports</td>
+              <td><span class="access-deny">✗</span><span class="access-level">No Access</span></td>
+            </tr>
+            <tr>
+              <td>Staff</td>
+              <td><span class="access-deny">✗</span><span class="access-level">No Access</span></td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td><span class="access-deny">✗</span><span class="access-level">No Access</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="window.location='staff-list.html'">Cancel</button>
+      <button class="btn-primary">Create Staff Member</button>
+    </div>
+
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+
+</body>
+</html>

@@ -39,7 +39,7 @@ workspace.
   Note: `@monobase/api-spec` (consumed by SDK + apps for generated OpenAPI types) lives at `specs/api/`, not under `packages/`.
 - `scripts/run-contract-tests.ts` - Runs the Hurl contract suite against `$API_URL`
 - `.github/workflows/contract.yml` - CI: boots the impl, runs Hurl + Schemathesis
-- `.claude/skills/` - 16 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
+- `.claude/skills/` - 17 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, module-review, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
 
 ## Business Domain Modules
 
@@ -147,7 +147,7 @@ notificationRepo.createNotificationForModule({
 ```
 
 ### Module Structure Pattern
-Backend handlers follow: **Router → Validators → Service → Handlers**
+Backend handlers follow: **Router → Validators → Handlers → Repositories**
 
 Each handler directory contains:
 - Handler files (CRUD operations)
@@ -218,6 +218,27 @@ To scaffold a new app, copy `apps/account/` and update `package.json` name + `vi
 - **Type Safety**: TypeScript checking across all workspaces
 
 **Details**: See [CONTRIBUTING.md#testing-requirements](./CONTRIBUTING.md#testing-requirements)
+
+## Development Protocol: Vertical TDD (MANDATORY)
+
+> **Read [docs/development/VERTICAL_TDD.md](./docs/development/VERTICAL_TDD.md) before writing any code. This overrides default agent behavior.**
+
+**Two non-negotiable rules:**
+
+1. **Tests before code, always.** Write failing tests first (RED), then implement (GREEN), then refactor. No exceptions — not for "simple" changes, not for "I'll add them later."
+
+2. **Vertical slices, never horizontal layers.** Each module goes fully end-to-end (TypeSpec → backend tests → backend → contract tests → frontend tests → frontend → E2E → verify) before starting the next module. Never batch "all backends first."
+
+**Per-module 10-step sequence:**
+```
+1. TypeSpec → 2. Codegen → 3. Backend Tests (RED) → 4. Backend Impl (GREEN)
+→ 5. Contract Tests (RED) → 6. Contract Impl (GREEN) → 7. Frontend Tests (RED)
+→ 8. Frontend Impl (GREEN) → 9. E2E Test → 10. Verify Gate
+```
+
+**Gate:** A module is not complete until all test layers pass (backend unit + contract + frontend unit + E2E) and `bun test` + `bun run typecheck` are green with no regressions.
+
+**Full protocol with examples, test locations, and rationalization rejection table:** [docs/development/VERTICAL_TDD.md](./docs/development/VERTICAL_TDD.md)
 
 ## Common Commands Quick Reference
 

@@ -25,9 +25,9 @@ export interface UseFormatDateOptions extends FormatDateOptions {
  */
 export interface UseFormatDateReturn {
   /** Format a date for display */
-  formatDate: (date: Date | number | string) => string
+  formatDate: (date: Date | number | string | null | undefined) => string
   /** Format a date as relative time */
-  formatRelativeDate: (date: Date | number | string, options?: FormatRelativeDateOptions) => string
+  formatRelativeDate: (date: Date | number | string | null | undefined, options?: FormatRelativeDateOptions) => string
   /** Current format type */
   format: DateFormat
 }
@@ -69,7 +69,7 @@ export function useFormatDate(
   const format = formatOptions.format || 'long'
 
   const formatDate = useCallback(
-    (date: Date | number | string) => {
+    (date: Date | number | string | null | undefined) => {
       return formatDateUtil(date, formatOptions)
     },
     memoize
@@ -81,7 +81,7 @@ export function useFormatDate(
   )
 
   const formatRelativeDate = useCallback(
-    (date: Date | number | string, relativeOptions?: FormatRelativeDateOptions) => {
+    (date: Date | number | string | null | undefined, relativeOptions?: FormatRelativeDateOptions) => {
       return formatRelativeDateUtil(date, {
         locale: formatOptions.locale,
         ...relativeOptions

@@ -164,6 +164,7 @@ export function authMiddleware(options?: AuthMiddlewareOptions) {
       const standardRoles = opts.roles.filter(r => !r.includes(':owner'));
 
       // Extract role names from standard roles only
+      // Roles must not contain ':' unless using the :owner pattern
       const standardRoleNames = standardRoles
         .map(r => r.split(':')[0])
         .filter((role): role is string => Boolean(role));

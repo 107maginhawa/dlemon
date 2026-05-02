@@ -11,3 +11,9 @@ optional = false
 
 # Logging configuration
 logLevel = "info"
+
+[test]
+# Preload happy-dom so React Testing Library component tests have window/document
+# when run via `bun test` from the monorepo root. Wrapped in try/catch so
+# backend tests (services/api-ts) that don't need a DOM are unaffected.
+preload = ["./test-setup.ts"]

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dentalemon · Tooth #14 Slideout — Conditions</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────────────── */
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* ── Top bar ─────────────────────────────────── */
+  .top-bar {
+    height: 52px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator-opaque);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--gold);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--gold-text);
+    flex-shrink: 0;
+  }
+  .patient-selector {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    padding: 6px 12px;
+    cursor: pointer;
+    min-height: 32px;
+  }
+  .patient-avatar {
+    width: 22px; height: 22px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--gold-text);
+  }
+  .patient-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .patient-chevron { font-size: 10px; color: var(--text-secondary); margin-left: 2px; }
+
+  .safety-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,59,48,0.1);
+    border-radius: 20px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; color: var(--system-red);
+    cursor: pointer; min-height: 26px;
+  }
+  .safety-dot { width: 6px; height: 6px; background: var(--system-red); border-radius: 50%; }
+
+  .bar-spacer { flex: 1; }
+
+  .visit-date {
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--fill-tertiary);
+    padding: 5px 10px; border-radius: 8px;
+  }
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-secondary); font-size: 16px;
+    background: transparent;
+  }
+  .icon-btn:hover { background: var(--fill-tertiary); }
+
+  /* ── Main area ───────────────────────────────── */
+  .main-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Background workspace (dimmed) ──────────── */
+  .workspace-bg {
+    flex: 1;
+    background: var(--bg);
+    opacity: 0.55;
+    overflow: hidden;
+    position: relative;
+  }
+  .ws-toolbar {
+    height: 40px;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--separator);
+    display: flex; align-items: center; padding: 0 16px; gap: 8px;
+  }
+  .ws-tool-btn {
+    height: 28px; padding: 0 12px;
+    border-radius: 6px;
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    background: var(--fill-tertiary);
+    display: flex; align-items: center;
+  }
+  .ws-tool-btn.active { background: var(--gold); color: var(--gold-text); }
+
+  .chart-area {
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .chart-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; }
+  .tooth-row {
+    display: flex; gap: 4px; align-items: flex-end;
+  }
+  .tooth-cell {
+    width: 36px; height: 40px;
+    background: var(--surface);
+    border-radius: 6px;
+    border: 0.5px solid var(--separator-opaque);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--text-tertiary); gap: 2px;
+  }
+  .tooth-cell.selected {
+    background: var(--gold);
+    border-color: #D4B840;
+  }
+  .tooth-cell.selected .t-num { color: var(--gold-text); font-weight: 700; }
+  .tooth-cell.caries { background: rgba(255,59,48,0.12); border-color: rgba(255,59,48,0.3); }
+  .tooth-cell.filled { background: rgba(52,199,89,0.12); border-color: rgba(52,199,89,0.3); }
+  .t-num { font-size: 9px; font-weight: 500; color: var(--text-secondary); }
+  .t-icon { font-size: 14px; }
+
+  /* ── Dim overlay ─────────────────────────────── */
+  .dim-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.18);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* ── Slideout panel ──────────────────────────── */
+  .slideout {
+    width: 320px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 3px solid var(--gold);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    z-index: 20;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.10);
+  }
+
+  /* Panel header */
+  .panel-header {
+    padding: 14px 16px 0;
+    flex-shrink: 0;
+  }
+  .panel-title-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .panel-title {
+    font-size: 16px; font-weight: 600; color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .panel-subtitle {
+    font-size: 12px; color: var(--text-secondary); margin-top: 2px;
+  }
+  .close-btn {
+    width: 28px; height: 28px;
+    border-radius: 14px;
+    background: var(--fill-tertiary);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-secondary);
+    flex-shrink: 0; margin-left: 8px; margin-top: -2px;
+  }
+  .close-btn:hover { background: rgba(118,118,128,0.2); }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    border-bottom: 0.5px solid var(--separator-opaque);
+  }
+  .tab {
+    flex: 1;
+    height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; position: relative;
+    background: none; border: none;
+  }
+  .tab.active { color: var(--gold-text); font-weight: 600; }
+  .tab.active::after {
+    content: '';
+    position: absolute; bottom: 0; left: 16px; right: 16px;
+    height: 2px; background: var(--gold); border-radius: 1px;
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    display: flex; align-items: center; gap: 0;
+    padding: 12px 16px 8px;
+    flex-shrink: 0;
+  }
+  .step-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .step-pill.active {
+    background: var(--gold);
+    color: var(--gold-text);
+  }
+  .step-pill.inactive {
+    background: var(--fill-tertiary);
+    color: var(--text-secondary);
+  }
+  .step-num {
+    width: 16px; height: 16px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    background: rgba(0,0,0,0.12);
+  }
+  .step-pill.active .step-num { background: rgba(74,64,24,0.2); }
+  .step-connector {
+    width: 20px; height: 1px;
+    background: var(--separator-opaque);
+    flex-shrink: 0;
+  }
+
+  /* Scrollable body */
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .panel-body::-webkit-scrollbar { width: 3px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 2px; }
+
+  /* Condition sections */
+  .section-header {
+    padding: 10px 16px 4px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .condition-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px;
+    min-height: 44px;
+    cursor: pointer;
+    border-bottom: 0.5px solid var(--separator);
+    position: relative;
+  }
+  .condition-item:last-child { border-bottom: none; }
+  .condition-item:hover { background: var(--gold-soft); }
+  .condition-item.checked { background: var(--gold-soft); }
+
+  .checkbox {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--text-tertiary);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .checkbox.checked-box {
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .checkmark { font-size: 12px; color: var(--gold-text); line-height: 1; }
+
+  .condition-label {
+    flex: 1;
+    font-size: 13px; font-weight: 500; color: var(--text-primary);
+  }
+  .condition-code {
+    font-size: 11px; color: var(--text-secondary);
+    background: var(--fill-tertiary);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .condition-item.checked .condition-code {
+    background: rgba(74,64,24,0.12);
+    color: var(--gold-text);
+  }
+
+  /* Section divider */
+  .section-divider {
+    height: 0.5px;
+    background: var(--separator-opaque);
+    margin: 6px 0;
+  }
+
+  /* Notes field */
+  .notes-section {
+    padding: 12px 16px;
+  }
+  .notes-label {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    letter-spacing: 0.4px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .notes-field {
+    width: 100%;
+    background: var(--bg);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px; color: var(--text-primary);
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+  }
+  .notes-field::placeholder { color: var(--text-tertiary); }
+  .notes-field:focus { border-color: var(--gold); }
+
+  /* Panel sticky footer */
+  .panel-footer {
+    padding: 12px 16px;
+    border-top: 0.5px solid var(--separator-opaque);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    flex-shrink: 0;
+  }
+  .next-btn {
+    width: 100%;
+    height: 44px;
+    background: var(--gold);
+    color: var(--gold-text);
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: inherit;
+  }
+  .next-btn:hover { background: var(--gold-hover); }
+
+  /* ── Bottom footer ───────────────────────────── */
+  .bottom-bar {
+    height: 44px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .footer-status { font-size: 12px; color: var(--text-secondary); }
+  .footer-actions { display: flex; gap: 8px; }
+  .footer-btn {
+    height: 30px; padding: 0 14px;
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; font-family: inherit;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .footer-btn.secondary { background: var(--fill-tertiary); color: var(--text-secondary); }
+  .footer-btn.gold { background: var(--gold); color: var(--gold-text); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo-mark">D</div>
+
+    <div class="patient-selector">
+      <div class="patient-avatar">RH</div>
+      <span class="patient-name">Russel Herrera</span>
+      <span class="patient-chevron">▾</span>
+    </div>
+
+    <div class="safety-pill">
+      <span class="safety-dot"></span>
+      Penicillin · Latex · Warfarin
+    </div>
+
+    <div class="bar-spacer"></div>
+
+    <div class="visit-date">Mar 5, 2026</div>
+
+    <div class="icon-btn" title="Notifications">🔔</div>
+    <div class="icon-btn" title="Search">🔍</div>
+    <div class="icon-btn" title="Settings">⚙️</div>
+  </div>
+
+  <!-- Main area -->
+  <div class="main-area">
+
+    <!-- Background workspace (dimmed) -->
+    <div class="workspace-bg">
+      <div class="ws-toolbar">
+        <div class="ws-tool-btn active">Odontogram</div>
+        <div class="ws-tool-btn">Periodontal</div>
+        <div class="ws-tool-btn">Treatment Plan</div>
+        <div class="ws-tool-btn">Notes</div>
+      </div>
+
+      <div class="chart-area">
+        <div class="chart-label">Upper — Right to Left (1–16)</div>
+        <div class="tooth-row">
+          <div class="tooth-cell">
+            <span class="t-num">1</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell filled">
+            <span class="t-num">2</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">3</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">4</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">5</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell caries">
+            <span class="t-num">6</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">7</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">8</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">9</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">10</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell filled">
+            <span class="t-num">11</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">12</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">13</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell selected">
+            <span class="t-num">14</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">15</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">16</span>
+            <span class="t-icon">🦷</span>
+          </div>
+        </div>
+
+        <div class="chart-label" style="margin-top:8px;">Lower — Right to Left (17–32)</div>
+        <div class="tooth-row">
+          <div class="tooth-cell">
+            <span class="t-num">17</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">18</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell filled">
+            <span class="t-num">19</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">20</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell caries">
+            <span class="t-num">21</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">22</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">23</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">24</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">25</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">26</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">27</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell filled">
+            <span class="t-num">28</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">29</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">30</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">31</span>
+            <span class="t-icon">🦷</span>
+          </div>
+          <div class="tooth-cell">
+            <span class="t-num">32</span>
+            <span class="t-icon">🦷</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dim overlay over workspace -->
+    <div class="dim-overlay"></div>
+
+    <!-- Slideout panel -->
+    <div class="slideout">
+
+      <!-- Panel header -->
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <div>
+            <div class="panel-title">Tooth #14 · Upper Left</div>
+            <div class="panel-subtitle">First Molar</div>
+          </div>
+          <button class="close-btn" aria-label="Close panel">✕</button>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar">
+          <button class="tab active" aria-selected="true">Conditions</button>
+          <button class="tab" aria-selected="false">History</button>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-indicator">
+        <div class="step-pill active">
+          <span class="step-num">1</span>
+          Condition
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-pill inactive">
+          <span class="step-num">2</span>
+          Surface
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-pill inactive">
+          <span class="step-num">3</span>
+          Treatment
+        </div>
+      </div>
+
+      <!-- Scrollable body -->
+      <div class="panel-body" role="list">
+
+        <!-- Section: Caries / Decay -->
+        <div class="section-header">Caries / Decay</div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Occlusal Caries</span>
+          <span class="condition-code">K02.51</span>
+        </div>
+
+        <div class="condition-item checked" role="listitem" tabindex="0" aria-selected="true">
+          <div class="checkbox checked-box" aria-checked="true" role="checkbox">
+            <span class="checkmark">✓</span>
+          </div>
+          <span class="condition-label">Approximal Caries</span>
+          <span class="condition-code">K02.52</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Cervical Caries</span>
+          <span class="condition-code">K02.53</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Recurrent Caries</span>
+          <span class="condition-code">K02.54</span>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Section: Structural -->
+        <div class="section-header">Structural</div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Fracture — Crown</span>
+          <span class="condition-code">S02.50</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Fracture — Root</span>
+          <span class="condition-code">S02.51</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Abrasion</span>
+          <span class="condition-code">K03.10</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Attrition</span>
+          <span class="condition-code">K03.00</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Abfraction</span>
+          <span class="condition-code" style="opacity:0; pointer-events:none;">——</span>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Section: Periapical -->
+        <div class="section-header">Periapical</div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Pulpitis</span>
+          <span class="condition-code">K04.00</span>
+        </div>
+
+        <div class="condition-item" role="listitem" tabindex="0">
+          <div class="checkbox" aria-checked="false" role="checkbox"></div>
+          <span class="condition-label">Periapical Abscess</span>
+          <span class="condition-code">K04.7</span>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Per-tooth notes -->
+        <div class="notes-section">
+          <div class="notes-label">Clinical Notes · Tooth #14</div>
+          <textarea
+            class="notes-field"
+            rows="3"
+            placeholder="Clinical observations for tooth #14…"
+            aria-label="Clinical observations for tooth 14"
+          ></textarea>
+        </div>
+
+      </div><!-- /panel-body -->
+
+      <!-- Sticky footer -->
+      <div class="panel-footer">
+        <button class="next-btn" aria-label="Next step: Surface">
+          Next: Surface
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+    </div><!-- /slideout -->
+  </div><!-- /main-area -->
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <span class="footer-status">Tooth #14 · 1 condition selected</span>
+    <div class="footer-actions">
+      <button class="footer-btn secondary">Discard</button>
+      <button class="footer-btn gold">Save Visit</button>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dentalemon · Consent Form Sheet</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────────────── */
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* ── Top bar ─────────────────────────────────── */
+  .top-bar {
+    height: 52px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 12px;
+    flex-shrink: 0; z-index: 10;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--gold); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--gold-text);
+  }
+  .patient-selector {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--fill-tertiary); border-radius: 10px;
+    padding: 6px 12px; cursor: pointer; min-height: 32px;
+  }
+  .patient-avatar {
+    width: 22px; height: 22px; background: var(--gold); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--gold-text);
+  }
+  .patient-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .safety-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,59,48,0.1); border-radius: 20px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; color: var(--system-red); min-height: 26px;
+  }
+  .safety-dot { width: 6px; height: 6px; background: var(--system-red); border-radius: 50%; }
+  .bar-spacer { flex: 1; }
+  .visit-date {
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--fill-tertiary); padding: 5px 10px; border-radius: 8px;
+  }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px;
+  }
+
+  /* ── Workspace background ────────────────────── */
+  .workspace-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0.5;
+    padding: 20px;
+    display: flex; gap: 16px;
+  }
+  .ws-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .ws-card-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .tooth-mini-row { display: flex; gap: 3px; flex-wrap: wrap; }
+  .tooth-mini {
+    width: 28px; height: 30px;
+    background: var(--fill-tertiary); border-radius: 4px;
+    border: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; color: var(--text-tertiary);
+  }
+  .tooth-mini.selected { background: var(--gold); }
+  .notes-stub {
+    width: 100%; height: 20px; background: var(--fill-tertiary); border-radius: 4px; margin-bottom: 6px;
+  }
+  .notes-stub:last-child { width: 60%; }
+
+  /* ── Overlay (dim) ───────────────────────────── */
+  .overlay-dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 20;
+  }
+
+  /* ── Sheet container ─────────────────────────── */
+  .workspace-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .sheet-container {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 70%;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Drag handle */
+  .drag-handle {
+    display: flex; justify-content: center;
+    padding: 10px 0 4px; flex-shrink: 0;
+  }
+  .drag-handle-bar {
+    width: 36px; height: 4px;
+    background: var(--text-tertiary); border-radius: 2px;
+  }
+
+  /* Sheet header */
+  .sheet-header {
+    padding: 0 20px 12px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sheet-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .close-btn {
+    width: 28px; height: 28px; border-radius: 14px;
+    background: var(--fill-tertiary); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-secondary);
+  }
+
+  /* Template selector */
+  .template-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .template-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; flex-shrink: 0; }
+  .template-select-wrap { flex: 1; position: relative; }
+  .template-select {
+    width: 100%; height: 36px;
+    background: var(--surface);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 8px;
+    padding: 0 32px 0 12px;
+    font-size: 13px; font-weight: 500; color: var(--text-primary);
+    font-family: inherit;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  .template-select:focus { border-color: var(--gold); }
+  .template-chevron {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; color: var(--text-secondary); pointer-events: none;
+  }
+  .change-btn {
+    height: 36px; padding: 0 14px;
+    background: var(--fill-tertiary);
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; font-family: inherit; flex-shrink: 0;
+  }
+  .change-btn:hover { background: rgba(118,118,128,0.2); }
+
+  /* Sheet body */
+  .sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .sheet-body::-webkit-scrollbar { width: 3px; }
+  .sheet-body::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 2px; }
+
+  /* Consent form paper */
+  .consent-paper {
+    background: var(--surface);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 20px;
+    line-height: 1.7;
+    font-size: 13px; color: var(--text-primary);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .consent-title {
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+    text-align: center; letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  .consent-field-row {
+    display: flex; gap: 6px; margin-bottom: 6px;
+    align-items: baseline;
+  }
+  .consent-field-label {
+    font-weight: 600; color: var(--text-secondary);
+    font-size: 12px; flex-shrink: 0; width: 56px;
+  }
+  .consent-field-value { font-size: 13px; color: var(--text-primary); }
+  .consent-divider { height: 0.5px; background: var(--separator-opaque); margin: 14px 0; }
+  .consent-body-text {
+    font-size: 12px; color: var(--text-secondary); line-height: 1.8;
+  }
+  .consent-body-para { margin-bottom: 10px; }
+  .consent-body-para:last-child { margin-bottom: 0; }
+  .consent-dentist-row {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--separator-opaque);
+  }
+  .consent-dentist-label { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+  .consent-dentist-value { font-size: 13px; color: var(--text-primary); margin-top: 2px; font-weight: 500; }
+
+  /* Signature section */
+  .sig-section { display: flex; flex-direction: column; gap: 10px; }
+  .sig-label {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .sig-canvas-wrap {
+    width: 300px;
+    background: var(--surface);
+    border: 1.5px dashed var(--separator-opaque);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .sig-canvas {
+    width: 300px;
+    height: 120px;
+    display: block;
+    cursor: crosshair;
+  }
+  /* Drawn signature SVG */
+  .sig-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .sig-timestamp {
+    font-size: 11px; color: var(--text-tertiary);
+    margin-top: 6px;
+  }
+  .sig-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .sig-btn {
+    height: 36px; padding: 0 16px;
+    background: var(--fill-tertiary);
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sig-btn:hover { background: rgba(118,118,128,0.2); }
+
+  /* ── Sheet footer ────────────────────────────── */
+  .sheet-footer {
+    padding: 12px 20px;
+    border-top: 0.5px solid var(--separator-opaque);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    flex-shrink: 0;
+  }
+  .save-btn {
+    width: 100%; height: 50px;
+    background: var(--gold); color: var(--gold-text);
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit;
+  }
+  .save-btn:hover { background: var(--gold-hover); }
+
+  /* Saved state (shown as second variant below) */
+  .saved-state {
+    width: 100%; height: 50px;
+    background: rgba(52,199,89,0.12);
+    border: 1px solid rgba(52,199,89,0.3);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 15px; font-weight: 600; color: #1A7A38;
+  }
+  .saved-check {
+    width: 22px; height: 22px;
+    background: var(--system-green);
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white;
+  }
+
+  /* ── Bottom bar ───────────────────────────────── */
+  .bottom-bar {
+    height: 44px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; flex-shrink: 0; z-index: 10;
+  }
+  .footer-status { font-size: 12px; color: var(--text-secondary); }
+  .footer-actions { display: flex; gap: 8px; }
+  .footer-btn {
+    height: 30px; padding: 0 14px;
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; font-family: inherit;
+  }
+  .footer-btn.secondary { background: var(--fill-tertiary); color: var(--text-secondary); }
+  .footer-btn.gold { background: var(--gold); color: var(--gold-text); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo-mark">D</div>
+    <div class="patient-selector">
+      <div class="patient-avatar">RH</div>
+      <span class="patient-name">Russel Herrera</span>
+      <span style="font-size:10px; color:var(--text-secondary); margin-left:2px;">▾</span>
+    </div>
+    <div class="safety-pill">
+      <span class="safety-dot"></span>
+      Penicillin · Latex · Warfarin
+    </div>
+    <div class="bar-spacer"></div>
+    <div class="visit-date">Mar 5, 2026</div>
+    <div class="icon-btn">🔔</div>
+    <div class="icon-btn">🔍</div>
+    <div class="icon-btn">⚙️</div>
+  </div>
+
+  <!-- Workspace wrapper -->
+  <div class="workspace-wrapper">
+
+    <!-- Background workspace -->
+    <div class="workspace-bg">
+      <div class="ws-card" style="flex:1;">
+        <div class="ws-card-title">Odontogram</div>
+        <div class="tooth-mini-row">
+          <div class="tooth-mini">1</div><div class="tooth-mini">2</div>
+          <div class="tooth-mini">3</div><div class="tooth-mini">4</div>
+          <div class="tooth-mini">5</div><div class="tooth-mini">6</div>
+          <div class="tooth-mini">7</div><div class="tooth-mini">8</div>
+          <div class="tooth-mini">9</div><div class="tooth-mini">10</div>
+          <div class="tooth-mini">11</div><div class="tooth-mini">12</div>
+          <div class="tooth-mini">13</div>
+          <div class="tooth-mini selected">14</div>
+          <div class="tooth-mini">15</div><div class="tooth-mini">16</div>
+        </div>
+      </div>
+      <div class="ws-card" style="width:240px;">
+        <div class="ws-card-title">Visit Notes</div>
+        <div class="notes-stub"></div>
+        <div class="notes-stub"></div>
+        <div class="notes-stub"></div>
+      </div>
+    </div>
+
+    <!-- Dim overlay -->
+    <div class="overlay-dim"></div>
+
+    <!-- Sheet -->
+    <div class="sheet-container">
+      <div class="sheet">
+
+        <!-- Drag handle -->
+        <div class="drag-handle" aria-hidden="true">
+          <div class="drag-handle-bar"></div>
+        </div>
+
+        <!-- Sheet header -->
+        <div class="sheet-header">
+          <div class="sheet-title">Consent Form</div>
+          <button class="close-btn" aria-label="Close consent form">✕</button>
+        </div>
+
+        <!-- Template selector row -->
+        <div class="template-row">
+          <span class="template-label">Template</span>
+          <div class="template-select-wrap">
+            <select class="template-select" aria-label="Select consent form template">
+              <option selected>Root Canal Consent Form</option>
+              <option>Extraction Consent Form</option>
+              <option>Implant Consent Form</option>
+              <option>General Treatment Consent</option>
+            </select>
+            <span class="template-chevron" aria-hidden="true">▾</span>
+          </div>
+          <button class="change-btn" aria-label="Change consent form template">Change</button>
+        </div>
+
+        <!-- Sheet body -->
+        <div class="sheet-body">
+
+          <!-- Consent form paper -->
+          <div class="consent-paper" role="document" aria-label="Root canal consent form document">
+
+            <div class="consent-title">Root Canal Treatment Consent</div>
+
+            <div class="consent-field-row">
+              <span class="consent-field-label">Patient:</span>
+              <span class="consent-field-value">Russel Herrera</span>
+            </div>
+            <div class="consent-field-row">
+              <span class="consent-field-label">Date:</span>
+              <span class="consent-field-value">March 5, 2026</span>
+            </div>
+            <div class="consent-field-row">
+              <span class="consent-field-label">Tooth:</span>
+              <span class="consent-field-value">#14 (Upper Left First Molar)</span>
+            </div>
+
+            <div class="consent-divider"></div>
+
+            <div class="consent-body-text">
+              <div class="consent-body-para">
+                I, <strong>Russel Herrera</strong>, hereby consent to the performance of root canal therapy (endodontic treatment) on tooth #14 as recommended by my dentist.
+              </div>
+              <div class="consent-body-para">
+                <strong>Procedure Description:</strong> Root canal therapy involves the removal of infected or inflamed pulp tissue from inside the tooth, cleaning and shaping the root canals, and filling and sealing the space to prevent reinfection.
+              </div>
+              <div class="consent-body-para">
+                <strong>Risks and Complications:</strong> I understand that the following risks may occur: post-operative discomfort or pain, swelling, instrument separation, perforation, incomplete treatment requiring referral, and the rare possibility of the procedure being unsuccessful, potentially requiring extraction.
+              </div>
+              <div class="consent-body-para">
+                <strong>Alternatives:</strong> I have been informed that alternatives include tooth extraction, temporary medication management, or no treatment, each with their own risks and consequences.
+              </div>
+              <div class="consent-body-para">
+                <strong>No Guarantee:</strong> I understand that no guarantee has been made regarding the outcome of this treatment, and that additional procedures may be required.
+              </div>
+
+              <div class="consent-dentist-row">
+                <div class="consent-dentist-label">Dentist performing procedure</div>
+                <div class="consent-dentist-value">Dr. Ramon Cruz, DDS · PRC License: 12345-A</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signature section -->
+          <div class="sig-section">
+            <div class="sig-label">Patient Signature</div>
+
+            <div class="sig-canvas-wrap" role="img" aria-label="Signature canvas — signed by Russel Herrera">
+              <!-- Signature canvas placeholder -->
+              <canvas class="sig-canvas" width="300" height="120" aria-hidden="true"></canvas>
+
+              <!-- SVG drawn signature overlay -->
+              <svg class="sig-svg" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Stylised cursive "Russel Herrera" signature path -->
+                <path
+                  d="M 30 85
+                     C 35 75, 40 65, 48 70
+                     C 54 74, 52 82, 58 78
+                     C 64 74, 66 66, 72 70
+                     C 78 74, 76 82, 80 80
+                     L 90 72
+                     C 96 67, 100 72, 106 70
+                     L 116 62
+                     C 120 58, 126 64, 132 62
+                     C 138 60, 136 70, 142 68
+                     C 148 66, 150 58, 156 62
+                     L 168 55
+                     C 174 52, 178 58, 186 56
+                     C 192 54, 190 64, 198 62
+                     C 204 60, 202 70, 208 72
+                     L 220 66
+                     C 226 63, 230 70, 240 68
+                     C 246 66, 248 74, 256 76
+                     L 270 72"
+                  fill="none"
+                  stroke="#1A1A1A"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <!-- Underline flourish -->
+                <path
+                  d="M 28 92 C 80 98, 160 96, 270 90"
+                  fill="none"
+                  stroke="#1A1A1A"
+                  stroke-width="1.2"
+                  stroke-linecap="round"
+                  opacity="0.5"
+                />
+              </svg>
+            </div>
+
+            <div class="sig-timestamp" aria-label="Signature timestamp">
+              Signed by: Russel Herrera · Mar 5, 2026  2:34 PM
+            </div>
+
+            <div class="sig-actions">
+              <button class="sig-btn" aria-label="Clear signature">Clear</button>
+              <button class="sig-btn" aria-label="Undo last stroke">Undo</button>
+            </div>
+          </div>
+
+          <!-- Spacer so footer doesn't cover last content -->
+          <div style="height: 8px;"></div>
+
+        </div><!-- /sheet-body -->
+
+        <!-- Sheet footer — two states shown -->
+        <!-- Active state (default) -->
+        <div class="sheet-footer" id="footer-active">
+          <button class="save-btn" aria-label="Save consent form to visit record">
+            Save Consent
+          </button>
+        </div>
+
+        <!-- Saved state (shown after successful save — uncomment to preview) -->
+        <!--
+        <div class="sheet-footer" id="footer-saved">
+          <div class="saved-state" role="status" aria-live="polite">
+            <div class="saved-check" aria-hidden="true">✓</div>
+            Consent saved to visit record.
+          </div>
+        </div>
+        -->
+
+      </div><!-- /sheet -->
+    </div><!-- /sheet-container -->
+
+  </div><!-- /workspace-wrapper -->
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <span class="footer-status">Consent Form · Root Canal · Tooth #14</span>
+    <div class="footer-actions">
+      <button class="footer-btn secondary">Cancel</button>
+      <button class="footer-btn gold">Save Visit</button>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<script>
+  /* Draw-on-canvas affordance (optional, for interactive demo only) */
+  const canvas = document.querySelector('.sig-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return [(clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY];
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      [lastX, lastY] = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      const [x, y] = getPos(e);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = '#1A1A1A';
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      [lastX, lastY] = [x, y];
+    });
+    canvas.addEventListener('mouseup', () => { drawing = false; });
+    canvas.addEventListener('mouseleave', () => { drawing = false; });
+  }
+</script>
+
+</body>
+</html>

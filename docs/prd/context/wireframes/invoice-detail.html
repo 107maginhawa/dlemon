@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — Invoice INV-2026-0034</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* ════ SIDEBAR ════ */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .logo-icon { font-size: 20px; line-height: 1; }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--gold-text);
+    }
+
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 14px 16px 4px;
+    }
+
+    .nav-item {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.10s ease;
+      text-decoration: none;
+    }
+
+    .nav-item:hover { background: var(--fill-tertiary); }
+    .nav-item:hover .nav-label { color: var(--text-primary); }
+
+    .nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+    .nav-item.active .nav-label { color: var(--gold-text); font-weight: 600; }
+    .nav-item.active .nav-icon svg { stroke: var(--gold-text); }
+
+    .nav-icon {
+      width: 20px; height: 20px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-icon svg {
+      width: 18px; height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.014em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .sidebar-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .sync-row {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .sync-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--system-green);
+    }
+
+    .sync-text {
+      font-size: 11px; font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-secondary);
+    }
+
+    .user-mini {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; min-height: 36px;
+    }
+
+    .user-mini-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .user-mini-name {
+      font-size: 12px; font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    /* ════ MAIN ════ */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    .top-bar {
+      height: 56px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .top-bar-left {
+      display: flex; align-items: center; gap: 8px;
+      min-width: 160px;
+    }
+
+    .back-link {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gold-text);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 3px;
+      min-height: 44px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .back-link:hover { text-decoration: underline; }
+
+    .top-bar-center {
+      font-size: 17px; font-weight: 600;
+      letter-spacing: -0.022em;
+      color: var(--text-primary);
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .top-bar-right {
+      display: flex; align-items: center; gap: 4px;
+      min-width: 160px;
+      justify-content: flex-end;
+    }
+
+    .btn-text {
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--gold-text);
+      cursor: pointer;
+      min-height: 44px;
+      padding: 0 10px;
+      border-radius: 8px;
+      transition: background 0.10s;
+    }
+
+    .btn-text:hover { background: var(--gold-soft); }
+
+    .btn-text.danger {
+      color: var(--system-red);
+    }
+
+    .btn-text.danger:hover { background: rgba(255,59,48,0.08); }
+
+    /* ════ CONTENT ════ */
+    .content-zone {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 24px;
+    }
+
+    /* Invoice header card */
+    .invoice-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .invoice-label-big {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+    }
+
+    .invoice-num-big {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .badge-partial  { background: rgba(255,149,0,0.15); color: #CC7700; }
+    .badge-paid     { background: rgba(52,199,89,0.15); color: #248A3D; }
+    .badge-overdue  { background: rgba(255,59,48,0.15); color: #D70015; }
+    .badge-issued   { background: rgba(90,200,250,0.15); color: #0071A4; }
+
+    .clinic-info {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .clinic-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.014em;
+      color: var(--text-primary);
+    }
+
+    .clinic-sub {
+      font-size: 12px;
+      letter-spacing: -0.01em;
+      color: var(--text-secondary);
+    }
+
+    /* Right-side billing info */
+    .billing-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 4px;
+    }
+
+    .billing-row {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .billing-row-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    .billing-row-value {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+    }
+
+    .billing-row-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Section header */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    /* Line items table */
+    .line-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .line-table th {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+    }
+
+    .line-table th:first-child { padding-left: 0; }
+    .line-table th:last-child { text-align: right; padding-right: 0; }
+
+    .line-table td {
+      padding: 12px 12px;
+      vertical-align: middle;
+      font-size: 13px;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      border-bottom: 0.5px solid var(--separator);
+    }
+
+    .line-table td:first-child { padding-left: 0; }
+    .line-table td:last-child { text-align: right; padding-right: 0; font-weight: 600; }
+
+    .line-table tbody tr:last-child td { border-bottom: none; }
+
+    .cdt-code {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #0071A4;
+      background: rgba(90,200,250,0.10);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .status-done {
+      background: rgba(52,199,89,0.12);
+      color: #248A3D;
+    }
+
+    .status-pending {
+      background: rgba(255,149,0,0.10);
+      color: #CC7700;
+    }
+
+    /* Totals */
+    .totals-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 0.5px solid var(--separator-opaque);
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .totals-label {
+      font-size: 13px;
+      letter-spacing: -0.012em;
+      color: var(--text-secondary);
+    }
+
+    .totals-value {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .totals-value.discount { color: #248A3D; }
+
+    .totals-row.total-line {
+      padding-top: 10px;
+      border-top: 0.5px solid var(--separator-opaque);
+      margin-top: 4px;
+    }
+
+    .totals-row.total-line .totals-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .totals-row.total-line .totals-value {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    /* Payment history */
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .receipt-table th {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+    }
+
+    .receipt-table th:first-child { padding-left: 0; }
+    .receipt-table th:last-child { text-align: right; padding-right: 0; }
+
+    .receipt-table td {
+      padding: 12px 12px;
+      vertical-align: middle;
+      font-size: 13px;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .receipt-table td:first-child { padding-left: 0; }
+    .receipt-table td:last-child { text-align: right; padding-right: 0; }
+
+    .receipt-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold-text);
+    }
+
+    .balance-remaining {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 0.5px solid var(--separator-opaque);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .balance-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: -0.012em;
+    }
+
+    .balance-value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      color: var(--system-red);
+    }
+
+    /* Status timeline */
+    .timeline-wrap {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 0.5px solid var(--separator-opaque);
+    }
+
+    .timeline-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 14px;
+    }
+
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .timeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      flex: 1;
+    }
+
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 11px;
+      left: calc(50% + 12px);
+      right: calc(-50% + 12px);
+      height: 2px;
+      background: var(--separator-opaque);
+    }
+
+    .timeline-step.done:not(:last-child)::after {
+      background: var(--system-green);
+    }
+
+    .timeline-node {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--separator-opaque);
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-step.done .timeline-node {
+      background: var(--system-green);
+      border-color: var(--system-green);
+    }
+
+    .timeline-step.current .timeline-node {
+      background: var(--system-orange);
+      border-color: var(--system-orange);
+    }
+
+    .timeline-step.done .timeline-node::after {
+      content: '';
+      width: 6px; height: 6px;
+      border-right: 2px solid white;
+      border-bottom: 2px solid white;
+      transform: rotate(45deg) translate(-1px, -1px);
+      display: block;
+    }
+
+    .timeline-step-name {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .timeline-step.done .timeline-step-name { color: #248A3D; font-weight: 600; }
+    .timeline-step.current .timeline-step-name { color: #CC7700; font-weight: 600; }
+
+    .timeline-step-date {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Footer actions */
+    .detail-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 8px;
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--gold-text);
+      border: none;
+      border-radius: 10px;
+      padding: 0 20px;
+      min-height: 44px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.016em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.10s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover { background: var(--gold-hover); }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 10px;
+      padding: 0 20px;
+      min-height: 44px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.016em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.10s ease;
+      white-space: nowrap;
+    }
+
+    .btn-secondary:hover { background: var(--fill-tertiary); }
+
+    .action-link {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gold-text);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .action-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- ════ SIDEBAR ════ -->
+  <nav class="sidebar" aria-label="Main navigation">
+
+    <div class="sidebar-logo">
+      <span class="logo-icon">🍋</span>
+      <span class="logo-text">Dentalemon</span>
+    </div>
+
+    <div class="nav-scroll">
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+
+      <div class="nav-section-label">Clinical</div>
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <span class="nav-label">Patients</span>
+      </a>
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        </span>
+        <span class="nav-label">Calendar</span>
+      </a>
+
+      <div class="nav-section-label">Operations</div>
+
+      <a class="nav-item active" href="#" tabindex="0" aria-current="page">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </span>
+        <span class="nav-label">Billing</span>
+      </a>
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </span>
+        <span class="nav-label">Reports</span>
+      </a>
+
+      <div class="nav-section-label">Admin</div>
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        </span>
+        <span class="nav-label">Staff</span>
+      </a>
+
+      <a class="nav-item" href="#" tabindex="0">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        <span class="nav-label">Settings</span>
+      </a>
+
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sync-row">
+        <div class="sync-dot"></div>
+        <span class="sync-text">Synced</span>
+      </div>
+      <div class="user-mini">
+        <div class="user-mini-avatar">RC</div>
+        <span class="user-mini-name">Dr. Ramon Cruz</span>
+      </div>
+    </div>
+
+  </nav>
+
+  <!-- ════ MAIN ════ -->
+  <div class="main">
+
+    <!-- Glass top bar -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <a class="back-link" href="#" tabindex="0">
+          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 1 1 6.5 7 12"/>
+          </svg>
+          Billing
+        </a>
+      </div>
+      <span class="top-bar-center">Invoice INV-2026-0034</span>
+      <div class="top-bar-right">
+        <button class="btn-text" tabindex="0">Print</button>
+        <button class="btn-text" tabindex="0">Email</button>
+        <button class="btn-text danger" tabindex="0">Void</button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-zone">
+
+      <!-- Invoice Header Card -->
+      <div class="card">
+        <div class="invoice-header">
+
+          <!-- Left: Clinic + invoice id -->
+          <div>
+            <div class="invoice-label-big">Invoice</div>
+            <div class="invoice-num-big">INV-2026-0034</div>
+            <span class="badge badge-partial">Partial</span>
+
+            <div class="clinic-info">
+              <span class="clinic-name">Cruz Dental Clinic</span>
+              <span class="clinic-sub">Dr. Ramon Cruz, DDS</span>
+              <span class="clinic-sub">Cruz St., Manila</span>
+              <span class="clinic-sub">PRC 12345-A</span>
+            </div>
+          </div>
+
+          <!-- Right: Billing details -->
+          <div class="billing-info">
+            <div class="billing-row">
+              <span class="billing-row-label">Bill To</span>
+              <span class="billing-row-value">HERRERA, Russel M.</span>
+              <span class="billing-row-sub">+63 917 555 1234</span>
+            </div>
+            <div class="billing-row">
+              <span class="billing-row-label">Visit Date</span>
+              <span class="billing-row-value">March 5, 2026</span>
+            </div>
+            <div class="billing-row">
+              <span class="billing-row-label">Issue Date</span>
+              <span class="billing-row-value">March 5, 2026</span>
+            </div>
+            <div class="billing-row">
+              <span class="billing-row-label">Due Date</span>
+              <span class="billing-row-value">March 19, 2026</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Line Items Card -->
+      <div class="card">
+        <div class="section-title">Services &amp; Procedures</div>
+
+        <table class="line-table">
+          <thead>
+            <tr>
+              <th style="width:28px;">#</th>
+              <th>Description</th>
+              <th>Tooth</th>
+              <th>Surface</th>
+              <th>CDT Code</th>
+              <th>Status</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color: var(--text-tertiary); font-size: 12px;">1</td>
+              <td style="font-weight: 500;">Composite Filling</td>
+              <td style="color: var(--text-secondary);">#14</td>
+              <td style="color: var(--text-secondary);">MO</td>
+              <td><span class="cdt-code">D2391</span></td>
+              <td><span class="status-pill status-done">&#10003; Done</span></td>
+              <td>₱2,500</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-tertiary); font-size: 12px;">2</td>
+              <td style="font-weight: 500;">Amalgam Filling</td>
+              <td style="color: var(--text-secondary);">#46</td>
+              <td style="color: var(--text-secondary);">O</td>
+              <td><span class="cdt-code">D2393</span></td>
+              <td><span class="status-pill status-done">&#10003; Done</span></td>
+              <td>₱1,800</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-tertiary); font-size: 12px;">3</td>
+              <td style="font-weight: 500;">Crown (PFM)</td>
+              <td style="color: var(--text-secondary);">#36</td>
+              <td style="color: var(--text-secondary);">B</td>
+              <td><span class="cdt-code">D2710</span></td>
+              <td><span class="status-pill status-pending">&#9203; Pending</span></td>
+              <td>₱8,000</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-tertiary); font-size: 12px;">4</td>
+              <td style="font-weight: 500;">Composite Bonding</td>
+              <td style="color: var(--text-secondary);">#21</td>
+              <td style="color: var(--text-secondary);">I</td>
+              <td><span class="cdt-code">D2385</span></td>
+              <td><span class="status-pill status-pending">&#9203; Pending</span></td>
+              <td>₱3,500</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-block">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal</span>
+            <span class="totals-value">₱15,800</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">Tax (VAT 0%)</span>
+            <span class="totals-value">₱0</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">Senior Discount (20%) — Items 1–2</span>
+            <span class="totals-value discount">−₱860</span>
+          </div>
+          <div class="totals-row total-line">
+            <span class="totals-label">Total</span>
+            <span class="totals-value">₱14,940</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment History Card -->
+      <div class="card">
+        <div class="section-title">Payments Received</div>
+
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th>Receipt #</th>
+              <th>Date</th>
+              <th>Method</th>
+              <th>Amount</th>
+              <th>Recorded By</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="receipt-num">R-A-0034</span></td>
+              <td>Mar 5, 2026</td>
+              <td>Cash</td>
+              <td style="font-weight: 600;">₱4,300</td>
+              <td style="color: var(--text-secondary);">Dr. Ramon Cruz</td>
+              <td style="text-align: right;"><a class="action-link" href="#" tabindex="0">View Receipt</a></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="balance-remaining">
+          <span class="balance-label">Balance Remaining</span>
+          <span class="balance-value">₱10,640</span>
+        </div>
+
+        <!-- Status Timeline -->
+        <div class="timeline-wrap">
+          <div class="timeline-label">Invoice Status</div>
+          <div class="timeline" role="list">
+
+            <div class="timeline-step done" role="listitem">
+              <div class="timeline-node"></div>
+              <span class="timeline-step-name">Draft</span>
+              <span class="timeline-step-date"></span>
+            </div>
+
+            <div class="timeline-step done" role="listitem">
+              <div class="timeline-node"></div>
+              <span class="timeline-step-name">Issued ✓</span>
+              <span class="timeline-step-date">Mar 5</span>
+            </div>
+
+            <div class="timeline-step current" role="listitem">
+              <div class="timeline-node"></div>
+              <span class="timeline-step-name">Partial ✓</span>
+              <span class="timeline-step-date">Mar 5</span>
+            </div>
+
+            <div class="timeline-step" role="listitem">
+              <div class="timeline-node"></div>
+              <span class="timeline-step-name">Paid</span>
+              <span class="timeline-step-date">—</span>
+            </div>
+
+            <div class="timeline-step" role="listitem">
+              <div class="timeline-node"></div>
+              <span class="timeline-step-name">Overdue</span>
+              <span class="timeline-step-date">—</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="detail-footer">
+        <button class="btn-primary" tabindex="0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Record Payment
+        </button>
+        <button class="btn-secondary" tabindex="0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Generate Receipt
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

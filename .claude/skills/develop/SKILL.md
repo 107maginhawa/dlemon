@@ -29,51 +29,72 @@ For each new/modified module in the plan:
 2. **STOP** — show the user the TypeSpec design for review
 3. Verify generation succeeded (no errors)
 
-### Phase 3: Backend (per module)
+### Phase 3: Per-Module Implementation (vertical)
 
-For each module:
+> **WHY vertical**: Horizontal phases ("all backends, then all frontends") hide integration failures until the end. Frontend work often reveals API design gaps — discovering them after 6 backends are "done" means reworking all 6.
 
+For each module, in dependency order, complete ALL of the following before starting the next module:
+
+**Backend:**
 1. Run `/db-migrate` — create/update database schema and generate migration
-2. Run `/handler` — implement handler business logic + repository
+2. Run `/handler` — write tests FIRST (TDD), then implement handler + repository
 3. Run `/test-api` — verify backend tests pass
 4. Run `/typecheck` — verify types are clean
 
-### Phase 4: Frontend (per module, if applicable)
+**Frontend (if applicable):**
+5. Run `/shadcn` — install any needed UI components
+6. Run `/frontend-module` — build API client, hooks, components, routes
+7. Run `/typecheck` — verify frontend types are clean
 
-For each module that needs UI:
+**Validate:**
+8. Run `/module-review` — completeness check (MUST pass before next module)
 
-1. Run `/shadcn` — install any needed UI components
-2. Run `/frontend-module` — build API client, hooks, components, routes
-3. Run `/typecheck` — verify frontend types are clean
+Do NOT proceed to the next module until all steps above pass for the current one.
 
-### Phase 5: Integration
+### Phase 4: Integration
 
-1. Run `/test-e2e` — if E2E tests exist or were written
-2. Run `/pre-commit` — full verification checklist
+1. Run `/module-review` — final cross-module sweep
+2. Run `/test-e2e` — if E2E tests exist or were written
+3. Run `/pre-commit` — full verification checklist
 
-### Phase 6: Ship
+### Phase 5: Ship
 
-1. Run `/commit` — create conventional commit
-2. If requested: push and create PR
+1. **STOP** — show `git diff` for user review
+2. Run `/commit` — create conventional commit
+3. If requested: push and create PR
+
+## Dependency Ordering
+
+Process modules in dependency order. If Module B references Module A's types (e.g., booking references person), complete Module A's full vertical pass first.
+
+This is graph order, not batching — it's required when modules have real dependencies.
+
+```
+Example: person → booking → billing
+Complete person fully, then booking fully, then billing fully.
+```
+
+## Scope Discipline
+
+> **WHY**: Despite "per module" language, AI agents rationalize horizontal batching. These rationalizations sound efficient but hide integration failures.
+
+Don't defer validation by expanding scope. Each module gets validated before starting the next.
+
+Reject these rationalizations:
+- "I'll do all migrations first, then all handlers" — NO. Each migration is validated by its own handler tests.
+- "I'll batch similar handlers" — NO. Each handler has unique business rules that need their own test coverage.
+- "I'll write all tests at the end" — NO. Tests written after implementation confirm assumptions, not correctness.
+
+**Exception**: Idempotent setup operations (e.g., `bunx shadcn add card table dialog`) are fine to batch — they have no ordering dependencies.
 
 ## Decision Logic
 
 ### When to skip phases
 
-- **Backend-only task** (no UI): skip Phase 4
-- **Frontend-only task** (API exists): skip Phase 2 + 3
+- **Backend-only task** (no UI): skip frontend steps in Phase 3
+- **Frontend-only task** (API exists): skip Phase 2 + backend steps in Phase 3
 - **Existing module modification**: skip TypeSpec if contract unchanged
 - **Bug fix**: may only need `/handler` or `/frontend-module` + tests
-
-### Dependency order
-
-```
-TypeSpec → DB Schema → Handlers → Frontend → Tests → Ship
-```
-
-Never implement handlers before TypeSpec is generated.
-Never implement frontend before handlers exist.
-Always test before shipping.
 
 ### Human checkpoints
 
@@ -85,9 +106,10 @@ Always pause for user review at:
 ### Multi-module tasks
 
 When the plan involves multiple modules:
-1. Process modules in dependency order (e.g., person before booking)
-2. Complete each module's backend before starting its frontend
+1. Order modules by dependency (e.g., person before booking)
+2. Complete each module VERTICALLY: backend + frontend + module-review before starting the next
 3. Run tests after each module, not just at the end
+4. Never batch "all backends then all frontends" — this is the #1 cause of late-stage rework
 
 ## Example Flow
 
@@ -100,14 +122,18 @@ User provides a PRD for a "Reviews" feature:
 2. /typespec → create specs/api/src/modules/reviews.tsp, generate code
    [PAUSE for review]
 
-3. /db-migrate → add reviews table to database.schema.ts
-4. /handler → implement createReview, getReview, listReviews, deleteReview
-5. /test-api → verify tests pass
+3. Per-module vertical pass for "reviews":
+   a. /db-migrate → add reviews table
+   b. /handler → write tests FIRST, then implement createReview, getReview, listReviews, deleteReview
+   c. /test-api → verify backend tests pass
+   d. /typecheck → types clean
+   e. /shadcn → add star-rating if needed
+   f. /frontend-module → build reviews UI
+   g. /typecheck → frontend types clean
+   h. /module-review → PASS → module complete
 
-6. /shadcn → add card, star-rating if needed
-7. /frontend-module → build reviews UI module
-8. /typecheck → verify all types
+4. /pre-commit → full checks pass
+   [PAUSE for review]
 
-9. /pre-commit → full checks pass
-10. /commit → feat(reviews): add NPS review system
+5. /commit → feat(reviews): add NPS review system
 ```

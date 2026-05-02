@@ -22,8 +22,9 @@
     "bun": ">=1.2.21"
   },
   "devDependencies": {
-    "@esbuild/darwin-arm64": "^0.25.0",
+    "@esbuild/darwin-arm64": "0.27.7",
     "@esbuild/linux-x64": "^0.25.0",
+    "@happy-dom/global-registrator": "^20.9.0",
     "@rollup/rollup-darwin-arm64": "^4.52.3",
     "@rollup/rollup-linux-x64-gnu": "^4.52.3",
     "@tauri-apps/cli-darwin-arm64": "^2.10.1",

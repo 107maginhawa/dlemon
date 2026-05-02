@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dentalemon · Prescription Sheet</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────────────── */
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* ── Top bar ─────────────────────────────────── */
+  .top-bar {
+    height: 52px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 12px;
+    flex-shrink: 0; z-index: 10;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--gold); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--gold-text);
+  }
+  .patient-selector {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--fill-tertiary); border-radius: 10px;
+    padding: 6px 12px; cursor: pointer; min-height: 32px;
+  }
+  .patient-avatar {
+    width: 22px; height: 22px; background: var(--gold); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--gold-text);
+  }
+  .patient-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .safety-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,59,48,0.1); border-radius: 20px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; color: var(--system-red); min-height: 26px;
+  }
+  .safety-dot { width: 6px; height: 6px; background: var(--system-red); border-radius: 50%; }
+  .bar-spacer { flex: 1; }
+  .visit-date {
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--fill-tertiary); padding: 5px 10px; border-radius: 8px;
+  }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px;
+  }
+
+  /* ── Workspace background ────────────────────── */
+  .workspace-bg {
+    flex: 1;
+    background: var(--bg);
+    opacity: 0.5;
+    position: relative;
+    overflow: hidden;
+  }
+  .ws-content {
+    padding: 24px;
+    display: flex; gap: 16px;
+  }
+  .ws-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .ws-card-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .tooth-mini-row { display: flex; gap: 3px; flex-wrap: wrap; }
+  .tooth-mini {
+    width: 28px; height: 30px;
+    background: var(--fill-tertiary); border-radius: 4px;
+    border: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; color: var(--text-tertiary);
+  }
+  .tooth-mini.selected { background: var(--gold); }
+
+  /* ── Overlay (dim) ───────────────────────────── */
+  .overlay-dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 20;
+  }
+
+  /* ── Sheet ───────────────────────────────────── */
+  .sheet-container {
+    position: absolute;
+    bottom: 44px; /* above bottom bar */
+    left: 0; right: 0;
+    height: 60%;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.16);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Drag handle */
+  .drag-handle {
+    display: flex; justify-content: center; padding: 10px 0 4px;
+    flex-shrink: 0;
+  }
+  .drag-handle-bar {
+    width: 36px; height: 4px;
+    background: var(--text-tertiary); border-radius: 2px;
+  }
+
+  /* Sheet header */
+  .sheet-header {
+    padding: 0 20px 12px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+    flex-shrink: 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px;
+  }
+  .sheet-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .sheet-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .close-btn {
+    width: 28px; height: 28px; border-radius: 14px;
+    background: var(--fill-tertiary); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-secondary); flex-shrink: 0;
+  }
+
+  /* Sheet body */
+  .sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .sheet-body::-webkit-scrollbar { width: 3px; }
+  .sheet-body::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 2px; }
+
+  /* Prescriber row */
+  .prescriber-row {
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .prescriber-icon {
+    width: 32px; height: 32px;
+    background: var(--gold); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .prescriber-info { flex: 1; }
+  .prescriber-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .prescriber-detail { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .readonly-badge {
+    font-size: 10px; color: var(--text-tertiary);
+    background: rgba(118,118,128,0.15);
+    padding: 2px 6px; border-radius: 4px;
+  }
+
+  /* Form rows */
+  .form-label {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    margin-bottom: 6px;
+  }
+  .input-field {
+    width: 100%;
+    height: 44px;
+    background: var(--bg);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 15px; color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+    display: flex; align-items: center; position: relative;
+  }
+  .input-field:focus-within { border-color: var(--gold); }
+  .input-with-icon {
+    position: relative;
+  }
+  .input-icon {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 15px; color: var(--text-secondary);
+    pointer-events: none;
+  }
+  .input-field-inner {
+    width: 100%;
+    height: 44px;
+    background: var(--bg);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 0 12px 0 36px;
+    font-size: 15px; color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+  }
+  .input-field-inner:focus { border-color: var(--gold); }
+
+  /* Dropdown suggestion */
+  .drug-suggestion {
+    background: var(--surface);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    overflow: hidden;
+    margin-top: 2px;
+  }
+  .suggestion-item {
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover { background: var(--gold-soft); }
+  .suggestion-pill {
+    background: var(--gold-soft);
+    border-radius: 4px; padding: 2px 7px;
+    font-size: 11px; color: var(--gold-text); font-weight: 500;
+  }
+  .suggestion-name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .suggestion-code { font-size: 11px; color: var(--text-secondary); }
+
+  /* Field row (inline) */
+  .field-row {
+    display: flex; gap: 10px;
+  }
+  .field-group { flex: 1; }
+
+  /* Segmented control */
+  .segmented {
+    display: flex;
+    background: var(--fill-tertiary);
+    border-radius: 8px;
+    padding: 2px;
+    height: 32px;
+  }
+  .seg-option {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    border-radius: 6px; cursor: pointer;
+  }
+  .seg-option.active {
+    background: var(--surface);
+    color: var(--text-primary); font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  /* Instructions textarea */
+  .textarea-field {
+    width: 100%;
+    background: var(--bg);
+    border: 0.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px; color: var(--text-primary);
+    font-family: inherit; resize: none; outline: none; line-height: 1.5;
+  }
+  .textarea-field:focus { border-color: var(--gold); }
+
+  /* Add another link */
+  .add-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 14px; font-weight: 500; color: var(--gold-text);
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    padding: 4px 0;
+  }
+  .add-link:hover { text-decoration: underline; }
+
+  /* ── Allergy warning ─────────────────────────── */
+  .allergy-warning {
+    background: rgba(255,59,48,0.06);
+    border: 1px solid rgba(255,59,48,0.25);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .warning-header {
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .warning-icon-wrap {
+    width: 32px; height: 32px;
+    background: rgba(255,59,48,0.12);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .warning-title {
+    font-size: 13px; font-weight: 700; color: var(--system-red);
+    margin-bottom: 3px;
+  }
+  .warning-body {
+    font-size: 12px; color: #C0392B; line-height: 1.5;
+  }
+  .warning-ack {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255,59,48,0.06);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .ack-checkbox {
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 1.5px solid rgba(255,59,48,0.5);
+    flex-shrink: 0; margin-top: 1px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ack-text { font-size: 12px; color: #8B3028; line-height: 1.4; }
+
+  .warning-actions { display: flex; gap: 8px; }
+  .btn-danger {
+    flex: 1; height: 44px;
+    background: var(--system-red); color: #FFFFFF;
+    border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-danger:hover { background: #E0342A; }
+  .btn-secondary {
+    height: 44px; padding: 0 16px;
+    background: var(--fill-tertiary); color: var(--text-primary);
+    border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Sheet footer ────────────────────────────── */
+  .sheet-footer {
+    padding: 12px 20px;
+    border-top: 0.5px solid var(--separator-opaque);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    flex-shrink: 0;
+  }
+  .save-btn {
+    width: 100%; height: 50px;
+    background: var(--gold); color: var(--gold-text);
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .save-btn:hover { background: var(--gold-hover); }
+
+  /* ── Bottom bar ───────────────────────────────── */
+  .bottom-bar {
+    height: 44px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 0.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; flex-shrink: 0; z-index: 10;
+  }
+  .footer-status { font-size: 12px; color: var(--text-secondary); }
+  .footer-actions { display: flex; gap: 8px; }
+  .footer-btn {
+    height: 30px; padding: 0 14px;
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; font-family: inherit;
+  }
+  .footer-btn.secondary { background: var(--fill-tertiary); color: var(--text-secondary); }
+  .footer-btn.gold { background: var(--gold); color: var(--gold-text); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo-mark">D</div>
+    <div class="patient-selector">
+      <div class="patient-avatar">RH</div>
+      <span class="patient-name">Russel Herrera</span>
+      <span style="font-size:10px; color:var(--text-secondary); margin-left:2px;">▾</span>
+    </div>
+    <div class="safety-pill">
+      <span class="safety-dot"></span>
+      Penicillin · Latex · Warfarin
+    </div>
+    <div class="bar-spacer"></div>
+    <div class="visit-date">Mar 5, 2026</div>
+    <div class="icon-btn">🔔</div>
+    <div class="icon-btn">🔍</div>
+    <div class="icon-btn">⚙️</div>
+  </div>
+
+  <!-- Workspace background + overlay -->
+  <div style="flex:1; position:relative; overflow:hidden;">
+
+    <!-- Workspace background (dimmed) -->
+    <div class="workspace-bg" style="position:absolute; inset:0;">
+      <div class="ws-content">
+        <div class="ws-card" style="flex:1;">
+          <div class="ws-card-title">Odontogram</div>
+          <div class="tooth-mini-row">
+            <div class="tooth-mini">1</div><div class="tooth-mini">2</div>
+            <div class="tooth-mini">3</div><div class="tooth-mini">4</div>
+            <div class="tooth-mini">5</div><div class="tooth-mini">6</div>
+            <div class="tooth-mini">7</div><div class="tooth-mini">8</div>
+            <div class="tooth-mini">9</div><div class="tooth-mini">10</div>
+            <div class="tooth-mini">11</div><div class="tooth-mini">12</div>
+            <div class="tooth-mini">13</div>
+            <div class="tooth-mini selected">14</div>
+            <div class="tooth-mini">15</div><div class="tooth-mini">16</div>
+          </div>
+        </div>
+        <div class="ws-card" style="width:200px;">
+          <div class="ws-card-title">Treatment Plan</div>
+          <div style="font-size:12px; color:var(--text-tertiary); margin-top:4px;">Composite Filling #14</div>
+          <div style="font-size:12px; color:var(--text-tertiary); margin-top:4px;">Root Canal #14</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dim overlay -->
+    <div class="overlay-dim"></div>
+
+    <!-- Sheet -->
+    <div class="sheet-container">
+      <div class="sheet">
+
+        <!-- Drag handle -->
+        <div class="drag-handle" aria-hidden="true">
+          <div class="drag-handle-bar"></div>
+        </div>
+
+        <!-- Sheet header -->
+        <div class="sheet-header">
+          <div>
+            <div class="sheet-title">Prescription</div>
+            <div class="sheet-subtitle">Russel Herrera · Mar 5, 2026</div>
+          </div>
+          <button class="close-btn" aria-label="Close prescription sheet">✕</button>
+        </div>
+
+        <!-- Sheet body -->
+        <div class="sheet-body">
+
+          <!-- Prescriber row (read-only) -->
+          <div class="prescriber-row" role="group" aria-label="Prescriber information">
+            <div class="prescriber-icon">👨‍⚕️</div>
+            <div class="prescriber-info">
+              <div class="prescriber-name">Dr. Ramon Cruz</div>
+              <div class="prescriber-detail">PRC License: 12345-A · Cruz Dental Clinic</div>
+            </div>
+            <span class="readonly-badge">Auto-filled</span>
+          </div>
+
+          <!-- Drug name -->
+          <div>
+            <div class="form-label">Drug Name</div>
+            <div class="input-with-icon">
+              <span class="input-icon" aria-hidden="true">🔍</span>
+              <input
+                class="input-field-inner"
+                type="text"
+                value="Amoxicillin 500mg"
+                aria-label="Drug name"
+              />
+            </div>
+            <!-- Dropdown suggestion -->
+            <div class="drug-suggestion" role="listbox" aria-label="Drug suggestions">
+              <div class="suggestion-item" role="option" tabindex="0">
+                <span class="suggestion-pill">Suggestion</span>
+                <div>
+                  <div class="suggestion-name">Amoxicillin 500mg</div>
+                  <div class="suggestion-code">ATC: J01CA04 · Broad-spectrum penicillin</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dosage / Frequency / Duration -->
+          <div class="field-row">
+            <div class="field-group">
+              <div class="form-label">Dosage</div>
+              <input
+                style="width:100%; height:44px; background:var(--bg); border:0.5px solid var(--separator-opaque); border-radius:10px; padding:0 12px; font-size:15px; color:var(--text-primary); font-family:inherit; outline:none;"
+                type="text"
+                value="500mg"
+                aria-label="Dosage"
+              />
+            </div>
+            <div class="field-group" style="flex:2;">
+              <div class="form-label">Frequency</div>
+              <div class="segmented" role="group" aria-label="Frequency selection">
+                <div class="seg-option" role="radio" aria-checked="false" tabindex="0">1x</div>
+                <div class="seg-option" role="radio" aria-checked="false" tabindex="0">2x</div>
+                <div class="seg-option active" role="radio" aria-checked="true" tabindex="0">3x</div>
+                <div class="seg-option" role="radio" aria-checked="false" tabindex="0">4x</div>
+                <div class="seg-option" role="radio" aria-checked="false" tabindex="0">PRN</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="form-label">Duration</div>
+              <input
+                style="width:100%; height:44px; background:var(--bg); border:0.5px solid var(--separator-opaque); border-radius:10px; padding:0 12px; font-size:15px; color:var(--text-primary); font-family:inherit; outline:none;"
+                type="text"
+                value="7 days"
+                aria-label="Duration"
+              />
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div>
+            <div class="form-label">Instructions</div>
+            <textarea
+              class="textarea-field"
+              rows="3"
+              aria-label="Prescription instructions"
+            >Take with food. Complete the full course.</textarea>
+          </div>
+
+          <!-- Add another -->
+          <button class="add-link" aria-label="Add another prescription">
+            + Add another prescription
+          </button>
+
+          <!-- ── Allergy warning ─────────────────── -->
+          <div class="allergy-warning" role="alert" aria-live="assertive">
+            <div class="warning-header">
+              <div class="warning-icon-wrap" aria-hidden="true">⚠️</div>
+              <div>
+                <div class="warning-title">ALLERGY ALERT</div>
+                <div class="warning-body">
+                  Patient is allergic to <strong>Penicillin</strong>. Amoxicillin is a penicillin-class antibiotic.
+                  This prescription requires your acknowledgment before saving.
+                </div>
+              </div>
+            </div>
+
+            <label class="warning-ack" for="ack-checkbox">
+              <div class="ack-checkbox" aria-hidden="true"></div>
+              <span class="ack-text" id="ack-label">
+                I understand the risk and confirm this prescription is clinically indicated for this patient.
+              </span>
+            </label>
+            <input
+              type="checkbox"
+              id="ack-checkbox"
+              aria-labelledby="ack-label"
+              style="position:absolute; opacity:0; pointer-events:none;"
+            />
+
+            <div class="warning-actions">
+              <button class="btn-danger" aria-label="Override allergy warning and save prescription">
+                Override and Save
+              </button>
+              <button class="btn-secondary" aria-label="Change drug to avoid allergy">
+                Change Drug
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /sheet-body -->
+
+        <!-- Sheet footer -->
+        <div class="sheet-footer">
+          <button class="save-btn" aria-label="Save prescription">
+            Save Prescription
+          </button>
+        </div>
+
+      </div><!-- /sheet -->
+    </div><!-- /sheet-container -->
+
+  </div><!-- /workspace wrapper -->
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <span class="footer-status">Prescription · Russel Herrera</span>
+    <div class="footer-actions">
+      <button class="footer-btn secondary">Cancel</button>
+      <button class="footer-btn gold">Save Visit</button>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+</body>
+</html>

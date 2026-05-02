@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentalemon — Russel Herrera</title>
+<style>
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --gold: #FFE97D;
+  --gold-hover: #F5DC60;
+  --gold-text: #4A4018;
+  --gold-soft: rgba(255,233,125,0.15);
+  --text-primary: #000000;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
+  --separator: rgba(60,60,67,0.12);
+  --separator-opaque: #C6C6C8;
+  --fill-tertiary: rgba(118,118,128,0.12);
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-green: #34C759;
+  --system-teal: #5AC8FA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────────────── */
+.sidebar {
+  width: 200px;
+  min-width: 200px;
+  background: var(--surface);
+  border-right: 0.5px solid var(--separator-opaque);
+  display: flex;
+  flex-direction: column;
+  padding-top: 16px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 20px;
+}
+
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--gold);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.logo-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 0 16px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 8px;
+  margin: 0 8px 2px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: pointer;
+  letter-spacing: -0.1px;
+}
+
+.nav-item:hover { background: var(--fill-tertiary); }
+
+.nav-item.active {
+  background: var(--gold-soft);
+  font-weight: 600;
+  color: var(--gold-text);
+}
+
+.nav-icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-divider { height: 0.5px; background: var(--separator-opaque); margin: 10px 0; }
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 12px 8px;
+  border-top: 0.5px solid var(--separator-opaque);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.user-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-text);
+  flex-shrink: 0;
+}
+
+.user-name-sm { font-size: 12px; font-weight: 600; }
+.user-role-sm { font-size: 11px; color: var(--text-secondary); }
+
+/* ── Main ─────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Top bar ──────────────────────────────────────── */
+.topbar {
+  height: 56px;
+  min-height: 56px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--separator-opaque);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  color: var(--gold-text);
+  font-weight: 500;
+  cursor: pointer;
+  height: 44px;
+  padding: 0 4px;
+  border-radius: 8px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.back-btn:hover { background: var(--gold-soft); }
+
+.topbar-patient-name {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: var(--fill-tertiary);
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.icon-btn:hover { background: var(--separator-opaque); }
+
+/* ── Scrollable content ───────────────────────────── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Cards ────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 14px 16px 10px;
+  border-bottom: 0.5px solid var(--separator);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.1px;
+  text-transform: uppercase;
+}
+
+/* ── Profile header card ──────────────────────────── */
+.profile-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.avatar-lg {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold-text);
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+.profile-main { flex: 1; min-width: 0; }
+
+.profile-name-last {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.profile-name-first {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: -0.2px;
+  margin-bottom: 6px;
+}
+
+.profile-demo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.profile-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+}
+
+.profile-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 0.5px solid var(--separator);
+  padding-left: 16px;
+  flex-shrink: 0;
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stat-small {
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Safety floor ─────────────────────────────────── */
+.safety-card {
+  background: rgba(255,59,48,0.06);
+  border: 1px solid rgba(255,59,48,0.2);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.safety-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+.safety-content { flex: 1; }
+
+.safety-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #D70015;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.safety-item {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  letter-spacing: -0.1px;
+}
+
+.safety-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #D70015;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-right: 4px;
+}
+
+/* ── Badges ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.badge-active { background: rgba(52,199,89,0.15); color: #248A3D; }
+.badge-pending { background: rgba(255,149,0,0.15); color: #CC7700; }
+.badge-overdue { background: rgba(255,59,48,0.15); color: #D70015; }
+.badge-session { background: rgba(90,200,250,0.15); color: #0071A4; }
+
+/* ── Tabs ─────────────────────────────────────────── */
+.tabs-bar {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: flex;
+  padding: 4px;
+  gap: 2px;
+}
+
+.tab {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: transparent;
+  letter-spacing: -0.1px;
+  transition: background 0.15s;
+}
+
+.tab:hover { background: var(--fill-tertiary); }
+
+.tab.active {
+  background: var(--gold);
+  color: var(--gold-text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* ── Two-col layout ───────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Condition list ───────────────────────────────── */
+.condition-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.condition-item:last-child { border-bottom: none; }
+
+.tooth-badge {
+  background: var(--fill-tertiary);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.condition-text {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+}
+
+.condition-note {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ── Financial rows ───────────────────────────────── */
+.fin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.fin-row:last-child { border-bottom: none; }
+
+.fin-label { font-size: 14px; color: var(--text-secondary); letter-spacing: -0.1px; }
+.fin-value { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+.fin-value.outstanding { color: #D70015; }
+
+/* ── Medical summary ──────────────────────────────── */
+.med-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--separator);
+  align-items: flex-start;
+}
+
+.med-row:last-child { border-bottom: none; }
+.med-key { font-size: 12px; font-weight: 600; color: var(--text-secondary); width: 90px; flex-shrink: 0; padding-top: 1px; text-transform: uppercase; letter-spacing: 0.2px; }
+.med-val { font-size: 14px; letter-spacing: -0.1px; line-height: 1.5; }
+
+.view-link {
+  color: var(--gold-text);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Payment history tab ──────────────────────────── */
+.payment-tab-content { display: block; }
+
+.table-header {
+  display: grid;
+  grid-template-columns: 100px 1fr 90px 90px 80px;
+  padding: 8px 16px;
+  background: var(--fill-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 90px 90px 80px;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--separator);
+  font-size: 14px;
+  align-items: center;
+}
+
+.table-row:last-child { border-bottom: none; }
+.table-row:hover { background: var(--fill-tertiary); }
+
+.table-date { color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+.table-amount { font-weight: 600; letter-spacing: -0.2px; font-variant-numeric: tabular-nums; }
+.table-method { font-size: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">🍋</div>
+    <span class="logo-text">Dentalemon</span>
+  </div>
+
+  <div class="sidebar-section-label">Clinic</div>
+  <div class="nav-item"><span class="nav-icon">⊞</span> Dashboard</div>
+  <div class="nav-item"><span class="nav-icon">📅</span> Schedule</div>
+  <div class="nav-item active"><span class="nav-icon">👤</span> Patients</div>
+  <div class="nav-item"><span class="nav-icon">🦷</span> Treatments</div>
+  <div class="nav-divider"></div>
+  <div class="sidebar-section-label">Finance</div>
+  <div class="nav-item"><span class="nav-icon">₱</span> Billing</div>
+  <div class="nav-item"><span class="nav-icon">📊</span> Reports</div>
+  <div class="nav-divider"></div>
+  <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+
+  <div class="sidebar-bottom">
+    <div class="user-chip">
+      <div class="user-avatar-sm">RC</div>
+      <div>
+        <div class="user-name-sm">Dr. Ramon Cruz</div>
+        <div class="user-role-sm">Dentist</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="patient-list.html">‹ Patients</a>
+    <div class="topbar-patient-name">Russel Herrera</div>
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Edit">✏</button>
+      <button class="icon-btn" title="Export">↓</button>
+      <button class="icon-btn" title="More">···</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Profile header card -->
+    <div class="card">
+      <div class="profile-card-inner">
+        <div class="avatar-lg">RH</div>
+        <div class="profile-main">
+          <div class="profile-name-last">HERRERA, Russel M.</div>
+          <div class="profile-name-first">Russel Herrera</div>
+          <div class="profile-demo-row">
+            <span class="badge badge-active">Active</span>
+            <span style="font-size:13px;color:var(--text-secondary);">Male · 42 yrs</span>
+          </div>
+          <div class="profile-contact-row">
+            <div class="contact-item">📱 <span>+63 917 555 1234</span></div>
+            <div class="contact-item">✉ <span>russel@email.com</span></div>
+          </div>
+        </div>
+        <div class="profile-stats">
+          <div class="stat-row">
+            <span class="stat-value">15</span>
+            <span class="stat-label">visits</span>
+          </div>
+          <div class="stat-small">Last: Mar 5, 2026</div>
+          <div class="stat-small">Next: Jun 5, 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety floor -->
+    <div class="safety-card">
+      <div class="safety-icon">⚠</div>
+      <div class="safety-content">
+        <div class="safety-title">Safety Alert — Always Visible</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="safety-item">
+            <span class="safety-label">Allergies:</span>
+            Penicillin, Latex
+          </div>
+          <div class="safety-item">
+            <span class="safety-label">Meds:</span>
+            Warfarin (Anticoagulant)
+          </div>
+          <div class="safety-item">
+            <span class="safety-label">Conditions:</span>
+            Diabetes Mellitus Type 2
+          </div>
+        </div>
+      </div>
+      <a href="medical-history-form.html" style="font-size:12px;color:#D70015;font-weight:600;text-decoration:none;white-space:nowrap;">View Full →</a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-bar">
+      <button class="tab active" id="tab-overview" onclick="showTab('overview')">Overview</button>
+      <button class="tab" id="tab-payment" onclick="showTab('payment')">Payment History</button>
+      <button class="tab" id="tab-followup" onclick="showTab('followup')">Follow-Up Log</button>
+    </div>
+
+    <!-- Overview tab -->
+    <div id="pane-overview">
+      <div class="two-col">
+
+        <!-- Active conditions -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Active Conditions</span>
+            <span class="badge badge-pending">3 pending</span>
+          </div>
+
+          <div class="condition-item">
+            <div class="tooth-badge">#14</div>
+            <div>
+              <div class="condition-text">MO Caries</div>
+              <div class="condition-note">Composite filling needed</div>
+            </div>
+            <span class="badge badge-pending">Pending</span>
+          </div>
+
+          <div class="condition-item">
+            <div class="tooth-badge">#36</div>
+            <div>
+              <div class="condition-text">Crown</div>
+              <div class="condition-note">PFM crown — prep done</div>
+            </div>
+            <span class="badge badge-pending">Pending</span>
+          </div>
+
+          <div class="condition-item">
+            <div class="tooth-badge">#21</div>
+            <div>
+              <div class="condition-text">Abrasion</div>
+              <div class="condition-note">Monitor / GIC restoration</div>
+            </div>
+            <span class="badge badge-pending">Pending</span>
+          </div>
+        </div>
+
+        <!-- Financial summary -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Financial Summary</span>
+          </div>
+          <div class="fin-row">
+            <span class="fin-label">Total Billed</span>
+            <span class="fin-value">₱15,800</span>
+          </div>
+          <div class="fin-row">
+            <span class="fin-label">Paid</span>
+            <span class="fin-value" style="color:#248A3D;">₱13,500</span>
+          </div>
+          <div class="fin-row" style="background:rgba(255,59,48,0.04);">
+            <span class="fin-label" style="font-weight:600;">Outstanding</span>
+            <span class="fin-value outstanding">₱2,300</span>
+          </div>
+          <div class="fin-row">
+            <span class="fin-label">Last Payment</span>
+            <span class="fin-value" style="font-size:13px;font-weight:500;color:var(--text-secondary);">Mar 5, 2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medical history card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Medical History</span>
+          <span style="font-size:12px;color:var(--text-tertiary);">Last updated Mar 5, 2026</span>
+        </div>
+
+        <div class="med-row">
+          <div class="med-key">Conditions</div>
+          <div class="med-val">Diabetes Mellitus Type 2 <span style="color:var(--text-tertiary);font-size:12px;">(ICD-10 E11)</span></div>
+        </div>
+        <div class="med-row">
+          <div class="med-key">Medications</div>
+          <div class="med-val">Warfarin 5mg <span style="color:var(--text-tertiary);font-size:12px;">— Monitor bleeding risk</span></div>
+        </div>
+        <div class="med-row">
+          <div class="med-key">Allergies</div>
+          <div class="med-val">
+            <span style="color:#D70015;font-weight:600;">Penicillin</span> (Severe) &nbsp;·&nbsp;
+            <span style="color:#D70015;font-weight:600;">Latex</span> (Moderate)
+          </div>
+        </div>
+        <div class="med-row" style="border-bottom:none;">
+          <div class="med-key"></div>
+          <a href="medical-history-form.html" class="view-link">View full history →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment history tab (hidden by default, shown via JS) -->
+    <div id="pane-payment" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Payment History</span>
+          <span style="font-size:12px;color:var(--text-secondary);">15 transactions</span>
+        </div>
+        <div class="table-header">
+          <span>Date</span>
+          <span>Visit / Service</span>
+          <span>Amount</span>
+          <span>Method</span>
+          <span>Status</span>
+        </div>
+        <div class="table-row">
+          <span class="table-date">Mar 5, 2026</span>
+          <span>Crown Prep #36</span>
+          <span class="table-amount">₱3,500</span>
+          <span class="table-method">GCash</span>
+          <span class="badge badge-active">Paid</span>
+        </div>
+        <div class="table-row">
+          <span class="table-date">Feb 10, 2026</span>
+          <span>Cleaning + X-Ray</span>
+          <span class="table-amount">₱1,200</span>
+          <span class="table-method">Cash</span>
+          <span class="badge badge-active">Paid</span>
+        </div>
+        <div class="table-row">
+          <span class="table-date">Jan 15, 2026</span>
+          <span>MO Composite #14</span>
+          <span class="table-amount">₱2,800</span>
+          <span class="table-method">Card</span>
+          <span class="badge badge-active">Paid</span>
+        </div>
+        <div class="table-row">
+          <span class="table-date">Dec 3, 2025</span>
+          <span>Extraction #38</span>
+          <span class="table-amount">₱2,300</span>
+          <span class="table-method">—</span>
+          <span class="badge badge-overdue">Unpaid</span>
+        </div>
+        <div class="table-row">
+          <span class="table-date">Nov 20, 2025</span>
+          <span>Root Canal #36</span>
+          <span class="table-amount">₱6,000</span>
+          <span class="table-method">GCash</span>
+          <span class="badge badge-active">Paid</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow-up tab (placeholder) -->
+    <div id="pane-followup" style="display:none;">
+      <div class="card" style="padding:40px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:12px;">📋</div>
+        <div style="font-size:16px;font-weight:600;letter-spacing:-0.3px;margin-bottom:6px;">Follow-Up Log</div>
+        <div style="font-size:14px;color:var(--text-secondary);">No follow-up notes yet. Add one after the next visit.</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function showTab(name) {
+  ['overview','payment','followup'].forEach(t => {
+    document.getElementById('pane-' + t).style.display = t === name ? 'block' : 'none';
+    const tabEl = document.getElementById('tab-' + t);
+    tabEl.className = t === name ? 'tab active' : 'tab';
+  });
+}
+</script>
+</body>
+</html>

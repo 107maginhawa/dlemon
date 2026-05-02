@@ -20,6 +20,7 @@ export function createAuth(config: AuthConfig) {
   return createAuthClient({
     baseURL: `${config.baseURL}/auth`,
     plugins: [
+      // @ts-ignore — better-auth passkeyClient types diverge from BetterAuthClientPlugin; upstream version mismatch
       passkeyClient(),
       twoFactorClient(),
     ],

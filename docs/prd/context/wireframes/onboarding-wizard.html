@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentalemon — Onboarding Wizard</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Top Bar ─── */
+  .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: rgba(242,242,247,0.82);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+  }
+
+  .top-bar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--gold);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .logo-wordmark {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .logo-wordmark span {
+    color: var(--gold-text);
+  }
+
+  .top-bar-center {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .top-bar-right {
+    min-width: 160px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .skip-link {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    text-decoration: none;
+    cursor: pointer;
+    padding: 8px 0;
+    transition: color 0.15s ease;
+  }
+
+  .skip-link:hover { color: var(--text-secondary); }
+  .skip-link.hidden { visibility: hidden; pointer-events: none; }
+
+  /* ─── Main content area ─── */
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 24px 40px;
+    min-height: 100vh;
+  }
+
+  /* ─── Screen system ─── */
+  .screen {
+    display: none;
+    width: 100%;
+    justify-content: center;
+    align-items: flex-start;
+    animation: none;
+  }
+
+  .screen.active {
+    display: flex;
+  }
+
+  .screen.entering {
+    animation: slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  .screen.leaving {
+    animation: slideOut 0.25s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-12px); }
+  }
+
+  /* ─── Card ─── */
+  .card {
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.06),
+      0 8px 32px rgba(0,0,0,0.06),
+      0 0 0 0.5px rgba(60,60,67,0.1);
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .card-body {
+    padding: 32px;
+  }
+
+  /* ─── PATH SELECTOR ─── */
+  #screen-path .card {
+    max-width: 540px;
+    text-align: center;
+  }
+
+  #screen-path .card-body {
+    padding: 40px;
+  }
+
+  .welcome-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+  }
+
+  .welcome-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    line-height: 1.4;
+  }
+
+  .path-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .path-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    border: 1.5px solid var(--separator-opaque);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .path-card:hover {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+  }
+
+  .path-card.selected {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,233,125,0.25);
+  }
+
+  .path-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--fill-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .path-card.selected .path-card-icon {
+    background: var(--gold);
+  }
+
+  .path-card-text {}
+
+  .path-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+
+  .path-card-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  .path-card-check {
+    margin-left: auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .path-card.selected .path-card-check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .path-card-check svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* ─── BREADCRUMB ─── */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 24px;
+  }
+
+  .breadcrumb-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+
+  .breadcrumb-step.active {
+    color: var(--gold-text);
+  }
+
+  .breadcrumb-step.completed {
+    color: var(--system-green);
+  }
+
+  .bc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .breadcrumb-step.active .bc-dot {
+    background: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,233,125,0.35);
+  }
+
+  .breadcrumb-step.completed .bc-dot {
+    background: var(--system-green);
+    display: none;
+  }
+
+  .bc-check {
+    display: none;
+    flex-shrink: 0;
+  }
+
+  .breadcrumb-step.completed .bc-check {
+    display: block;
+  }
+
+  .bc-line {
+    flex: 1;
+    height: 0.5px;
+    background: var(--separator-opaque);
+    margin: 0 8px;
+    min-width: 20px;
+  }
+
+  .bc-label {
+    font-size: 11px;
+    letter-spacing: 0.1px;
+  }
+
+  /* ─── FORM ELEMENTS ─── */
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.4;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .form-label .req {
+    color: var(--system-red);
+    margin-left: 2px;
+  }
+
+  .form-input {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .form-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,233,125,0.3);
+  }
+
+  .form-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .form-input-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  .input-row {
+    display: grid;
+    gap: 12px;
+  }
+
+  .input-row-2 { grid-template-columns: 1fr 1fr; }
+  .input-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .prefix-input-wrap {
+    display: flex;
+    gap: 8px;
+  }
+
+  .prefix-select {
+    height: 44px;
+    border: 1px solid var(--separator-opaque);
+    border-radius: 10px;
+    padding: 0 10px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--fill-tertiary);
+    outline: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238E8E93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  .prefix-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,233,125,0.3);
+  }
+
+  /* Upload area */
+  .upload-area {
+    border: 1.5px dashed var(--separator-opaque);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: var(--bg);
+  }
+
+  .upload-area:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+
+  .upload-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .upload-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+
+  .upload-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* Canvas sig */
+  .signature-area {
+    border: 1.5px dashed var(--separator-opaque);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
+    cursor: crosshair;
+    position: relative;
+  }
+
+  .signature-canvas {
+    display: block;
+    width: 100%;
+    height: 120px;
+    touch-action: none;
+  }
+
+  .signature-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .sig-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-ghost-small {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--separator-opaque);
+    border-radius: 8px;
+    background: none;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-ghost-small:hover {
+    background: var(--fill-tertiary);
+    color: var(--text-primary);
+  }
+
+  /* PIN inputs */
+  .pin-section {
+    margin-top: 8px;
+  }
+
+  .pin-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .pin-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .pin-input {
+    width: 44px;
+    height: 52px;
+    border: 1.5px solid var(--separator-opaque);
+    border-radius: 10px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    background: var(--surface);
+    outline: none;
+    caret-color: var(--gold-text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .pin-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,233,125,0.3);
+  }
+
+  /* ─── FEES TABLE ─── */
+  .fees-table-wrap {
+    border: 0.5px solid var(--separator);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .fees-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .fees-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--separator);
+  }
+
+  .fees-table thead th:last-child {
+    text-align: right;
+  }
+
+  .category-row td {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+    background: rgba(242,242,247,0.6);
+    border-top: 0.5px solid var(--separator);
+  }
+
+  .fees-table tbody tr.data-row {
+    border-top: 0.5px solid var(--separator);
+    transition: background 0.12s ease;
+  }
+
+  .fees-table tbody tr.data-row:hover {
+    background: rgba(255,233,125,0.07);
+  }
+
+  .fees-table tbody tr.data-row td {
+    padding: 10px 14px;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  .fees-table tbody tr.data-row td.cdt {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: 'SF Mono', ui-monospace, monospace;
+  }
+
+  .fees-table tbody tr.data-row td.price-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  .price-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: text;
+  }
+
+  .price-edit-input {
+    width: 80px;
+    height: 30px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 0 6px;
+    font-size: 14px;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-primary);
+    background: transparent;
+    outline: none;
+    transition: all 0.15s ease;
+    cursor: text;
+  }
+
+  .price-edit-input:focus {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+    box-shadow: 0 0 0 2px rgba(255,233,125,0.25);
+  }
+
+  .add-treatment-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gold-text);
+    cursor: pointer;
+    padding: 10px 14px;
+    border-top: 0.5px solid var(--separator);
+    width: 100%;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    font-family: inherit;
+    text-align: left;
+    transition: background 0.15s ease;
+  }
+
+  .add-treatment-link:hover {
+    background: var(--gold-soft);
+  }
+
+  /* ─── PATIENT FORM ─── */
+  .patient-row-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  .add-another-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gold-text);
+    cursor: pointer;
+    margin-top: 16px;
+    padding: 0;
+    background: none;
+    border: none;
+    font-family: inherit;
+    transition: opacity 0.15s ease;
+  }
+
+  .add-another-link:hover { opacity: 0.7; }
+
+  /* ─── STICKY BOTTOM NAV ─── */
+  .sticky-nav {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 0.5px solid var(--separator);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .sticky-nav.has-back {
+    justify-content: space-between;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--gold-text);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--gold-hover);
+    transform: translateY(-0.5px);
+    box-shadow: 0 4px 12px rgba(255,233,125,0.5);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--fill-tertiary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--separator);
+  }
+
+  .btn-secondary:hover {
+    background: var(--separator);
+  }
+
+  .btn-ghost {
+    background: none;
+    color: var(--text-secondary);
+    border: none;
+  }
+
+  .btn-ghost:hover {
+    color: var(--text-primary);
+    background: var(--fill-tertiary);
+  }
+
+  .btn-outline {
+    background: none;
+    color: var(--text-primary);
+    border: 1.5px solid var(--separator-opaque);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+
+  /* ─── COMPLETION SCREEN ─── */
+  #screen-complete .card {
+    max-width: 520px;
+    text-align: center;
+  }
+
+  #screen-complete .card-body {
+    padding: 48px;
+  }
+
+  .complete-icon-wrap {
+    width: 80px;
+    height: 80px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px rgba(255,233,125,0.5);
+  }
+
+  .complete-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+
+  .complete-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 32px;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .complete-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .complete-actions .btn {
+    flex: 1;
+    max-width: 200px;
+    flex-direction: column;
+    height: auto;
+    padding: 16px 20px;
+    gap: 4px;
+    border-radius: 12px;
+  }
+
+  .complete-actions .btn .btn-action-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .complete-actions .btn .btn-action-sub {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.75;
+  }
+
+  .complete-tip {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+    padding: 12px 16px;
+    background: var(--fill-tertiary);
+    border-radius: 8px;
+  }
+
+  /* ─── STEP 1 specific ─── */
+  #screen-step1 .card {
+    max-width: 600px;
+  }
+
+  /* ─── STEP 2 specific ─── */
+  #screen-step2 .card {
+    max-width: 600px;
+  }
+
+  /* ─── STEP 3 specific ─── */
+  #screen-step3 .card {
+    max-width: 900px;
+  }
+
+  #screen-step3 .card-body {
+    padding: 28px 32px 0;
+  }
+
+  /* ─── STEP 4 specific ─── */
+  #screen-step4 .card {
+    max-width: 600px;
+  }
+
+  /* Date input */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Divider */
+  .form-divider {
+    height: 0.5px;
+    background: var(--separator);
+    margin: 20px 0;
+  }
+
+  /* Inline note */
+  .inline-note {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--fill-tertiary);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .inline-note-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Scroll container for step 3 table */
+  .step3-scroll {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    padding: 0 0 8px;
+  }
+
+  .step3-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .step3-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .step3-scroll::-webkit-scrollbar-thumb {
+    background: var(--separator-opaque);
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────────────────────────── TOP BAR ─── -->
+<header class="top-bar">
+  <a href="#" class="top-bar-logo">
+    <div class="logo-icon">🦷</div>
+    <div class="logo-wordmark">Dental<span>emon</span></div>
+  </a>
+
+  <div class="top-bar-center" id="step-indicator" style="visibility:hidden;">Step 1 of 4</div>
+
+  <div class="top-bar-right">
+    <a href="#" class="skip-link hidden" id="skip-link" onclick="goToComplete(); return false;">Skip to Dashboard</a>
+  </div>
+</header>
+
+<!-- ─────────────────────────────────────────── MAIN ─── -->
+<main class="main" id="main-area">
+
+  <!-- ══════════════════════ PATH SELECTOR ══════════════════════ -->
+  <div class="screen active entering" id="screen-path">
+    <div class="card" style="max-width:540px;">
+      <div class="card-body" style="padding:40px;">
+        <div class="welcome-title">Welcome to Dentalemon 🦷</div>
+        <div class="welcome-subtitle">Let's set up your practice in under 10 minutes.</div>
+
+        <div class="path-options">
+          <div class="path-card" id="path-fresh" onclick="selectPath('fresh')">
+            <div class="path-card-icon">✨</div>
+            <div class="path-card-text">
+              <div class="path-card-title">Starting Fresh</div>
+              <div class="path-card-sub">Set up your clinic from scratch</div>
+            </div>
+            <div class="path-card-check">
+              <svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#4A4018" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+
+          <div class="path-card" id="path-migrate" onclick="selectPath('migrate')">
+            <div class="path-card-icon">📥</div>
+            <div class="path-card-text">
+              <div class="path-card-title">Migrating from another system</div>
+              <div class="path-card-sub">I have existing patient records to import</div>
+            </div>
+            <div class="path-card-check">
+              <svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#4A4018" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="path-continue-btn" disabled onclick="goToStep(1)" style="width:100%;">
+          Continue
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ STEP 1: CLINIC SETUP ══════════════════════ -->
+  <div class="screen" id="screen-step1">
+    <div class="card">
+      <div class="card-body">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+          <div class="breadcrumb-step active" data-step-bc="1">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Clinic</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="2">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Profile</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="3">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Fees</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="4">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">First Patient</span>
+          </div>
+        </div>
+
+        <div class="section-title">Set up your clinic</div>
+        <div class="section-subtitle">This information appears on receipts and consent forms.</div>
+
+        <div class="form-group">
+          <label class="form-label">Clinic Name <span class="req">*</span></label>
+          <input type="text" class="form-input" value="Cruz Dental Clinic" placeholder="e.g. Cruz Dental Clinic">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Address <span class="req">*</span></label>
+          <input type="text" class="form-input" value="Cruz St., Paco, Manila, Philippines" placeholder="Street, City, Province, Country">
+        </div>
+
+        <div class="input-row input-row-2">
+          <div class="form-group">
+            <label class="form-label">Phone <span class="req">*</span></label>
+            <input type="tel" class="form-input" value="+63 917 555 0000" placeholder="+63 9XX XXX XXXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" value="cruzdentalclinic@email.com" placeholder="clinic@email.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Website</label>
+          <input type="url" class="form-input" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Clinic Logo</label>
+          <div class="upload-area" onclick="this.style.borderColor='var(--gold)'; this.style.background='var(--gold-soft)';">
+            <div class="upload-icon">🏥</div>
+            <div class="upload-label">Add clinic logo</div>
+            <div class="upload-hint">Optional — PNG, JPG up to 2MB. Appears on receipts.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sticky-nav">
+        <button class="btn btn-primary" onclick="goToStep(2)">
+          Next: Dentist Profile
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ STEP 2: DENTIST PROFILE ══════════════════════ -->
+  <div class="screen" id="screen-step2">
+    <div class="card">
+      <div class="card-body">
+        <!-- Breadcrumb (same markup, JS updates state) -->
+        <div class="breadcrumb">
+          <div class="breadcrumb-step" data-step-bc="1">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Clinic</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step active" data-step-bc="2">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Profile</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="3">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Fees</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="4">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">First Patient</span>
+          </div>
+        </div>
+
+        <div class="section-title">Your profile</div>
+        <div class="section-subtitle" style="margin-bottom:20px;">Your details appear on prescriptions and receipts.</div>
+
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="req">*</span></label>
+          <div class="prefix-input-wrap">
+            <select class="prefix-select" style="width:80px;">
+              <option>Dr.</option>
+              <option>Dra.</option>
+              <option>Mr.</option>
+              <option>Ms.</option>
+            </select>
+            <input type="text" class="form-input" value="Ramon Cruz, DDS" placeholder="First Last, Degree">
+          </div>
+        </div>
+
+        <div class="input-row input-row-2">
+          <div class="form-group">
+            <label class="form-label">PRC License No. <span class="req">*</span></label>
+            <input type="text" class="form-input" value="12345-A" placeholder="e.g. 12345-A" style="font-variant-numeric:tabular-nums;">
+            <div class="form-input-note">Appears on prescriptions and receipts.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">License Expiry</label>
+            <input type="text" class="form-input" value="Dec 31, 2027" placeholder="MMM DD, YYYY">
+          </div>
+        </div>
+
+        <div class="form-divider"></div>
+
+        <div class="form-group">
+          <label class="form-label">E-Signature <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-tertiary);">(optional)</span></label>
+          <div class="inline-note" style="margin-bottom:10px;width:100%;">
+            <span class="inline-note-icon">✍️</span>
+            Draw your signature below — it will appear on documents and prescriptions.
+          </div>
+          <div class="signature-area">
+            <canvas class="signature-canvas" id="sig-canvas" width="600" height="120"></canvas>
+            <div class="signature-placeholder" id="sig-placeholder">Draw signature here</div>
+          </div>
+          <div class="sig-actions">
+            <button class="btn-ghost-small" onclick="undoSignature()">↩ Undo</button>
+            <button class="btn-ghost-small" onclick="clearSignature()">✕ Clear</button>
+          </div>
+        </div>
+
+        <div class="form-divider"></div>
+
+        <div class="form-group">
+          <label class="form-label">Security Question</label>
+          <select class="form-input" style="height:44px;cursor:pointer;background-image:url(\"data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238E8E93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;-webkit-appearance:none;appearance:none;">
+            <option>What was your childhood nickname?</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first pet?</option>
+            <option>What city were you born in?</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Answer</label>
+          <input type="text" class="form-input" placeholder="Your answer (case-sensitive)">
+        </div>
+
+        <div class="form-divider"></div>
+
+        <div class="pin-section">
+          <div class="pin-label">Create a 6-digit PIN</div>
+          <div class="pin-inputs" id="pin-inputs">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 0)">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 1)">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 2)">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 3)">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 4)">
+            <input class="pin-input" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" onkeyup="pinAdvance(this, 5)">
+          </div>
+          <div class="form-input-note" style="margin-top:8px;">Used to lock and unlock Dentalemon. Keep this private.</div>
+        </div>
+      </div>
+
+      <div class="sticky-nav has-back">
+        <button class="btn btn-secondary" onclick="goToStep(1)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="goToStep(3)">
+          Next: Fee Schedule
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ STEP 3: FEE SCHEDULE ══════════════════════ -->
+  <div class="screen" id="screen-step3">
+    <div class="card">
+      <div class="card-body">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+          <div class="breadcrumb-step" data-step-bc="1">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Clinic</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="2">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Profile</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step active" data-step-bc="3">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Fees</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="4">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">First Patient</span>
+          </div>
+        </div>
+
+        <div class="section-title">Treatment fee schedule</div>
+        <div class="section-subtitle">Pre-populated with common procedures. Edit prices to match your clinic.</div>
+      </div>
+
+      <div class="step3-scroll">
+        <div style="padding: 0 32px;">
+          <div class="fees-table-wrap">
+            <table class="fees-table">
+              <thead>
+                <tr>
+                  <th style="width:36%;">Treatment</th>
+                  <th style="width:14%;">CDT Code</th>
+                  <th style="width:22%;text-align:right;">Price (₱)</th>
+                  <th style="width:28%;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- GENERAL -->
+                <tr class="category-row"><td colspan="4">General</td></tr>
+                <tr class="data-row">
+                  <td>Dental Examination</td>
+                  <td class="cdt">D0120</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Dental Cleaning (Prophylaxis)</td>
+                  <td class="cdt">D1110</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱800" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Composite Filling (1 surface)</td>
+                  <td class="cdt">D2391</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱2,500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Amalgam Filling</td>
+                  <td class="cdt">D2393</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱1,500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+
+                <!-- ENDODONTICS -->
+                <tr class="category-row"><td colspan="4">Endodontics</td></tr>
+                <tr class="data-row">
+                  <td>Root Canal (anterior)</td>
+                  <td class="cdt">D3310</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱5,000" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Root Canal (posterior)</td>
+                  <td class="cdt">D3330</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱8,000" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+
+                <!-- PROSTHODONTICS -->
+                <tr class="category-row"><td colspan="4">Prosthodontics</td></tr>
+                <tr class="data-row">
+                  <td>Crown (PFM)</td>
+                  <td class="cdt">D2710</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱8,000" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Denture (complete)</td>
+                  <td class="cdt">D5110</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱25,000" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+
+                <!-- ORAL SURGERY -->
+                <tr class="category-row"><td colspan="4">Oral Surgery</td></tr>
+                <tr class="data-row">
+                  <td>Simple Extraction</td>
+                  <td class="cdt">D7140</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+                <tr class="data-row">
+                  <td>Surgical Extraction</td>
+                  <td class="cdt">D7210</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱1,500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+
+                <!-- PEDIATRIC -->
+                <tr class="category-row"><td colspan="4">Pediatric</td></tr>
+                <tr class="data-row">
+                  <td>Sealant (per tooth)</td>
+                  <td class="cdt">D1351</td>
+                  <td class="price-cell"><input class="price-edit-input" type="text" value="₱500" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="add-treatment-link" onclick="addTreatmentRow()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Add treatment
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sticky-nav has-back" style="padding:16px 32px;">
+        <button class="btn btn-secondary" onclick="goToStep(2)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <button class="btn btn-primary" onclick="goToStep(4)">
+          Next: First Patient
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ STEP 4: FIRST PATIENT ══════════════════════ -->
+  <div class="screen" id="screen-step4">
+    <div class="card">
+      <div class="card-body">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+          <div class="breadcrumb-step" data-step-bc="1">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Clinic</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="2">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Profile</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step" data-step-bc="3">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">Fees</span>
+          </div>
+          <div class="bc-line"></div>
+          <div class="breadcrumb-step active" data-step-bc="4">
+            <div class="bc-dot"></div>
+            <svg class="bc-check" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M4 7l2.5 2.5 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="bc-label">First Patient</span>
+          </div>
+        </div>
+
+        <div class="section-title">Add your first patient</div>
+        <div class="section-subtitle">Optional — you can add patients anytime from the Patient List.</div>
+
+        <div id="patient-list-container">
+          <!-- Patient card 1 -->
+          <div class="patient-entry" id="patient-1">
+            <div class="input-row input-row-3" style="margin-bottom:12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Last Name</label>
+                <input type="text" class="form-input patient-last-name" placeholder="Santos" oninput="checkPatientFilled()">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">First Name</label>
+                <input type="text" class="form-input" placeholder="Maria">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">M.I.</label>
+                <input type="text" class="form-input" placeholder="L." maxlength="4">
+              </div>
+            </div>
+            <div class="input-row input-row-2">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Mobile</label>
+                <div class="prefix-input-wrap">
+                  <select class="prefix-select" style="width:72px;font-size:14px;">
+                    <option>+63</option>
+                    <option>+1</option>
+                    <option>+44</option>
+                  </select>
+                  <input type="tel" class="form-input" placeholder="9XX XXX XXXX">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="form-input">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="add-another-link" id="add-another-btn" onclick="addAnotherPatient()" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Add Another Patient
+        </button>
+      </div>
+
+      <div class="sticky-nav has-back">
+        <button class="btn btn-secondary" onclick="goToStep(3)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-ghost" onclick="goToComplete()">Skip for Now</button>
+          <button class="btn btn-primary" id="complete-btn" onclick="goToComplete()">
+            Complete Setup
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ COMPLETION ══════════════════════ -->
+  <div class="screen" id="screen-complete">
+    <div class="card">
+      <div class="card-body">
+        <div class="complete-icon-wrap">🎉</div>
+        <div class="complete-title">You're all set!</div>
+        <div class="complete-subtitle">Cruz Dental Clinic is ready. Start adding patients and recording visits.</div>
+
+        <div class="complete-actions">
+          <a href="patient-list.html" class="btn btn-primary" style="text-decoration:none;">
+            <div class="btn-action-title">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;"><rect x="2" y="3" width="14" height="2" rx="1" fill="currentColor"/><rect x="2" y="8" width="10" height="2" rx="1" fill="currentColor"/><rect x="2" y="13" width="12" height="2" rx="1" fill="currentColor"/></svg>
+              Open Patient List
+            </div>
+            <div class="btn-action-sub">Start managing patients</div>
+          </a>
+          <a href="dashboard.html" class="btn btn-outline" style="text-decoration:none;">
+            <div class="btn-action-title">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-bottom:4px;display:block;margin-left:auto;margin-right:auto;"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/></svg>
+              View Dashboard
+            </div>
+            <div class="btn-action-sub">Overview of your clinic</div>
+          </a>
+        </div>
+
+        <div class="complete-tip">
+          Tip: Tap the ? button anytime for help with features.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ─────────────────────────────────────────── JAVASCRIPT ─── -->
+<script>
+  // ─── State ───
+  let currentScreen = 'path';
+  let selectedPath = null;
+  let patientCount = 1;
+  const completedSteps = new Set();
+
+  // ─── Screen IDs in order ───
+  const screenOrder = ['path', 'step1', 'step2', 'step3', 'step4', 'complete'];
+
+  // ─── Path selection ───
+  function selectPath(type) {
+    selectedPath = type;
+    document.getElementById('path-fresh').classList.toggle('selected', type === 'fresh');
+    document.getElementById('path-migrate').classList.toggle('selected', type === 'migrate');
+    document.getElementById('path-continue-btn').disabled = false;
+  }
+
+  // ─── Navigate to step (1-4) or to named screens ───
+  function goToStep(n) {
+    const stepId = 'step' + n;
+    if (n > 1) {
+      for (let i = 1; i < n; i++) completedSteps.add(i);
+    }
+    transitionTo(stepId);
+  }
+
+  function goToComplete() {
+    completedSteps.add(1);
+    completedSteps.add(2);
+    completedSteps.add(3);
+    completedSteps.add(4);
+    transitionTo('complete');
+  }
+
+  // ─── Core transition engine ───
+  function transitionTo(targetId) {
+    const fromEl = document.getElementById('screen-' + currentScreen);
+    const toEl   = document.getElementById('screen-' + targetId);
+    if (!toEl || currentScreen === targetId) return;
+
+    fromEl.classList.remove('entering');
+    fromEl.classList.add('leaving');
+
+    setTimeout(() => {
+      fromEl.classList.remove('active', 'leaving');
+      toEl.classList.add('active', 'entering');
+      currentScreen = targetId;
+      updateTopBar();
+      scrollToTop();
+    }, 220);
+  }
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ─── Top bar updates ───
+  function updateTopBar() {
+    const indicator = document.getElementById('step-indicator');
+    const skipLink  = document.getElementById('skip-link');
+
+    if (currentScreen === 'path' || currentScreen === 'complete') {
+      indicator.style.visibility = 'hidden';
+      skipLink.classList.add('hidden');
+      return;
+    }
+
+    const stepNum = parseInt(currentScreen.replace('step', ''));
+    indicator.style.visibility = 'visible';
+    indicator.textContent = 'Step ' + stepNum + ' of 4';
+
+    if (stepNum === 4) {
+      skipLink.classList.remove('hidden');
+    } else {
+      skipLink.classList.add('hidden');
+    }
+  }
+
+  // ─── Signature canvas ───
+  let isDrawing = false;
+  let sigHistory = [];
+  let sigCtx = null;
+
+  function initCanvas() {
+    const canvas = document.getElementById('sig-canvas');
+    if (!canvas) return;
+
+    // Scale for retina
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 120 * dpr;
+    sigCtx = canvas.getContext('2d');
+    sigCtx.scale(dpr, dpr);
+    sigCtx.strokeStyle = '#1C1C1E';
+    sigCtx.lineWidth = 2;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); draw(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+  }
+
+  function getPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function startDraw(e) {
+    isDrawing = true;
+    const canvas = document.getElementById('sig-canvas');
+    const pos = getPos(e, canvas);
+    sigCtx.beginPath();
+    sigCtx.moveTo(pos.x, pos.y);
+    saveHistory();
+    document.getElementById('sig-placeholder').style.display = 'none';
+  }
+
+  function draw(e) {
+    if (!isDrawing) return;
+    const canvas = document.getElementById('sig-canvas');
+    const pos = getPos(e, canvas);
+    sigCtx.lineTo(pos.x, pos.y);
+    sigCtx.stroke();
+  }
+
+  function stopDraw() { isDrawing = false; }
+
+  function saveHistory() {
+    const canvas = document.getElementById('sig-canvas');
+    sigHistory.push(canvas.toDataURL());
+    if (sigHistory.length > 20) sigHistory.shift();
+  }
+
+  function undoSignature() {
+    const canvas = document.getElementById('sig-canvas');
+    if (sigHistory.length === 0) { clearSignature(); return; }
+    const prev = sigHistory.pop();
+    const img = new Image();
+    img.onload = () => {
+      sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+      sigCtx.drawImage(img, 0, 0, canvas.getBoundingClientRect().width, 120);
+    };
+    img.src = prev;
+    if (sigHistory.length === 0) {
+      document.getElementById('sig-placeholder').style.display = '';
+    }
+  }
+
+  function clearSignature() {
+    const canvas = document.getElementById('sig-canvas');
+    sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+    sigHistory = [];
+    document.getElementById('sig-placeholder').style.display = '';
+  }
+
+  // ─── PIN keyboard navigation ───
+  function pinAdvance(input, index) {
+    const inputs = document.querySelectorAll('#pin-inputs .pin-input');
+    if (input.value.length === 1 && index < inputs.length - 1) {
+      inputs[index + 1].focus();
+    }
+    if (event.key === 'Backspace' && input.value.length === 0 && index > 0) {
+      inputs[index - 1].focus();
+    }
+    // Only allow digits
+    input.value = input.value.replace(/[^0-9]/g, '');
+  }
+
+  // ─── Price cell editing ───
+  function selectPriceInput(input) {
+    setTimeout(() => {
+      input.select();
+    }, 0);
+  }
+
+  // ─── Add treatment row ───
+  function addTreatmentRow() {
+    const tbody = document.querySelector('.fees-table tbody');
+    const tr = document.createElement('tr');
+    tr.className = 'data-row';
+    tr.innerHTML = `
+      <td><input type="text" style="border:none;outline:none;font-size:14px;font-family:inherit;width:100%;background:transparent;color:var(--text-primary);" placeholder="Treatment name" autofocus></td>
+      <td class="cdt"><input type="text" style="border:none;outline:none;font-size:13px;font-family:'SF Mono',ui-monospace,monospace;width:70px;background:transparent;color:var(--text-secondary);" placeholder="D0000"></td>
+      <td class="price-cell"><input class="price-edit-input" type="text" value="₱0" onclick="selectPriceInput(this)" onfocus="selectPriceInput(this)"></td>
+      <td></td>
+    `;
+    tbody.appendChild(tr);
+    tr.querySelector('input').focus();
+  }
+
+  // ─── Patient form ───
+  function checkPatientFilled() {
+    const lastName = document.querySelector('.patient-last-name');
+    const addBtn = document.getElementById('add-another-btn');
+    if (lastName && lastName.value.trim().length > 0) {
+      addBtn.style.display = 'inline-flex';
+    }
+  }
+
+  function addAnotherPatient() {
+    patientCount++;
+    const container = document.getElementById('patient-list-container');
+
+    const divider = document.createElement('div');
+    divider.className = 'form-divider';
+    container.appendChild(divider);
+
+    const entry = document.createElement('div');
+    entry.className = 'patient-entry';
+    entry.id = 'patient-' + patientCount;
+    entry.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">Patient ${patientCount}</div>
+        <button onclick="removePatient(${patientCount})" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-tertiary);padding:4px 8px;border-radius:6px;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.color='var(--system-red)'" onmouseout="this.style.color='var(--text-tertiary)'">Remove</button>
+      </div>
+      <div class="input-row input-row-3" style="margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Last Name</label>
+          <input type="text" class="form-input" placeholder="Santos">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">First Name</label>
+          <input type="text" class="form-input" placeholder="Maria">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">M.I.</label>
+          <input type="text" class="form-input" placeholder="L." maxlength="4">
+        </div>
+      </div>
+      <div class="input-row input-row-2">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Mobile</label>
+          <div class="prefix-input-wrap">
+            <select class="prefix-select" style="width:72px;font-size:14px;">
+              <option>+63</option><option>+1</option><option>+44</option>
+            </select>
+            <input type="tel" class="form-input" placeholder="9XX XXX XXXX">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Date of Birth</label>
+          <input type="date" class="form-input">
+        </div>
+      </div>
+    `;
+    container.appendChild(entry);
+    entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    entry.querySelector('input').focus();
+  }
+
+  function removePatient(id) {
+    const entry = document.getElementById('patient-' + id);
+    if (entry) {
+      const prev = entry.previousElementSibling;
+      if (prev && prev.classList.contains('form-divider')) prev.remove();
+      entry.remove();
+      patientCount = Math.max(1, patientCount - 1);
+    }
+  }
+
+  // ─── Init ───
+  window.addEventListener('DOMContentLoaded', () => {
+    // Init canvas after a frame so layout is settled
+    requestAnimationFrame(() => {
+      requestAnimationFrame(initCanvas);
+    });
+
+    // Make PIN inputs navigate on keydown too
+    document.querySelectorAll('.pin-input').forEach((input, idx) => {
+      input.addEventListener('keydown', e => {
+        const inputs = document.querySelectorAll('.pin-input');
+        if (e.key === 'Backspace' && input.value === '' && idx > 0) {
+          inputs[idx - 1].focus();
+        }
+      });
+    });
+  });
+
+  // Re-init canvas when step 2 becomes active
+  const step2Obs = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      if (m.target.id === 'screen-step2' && m.target.classList.contains('active')) {
+        requestAnimationFrame(() => requestAnimationFrame(initCanvas));
+      }
+    });
+  });
+
+  const step2Screen = document.getElementById('screen-step2');
+  if (step2Screen) {
+    step2Obs.observe(step2Screen, { attributes: true, attributeFilter: ['class'] });
+  }
+</script>
+</body>
+</html>
