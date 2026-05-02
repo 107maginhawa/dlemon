@@ -6,36 +6,15 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import { generateTimeSlots, formatTimeLabel } from './calendar-day';
 
 // ---------------------------------------------------------------------------
-// Pure logic helpers
+// Local helpers not exported by the component
 // ---------------------------------------------------------------------------
 
-interface TimeSlot {
-  hour: number;
-  minute: number;
-  label: string;
-}
-
-function generateTimeSlots(startHour = 7, endHour = 19, intervalMins = 30): TimeSlot[] {
-  const slots: TimeSlot[] = [];
-  for (let h = startHour; h < endHour; h++) {
-    for (let m = 0; m < 60; m += intervalMins) {
-      slots.push({
-        hour: h,
-        minute: m,
-        label: formatTimeLabel(h, m),
-      });
-    }
-  }
-  return slots;
-}
-
-function formatTimeLabel(hour: number, minute: number): string {
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  const displayMinute = minute.toString().padStart(2, '0');
-  return `${displayHour}:${displayMinute} ${period}`;
+interface SimpleAppointment {
+  id: string;
+  scheduledAt: string;
 }
 
 /**
@@ -49,11 +28,6 @@ function getAppointmentPosition(scheduledAt: string, dayStartHour = 7): number {
   const minute = date.getMinutes();
   const hoursFromStart = (hour - dayStartHour) + minute / 60;
   return (hoursFromStart / 12) * 100;
-}
-
-interface SimpleAppointment {
-  id: string;
-  scheduledAt: string;
 }
 
 function groupAppointmentsByHour(appointments: SimpleAppointment[]): Record<number, SimpleAppointment[]> {

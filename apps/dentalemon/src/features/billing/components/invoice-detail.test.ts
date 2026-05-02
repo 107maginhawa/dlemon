@@ -6,54 +6,14 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface PaymentForm {
-  amountCents: number;
-  method: string;
-  receiptNumber: string;
-  recordedByMemberId: string;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers
-// ---------------------------------------------------------------------------
-
-function canIssue(status: string): boolean {
-  return status === 'draft';
-}
-
-function canVoid(status: string): boolean {
-  return status === 'issued' || status === 'partial' || status === 'overdue';
-}
-
-function canRecord(status: string): boolean {
-  return status === 'issued' || status === 'partial' || status === 'overdue';
-}
-
-function validatePaymentForm(form: PaymentForm): string[] {
-  const errors: string[] = [];
-  if (!form.amountCents || form.amountCents <= 0) errors.push('Amount must be greater than zero');
-  if (!form.method.trim()) errors.push('Payment method is required');
-  if (!form.receiptNumber.trim()) errors.push('Receipt number is required');
-  return errors;
-}
-
-function buildPaymentPayload(form: PaymentForm) {
-  return {
-    amountCents: form.amountCents,
-    method: form.method.trim(),
-    receiptNumber: form.receiptNumber.trim(),
-    recordedByMemberId: form.recordedByMemberId.trim(),
-  };
-}
-
-function calcChangeAmount(tenderedCents: number, totalCents: number): number {
-  return Math.max(0, tenderedCents - totalCents);
-}
+import {
+  canIssue,
+  canVoid,
+  canRecord,
+  validatePaymentForm,
+  buildPaymentPayload,
+  calcChangeAmount,
+} from './invoice-detail';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -115,7 +75,6 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
       amountCents: 0,
       method: 'cash',
       receiptNumber: 'R-001',
-      recordedByMemberId: 'm-1',
     });
     expect(errors).toContain('Amount must be greater than zero');
   });
@@ -125,7 +84,6 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
       amountCents: 0,
       method: 'cash',
       receiptNumber: 'R-001',
-      recordedByMemberId: 'm-1',
     });
     expect(errors.length).toBeGreaterThan(0);
   });
@@ -135,7 +93,6 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
       amountCents: 5000,
       method: '',
       receiptNumber: 'R-001',
-      recordedByMemberId: 'm-1',
     });
     expect(errors).toContain('Payment method is required');
   });
@@ -145,7 +102,6 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
       amountCents: 5000,
       method: 'cash',
       receiptNumber: '',
-      recordedByMemberId: 'm-1',
     });
     expect(errors).toContain('Receipt number is required');
   });
@@ -155,7 +111,6 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
       amountCents: 5000,
       method: 'cash',
       receiptNumber: 'R-001',
-      recordedByMemberId: 'm-1',
     });
     expect(errors.length).toBe(0);
   });

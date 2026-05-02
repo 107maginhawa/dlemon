@@ -8,18 +8,18 @@
 
 import { describe, test, expect } from 'bun:test';
 import { canAccess, canViewFinancials } from '../../../utils/rbac';
+import {
+  getGreeting,
+  formatTodayDate,
+  calcTrend,
+  groupAppointmentsByStatus,
+  getNextAppointment,
+  sumOutstanding,
+} from './morning-briefing';
 
 // ---------------------------------------------------------------------------
-// Types
+// Local helpers not exported by the component
 // ---------------------------------------------------------------------------
-
-interface Appointment {
-  id: string;
-  patientName?: string;
-  scheduledAt: string;
-  status: string;
-  procedureType?: string;
-}
 
 interface Payment {
   amountCents: number;
@@ -32,36 +32,10 @@ interface Treatment {
   procedureType?: string;
 }
 
-interface Invoice {
-  id: string;
-  balanceCents: number;
-  status: string;
-}
-
 interface PaymentPlan {
   id: string;
   status: string;
   patientName?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers (mirrors exports from morning-briefing.tsx)
-// ---------------------------------------------------------------------------
-
-function getGreeting(hour: number): string {
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function formatTodayDate(date?: Date): string {
-  const d = date ?? new Date();
-  return d.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 function calcCollectionsToday(payments: Payment[], today: string): number {
@@ -70,59 +44,9 @@ function calcCollectionsToday(payments: Payment[], today: string): number {
     .reduce((sum, p) => sum + p.amountCents, 0);
 }
 
-function calcTrend(today: number, yesterday: number): string {
-  if (yesterday === 0 && today === 0) return '\u2014';
-  if (yesterday === 0) return '+100%';
-  const pct = Math.round(((today - yesterday) / yesterday) * 100);
-  if (pct > 0) return `+${pct}%`;
-  if (pct < 0) return `${pct}%`;
-  return '0%';
-}
-
-function groupAppointmentsByStatus(appointments: Appointment[]): {
-  done: Appointment[];
-  now: Appointment[];
-  upcoming: Appointment[];
-} {
-  const done: Appointment[] = [];
-  const now: Appointment[] = [];
-  const upcoming: Appointment[] = [];
-
-  for (const appt of appointments) {
-    switch (appt.status) {
-      case 'completed':
-      case 'noShow':
-        done.push(appt);
-        break;
-      case 'checkedIn':
-        now.push(appt);
-        break;
-      case 'scheduled':
-      default:
-        upcoming.push(appt);
-        break;
-    }
-  }
-
-  return { done, now, upcoming };
-}
-
-function getNextAppointment(appointments: Appointment[], _now?: Date): Appointment | null {
-  const upcoming = appointments.filter(
-    (a) => a.status === 'scheduled' || a.status === 'checkedIn'
-  );
-  if (upcoming.length === 0) return null;
-  upcoming.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  return upcoming[0];
-}
-
 function filterPendingTreatments(treatments: Treatment[]): Treatment[] {
   const excluded = new Set(['verified', 'dismissed']);
   return treatments.filter((t) => !excluded.has(t.status));
-}
-
-function sumOutstanding(invoices: Invoice[]): number {
-  return invoices.reduce((sum, inv) => sum + inv.balanceCents, 0);
 }
 
 function getPlansBehind(plans: PaymentPlan[]): PaymentPlan[] {
@@ -222,11 +146,11 @@ describe('MorningBriefing -- calcTrend', () => {
 
 describe('MorningBriefing -- groupAppointmentsByStatus', () => {
   test('splits appointments into done, now, upcoming', () => {
-    const appts: Appointment[] = [
-      { id: '1', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
-      { id: '2', scheduledAt: '2026-05-02T09:00:00Z', status: 'checkedIn' },
-      { id: '3', scheduledAt: '2026-05-02T10:00:00Z', status: 'scheduled' },
-      { id: '4', scheduledAt: '2026-05-02T11:00:00Z', status: 'noShow' },
+    const appts = [
+      { id: '1', patientId: 'p1', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
+      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:00:00Z', status: 'checkedIn' },
+      { id: '3', patientId: 'p3', scheduledAt: '2026-05-02T10:00:00Z', status: 'scheduled' },
+      { id: '4', patientId: 'p4', scheduledAt: '2026-05-02T11:00:00Z', status: 'noShow' },
     ];
     const result = groupAppointmentsByStatus(appts);
     expect(result.done.length).toBe(2);
@@ -244,10 +168,10 @@ describe('MorningBriefing -- groupAppointmentsByStatus', () => {
 
 describe('MorningBriefing -- getNextAppointment', () => {
   test('returns first scheduled/checkedIn appointment by time', () => {
-    const appts: Appointment[] = [
-      { id: '1', scheduledAt: '2026-05-02T14:00:00Z', status: 'scheduled' },
-      { id: '2', scheduledAt: '2026-05-02T09:30:00Z', status: 'checkedIn' },
-      { id: '3', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
+    const appts = [
+      { id: '1', patientId: 'p1', scheduledAt: '2026-05-02T14:00:00Z', status: 'scheduled' },
+      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:30:00Z', status: 'checkedIn' },
+      { id: '3', patientId: 'p3', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
     ];
     const result = getNextAppointment(appts);
     expect(result?.id).toBe('2');
@@ -258,8 +182,8 @@ describe('MorningBriefing -- getNextAppointment', () => {
   });
 
   test('returns null when all completed', () => {
-    const appts: Appointment[] = [
-      { id: '1', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
+    const appts = [
+      { id: '1', patientId: 'p1', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
     ];
     expect(getNextAppointment(appts)).toBeNull();
   });
@@ -300,10 +224,10 @@ describe('MorningBriefing -- sumOutstanding', () => {
   });
 
   test('sums balanceCents correctly', () => {
-    const invoices: Invoice[] = [
-      { id: '1', balanceCents: 800000, status: 'overdue' },
-      { id: '2', balanceCents: 350000, status: 'overdue' },
-      { id: '3', balanceCents: 120000, status: 'overdue' },
+    const invoices = [
+      { id: '1', invoiceNumber: 'INV-001', patientId: 'p1', totalCents: 800000, paidCents: 0, balanceCents: 800000, status: 'overdue', createdAt: '2026-01-01' },
+      { id: '2', invoiceNumber: 'INV-002', patientId: 'p2', totalCents: 350000, paidCents: 0, balanceCents: 350000, status: 'overdue', createdAt: '2026-01-02' },
+      { id: '3', invoiceNumber: 'INV-003', patientId: 'p3', totalCents: 120000, paidCents: 0, balanceCents: 120000, status: 'overdue', createdAt: '2026-01-03' },
     ];
     expect(sumOutstanding(invoices)).toBe(1270000);
   });

@@ -5,49 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type MemberRole = 'dentist_owner' | 'dentist_associate' | 'staff_full' | 'staff_scheduling';
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers (mirrors what the component exports)
-// ---------------------------------------------------------------------------
-
-function formatRole(role: string): string {
-  const map: Record<string, string> = {
-    dentist_owner: 'Dentist-Owner',
-    dentist_associate: 'Associate Dentist',
-    staff_full: 'Staff - Full Operations',
-    staff_scheduling: 'Staff - Scheduling',
-  };
-  return map[role] ?? role;
-}
-
-function getRoleBadgeClass(role: string): string {
-  switch (role) {
-    case 'dentist_owner':
-      return 'bg-amber-100 text-amber-800';
-    case 'dentist_associate':
-      return 'bg-blue-100 text-blue-700';
-    case 'staff_full':
-      return 'bg-green-100 text-green-700';
-    case 'staff_scheduling':
-      return 'bg-purple-100 text-purple-700';
-    default:
-      return 'bg-gray-100 text-gray-500';
-  }
-}
-
-function canDeactivate(memberRole: MemberRole, currentUserRole: MemberRole): boolean {
-  // Only dentist_owner can manage staff
-  if (currentUserRole !== 'dentist_owner') return false;
-  // Owner cannot deactivate themselves
-  if (memberRole === 'dentist_owner') return false;
-  return true;
-}
+import { formatRole, getRoleBadgeClass, canDeactivate } from './staff-list';
 
 // ---------------------------------------------------------------------------
 // Tests

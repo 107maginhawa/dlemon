@@ -5,67 +5,14 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface StaffFormData {
-  displayName: string;
-  role: string;
-  pin: string;
-  confirmPin: string;
-  branchId: string;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers (mirrors what the component exports)
-// ---------------------------------------------------------------------------
-
-function validateStaffForm(form: StaffFormData): string[] {
-  const errors: string[] = [];
-
-  if (!form.displayName.trim()) {
-    errors.push('Display name is required');
-  }
-
-  if (!form.role) {
-    errors.push('Role is required');
-  }
-
-  if (!form.pin) {
-    errors.push('PIN is required');
-  } else if (!/^\d{6}$/.test(form.pin)) {
-    errors.push('PIN must be exactly 6 digits');
-  }
-
-  if (form.pin && form.confirmPin && form.pin !== form.confirmPin) {
-    errors.push('PINs do not match');
-  }
-
-  return errors;
-}
-
-function buildCreateMemberPayload(form: StaffFormData): {
-  branchId: string;
-  displayName: string;
-  role: string;
-  pin: string;
-} {
-  return {
-    branchId: form.branchId,
-    displayName: form.displayName.trim(),
-    role: form.role,
-    pin: form.pin,
-  };
-}
+import { validateStaffForm, buildCreateMemberPayload } from './staff-create-modal';
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('StaffCreateModal -- validateStaffForm', () => {
-  const validForm: StaffFormData = {
+  const validForm = {
     displayName: 'Dr. Test',
     role: 'staff_full',
     pin: '123456',

@@ -3,94 +3,18 @@
  *
  * Tests: formatInvoiceStatus, getStatusBadgeClass, formatCents,
  *        getBalanceClass, summarizeInvoices
+ *
+ * Imports directly from the real component to prevent test-impl drift.
  */
 
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface InvoiceSummaryInput {
-  status: string;
-  totalCents: number;
-  balanceCents: number;
-  paidCents: number;
-  createdAt: string;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers
-// ---------------------------------------------------------------------------
-
-function formatInvoiceStatus(status: string): string {
-  const map: Record<string, string> = {
-    draft: 'Draft',
-    issued: 'Issued',
-    partial: 'Partial',
-    paid: 'Paid',
-    overdue: 'Overdue',
-    voided: 'Voided',
-  };
-  return map[status] ?? status;
-}
-
-function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case 'draft':
-      return 'bg-gray-100 text-gray-500';
-    case 'issued':
-      return 'bg-blue-100 text-blue-700';
-    case 'partial':
-      return 'bg-orange-100 text-orange-700';
-    case 'paid':
-      return 'bg-green-100 text-green-700';
-    case 'overdue':
-      return 'bg-red-100 text-red-700';
-    case 'voided':
-      return 'bg-gray-100 text-gray-400 line-through';
-    default:
-      return 'bg-gray-100 text-gray-500';
-  }
-}
-
-function formatCents(cents: number): string {
-  const pesos = cents / 100;
-  return `\u20B1${pesos.toFixed(2)}`;
-}
-
-function getBalanceClass(balanceCents: number): string {
-  return balanceCents > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
-}
-
-function summarizeInvoices(invoices: InvoiceSummaryInput[]): {
-  totalOutstanding: number;
-  collectedThisMonth: number;
-  overdueAmount: number;
-} {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  let totalOutstanding = 0;
-  let collectedThisMonth = 0;
-  let overdueAmount = 0;
-
-  for (const inv of invoices) {
-    if (inv.status !== 'voided' && inv.status !== 'paid') {
-      totalOutstanding += inv.balanceCents;
-    }
-    if (inv.status === 'overdue') {
-      overdueAmount += inv.balanceCents;
-    }
-    const created = new Date(inv.createdAt);
-    if (created.getMonth() === currentMonth && created.getFullYear() === currentYear) {
-      collectedThisMonth += inv.paidCents;
-    }
-  }
-
-  return { totalOutstanding, collectedThisMonth, overdueAmount };
-}
+import {
+  formatInvoiceStatus,
+  getStatusBadgeClass,
+  formatCents,
+  getBalanceClass,
+  summarizeInvoices,
+} from './billing-list';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -168,12 +92,12 @@ describe('BillingList -- summarizeInvoices', () => {
     const now = new Date();
     const thisMonth = now.toISOString();
 
-    const invoices: InvoiceSummaryInput[] = [
-      { status: 'issued', totalCents: 10000, balanceCents: 10000, paidCents: 0, createdAt: thisMonth },
-      { status: 'partial', totalCents: 20000, balanceCents: 5000, paidCents: 15000, createdAt: thisMonth },
-      { status: 'overdue', totalCents: 8000, balanceCents: 8000, paidCents: 0, createdAt: thisMonth },
-      { status: 'paid', totalCents: 12000, balanceCents: 0, paidCents: 12000, createdAt: thisMonth },
-      { status: 'voided', totalCents: 2000, balanceCents: 2000, paidCents: 0, createdAt: thisMonth },
+    const invoices = [
+      { status: 'issued' as const, totalCents: 10000, balanceCents: 10000, paidCents: 0, createdAt: thisMonth },
+      { status: 'partial' as const, totalCents: 20000, balanceCents: 5000, paidCents: 15000, createdAt: thisMonth },
+      { status: 'overdue' as const, totalCents: 8000, balanceCents: 8000, paidCents: 0, createdAt: thisMonth },
+      { status: 'paid' as const, totalCents: 12000, balanceCents: 0, paidCents: 12000, createdAt: thisMonth },
+      { status: 'voided' as const, totalCents: 2000, balanceCents: 2000, paidCents: 0, createdAt: thisMonth },
     ];
 
     const result = summarizeInvoices(invoices);

@@ -6,49 +6,14 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import {
+  validateAppointmentForm,
+  buildAppointmentPayload,
+} from './appointment-modal';
 
 // ---------------------------------------------------------------------------
-// Types
+// Local helpers not exported by the component
 // ---------------------------------------------------------------------------
-
-interface AppointmentForm {
-  patientId: string;
-  dentistMemberId: string;
-  branchId: string;
-  date: string;
-  time: string;
-  durationMinutes: number | undefined;
-  procedureType: string;
-  notes: string;
-  walkIn: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers
-// ---------------------------------------------------------------------------
-
-function validateAppointmentForm(form: AppointmentForm): string[] {
-  const errors: string[] = [];
-  if (!form.patientId.trim()) errors.push('Patient ID is required');
-  if (!form.procedureType.trim()) errors.push('Procedure type is required');
-  if (!form.date.trim() || !form.time.trim()) errors.push('Scheduled date and time are required');
-  return errors;
-}
-
-function buildAppointmentPayload(form: AppointmentForm) {
-  const duration = form.durationMinutes ?? 30;
-  const scheduledAt = `${form.date}T${form.time}:00`;
-  return {
-    patientId: form.patientId.trim(),
-    dentistMemberId: form.dentistMemberId.trim() || undefined,
-    branchId: form.branchId.trim() || '00000000-0000-4000-8000-000000000001',
-    scheduledAt,
-    durationMinutes: duration,
-    procedureType: form.procedureType.trim(),
-    notes: form.notes.trim() || undefined,
-    walkIn: form.walkIn,
-  };
-}
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -87,7 +52,7 @@ function canCancel(status: string): boolean {
 // ---------------------------------------------------------------------------
 
 describe('AppointmentModal — form validation', () => {
-  const valid: AppointmentForm = {
+  const valid = {
     patientId: 'p-1',
     dentistMemberId: 'm-1',
     branchId: '00000000-0000-4000-8000-000000000001',
@@ -124,7 +89,7 @@ describe('AppointmentModal — form validation', () => {
   });
 
   test('durationMinutes defaults to 30 if not provided', () => {
-    const payload = buildAppointmentPayload({ ...valid, durationMinutes: undefined });
+    const payload = buildAppointmentPayload({ ...valid, durationMinutes: 0 });
     expect(payload.durationMinutes).toBe(30);
   });
 });

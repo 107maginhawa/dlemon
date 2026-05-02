@@ -5,53 +5,12 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Installment {
-  status: string;
-  dueDate: string;
-  amountCents: number;
-}
-
-// ---------------------------------------------------------------------------
-// Pure logic helpers
-// ---------------------------------------------------------------------------
-
-function formatFrequency(frequency: string): string {
-  const map: Record<string, string> = {
-    monthly: 'Monthly',
-    weekly: 'Weekly',
-    biweekly: 'Bi-Weekly',
-  };
-  return map[frequency] ?? frequency;
-}
-
-function getPlanStatusClass(status: string): string {
-  switch (status) {
-    case 'onTrack':
-      return 'bg-green-100 text-green-700';
-    case 'behind':
-      return 'bg-red-100 text-red-700';
-    case 'completed':
-      return 'bg-green-100 text-green-700';
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-500';
-    default:
-      return 'bg-gray-100 text-gray-500';
-  }
-}
-
-function calcProgress(paidCents: number, totalCents: number): number {
-  if (totalCents <= 0) return 0;
-  return Math.round((paidCents / totalCents) * 100);
-}
-
-function isInstallmentOverdue(installment: Installment): boolean {
-  return installment.status === 'overdue';
-}
+import {
+  formatFrequency,
+  getPlanStatusClass,
+  calcProgress,
+  isInstallmentOverdue,
+} from './payment-plan-view';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -109,14 +68,14 @@ describe('PaymentPlanView -- calcProgress', () => {
 
 describe('PaymentPlanView -- isInstallmentOverdue', () => {
   test('isInstallmentOverdue({ status: "overdue" }) === true', () => {
-    expect(isInstallmentOverdue({ status: 'overdue', dueDate: '2026-03-01', amountCents: 10000 })).toBe(true);
+    expect(isInstallmentOverdue({ status: 'overdue' })).toBe(true);
   });
 
   test('isInstallmentOverdue({ status: "paid" }) === false', () => {
-    expect(isInstallmentOverdue({ status: 'paid', dueDate: '2026-03-01', amountCents: 10000 })).toBe(false);
+    expect(isInstallmentOverdue({ status: 'paid' })).toBe(false);
   });
 
   test('isInstallmentOverdue({ status: "pending" }) === false', () => {
-    expect(isInstallmentOverdue({ status: 'pending', dueDate: '2026-06-01', amountCents: 10000 })).toBe(false);
+    expect(isInstallmentOverdue({ status: 'pending' })).toBe(false);
   });
 });
