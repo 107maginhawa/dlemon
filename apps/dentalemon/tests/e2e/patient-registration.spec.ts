@@ -39,7 +39,7 @@ async function signUpAndSeedOrg(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  // Seed org + branch
+  // Seed org
   const orgRes = await page.evaluate(async (api) => {
     const res = await fetch(`${api}/dental/organizations/`, {
       method: 'POST',
@@ -50,7 +50,24 @@ async function signUpAndSeedOrg(page: Page) {
     return res.json();
   }, API);
 
-  return { email, password, orgId: orgRes.id };
+  // Seed branch
+  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+    });
+    return res.json();
+  }, { api: API, orgId: orgRes.id });
+
+  // Set dental context in localStorage so the dashboard guard doesn't redirect to dental-onboarding
+  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    localStorage.setItem('currentOrgId', orgId);
+    localStorage.setItem('currentBranchId', branchId);
+  }, { orgId: orgRes.id, branchId: branchRes.id });
+
+  return { email, password, orgId: orgRes.id, branchId: branchRes.id };
 }
 
 test.describe('Patient Registration flow', () => {

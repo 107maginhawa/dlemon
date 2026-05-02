@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/utils/guards'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
@@ -17,7 +17,22 @@ import {
 } from 'lucide-react'
 
 export const Route = createFileRoute('/_dashboard')({
-  beforeLoad: requireAuth,
+  beforeLoad: async (opts) => {
+    // Require authentication first
+    await requireAuth(opts)
+
+    // FR7.5/FR9.8: If no dental org is set up yet, redirect to the setup wizard
+    // (unless the user is already on the dental-onboarding route itself)
+    const pathname = opts.location?.pathname ?? ''
+    if (!pathname.includes('dental-onboarding')) {
+      const currentBranchId = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('currentBranchId')
+        : null
+      if (!currentBranchId) {
+        throw redirect({ to: '/dental-onboarding' as any })
+      }
+    }
+  },
   component: DashboardLayout,
 })
 

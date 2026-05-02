@@ -6,10 +6,9 @@ export const Route = createFileRoute('/_dashboard/dashboard')({
 })
 
 function DashboardPage() {
-  // In a real app, role would come from auth context
-  // For now, default to dentist_owner
-  const role = 'dentist_owner' as const;
-  const branchId = '00000000-0000-4000-8000-000000000001';
+  // Role and branchId come from localStorage (set during dental onboarding or PIN auth)
+  const branchId = localStorage.getItem('currentBranchId') ?? ''
+  const role = 'dentist_owner' as const
 
   return (
     <div className="p-6">

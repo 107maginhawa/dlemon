@@ -59,6 +59,14 @@ async function signUpNewUser(page: any) {
   // Wait for redirect (either to onboarding or email verification)
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 })
 
+  // Set a mock dental context so the dashboard guard (FR7.5) doesn't redirect to
+  // /dental-onboarding after person profile completion. These tests specifically
+  // test the person profile onboarding flow, not the dental clinic setup.
+  await page.evaluate(() => {
+    localStorage.setItem('currentBranchId', '00000000-0000-4000-8000-000000000001');
+    localStorage.setItem('currentOrgId', '00000000-0000-4000-8000-000000000002');
+  });
+
   return { email, password, name }
 }
 
