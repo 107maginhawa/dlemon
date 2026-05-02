@@ -5,7 +5,7 @@
  * No-show is reversible (can revert to completed per PRD FR3.x).
  */
 
-import { eq, and, gte, lt } from 'drizzle-orm';
+import { eq, and, gte, lt, ne, or } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -119,6 +119,37 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'noShow')))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * FR3.7: Find overlapping appointments for the same dentist in the same branch.
+   * Overlap = the proposed time window intersects with an existing scheduled/checkedIn appointment.
+   * Non-blocking — caller decides whether to warn or block.
+   */
+  async findOverlapping(
+    dentistMemberId: string,
+    branchId: string,
+    startTime: Date,
+    durationMinutes: number,
+    excludeId?: string,
+  ): Promise<DentalAppointment[]> {
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
+    const conditions = [
+      eq(dentalAppointments.dentistMemberId, dentistMemberId),
+      eq(dentalAppointments.branchId, branchId),
+      // Overlap: existing.start < proposed.end AND existing.end > proposed.start
+      lt(dentalAppointments.scheduledAt, endTime),
+      // existing.end > proposed.start (approximate: start + duration > proposed.start)
+      gte(dentalAppointments.scheduledAt, new Date(startTime.getTime() - 120 * 60 * 1000)), // look back 2h max
+      or(
+        eq(dentalAppointments.status, 'scheduled'),
+        eq(dentalAppointments.status, 'checkedIn'),
+      )!,
+    ];
+    if (excludeId) {
+      conditions.push(ne(dentalAppointments.id, excludeId));
+    }
+    return await this.db.select().from(dentalAppointments).where(and(...conditions));
   }
 
   /**

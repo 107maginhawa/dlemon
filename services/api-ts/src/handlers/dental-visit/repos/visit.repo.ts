@@ -6,7 +6,7 @@
  *      and at application level via findActiveByPatient.
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -54,6 +54,23 @@ export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVi
       .select()
       .from(dentalVisits)
       .where(and(eq(dentalVisits.patientId, patientId), eq(dentalVisits.status, 'active')));
+    return row ?? null;
+  }
+
+  /**
+   * EC7: Find any in-progress visit (draft or active) for a patient.
+   * Used by checkInAppointment to enforce max-1-active-visit rule.
+   */
+  async findInProgressByPatient(patientId: string): Promise<DentalVisit | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalVisits)
+      .where(
+        and(
+          eq(dentalVisits.patientId, patientId),
+          or(eq(dentalVisits.status, 'draft'), eq(dentalVisits.status, 'active'))!,
+        ),
+      );
     return row ?? null;
   }
 

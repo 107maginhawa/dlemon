@@ -27,17 +27,29 @@ export async function createAppointment(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new DentalAppointmentRepository(db);
 
+  const scheduledAt = new Date(body['scheduledAt'] as string);
+  const durationMinutes = body['durationMinutes'] as number;
+  const dentistMemberId = body['dentistMemberId'] as string;
+  const branchId = body['branchId'] as string;
+
+  // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
+  const overlapping = await repo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);
+  const warnings: string[] = [];
+  if (overlapping.length > 0) {
+    warnings.push('DOUBLE_BOOKING');
+  }
+
   const appt = await repo.createOne({
     patientId: body['patientId'] as string,
-    dentistMemberId: body['dentistMemberId'] as string,
-    branchId: body['branchId'] as string,
-    scheduledAt: new Date(body['scheduledAt'] as string),
-    durationMinutes: body['durationMinutes'] as number,
+    dentistMemberId,
+    branchId,
+    scheduledAt,
+    durationMinutes,
     procedureType: body['procedureType'] as string,
     operatoryId: typeof body['operatoryId'] === 'string' ? body['operatoryId'] : undefined,
     walkIn: body['walkIn'] === true,
     notes: typeof body['notes'] === 'string' ? body['notes'] : undefined,
   });
 
-  return ctx.json(appt, 201);
+  return ctx.json({ ...appt, warnings }, 201);
 }

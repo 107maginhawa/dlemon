@@ -13,7 +13,7 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import type { User } from '@/types/auth';
@@ -39,6 +39,12 @@ export async function checkInAppointment(ctx: HandlerContext) {
   // 2. Check in the appointment
   const checkedIn = await appointmentRepo.checkIn(appointmentId);
   if (!checkedIn) throw new ValidationError('Failed to check in appointment');
+
+  // EC7: Check for existing in-progress visit (draft or active) for this patient
+  const inProgressVisit = await visitRepo.findInProgressByPatient(appointment.patientId);
+  if (inProgressVisit) {
+    throw new ConflictError('Visit already active for this patient. Complete or cancel the existing visit first.');
+  }
 
   // 3. Create a draft visit linked to the appointment
   const visit = await visitRepo.createOne({

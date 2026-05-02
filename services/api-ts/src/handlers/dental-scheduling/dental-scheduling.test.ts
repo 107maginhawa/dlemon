@@ -462,3 +462,90 @@ describe('cancelAppointment handler', () => {
     expect(updated!.cancelledAt).toBeTruthy();
   });
 });
+
+// ===========================================================================
+// FR3.7: Double-booking warning (non-blocking)
+// ===========================================================================
+
+describe('FR3.7: double-booking warning', () => {
+  test('returns 201 with empty warnings when no overlap exists', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.warnings)).toBe(true);
+    expect(body.warnings).toHaveLength(0);
+  });
+
+  test('returns 201 with DOUBLE_BOOKING warning when same dentist has overlapping appointment', async () => {
+    // Seed an existing appointment at the same time
+    await seedAppointment();
+
+    const app = buildTestApp(TEST_USER);
+    // Create another appointment at the same time for the same dentist + branch
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    // Still creates (non-blocking)
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.warnings).toContain('DOUBLE_BOOKING');
+  });
+
+  test('no double-booking warning when dentist is different', async () => {
+    await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const DIFFERENT_DENTIST_ID = 'd0000000-0000-1000-8000-000000000099';
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, dentistMemberId: DIFFERENT_DENTIST_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.warnings).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
+// EC7: Max 1 active visit per patient at check-in
+// ===========================================================================
+
+describe('EC7: max one active visit per patient', () => {
+  test('returns 409 when patient already has an in-progress visit at check-in', async () => {
+    // Create first appointment and check it in (creates draft visit)
+    const appt1 = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const firstCheckIn = await app.request(`/dental/appointments/${appt1.id}/check-in`, {
+      method: 'POST',
+    });
+    expect(firstCheckIn.status).toBe(200);
+
+    // Seed a second appointment for the same patient
+    const repo = new DentalAppointmentRepository(db);
+    const appt2 = await repo.createOne({
+      patientId: PATIENT_ID, // same patient
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(FUTURE_DATE),
+      durationMinutes: 30,
+      procedureType: 'Follow-Up',
+    });
+
+    // Try to check in the second appointment — should fail (EC7)
+    const secondCheckIn = await app.request(`/dental/appointments/${appt2.id}/check-in`, {
+      method: 'POST',
+    });
+    expect(secondCheckIn.status).toBe(409);
+    const body = await secondCheckIn.json() as any;
+    expect(body.error).toMatch(/visit already active/i);
+  });
+});
