@@ -28,6 +28,7 @@ export async function createPatient(ctx: HandlerContext) {
   }
   
   // Get validated request body (FHIR-aligned CreatePatientRequest)
+  // Also accepts dental-friendly fields: displayName, personId (for staff-created patients)
   const body = ctx.req.valid('json') as {
     name?: Array<{ use?: string; family?: string; given?: string[] }>;
     birthDate?: string;
@@ -36,6 +37,10 @@ export async function createPatient(ctx: HandlerContext) {
     dentalHistorySummary?: string;
     primaryProvider?: any;
     primaryPharmacy?: any;
+    // Dental staff creation — pass personId to link to an existing person
+    personId?: string;
+    // Simple dental registration fields — split into person record
+    displayName?: string;
   };
 
   // Get dependencies from context
@@ -46,17 +51,39 @@ export async function createPatient(ctx: HandlerContext) {
   const patientRepo = new PatientRepository(db, logger);
   const personRepo = new PersonRepository(db, logger);
 
-  // Map FHIR name to person fields
-  const officialName = body.name?.[0];
-  const personData = officialName ? {
-    firstName: officialName.given?.[0] ?? 'Unknown',
-    lastName: officialName.family,
-    dateOfBirth: body.birthDate,
-    gender: body.gender as any,
-  } : undefined;
+  let person;
 
-  // Ensure person exists for the user (create if needed)
-  const person = await personRepo.ensurePersonForUser(user, personData);
+  if (body.personId) {
+    // Staff-created patient: link to an existing person record
+    person = await personRepo.findOneById(body.personId);
+    if (!person) {
+      throw new NotFoundError('Person not found');
+    }
+  } else {
+    // Map FHIR name to person fields (or split displayName for simple dental registration)
+    const officialName = body.name?.[0];
+    let personData: { firstName: string; lastName?: string; dateOfBirth?: string; gender?: any } | undefined;
+
+    if (body.displayName) {
+      const parts = body.displayName.trim().split(/\s+/);
+      personData = {
+        firstName: parts[0] ?? 'Unknown',
+        lastName: parts.slice(1).join(' ') || undefined,
+        dateOfBirth: body.birthDate,
+        gender: body.gender as any,
+      };
+    } else if (officialName) {
+      personData = {
+        firstName: officialName.given?.[0] ?? 'Unknown',
+        lastName: officialName.family,
+        dateOfBirth: body.birthDate,
+        gender: body.gender as any,
+      };
+    }
+
+    // Ensure person exists for the user (create if needed)
+    person = await personRepo.ensurePersonForUser(user, personData);
+  }
 
   // Check if patient profile already exists for this person
   const existingPatient = await patientRepo.findByPersonId(person.id);
