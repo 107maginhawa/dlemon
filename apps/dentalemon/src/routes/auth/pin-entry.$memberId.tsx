@@ -8,7 +8,7 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { pinSession } from '@/utils/pin-session';
 
 export const Route = createFileRoute('/auth/pin-entry/$memberId')({
@@ -184,24 +184,67 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil }
 // Route component
 // --------------------------------------------------------------------------
 
+const API = 'http://localhost:7213';
+
 function PinEntryRoute() {
   const { memberId } = Route.useParams();
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [lockedUntil, setLockedUntil] = useState<Date | undefined>();
-
-  // TODO Phase 2.4: fetch the member details from the API
-  // For now use a placeholder
-  const member: PinEntryMember = {
+  const [member, setMember] = useState<PinEntryMember>({
     id: memberId,
-    displayName: 'Staff Member',
+    displayName: 'Loading…',
     role: 'staff_full',
-  };
+  });
+
+  useEffect(() => {
+    const branchId = localStorage.getItem('currentBranchId');
+    if (!branchId) return;
+    fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
+      credentials: 'include',
+    })
+      .then(r => r.json())
+      .then((data: { items?: PinEntryMember[] }) => {
+        const found = (data.items ?? []).find((m: PinEntryMember) => m.id === memberId);
+        if (found) setMember(found);
+      })
+      .catch(() => {});
+  }, [memberId]);
 
   async function handleSubmit(pin: string): Promise<VerifyPinResult | void> {
-    // TODO: need orgId + branchId from context/store
-    // For now this is a placeholder — the full wiring happens in Phase 2.4
-    setErrorMessage('PIN verification requires org context (Phase 2.4)');
+    const orgId = localStorage.getItem('currentOrgId');
+    const branchId = localStorage.getItem('currentBranchId');
+    if (!orgId || !branchId) {
+      setErrorMessage('Missing org context');
+      return;
+    }
+
+    const res = await fetch(
+      `${API}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/verify-pin`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pin }),
+      }
+    );
+
+    const data = await res.json();
+    if (data.success) {
+      pinSession.startSession({ memberId, displayName: member.displayName, role: member.role });
+      navigate({ to: '/dashboard' });
+    } else {
+      if (data.lockedUntil) {
+        setLockedUntil(new Date(data.lockedUntil));
+      }
+      setErrorMessage('Incorrect PIN');
+    }
+
+    return {
+      success: data.success,
+      failedAttempts: data.failedAttempts ?? 0,
+      lockedUntil: data.lockedUntil ? new Date(data.lockedUntil) : undefined,
+    };
   }
 
   return (

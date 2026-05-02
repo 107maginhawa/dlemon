@@ -70,7 +70,7 @@ export async function createDentalInvoice(
     isDone: t.status === 'verified',
   }));
 
-  await invoiceRepo.createLineItems(lineItems);
+  const createdLineItems = await invoiceRepo.createLineItems(lineItems);
 
-  return ctx.json(invoice, 201);
+  return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

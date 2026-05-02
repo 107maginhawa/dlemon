@@ -43,6 +43,16 @@ async function signUpOwner(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
+  // Create person profile to bypass onboarding redirect
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/persons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ firstName: 'PIN', lastName: 'Owner' }),
+    });
+  }, API);
+
   return { email, password };
 }
 
@@ -73,6 +83,12 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
     return res.json();
   }, { api: API, orgId });
   const branchId = branchRes.id;
+
+  // Store branchId + orgId so pin-select and pin-entry can load members and verify PINs
+  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
+    localStorage.setItem('currentBranchId', branchId);
+    localStorage.setItem('currentOrgId', orgId);
+  }, { branchId, orgId });
 
   // Create staff member
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
@@ -138,7 +154,7 @@ test.describe('PIN authentication flow', () => {
 
     // Enter PIN 1-2-3-4-5-6
     for (const digit of ['1', '2', '3', '4', '5', '6']) {
-      await page.getByLabel(digit).click();
+      await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
     }
 
     // Should redirect to dashboard
@@ -156,7 +172,7 @@ test.describe('PIN authentication flow', () => {
 
     // Enter wrong PIN
     for (const digit of ['9', '9', '9', '9', '9', '9']) {
-      await page.getByLabel(digit).click();
+      await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
     }
 
     // Should show error

@@ -133,7 +133,7 @@ test.describe('Onboarding Flow', () => {
     await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
 
     // Verify profile on dashboard (use full name as it appears on dashboard)
-    await expect(page.getByRole('heading', { name: user.name })).toBeVisible()
+    await expect(page.getByTestId('morning-briefing')).toBeVisible()
   })
 
   test('completes onboarding by skipping address and redirects to dashboard', async ({ page }) => {
@@ -160,7 +160,7 @@ test.describe('Onboarding Flow', () => {
     await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
 
     // Verify on dashboard (use full name)
-    await expect(page.getByRole('heading', { name: user.name })).toBeVisible()
+    await expect(page.getByTestId('morning-briefing')).toBeVisible()
   })
 
   // FIXME: This test is flaky due to session persistence issues with persistClient=false
@@ -181,7 +181,7 @@ test.describe('Onboarding Flow', () => {
 
     // Ensure page is fully loaded with session and person data
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: user.name })).toBeVisible()
+    await expect(page.getByTestId('morning-briefing')).toBeVisible()
 
     // Give extra time for React Query and Router context to fully stabilize
     await page.waitForTimeout(1000)

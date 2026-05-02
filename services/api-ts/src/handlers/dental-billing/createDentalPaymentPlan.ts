@@ -44,7 +44,7 @@ export async function createDentalPaymentPlan(
   const totalCents = invoice.balanceCents;
   const amountPerInstallmentCents = Math.floor(totalCents / body.numberOfInstallments);
 
-  const { plan } = await planRepo.createWithInstallments({
+  const { plan, installments } = await planRepo.createWithInstallments({
     invoiceId,
     patientId: body.patientId,
     totalCents,
@@ -54,5 +54,5 @@ export async function createDentalPaymentPlan(
     amountPerInstallmentCents,
   });
 
-  return ctx.json(plan, 201);
+  return ctx.json({ ...plan, installments }, 201);
 }

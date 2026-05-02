@@ -59,10 +59,11 @@ async function setup(page: Page) {
 async function createAppointment(page: Page, patientId: string) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const scheduledAt = tomorrow.toISOString().slice(0, 10) + 'T09:00:00';
+  tomorrow.setHours(9, 0, 0, 0);
+  const scheduledAt = tomorrow.toISOString();
 
   const apptRes = await page.evaluate(async ({ api, patientId, scheduledAt }) => {
-    const res = await fetch(`${api}/dental/appointments`, {
+    const res = await fetch(`${api}/dental/appointments/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

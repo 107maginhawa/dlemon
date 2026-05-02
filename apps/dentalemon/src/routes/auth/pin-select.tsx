@@ -8,7 +8,9 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API = 'http://localhost:7213';
 
 export const Route = createFileRoute('/auth/pin-select')({
   component: PinSelectRoute,
@@ -92,10 +94,18 @@ export function PinSelect({ members, onSelect }: PinSelectProps) {
 
 function PinSelectRoute() {
   const navigate = useNavigate();
+  const [members, setMembers] = useState<PinSelectMember[]>([]);
 
-  // TODO Phase 2.4: fetch active members from current org/branch via TanStack Query
-  // For now, render an empty state with a helpful message.
-  const members: PinSelectMember[] = [];
+  useEffect(() => {
+    const branchId = localStorage.getItem('currentBranchId');
+    if (!branchId) return;
+    fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
+      credentials: 'include',
+    })
+      .then(r => r.json())
+      .then(data => setMembers(data.items ?? []))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

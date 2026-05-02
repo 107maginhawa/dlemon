@@ -39,7 +39,7 @@ test.describe('First Launch Onboarding', () => {
 
     // Create org via API
     const orgRes = await page.evaluate(async (api) => {
-      const res = await fetch(`${api}/dental/organizations`, {
+      const res = await fetch(`${api}/dental/organizations/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

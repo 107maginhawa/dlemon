@@ -62,7 +62,7 @@ test.describe('Returning Patient Visit', () => {
   test('navigates to workspace from patient list', async ({ page }) => {
     const { patientId } = await signUpAndGetPatient(page);
 
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('timeline-carousel')).toBeVisible();
@@ -71,7 +71,7 @@ test.describe('Returning Patient Visit', () => {
   test('workspace shows new visit button', async ({ page }) => {
     const { patientId } = await signUpAndGetPatient(page);
 
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('new-visit-btn')).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Returning Patient Visit', () => {
   test('dental chart renders 32 teeth', async ({ page }) => {
     const { patientId } = await signUpAndGetPatient(page);
 
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Create a visit first
@@ -97,7 +97,7 @@ test.describe('Returning Patient Visit', () => {
   test('clicking a tooth opens slideout', async ({ page }) => {
     const { patientId } = await signUpAndGetPatient(page);
 
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     await page.getByTestId('new-visit-btn').click();
@@ -110,7 +110,7 @@ test.describe('Returning Patient Visit', () => {
   test('slideout can select condition and advance to surface step', async ({ page }) => {
     const { patientId } = await signUpAndGetPatient(page);
 
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     await page.getByTestId('new-visit-btn').click();

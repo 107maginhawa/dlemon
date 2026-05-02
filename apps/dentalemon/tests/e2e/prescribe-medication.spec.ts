@@ -68,21 +68,21 @@ async function setupWorkspace(page: Page) {
 test.describe('Prescribe Medication (J7)', () => {
   test('workspace page loads for a patient', async ({ page }) => {
     const { patientId } = await setupWorkspace(page);
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('timeline-carousel')).toBeVisible();
   });
 
   test('new visit button is visible', async ({ page }) => {
     const { patientId } = await setupWorkspace(page);
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('new-visit-btn')).toBeVisible();
   });
 
   test('can create a new visit', async ({ page }) => {
     const { patientId } = await setupWorkspace(page);
-    await page.goto(`${APP}/workspace/${patientId}`);
+    await page.goto(`${APP}/${patientId}`);
     await page.waitForLoadState('networkidle');
     await page.getByTestId('new-visit-btn').click();
     await page.waitForTimeout(600);

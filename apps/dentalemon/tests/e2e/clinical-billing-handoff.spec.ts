@@ -85,9 +85,9 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
     });
   }, { api: API, visitId });
 
-  // Add treatment
-  await page.evaluate(async ({ api, visitId, patientId }) => {
-    return fetch(`${api}/dental/visits/${visitId}/treatments`, {
+  // Add treatment and mark as performed
+  const treatmentId = await page.evaluate(async ({ api, visitId, patientId }) => {
+    const res = await fetch(`${api}/dental/visits/${visitId}/treatments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -100,7 +100,18 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
         priceCents: 250000,
       }),
     });
+    const data = await res.json();
+    return data.id;
   }, { api: API, visitId, patientId });
+
+  await page.evaluate(async ({ api, visitId, treatmentId }) => {
+    return fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'performed' }),
+    });
+  }, { api: API, visitId, treatmentId });
 
   // Complete
   await page.evaluate(async ({ api, visitId }) => {
@@ -126,7 +137,12 @@ test.describe('Clinical-Billing Handoff', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ visitId, patientId }),
+        body: JSON.stringify({
+          visitId,
+          patientId,
+          branchId: '00000000-0000-4000-8000-000000000001',
+          dentistMemberId: '00000000-0000-4000-8000-000000000002',
+        }),
       });
       return { status: res.status, body: await res.json() };
     }, { api: API, visitId, patientId });
@@ -161,6 +177,7 @@ test.describe('Clinical-Billing Handoff', () => {
           amountCents: totalCents,
           method: 'cash',
           receiptNumber: `R-${Date.now()}`,
+          recordedByMemberId: '00000000-0000-4000-8000-000000000002',
         }),
       });
       return res.status;

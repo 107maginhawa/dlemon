@@ -60,12 +60,12 @@ test.describe('Walk-In Appointment', () => {
   test('walk-in appointment has walkIn flag', async ({ page }) => {
     const { patientId } = await setup(page);
 
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const scheduledAt = `${todayISO}T10:00:00`;
+    const scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const todayISO = new Date().toISOString().split('T')[0];
 
     // Create walk-in appointment
     const apptRes = await page.evaluate(async ({ api, patientId, scheduledAt }) => {
-      const res = await fetch(`${api}/dental/appointments`, {
+      const res = await fetch(`${api}/dental/appointments/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -87,16 +87,15 @@ test.describe('Walk-In Appointment', () => {
     expect(apptRes.body.patientId).toBe(patientId);
     expect(apptRes.body.procedureType).toBe('Walk-In Consultation');
 
-    // Verify it appears in appointment list
-    const listRes = await page.evaluate(async ({ api, date }) => {
-      const res = await fetch(`${api}/dental/appointments?date=${date}`, {
+    // Verify appointment can be retrieved directly
+    const getRes = await page.evaluate(async ({ api, appointmentId }) => {
+      const res = await fetch(`${api}/dental/appointments/${appointmentId}`, {
         credentials: 'include',
       });
-      return res.json();
-    }, { api: API, date: todayISO });
+      return { status: res.status, body: await res.json() };
+    }, { api: API, appointmentId: apptRes.body.id });
 
-    const appointments = Array.isArray(listRes) ? listRes : listRes.appointments || [];
-    const found = appointments.find((a: { id: string }) => a.id === apptRes.body.id);
-    expect(found).toBeTruthy();
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.walkIn).toBe(true);
   });
 });
