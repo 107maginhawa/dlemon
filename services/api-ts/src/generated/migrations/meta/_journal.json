@@ -15,6 +15,55 @@
       "when": 1777535998262,
       "tag": "0001_dry_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777660978640,
+      "tag": "0002_pale_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777664867505,
+      "tag": "0003_fresh_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777675153963,
+      "tag": "0004_tearful_purple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777677720195,
+      "tag": "0005_previous_natasha_romanoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777678630207,
+      "tag": "0006_thick_swordsman",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777680614790,
+      "tag": "0007_legal_triton",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777682006785,
+      "tag": "0008_lucky_talisman",
+      "breakpoints": true
     }
   ]
 }
