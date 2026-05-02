@@ -29,6 +29,24 @@ export const Route = createFileRoute('/_dashboard')({
         ? localStorage.getItem('currentBranchId')
         : null
       if (!currentBranchId) {
+        // Try to auto-detect org/branch from API (e.g. seeded via script)
+        try {
+          const res = await fetch('http://localhost:7213/dental/org/context', {
+            credentials: 'include',
+          })
+          if (res.ok) {
+            const ctx = await res.json() as any
+            if (ctx.branch?.id) {
+              localStorage.setItem('currentBranchId', ctx.branch.id)
+              if (ctx.org?.id) localStorage.setItem('currentOrgId', ctx.org.id)
+              if (ctx.member?.role) localStorage.setItem('currentMemberRole', ctx.member.role)
+              // Context found — continue to dashboard instead of redirecting to onboarding
+              return
+            }
+          }
+        } catch {
+          // API unreachable — fall through to onboarding
+        }
         throw redirect({ to: '/dental-onboarding' as any })
       }
     }
