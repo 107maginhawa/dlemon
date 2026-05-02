@@ -52,6 +52,17 @@ export class MembershipRepository extends DatabaseRepository<
   }
 
   /**
+   * Count active members in a branch (used for tier limit enforcement)
+   */
+  async countActiveByBranch(branchId: string): Promise<number> {
+    const rows = await this.db
+      .select()
+      .from(dentalMemberships)
+      .where(and(eq(dentalMemberships.branchId, branchId), eq(dentalMemberships.status, 'active')));
+    return rows.length;
+  }
+
+  /**
    * Set or replace the PIN hash for a member
    */
   async updatePin(id: string, pinHash: string): Promise<DentalMembership | null> {

@@ -30,6 +30,22 @@ export interface StaffListProps {
   branchId: string;
 }
 
+// FR8.13: Access denied component for non-owner roles
+export function StaffAccessDenied() {
+  return (
+    <div
+      data-testid="staff-access-denied"
+      className="flex flex-col items-center justify-center py-24 gap-3 text-center"
+    >
+      <div className="text-4xl">🔒</div>
+      <h2 className="text-lg font-semibold">Access Denied</h2>
+      <p className="text-sm text-muted-foreground max-w-xs">
+        Only the Dentist-Owner can manage staff. Contact your practice owner for access.
+      </p>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Pure logic helpers (exported for testing)
 // ---------------------------------------------------------------------------

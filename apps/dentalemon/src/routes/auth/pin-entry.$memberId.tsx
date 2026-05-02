@@ -262,6 +262,8 @@ function PinEntryRoute() {
 
     if (data.success) {
       pinSession.startSession({ memberId, displayName: member.displayName, role: member.role });
+      localStorage.setItem('currentMemberId', memberId);
+      localStorage.setItem('currentMemberRole', member.role);
       setFailedAttempts(0);
       // FR9.3: Navigate to role-appropriate landing page
       const destination = ROLE_LANDING[member.role] ?? '/dashboard';

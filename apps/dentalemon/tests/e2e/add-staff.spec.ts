@@ -1,93 +1,163 @@
-import { test, expect } from '@playwright/test'
-
-const API = 'http://localhost:7213'
-
 /**
- * J9: owner creates staff member, verifies in list, then deactivates
+ * E2E: Staff Management (FR6.x)
  *
- * This test uses the API directly rather than UI interaction since the
- * staff page requires an authenticated session with an existing org/branch.
+ * Business Rules:
+ * - FR6.1: Create staff member with name, role, 6-digit PIN
+ * - FR6.5: Staff list shows name, role badge, status, actions
+ * - FR8.13: Only Dentist-Owner can access staff module
  */
-test('can create staff member via API, list, and deactivate', async ({ request }) => {
-  // Step 1: Sign up to get an authenticated session
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  const email = `staff-test-${timestamp}-${random}@example.com`
-  const password = 'TestPass123!'
-  const name = `StaffTest ${timestamp}`
 
-  const signupRes = await request.post(`${API}/auth/sign-up/email`, {
-    data: { name, email, password },
-  })
-  // signup may return 200 or 302 depending on config
-  expect([200, 201, 302]).toContain(signupRes.status())
+import { test, expect, type Page } from '@playwright/test';
 
-  // Step 2: Create an org + branch for the test
-  const orgRes = await request.post(`${API}/dental/organizations/`, {
-    data: {
-      name: `Test Practice ${timestamp}`,
-      tier: 'clinic',
-      countryCode: 'PH',
-    },
-  })
-  // If org creation fails (e.g. auth required), skip gracefully
-  if (!orgRes.ok()) {
-    test.skip()
-    return
+const API = 'http://localhost:7213';
+const APP = 'http://localhost:3003';
+
+async function signUpAndSetupPractice(page: Page): Promise<{ orgId: string; branchId: string }> {
+  const suffix = Date.now();
+  const email = `staff-e2e-${suffix}@example.org`;
+  const password = 'E2eTestPass123!';
+
+  await page.goto(`${APP}/auth/sign-up`);
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Name', { exact: true }).fill(`Staff Owner ${suffix}`);
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  const pwInput = page.locator('input[type="password"]');
+  await pwInput.click();
+  await pwInput.pressSequentially(password, { delay: 10 });
+  await expect(pwInput).not.toHaveValue('');
+
+  const signupResponse = page.waitForResponse(
+    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
+    { timeout: 10000 },
+  ).catch(() => null);
+  await page.getByRole('button', { name: /create an account/i }).click();
+  const res = await signupResponse;
+  if (res && res.status() >= 400) {
+    const body = await res.text().catch(() => '<unreadable>');
+    throw new Error(`Sign-up POST returned ${res.status()}: ${body.slice(0, 500)}`);
   }
-  const org = await orgRes.json()
+  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  const branchRes = await request.post(`${API}/dental/organizations/${org.id}/branches/`, {
-    data: {
-      name: 'Main Branch',
-      timezone: 'Asia/Manila',
-    },
-  })
-  if (!branchRes.ok()) {
-    test.skip()
-    return
-  }
-  const branch = await branchRes.json()
-  const branchId = branch.id
+  // Create person profile to bypass onboarding redirect
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/persons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ firstName: 'Staff', lastName: 'Owner' }),
+    });
+  }, API);
 
-  // Step 3: Create a staff member via the flat API
-  const createRes = await request.post(`${API}/dental/organizations/${org.id}/branches/${branchId}/members/`, {
-    data: {
-      displayName: 'Test Staff Member',
-      role: 'staff_full',
-    },
-  })
+  // Seed org + branch
+  const orgRes = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/organizations/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Staff Test Clinic', tier: 'clinic', countryCode: 'PH' }),
+    });
+    return res.json();
+  }, API);
+  const orgId = orgRes.id;
 
-  if (!createRes.ok()) {
-    test.skip()
-    return
-  }
-  const created = await createRes.json()
-  expect(created.id).toBeTruthy()
-  expect(created.displayName).toBe('Test Staff Member')
-  expect(created.role).toBe('staff_full')
-  expect(created.status).toBe('active')
+  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+    });
+    return res.json();
+  }, { api: API, orgId });
+  const branchId = branchRes.id;
 
-  // Step 4: List members and verify the new member appears
-  const listRes = await request.get(`${API}/dental/org/members?branchId=${branchId}`)
-  if (listRes.ok()) {
-    const list = await listRes.json()
-    const found = list.items?.find((m: any) => m.id === created.id)
-    expect(found).toBeTruthy()
-    expect(found.displayName).toBe('Test Staff Member')
-  }
+  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    localStorage.setItem('currentOrgId', orgId);
+    localStorage.setItem('currentBranchId', branchId);
+    // Simulate dentist_owner logged in via PIN (FR8.13 access)
+    localStorage.setItem('currentMemberRole', 'dentist_owner');
+  }, { orgId, branchId });
 
-  // Step 5: Deactivate the member
-  const deactivateRes = await request.delete(`${API}/dental/org/members/${created.id}`)
-  if (deactivateRes.ok()) {
-    expect(deactivateRes.status()).toBe(204)
-  }
+  return { orgId, branchId };
+}
 
-  // Step 6: Verify deactivated member no longer in default list
-  const listAfterRes = await request.get(`${API}/dental/org/members?branchId=${branchId}`)
-  if (listAfterRes.ok()) {
-    const listAfter = await listAfterRes.json()
-    const stillThere = listAfter.items?.find((m: any) => m.id === created.id)
-    expect(stillThere).toBeFalsy()
-  }
-})
+test.describe('Staff Management', () => {
+  test('FR6.5: staff page loads and shows staff list header', async ({ page }) => {
+    await signUpAndSetupPractice(page);
+    await page.goto(`${APP}/staff`);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Staff Members' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /add staff/i })).toBeVisible();
+  });
+
+  test('FR6.1: "+ Add Staff" button opens creation modal', async ({ page }) => {
+    await signUpAndSetupPractice(page);
+    await page.goto(`${APP}/staff`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /add staff/i }).click();
+    await expect(page.getByTestId('staff-create-modal')).toBeVisible();
+
+    // Should have required fields: name, role, PIN
+    await expect(page.getByLabel(/display name/i)).toBeVisible();
+    await expect(page.getByLabel(/pin.*6 digits/i)).toBeVisible();
+  });
+
+  test('FR6.1: form validates 6-digit PIN requirement', async ({ page }) => {
+    await signUpAndSetupPractice(page);
+    await page.goto(`${APP}/staff`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /add staff/i }).click();
+    await page.getByLabel(/display name/i).fill('Test Staff');
+    await page.getByLabel(/pin.*6 digits/i).fill('123'); // Too short
+
+    await page.getByRole('button', { name: /create staff member/i }).click();
+
+    await expect(page.getByText(/pin must be exactly 6 digits/i)).toBeVisible();
+  });
+
+  test('FR6.1: creating a staff member adds to the list', async ({ page }) => {
+    const { orgId, branchId } = await signUpAndSetupPractice(page);
+    await page.goto(`${APP}/staff`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /add staff/i }).click();
+    await page.getByLabel(/display name/i).fill('Nurse Maria');
+
+    // Select role: Staff - Full Operations
+    await page.getByText('Staff - Full Operations').click();
+
+    await page.getByLabel(/pin.*6 digits/i).fill('111111');
+    await page.getByLabel(/confirm pin/i).fill('111111');
+
+    const createResponse = page.waitForResponse(
+      (resp: any) => resp.url().includes('/members') && resp.request().method() === 'POST',
+      { timeout: 10000 },
+    ).catch(() => null);
+
+    await page.getByRole('button', { name: /create staff member/i }).click();
+    await createResponse;
+
+    // Staff member should appear in list
+    await page.waitForTimeout(500); // allow list refresh
+    await expect(page.getByText('Nurse Maria')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('FR8.13: non-owner role sees access denied on staff page', async ({ page }) => {
+    await signUpAndSetupPractice(page);
+
+    // Override role to staff_full (not owner)
+    await page.evaluate(() => {
+      localStorage.setItem('currentMemberRole', 'staff_full');
+    });
+
+    await page.goto(`${APP}/staff`);
+    await page.waitForLoadState('networkidle');
+
+    // Should show access denied, not the staff list
+    await expect(page.getByTestId('staff-access-denied')).toBeVisible();
+    await expect(page.getByText(/access denied/i)).toBeVisible();
+  });
+});
