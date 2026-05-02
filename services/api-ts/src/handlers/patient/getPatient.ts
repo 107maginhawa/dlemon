@@ -22,8 +22,8 @@ export async function getPatient(ctx: HandlerContext) {
   // Get authenticated user (middleware guarantees user exists)
   const user = ctx.get('user') as User;
   
-  // Get path parameter and query
-  let patientId = ctx.req.param('patient') as string;
+  // Get path parameter and query (TypeSpec uses 'id')
+  let patientId = (ctx.req.param('id') || ctx.req.param('patient')) as string;
   const query = ctx.req.valid('query') as { expand?: string[] };
   
   // Get dependencies from context
@@ -67,11 +67,16 @@ export async function getPatient(ctx: HandlerContext) {
     });
   }
   
-  // Check authorization - owner can only access their own record
+  // Check authorization — admin/staff can view any patient; owner can view own record
   const personId = typeof patient.person === 'string' ? patient.person : (patient.person as { id: string }).id;
   const isOwner = personId === user.id;
+  const staffRoles = ['admin', 'clinician', 'registrar', 'support'];
+  const userRole = (user as any).role || 'user';
+  const isStaff = staffRoles.some(r =>
+    userRole.split(',').map((s: string) => s.trim()).includes(r)
+  );
 
-  if (!isOwner) {
+  if (!isOwner && !isStaff) {
     throw new ForbiddenError('Access denied');
   }
   

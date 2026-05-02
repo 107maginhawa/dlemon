@@ -3,7 +3,7 @@
  * Uses Drizzle ORM with PostgreSQL
  */
 
-import { pgTable, uuid, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, jsonb, index, uniqueIndex, text, boolean } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 import { persons, type PersonCreateRequest } from '../../person/repos/person.schema';
@@ -20,9 +20,15 @@ export const patients = pgTable('patient', {
   
   // Primary care provider information (optional)
   primaryProvider: jsonb('primary_provider').$type<ProviderInfo>(),
-  
+
   // Primary pharmacy information (optional)
   primaryPharmacy: jsonb('primary_pharmacy').$type<PharmacyInfo>(),
+
+  // Dental-specific extensions
+  preferredBranchId: uuid('preferred_branch_id'),
+  dentalHistorySummary: text('dental_history_summary'),
+  needsFollowUp: boolean('needs_follow_up').default(false),
+  hasActivePaymentPlan: boolean('has_active_payment_plan').default(false),
 }, (table) => ({
   // Indexes for search and performance
   personIdx: index('patients_person_id_idx').on(table.person),
@@ -88,11 +94,16 @@ export interface PatientCreateRequest {
   person?: PersonCreateRequest; // Person demographic information
   primaryProvider?: ProviderInfo;
   primaryPharmacy?: PharmacyInfo;
+  preferredBranchId?: string;
+  dentalHistorySummary?: string;
 }
 
 export interface PatientUpdateRequest {
   primaryProvider?: ProviderInfoUpdate | null;
   primaryPharmacy?: PharmacyInfoUpdate | null;
+  preferredBranchId?: string | null;
+  dentalHistorySummary?: string | null;
+  needsFollowUp?: boolean | null;
 }
 
 // Helper type for queries with joined person data

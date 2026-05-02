@@ -3,7 +3,7 @@
  * Encapsulates all database operations for the patients table
  */
 
-import { eq, and, or, ilike, isNull, inArray, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, ilike, isNull, inArray, sql, type SQL, isNotNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
@@ -19,6 +19,13 @@ export interface PatientFilters {
   person?: string;
   q?: string; // General search query
   ids?: string[]; // Filter by patient IDs using IN query
+  branchId?: string; // Filter by preferred dental branch
+  needsFollowUp?: boolean; // Filter by follow-up flag
+}
+
+export interface ArchiveResult {
+  success: boolean;
+  reason?: string;
 }
 
 export class PatientRepository extends DatabaseRepository<Patient, NewPatient, PatientFilters> {
@@ -43,6 +50,14 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
 
     if (filters.ids && filters.ids.length > 0) {
       conditions.push(inArray(patients.id, filters.ids));
+    }
+
+    if (filters.branchId) {
+      conditions.push(eq(patients.preferredBranchId, filters.branchId));
+    }
+
+    if (filters.needsFollowUp !== undefined) {
+      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
     }
 
     // General search would require joining with persons table
@@ -143,6 +158,14 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       );
     }
 
+    if (filters?.branchId) {
+      conditions.push(eq(patients.preferredBranchId, filters.branchId));
+    }
+
+    if (filters?.needsFollowUp !== undefined) {
+      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
+    }
+
     if (conditions.length > 0) {
       query.where(and(...conditions));
     }
@@ -164,6 +187,29 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       ...patient,
       person
     })) as PatientWithPerson[];
+  }
+
+  /**
+   * Archive a patient (soft-archive via needsFollowUp reset).
+   * EC1: blocks if the patient has an active payment plan.
+   */
+  async archivePatient(id: string): Promise<ArchiveResult> {
+    const patient = await this.findOneById(id);
+    if (!patient) {
+      return { success: false, reason: 'Patient not found' };
+    }
+
+    if (patient.hasActivePaymentPlan) {
+      return {
+        success: false,
+        reason: 'Cannot archive patient with an active payment plan',
+      };
+    }
+
+    // Clear follow-up flag on archive
+    await this.updateOneById(id, { needsFollowUp: false });
+
+    return { success: true };
   }
 
 }

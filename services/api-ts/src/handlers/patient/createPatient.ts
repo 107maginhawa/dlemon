@@ -1,6 +1,6 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { 
+import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
@@ -8,10 +8,8 @@ import {
 } from '@/core/errors';
 import { PatientRepository } from './repos/patient.repo';
 import { PersonRepository } from '../person/repos/person.repo';
-import { type PatientCreateRequest, type PatientWithPerson } from './repos/patient.schema';
 import { addUserRole } from '@/utils/auth';
-import type { User, Session } from '@/types/auth';
-import type { AuthInstance } from '@/utils/auth';
+import type { User } from '@/types/auth';
 
 /**
  * createPatient
@@ -29,51 +27,62 @@ export async function createPatient(ctx: HandlerContext) {
     throw new BusinessLogicError('User must have a person profile before creating patient profile', 'MISSING_PERSON_PROFILE');
   }
   
-  // Get validated request body
-  const body = ctx.req.valid('json') as PatientCreateRequest;
-  
+  // Get validated request body (FHIR-aligned CreatePatientRequest)
+  const body = ctx.req.valid('json') as {
+    name?: Array<{ use?: string; family?: string; given?: string[] }>;
+    birthDate?: string;
+    gender?: string;
+    preferredBranchId?: string;
+    dentalHistorySummary?: string;
+    primaryProvider?: any;
+    primaryPharmacy?: any;
+  };
+
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
-  
+
   // Instantiate repositories
   const patientRepo = new PatientRepository(db, logger);
   const personRepo = new PersonRepository(db, logger);
-  
+
+  // Map FHIR name to person fields
+  const officialName = body.name?.[0];
+  const personData = officialName ? {
+    firstName: officialName.given?.[0] ?? 'Unknown',
+    lastName: officialName.family,
+    dateOfBirth: body.birthDate,
+    gender: body.gender as any,
+  } : undefined;
+
   // Ensure person exists for the user (create if needed)
-  const person = await personRepo.ensurePersonForUser(user, body.person);
-  
+  const person = await personRepo.ensurePersonForUser(user, personData);
+
   // Check if patient profile already exists for this person
   const existingPatient = await patientRepo.findByPersonId(person.id);
   if (existingPatient) {
     throw new BusinessLogicError('Patient profile already exists for this person', 'PATIENT_EXISTS');
   }
-  
-  // Create patient record
+
+  // Create patient record with dental fields
   const patient = await patientRepo.createOne({
     person: person.id,
     primaryProvider: body.primaryProvider || null,
-    primaryPharmacy: body.primaryPharmacy || null
+    primaryPharmacy: body.primaryPharmacy || null,
+    ...(body.preferredBranchId ? { preferredBranchId: body.preferredBranchId } : {}),
+    ...(body.dentalHistorySummary ? { dentalHistorySummary: body.dentalHistorySummary } : {}),
   });
 
-  // Add patient role to user after creating profile
-  await addUserRole(db, user, 'patient');
+  // Assign patient role for self-registration (skip for admin/staff/clinician)
+  // Role takes effect on next session creation — no session revocation needed
+  const staffRoles = ['admin', 'clinician', 'registrar', 'support'];
+  const userRole = (user as any).role || 'user';
+  const isStaffCreation = staffRoles.some(r =>
+    userRole.split(',').map((s: string) => s.trim()).includes(r)
+  );
 
-  // Invalidate current session to force re-authentication with updated roles
-  // User will need to sign in again to get fresh JWT with patient role
-  const session = ctx.get('session') as Session;
-  const auth = ctx.get('auth') as AuthInstance;
-  if (session?.token && auth) {
-    try {
-      await auth.api.revokeSession({
-        body: { token: session.token },
-        headers: ctx.req.raw.headers,
-      });
-      logger?.info({ userId: user.id }, 'Session invalidated after patient role assignment');
-    } catch (error) {
-      // Log but don't fail the request if session revocation fails
-      logger?.warn({ error, userId: user.id }, 'Failed to revoke session after role assignment');
-    }
+  if (!isStaffCreation) {
+    await addUserRole(db, user, 'patient');
   }
 
   // Log audit trail

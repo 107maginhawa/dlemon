@@ -21,8 +21,8 @@ export async function updatePatient(ctx: HandlerContext) {
   // Get authenticated user (middleware guarantees user exists)
   const user = ctx.get('user') as User;
   
-  // Extract patient ID from path
-  const patientId = ctx.req.param('patient') as string;
+  // Extract patient ID from path (TypeSpec uses 'id')
+  const patientId = (ctx.req.param('id') || ctx.req.param('patient')) as string;
   
   // Extract validated request body
   const body = ctx.req.valid('json') as PatientUpdateRequest;
@@ -44,19 +44,11 @@ export async function updatePatient(ctx: HandlerContext) {
     });
   }
   
-  // Check authorization - owner can only update their own record
-  const personId = typeof existingPatient.person === 'string' ? existingPatient.person : (existingPatient.person as { id: string }).id;
-  const isOwner = personId === user.id;
-
-  if (!isOwner) {
-    throw new ForbiddenError('You can only update your own patient profile');
-  }
-  
-  // Prepare update data
+  // Prepare update data — admin/staff can update any patient
   const updateData: any = {
     updatedBy: user.id
   };
-  
+
   // Only update fields that are provided
   if (body.primaryProvider !== undefined) {
     updateData.primaryProvider = body.primaryProvider;
@@ -64,6 +56,18 @@ export async function updatePatient(ctx: HandlerContext) {
   if (body.primaryPharmacy !== undefined) {
     updateData.primaryPharmacy = body.primaryPharmacy;
   }
+  // Dental-specific fields
+  if ((body as any).dentalHistorySummary !== undefined) {
+    updateData.dentalHistorySummary = (body as any).dentalHistorySummary;
+  }
+  if ((body as any).needsFollowUp !== undefined) {
+    updateData.needsFollowUp = (body as any).needsFollowUp;
+  }
+  if ((body as any).preferredBranchId !== undefined) {
+    updateData.preferredBranchId = (body as any).preferredBranchId;
+  }
+
+  const isOwner = existingPatient.person === user.id;
   
   // Update patient record
   const updatedPatient = await patientRepo.updateOneById(patientId, updateData);

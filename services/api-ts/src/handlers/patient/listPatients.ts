@@ -31,26 +31,33 @@ export async function listPatients(ctx: HandlerContext) {
     q?: string;
     expand?: string[];
     status?: 'active' | 'inactive' | 'archived';
+    branchId?: string;
+    needsFollowUp?: boolean;
   };
 
   // Parse pagination with utilities - use TypeSpec defaults (limit: 20, maxLimit: 100)
   const { limit, offset } = parsePagination(query, { limit: 20, maxLimit: 100 });
 
   // Parse filters with utilities
-  const filters = parseFilters(query, ['q', 'status']);
-  
+  const baseFilters = parseFilters(query, ['q', 'status']);
+  const filters = {
+    ...baseFilters,
+    ...(query.branchId ? { branchId: query.branchId } : {}),
+    ...(query.needsFollowUp !== undefined ? { needsFollowUp: query.needsFollowUp } : {}),
+  };
+
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
-  
+
   // Instantiate repository
   const repo = new PatientRepository(db, logger);
-  
-  // Fetch patients (expansion handled automatically by auto-expand middleware)
-  const patients = await repo.findMany(filters, { pagination: { limit, offset } });
+
+  // Fetch patients with dental filters (expansion handled by auto-expand middleware)
+  const patients = await repo.findManyWithPerson(filters, { pagination: { limit, offset } });
   
   // Get total count for proper pagination metadata
-  const totalCount = await repo.count(filters);
+  const totalCount = await repo.count();
   
   // Build pagination metadata
   const paginationMeta = buildPaginationMeta(patients, totalCount, limit, offset);
