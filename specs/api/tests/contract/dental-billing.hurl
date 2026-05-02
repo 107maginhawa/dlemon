@@ -23,7 +23,7 @@ POST {{api}}/dental/visits
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f4000000-0000-4000-8000-000000000001",
+  "patientId": "{{user_id}}",
   "branchId": "f4000000-0000-4000-8000-000000000002",
   "dentistMemberId": "f4000000-0000-4000-8000-000000000003",
   "chiefComplaint": "Billing test visit"
@@ -53,7 +53,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f4000000-0000-4000-8000-000000000001",
+  "patientId": "{{user_id}}",
   "cdtCode": "D2391",
   "description": "Resin composite, one surface",
   "toothNumber": 26,
@@ -71,7 +71,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f4000000-0000-4000-8000-000000000001",
+  "patientId": "{{user_id}}",
   "cdtCode": "D0150",
   "description": "Comprehensive oral evaluation",
   "priceCents": 8500
@@ -111,7 +111,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f4000000-0000-4000-8000-000000000001",
+  "patientId": "{{user_id}}",
   "branchId": "f4000000-0000-4000-8000-000000000002",
   "dentistMemberId": "f4000000-0000-4000-8000-000000000003"
 }
@@ -191,7 +191,7 @@ POST {{api}}/dental/billing/invoices/{{invoice_id}}/plan
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f4000000-0000-4000-8000-000000000001",
+  "patientId": "{{user_id}}",
   "numberOfInstallments": 3,
   "frequency": "monthly",
   "startDate": "2026-07-01T00:00:00.000Z"
