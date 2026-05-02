@@ -1,0 +1,39 @@
+/**
+ * resetMemberPin — reset a member's PIN (owner operation)
+ *
+ * Path: POST /dental/org/members/:memberId/reset-pin
+ * Body: { pin: string } — raw PIN, hashed server-side
+ */
+
+import type { Context } from 'hono';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import type { User } from '@/types/auth';
+import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
+
+export async function resetMemberPin(ctx: Context): Promise<Response> {
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
+  const memberId = ctx.req.param('memberId')!;
+  const body = await ctx.req.json();
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const pin = body.pin as string | undefined;
+  if (!pin || typeof pin !== 'string' || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    return ctx.json({ error: 'PIN must be exactly 6 digits' }, 400);
+  }
+
+  const repo = new MembershipRepository(db, logger);
+  const member = await repo.findOneById(memberId);
+  if (!member) throw new NotFoundError('Membership');
+
+  const pinHash = await Bun.password.hash(pin);
+  await repo.updatePin(memberId, pinHash);
+
+  // Also reset any failed attempts / lockout
+  await repo.resetPinAttempts(memberId);
+
+  return ctx.json({ success: true });
+}
