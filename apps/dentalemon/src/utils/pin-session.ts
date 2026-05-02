@@ -1,0 +1,91 @@
+/**
+ * PIN Session Manager
+ *
+ * Manages the local "who is currently logged in on this device" state.
+ * The session is in-memory only — it is cleared when the tab/app closes,
+ * and it auto-expires after INACTIVITY_TIMEOUT_MS of inactivity.
+ *
+ * The cloud Better-Auth session (the practice owner's cloud account) is
+ * separate from this — this is specifically for the PIN-based staff session
+ * that controls who can access the dental workspace on-device.
+ */
+
+export const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+export interface PinSessionData {
+  memberId: string;
+  displayName: string;
+  role: string;
+  lastActiveAt: number;
+  locked: boolean;
+}
+
+export interface StartSessionOptions {
+  memberId: string;
+  displayName: string;
+  role: string;
+}
+
+export class PinSessionManager {
+  private session: PinSessionData | null = null;
+
+  /** Start a new session for the given member. Replaces any existing session. */
+  startSession(opts: StartSessionOptions): void {
+    this.session = {
+      memberId: opts.memberId,
+      displayName: opts.displayName,
+      role: opts.role,
+      lastActiveAt: Date.now(),
+      locked: false,
+    };
+  }
+
+  /** Return the current session, or null if no session is active. */
+  getSession(): PinSessionData | null {
+    return this.session;
+  }
+
+  /** Update the last-activity timestamp (call on any user interaction). */
+  updateActivity(now: number = Date.now()): void {
+    if (this.session) {
+      this.session.lastActiveAt = now;
+    }
+  }
+
+  /** Returns true if the session has been inactive beyond INACTIVITY_TIMEOUT_MS. */
+  isExpired(): boolean {
+    if (!this.session) return false;
+    return Date.now() - this.session.lastActiveAt > INACTIVITY_TIMEOUT_MS;
+  }
+
+  /** Returns true if the session is currently locked (pending re-auth). */
+  isLocked(): boolean {
+    return this.session?.locked === true;
+  }
+
+  /**
+   * Lock the session for re-authentication.
+   * The memberId is preserved so the PIN entry screen can show who needs to re-auth.
+   */
+  lockForReauth(): void {
+    if (this.session) {
+      this.session.locked = true;
+    }
+  }
+
+  /** Unlock the session after successful re-auth. Refreshes lastActiveAt. */
+  unlockSession(): void {
+    if (this.session) {
+      this.session.locked = false;
+      this.session.lastActiveAt = Date.now();
+    }
+  }
+
+  /** Clear the session completely (log out). */
+  clearSession(): void {
+    this.session = null;
+  }
+}
+
+/** Module-level singleton for use across the app. */
+export const pinSession = new PinSessionManager();

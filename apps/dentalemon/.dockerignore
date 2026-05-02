@@ -1,0 +1,10 @@
+# Whitelist approach: Ignore everything except what's needed for Docker build
+
+# Ignore everything
+*
+
+# Allow only what we need for the Docker build
+!dist/
+!docker-entrypoint.sh
+!Caddyfile
+!Dockerfile

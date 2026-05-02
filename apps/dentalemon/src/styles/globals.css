@@ -1,0 +1,229 @@
+/* Dentalemon — Apple HIG + Lemon Brand Accent */
+
+/* Better Auth UI styles */
+@import "@daveyplate/better-auth-ui/css";
+
+@custom-variant dark (&:is(.dark *));
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Apple HIG Light Mode + Lemon Accent */
+    --radius: 0.75rem;
+    --background: 240 5% 96.9%; /* #F2F2F7 systemGroupedBackground */
+    --foreground: 0 0% 0%; /* #000000 label */
+    --card: 0 0% 100%; /* #FFFFFF systemBackground */
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 47 100% 74%; /* #FFE97D lemon */
+    --primary-foreground: 45 55% 19%; /* #4A4018 lemon foreground */
+    --secondary: 240 5% 96%; /* systemFill */
+    --secondary-foreground: 0 0% 0%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 1% 56%; /* #8E8E93 secondaryLabel */
+    --accent: 47 100% 92%; /* lemon-soft */
+    --accent-foreground: 45 55% 19%;
+    --destructive: 0 100% 59%; /* #FF3B30 systemRed */
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 47 100% 74%; /* lemon focus ring */
+    --chart-1: 142 71% 45%; /* systemGreen */
+    --chart-2: 36 100% 50%; /* systemOrange */
+    --chart-3: 0 100% 59%; /* systemRed */
+    --chart-4: 195 92% 67%; /* systemTeal */
+    --chart-5: 47 100% 74%; /* lemon */
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 47 100% 74%;
+    --sidebar-primary-foreground: 45 55% 19%;
+    --sidebar-accent: 47 100% 92%;
+    --sidebar-accent-foreground: 45 55% 19%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 47 100% 74%;
+
+    /* Dental chart colors */
+    --dental-caries: #FF3B30;
+    --dental-fractured: #FF9500;
+    --dental-filled: #5AC8FA;
+    --dental-crown: #FFE97D;
+    --dental-missing: #C7C7CC;
+
+    /* Semantic */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --info: #5AC8FA;
+  }
+
+  .dark {
+    /* Apple HIG Dark Mode */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 240 6% 12%; /* #1C1C1E */
+    --card-foreground: 0 0% 100%;
+    --popover: 240 6% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 47 100% 74%;
+    --primary-foreground: 45 55% 19%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 1% 56%;
+    --accent: 47 100% 92%;
+    --accent-foreground: 45 55% 19%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 47 100% 74%;
+
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 47 100% 74%;
+    --sidebar-primary-foreground: 45 55% 19%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 47 100% 74%;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hairline {
+    border-width: 0.5px;
+  }
+}
+
+@layer utilities {
+  .glass-bar {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  .glass-bar-dark {
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  /* WCAG 2.1 AA focus ring — lemon accent */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: rgba(255, 233, 125, 0.35);
+  }
+}
+
+/* Reduced motion — disable animations, flatten carousel */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .swiper-slide {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Print styles — receipts, prescriptions, consent forms, invoices, treatment plans */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* Hide navigation & interactive elements */
+  nav, .sidebar, .glass-bar, .glass-bar-dark,
+  button:not(.print-visible), [role="navigation"],
+  .no-print { display: none !important; }
+
+  /* Show print-only elements */
+  .print-only { display: block !important; }
+
+  /* Receipt/invoice layout */
+  .print-receipt {
+    max-width: 80mm;
+    margin: 0 auto;
+    font-size: 10pt;
+  }
+
+  .print-a4 {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 20mm;
+  }
+
+  /* Avoid page breaks inside cards */
+  .rounded-xl, .card, [class*="Card"] {
+    break-inside: avoid;
+  }
+
+  /* Ensure borders print */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Remove shadows & rounded corners for print */
+  .shadow, .shadow-sm, .shadow-md { box-shadow: none !important; }
+}
