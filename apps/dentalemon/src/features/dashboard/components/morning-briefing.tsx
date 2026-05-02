@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { canViewFinancials } from '../../../utils/rbac';
 import { MetricCard } from './metric-card';
 import type { DentalRole } from '../../../utils/rbac';
@@ -147,6 +148,7 @@ export interface MorningBriefingProps {
 }
 
 export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
+  const navigate = useNavigate();
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [tomorrowAppointments, setTomorrowAppointments] = useState<Appointment[]>([]);
   const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
@@ -228,18 +230,24 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
       <div className="flex items-center gap-2.5 flex-wrap">
         <button
           type="button"
+          data-testid="quick-new-patient"
+          onClick={() => navigate({ to: '/patients' })}
           className="h-11 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold flex items-center gap-1.5 hover:bg-[#F5DC60] transition-colors"
         >
           <span className="text-base leading-none">+</span> New Patient
         </button>
         <button
           type="button"
+          data-testid="quick-new-appointment"
+          onClick={() => navigate({ to: '/calendar' })}
           className="h-11 px-4 rounded-xl bg-background border border-border text-sm font-medium flex items-center gap-1.5 hover:bg-secondary/50 transition-colors"
         >
           <span className="text-base leading-none">+</span> New Appointment
         </button>
         <button
           type="button"
+          data-testid="quick-open-workspace"
+          onClick={() => navigate({ to: '/patients' })}
           className="h-11 px-4 rounded-xl bg-background border border-border text-sm font-medium flex items-center gap-1.5 hover:bg-secondary/50 transition-colors"
         >
           Open Workspace
