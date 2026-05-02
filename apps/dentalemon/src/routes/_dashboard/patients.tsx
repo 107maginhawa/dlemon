@@ -2,12 +2,15 @@
  * Patients Route — /patients
  *
  * Shows the patient list with search and registration modal.
+ * FR2.1: Fetches patient list from API (GET /patients?branchId=...)
+ * FR2.3: Registration modal posts to API (POST /persons + POST /patients)
+ * FR2.20: Consent required before registration
  *
  * Wireframe: docs/prd/context/wireframes/patient-list.html
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
@@ -16,14 +19,89 @@ export const Route = createFileRoute('/_dashboard/patients')({
   component: PatientsPage,
 });
 
-// TODO Phase 1.1: fetch from API via TanStack Query + dental patient endpoint
-const STUB_PATIENTS: PatientCardData[] = [];
+const API = 'http://localhost:7213';
+
+/**
+ * Map the API patient response to the PatientCardData shape used by PatientFolderCard.
+ * The API returns patient with expanded person data.
+ */
+function toPatientCard(p: any): PatientCardData {
+  const person = typeof p.person === 'object' ? p.person : null;
+  const firstName = person?.firstName ?? '';
+  const lastName = person?.lastName ?? '';
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'Unknown Patient';
+
+  let age = 0;
+  if (person?.dateOfBirth) {
+    const dob = new Date(person.dateOfBirth);
+    const today = new Date();
+    age = today.getFullYear() - dob.getFullYear();
+    if (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate())) age--;
+  }
+
+  return {
+    id: p.id,
+    displayName,
+    age,
+    lastVisit: p.lastVisit ? new Date(p.lastVisit) : undefined,
+    visitCount: p.visitCount ?? 0,
+    needsFollowUp: p.needsFollowUp ?? false,
+    hasBalance: p.hasBalance ?? false,
+  };
+}
 
 function PatientsPage() {
   const navigate = useNavigate();
+  const [patients, setPatients] = useState<PatientCardData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [followUpOnly, setFollowUpOnly] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+
+  const branchId = localStorage.getItem('currentBranchId') ?? '';
+
+  async function fetchPatients() {
+    if (!branchId) return;
+    try {
+      const res = await fetch(
+        `${API}/patients?branchId=${encodeURIComponent(branchId)}&expand=person`,
+        { credentials: 'include' },
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setPatients((data.data ?? []).map(toPatientCard));
+    } catch {
+      // Network error — keep existing list
+    }
+  }
+
+  useEffect(() => {
+    fetchPatients();
+  }, [branchId]);
+
+  async function handleRegister(data: {
+    displayName: string;
+    dateOfBirth: string;
+    gender: string;
+    consentGiven: boolean;
+  }) {
+    // FR2.3/FR2.20: Use dental patient registration endpoint (staff creating patient for another person)
+    await fetch(`${API}/dental/patients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        displayName: data.displayName,
+        dateOfBirth: data.dateOfBirth || undefined,
+        gender: data.gender || undefined,
+        consentGiven: data.consentGiven,
+        branchId: branchId || undefined,
+      }),
+    });
+
+    setShowRegistration(false);
+    // Refresh list to show newly registered patient
+    await fetchPatients();
+  }
 
   return (
     <div className="p-6 flex flex-col gap-6">
@@ -53,7 +131,7 @@ function PatientsPage() {
       </div>
 
       <PatientList
-        patients={STUB_PATIENTS}
+        patients={patients}
         onSelect={(patient) =>
           navigate({ to: '/$patientId', params: { patientId: patient.id } })
         }
@@ -65,11 +143,7 @@ function PatientsPage() {
       <PatientRegistrationModal
         open={showRegistration}
         onClose={() => setShowRegistration(false)}
-        onSubmit={async (data) => {
-          // TODO Phase 1.1: POST to /patients API
-          console.log('Register patient:', data);
-          setShowRegistration(false);
-        }}
+        onSubmit={handleRegister}
       />
     </div>
   );
