@@ -69,7 +69,6 @@ export async function fetchRuntimeConfig(timeout = 2000): Promise<RuntimeConfig>
     configCache = config
     cacheTimestamp = now
 
-    console.log('[RuntimeConfig] Fetched runtime config:', config)
     return config
 
   } catch (error) {

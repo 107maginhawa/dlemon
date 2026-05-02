@@ -152,6 +152,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [tomorrowAppointments, setTomorrowAppointments] = useState<Appointment[]>([]);
   const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
+  const [dailyCollectionsCents, setDailyCollectionsCents] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,7 +177,8 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
 
       if (showFinancials) {
         fetches.push(
-          fetch(`${API}/dental/billing/invoices?status=overdue`, { credentials: 'include' })
+          fetch(`${API}/dental/billing/invoices?status=overdue`, { credentials: 'include' }),
+          fetch(`${API}/dental/billing/invoices?branchId=${encodeURIComponent(branchId)}`, { credentials: 'include' }),
         );
       }
 
@@ -201,6 +203,19 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
         setOverdueInvoices(
           Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? []
         );
+      }
+
+      if (showFinancials && responses[3]) {
+        const allInvoicesData = await responses[3].json();
+        const allInvoices: Invoice[] = Array.isArray(allInvoicesData)
+          ? allInvoicesData
+          : allInvoicesData.invoices ?? [];
+        const todayStr = today;
+        const collected = allInvoices
+          .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
+          .filter((inv) => inv.createdAt?.slice(0, 10) === todayStr)
+          .reduce((sum, inv) => sum + (inv.paidCents ?? inv.totalCents - inv.balanceCents), 0);
+        setDailyCollectionsCents(collected);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -277,7 +292,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               title="Today's Schedule"
               value={todayAppointments.length}
               subtitle="appointments today"
-              action={{ label: 'View all', onClick: () => {} }}
+              action={{ label: 'View all', onClick: () => navigate({ to: '/calendar' }) }}
             >
               {/* Next patient */}
               {nextAppt && (
@@ -325,9 +340,9 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
             {showFinancials ? (
               <MetricCard
                 title="Daily Collections"
-                value={'\u20B1\u2014'}
-                subtitle="Configure collections API for live data"
-                action={{ label: 'Details', onClick: () => {} }}
+                value={dailyCollectionsCents !== null ? formatCents(dailyCollectionsCents) : '\u20B1\u2014'}
+                subtitle={dailyCollectionsCents !== null ? 'collected today' : 'loading...'}
+                action={{ label: 'Details', onClick: () => navigate({ to: '/billing' }) }}
               />
             ) : (
               <MetricCard
@@ -344,7 +359,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                 value={overdueInvoices.length}
                 subtitle={`patients with overdue balances`}
                 accentColor="red"
-                action={{ label: 'View all', onClick: () => {} }}
+                action={{ label: 'View all', onClick: () => navigate({ to: '/billing' }) }}
               >
                 {/* Overdue patient list (first 3) */}
                 {overdueInvoices.length > 0 && (
@@ -391,7 +406,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               title="Pending Treatments"
               value={todayAppointments.filter((a) => a.status === 'scheduled').length}
               subtitle="scheduled appointments pending"
-              action={{ label: 'View all', onClick: () => {} }}
+              action={{ label: 'View all', onClick: () => navigate({ to: '/patients' }) }}
             >
               <p className="text-[11px] text-muted-foreground">
                 Check workspace for treatment details
@@ -404,7 +419,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                 title="Payment Plans"
                 value={'\u2014'}
                 subtitle="active plans"
-                action={{ label: 'Manage', onClick: () => {} }}
+                action={{ label: 'Manage', onClick: () => navigate({ to: '/billing' }) }}
               >
                 <p className="text-[11px] text-muted-foreground">
                   View billing module for plan details
@@ -441,6 +456,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                 </span>
                 <button
                   type="button"
+                  onClick={() => navigate({ to: '/calendar' })}
                   className="text-xs font-medium text-[#4A4018] hover:underline"
                 >
                   Open Calendar

@@ -70,14 +70,12 @@ export async function initializeOneSignal(): Promise<void> {
     });
 
     isInitialized = true;
-    console.log('OneSignal initialized successfully');
 
     // Set optional app tag if configured
     const appTag = getOneSignalAppTag();
     if (appTag) {
       try {
         await OneSignal.User.addTag('app', appTag);
-        console.log('OneSignal app tag set:', appTag);
       } catch (tagError) {
         console.error('Failed to set OneSignal app tag:', tagError);
       }
@@ -96,7 +94,6 @@ export async function setOneSignalUserId(userId: string): Promise<void> {
 
   try {
     await OneSignal.login(userId);
-    console.log('OneSignal user ID set:', userId);
   } catch (error) {
     console.error('Failed to set OneSignal user ID:', error);
   }
@@ -111,7 +108,6 @@ export async function clearOneSignalUserId(): Promise<void> {
 
   try {
     await OneSignal.logout();
-    console.log('OneSignal user ID cleared');
   } catch (error) {
     console.error('Failed to clear OneSignal user ID:', error);
   }
@@ -156,7 +152,6 @@ export async function optInToNotifications(): Promise<void> {
 
   try {
     await OneSignal.User.PushSubscription.optIn();
-    console.log('Opted in to push notifications');
   } catch (error) {
     console.error('Failed to opt in to notifications:', error);
   }
@@ -170,7 +165,6 @@ export async function optOutOfNotifications(): Promise<void> {
 
   try {
     await OneSignal.User.PushSubscription.optOut();
-    console.log('Opted out of push notifications');
   } catch (error) {
     console.error('Failed to opt out of notifications:', error);
   }

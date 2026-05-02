@@ -77,7 +77,6 @@ function App() {
 
   useEffect(() => {
     getRuntimeConfig().then(runtimeConfig => {
-      console.log('[App] Runtime config loaded:', runtimeConfig)
       setConfig(runtimeConfig)
       
       // Initialize OneSignal with runtime config (optional - only if app ID is set)
