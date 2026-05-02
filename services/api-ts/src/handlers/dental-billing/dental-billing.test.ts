@@ -1005,3 +1005,101 @@ describe('getDentalPaymentPlan handler', () => {
     expect(body.installments.length).toBe(4);
   });
 });
+
+// ===========================================================================
+// EC3: Only highest discount applies (no stacking)
+// ===========================================================================
+
+describe('EC3: only highest discount applies', () => {
+  test('applying a second discount replaces the first (no stacking)', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+
+    // First discount: 10%
+    await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'PWD', percentageRate: 10 }),
+    });
+
+    // Second discount: 20% (higher — should replace, not stack)
+    const res2 = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior', percentageRate: 20 }),
+    });
+    expect(res2.status).toBe(200);
+    const body2 = await res2.json() as any;
+
+    // Discount should be 20% of subtotal, not 10% + 20% = 30%
+    const expected20pct = Math.round(invoice.subtotalCents * 0.20);
+    // Allow ±1 cent for rounding differences
+    expect(Math.abs(body2.discountCents - expected20pct)).toBeLessThanOrEqual(1);
+    // Total should NOT be less than if 30% was applied
+    const would30pct = Math.round(invoice.subtotalCents * 0.30);
+    expect(body2.discountCents).toBeLessThan(would30pct + 1);
+  });
+});
+
+// ===========================================================================
+// EC6: Multiple payment plans per patient allowed
+// ===========================================================================
+
+describe('EC6: multiple payment plans per patient', () => {
+  test('allows creating two payment plans for the same patient (different invoices)', async () => {
+    const { invoice: inv1 } = await seedInvoice();
+
+    // Seed a second visit and invoice for the same patient
+    const visitRepo = new VisitRepository(db);
+    const visit2 = await visitRepo.createOne({
+      patientId: PATIENT_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID,
+    });
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    const invoiceNumber2 = await invoiceRepo.generateInvoiceNumber();
+    const inv2 = await invoiceRepo.createOne({
+      visitId: visit2.id,
+      patientId: PATIENT_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID,
+      invoiceNumber: invoiceNumber2,
+      subtotalCents: 60000,
+      taxCents: 0,
+      taxRate: '0',
+      totalCents: 60000,
+      balanceCents: 60000,
+    });
+
+    const app = buildTestApp(TEST_USER);
+
+    // Create plan for first invoice
+    const res1 = await app.request(`/dental/billing/invoices/${inv1.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        numberOfInstallments: 3,
+        frequency: 'monthly',
+        startDate: new Date().toISOString(),
+      }),
+    });
+    expect(res1.status).toBe(201);
+
+    // Create plan for second invoice (same patient — EC6 allows this)
+    const res2 = await app.request(`/dental/billing/invoices/${inv2.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        numberOfInstallments: 6,
+        frequency: 'monthly',
+        startDate: new Date().toISOString(),
+      }),
+    });
+    expect(res2.status).toBe(201);
+    const body2 = await res2.json() as any;
+    expect(body2.invoiceId).toBe(inv2.id);
+    expect(body2.installments).toHaveLength(6);
+  });
+});
