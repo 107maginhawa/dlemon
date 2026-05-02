@@ -128,4 +128,24 @@ test.describe('Returning Patient Visit', () => {
     // Should now show surface selector
     await expect(page.getByTestId('five-surface-selector')).toBeVisible();
   });
+
+  test('FR1.10: workspace footer shows "Continue to Payment" button', async ({ page }) => {
+    const { patientId } = await signUpAndGetPatient(page);
+
+    await page.goto(`${APP}/${patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    // FR1.10: persistent payment footer is always visible in workspace
+    await expect(page.getByRole('button', { name: /continue to payment/i })).toBeVisible();
+  });
+
+  test('FR1.15: workspace shows "new visit" button (not read-only) for current patient', async ({ page }) => {
+    const { patientId } = await signUpAndGetPatient(page);
+
+    await page.goto(`${APP}/${patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    // FR1.15: active workspace has a way to create/start a visit (not read-only)
+    await expect(page.getByTestId('new-visit-btn')).toBeVisible();
+  });
 });

@@ -337,4 +337,22 @@ describe('updateDentalTreatment handler', () => {
     expect(body.cdtCode).toBe('D2140');
     expect(body.conditionCode).toBe('K02.9');
   });
+
+  test('EC4: priceCents is locked at creation — update cannot change fee', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+
+    // Attempt to change price in update
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceCents: 99999 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // priceCents must remain at original value — EC4 locks it
+    expect(body.priceCents).toBe(treatment.priceCents);
+    expect(body.priceCents).not.toBe(99999);
+  });
 });
