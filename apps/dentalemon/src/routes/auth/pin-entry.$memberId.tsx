@@ -37,6 +37,8 @@ interface PinEntryProps {
   onBack: () => void;
   errorMessage?: string;
   lockedUntil?: Date;
+  /** FR9.7: Show "Forgot PIN?" link when failedAttempts >= 3 */
+  failedAttempts?: number;
 }
 
 const PIN_LENGTH = 6;
@@ -57,9 +59,10 @@ function initials(displayName: string): string {
   return (words[0] ?? '?').slice(0, 2).toUpperCase();
 }
 
-export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil }: PinEntryProps) {
+export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil, failedAttempts = 0 }: PinEntryProps) {
   const [digits, setDigits] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPin, setShowForgotPin] = useState(false);
 
   const isLocked = lockedUntil !== undefined && lockedUntil > new Date();
 
@@ -140,6 +143,23 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil }
             <p className="text-sm text-destructive text-center">{errorMessage}</p>
           )}
 
+          {/* FR9.7: "Forgot PIN?" appears after 3 failed attempts */}
+          {failedAttempts >= 3 && !showForgotPin && (
+            <button
+              data-testid="forgot-pin-link"
+              onClick={() => setShowForgotPin(true)}
+              className="text-xs text-primary underline"
+            >
+              Forgot PIN?
+            </button>
+          )}
+          {showForgotPin && (
+            <div data-testid="forgot-pin-message" className="text-center text-xs text-muted-foreground px-4 py-2 rounded-lg bg-secondary">
+              <p className="font-medium mb-1">PIN Reset</p>
+              <p>Ask your practice owner or administrator to reset your PIN via the Staff settings.</p>
+            </div>
+          )}
+
           {/* Keypad */}
           <div
             role="group"
@@ -186,11 +206,20 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil }
 
 const API = 'http://localhost:7213';
 
+// FR9.3: Role-based landing page after successful PIN authentication
+const ROLE_LANDING: Record<string, string> = {
+  dentist_owner: '/dashboard',
+  dentist_associate: '/dashboard',
+  staff_full: '/patients',
+  staff_scheduling: '/calendar',
+};
+
 function PinEntryRoute() {
   const { memberId } = Route.useParams();
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [lockedUntil, setLockedUntil] = useState<Date | undefined>();
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [member, setMember] = useState<PinEntryMember>({
     id: memberId,
     displayName: 'Loading…',
@@ -230,13 +259,19 @@ function PinEntryRoute() {
     );
 
     const data = await res.json();
+
     if (data.success) {
       pinSession.startSession({ memberId, displayName: member.displayName, role: member.role });
-      navigate({ to: '/dashboard' });
+      setFailedAttempts(0);
+      // FR9.3: Navigate to role-appropriate landing page
+      const destination = ROLE_LANDING[member.role] ?? '/dashboard';
+      navigate({ to: destination as any });
     } else {
       if (data.lockedUntil) {
         setLockedUntil(new Date(data.lockedUntil));
       }
+      const newAttempts = data.failedAttempts ?? (failedAttempts + 1);
+      setFailedAttempts(newAttempts);
       setErrorMessage('Incorrect PIN');
     }
 
@@ -255,6 +290,7 @@ function PinEntryRoute() {
         onBack={() => navigate({ to: '/auth/pin-select' })}
         errorMessage={errorMessage}
         lockedUntil={lockedUntil}
+        failedAttempts={failedAttempts}
       />
     </div>
   );

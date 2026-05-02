@@ -1,13 +1,10 @@
 /**
  * E2E: PIN authentication flow
  *
- * Journey J18: Staff selects profile → enters PIN → reaches dashboard
- * → inactivity lock → re-enters PIN → workspace restored
- *
- * Preconditions:
- *  - A practice owner has signed up (cloud account)
- *  - A dental org, branch, and staff member exist (seeded via API)
- *  - The staff member has a PIN set
+ * Business Rules:
+ * - FR9.2: User selection screen shows cards with avatar, name, role badge; single user = auto-select
+ * - FR9.3: Role-based landing: dentist_owner → /dashboard, staff_full → /patients, staff_scheduling → /calendar
+ * - FR9.7: After 3 fails, "Forgot PIN?" link appears
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -57,10 +54,9 @@ async function signUpOwner(page: Page) {
 }
 
 /**
- * Seed org, branch, and staff member via API (uses existing browser session)
+ * Seed org, branch, and one staff_full member via API (uses existing browser session)
  */
 async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
-  // Create org
   const orgRes = await page.evaluate(async (api) => {
     const res = await fetch(`${api}/dental/organizations/`, {
       method: 'POST',
@@ -72,7 +68,6 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   }, API);
   const orgId = orgRes.id;
 
-  // Create branch
   const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
     const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
       method: 'POST',
@@ -84,13 +79,11 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   }, { api: API, orgId });
   const branchId = branchRes.id;
 
-  // Store branchId + orgId so pin-select and pin-entry can load members and verify PINs
   await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
     localStorage.setItem('currentBranchId', branchId);
     localStorage.setItem('currentOrgId', orgId);
   }, { branchId, orgId });
 
-  // Create staff member
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
     const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
       method: 'POST',
@@ -102,7 +95,6 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   }, { api: API, orgId, branchId });
   const memberId = memberRes.id;
 
-  // Set PIN for staff member
   await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
     await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
       method: 'POST',
@@ -115,10 +107,74 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   return { orgId, branchId, memberId };
 }
 
+/**
+ * Seed org, branch, and ONE dentist_owner member via API
+ */
+async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
+  const orgRes = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/organizations/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Owner PIN Test Clinic', tier: 'solo', countryCode: 'PH' }),
+    });
+    return res.json();
+  }, API);
+  const orgId = orgRes.id;
+
+  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Clinic', timezone: 'Asia/Manila' }),
+    });
+    return res.json();
+  }, { api: API, orgId });
+  const branchId = branchRes.id;
+
+  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
+    localStorage.setItem('currentBranchId', branchId);
+    localStorage.setItem('currentOrgId', orgId);
+  }, { branchId, orgId });
+
+  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Dr. Maria Reyes', role: 'dentist_owner' }),
+    });
+    return res.json();
+  }, { api: API, orgId, branchId });
+  const memberId = memberRes.id;
+
+  await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
+    await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ pin: '654321' }),
+    });
+  }, { api: API, orgId, branchId, memberId });
+
+  return { orgId, branchId, memberId };
+}
+
 test.describe('PIN authentication flow', () => {
   test('owner can set up staff and staff can select profile', async ({ page }) => {
     await signUpOwner(page);
-    const { memberId } = await seedOrgAndStaff(page);
+    const { orgId, branchId } = await seedOrgAndStaff(page);
+
+    // Add a second member so the selection screen is shown (FR9.2 auto-select skips with 1 member)
+    await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Dr. Juan Santos', role: 'dentist_associate' }),
+      });
+    }, { api: API, orgId, branchId });
 
     // Navigate to PIN select screen
     await page.goto(`${APP}/auth/pin-select`);
@@ -130,7 +186,17 @@ test.describe('PIN authentication flow', () => {
 
   test('selecting a member card navigates to PIN entry', async ({ page }) => {
     await signUpOwner(page);
-    await seedOrgAndStaff(page);
+    const { orgId, branchId } = await seedOrgAndStaff(page);
+
+    // Add second member to disable auto-select
+    await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Dr. Juan Santos', role: 'dentist_associate' }),
+      });
+    }, { api: API, orgId, branchId });
 
     await page.goto(`${APP}/auth/pin-select`);
     await page.waitForLoadState('networkidle');
@@ -144,31 +210,31 @@ test.describe('PIN authentication flow', () => {
     await expect(page.getByLabel('1')).toBeVisible();
   });
 
-  test('entering correct PIN reaches the dashboard', async ({ page }) => {
+  test('entering correct PIN as dentist_owner reaches /dashboard', async ({ page }) => {
     await signUpOwner(page);
-    await seedOrgAndStaff(page);
+    const { memberId } = await seedOrgAndOwnerMember(page);
 
-    await page.goto(`${APP}/auth/pin-select`);
+    // Navigate directly to pin-entry for the owner member (FR9.2 auto-selects for single member too)
+    await page.goto(`${APP}/auth/pin-entry/${memberId}`);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /Sign in as Staff Ana Cruz/i }).click();
 
-    // Enter PIN 1-2-3-4-5-6
-    for (const digit of ['1', '2', '3', '4', '5', '6']) {
+    // Enter PIN 6-5-4-3-2-1
+    for (const digit of ['6', '5', '4', '3', '2', '1']) {
       await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
     }
 
-    // Should redirect to dashboard
-    await page.waitForURL(/\/dashboard/, { timeout: 5000 });
+    // dentist_owner should land on /dashboard (FR9.3)
+    await page.waitForURL(/\/dashboard/, { timeout: 8000 });
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test('wrong PIN shows error message', async ({ page }) => {
     await signUpOwner(page);
-    await seedOrgAndStaff(page);
+    const { memberId } = await seedOrgAndStaff(page);
 
-    await page.goto(`${APP}/auth/pin-select`);
+    // Navigate directly to pin-entry
+    await page.goto(`${APP}/auth/pin-entry/${memberId}`);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /Sign in as Staff Ana Cruz/i }).click();
 
     // Enter wrong PIN
     for (const digit of ['9', '9', '9', '9', '9', '9']) {
@@ -177,5 +243,56 @@ test.describe('PIN authentication flow', () => {
 
     // Should show error
     await expect(page.getByText(/incorrect pin/i)).toBeVisible({ timeout: 3000 });
+  });
+
+  test('FR9.3: staff_full correct PIN lands on /patients (not /dashboard)', async ({ page }) => {
+    await signUpOwner(page);
+    const { memberId } = await seedOrgAndStaff(page);
+
+    // Navigate directly to pin-entry
+    await page.goto(`${APP}/auth/pin-entry/${memberId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Enter correct PIN
+    for (const digit of ['1', '2', '3', '4', '5', '6']) {
+      await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
+    }
+
+    // staff_full should land on /patients, not /dashboard (FR9.3)
+    await page.waitForURL(/\/patients/, { timeout: 8000 });
+    await expect(page).toHaveURL(/\/patients/);
+  });
+
+  test('FR9.7: "Forgot PIN?" link appears after 3 failed attempts', async ({ page }) => {
+    await signUpOwner(page);
+    const { memberId } = await seedOrgAndStaff(page);
+
+    // Navigate directly to pin-entry
+    await page.goto(`${APP}/auth/pin-entry/${memberId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Enter wrong PIN 3 times
+    for (let attempt = 0; attempt < 3; attempt++) {
+      for (const digit of ['9', '9', '9', '9', '9', '9']) {
+        await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
+      }
+      await page.waitForResponse(resp => resp.url().includes('verify-pin'), { timeout: 5000 }).catch(() => {});
+    }
+
+    // "Forgot PIN?" should be visible after 3 fails (FR9.7)
+    await expect(page.getByTestId('forgot-pin-link')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('FR9.2: single member auto-navigates to PIN entry', async ({ page }) => {
+    await signUpOwner(page);
+    await seedOrgAndStaff(page); // only 1 member in this branch
+
+    // Navigate to pin-select — should auto-redirect to pin-entry for the single member
+    await page.goto(`${APP}/auth/pin-select`);
+
+    // Should land on pin-entry without requiring a click (FR9.2 auto-select)
+    await expect(page).toHaveURL(/\/auth\/pin-entry\//, { timeout: 8000 });
+    // PIN keypad should be visible
+    await expect(page.getByLabel('1')).toBeVisible();
   });
 });

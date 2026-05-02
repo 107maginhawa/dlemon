@@ -195,6 +195,31 @@ describe('verifyPin handler', () => {
     expect(body.lockedUntil).toBeTruthy();
   });
 
+  test('FR9.3: returns 429 with 5-minute lockout after 10 failed attempts', async () => {
+    const membershipRepo = await seedAll();
+    const member = await seedMember(membershipRepo);
+    const pinHash = await Bun.password.hash('123456');
+    await membershipRepo.updatePin(member.id, pinHash);
+
+    // Trigger 10 failed attempts (escalates from 30s to 5-minute lockout)
+    for (let i = 0; i < 10; i++) {
+      await membershipRepo.recordFailedPinAttempt(member.id);
+    }
+
+    const app = buildTestApp(authedUser);
+    const res = await app.request(
+      `/dental/organizations/${ORG_ID}/branches/${BRANCH_ID}/members/${member.id}/verify-pin`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: '123456' }) },
+    );
+
+    expect(res.status).toBe(429);
+    const body = await res.json() as any;
+    expect(body.lockedUntil).toBeTruthy();
+    // Lockout at 10 attempts should be at least 4 minutes in the future (5-min lockout)
+    const lockedUntilTime = new Date(body.lockedUntil).getTime();
+    expect(lockedUntilTime).toBeGreaterThan(Date.now() + 4 * 60 * 1000);
+  });
+
   test('resets failed attempts on successful PIN verification', async () => {
     const membershipRepo = await seedAll();
     const member = await seedMember(membershipRepo);

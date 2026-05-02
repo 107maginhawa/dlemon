@@ -103,7 +103,14 @@ function PinSelectRoute() {
       credentials: 'include',
     })
       .then(r => r.json())
-      .then(data => setMembers(data.items ?? []))
+      .then(data => {
+        const items: PinSelectMember[] = data.items ?? [];
+        setMembers(items);
+        // FR9.2: Single user = auto-select (navigate directly to PIN entry)
+        if (items.length === 1) {
+          navigate({ to: '/auth/pin-entry/$memberId', params: { memberId: items[0]!.id } });
+        }
+      })
       .catch(() => {});
   }, []);
 
