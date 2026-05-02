@@ -153,6 +153,18 @@ model Patient extends HealthcareBaseEntity {
 
   @doc("Patient's primary pharmacy (free-form, kept for SDK compatibility)")
   primaryPharmacy?: PrimaryPharmacyInfo;
+
+  @doc("Preferred dental branch ID for this patient")
+  preferredBranchId?: UUID;
+
+  @doc("Free-text summary of the patient's dental history")
+  dentalHistorySummary?: string;
+
+  @doc("Whether this patient has pending treatments requiring a follow-up visit")
+  needsFollowUp?: boolean;
+
+  @doc("Whether this patient has an active payment plan (set by billing module); prevents archiving")
+  hasActivePaymentPlan?: boolean;
 }
 
 /**
@@ -254,6 +266,12 @@ model CreatePatientRequest {
 
   @doc("Insurance coverage references for the patient")
   insuranceCoverage?: Reference[];
+
+  @doc("Preferred dental branch ID for this patient")
+  preferredBranchId?: UUID;
+
+  @doc("Free-text summary of the patient's dental history")
+  dentalHistorySummary?: string;
 }
 
 /**
@@ -317,6 +335,15 @@ model UpdatePatientRequest {
 
   @doc("Updated insurance coverage references - null clears all coverage")
   insuranceCoverage?: Reference[] | null;
+
+  @doc("Updated preferred dental branch ID - null clears the field")
+  preferredBranchId?: UUID | null;
+
+  @doc("Updated dental history summary - null clears the field")
+  dentalHistorySummary?: string | null;
+
+  @doc("Updated needs-follow-up flag - null clears the field")
+  needsFollowUp?: boolean | null;
 }
 
 @doc("Request to merge two patient records into one")
@@ -371,7 +398,7 @@ namespace PatientModule {
     @operationId("createPatient")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "registrar"])
+    @extension("x-security-required-roles", #["admin", "clinician", "registrar", "user"])
     createPatient(
       @body patient: CreatePatientRequest
     ): ApiCreatedResponse<Patient>
@@ -384,7 +411,7 @@ namespace PatientModule {
     @operationId("listPatients")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "support"])
+    @extension("x-security-required-roles", #["admin", "clinician", "support", "user"])
     listPatients(
       ...PaginationQuery,
       @doc("Filter by patient name (searches across all HumanName components)")
@@ -396,7 +423,11 @@ namespace PatientModule {
       @doc("Filter by medical record number")
       @query mrn?: string,
       @doc("Filter by active status")
-      @query active?: boolean
+      @query active?: boolean,
+      @doc("Filter patients by preferred dental branch ID")
+      @query branchId?: UUID,
+      @doc("Filter patients who need a follow-up visit")
+      @query needsFollowUp?: boolean
     ): ApiOkResponse<PaginatedResponse<Patient>>
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse;
@@ -406,7 +437,7 @@ namespace PatientModule {
     @get
     @route("/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "support", "patient:owner"])
+    @extension("x-security-required-roles", #["admin", "clinician", "support", "user", "patient:owner"])
     getPatient(
       @path @doc("Patient record UUID") id: UUID
     ): ApiOkResponse<Patient>
@@ -419,7 +450,7 @@ namespace PatientModule {
     @patch(#{implicitOptionality: true})
     @route("/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "registrar", "patient:owner"])
+    @extension("x-security-required-roles", #["admin", "clinician", "registrar", "user", "patient:owner"])
     updatePatient(
       @path @doc("Patient record UUID") id: UUID,
       @body updates: UpdatePatientRequest
@@ -434,7 +465,7 @@ namespace PatientModule {
     @delete
     @route("/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "registrar"])
+    @extension("x-security-required-roles", #["admin", "registrar", "user"])
     deactivatePatient(
       @path @doc("Patient record UUID") id: UUID
     ): ApiNoContentResponse

@@ -11,6 +11,7 @@
 # 1. Sign up.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "verify-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -22,8 +23,8 @@ HTTP 200
 # 2. Poll Mailpit for the queued message.
 GET {{mailpit_api}}/api/v1/search?query=to:verify-{{suffix}}@example.org&limit=1
 [Options]
-retry: 30
-retry-interval: 500ms
+retry: 60
+retry-interval: 1000ms
 HTTP 200
 [Captures]
 message_id: jsonpath "$.messages[0].ID"

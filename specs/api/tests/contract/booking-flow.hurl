@@ -7,6 +7,7 @@
 # 0. Create the host.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "flow-host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -62,6 +63,7 @@ jsonpath "$" isCollection
 # 3. Switch to a client user (jar now holds client session).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "flow-client-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -107,6 +109,7 @@ jsonpath "$.pagination.totalCount" >= 1
 # 6. Switch back to the host to confirm.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "flow-host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -125,6 +128,7 @@ jsonpath "$.status" == "confirmed"
 # 7. Switch back to client to cancel.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "flow-client-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

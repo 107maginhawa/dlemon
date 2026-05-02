@@ -4,6 +4,7 @@
 # 0. Sign up + create person profile
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",

@@ -6,6 +6,7 @@
 # 1. Validation error on POST /persons with empty body.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "errors-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -43,6 +44,7 @@ jsonpath "$.statusCode" == 404
 # (Use a hop that the auth middleware rejects pre-routing — sign out
 # clears the cookie jar.)
 POST {{api}}/auth/sign-out
+Origin: {{api}}
 HTTP 200
 
 

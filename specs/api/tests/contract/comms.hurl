@@ -6,6 +6,7 @@
 # 0. User A signs up and creates a person profile.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-a-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -30,6 +31,7 @@ HTTP 201
 # 0b. User B.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-b-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -61,6 +63,7 @@ jsonpath "$.data" isCollection
 # 2. Sign back in as A, then create a room with both persons.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-a-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -95,6 +98,7 @@ HTTP 201
 # 4. Switch to B and read the messages.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-b-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

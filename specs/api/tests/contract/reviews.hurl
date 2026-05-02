@@ -9,6 +9,7 @@
 # 0. Create reviewer (latest cookie in jar = reviewer).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reviewer-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -46,6 +47,7 @@ HTTP 400
 # 2. Sign up the person being reviewed (jar now holds reviewee).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reviewee-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -70,6 +72,7 @@ HTTP 201
 # 3. Sign back in as the reviewer so the jar holds their session again.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reviewer-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

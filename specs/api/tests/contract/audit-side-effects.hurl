@@ -6,6 +6,7 @@
 # 1. Sign up a regular user (target whose actions we want to audit).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "audit-target-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -42,6 +43,7 @@ HTTP 200
 # 4. Switch to admin and query the audit log for entries about this person.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "{{admin_email}}",
   "password": "{{admin_password}}"

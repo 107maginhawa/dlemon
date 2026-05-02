@@ -4,6 +4,7 @@
 
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-x-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -27,6 +28,7 @@ HTTP 201
 
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-y-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -51,6 +53,7 @@ HTTP 201
 # Outsider Z (not in any room).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-z-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -75,6 +78,7 @@ HTTP 201
 # Sign back in as X, the room creator.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-x-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -124,6 +128,7 @@ status < 300
 # 4. Outsider Z cannot read messages in this room.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "comms-z-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

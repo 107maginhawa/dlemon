@@ -5,6 +5,7 @@
 
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "expand-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",

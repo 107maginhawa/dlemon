@@ -6,6 +6,7 @@
 # 1. Create a new account
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "ct-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -32,4 +33,5 @@ jsonpath "$.user.email" == "{{created_user_email}}"
 # 3. Sign out
 POST {{api}}/auth/sign-out
 Cookie: better-auth.session_token={{session_token}}
+Origin: {{api}}
 HTTP 200
