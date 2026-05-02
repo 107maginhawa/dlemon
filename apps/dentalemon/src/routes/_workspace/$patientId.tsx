@@ -27,6 +27,7 @@ function WorkspacePage() {
   const { patientId } = Route.useParams();
   const [visits, setVisits] = useState<VisitCard[]>([]);
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
+  const [pmdShared, setPmdShared] = useState(false);
   const [teeth, setTeeth] = useState<ToothData[]>([]);
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
   const [treatments, setTreatments] = useState<any[]>([]);
@@ -82,6 +83,31 @@ function WorkspacePage() {
     setSelectedTooth(null);
     await loadChart(visitId);
     await loadTreatments(visitId);
+  }
+
+  const currentVisit = visits.find(v => v.id === currentVisitId);
+  const isCompletedVisit = currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
+
+  async function handleSharePMD() {
+    if (!currentVisitId) return;
+    setPmdShared(false);
+    const res = await fetch(`${API}/dental/visits/${currentVisitId}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ patientId }),
+    });
+    if (res.ok) {
+      const pmd = await res.json();
+      // Trigger device share or show checksum as confirmation
+      if (navigator.share) {
+        navigator.share({
+          title: 'Portable Medical Document',
+          text: `PMD for visit — Checksum: ${pmd.checksum}`,
+        }).catch(() => {});
+      }
+      setPmdShared(true);
+    }
   }
 
   async function handleNewVisit() {
@@ -163,12 +189,25 @@ function WorkspacePage() {
     <div className="flex h-full flex-col">
       {/* Timeline Carousel */}
       <div className="shrink-0 border-b bg-background/80 backdrop-blur">
-        <TimelineCarousel
-          visits={visits}
-          currentVisitId={currentVisitId ?? undefined}
-          onSelectVisit={handleSelectVisit}
-          onNewVisit={handleNewVisit}
-        />
+        <div className="flex items-center justify-between">
+          <TimelineCarousel
+            visits={visits}
+            currentVisitId={currentVisitId ?? undefined}
+            onSelectVisit={handleSelectVisit}
+            onNewVisit={handleNewVisit}
+          />
+          {isCompletedVisit && (
+            <button
+              type="button"
+              data-testid="share-pmd-btn"
+              onClick={handleSharePMD}
+              className="mr-4 shrink-0 text-xs font-medium text-primary hover:underline flex items-center gap-1"
+              aria-label="Share PMD"
+            >
+              {pmdShared ? '✓ PMD shared' : 'Share PMD'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main content area */}

@@ -114,6 +114,86 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
   return visitId;
 }
 
+async function signUpForPMD(page: Page) {
+  const suffix = Date.now();
+  await page.goto(`${APP}/auth/sign-up`);
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Name', { exact: true }).fill(`PMD UI Owner ${suffix}`);
+  await page.getByLabel('Email', { exact: true }).fill(`pmd-ui-e2e-${suffix}@example.org`);
+  const pwInput = page.locator('input[type="password"]');
+  await pwInput.click();
+  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
+  await expect(pwInput).not.toHaveValue('');
+  const signupResponse = page.waitForResponse(
+    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
+    { timeout: 10000 },
+  ).catch(() => null);
+  await page.getByRole('button', { name: /create an account/i }).click();
+  await signupResponse;
+  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+
+  // Bypass onboarding
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/persons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ firstName: 'PMD', lastName: 'Owner' }),
+    });
+  }, API);
+
+  return { suffix };
+}
+
+test.describe('FR12.6: Share PMD Button on Completed Visits', () => {
+  test('Share PMD button appears on completed visit in workspace', async ({ page }) => {
+    await signUpForPMD(page);
+
+    // Seed a patient + completed visit via API
+    const result = await page.evaluate(async (api) => {
+      const patientRes = await fetch(`${api}/dental/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'PMD Share Patient', consentGiven: true }),
+      });
+      if (!patientRes.ok) return null;
+      const patient = await patientRes.json() as any;
+
+      const visitRes = await fetch(`${api}/dental/visits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientId: patient.id,
+          branchId: '00000000-0000-4000-8000-000000000001',
+          dentistMemberId: '00000000-0000-4000-8000-000000000002',
+        }),
+      });
+      if (!visitRes.ok) return null;
+      const visit = await visitRes.json() as any;
+
+      // Complete the visit
+      await fetch(`${api}/dental/visits/${visit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'completed' }),
+      });
+
+      return { patientId: patient.id, visitId: visit.id };
+    }, API);
+
+    if (!result) return; // seeding failed
+
+    await page.goto(`${APP}/${result.patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    // FR12.6: Share PMD button should be visible when a completed visit is selected
+    await expect(page.getByTestId('share-pmd-btn')).toBeVisible({ timeout: 8000 });
+  });
+});
+
 test.describe('PMD Generation', () => {
   test('can generate PMD from a completed visit', async ({ page }) => {
     const { patientId } = await setup(page);

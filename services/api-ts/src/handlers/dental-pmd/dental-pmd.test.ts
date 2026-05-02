@@ -12,6 +12,7 @@ import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { generatePMD } from './generatePMD';
 import { getPMDForVisit } from './getPMDForVisit';
 import { importPMD } from './importPMD';
@@ -73,6 +74,26 @@ async function seedDraftVisit() {
     branchId: BRANCH_ID,
     dentistMemberId: DENTIST_MEMBER_ID,
   });
+}
+
+async function seedCompletedVisitWithTreatment() {
+  const visitRepo = new VisitRepository(db);
+  const treatmentRepo = new TreatmentRepository(db);
+  const visit = await visitRepo.createOne({
+    patientId: PATIENT_ID,
+    branchId: BRANCH_ID,
+    dentistMemberId: DENTIST_MEMBER_ID,
+  });
+  await treatmentRepo.createOne({
+    visitId: visit.id,
+    patientId: PATIENT_ID,
+    cdtCode: 'D2140',
+    description: 'Amalgam restoration — 1 surface',
+    priceCents: 4500,
+    conditionCode: 'K02.1',
+    status: 'performed',
+  });
+  return visitRepo.complete(visit.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -395,5 +416,102 @@ describe('listPMDs handler', () => {
     // At least one PMD returned (generated status only — superseded excluded by repo)
     expect(body.items.length).toBeGreaterThanOrEqual(1);
     expect(body.items[0].patientId).toBe(PATIENT_ID);
+  });
+});
+
+// ===========================================================================
+// FR12.1: PMD content includes CDT procedures and RxNorm prescriptions
+// ===========================================================================
+
+describe('FR12.1: PMD content includes coded clinical data', () => {
+  test('PMD content snapshot includes CDT code from performed treatment', async () => {
+    const visit = await seedCompletedVisitWithTreatment();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // FR12.1: content must contain CDT codes (procedures)
+    const content = JSON.parse(body.content);
+    expect(Array.isArray(content.treatments)).toBe(true);
+    expect(content.treatments.length).toBeGreaterThanOrEqual(1);
+    expect(content.treatments[0].cdtCode).toBe('D2140');
+  });
+
+  test('PMD content includes patientId and visitId for identity anchoring', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // FR12.1: patient identity anchored in content
+    const content = JSON.parse(body.content);
+    expect(content.patientId).toBe(PATIENT_ID);
+    expect(content.visitId).toBe(visit!.id);
+  });
+
+  test('PMD content includes prescriptions array (may be empty)', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // FR12.1: prescriptions (RxNorm) must be present in content (even if empty)
+    const content = JSON.parse(body.content);
+    expect(Array.isArray(content.prescriptions)).toBe(true);
+  });
+});
+
+// ===========================================================================
+// FR12.4: PMD has checksum for integrity (digital signature foundation)
+// ===========================================================================
+
+describe('FR12.4: PMD checksum (integrity anchor for digital signature)', () => {
+  test('generated PMD has a non-empty checksum', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // FR12.4: checksum required (SHA-256 of content)
+    expect(typeof body.checksum).toBe('string');
+    expect(body.checksum.length).toBeGreaterThan(0);
+  });
+
+  test('two PMDs with different content produce different checksums', async () => {
+    const visit1 = await seedCompletedVisit();
+    const visit2 = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+
+    const res1 = await app.request(`/dental/visits/${visit1!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    const res2 = await app.request(`/dental/visits/${visit2!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+
+    const body1 = await res1.json() as any;
+    const body2 = await res2.json() as any;
+    // Different visit IDs → different content → different checksums
+    expect(body1.checksum).not.toBe(body2.checksum);
   });
 });
