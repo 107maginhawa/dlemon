@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/utils/guards'
+import { apiBaseUrl } from '@/utils/config'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
   SidebarProvider,
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/_dashboard')({
       if (!currentBranchId) {
         // Try to auto-detect org/branch from API (e.g. seeded via script)
         try {
-          const res = await fetch('http://localhost:7213/dental/org/context', {
+          const res = await fetch(`${apiBaseUrl}/dental/org/context`, {
             credentials: 'include',
           })
           if (res.ok) {

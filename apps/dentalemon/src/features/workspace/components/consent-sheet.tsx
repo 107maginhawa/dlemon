@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
 const CONSENT_TEMPLATES = [
   { id: 'tpl-general', name: 'General Dental Consent' },
@@ -97,7 +98,7 @@ export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: Con
     setSaving(true);
     try {
       // Create the form first
-      const createRes = await fetch(`http://localhost:7213/dental/visits/${visitId}/consents`, {
+      const createRes = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/consents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -107,7 +108,7 @@ export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: Con
       const form = await createRes.json();
 
       // Sign it
-      const signRes = await fetch(`http://localhost:7213/dental/visits/${visitId}/consents/${form.id}/sign`, {
+      const signRes = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/consents/${form.id}/sign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

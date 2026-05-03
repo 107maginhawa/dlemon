@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
 interface SafetyFloorPreview {
   conditions: string[];
@@ -66,7 +67,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   async function handleConfirm() {
     setSaving(true);
     try {
-      const res = await fetch('http://localhost:7213/dental/pmd/import', {
+      const res = await fetch(`${apiBaseUrl}/dental/pmd/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

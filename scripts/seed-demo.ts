@@ -120,7 +120,7 @@ async function seed() {
     log(`→ Existing clinic: ${org.name} / ${branch.name}`);
   } else {
     // Create fresh
-    const orgResult = await post('/dental/organizations/', {
+    const orgResult = await post('/dental/organizations', {
       name: 'Reyes Family Dental',
       tier: 'clinic',
       countryCode: 'PH',
@@ -129,7 +129,7 @@ async function seed() {
     org = orgResult.data;
     log(`✓ Created clinic: ${org.name} (${org.id})`);
 
-    const branchResult = await post(`/dental/organizations/${org.id}/branches/`, {
+    const branchResult = await post(`/dental/organizations/${org.id}/branches`, {
       name: 'Main Clinic',
       timezone: 'Asia/Manila',
       address: '123 Bonifacio Ave',
@@ -145,7 +145,7 @@ async function seed() {
   section('4. Staff members');
 
   if (!ownerMember) {
-    const r = await post(`/dental/org/members?branchId=${branch.id}`, {
+    const r = await post(`/dental/organizations/${org.id}/branches/${branch.id}/members`, {
       displayName: 'Dr. Maria Reyes',
       role: 'dentist_owner',
       personId: userId,
@@ -166,7 +166,7 @@ async function seed() {
   if (pinResult.ok) log(`  PIN set: 1 2 3 4 5 6`);
 
   // Staff assistant — always try, ignore duplicate errors
-  const staffResult = await post(`/dental/org/members?branchId=${branch.id}`, {
+  const staffResult = await post(`/dental/organizations/${org.id}/branches/${branch.id}/members`, {
     displayName: 'Ana Santos',
     role: 'staff_full',
   }, cookie);
@@ -196,20 +196,31 @@ async function seed() {
 
   const patients: any[] = [];
   for (const p of patientsData) {
-    // Try /dental/patients first (new endpoint), fall back to /patients (FHIR)
-    let r = await post('/dental/patients', { ...p, dateOfBirth: p.birthDate, consentGiven: true, branchId: branch.id }, cookie);
-    if (!r.ok) {
-      r = await post('/patients', { displayName: p.displayName, birthDate: p.birthDate, gender: p.gender }, cookie);
-    }
+    // Try creating the patient
+    const r = await post('/dental/patients', { ...p, dateOfBirth: p.birthDate, consentGiven: true, branchId: branch.id }, cookie);
     if (r.ok) {
       patients.push({ ...r.data, displayName: p.displayName });
       log(`✓ ${p.displayName}`);
+    } else if (r.status === 400 || r.status === 409) {
+      // Already exists — fetch by branchId and find matching name
+      const listR = await get(`/dental/patients?branchId=${branch.id}`, cookie);
+      if (listR.ok) {
+        const existing = (listR.data?.patients ?? listR.data ?? []).find(
+          (pt: any) => (pt.displayName ?? pt.name ?? '') === p.displayName
+        );
+        if (existing) {
+          patients.push({ ...existing, displayName: p.displayName });
+          log(`→ Existing: ${p.displayName}`);
+          continue;
+        }
+      }
+      log(`⚠ Skipped ${p.displayName} (${r.status})`);
     } else {
       log(`⚠ Skipped ${p.displayName} (${r.status})`);
     }
   }
 
-  if (!patients.length) throw new Error('No patients created — cannot seed visits');
+  if (!patients.length) throw new Error('No patients found — cannot seed visits');
 
   // ── 6. Appointments ──────────────────────────────────────────────────────
   section('6. Appointments (today + tomorrow)');
@@ -230,7 +241,7 @@ async function seed() {
   ];
 
   for (const a of apptDefs) {
-    const r = await post('/dental/appointments/', {
+    const r = await post('/dental/appointments', {
       patientId: a.patient.id,
       dentistMemberId: ownerMember.id,
       branchId: branch.id,
@@ -262,7 +273,7 @@ async function seed() {
   ];
 
   for (const t of treatments) {
-    const r = must(await post(`/dental/visits/${visitR.id}/treatments`, { patientId: p0.id, ...t }, cookie), 'create treatment');
+    const r = must(await post(`/dental/visits/${visitR.id}/treatments`, { visitId: visitR.id, patientId: p0.id, ...t }, cookie), 'create treatment');
     await patch(`/dental/visits/${visitR.id}/treatments/${r.id}`, { status: 'performed' }, cookie);
   }
 
@@ -305,10 +316,10 @@ async function seed() {
     await patch(`/dental/visits/${v1R.id}`, { status: 'active' }, cookie);
 
     await post(`/dental/visits/${v1R.id}/treatments`, {
-      patientId: p1.id, cdtCode: 'D0220', description: 'Periapical X-ray', priceCents: 80000, toothNumber: 24,
+      visitId: v1R.id, patientId: p1.id, cdtCode: 'D0220', description: 'Periapical X-ray', priceCents: 80000, toothNumber: 24,
     }, cookie);
     await post(`/dental/visits/${v1R.id}/treatments`, {
-      patientId: p1.id, cdtCode: 'D2140', description: 'Amalgam restoration — 1 surface', priceCents: 350000,
+      visitId: v1R.id, patientId: p1.id, cdtCode: 'D2140', description: 'Amalgam restoration — 1 surface', priceCents: 350000,
       toothNumber: 24, surfaces: ['mesial'], conditionCode: 'K02.9',
     }, cookie);
 

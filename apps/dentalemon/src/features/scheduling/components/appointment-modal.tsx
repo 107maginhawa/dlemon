@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
 const DURATION_OPTIONS = [
   { value: 30, label: '30 min' },
@@ -116,7 +117,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
         notes,
         walkIn,
       });
-      const res = await fetch('http://localhost:7213/dental/appointments', {
+      const res = await fetch(`${apiBaseUrl}/dental/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

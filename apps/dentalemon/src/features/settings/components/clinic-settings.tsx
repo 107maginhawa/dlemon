@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 export function ClinicSettings() {
   const [name, setName] = useState('');

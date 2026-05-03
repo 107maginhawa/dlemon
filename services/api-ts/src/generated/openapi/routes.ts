@@ -362,14 +362,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // createAppointment
-  app.post('/dental/appointments/',
+  app.post('/dental/appointments',
     authMiddleware({ roles: ["user"] }),
     zValidator('json', validators.CreateAppointmentBody, validationErrorHandler),
     registry.createAppointment as unknown as Handler
   );
 
   // listAppointments
-  app.get('/dental/appointments/',
+  app.get('/dental/appointments',
     authMiddleware({ roles: ["user"] }),
     zValidator('query', validators.ListAppointmentsQuery, validationErrorHandler),
     registry.listAppointments as unknown as Handler
@@ -508,7 +508,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // DentalOrganizationManagement_create
-  app.post('/dental/organizations/',
+  app.post('/dental/organizations',
     authMiddleware(),
     zValidator('json', validators.DentalOrganizationManagement_createBody, validationErrorHandler),
     registry.DentalOrganizationManagement_create as unknown as Handler
@@ -530,7 +530,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // DentalBranchManagement_create
-  app.post('/dental/organizations/:orgId/branches/',
+  app.post('/dental/organizations/:orgId/branches',
     authMiddleware(),
     zValidator('param', validators.DentalBranchManagement_createParams, validationErrorHandler),
     zValidator('json', validators.DentalBranchManagement_createBody, validationErrorHandler),
@@ -538,7 +538,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // DentalBranchManagement_list
-  app.get('/dental/organizations/:orgId/branches/',
+  app.get('/dental/organizations/:orgId/branches',
     authMiddleware(),
     zValidator('param', validators.DentalBranchManagement_listParams, validationErrorHandler),
     registry.DentalBranchManagement_list as unknown as Handler
@@ -552,7 +552,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // DentalMembershipManagement_create
-  app.post('/dental/organizations/:orgId/branches/:branchId/members/',
+  app.post('/dental/organizations/:orgId/branches/:branchId/members',
     authMiddleware(),
     zValidator('param', validators.DentalMembershipManagement_createParams, validationErrorHandler),
     zValidator('json', validators.DentalMembershipManagement_createBody, validationErrorHandler),
@@ -560,7 +560,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // DentalMembershipManagement_list
-  app.get('/dental/organizations/:orgId/branches/:branchId/members/',
+  app.get('/dental/organizations/:orgId/branches/:branchId/members',
     authMiddleware(),
     zValidator('param', validators.DentalMembershipManagement_listParams, validationErrorHandler),
     registry.DentalMembershipManagement_list as unknown as Handler
@@ -588,36 +588,6 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.DentalMembershipManagement_verifyPinParams, validationErrorHandler),
     zValidator('json', validators.DentalMembershipManagement_verifyPinBody, validationErrorHandler),
     registry.DentalMembershipManagement_verifyPin as unknown as Handler
-  );
-
-  // createMember (flat endpoint)
-  app.post('/dental/org/members',
-    authMiddleware(),
-    registry.createMember as unknown as Handler
-  );
-
-  // listMembers (flat endpoint)
-  app.get('/dental/org/members',
-    authMiddleware(),
-    registry.listMembers as unknown as Handler
-  );
-
-  // updateMember (flat endpoint)
-  app.patch('/dental/org/members/:memberId',
-    authMiddleware(),
-    registry.updateMember as unknown as Handler
-  );
-
-  // deactivateMember (flat endpoint)
-  app.delete('/dental/org/members/:memberId',
-    authMiddleware(),
-    registry.deactivateMember as unknown as Handler
-  );
-
-  // resetMemberPin (flat endpoint)
-  app.post('/dental/org/members/:memberId/reset-pin',
-    authMiddleware(),
-    registry.resetMemberPin as unknown as Handler
   );
 
   // importPMD

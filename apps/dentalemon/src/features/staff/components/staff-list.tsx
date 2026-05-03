@@ -7,8 +7,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { StaffCreateModal } from './staff-create-modal';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 // ---------------------------------------------------------------------------
 // Types

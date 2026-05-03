@@ -283,7 +283,6 @@ namespace DentalOrgModule {
     @doc("Create a new dental organization")
     @useAuth(bearerAuth)
     @post
-    @route("/")
     create(@body body: CreateOrganizationRequest): {
       @statusCode statusCode: 201;
       @body body: DentalOrganization;
@@ -310,7 +309,6 @@ namespace DentalOrgModule {
     @doc("Create a branch within an organization")
     @useAuth(bearerAuth)
     @post
-    @route("/")
     create(
       @path orgId: UUID,
       @body body: CreateBranchRequest,
@@ -322,7 +320,6 @@ namespace DentalOrgModule {
     @doc("List branches for an organization")
     @useAuth(bearerAuth)
     @get
-    @route("/")
     list(@path orgId: UUID): BranchList | ApiUnauthorizedResponse | ErrorResponse;
 
     @doc("Get a branch by ID")
@@ -337,7 +334,6 @@ namespace DentalOrgModule {
     @doc("Add a staff member to a branch")
     @useAuth(bearerAuth)
     @post
-    @route("/")
     create(
       @path orgId: UUID,
       @path branchId: UUID,
@@ -350,7 +346,6 @@ namespace DentalOrgModule {
     @doc("List active members for a branch")
     @useAuth(bearerAuth)
     @get
-    @route("/")
     list(@path orgId: UUID, @path branchId: UUID): MembershipList | ApiUnauthorizedResponse | ErrorResponse;
 
     @doc("Deactivate a member")

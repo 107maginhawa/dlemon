@@ -9,8 +9,9 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 export const Route = createFileRoute('/auth/pin-select')({
   component: PinSelectRoute,

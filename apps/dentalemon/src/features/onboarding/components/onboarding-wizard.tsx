@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 type Step = 'clinic' | 'dentist' | 'fees' | 'patient';
 const STEPS: Step[] = ['clinic', 'dentist', 'fees', 'patient'];

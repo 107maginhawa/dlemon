@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
 const FREQUENCY_OPTIONS = [
   'OD (once daily)',
@@ -55,7 +56,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
     setErrors([]);
     setSaving(true);
     try {
-      const res = await fetch(`http://localhost:7213/dental/visits/${visitId}/prescriptions`, {
+      const res = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/prescriptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -28,6 +28,7 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
 import { createDentalPatient } from '@/handlers/dental-patient/createDentalPatient';
 import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
+import { authMiddleware } from '@/middleware/auth';
 import { registerRoutes as registerHealthRoutes } from '@/core/health';
 import { registerRoutes as registerAuthRoutes } from '@/core/auth';
 import { registerRoutes as registerDocsRoutes } from '@/core/openapi';
@@ -100,8 +101,8 @@ export function createApp(config: Config): App {
   registerOpenAPIRoutes(app as any);
 
   // Dental-specific routes (not in TypeSpec, bypass generated validators)
-  app.post('/dental/patients', createDentalPatient);
-  app.get('/dental/org/context', getOrgContext);
+  app.post('/dental/patients', authMiddleware({ required: true, roles: ['user'] }), createDentalPatient);
+  app.get('/dental/org/context', authMiddleware({ required: true, roles: ['user'] }), getOrgContext);
 
   // Register WebSocket handlers
   registerWebSocketRoutes(app as App);

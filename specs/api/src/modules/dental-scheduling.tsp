@@ -92,7 +92,6 @@ model CheckInResponse {
 namespace DentalSchedulingModule {
   interface AppointmentManagement {
     @post
-    @route("/")
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     @operationId("createAppointment")
@@ -103,7 +102,6 @@ namespace DentalSchedulingModule {
       | ApiUnauthorizedResponse;
 
     @get
-    @route("/")
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     @operationId("listAppointments")

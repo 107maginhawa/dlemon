@@ -604,7 +604,7 @@ async function generateRegistry(paths: Record<string, PathItem>) {
     for (const [method, operation] of Object.entries(methods)) {
       if (!operation.operationId) continue;
       
-      const module = operation.tags?.[0]?.toLowerCase() || 'default';
+      const module = (operation.tags?.[0]?.toLowerCase() || 'default').replace(/:/g, '-');
       if (!operationsByModule.has(module)) {
         operationsByModule.set(module, []);
       }
@@ -651,7 +651,7 @@ async function generateHandlerStubs(paths: Record<string, PathItem>, spec: any) 
     for (const [method, operation] of Object.entries(methods)) {
       if (!operation.operationId) continue;
       
-      const module = operation.tags?.[0]?.toLowerCase() || 'default';
+      const module = (operation.tags?.[0]?.toLowerCase() || 'default').replace(/:/g, '-');
       const handlerDir = path.join(HANDLERS_DIR, module);
       const handlerPath = path.join(handlerDir, `${operation.operationId}.ts`);
       
@@ -1302,7 +1302,7 @@ async function generateWebSocketHandlers() {
   const wsFiles: string[] = [];
 
   for await (const file of glob.scan({ cwd: path.join(ROOT_DIR, 'src/handlers'), absolute: false })) {
-    wsFiles.push(file);
+    if (!file.endsWith('.test.ts')) wsFiles.push(file);
   }
 
   if (wsFiles.length === 0) {

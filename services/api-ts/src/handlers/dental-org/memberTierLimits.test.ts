@@ -13,8 +13,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
-import { DentalMembershipManagement_create } from '@/handlers/dental:org/DentalMembershipManagement_create';
-import { DentalMembershipManagement_deactivate } from '@/handlers/dental:org/DentalMembershipManagement_deactivate';
+import { DentalMembershipManagement_create } from '@/handlers/dental-org/DentalMembershipManagement_create';
+import { DentalMembershipManagement_deactivate } from '@/handlers/dental-org/DentalMembershipManagement_deactivate';
 import {
   DentalMembershipManagement_createParams,
   DentalMembershipManagement_createBody,

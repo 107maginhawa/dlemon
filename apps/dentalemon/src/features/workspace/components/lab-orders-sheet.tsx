@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
 
 type LabOrderStatus = 'ordered' | 'inFabrication' | 'delivered' | 'fitted' | 'cancelled';
 
@@ -52,7 +53,7 @@ interface CreateForm {
   expectedDeliveryDate: string;
 }
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 export interface LabOrdersSheetProps {
   visitId: string;

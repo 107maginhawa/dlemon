@@ -18,8 +18,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { canViewFinancials } from '../../../utils/rbac';
 import { MetricCard } from './metric-card';
 import type { DentalRole } from '../../../utils/rbac';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 // ---------------------------------------------------------------------------
 // Types

@@ -7,8 +7,9 @@
 
 import React, { useState } from 'react';
 import { canAccess, type DentalRole, type DentalModule } from '@/utils/rbac';
+import { apiBaseUrl } from '@/utils/config';
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 // ---------------------------------------------------------------------------
 // Types

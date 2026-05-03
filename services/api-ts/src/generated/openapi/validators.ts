@@ -17438,7 +17438,7 @@ export const ListDentalVisitsResponse = z.object({
 
 export const GetToothHistoryParams = z.object({
   patientId: UUIDSchema,
-  toothNumber: z.coerce.number().int(),
+  toothNumber: z.number().int(),
 });
 export type GetToothHistoryParams = z.infer<typeof GetToothHistoryParams>;
 
@@ -17577,7 +17577,7 @@ export const GetDentalChartResponse = DentalChartSchema;
 
 export const UpdateToothParams = z.object({
   visitId: UUIDSchema,
-  toothNumber: z.coerce.number().int(),
+  toothNumber: z.number().int(),
 });
 export type UpdateToothParams = z.infer<typeof UpdateToothParams>;
 

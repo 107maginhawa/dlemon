@@ -11,12 +11,13 @@ import { CalendarDay } from '../../features/scheduling/components/calendar-day';
 import { CalendarWeek } from '../../features/scheduling/components/calendar-week';
 import { AppointmentModal } from '../../features/scheduling/components/appointment-modal';
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
+import { apiBaseUrl } from '@/utils/config';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
   component: CalendarPage,
 });
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);

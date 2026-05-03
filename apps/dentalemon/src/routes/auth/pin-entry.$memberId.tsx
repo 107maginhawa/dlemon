@@ -10,6 +10,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { pinSession } from '@/utils/pin-session';
+import { apiBaseUrl } from '@/utils/config';
 
 export const Route = createFileRoute('/auth/pin-entry/$memberId')({
   component: PinEntryRoute,
@@ -204,7 +205,7 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil, 
 // Route component
 // --------------------------------------------------------------------------
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 // FR9.3: Role-based landing page after successful PIN authentication
 const ROLE_LANDING: Record<string, string> = {

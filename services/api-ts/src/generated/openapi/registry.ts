@@ -48,74 +48,69 @@ import { joinVideoCall } from '../../handlers/comms/joinVideoCall';
 import { leaveVideoCall } from '../../handlers/comms/leaveVideoCall';
 import { updateVideoCallParticipant } from '../../handlers/comms/updateVideoCallParticipant';
 import { getIceServers } from '../../handlers/comms/getIceServers';
-import { createAppointment } from '../../handlers/dental:scheduling/createAppointment';
-import { listAppointments } from '../../handlers/dental:scheduling/listAppointments';
-import { getAppointment } from '../../handlers/dental:scheduling/getAppointment';
-import { updateAppointment } from '../../handlers/dental:scheduling/updateAppointment';
-import { cancelAppointment } from '../../handlers/dental:scheduling/cancelAppointment';
-import { checkInAppointment } from '../../handlers/dental:scheduling/checkInAppointment';
-import { createDentalInvoice } from '../../handlers/dental:billing/createDentalInvoice';
-import { listDentalInvoices } from '../../handlers/dental:billing/listDentalInvoices';
-import { getDentalInvoice } from '../../handlers/dental:billing/getDentalInvoice';
-import { applyDentalDiscount } from '../../handlers/dental:billing/applyDentalDiscount';
-import { issueDentalInvoice } from '../../handlers/dental:billing/issueDentalInvoice';
-import { recordDentalPayment } from '../../handlers/dental:billing/recordDentalPayment';
-import { listDentalPayments } from '../../handlers/dental:billing/listDentalPayments';
-import { voidDentalPayment } from '../../handlers/dental:billing/voidDentalPayment';
-import { createDentalPaymentPlan } from '../../handlers/dental:billing/createDentalPaymentPlan';
-import { getDentalPaymentPlan } from '../../handlers/dental:billing/getDentalPaymentPlan';
-import { voidDentalInvoice } from '../../handlers/dental:billing/voidDentalInvoice';
-import { createMedicalHistoryEntry } from '../../handlers/dental:clinical/createMedicalHistoryEntry';
-import { listMedicalHistory } from '../../handlers/dental:clinical/listMedicalHistory';
-import { updateMedicalHistoryEntry } from '../../handlers/dental:clinical/updateMedicalHistoryEntry';
-import { createAmendment } from '../../handlers/dental:clinical/createAmendment';
-import { listAmendments } from '../../handlers/dental:clinical/listAmendments';
-import { createAttachment } from '../../handlers/dental:clinical/createAttachment';
-import { listAttachments } from '../../handlers/dental:clinical/listAttachments';
-import { deleteAttachment } from '../../handlers/dental:clinical/deleteAttachment';
-import { createConsentForm } from '../../handlers/dental:clinical/createConsentForm';
-import { listConsentForms } from '../../handlers/dental:clinical/listConsentForms';
-import { signConsentForm } from '../../handlers/dental:clinical/signConsentForm';
-import { createLabOrder } from '../../handlers/dental:clinical/createLabOrder';
-import { listLabOrders } from '../../handlers/dental:clinical/listLabOrders';
-import { updateLabOrder } from '../../handlers/dental:clinical/updateLabOrder';
-import { createPrescription } from '../../handlers/dental:clinical/createPrescription';
-import { listPrescriptions } from '../../handlers/dental:clinical/listPrescriptions';
-import { updatePrescription } from '../../handlers/dental:clinical/updatePrescription';
-import { DentalOrganizationManagement_create } from '../../handlers/dental:org/DentalOrganizationManagement_create';
-import { DentalOrganizationManagement_get } from '../../handlers/dental:org/DentalOrganizationManagement_get';
-import { DentalOrganizationManagement_update } from '../../handlers/dental:org/DentalOrganizationManagement_update';
-import { DentalBranchManagement_create } from '../../handlers/dental:org/DentalBranchManagement_create';
-import { DentalBranchManagement_list } from '../../handlers/dental:org/DentalBranchManagement_list';
-import { DentalBranchManagement_get } from '../../handlers/dental:org/DentalBranchManagement_get';
-import { DentalMembershipManagement_create } from '../../handlers/dental:org/DentalMembershipManagement_create';
-import { DentalMembershipManagement_list } from '../../handlers/dental:org/DentalMembershipManagement_list';
-import { DentalMembershipManagement_deactivate } from '../../handlers/dental:org/DentalMembershipManagement_deactivate';
-import { DentalMembershipManagement_setPin } from '../../handlers/dental:org/DentalMembershipManagement_setPin';
-import { DentalMembershipManagement_verifyPin } from '../../handlers/dental:org/DentalMembershipManagement_verifyPin';
-import { createMember } from '../../handlers/dental-org/createMember';
-import { listMembers } from '../../handlers/dental-org/listMembers';
-import { updateMember } from '../../handlers/dental-org/updateMember';
-import { deactivateMember } from '../../handlers/dental-org/deactivateMember';
-import { resetMemberPin } from '../../handlers/dental-org/resetMemberPin';
-import { importPMD } from '../../handlers/dental:pmd/importPMD';
-import { listImportedPMDs } from '../../handlers/dental:pmd/listImportedPMDs';
-import { listPMDs } from '../../handlers/dental:pmd/listPMDs';
-import { generatePMD } from '../../handlers/dental:pmd/generatePMD';
-import { getPMDForVisit } from '../../handlers/dental:pmd/getPMDForVisit';
-import { createDentalVisit } from '../../handlers/dental:visit/createDentalVisit';
-import { listDentalVisits } from '../../handlers/dental:visit/listDentalVisits';
-import { getToothHistory } from '../../handlers/dental:visit/getToothHistory';
-import { getDentalVisit } from '../../handlers/dental:visit/getDentalVisit';
-import { updateDentalVisit } from '../../handlers/dental:visit/updateDentalVisit';
-import { upsertDentalChart } from '../../handlers/dental:visit/upsertDentalChart';
-import { getDentalChart } from '../../handlers/dental:visit/getDentalChart';
-import { updateTooth } from '../../handlers/dental:visit/updateTooth';
-import { upsertVisitNotes } from '../../handlers/dental:visit/upsertVisitNotes';
-import { getVisitNotes } from '../../handlers/dental:visit/getVisitNotes';
-import { createDentalTreatment } from '../../handlers/dental:visit/createDentalTreatment';
-import { listDentalTreatments } from '../../handlers/dental:visit/listDentalTreatments';
-import { updateDentalTreatment } from '../../handlers/dental:visit/updateDentalTreatment';
+import { createAppointment } from '../../handlers/dental-scheduling/createAppointment';
+import { listAppointments } from '../../handlers/dental-scheduling/listAppointments';
+import { getAppointment } from '../../handlers/dental-scheduling/getAppointment';
+import { updateAppointment } from '../../handlers/dental-scheduling/updateAppointment';
+import { cancelAppointment } from '../../handlers/dental-scheduling/cancelAppointment';
+import { checkInAppointment } from '../../handlers/dental-scheduling/checkInAppointment';
+import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
+import { listDentalInvoices } from '../../handlers/dental-billing/listDentalInvoices';
+import { getDentalInvoice } from '../../handlers/dental-billing/getDentalInvoice';
+import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
+import { issueDentalInvoice } from '../../handlers/dental-billing/issueDentalInvoice';
+import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
+import { listDentalPayments } from '../../handlers/dental-billing/listDentalPayments';
+import { voidDentalPayment } from '../../handlers/dental-billing/voidDentalPayment';
+import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
+import { getDentalPaymentPlan } from '../../handlers/dental-billing/getDentalPaymentPlan';
+import { voidDentalInvoice } from '../../handlers/dental-billing/voidDentalInvoice';
+import { createMedicalHistoryEntry } from '../../handlers/dental-clinical/createMedicalHistoryEntry';
+import { listMedicalHistory } from '../../handlers/dental-clinical/listMedicalHistory';
+import { updateMedicalHistoryEntry } from '../../handlers/dental-clinical/updateMedicalHistoryEntry';
+import { createAmendment } from '../../handlers/dental-clinical/createAmendment';
+import { listAmendments } from '../../handlers/dental-clinical/listAmendments';
+import { createAttachment } from '../../handlers/dental-clinical/createAttachment';
+import { listAttachments } from '../../handlers/dental-clinical/listAttachments';
+import { deleteAttachment } from '../../handlers/dental-clinical/deleteAttachment';
+import { createConsentForm } from '../../handlers/dental-clinical/createConsentForm';
+import { listConsentForms } from '../../handlers/dental-clinical/listConsentForms';
+import { signConsentForm } from '../../handlers/dental-clinical/signConsentForm';
+import { createLabOrder } from '../../handlers/dental-clinical/createLabOrder';
+import { listLabOrders } from '../../handlers/dental-clinical/listLabOrders';
+import { updateLabOrder } from '../../handlers/dental-clinical/updateLabOrder';
+import { createPrescription } from '../../handlers/dental-clinical/createPrescription';
+import { listPrescriptions } from '../../handlers/dental-clinical/listPrescriptions';
+import { updatePrescription } from '../../handlers/dental-clinical/updatePrescription';
+import { DentalOrganizationManagement_create } from '../../handlers/dental-org/DentalOrganizationManagement_create';
+import { DentalOrganizationManagement_get } from '../../handlers/dental-org/DentalOrganizationManagement_get';
+import { DentalOrganizationManagement_update } from '../../handlers/dental-org/DentalOrganizationManagement_update';
+import { DentalBranchManagement_create } from '../../handlers/dental-org/DentalBranchManagement_create';
+import { DentalBranchManagement_list } from '../../handlers/dental-org/DentalBranchManagement_list';
+import { DentalBranchManagement_get } from '../../handlers/dental-org/DentalBranchManagement_get';
+import { DentalMembershipManagement_create } from '../../handlers/dental-org/DentalMembershipManagement_create';
+import { DentalMembershipManagement_list } from '../../handlers/dental-org/DentalMembershipManagement_list';
+import { DentalMembershipManagement_deactivate } from '../../handlers/dental-org/DentalMembershipManagement_deactivate';
+import { DentalMembershipManagement_setPin } from '../../handlers/dental-org/DentalMembershipManagement_setPin';
+import { DentalMembershipManagement_verifyPin } from '../../handlers/dental-org/DentalMembershipManagement_verifyPin';
+import { importPMD } from '../../handlers/dental-pmd/importPMD';
+import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
+import { listPMDs } from '../../handlers/dental-pmd/listPMDs';
+import { generatePMD } from '../../handlers/dental-pmd/generatePMD';
+import { getPMDForVisit } from '../../handlers/dental-pmd/getPMDForVisit';
+import { createDentalVisit } from '../../handlers/dental-visit/createDentalVisit';
+import { listDentalVisits } from '../../handlers/dental-visit/listDentalVisits';
+import { getToothHistory } from '../../handlers/dental-visit/getToothHistory';
+import { getDentalVisit } from '../../handlers/dental-visit/getDentalVisit';
+import { updateDentalVisit } from '../../handlers/dental-visit/updateDentalVisit';
+import { upsertDentalChart } from '../../handlers/dental-visit/upsertDentalChart';
+import { getDentalChart } from '../../handlers/dental-visit/getDentalChart';
+import { updateTooth } from '../../handlers/dental-visit/updateTooth';
+import { upsertVisitNotes } from '../../handlers/dental-visit/upsertVisitNotes';
+import { getVisitNotes } from '../../handlers/dental-visit/getVisitNotes';
+import { createDentalTreatment } from '../../handlers/dental-visit/createDentalTreatment';
+import { listDentalTreatments } from '../../handlers/dental-visit/listDentalTreatments';
+import { updateDentalTreatment } from '../../handlers/dental-visit/updateDentalTreatment';
 import { listEmailQueueItems } from '../../handlers/email/listEmailQueueItems';
 import { getEmailQueueItem } from '../../handlers/email/getEmailQueueItem';
 import { cancelEmailQueueItem } from '../../handlers/email/cancelEmailQueueItem';
@@ -221,7 +216,7 @@ export const registry = {
   updateVideoCallParticipant,
   getIceServers,
 
-  // Dental:scheduling handlers
+  // Dental-scheduling handlers
   createAppointment,
   listAppointments,
   getAppointment,
@@ -229,7 +224,7 @@ export const registry = {
   cancelAppointment,
   checkInAppointment,
 
-  // Dental:billing handlers
+  // Dental-billing handlers
   createDentalInvoice,
   listDentalInvoices,
   getDentalInvoice,
@@ -242,7 +237,7 @@ export const registry = {
   getDentalPaymentPlan,
   voidDentalInvoice,
 
-  // Dental:clinical handlers
+  // Dental-clinical handlers
   createMedicalHistoryEntry,
   listMedicalHistory,
   updateMedicalHistoryEntry,
@@ -261,7 +256,7 @@ export const registry = {
   listPrescriptions,
   updatePrescription,
 
-  // Dental:org handlers
+  // Dental-org handlers
   DentalOrganizationManagement_create,
   DentalOrganizationManagement_get,
   DentalOrganizationManagement_update,
@@ -273,20 +268,15 @@ export const registry = {
   DentalMembershipManagement_deactivate,
   DentalMembershipManagement_setPin,
   DentalMembershipManagement_verifyPin,
-  createMember,
-  listMembers,
-  updateMember,
-  deactivateMember,
-  resetMemberPin,
 
-  // Dental:pmd handlers
+  // Dental-pmd handlers
   importPMD,
   listImportedPMDs,
   listPMDs,
   generatePMD,
   getPMDForVisit,
 
-  // Dental:visit handlers
+  // Dental-visit handlers
   createDentalVisit,
   listDentalVisits,
   getToothHistory,

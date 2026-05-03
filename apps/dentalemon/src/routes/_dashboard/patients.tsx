@@ -14,12 +14,13 @@ import React, { useState, useEffect } from 'react';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
+import { apiBaseUrl } from '@/utils/config';
 
 export const Route = createFileRoute('/_dashboard/patients')({
   component: PatientsPage,
 });
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 /**
  * Map the API patient response to the PatientCardData shape used by PatientFolderCard.

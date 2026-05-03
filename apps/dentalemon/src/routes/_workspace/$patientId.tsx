@@ -16,12 +16,13 @@ import { DentalChart } from '@/features/workspace/components/dental-chart.tsx';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
+import { apiBaseUrl } from '@/utils/config';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
 });
 
-const API = 'http://localhost:7213';
+const API = apiBaseUrl;
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
