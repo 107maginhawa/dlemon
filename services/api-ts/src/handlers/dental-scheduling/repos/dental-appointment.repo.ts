@@ -5,7 +5,7 @@
  * No-show is reversible (can revert to completed per PRD FR3.x).
  */
 
-import { eq, and, gte, lt, ne, or } from 'drizzle-orm';
+import { eq, and, gte, lt, ne, or, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -59,13 +59,14 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
   /**
    * Check in an appointment: sets status to checkedIn and records checkInTime.
    */
-  async checkIn(id: string): Promise<DentalAppointment | null> {
+  async checkIn(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
         status: 'checkedIn',
         checkInTime: new Date(),
         updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
       })
       .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'scheduled')))
       .returning();
@@ -74,8 +75,9 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
 
   /**
    * Cancel an appointment: sets status to cancelled and records cancelledAt + optional reason.
+   * Guard: only scheduled or checkedIn appointments can be cancelled.
    */
-  async cancel(id: string, reason?: string): Promise<DentalAppointment | null> {
+  async cancel(id: string, reason?: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
@@ -83,24 +85,33 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         cancelledAt: new Date(),
         cancellationReason: reason ?? null,
         updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
       })
-      .where(eq(dentalAppointments.id, id))
+      .where(and(
+        eq(dentalAppointments.id, id),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checkedIn')),
+      ))
       .returning();
     return updated ?? null;
   }
 
   /**
    * Mark an appointment as no-show.
+   * Guard: only scheduled or checkedIn appointments can be marked as no-show.
    */
-  async markNoShow(id: string): Promise<DentalAppointment | null> {
+  async markNoShow(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
         status: 'noShow',
         noShowAt: new Date(),
         updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
       })
-      .where(eq(dentalAppointments.id, id))
+      .where(and(
+        eq(dentalAppointments.id, id),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checkedIn')),
+      ))
       .returning();
     return updated ?? null;
   }
@@ -108,13 +119,14 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
   /**
    * Revert a no-show appointment back to completed status (reversible per PRD).
    */
-  async revertNoShow(id: string): Promise<DentalAppointment | null> {
+  async revertNoShow(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
         status: 'completed',
         noShowAt: null,
         updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
       })
       .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'noShow')))
       .returning();
@@ -125,6 +137,9 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
    * FR3.7: Find overlapping appointments for the same dentist in the same branch.
    * Overlap = the proposed time window intersects with an existing scheduled/checkedIn appointment.
    * Non-blocking — caller decides whether to warn or block.
+   *
+   * Uses proper interval math: existing.start < proposed.end AND existing.end > proposed.start
+   * where existing.end = existing.scheduledAt + existing.durationMinutes (computed via SQL interval).
    */
   async findOverlapping(
     dentistMemberId: string,
@@ -137,10 +152,10 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
     const conditions = [
       eq(dentalAppointments.dentistMemberId, dentistMemberId),
       eq(dentalAppointments.branchId, branchId),
-      // Overlap: existing.start < proposed.end AND existing.end > proposed.start
+      // Overlap condition: existing.start < proposed.end
       lt(dentalAppointments.scheduledAt, endTime),
-      // existing.end > proposed.start (approximate: start + duration > proposed.start)
-      gte(dentalAppointments.scheduledAt, new Date(startTime.getTime() - 120 * 60 * 1000)), // look back 2h max
+      // AND existing.end > proposed.start  (computed: start + duration interval)
+      sql`${dentalAppointments.scheduledAt} + (${dentalAppointments.durationMinutes} * interval '1 minute') > ${startTime.toISOString()}::timestamptz`,
       or(
         eq(dentalAppointments.status, 'scheduled'),
         eq(dentalAppointments.status, 'checkedIn'),

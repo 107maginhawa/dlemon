@@ -7,39 +7,38 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
+import { assertBranchAccess } from './utils/assert-branch-access';
 import { eq } from 'drizzle-orm';
 import type { User } from '@/types/auth';
+import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 
 export async function createAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') throw new ValidationError('patientId is required');
-  if (!body['dentistMemberId'] || typeof body['dentistMemberId'] !== 'string') throw new ValidationError('dentistMemberId is required');
-  if (!body['branchId'] || typeof body['branchId'] !== 'string') throw new ValidationError('branchId is required');
-  if (!body['scheduledAt'] || typeof body['scheduledAt'] !== 'string') throw new ValidationError('scheduledAt is required');
-  if (!body['durationMinutes'] || typeof body['durationMinutes'] !== 'number') throw new ValidationError('durationMinutes is required');
-  if (!body['procedureType'] || typeof body['procedureType'] !== 'string') throw new ValidationError('procedureType is required');
+  const body = ctx.req.valid('json') as CreateAppointmentBody;
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Authorization: user must have active membership in the target branch
+  await assertBranchAccess(db, user.id, body.branchId);
   const repo = new DentalAppointmentRepository(db);
 
-  const scheduledAt = new Date(body['scheduledAt'] as string);
-  const durationMinutes = body['durationMinutes'] as number;
-  const dentistMemberId = body['dentistMemberId'] as string;
-  const branchId = body['branchId'] as string;
+  // scheduledAt is already a Date (zod transform)
+  const scheduledAt = body.scheduledAt instanceof Date ? body.scheduledAt : new Date(body.scheduledAt as any);
+  const durationMinutes = body.durationMinutes;
+  const dentistMemberId = body.dentistMemberId;
+  const branchId = body.branchId;
 
   // FR3.10: Validate against configured working hours (blocking)
   const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
   if (branch?.workingHours) {
     const hours = parseWorkingHours(branch.workingHours);
-    if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours)) {
+    if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours, branch.timezone ?? 'UTC')) {
       throw new BusinessLogicError('Appointment is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
     }
   }
@@ -52,15 +51,17 @@ export async function createAppointment(ctx: HandlerContext) {
   }
 
   const appt = await repo.createOne({
-    patientId: body['patientId'] as string,
+    patientId: body.patientId,
     dentistMemberId,
     branchId,
     scheduledAt,
     durationMinutes,
-    procedureType: body['procedureType'] as string,
-    operatoryId: typeof body['operatoryId'] === 'string' ? body['operatoryId'] : undefined,
-    walkIn: body['walkIn'] === true,
-    notes: typeof body['notes'] === 'string' ? body['notes'] : undefined,
+    procedureType: body.procedureType,
+    operatoryId: body.operatoryId,
+    walkIn: body.walkIn ?? false,
+    notes: body.notes,
+    createdBy: user.id,
+    updatedBy: user.id,
   });
 
   return ctx.json({ ...appt, warnings }, 201);

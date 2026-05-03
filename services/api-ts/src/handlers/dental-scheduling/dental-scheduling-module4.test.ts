@@ -16,12 +16,15 @@
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { createAppointment } from './createAppointment';
 import { getWorkingHours, updateWorkingHours } from './workingHours';
+import { CreateAppointmentBody } from '@/generated/openapi/validators';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
@@ -50,7 +53,7 @@ function buildTestApp(user?: typeof TEST_USER) {
 
   app.get('/dental/branches/:branchId/working-hours', getWorkingHours);
   app.put('/dental/branches/:branchId/working-hours', updateWorkingHours);
-  app.post('/dental/appointments', createAppointment);
+  app.post('/dental/appointments', zValidator('json', CreateAppointmentBody), createAppointment as any);
   return app;
 }
 
@@ -78,12 +81,23 @@ async function seedBranch(workingHoursJson?: string | null) {
     set: { workingHours: workingHoursJson ?? null, updatedBy: TEST_USER.id },
   }).returning();
 
+  // Seed membership so assertBranchAccess passes for createAppointment
+  await db.insert(dentalMemberships).values({
+    branchId: BRANCH_ID,
+    personId: TEST_USER.id,
+    displayName: 'Test Dentist',
+    role: 'dentist_owner',
+    status: 'active',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
   return branch!;
 }
 
 afterEach(async () => {
   await db.execute(sql`
-    TRUNCATE dental_appointment, dental_branch, dental_organization
+    TRUNCATE dental_appointment, dental_membership, dental_branch, dental_organization
     RESTART IDENTITY CASCADE
   `);
 });
@@ -184,11 +198,12 @@ describe('PUT working hours (FR3.10)', () => {
 // ---------------------------------------------------------------------------
 
 describe('createAppointment working hours enforcement (FR3.10)', () => {
-  // Monday 10:00 UTC
-  const mondayAt10 = '2026-03-02T10:00:00.000Z'; // Monday 2026-03-02
-  const mondayAt17 = '2026-03-02T17:00:00.000Z'; // Monday 17:00 — 60-min appt ends at 18:00, exactly at close
-  const mondayAt17_30 = '2026-03-02T17:30:00.000Z'; // ends at 18:30, outside close
-  const sundayAt10 = '2026-03-08T10:00:00.000Z'; // Sunday — closed
+  // Times expressed in UTC but representing Asia/Manila (UTC+8) local times
+  // Monday 2026-03-02: 10:00 Manila = 02:00 UTC
+  const mondayAt10 = '2026-03-02T02:00:00.000Z'; // Monday 10:00 Manila (within 09:00-18:00)
+  const mondayAt17 = '2026-03-02T09:00:00.000Z'; // Monday 17:00 Manila — 60-min appt ends 18:00, exactly at close
+  const mondayAt17_30 = '2026-03-02T09:30:00.000Z'; // Monday 17:30 Manila — ends 18:30, outside close
+  const sundayAt10 = '2026-03-08T02:00:00.000Z'; // Sunday 10:00 Manila — closed
 
   const workingHours = {
     monday:    { enabled: true,  open: '09:00', close: '18:00' },
@@ -265,8 +280,27 @@ describe('createAppointment working hours enforcement (FR3.10)', () => {
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: apptBody(mondayAt17, 60), // 17:00 + 60min = 18:00, exactly at close
+      body: apptBody(mondayAt17, 60), // 17:00 Manila + 60min = 18:00 Manila, exactly at close
     });
     expect(res.status).toBe(201);
+  });
+
+  test('timezone: blocked when UTC time falls within hours but Manila local time is outside', async () => {
+    // Branch timezone: Asia/Manila (UTC+8)
+    // Working hours: 09:00-18:00 Manila
+    // A UTC time of 11:00 UTC = 19:00 Manila (outside hours, but within UTC business hours)
+    await seedBranch(JSON.stringify(workingHours));
+    const app = buildTestApp(TEST_USER);
+
+    // Monday 2026-03-02 11:00 UTC = 19:00 Manila — outside business hours
+    const outsideInManila = '2026-03-02T11:00:00.000Z';
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: apptBody(outsideInManila, 60),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('OUTSIDE_WORKING_HOURS');
   });
 });

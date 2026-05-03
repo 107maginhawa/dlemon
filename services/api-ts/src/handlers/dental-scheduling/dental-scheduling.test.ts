@@ -4,16 +4,29 @@
  * Tests HTTP-level behavior: auth, validation, 201/200/204 on success, 404 not found,
  * and state transitions (checkIn, cancel).
  *
- * The scheduling handlers use ctx.req.json() and ctx.req.param() directly (no
- * ctx.req.valid), so no zValidator middleware is required in the test app.
+ * Handlers use ctx.req.valid() so the test app wires zValidator middleware
+ * matching the generated route registration.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
+import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import {
+  CreateAppointmentBody,
+  ListAppointmentsQuery,
+  GetAppointmentParams,
+  UpdateAppointmentBody,
+  UpdateAppointmentParams,
+  CancelAppointmentParams,
+  CheckInAppointmentParams,
+} from '@/generated/openapi/validators';
 
 import { createAppointment } from './createAppointment';
 import { getAppointment } from './getAppointment';
@@ -26,11 +39,43 @@ const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/mo
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
+const ORG_ID = 'f0000000-0000-1000-8000-000000000000';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
 
-// Scheduling handlers read ctx.get('user') directly — no zValidator needed.
+// Seed org + branch + membership once so assertBranchAccess passes for TEST_USER + BRANCH_ID
+beforeAll(async () => {
+  await db.insert(dentalOrganizations).values({
+    id: ORG_ID,
+    name: 'Test Clinic',
+    tier: 'solo',
+    ownerPersonId: TEST_USER.id,
+    countryCode: 'PH',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalBranches).values({
+    id: BRANCH_ID,
+    organizationId: ORG_ID,
+    name: 'Main Branch',
+    timezone: 'Asia/Manila',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalMemberships).values({
+    branchId: BRANCH_ID,
+    personId: TEST_USER.id,
+    displayName: 'Test Dentist',
+    role: 'dentist_owner',
+    status: 'active',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+});
+
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
 
@@ -52,12 +97,17 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/appointments', createAppointment as any);
-  app.get('/dental/appointments', listAppointments as any);
-  app.get('/dental/appointments/:appointmentId', getAppointment as any);
-  app.patch('/dental/appointments/:appointmentId', updateAppointment as any);
-  app.delete('/dental/appointments/:appointmentId', cancelAppointment as any);
-  app.post('/dental/appointments/:appointmentId/check-in', checkInAppointment as any);
+  // Wire zValidator to match generated route registration (handlers use ctx.req.valid())
+  app.post('/dental/appointments', zValidator('json', CreateAppointmentBody), createAppointment as any);
+  app.get('/dental/appointments', zValidator('query', ListAppointmentsQuery), listAppointments as any);
+  app.get('/dental/appointments/:appointmentId', zValidator('param', GetAppointmentParams), getAppointment as any);
+  app.patch('/dental/appointments/:appointmentId',
+    zValidator('param', UpdateAppointmentParams),
+    zValidator('json', UpdateAppointmentBody),
+    updateAppointment as any,
+  );
+  app.delete('/dental/appointments/:appointmentId', zValidator('param', CancelAppointmentParams), cancelAppointment as any);
+  app.post('/dental/appointments/:appointmentId/check-in', zValidator('param', CheckInAppointmentParams), checkInAppointment as any);
 
   return app;
 }
@@ -547,5 +597,221 @@ describe('EC7: max one active visit per patient', () => {
     expect(secondCheckIn.status).toBe(409);
     const body = await secondCheckIn.json() as any;
     expect(body.error).toMatch(/visit already active/i);
+  });
+
+  test('appointment stays in scheduled status when check-in fails due to existing visit (race condition fix)', async () => {
+    const appt1 = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    // Check in first appointment to create an active visit
+    await app.request(`/dental/appointments/${appt1.id}/check-in`, { method: 'POST' });
+
+    const repo = new DentalAppointmentRepository(db);
+    const appt2 = await repo.createOne({
+      patientId: PATIENT_ID,
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(FUTURE_DATE),
+      durationMinutes: 30,
+      procedureType: 'Follow-Up',
+    });
+
+    // Second check-in should fail
+    const res = await app.request(`/dental/appointments/${appt2.id}/check-in`, { method: 'POST' });
+    expect(res.status).toBe(409);
+
+    // Verify appt2 is still 'scheduled', NOT stuck in 'checkedIn' (race condition fix)
+    const updated = await repo.findOneById(appt2.id);
+    expect(updated!.status).toBe('scheduled');
+  });
+});
+
+// ===========================================================================
+// Status transition guards
+// ===========================================================================
+
+describe('status transition guards', () => {
+  test('cannot cancel a completed appointment (via PATCH status=cancelled)', async () => {
+    const appt = await seedAppointment();
+    const repo = new DentalAppointmentRepository(db);
+    // Manually set to completed via DB (no direct endpoint for this)
+    await db.execute(sql`UPDATE dental_appointment SET status = 'completed' WHERE id = ${appt.id}`);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+    // cancel() guard returns null -> NotFoundError or similar non-2xx
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('cannot mark noShow on a cancelled appointment', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    // Cancel first
+    await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+
+    // Now attempt noShow
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'noShow' }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('revertNoShow: noShow appointment can be reverted to completed', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    // Mark as noShow first
+    const noShowRes = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'noShow' }),
+    });
+    expect(noShowRes.status).toBe(200);
+
+    // Revert to completed
+    const revertRes = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(revertRes.status).toBe(200);
+    const body = await revertRes.json() as any;
+    expect(body.status).toBe('completed');
+    expect(body.noShowAt).toBeNull();
+  });
+
+  test('generic PATCH cannot set arbitrary status (status field is ignored)', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    // Attempt to set to 'checkedIn' directly via notes+status patch
+    // Since 'checkedIn' doesn't match any transition branch in the handler,
+    // it falls through to generic patch which no longer passes status
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: 'test', status: 'checkedIn' }),
+    });
+    // Should succeed (notes update) but status should NOT change to checkedIn
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('scheduled'); // unchanged
+    expect(body.notes).toBe('test');
+  });
+});
+
+// ===========================================================================
+// Cancellation reason
+// ===========================================================================
+
+describe('cancellationReason', () => {
+  test('stores cancellationReason when cancelled via DELETE with body', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Patient request' }),
+    });
+    expect(res.status).toBe(204);
+
+    const repo = new DentalAppointmentRepository(db);
+    const updated = await repo.findOneById(appt.id);
+    expect(updated!.cancellationReason).toBe('Patient request');
+  });
+});
+
+// ===========================================================================
+// Audit trail
+// ===========================================================================
+
+describe('audit trail', () => {
+  test('createdBy is set to user.id on create', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+
+    const repo = new DentalAppointmentRepository(db);
+    const appt = await repo.findOneById(body.id);
+    expect(appt!.createdBy).toBe(TEST_USER.id);
+  });
+
+  test('updatedBy is set to user.id on cancel', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+
+    const repo = new DentalAppointmentRepository(db);
+    const updated = await repo.findOneById(appt.id);
+    expect(updated!.updatedBy).toBe(TEST_USER.id);
+  });
+});
+
+// ===========================================================================
+// Pagination
+// ===========================================================================
+
+describe('pagination on listAppointments', () => {
+  test('returns at most limit appointments', async () => {
+    const repo = new DentalAppointmentRepository(db);
+    // Seed 3 appointments
+    for (let i = 0; i < 3; i++) {
+      await repo.createOne({
+        patientId: PATIENT_ID,
+        dentistMemberId: MEMBER_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
+        durationMinutes: 30,
+        procedureType: 'Cleaning',
+      });
+    }
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments?limit=2');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.length).toBeLessThanOrEqual(2);
+  });
+
+  test('offset skips earlier results', async () => {
+    const repo = new DentalAppointmentRepository(db);
+    for (let i = 0; i < 3; i++) {
+      await repo.createOne({
+        patientId: PATIENT_ID,
+        dentistMemberId: MEMBER_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
+        durationMinutes: 30,
+        procedureType: 'Cleaning',
+      });
+    }
+
+    const app = buildTestApp(TEST_USER);
+    const res1 = await app.request('/dental/appointments?limit=2&offset=0');
+    const res2 = await app.request('/dental/appointments?limit=2&offset=2');
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+
+    const page1 = await res1.json() as any[];
+    const page2 = await res2.json() as any[];
+    // IDs should not overlap
+    const ids1 = new Set(page1.map((a: any) => a.id));
+    const ids2 = new Set(page2.map((a: any) => a.id));
+    const overlap = [...ids1].filter(id => ids2.has(id));
+    expect(overlap.length).toBe(0);
   });
 });

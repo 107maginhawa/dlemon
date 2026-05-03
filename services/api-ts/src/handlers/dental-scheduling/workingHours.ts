@@ -38,16 +38,35 @@ export function parseWorkingHours(raw: string | null | undefined): WorkingHours 
   try { return JSON.parse(raw) as WorkingHours; } catch { return null; }
 }
 
-/** Returns true if the given Date falls within working hours for the branch. */
-export function isWithinWorkingHours(scheduledAt: Date, durationMinutes: number, hours: WorkingHours): boolean {
-  const day = scheduledAt.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as typeof DAYS[number];
+/** Returns true if the given Date falls within working hours for the branch.
+ *  @param timezone - IANA timezone string for the branch (e.g. 'Asia/Manila'). Falls back to 'UTC'.
+ */
+export function isWithinWorkingHours(
+  scheduledAt: Date,
+  durationMinutes: number,
+  hours: WorkingHours,
+  timezone: string = 'UTC',
+): boolean {
+  const tz = timezone || 'UTC';
+  const day = scheduledAt.toLocaleDateString('en-US', { weekday: 'long', timeZone: tz }).toLowerCase() as typeof DAYS[number];
   const schedule = hours[day];
   if (!schedule?.enabled) return false;
   if (!schedule.open || !schedule.close) return true; // no time restriction
 
   const [oh, om] = schedule.open.split(':').map(Number);
   const [ch, cm] = schedule.close.split(':').map(Number);
-  const startMins = scheduledAt.getHours() * 60 + scheduledAt.getMinutes();
+
+  // Use Intl to extract hour/minute in the branch's timezone
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).formatToParts(scheduledAt);
+  const hour = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? 0);
+
+  const startMins = hour * 60 + minute;
   const endMins = startMins + durationMinutes;
   const openMins = oh! * 60 + om!;
   const closeMins = ch! * 60 + cm!;
@@ -59,7 +78,7 @@ export async function getWorkingHours(ctx: Context) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const branchId = ctx.req.param('branchId');
+  const branchId = ctx.req.param('branchId')!;
   const db = ctx.get('database') as DatabaseInstance;
 
   const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
@@ -73,7 +92,7 @@ export async function updateWorkingHours(ctx: Context) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const branchId = ctx.req.param('branchId');
+  const branchId = ctx.req.param('branchId')!;
   const db = ctx.get('database') as DatabaseInstance;
 
   let body: any;
@@ -101,12 +120,12 @@ export async function updateWorkingHours(ctx: Context) {
     }
   }
 
-  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
+  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId!));
   if (!branch) throw new NotFoundError('Branch not found');
 
   await db.update(dentalBranches)
     .set({ workingHours: JSON.stringify(workingHours), updatedAt: new Date(), updatedBy: user.id })
-    .where(eq(dentalBranches.id, branchId));
+    .where(eq(dentalBranches.id, branchId!));
 
   return ctx.json({ branchId, workingHours }, 200);
 }

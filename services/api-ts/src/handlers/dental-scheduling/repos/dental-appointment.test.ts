@@ -224,4 +224,100 @@ describe('DentalAppointmentRepository', () => {
       expect(linked!.visitId).toBe(VISIT_1);
     });
   });
+
+  // ===== STATUS GUARDS =====
+
+  describe('cancel status guard', () => {
+    test('returns null when cancelling a completed appointment', async () => {
+      const appt = await repo.createOne(baseAppointment);
+      // Force to completed via raw SQL (no handler path for this in test)
+      await db.execute(sql`UPDATE dental_appointment SET status = 'completed' WHERE id = ${appt.id}`);
+      const result = await repo.cancel(appt.id);
+      expect(result).toBeNull();
+
+      // Verify status unchanged
+      const current = await repo.findOneById(appt.id);
+      expect(current!.status).toBe('completed');
+    });
+
+    test('allows cancelling a scheduled appointment', async () => {
+      const appt = await repo.createOne(baseAppointment);
+      const result = await repo.cancel(appt.id);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('cancelled');
+    });
+
+    test('allows cancelling a checkedIn appointment', async () => {
+      const appt = await repo.createOne(baseAppointment);
+      await repo.checkIn(appt.id);
+      const result = await repo.cancel(appt.id);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('cancelled');
+    });
+  });
+
+  describe('markNoShow status guard', () => {
+    test('returns null when marking a cancelled appointment as noShow', async () => {
+      const appt = await repo.createOne(baseAppointment);
+      await repo.cancel(appt.id);
+      const result = await repo.markNoShow(appt.id);
+      expect(result).toBeNull();
+
+      // Verify still cancelled
+      const current = await repo.findOneById(appt.id);
+      expect(current!.status).toBe('cancelled');
+    });
+
+    test('allows markNoShow on a scheduled appointment', async () => {
+      const appt = await repo.createOne(baseAppointment);
+      const result = await repo.markNoShow(appt.id);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('noShow');
+    });
+  });
+
+  // ===== OVERLAP DETECTION =====
+
+  describe('findOverlapping', () => {
+    test('detects overlap for appointments 15 minutes apart (same dentist/branch)', async () => {
+      // Appointment 1: 09:00 - 09:30 (30 min)
+      const appt1Start = new Date('2025-07-01T09:00:00Z');
+      await repo.createOne({ ...baseAppointment, scheduledAt: appt1Start, durationMinutes: 30 });
+
+      // Appointment 2: 09:15 - 09:45 — overlaps with appt1
+      const appt2Start = new Date('2025-07-01T09:15:00Z');
+      const overlaps = await repo.findOverlapping(DENTIST_1, BRANCH_1, appt2Start, 30);
+      expect(overlaps.length).toBeGreaterThan(0);
+    });
+
+    test('no overlap for appointments 2.5 hours apart', async () => {
+      // Appointment 1: 09:00 - 09:30
+      const appt1Start = new Date('2025-07-01T09:00:00Z');
+      await repo.createOne({ ...baseAppointment, scheduledAt: appt1Start, durationMinutes: 30 });
+
+      // Appointment 2: 11:31 - 12:01 — no overlap
+      const appt2Start = new Date('2025-07-01T11:31:00Z');
+      const overlaps = await repo.findOverlapping(DENTIST_1, BRANCH_1, appt2Start, 30);
+      expect(overlaps.length).toBe(0);
+    });
+
+    test('detects overlap for long appointments that would have been missed by 2h heuristic', async () => {
+      // Appointment 1: 09:00 - 11:30 (150 min)
+      const appt1Start = new Date('2025-07-01T09:00:00Z');
+      await repo.createOne({ ...baseAppointment, scheduledAt: appt1Start, durationMinutes: 150 });
+
+      // Appointment 2: 11:00 - 11:30 — within the 150min window, was missed by 2h heuristic
+      const appt2Start = new Date('2025-07-01T11:00:00Z');
+      const overlaps = await repo.findOverlapping(DENTIST_1, BRANCH_1, appt2Start, 30);
+      expect(overlaps.length).toBeGreaterThan(0);
+    });
+
+    test('no overlap when different dentist', async () => {
+      const appt1Start = new Date('2025-07-01T09:00:00Z');
+      await repo.createOne({ ...baseAppointment, scheduledAt: appt1Start, durationMinutes: 30 });
+
+      const overlaps = await repo.findOverlapping(DENTIST_2, BRANCH_1, appt1Start, 30);
+      expect(overlaps.length).toBe(0);
+    });
+  });
 });

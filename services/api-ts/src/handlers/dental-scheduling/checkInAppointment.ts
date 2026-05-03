@@ -16,13 +16,15 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
 
 export async function checkInAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const appointmentId = ctx.req.param('appointmentId')!;
+  const { appointmentId } = ctx.req.valid('param') as CheckInAppointmentParams;
   const db = ctx.get('database') as DatabaseInstance;
 
   const appointmentRepo = new DentalAppointmentRepository(db);
@@ -32,32 +34,36 @@ export async function checkInAppointment(ctx: HandlerContext) {
   const appointment = await appointmentRepo.findOneById(appointmentId);
   if (!appointment) throw new NotFoundError('Appointment');
 
+  await assertBranchAccess(db, user.id, appointment.branchId);
+
   if (appointment.status !== 'scheduled') {
     throw new ValidationError('Only scheduled appointments can be checked in');
   }
 
-  // 2. Check in the appointment
-  const checkedIn = await appointmentRepo.checkIn(appointmentId);
-  if (!checkedIn) throw new ValidationError('Failed to check in appointment');
-
-  // EC7: Check for existing in-progress visit (draft or active) for this patient
+  // EC7: Check for existing in-progress visit BEFORE mutating appointment status
+  // (prevents appointment getting stuck in checkedIn with no visit on conflict)
   const inProgressVisit = await visitRepo.findInProgressByPatient(appointment.patientId);
   if (inProgressVisit) {
     throw new ConflictError('Visit already active for this patient. Complete or cancel the existing visit first.');
   }
 
-  // 3. Create a draft visit linked to the appointment
-  const visit = await visitRepo.createOne({
-    patientId: appointment.patientId,
-    branchId: appointment.branchId,
-    dentistMemberId: appointment.dentistMemberId,
+  // 2-4: Atomically: check in + create visit + link visit
+  const result = await db.transaction(async (tx: any) => {
+    const txAppointmentRepo = new DentalAppointmentRepository(tx);
+    const txVisitRepo = new VisitRepository(tx);
+
+    const checkedIn = await txAppointmentRepo.checkIn(appointmentId, user.id);
+    if (!checkedIn) throw new ValidationError('Failed to check in appointment');
+
+    const visit = await txVisitRepo.createOne({
+      patientId: appointment.patientId,
+      branchId: appointment.branchId,
+      dentistMemberId: appointment.dentistMemberId,
+    });
+
+    const linked = await txAppointmentRepo.linkVisit(appointmentId, visit.id);
+    return { appointment: linked, visitId: visit.id };
   });
 
-  // 4. Link visit back to appointment
-  const linkedAppointment = await appointmentRepo.linkVisit(appointmentId, visit.id);
-
-  return ctx.json({
-    appointment: linkedAppointment,
-    visitId: visit.id,
-  });
+  return ctx.json(result);
 }
