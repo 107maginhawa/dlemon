@@ -40,13 +40,13 @@ async function setup(page: Page) {
 
   // Create patient
   const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+    const res = await fetch(`${api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        name: [{ use: 'official', family: 'Herrera', given: ['Russel'] }],
-        birthDate: '1990-07-20',
+        displayName: 'Russel Herrera',
+        dateOfBirth: '1990-07-20',
         gender: 'male',
       }),
     });
@@ -65,7 +65,7 @@ test.describe('Walk-In Appointment', () => {
 
     // Create walk-in appointment
     const apptRes = await page.evaluate(async ({ api, patientId, scheduledAt }) => {
-      const res = await fetch(`${api}/dental/appointments/`, {
+      const res = await fetch(`${api}/dental/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

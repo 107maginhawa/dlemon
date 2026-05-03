@@ -17,7 +17,9 @@ const DURATION_OPTIONS = [
   { value: 120, label: '2 hr' },
 ] as const;
 
-const DEFAULT_BRANCH_ID = '00000000-0000-4000-8000-000000000001';
+function getDefaultBranchId(): string {
+  return typeof localStorage !== 'undefined' ? (localStorage.getItem('currentBranchId') ?? '') : '';
+}
 
 export interface AppointmentModalProps {
   open: boolean;
@@ -55,7 +57,7 @@ export function buildAppointmentPayload(form: {
   return {
     patientId: form.patientId.trim(),
     dentistMemberId: form.dentistMemberId.trim() || undefined,
-    branchId: form.branchId.trim() || DEFAULT_BRANCH_ID,
+    branchId: form.branchId.trim() || getDefaultBranchId(),
     scheduledAt,
     durationMinutes: form.durationMinutes || 30,
     procedureType: form.procedureType.trim(),
@@ -67,7 +69,7 @@ export function buildAppointmentPayload(form: {
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
   const [patientId, setPatientId] = useState('');
   const [dentistMemberId, setDentistMemberId] = useState('');
-  const [branchId, setBranchId] = useState(DEFAULT_BRANCH_ID);
+  const [branchId, setBranchId] = useState(getDefaultBranchId);
   const [date, setDate] = useState(initialDate || '');
   const [time, setTime] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
@@ -86,7 +88,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   function handleClose() {
     setPatientId('');
     setDentistMemberId('');
-    setBranchId(DEFAULT_BRANCH_ID);
+    setBranchId(getDefaultBranchId());
     setDate(initialDate || '');
     setTime('');
     setDurationMinutes(30);

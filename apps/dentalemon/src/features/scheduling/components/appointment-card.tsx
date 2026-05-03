@@ -10,6 +10,7 @@ import React from 'react';
 export interface Appointment {
   id: string;
   patientId: string;
+  patientName?: string;
   dentistMemberId?: string;
   branchId?: string;
   scheduledAt: string;
@@ -85,9 +86,9 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
         onClick={() => onClick?.(appointment)}
         role="button"
         tabIndex={0}
-        aria-label={`${truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}`}
+        aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}`}
       >
-        <div className="text-[11px] font-semibold truncate">{truncateId(appointment.patientId)}</div>
+        <div className="text-[11px] font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
         <div className="text-[10px] text-muted-foreground">{time}</div>
       </div>
     );
@@ -99,9 +100,9 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
       onClick={() => onClick?.(appointment)}
       role="button"
       tabIndex={0}
-      aria-label={`${truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}, ${badge.label}`}
+      aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}, ${badge.label}`}
     >
-      <div className="text-xs font-semibold truncate">{truncateId(appointment.patientId)}</div>
+      <div className="text-xs font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
       <div className="text-[11px] text-muted-foreground truncate">
         {appointment.procedureType} · {time}
       </div>
@@ -116,7 +117,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
             onCheckIn(appointment.id);
           }}
           className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FFE97D] text-[#4A4018] text-[11px] font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-          aria-label={`Check in ${truncateId(appointment.patientId)}`}
+          aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
         >
           Check In
         </button>

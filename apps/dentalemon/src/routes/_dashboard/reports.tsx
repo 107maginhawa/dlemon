@@ -1,13 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { RevenueReport } from '../../features/reports/components/revenue-report'
 import { canAccessReports } from '../../utils/rbac'
+import type { DentalRole } from '../../utils/rbac'
 
 export const Route = createFileRoute('/_dashboard/reports')({
   component: ReportsPage,
 })
 
 function ReportsPage() {
-  const role = 'dentist_owner' as const;
+  const role = (localStorage.getItem('currentMemberRole') ?? 'dentist_owner') as DentalRole;
+  const branchId = localStorage.getItem('currentBranchId') ?? '';
+
   if (!canAccessReports(role)) {
     return (
       <div className="p-6">
@@ -19,7 +22,7 @@ function ReportsPage() {
 
   return (
     <div className="p-6">
-      <RevenueReport branchId="00000000-0000-4000-8000-000000000001" />
+      <RevenueReport branchId={branchId} />
     </div>
   );
 }

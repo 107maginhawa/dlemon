@@ -9,8 +9,8 @@ import { AppointmentCard, type Appointment } from './appointment-card';
 
 const SLOT_HEIGHT_PX = 48;
 const DAY_START_HOUR = 7;
-const DAY_END_HOUR = 19;
-const TOTAL_SLOTS = (DAY_END_HOUR - DAY_START_HOUR) * 2; // 24 half-hour slots
+const DAY_END_HOUR = 22; // Extended to 10 PM to capture late appointments
+const TOTAL_SLOTS = (DAY_END_HOUR - DAY_START_HOUR) * 2; // 30 half-hour slots
 
 export function generateTimeSlots(startHour = DAY_START_HOUR, endHour = DAY_END_HOUR, intervalMins = 30) {
   const slots: { hour: number; minute: number; label: string }[] = [];

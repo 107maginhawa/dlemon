@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
 
 const API = apiBaseUrl;
@@ -12,6 +12,28 @@ export function ClinicSettings() {
   const [licenseNumber, setLicenseNumber] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+
+  useEffect(() => {
+    if (!branchId) { setLoading(false); return; }
+    fetch(`${API}/dental/branches/${branchId}/settings`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: any) => {
+        if (data?.settings) {
+          const s = data.settings;
+          if (s.clinicName) setName(s.clinicName);
+          if (s.clinicAddress) setAddress(s.clinicAddress);
+          if (s.clinicPhone) setPhone(s.clinicPhone);
+          if (s.clinicEmail) setEmail(s.clinicEmail);
+          if (s.logoUrl) setLogoUrl(s.logoUrl);
+          if (s.dentistLicenseNumber) setLicenseNumber(s.dentistLicenseNumber);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [branchId]);
 
   function validate(): string[] {
     const errs: string[] = [];
@@ -24,12 +46,31 @@ export function ClinicSettings() {
     const errs = validate();
     if (errs.length > 0) { setErrors(errs); return; }
     setErrors([]);
+
+    if (!branchId) { setErrors(['No branch selected']); return; }
+
+    await fetch(`${API}/dental/branches/${branchId}/settings`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicName: name.trim(),
+        clinicAddress: address.trim(),
+        clinicPhone: phone.trim(),
+        clinicEmail: email.trim(),
+        logoUrl: logoUrl.trim(),
+        dentistLicenseNumber: licenseNumber.trim(),
+      }),
+    });
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
   const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none';
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
+
+  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
     <div className="flex flex-col gap-4 max-w-lg">

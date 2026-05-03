@@ -40,20 +40,54 @@ async function signUpAndGetPatient(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  // Create a test patient via API
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+  // Set up dental org/branch/member so the workspace can create visits
+  const ctx = await page.evaluate(async (api) => {
+    const orgRes = await fetch(`${api}/dental/organizations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Test Clinic', tier: 'solo', countryCode: 'PH' }),
+    });
+    const org = await orgRes.json();
+    const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+    });
+    const branch = await branchRes.json();
+    const memberRes = await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Test Dentist', role: 'dentist_owner' }),
+    });
+    const member = await memberRes.json();
+    return { orgId: org.id, branchId: branch.id, memberId: member.id };
+  }, API);
+
+  await page.evaluate((ids) => {
+    localStorage.setItem('currentOrgId', ids.orgId);
+    localStorage.setItem('currentBranchId', ids.branchId);
+    localStorage.setItem('currentMemberId', ids.memberId);
+  }, ctx);
+
+  // Create a test patient via dental API
+  const patientRes = await page.evaluate(async (args) => {
+    const res = await fetch(`${args.api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        name: [{ use: 'official', family: 'Santos', given: ['Maria'] }],
-        birthDate: '1985-06-15',
+        displayName: 'Maria Santos',
+        dateOfBirth: '1985-06-15',
         gender: 'female',
+        branchId: args.branchId,
+        consentGiven: true,
       }),
     });
     return res.json();
-  }, API);
+  }, { api: API, branchId: ctx.branchId });
 
   return { email, password, patientId: patientRes.id };
 }

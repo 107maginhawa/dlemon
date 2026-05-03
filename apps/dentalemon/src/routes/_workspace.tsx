@@ -19,16 +19,7 @@ function WorkspaceLayout() {
         <Outlet />
       </main>
 
-      {/* Payment footer */}
-      <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
-        <span className="text-sm text-muted-foreground">No pending items</span>
-        <button
-          type="button"
-          className="rounded-lg bg-[#FFE97D] px-5 py-2 text-sm font-semibold text-[#4A4018] hover:bg-[#F5DC60] min-h-[44px]"
-        >
-          Continue to Payment
-        </button>
-      </footer>
+      {/* Payment footer is rendered by the child page to access treatments state */}
     </div>
   )
 }

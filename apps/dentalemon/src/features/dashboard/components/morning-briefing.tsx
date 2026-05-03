@@ -154,6 +154,8 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const [tomorrowAppointments, setTomorrowAppointments] = useState<Appointment[]>([]);
   const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
   const [dailyCollectionsCents, setDailyCollectionsCents] = useState<number | null>(null);
+  const [activePaymentPlans, setActivePaymentPlans] = useState<number | null>(null);
+  const [pendingLabOrders, setPendingLabOrders] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,6 +176,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
       const fetches: Promise<Response>[] = [
         fetch(`${API}/dental/appointments?date=${today}`, { credentials: 'include' }),
         fetch(`${API}/dental/appointments?date=${tomorrow}`, { credentials: 'include' }),
+        fetch(`${API}/dental/dashboard/summary`, { credentials: 'include' }),
       ];
 
       if (showFinancials) {
@@ -185,12 +188,12 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
 
       const responses = await Promise.all(fetches);
 
-      for (const res of responses) {
-        if (!res.ok) throw new Error('Failed to load dashboard data');
-      }
+      // Only throw on core appointment fetches; summary/financial are best-effort
+      if (!responses[0]!.ok || !responses[1]!.ok) throw new Error('Failed to load appointments');
 
       const todayData = await responses[0]!.json();
       const tomorrowData = await responses[1]!.json();
+      const summaryData = responses[2]?.ok ? await responses[2].json() : null;
 
       setTodayAppointments(
         Array.isArray(todayData) ? todayData : todayData.appointments ?? []
@@ -199,15 +202,21 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
         Array.isArray(tomorrowData) ? tomorrowData : tomorrowData.appointments ?? []
       );
 
-      if (showFinancials && responses[2]) {
-        const invoiceData = await responses[2].json();
+      if (summaryData) {
+        setActivePaymentPlans(summaryData.activePaymentPlans?.count ?? 0);
+        setPendingLabOrders(summaryData.labOrders?.totalPending ?? 0);
+      }
+
+      // Financial data at indices 3 and 4 (pushed conditionally)
+      if (showFinancials && responses[3]) {
+        const invoiceData = await responses[3].json();
         setOverdueInvoices(
           Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? []
         );
       }
 
-      if (showFinancials && responses[3]) {
-        const allInvoicesData = await responses[3].json();
+      if (showFinancials && responses[4]) {
+        const allInvoicesData = await responses[4].json();
         const allInvoices: Invoice[] = Array.isArray(allInvoicesData)
           ? allInvoicesData
           : allInvoicesData.invoices ?? [];
@@ -418,14 +427,10 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
             {showFinancials ? (
               <MetricCard
                 title="Payment Plans"
-                value={'\u2014'}
+                value={activePaymentPlans !== null ? activePaymentPlans : '\u2014'}
                 subtitle="active plans"
                 action={{ label: 'Manage', onClick: () => navigate({ to: '/billing' }) }}
-              >
-                <p className="text-[11px] text-muted-foreground">
-                  View billing module for plan details
-                </p>
-              </MetricCard>
+              />
             ) : (
               <MetricCard
                 title="Checked In"
@@ -438,13 +443,9 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
             {/* Lab Orders */}
             <MetricCard
               title="Lab Orders"
-              value={'\u2014'}
-              subtitle="delivery tracking"
-            >
-              <p className="text-[11px] text-muted-foreground">
-                Check lab orders in workspace
-              </p>
-            </MetricCard>
+              value={pendingLabOrders !== null ? pendingLabOrders : '\u2014'}
+              subtitle="pending delivery"
+            />
           </div>
 
           {/* Row 3: Tomorrow Preview + Reminders */}

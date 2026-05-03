@@ -141,7 +141,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     setErrors([]);
     try {
       // Create org using correct nested API endpoint
-      const orgRes = await fetch(`${API}/dental/organizations/`, {
+      const orgRes = await fetch(`${API}/dental/organizations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -154,7 +154,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       const org = await orgRes.json();
 
       // Create branch using correct nested API endpoint
-      const branchRes = await fetch(`${API}/dental/organizations/${org.id}/branches/`, {
+      const branchRes = await fetch(`${API}/dental/organizations/${org.id}/branches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -172,7 +172,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       const branch = await branchRes.json();
 
       // Create dentist-owner member using correct nested API endpoint
-      const memberRes = await fetch(`${API}/dental/organizations/${org.id}/branches/${branch.id}/members/`, {
+      const memberRes = await fetch(`${API}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -209,16 +209,13 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
       // Create first patient (only if not skipped)
       if (!skipPatient && patientName.trim()) {
-        const nameParts = patientName.trim().split(' ');
-        const family = nameParts.length > 1 ? nameParts[nameParts.length - 1]! : nameParts[0]!;
-        const given = nameParts.length > 1 ? nameParts.slice(0, -1) : [nameParts[0]!];
-        await fetch(`${API}/patients`, {
+        await fetch(`${API}/dental/patients`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            name: [{ use: 'official', family, given }],
-            birthDate,
+            displayName: patientName.trim(),
+            dateOfBirth: birthDate,
             gender,
           }),
         });

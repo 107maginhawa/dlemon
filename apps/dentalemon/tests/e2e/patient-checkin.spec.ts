@@ -40,13 +40,13 @@ async function setup(page: Page) {
 
   // Create patient
   const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+    const res = await fetch(`${api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        name: [{ use: 'official', family: 'Santos', given: ['Maria'] }],
-        birthDate: '1985-03-15',
+        displayName: 'Maria Santos',
+        dateOfBirth: '1985-03-15',
         gender: 'female',
       }),
     });
@@ -63,7 +63,7 @@ async function createAppointment(page: Page, patientId: string) {
   const scheduledAt = tomorrow.toISOString();
 
   const apptRes = await page.evaluate(async ({ api, patientId, scheduledAt }) => {
-    const res = await fetch(`${api}/dental/appointments/`, {
+    const res = await fetch(`${api}/dental/appointments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

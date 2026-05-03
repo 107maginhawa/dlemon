@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiBaseUrl } from '@/utils/config';
+
+const API = apiBaseUrl;
 
 interface FeeEntry {
   cdtCode: string;
@@ -16,9 +19,42 @@ const DEFAULT_FEES: FeeEntry[] = [
   { cdtCode: 'D7210', description: 'Surgical Extraction', priceCents: 0 },
 ];
 
+// CDT code descriptions map for known codes
+const CDT_DESCRIPTIONS: Record<string, string> = {
+  D0120: 'Periodic Exam', D0150: 'Comprehensive Exam', D0274: 'Bitewings (4 films)',
+  D1110: 'Prophylaxis', D2391: 'Composite (1 surface)', D2392: 'Composite (2 surfaces)',
+  D2393: 'Composite (3 surfaces)', D2710: 'Crown (porcelain)', D7140: 'Simple Extraction',
+  D7210: 'Surgical Extraction', D3310: 'Root Canal (anterior)', D3320: 'Root Canal (premolar)',
+  D3330: 'Root Canal (molar)', D4341: 'Periodontal Scaling', D6010: 'Implant Placement',
+};
+
 export function FeeSchedule() {
   const [fees, setFees] = useState<FeeEntry[]>(DEFAULT_FEES);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+
+  useEffect(() => {
+    if (!branchId) { setLoading(false); return; }
+    fetch(`${API}/dental/branches/${branchId}/settings`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: any) => {
+        const feeSchedule: Record<string, number> = data?.settings?.feeSchedule ?? {};
+        if (Object.keys(feeSchedule).length > 0) {
+          // Build entries from saved fee schedule, merging with defaults
+          const allCodes = new Set([...DEFAULT_FEES.map(f => f.cdtCode), ...Object.keys(feeSchedule)]);
+          const entries: FeeEntry[] = Array.from(allCodes).map(code => ({
+            cdtCode: code,
+            description: CDT_DESCRIPTIONS[code] ?? DEFAULT_FEES.find(f => f.cdtCode === code)?.description ?? '',
+            priceCents: feeSchedule[code] ?? 0,
+          }));
+          setFees(entries);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [branchId]);
 
   function updateFee(index: number, priceCents: number) {
     const updated = [...fees];
@@ -31,10 +67,23 @@ export function FeeSchedule() {
     setFees([...fees, { cdtCode: '', description: '', priceCents: 0 }]);
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (!branchId) return;
+    const feeSchedule: Record<string, number> = {};
+    fees.forEach(f => { if (f.cdtCode) feeSchedule[f.cdtCode] = f.priceCents; });
+
+    await fetch(`${API}/dental/branches/${branchId}/settings`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feeSchedule }),
+    });
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
+
+  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
     <div className="flex flex-col gap-4">

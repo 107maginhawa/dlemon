@@ -250,3 +250,4 @@ test-results.json
 
 # Gemini
 .gemini-clipboard
+.gstack/

@@ -58,7 +58,7 @@ async function signUpOwner(page: Page) {
  */
 async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
   const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations/`, {
+    const res = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -69,7 +69,7 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   const orgId = orgRes.id;
 
   const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -85,7 +85,7 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
   }, { branchId, orgId });
 
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -112,7 +112,7 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
  */
 async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
   const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations/`, {
+    const res = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -123,7 +123,7 @@ async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branc
   const orgId = orgRes.id;
 
   const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -139,7 +139,7 @@ async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branc
   }, { branchId, orgId });
 
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -168,7 +168,7 @@ test.describe('PIN authentication flow', () => {
 
     // Add a second member so the selection screen is shown (FR9.2 auto-select skips with 1 member)
     await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -190,7 +190,7 @@ test.describe('PIN authentication flow', () => {
 
     // Add second member to disable auto-select
     await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/`, {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

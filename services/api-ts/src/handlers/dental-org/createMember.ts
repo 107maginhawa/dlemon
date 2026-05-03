@@ -37,6 +37,13 @@ export async function createMember(ctx: Context): Promise<Response> {
   const logger = ctx.get('logger');
 
   const repo = new MembershipRepository(db, logger);
+
+  // Optionally accept a PIN and hash it
+  let pinHash: string | null = null;
+  if (body.pin && typeof body.pin === 'string' && /^\d{6}$/.test(body.pin)) {
+    pinHash = await Bun.password.hash(body.pin);
+  }
+
   const membership = await repo.createOne({
     branchId: resolvedBranchId,
     displayName: body.displayName.trim(),
@@ -44,10 +51,11 @@ export async function createMember(ctx: Context): Promise<Response> {
     personId: body.personId ?? null,
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
+    ...(pinHash ? { pinHash } : {}),
   });
 
   // Strip pinHash from response
-  const { pinHash, ...safeResponse } = membership;
+  const { pinHash: _ph, ...safeResponse } = membership;
 
   return ctx.json(safeResponse, 201);
 }

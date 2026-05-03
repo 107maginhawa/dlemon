@@ -39,7 +39,7 @@ test.describe('First Launch Onboarding', () => {
 
     // Create org via API
     const orgRes = await page.evaluate(async (api) => {
-      const res = await fetch(`${api}/dental/organizations/`, {
+      const res = await fetch(`${api}/dental/organizations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -54,7 +54,7 @@ test.describe('First Launch Onboarding', () => {
 
     // Create branch
     const branchRes = await page.evaluate(async ({ api, orgId }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+      const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -81,13 +81,13 @@ test.describe('First Launch Onboarding', () => {
 
     // Create first patient
     const patientRes = await page.evaluate(async (api) => {
-      const res = await fetch(`${api}/patients`, {
+      const res = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: [{ use: 'official', family: 'Reyes', given: ['Maria'] }],
-          birthDate: '1985-03-15',
+          displayName: 'Maria Reyes',
+          dateOfBirth: '1985-03-15',
           gender: 'female',
         }),
       });

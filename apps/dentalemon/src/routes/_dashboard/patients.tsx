@@ -30,14 +30,15 @@ function toPatientCard(p: any): PatientCardData {
   const person = typeof p.person === 'object' ? p.person : null;
   const firstName = person?.firstName ?? '';
   const lastName = person?.lastName ?? '';
-  const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'Unknown Patient';
+  const displayName = p.displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Unknown Patient';
 
   let age = 0;
-  if (person?.dateOfBirth) {
-    const dob = new Date(person.dateOfBirth);
+  const dob = person?.dateOfBirth ?? p.dateOfBirth;
+  if (dob) {
+    const dobDate = new Date(dob);
     const today = new Date();
-    age = today.getFullYear() - dob.getFullYear();
-    if (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate())) age--;
+    age = today.getFullYear() - dobDate.getFullYear();
+    if (today < new Date(today.getFullYear(), dobDate.getMonth(), dobDate.getDate())) age--;
   }
 
   return {
@@ -47,7 +48,7 @@ function toPatientCard(p: any): PatientCardData {
     lastVisit: p.lastVisit ? new Date(p.lastVisit) : undefined,
     visitCount: p.visitCount ?? 0,
     needsFollowUp: p.needsFollowUp ?? false,
-    hasBalance: p.hasBalance ?? false,
+    hasBalance: p.hasBalance ?? p.hasActivePaymentPlan ?? false,
   };
 }
 
@@ -60,16 +61,19 @@ function PatientsPage() {
 
   const branchId = localStorage.getItem('currentBranchId') ?? '';
 
-  async function fetchPatients() {
-    if (!branchId) return;
+  async function fetchPatients(search?: string) {
     try {
+      const params = new URLSearchParams();
+      if (search) params.set('q', search);
+      if (branchId) params.set('branchId', branchId);
       const res = await fetch(
-        `${API}/patients?branchId=${encodeURIComponent(branchId)}&expand=person`,
+        `${API}/dental/patients${params.toString() ? `?${params}` : ''}`,
         { credentials: 'include' },
       );
       if (!res.ok) return;
       const data = await res.json();
-      setPatients((data.data ?? []).map(toPatientCard));
+      const items = Array.isArray(data) ? data : (data.patients ?? data.data ?? data.items ?? []);
+      setPatients(items.map(toPatientCard));
     } catch {
       // Network error — keep existing list
     }
@@ -77,7 +81,7 @@ function PatientsPage() {
 
   useEffect(() => {
     fetchPatients();
-  }, [branchId]);
+  }, []);
 
   async function handleRegister(data: {
     displayName: string;

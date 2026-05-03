@@ -40,29 +40,56 @@ async function setupWorkspace(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  // Get user id for prescriber
-  const meRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    return res.json();
+  // Set up dental org/branch/member so the workspace can create visits
+  const ctx = await page.evaluate(async (api) => {
+    const orgRes = await fetch(`${api}/dental/organizations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Test Clinic', tier: 'solo', countryCode: 'PH' }),
+    });
+    const org = await orgRes.json();
+    const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+    });
+    const branch = await branchRes.json();
+    const memberRes = await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Test Dentist', role: 'dentist_owner' }),
+    });
+    const member = await memberRes.json();
+    return { orgId: org.id, branchId: branch.id, memberId: member.id };
   }, API);
-  const memberId = meRes?.session?.userId ?? '00000000-0000-4000-8000-000000000002';
 
-  // Create patient
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+  await page.evaluate((ids) => {
+    localStorage.setItem('currentOrgId', ids.orgId);
+    localStorage.setItem('currentBranchId', ids.branchId);
+    localStorage.setItem('currentMemberId', ids.memberId);
+  }, ctx);
+
+  // Create patient via dental API
+  const patientRes = await page.evaluate(async (args) => {
+    const res = await fetch(`${args.api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        name: [{ use: 'official', family: 'Reyes', given: ['Ana'] }],
-        birthDate: '1990-03-12',
+        displayName: 'Ana Reyes',
+        dateOfBirth: '1990-03-12',
         gender: 'female',
+        branchId: args.branchId,
+        consentGiven: true,
       }),
     });
     return res.json();
-  }, API);
+  }, { api: API, branchId: ctx.branchId });
 
-  return { patientId: patientRes.id, memberId };
+  return { patientId: patientRes.id, memberId: ctx.memberId };
 }
 
 test.describe('Prescribe Medication (J7)', () => {

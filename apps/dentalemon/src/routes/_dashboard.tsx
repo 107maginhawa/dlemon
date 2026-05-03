@@ -41,6 +41,7 @@ export const Route = createFileRoute('/_dashboard')({
               localStorage.setItem('currentBranchId', ctx.branch.id)
               if (ctx.org?.id) localStorage.setItem('currentOrgId', ctx.org.id)
               if (ctx.member?.role) localStorage.setItem('currentMemberRole', ctx.member.role)
+              if (ctx.member?.id) localStorage.setItem('currentMemberId', ctx.member.id)
               // Context found — continue to dashboard instead of redirecting to onboarding
               return
             }

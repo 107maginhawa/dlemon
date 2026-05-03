@@ -39,9 +39,10 @@ export interface ToothSlideoutProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: ToothSlideoutData) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function ToothSlideout({ toothNumber, open, onClose, onSave }: ToothSlideoutProps) {
+export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: ToothSlideoutProps) {
   const [step, setStep] = useState<Step>('condition');
   const [state, setState] = useState('');
   const [conditionCode, setConditionCode] = useState('');
@@ -240,7 +241,15 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave }: ToothSlide
 
       {/* Footer navigation */}
       <div className="flex items-center justify-between p-4 border-t gap-2">
-        {stepIdx > 0 ? (
+        {readOnly ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+          >
+            Close
+          </button>
+        ) : stepIdx > 0 ? (
           <button
             type="button"
             onClick={() => setStep(steps[stepIdx - 1]!)}
@@ -258,7 +267,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave }: ToothSlide
           </button>
         )}
 
-        {stepIdx < steps.length - 1 ? (
+        {!readOnly && (stepIdx < steps.length - 1 ? (
           <button
             type="button"
             onClick={() => setStep(steps[stepIdx + 1]!)}
@@ -276,7 +285,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave }: ToothSlide
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
-        )}
+        ))}
       </div>
     </aside>
   );

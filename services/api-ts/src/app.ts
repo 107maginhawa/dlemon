@@ -53,6 +53,9 @@ import { getDentalPaymentReceipt } from '@/handlers/dental-billing/getDentalPaym
 import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
 import { getDashboardSummary } from '@/handlers/dental-org/getDashboardSummary';
 import { setSecurityQuestion, recoverPin } from '@/handlers/dental-org/pinRecovery';
+import { createMember } from '@/handlers/dental-org/createMember';
+import { listMembers } from '@/handlers/dental-org/listMembers';
+import { resetMemberPin } from '@/handlers/dental-org/resetMemberPin';
 import { getImportedPMD } from '@/handlers/dental-pmd/getImportedPMD';
 import { importPatients } from '@/handlers/dental-patient/importPatients';
 import { exportPMD } from '@/handlers/dental-pmd/exportPMD';
@@ -194,6 +197,11 @@ export function createApp(config: Config): App {
   // FR12.6: Export/share PMD as downloadable file
   // Must be registered before the generated :visitId/pmd GET to avoid conflicts
   app.get('/dental/visits/:visitId/pmd/export', dentalAuth, exportPMD);
+
+  // Member management (flat API — org/branch resolved from auth context)
+  app.get('/dental/org/members', dentalAuth, listMembers);
+  app.post('/dental/org/members', dentalAuth, createMember);
+  app.post('/dental/org/members/:memberId/reset-pin', dentalAuth, resetMemberPin);
 
   // FR9.7: PIN recovery via security question
   app.post('/dental/org/members/:memberId/security-question', dentalAuth, setSecurityQuestion);

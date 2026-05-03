@@ -53,7 +53,7 @@ async function signUpAndSeedOrg(page: Page) {
 
   // Seed org
   const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations/`, {
+    const res = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -64,7 +64,7 @@ async function signUpAndSeedOrg(page: Page) {
 
   // Seed branch
   const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/`, {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

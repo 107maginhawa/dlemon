@@ -96,7 +96,7 @@ function WorkspacePage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ patientId }),
+      body: JSON.stringify({ visitId: currentVisitId, patientId }),
     });
     if (res.ok) {
       const pmd = await res.json();
@@ -118,8 +118,8 @@ function WorkspacePage() {
       credentials: 'include',
       body: JSON.stringify({
         patientId,
-        branchId: '00000000-0000-4000-8000-000000000001',
-        dentistMemberId: '00000000-0000-4000-8000-000000000002',
+        branchId: localStorage.getItem('currentBranchId') ?? '',
+        dentistMemberId: localStorage.getItem('currentMemberId') ?? '',
       }),
     });
     if (!res.ok) return;
@@ -186,6 +186,9 @@ function WorkspacePage() {
     );
   }
 
+  const totalCents = treatments.reduce((sum, t) => sum + (t.priceCents ?? 0), 0);
+  const pendingCount = treatments.filter(t => t.status !== 'performed').length;
+
   return (
     <div className="flex h-full flex-col">
       {/* Timeline Carousel */}
@@ -212,18 +215,56 @@ function WorkspacePage() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex min-h-0">
-        {/* Dental Chart zone */}
-        <div className="flex-1 overflow-auto">
-          {currentVisitId ? (
-            <DentalChart
-              teeth={teeth}
-              selectedTooth={selectedTooth}
-              onSelectTooth={handleSelectTooth}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">Select or create a visit to begin.</p>
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Dental Chart + Treatment List zone */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            {currentVisitId ? (
+              <DentalChart
+                teeth={teeth}
+                selectedTooth={selectedTooth}
+                onSelectTooth={handleSelectTooth}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">Select or create a visit to begin.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Treatment list */}
+          {treatments.length > 0 && (
+            <div className="shrink-0 border-t max-h-48 overflow-y-auto bg-background">
+              <table className="w-full text-sm" aria-label="Treatments">
+                <thead className="sticky top-0 bg-muted/60">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Tooth</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">CDT</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Description</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {treatments.map((t) => (
+                    <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
+                      <td className="px-4 py-2 font-medium">{t.toothNumber ?? '—'}</td>
+                      <td className="px-4 py-2 font-mono text-xs">{t.cdtCode ?? '—'}</td>
+                      <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">{t.description ?? '—'}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">₱{((t.priceCents ?? 0) / 100).toLocaleString()}</td>
+                      <td className="px-4 py-2">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                          t.status === 'performed' ? 'bg-green-100 text-green-700' :
+                          t.status === 'proposed' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -234,8 +275,26 @@ function WorkspacePage() {
           open={selectedTooth !== null && currentVisitId !== null}
           onClose={() => setSelectedTooth(null)}
           onSave={handleSaveToothData}
+          readOnly={isCompletedVisit}
         />
       </div>
+
+      {/* Payment footer */}
+      <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
+        <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
+          {treatments.length === 0
+            ? 'No treatments recorded'
+            : `${treatments.length} treatment${treatments.length !== 1 ? 's' : ''} · ₱${(totalCents / 100).toLocaleString()}`}
+        </span>
+        <button
+          type="button"
+          disabled={pendingCount === 0 && !isCompletedVisit}
+          className="rounded-lg bg-[#FFE97D] px-5 py-2 text-sm font-semibold text-[#4A4018] hover:bg-[#F5DC60] min-h-[44px] disabled:opacity-50"
+          data-testid="continue-to-payment-btn"
+        >
+          {isCompletedVisit ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
+        </button>
+      </footer>
     </div>
   );
 }
