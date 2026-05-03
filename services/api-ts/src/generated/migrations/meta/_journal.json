@@ -99,6 +99,13 @@
       "when": 1777793864497,
       "tag": "0013_melted_wildside",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777798495888,
+      "tag": "0014_bright_agent_brand",
+      "breakpoints": true
     }
   ]
 }

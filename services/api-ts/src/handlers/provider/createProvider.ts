@@ -29,8 +29,8 @@ export async function createProvider(ctx: HandlerContext) {
     throw new BusinessLogicError('User must have a person profile before creating provider profile', 'MISSING_PERSON_PROFILE');
   }
   
-  // Get validated request body
-  const body = ctx.req.valid('json') as ProviderCreateRequest;
+  // Get validated request body (falls back to raw JSON when no validator middleware is present)
+  const body = (ctx.req.valid('json') ?? await ctx.req.json().catch(() => ({}))) as ProviderCreateRequest;
   
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;

@@ -1,5 +1,5 @@
 /**
- * Module 10: Onboarding — FR7.2 CSV / JSON patient import
+ * Module 10: Onboarding — FR7.2 CSV / JSON patient import + FR7.5 First-Time Detection
  *
  * Tests:
  * - Import via JSON array (happy path)
@@ -11,7 +11,7 @@
  * - 401 without auth
  * - Empty array → 400
  * - CSV missing required header columns → 422
- * - FR7.5 (checked via getOrgContext returning null when no org exists)
+ * - FR7.5: getOrgContext returns { org: null } for a fresh user with no org
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
@@ -20,6 +20,7 @@ import { Hono } from 'hono';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { importPatients } from './importPatients';
+import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
@@ -170,5 +171,43 @@ describe('POST /dental/patients/import via CSV', () => {
       body: csv,
     });
     expect(res.status).toBe(422);
+  });
+});
+
+// FR7.5: First-Time Detection — GET /dental/org/context returns null fields for new user
+describe('FR7.5 — First-Time Detection', () => {
+  const FRESH_USER = { id: 'ff000000-0000-0000-0000-000000000099', email: 'fresh@clinic.com' };
+
+  function buildOrgContextApp(user?: typeof FRESH_USER) {
+    const app = new Hono();
+    app.onError((err, c) => {
+      if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+      return c.json({ error: String(err.message) }, 500);
+    });
+    app.use('*', async (c, next) => {
+      const ctx = c as any;
+      ctx.set('database', db);
+      if (user) ctx.set('user', user);
+      await next();
+    });
+    app.get('/dental/org/context', getOrgContext as any);
+    return app;
+  }
+
+  test('returns { org: null, branch: null, member: null } for a user with no org', async () => {
+    // FRESH_USER has never completed onboarding — no org exists for this person ID
+    const app = buildOrgContextApp(FRESH_USER);
+    const res = await app.request('/dental/org/context');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.org).toBeNull();
+    expect(body.branch).toBeNull();
+    expect(body.member).toBeNull();
+  });
+
+  test('returns 401 when called without auth', async () => {
+    const app = buildOrgContextApp(); // no user
+    const res = await app.request('/dental/org/context');
+    expect(res.status).toBe(401);
   });
 });

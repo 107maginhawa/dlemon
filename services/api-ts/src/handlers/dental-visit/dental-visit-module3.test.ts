@@ -6,6 +6,7 @@
  *   FR1.11  Auto carry-over + restore dismissed
  *   FR1.16  Immutability enforcement on completed/locked visits
  *   FR1.17  Auto-discard empty drafts + 48h auto-lock
+ *   FR1.19  Dentition Management (deciduous auto-populate)
  *   FR1.22  Treatment Plan Presentation endpoint
  *   EC2     Pending treatments on extracted tooth (blocked)
  */
@@ -33,6 +34,7 @@ import {
 } from './treatmentTemplates';
 import { carryOverTreatments } from './carryOverTreatments';
 import { getTreatmentPlan } from './getTreatmentPlan';
+import { initializeDentition } from './initializeDentition';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
@@ -80,6 +82,9 @@ function buildTestApp(user?: typeof TEST_USER) {
 
   // Treatment plan
   app.get('/dental/patients/:patientId/treatment-plan', getTreatmentPlan as any);
+
+  // FR1.19: Dentition management
+  app.post('/dental/patients/:patientId/dentition', initializeDentition as any);
 
   return app;
 }
@@ -562,5 +567,99 @@ describe('EC2: pending treatment on extracted tooth is blocked', () => {
     });
 
     expect(res.status).toBe(201);
+  });
+});
+
+// ─── FR1.19 Dentition Management ─────────────────────────────────────────────
+
+describe('FR1.19 — Dentition Management (deciduous auto-populate)', () => {
+  afterEach(async () => {
+    await db.execute(sql`DELETE FROM dental_chart WHERE patient_id = ${PATIENT_ID}`);
+  });
+
+  test('auto-populates deciduous teeth for patient ≤5 years old', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - 3);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: visit.id }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.dentitionType).toBe('deciduous');
+    expect(body.toothCount).toBe(20);
+    expect(body.teeth.every((t: any) => t.state === 'healthy')).toBe(true);
+  });
+
+  test('auto-populates mixed dentition for patient 6-12 years old', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - 9);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: visit.id }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.dentitionType).toBe('mixed');
+    expect(body.toothCount).toBe(52);
+    const deciduous = body.teeth.filter((t: any) => t.note === 'primary');
+    const permanent = body.teeth.filter((t: any) => t.note === 'permanent');
+    expect(deciduous.length).toBe(20);
+    expect(permanent.length).toBe(32);
+  });
+
+  test('auto-populates permanent teeth for patient >12 years old', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - 30);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: visit.id }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.dentitionType).toBe('permanent');
+    expect(body.toothCount).toBe(32);
+  });
+
+  test('returns 400 when dateOfBirth is missing', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: visit.id }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 401 without auth', async () => {
+    const app = buildTestApp();
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - 30);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: 'any-id' }),
+    });
+
+    expect(res.status).toBe(401);
   });
 });

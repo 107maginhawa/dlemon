@@ -92,6 +92,11 @@ export class EmailQueueRepository extends DatabaseRepository<EmailQueueItem, New
       throw new ValidationError('Either template ID or templateTags must be provided');
     }
 
+    // Validate email length — recipient_email column is varchar(255)
+    if (request.recipient && request.recipient.length > 255) {
+      throw new ValidationError('Recipient email address exceeds maximum length of 255 characters');
+    }
+
     this.logger?.debug({
       template: request.template,
       templateTags: request.templateTags,

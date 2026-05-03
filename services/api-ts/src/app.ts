@@ -39,6 +39,7 @@ import { getDentalPatientSafetyFloor } from '@/handlers/dental-patient/getDental
 import { getDentalPatientStatement } from '@/handlers/dental-patient/getDentalPatientStatement';
 import { getTreatmentPlan } from '@/handlers/dental-visit/getTreatmentPlan';
 import { carryOverTreatments } from '@/handlers/dental-visit/carryOverTreatments';
+import { initializeDentition } from '@/handlers/dental-visit/initializeDentition';
 import {
   listTreatmentTemplates,
   createTreatmentTemplate,
@@ -57,6 +58,12 @@ import { importPatients } from '@/handlers/dental-patient/importPatients';
 import { exportPMD } from '@/handlers/dental-pmd/exportPMD';
 import { getWorkingHours, updateWorkingHours } from '@/handlers/dental-scheduling/workingHours';
 import { getBranchSettings, updateBranchSettings } from '@/handlers/dental-org/branchSettings';
+import {
+  listConsentTemplates,
+  createConsentTemplate,
+  updateConsentTemplate,
+  deleteConsentTemplate,
+} from '@/handlers/dental-org/consentTemplates';
 import { authMiddleware } from '@/middleware/auth';
 import { registerRoutes as registerHealthRoutes } from '@/core/health';
 import { registerRoutes as registerAuthRoutes } from '@/core/auth';
@@ -166,6 +173,8 @@ export function createApp(config: Config): App {
   app.post('/dental/visits/:visitId/apply-template/:templateId', dentalAuth, applyTemplate);
   // FR1.11: Carry over treatments
   app.post('/dental/visits/:visitId/carry-over', dentalAuth, carryOverTreatments);
+  // FR1.19: Dentition management (deciduous auto-populate)
+  app.post('/dental/patients/:patientId/dentition', dentalAuth, initializeDentition);
   // FR1.22: Treatment plan presentation
   app.get('/dental/patients/:patientId/treatment-plan', dentalAuth, getTreatmentPlan);
 
@@ -197,6 +206,15 @@ export function createApp(config: Config): App {
   // FR8.1-FR8.3, FR8.7, FR8.8, FR8.13: Branch settings (clinic config, fee schedule, locale, access control)
   app.get('/dental/branches/:branchId/settings', dentalAuth, getBranchSettings);
   app.put('/dental/branches/:branchId/settings', dentalAuth, updateBranchSettings);
+
+  // FR8.4: Treatment Templates Editor — same handlers as FR1.8, branch-scoped CRUD
+  // Routes already registered above at /dental/treatment-templates
+
+  // FR8.4b: Consent Form Templates CRUD
+  app.get('/dental/branches/:branchId/consent-templates', dentalAuth, listConsentTemplates);
+  app.post('/dental/branches/:branchId/consent-templates', dentalAuth, createConsentTemplate);
+  app.patch('/dental/branches/:branchId/consent-templates/:id', dentalAuth, updateConsentTemplate);
+  app.delete('/dental/branches/:branchId/consent-templates/:id', dentalAuth, deleteConsentTemplate);
 
   // Register WebSocket handlers
   registerWebSocketRoutes(app as App);
