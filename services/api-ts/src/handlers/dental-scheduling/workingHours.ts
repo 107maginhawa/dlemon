@@ -21,6 +21,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { eq } from 'drizzle-orm';
+import { assertBranchAccess } from './utils/assert-branch-access';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -84,6 +85,8 @@ export async function getWorkingHours(ctx: Context) {
   const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
   if (!branch) throw new NotFoundError('Branch not found');
 
+  await assertBranchAccess(db, user.id, branchId);
+
   const hours = parseWorkingHours(branch.workingHours);
   return ctx.json({ branchId, workingHours: hours }, 200);
 }
@@ -94,6 +97,11 @@ export async function updateWorkingHours(ctx: Context) {
 
   const branchId = ctx.req.param('branchId')!;
   const db = ctx.get('database') as DatabaseInstance;
+
+  const [existingBranch] = await db.select({ id: dentalBranches.id }).from(dentalBranches).where(eq(dentalBranches.id, branchId));
+  if (!existingBranch) throw new NotFoundError('Branch not found');
+
+  await assertBranchAccess(db, user.id, branchId);
 
   let body: any;
   try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
@@ -119,9 +127,6 @@ export async function updateWorkingHours(ctx: Context) {
       }
     }
   }
-
-  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId!));
-  if (!branch) throw new NotFoundError('Branch not found');
 
   await db.update(dentalBranches)
     .set({ workingHours: JSON.stringify(workingHours), updatedAt: new Date(), updatedBy: user.id })

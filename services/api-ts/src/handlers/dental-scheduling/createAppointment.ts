@@ -28,8 +28,8 @@ export async function createAppointment(ctx: HandlerContext) {
   await assertBranchAccess(db, user.id, body.branchId);
   const repo = new DentalAppointmentRepository(db);
 
-  // scheduledAt is already a Date (zod transform)
-  const scheduledAt = body.scheduledAt instanceof Date ? body.scheduledAt : new Date(body.scheduledAt as any);
+  // scheduledAt is already a Date after zod transform
+  const scheduledAt = body.scheduledAt instanceof Date ? body.scheduledAt : new Date(String(body.scheduledAt));
   const durationMinutes = body.durationMinutes;
   const dentistMemberId = body.dentistMemberId;
   const branchId = body.branchId;

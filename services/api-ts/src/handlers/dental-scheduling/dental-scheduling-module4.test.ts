@@ -128,6 +128,14 @@ describe('GET working hours', () => {
     const res = await app.request(`/dental/branches/${BRANCH_ID}/working-hours`, { method: 'GET' });
     expect(res.status).toBe(401);
   });
+
+  test('403 when user has no membership in branch', async () => {
+    await seedBranch(null);
+    const OTHER_USER = { id: '00000000-0000-0000-0000-000000000077', email: 'outsider@clinic.com' };
+    const app = buildTestApp(OTHER_USER); // not seeded as member
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/working-hours`, { method: 'GET' });
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('PUT working hours (FR3.10)', () => {
@@ -190,6 +198,18 @@ describe('PUT working hours (FR3.10)', () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
+  });
+
+  test('403 when user has no membership in branch (PUT)', async () => {
+    await seedBranch(null);
+    const OTHER_USER = { id: '00000000-0000-0000-0000-000000000077', email: 'outsider@clinic.com' };
+    const app = buildTestApp(OTHER_USER);
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/working-hours`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workingHours: validHours }),
+    });
+    expect(res.status).toBe(403);
   });
 });
 

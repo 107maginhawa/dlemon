@@ -9,13 +9,11 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import type { AppointmentFilters } from './repos/dental-appointment.repo';
+import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import type { User } from '@/types/auth';
 import { eq, and, gte, lt, inArray } from 'drizzle-orm';
 import { dentalAppointments } from './repos/dental-appointment.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { patients } from '@/handlers/patient/repos/patient.schema';
-import { persons } from '@/handlers/person/repos/person.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { ListAppointmentsQuery } from '@/generated/openapi/validators';
 
@@ -24,7 +22,7 @@ export async function listAppointments(ctx: HandlerContext) {
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const query = ctx.req.valid('query') as ListAppointmentsQuery;
-  const filters: AppointmentFilters = {};
+  const filters: { branchId?: string; dentistMemberId?: string; date?: string; status?: string; patientId?: string } = {};
 
   if (query.branchId) filters.branchId = query.branchId;
   if (query.dentistMemberId) filters.dentistMemberId = query.dentistMemberId;
@@ -41,9 +39,10 @@ export async function listAppointments(ctx: HandlerContext) {
   const offset = Math.max(parseInt(rawQuery['offset'] ?? '0', 10) || 0, 0);
 
   const db = ctx.get('database') as DatabaseInstance;
+  const repo = new DentalAppointmentRepository(db);
 
   // Build conditions
-  const conditions = [];
+  const conditions: ReturnType<typeof eq>[] = [];
 
   // Authorization: scope results to branches the user has access to
   if (filters.branchId) {
@@ -57,57 +56,19 @@ export async function listAppointments(ctx: HandlerContext) {
       .where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.status, 'active')));
     const accessibleBranchIds = memberships.map(m => m.branchId);
     if (accessibleBranchIds.length === 0) return ctx.json([]);
-    conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds));
+    conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds) as any);
   }
 
   if (filters.dentistMemberId) conditions.push(eq(dentalAppointments.dentistMemberId, filters.dentistMemberId));
-  if (filters.status) conditions.push(eq(dentalAppointments.status, filters.status));
+  if (filters.status) conditions.push(eq(dentalAppointments.status, filters.status as any));
   if (filters.patientId) conditions.push(eq(dentalAppointments.patientId, filters.patientId));
   if (filters.date) {
     const dayStart = new Date(filters.date + 'T00:00:00.000Z');
     const dayEnd = new Date(filters.date + 'T23:59:59.999Z');
-    conditions.push(gte(dentalAppointments.scheduledAt, dayStart));
-    conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)));
+    conditions.push(gte(dentalAppointments.scheduledAt, dayStart) as any);
+    conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)) as any);
   }
 
-  const rows = await db
-    .select({
-      id: dentalAppointments.id,
-      patientId: dentalAppointments.patientId,
-      dentistMemberId: dentalAppointments.dentistMemberId,
-      branchId: dentalAppointments.branchId,
-      scheduledAt: dentalAppointments.scheduledAt,
-      durationMinutes: dentalAppointments.durationMinutes,
-      procedureType: dentalAppointments.procedureType,
-      operatoryId: dentalAppointments.operatoryId,
-      walkIn: dentalAppointments.walkIn,
-      status: dentalAppointments.status,
-      checkInTime: dentalAppointments.checkInTime,
-      visitId: dentalAppointments.visitId,
-      notes: dentalAppointments.notes,
-      cancelledAt: dentalAppointments.cancelledAt,
-      cancellationReason: dentalAppointments.cancellationReason,
-      noShowAt: dentalAppointments.noShowAt,
-      createdAt: dentalAppointments.createdAt,
-      updatedAt: dentalAppointments.updatedAt,
-      // Patient name from person table
-      firstName: persons.firstName,
-      lastName: persons.lastName,
-    })
-    .from(dentalAppointments)
-    .leftJoin(patients, eq(patients.id, dentalAppointments.patientId))
-    .leftJoin(persons, eq(persons.id, patients.person))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .limit(limit)
-    .offset(offset);
-
-  const appointments = rows.map((row) => {
-    const { firstName, lastName, ...appt } = row;
-    const patientName = firstName
-      ? [firstName, lastName].filter(Boolean).join(' ')
-      : undefined;
-    return { ...appt, patientName };
-  });
-
+  const appointments = await repo.findManyWithPatientName(conditions as any, limit, offset);
   return ctx.json(appointments);
 }

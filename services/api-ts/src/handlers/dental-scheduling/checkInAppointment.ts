@@ -48,7 +48,7 @@ export async function checkInAppointment(ctx: HandlerContext) {
   }
 
   // 2-4: Atomically: check in + create visit + link visit
-  const result = await db.transaction(async (tx: any) => {
+  const result = await db.transaction(async (tx) => {
     const txAppointmentRepo = new DentalAppointmentRepository(tx);
     const txVisitRepo = new VisitRepository(tx);
 

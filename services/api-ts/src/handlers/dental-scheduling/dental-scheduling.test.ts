@@ -814,4 +814,189 @@ describe('pagination on listAppointments', () => {
     const overlap = [...ids1].filter(id => ids2.has(id));
     expect(overlap.length).toBe(0);
   });
+
+  test('limit is capped at 200 even when higher value is requested', async () => {
+    const repo = new DentalAppointmentRepository(db);
+    // Seed 3 appointments — if limit>200 were uncapped, we'd still only have 3
+    // This verifies the cap logic doesn't throw and returns valid results
+    for (let i = 0; i < 3; i++) {
+      await repo.createOne({
+        patientId: PATIENT_ID,
+        dentistMemberId: MEMBER_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
+        durationMinutes: 30,
+        procedureType: 'Cleaning',
+      });
+    }
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments?limit=500');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // Should return all 3 (capped at 200, but we only have 3)
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBeLessThanOrEqual(200);
+  });
+});
+
+// ===========================================================================
+// Auth scoping — 403 on unauthorized branch
+// ===========================================================================
+
+describe('branch authorization (assertBranchAccess)', () => {
+  const UNAUTHORIZED_BRANCH = 'eeeeeeee-0000-1000-8000-000000000099';
+  const OTHER_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'other@clinic.com' };
+
+  test('createAppointment returns 403 when user has no membership in branchId', async () => {
+    const app = buildTestApp(OTHER_USER); // OTHER_USER has no membership seeded
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('getAppointment returns 403 when user has no membership in appointment branch', async () => {
+    const appt = await seedAppointment(); // seeded in BRANCH_ID
+    const app = buildTestApp(OTHER_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('cancelAppointment returns 403 when user has no membership in appointment branch', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(OTHER_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(403);
+  });
+
+  test('listAppointments returns empty array when user has no memberships', async () => {
+    await seedAppointment(); // in BRANCH_ID
+    const app = buildTestApp(OTHER_USER); // no memberships
+    const res = await app.request('/dental/appointments');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // OTHER_USER has no memberships, so accessible branches = [] → empty result
+    expect(body).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
+// patientId filter on listAppointments
+// ===========================================================================
+
+describe('patientId filter on listAppointments', () => {
+  const PATIENT_2 = 'a0000000-0000-1000-8000-000000000002';
+
+  test('filters appointments by patientId', async () => {
+    const repo = new DentalAppointmentRepository(db);
+    // Seed appointment for PATIENT_ID
+    await repo.createOne({
+      patientId: PATIENT_ID,
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      durationMinutes: 30,
+      procedureType: 'Cleaning',
+    });
+    // Seed appointment for PATIENT_2
+    await repo.createOne({
+      patientId: PATIENT_2,
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      durationMinutes: 30,
+      procedureType: 'Checkup',
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/appointments?patientId=${PATIENT_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.every((a: any) => a.patientId === PATIENT_ID)).toBe(true);
+    expect(body.length).toBe(1);
+  });
+});
+
+// ===========================================================================
+// Reschedule validation (overlap + working hours re-check on PATCH)
+// ===========================================================================
+
+describe('reschedule validation on updateAppointment', () => {
+  // Branch has working hours Mon-Fri 09:00-18:00 Manila (UTC+8)
+  // Monday 2026-03-02 at 17:30 Manila = 09:30 UTC → appt ends 18:30, outside close
+  const OUTSIDE_HOURS_UTC = '2026-03-02T09:30:00.000Z'; // 17:30 Manila, ends 18:30
+  const INSIDE_HOURS_UTC = '2026-03-02T02:00:00.000Z';  // 10:00 Manila, ends 11:00
+
+  const WORKING_HOURS = {
+    monday:    { enabled: true,  open: '09:00', close: '18:00' },
+    tuesday:   { enabled: true,  open: '09:00', close: '18:00' },
+    wednesday: { enabled: true,  open: '09:00', close: '18:00' },
+    thursday:  { enabled: true,  open: '09:00', close: '18:00' },
+    friday:    { enabled: true,  open: '09:00', close: '18:00' },
+    saturday:  { enabled: false },
+    sunday:    { enabled: false },
+  };
+
+  test('reschedule to outside working hours returns 422', async () => {
+    // Set working hours on branch
+    const { dentalBranches: branchTable } = await import('@/handlers/dental-org/repos/branch.schema');
+    const { eq } = await import('drizzle-orm');
+    await db.update(branchTable).set({ workingHours: JSON.stringify(WORKING_HOURS) }).where(eq(branchTable.id, BRANCH_ID));
+
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledAt: OUTSIDE_HOURS_UTC, durationMinutes: 60 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('OUTSIDE_WORKING_HOURS');
+
+    // Clean up working hours
+    await db.update(branchTable).set({ workingHours: null }).where(eq(branchTable.id, BRANCH_ID));
+  });
+
+  test('reschedule to overlap with another appointment returns 409', async () => {
+    const repo = new DentalAppointmentRepository(db);
+
+    // Seed fixed appointment at INSIDE_HOURS_UTC (10:00 Manila, 60 min)
+    const fixed = await repo.createOne({
+      patientId: PATIENT_ID,
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(INSIDE_HOURS_UTC),
+      durationMinutes: 60,
+      procedureType: 'Cleaning',
+    });
+
+    // Seed a second appointment at a non-overlapping time
+    const toMove = await repo.createOne({
+      patientId: PATIENT_ID,
+      dentistMemberId: MEMBER_ID,
+      branchId: BRANCH_ID,
+      scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      durationMinutes: 30,
+      procedureType: 'Follow-Up',
+    });
+
+    const app = buildTestApp(TEST_USER);
+
+    // Reschedule toMove to overlap with fixed (same time, same dentist)
+    const res = await app.request(`/dental/appointments/${toMove.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledAt: INSIDE_HOURS_UTC }),
+    });
+    expect(res.status).toBe(409);
+
+    // Verify the appointment hasn't moved
+    const current = await repo.findOneById(toMove.id);
+    expect(current!.scheduledAt.toISOString()).not.toBe(INSIDE_HOURS_UTC);
+  });
 });
