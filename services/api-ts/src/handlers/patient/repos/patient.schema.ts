@@ -3,7 +3,7 @@
  * Uses Drizzle ORM with PostgreSQL
  */
 
-import { pgTable, uuid, jsonb, index, uniqueIndex, text, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, jsonb, index, uniqueIndex, text, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 import { persons, type PersonCreateRequest } from '../../person/repos/person.schema';
@@ -29,6 +29,23 @@ export const patients = pgTable('patient', {
   dentalHistorySummary: text('dental_history_summary'),
   needsFollowUp: boolean('needs_follow_up').default(false),
   hasActivePaymentPlan: boolean('has_active_payment_plan').default(false),
+
+  // FR2.9: Patient status management
+  status: text('status').default('active').notNull(), // 'active' | 'archived'
+  archivedAt: timestamp('archived_at'),
+
+  // FR2.16: Emergency contact
+  emergencyContact: jsonb('emergency_contact').$type<EmergencyContact>(),
+
+  // FR2.17: Communication preferences
+  communicationPreferences: jsonb('communication_preferences').$type<CommunicationPreferences>(),
+
+  // FR2.18: Recall / next visit tracking
+  recallDate: text('recall_date'), // ISO date string e.g. "2026-08-15"
+  recallNote: text('recall_note'),
+
+  // FR2.12: Follow-up notes log (append-only JSONB array)
+  followUpNotes: jsonb('follow_up_notes').$type<FollowUpNote[]>().default(sql`'[]'::jsonb`),
 }, (table) => ({
   // Indexes for search and performance
   personIdx: index('patients_person_id_idx').on(table.person),
@@ -104,6 +121,36 @@ export interface PatientUpdateRequest {
   preferredBranchId?: string | null;
   dentalHistorySummary?: string | null;
   needsFollowUp?: boolean | null;
+  // FR2.16
+  emergencyContact?: EmergencyContact | null;
+  // FR2.17
+  communicationPreferences?: CommunicationPreferences | null;
+  // FR2.18
+  recallDate?: string | null;
+  recallNote?: string | null;
+}
+
+// FR2.16: Emergency contact info
+export interface EmergencyContact {
+  name: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+}
+
+// FR2.17: Communication preferences
+export interface CommunicationPreferences {
+  preferredChannel?: 'sms' | 'email' | 'phone' | 'none';
+  reminderOptIn?: boolean;
+  preferredLanguage?: string;
+}
+
+// FR2.12: Follow-up note entry
+export interface FollowUpNote {
+  id: string;
+  text: string;
+  createdAt: string; // ISO timestamp
+  createdBy: string; // userId
 }
 
 // Helper type for queries with joined person data

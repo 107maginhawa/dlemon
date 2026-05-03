@@ -29,6 +29,11 @@ export const dentalMemberships = pgTable('dental_membership', {
   pinFailedAttempts: integer('pin_failed_attempts').notNull().default(0),
   status: memberStatusEnum('status').notNull().default('active'),
   avatarUrl: text('avatar_url'),
+  // FR6.4: Activity visibility — track when member last logged in via PIN
+  lastLoginAt: timestamp('last_login_at'),
+  // FR9.7: PIN recovery — security question
+  securityQuestion: text('security_question'),
+  securityAnswerHash: text('security_answer_hash'),
 }, (table) => ({
   // A person can only have one membership per branch (only enforced when personId is set)
   personBranchUnique: uniqueIndex('dental_membership_person_branch_unique')

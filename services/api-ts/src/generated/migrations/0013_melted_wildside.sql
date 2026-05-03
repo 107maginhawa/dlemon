@@ -1,0 +1,1 @@
+ALTER TABLE "dental_branch" ADD COLUMN "settings" jsonb;

@@ -6,7 +6,7 @@
  *      and at application level via findActiveByPatient.
  */
 
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, lt, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -99,6 +99,58 @@ export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVi
       .where(eq(dentalVisits.id, id))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * FR1.17: Auto-discard empty draft visits (no treatments).
+   * Returns IDs of deleted visits.
+   */
+  async discardEmptyDrafts(patientId?: string): Promise<string[]> {
+    const { dentalTreatments } = await import('./treatment.schema');
+    const { sql: rawSql } = await import('drizzle-orm');
+
+    // Find draft visits with no treatments
+    const draftVisits = patientId
+      ? await this.db.select().from(dentalVisits).where(
+          and(eq(dentalVisits.status, 'draft'), eq(dentalVisits.patientId, patientId))
+        )
+      : await this.db.select().from(dentalVisits).where(eq(dentalVisits.status, 'draft'));
+
+    const emptyVisitIds: string[] = [];
+    for (const v of draftVisits) {
+      const [countRow] = await this.db
+        .select({ count: rawSql<number>`count(*)` })
+        .from(dentalTreatments)
+        .where(eq(dentalTreatments.visitId, v.id));
+      if (Number(countRow?.count ?? 0) === 0) {
+        emptyVisitIds.push(v.id);
+      }
+    }
+
+    if (emptyVisitIds.length > 0) {
+      await this.db.delete(dentalVisits).where(inArray(dentalVisits.id, emptyVisitIds));
+    }
+
+    return emptyVisitIds;
+  }
+
+  /**
+   * FR1.17: Auto-lock completed visits older than cutoffHours (default 48h).
+   * Returns count of visits locked.
+   */
+  async autoLockCompletedVisits(cutoffHours = 48): Promise<number> {
+    const cutoff = new Date(Date.now() - cutoffHours * 60 * 60 * 1000);
+    const result = await this.db
+      .update(dentalVisits)
+      .set({ status: 'locked', lockedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(dentalVisits.status, 'completed'),
+          lt(dentalVisits.completedAt, cutoff)
+        )
+      )
+      .returning({ id: dentalVisits.id });
+    return result.length;
   }
 
   async updateStatus(id: string, patch: Partial<Pick<DentalVisit, 'status' | 'chiefComplaint'>>): Promise<DentalVisit | null> {

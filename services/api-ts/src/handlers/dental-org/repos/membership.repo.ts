@@ -132,4 +132,14 @@ export class MembershipRepository extends DatabaseRepository<
   isLockedOut(member: DentalMembership): boolean {
     return member.pinLockedUntil !== null && member.pinLockedUntil > new Date();
   }
+
+  /**
+   * FR6.4: Record the current timestamp as lastLoginAt for activity visibility.
+   */
+  async trackLastLogin(id: string): Promise<void> {
+    await this.db
+      .update(dentalMemberships)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(dentalMemberships.id, id));
+  }
 }

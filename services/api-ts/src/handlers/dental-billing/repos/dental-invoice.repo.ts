@@ -5,7 +5,7 @@
  * Handles invoice number generation, payment tracking, and discount application.
  */
 
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, lte, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import {
   dentalInvoices,
@@ -244,6 +244,24 @@ export class DentalInvoiceRepository {
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * FR4.1b: Mark issued/partial invoices past their due date as overdue.
+   * Returns the count of invoices transitioned to overdue.
+   */
+  async markOverdueInvoices(asOf: Date = new Date()): Promise<number> {
+    const result = await this.db
+      .update(dentalInvoices)
+      .set({ status: 'overdue', updatedAt: new Date() })
+      .where(
+        and(
+          inArray(dentalInvoices.status, ['issued', 'partial']),
+          lte(dentalInvoices.dueDate, asOf),
+        )
+      )
+      .returning({ id: dentalInvoices.id });
+    return result.length;
   }
 
   /**

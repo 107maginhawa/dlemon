@@ -27,7 +27,36 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
 import { createDentalPatient } from '@/handlers/dental-patient/createDentalPatient';
+import { listDentalPatients } from '@/handlers/dental-patient/listDentalPatients';
+import { getDentalPatient } from '@/handlers/dental-patient/getDentalPatient';
+import { updateDentalPatient } from '@/handlers/dental-patient/updateDentalPatient';
+import { archiveDentalPatient } from '@/handlers/dental-patient/archiveDentalPatient';
+import { restoreDentalPatient } from '@/handlers/dental-patient/restoreDentalPatient';
+import { bulkArchiveDentalPatients } from '@/handlers/dental-patient/bulkArchiveDentalPatients';
+import { exportDentalPatients } from '@/handlers/dental-patient/exportDentalPatients';
+import { listFollowUpNotes, addFollowUpNote } from '@/handlers/dental-patient/followUpNotes';
+import { getDentalPatientSafetyFloor } from '@/handlers/dental-patient/getDentalPatientSafetyFloor';
+import { getDentalPatientStatement } from '@/handlers/dental-patient/getDentalPatientStatement';
+import { getTreatmentPlan } from '@/handlers/dental-visit/getTreatmentPlan';
+import { carryOverTreatments } from '@/handlers/dental-visit/carryOverTreatments';
+import {
+  listTreatmentTemplates,
+  createTreatmentTemplate,
+  updateTreatmentTemplate,
+  deleteTreatmentTemplate,
+  applyTemplate,
+} from '@/handlers/dental-visit/treatmentTemplates';
+import { getPatientBalance } from '@/handlers/dental-billing/getPatientBalance';
+import { getCollectionsSummary } from '@/handlers/dental-billing/getCollectionsSummary';
+import { getDentalPaymentReceipt } from '@/handlers/dental-billing/getDentalPaymentReceipt';
 import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
+import { getDashboardSummary } from '@/handlers/dental-org/getDashboardSummary';
+import { setSecurityQuestion, recoverPin } from '@/handlers/dental-org/pinRecovery';
+import { getImportedPMD } from '@/handlers/dental-pmd/getImportedPMD';
+import { importPatients } from '@/handlers/dental-patient/importPatients';
+import { exportPMD } from '@/handlers/dental-pmd/exportPMD';
+import { getWorkingHours, updateWorkingHours } from '@/handlers/dental-scheduling/workingHours';
+import { getBranchSettings, updateBranchSettings } from '@/handlers/dental-org/branchSettings';
 import { authMiddleware } from '@/middleware/auth';
 import { registerRoutes as registerHealthRoutes } from '@/core/health';
 import { registerRoutes as registerAuthRoutes } from '@/core/auth';
@@ -101,8 +130,73 @@ export function createApp(config: Config): App {
   registerOpenAPIRoutes(app as any);
 
   // Dental-specific routes (not in TypeSpec, bypass generated validators)
-  app.post('/dental/patients', authMiddleware({ required: true, roles: ['user'] }), createDentalPatient);
-  app.get('/dental/org/context', authMiddleware({ required: true, roles: ['user'] }), getOrgContext);
+  const dentalAuth = authMiddleware({ required: true, roles: ['user'] });
+
+  // FR7.2: CSV / JSON patient import (before /:id to avoid param capture)
+  app.post('/dental/patients/import', dentalAuth, importPatients);
+  // FR2.8: Export must be before /:id to avoid param capture
+  app.get('/dental/patients/export', dentalAuth, exportDentalPatients);
+  // FR2.13: Bulk archive
+  app.post('/dental/patients/bulk-archive', dentalAuth, bulkArchiveDentalPatients);
+
+  // FR2.3: Create patient
+  app.post('/dental/patients', dentalAuth, createDentalPatient);
+  // FR2.1, FR2.2, FR2.10: List / search patients
+  app.get('/dental/patients', dentalAuth, listDentalPatients);
+  // FR2.4: Patient profile
+  app.get('/dental/patients/:id', dentalAuth, getDentalPatient);
+  // FR2.9, FR2.16, FR2.17, FR2.18: Update patient fields
+  app.patch('/dental/patients/:id', dentalAuth, updateDentalPatient);
+  // FR2.7: Archive / Restore
+  app.post('/dental/patients/:id/archive', dentalAuth, archiveDentalPatient);
+  app.post('/dental/patients/:id/restore', dentalAuth, restoreDentalPatient);
+  // FR2.12: Follow-up notes
+  app.get('/dental/patients/:id/follow-up-notes', dentalAuth, listFollowUpNotes);
+  app.post('/dental/patients/:id/follow-up-notes', dentalAuth, addFollowUpNote);
+  // FR2.15: Safety floor
+  app.get('/dental/patients/:id/safety-floor', dentalAuth, getDentalPatientSafetyFloor);
+  // FR2.21: Itemized statement
+  app.get('/dental/patients/:id/statement', dentalAuth, getDentalPatientStatement);
+
+  // FR1.8: Treatment templates
+  app.get('/dental/treatment-templates', dentalAuth, listTreatmentTemplates);
+  app.post('/dental/treatment-templates', dentalAuth, createTreatmentTemplate);
+  app.patch('/dental/treatment-templates/:id', dentalAuth, updateTreatmentTemplate);
+  app.delete('/dental/treatment-templates/:id', dentalAuth, deleteTreatmentTemplate);
+  app.post('/dental/visits/:visitId/apply-template/:templateId', dentalAuth, applyTemplate);
+  // FR1.11: Carry over treatments
+  app.post('/dental/visits/:visitId/carry-over', dentalAuth, carryOverTreatments);
+  // FR1.22: Treatment plan presentation
+  app.get('/dental/patients/:patientId/treatment-plan', dentalAuth, getTreatmentPlan);
+
+  // FR4.4: Per-patient outstanding balance
+  app.get('/dental/billing/patients/:patientId/balance', dentalAuth, getPatientBalance);
+  // FR4.5: Collections summary
+  app.get('/dental/billing/collections/summary', dentalAuth, getCollectionsSummary);
+  // FR4.6: Payment receipt
+  app.get('/dental/billing/invoices/:invoiceId/payments/:paymentId/receipt', dentalAuth, getDentalPaymentReceipt);
+
+  app.get('/dental/org/context', dentalAuth, getOrgContext);
+  // FR0.7 + FR0.8: Dashboard summary (active payment plans + lab order status)
+  app.get('/dental/dashboard/summary', dentalAuth, getDashboardSummary);
+
+  // FR12.2: Read parsed imported PMD
+  app.get('/dental/pmd/imported/:id', dentalAuth, getImportedPMD);
+  // FR12.6: Export/share PMD as downloadable file
+  // Must be registered before the generated :visitId/pmd GET to avoid conflicts
+  app.get('/dental/visits/:visitId/pmd/export', dentalAuth, exportPMD);
+
+  // FR9.7: PIN recovery via security question
+  app.post('/dental/org/members/:memberId/security-question', dentalAuth, setSecurityQuestion);
+  app.post('/dental/org/members/:memberId/recover-pin', recoverPin); // No auth — user is locked out
+
+  // FR3.10 / FR8.6: Working hours configuration
+  app.get('/dental/branches/:branchId/working-hours', dentalAuth, getWorkingHours);
+  app.put('/dental/branches/:branchId/working-hours', dentalAuth, updateWorkingHours);
+
+  // FR8.1-FR8.3, FR8.7, FR8.8, FR8.13: Branch settings (clinic config, fee schedule, locale, access control)
+  app.get('/dental/branches/:branchId/settings', dentalAuth, getBranchSettings);
+  app.put('/dental/branches/:branchId/settings', dentalAuth, updateBranchSettings);
 
   // Register WebSocket handlers
   registerWebSocketRoutes(app as App);

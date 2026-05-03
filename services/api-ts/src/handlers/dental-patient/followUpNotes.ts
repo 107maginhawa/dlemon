@@ -1,0 +1,81 @@
+/**
+ * Follow-up notes handlers — FR2.12
+ *
+ * GET  /dental/patients/:id/follow-up-notes  — list notes
+ * POST /dental/patients/:id/follow-up-notes  — add note
+ */
+
+import type { Context } from 'hono';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { PatientRepository } from '../patient/repos/patient.repo';
+import type { FollowUpNote } from '../patient/repos/patient.schema';
+import { sql } from 'drizzle-orm';
+import { patients } from '../patient/repos/patient.schema';
+import { eq } from 'drizzle-orm';
+
+export async function listFollowUpNotes(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const patientId = ctx.req.param('id');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new PatientRepository(db, logger);
+  const patient = await repo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  const notes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+
+  return ctx.json({ notes, total: notes.length }, 200);
+}
+
+export async function addFollowUpNote(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const patientId = ctx.req.param('id');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  let body: any;
+  try {
+    body = await ctx.req.json();
+  } catch {
+    throw new ValidationError('Invalid JSON body');
+  }
+
+  const text = (body?.text ?? '').trim();
+  if (!text) throw new ValidationError('text is required');
+
+  const repo = new PatientRepository(db, logger);
+  const patient = await repo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  const newNote: FollowUpNote = {
+    id: crypto.randomUUID(),
+    text,
+    createdAt: new Date().toISOString(),
+    createdBy: user.id,
+  };
+
+  const existingNotes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+  const updatedNotes = [...existingNotes, newNote];
+
+  // Append note to JSONB array
+  await db
+    .update(patients)
+    .set({ followUpNotes: updatedNotes as any, updatedAt: new Date() })
+    .where(eq(patients.id, patientId));
+
+  // Also set needsFollowUp=true when a follow-up note is added
+  await db
+    .update(patients)
+    .set({ needsFollowUp: true, updatedAt: new Date() })
+    .where(eq(patients.id, patientId));
+
+  logger?.info({ action: 'addFollowUpNote', patientId, noteId: newNote.id }, 'Follow-up note added');
+
+  return ctx.json({ note: newNote, total: updatedNotes.length }, 201);
+}

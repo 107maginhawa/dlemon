@@ -6,8 +6,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { TreatmentRepository } from './repos/treatment.repo';
+import { VisitRepository } from './repos/visit.repo';
+import { DentalChartRepository } from './repos/dental-chart.repo';
 import type { User } from '@/types/auth';
 
 export async function createDentalTreatment(ctx: HandlerContext) {
@@ -24,6 +26,31 @@ export async function createDentalTreatment(ctx: HandlerContext) {
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new TreatmentRepository(db);
+  const visitRepo = new VisitRepository(db);
+
+  // FR1.16: Immutability — cannot add treatments to completed/locked visits
+  const visit = await visitRepo.findOneById(visitId);
+  if (visit && (visit.status === 'completed' || visit.status === 'locked')) {
+    throw new BusinessLogicError(
+      `Cannot add treatments to a ${visit.status} visit`,
+      'VISIT_IMMUTABLE'
+    );
+  }
+
+  // EC2: Block treatment on extracted tooth
+  if (typeof body['toothNumber'] === 'number') {
+    const chartRepo = new DentalChartRepository(db);
+    const chart = visit ? await chartRepo.findByVisit(visit.id) : null;
+    if (chart) {
+      const toothState = chart.teeth.find((t: any) => t.toothNumber === body['toothNumber']);
+      if (toothState?.state === 'extracted') {
+        throw new BusinessLogicError(
+          `Tooth ${body['toothNumber']} is extracted — cannot add pending treatments`,
+          'TOOTH_EXTRACTED'
+        );
+      }
+    }
+  }
 
   const treatment = await repo.createOne({
     visitId,

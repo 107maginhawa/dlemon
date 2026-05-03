@@ -64,6 +64,41 @@
       "when": 1777682006785,
       "tag": "0008_lucky_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777789026280,
+      "tag": "0009_clammy_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777791146375,
+      "tag": "0010_ancient_magik",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777791921331,
+      "tag": "0011_fresh_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777792010314,
+      "tag": "0012_thankful_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777793864497,
+      "tag": "0013_melted_wildside",
+      "breakpoints": true
     }
   ]
 }

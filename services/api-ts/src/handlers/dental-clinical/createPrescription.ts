@@ -8,6 +8,8 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError } from '@/core/errors';
 import { PrescriptionRepository } from './repos/prescription.repo';
+import { medicalHistoryEntries } from './repos/medical-history.schema';
+import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 
 export async function createPrescription(ctx: HandlerContext) {
@@ -26,6 +28,20 @@ export async function createPrescription(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new PrescriptionRepository(db);
 
+  // FR1.12: Allergy cross-check — warn (non-blocking) if drug matches a patient allergy
+  const patientId = body['patientId'] as string;
+  const drugName = (body['drugName'] as string).toLowerCase();
+  const allergies = await db.select().from(medicalHistoryEntries).where(
+    and(
+      eq(medicalHistoryEntries.patientId, patientId),
+      eq(medicalHistoryEntries.entryType, 'allergy'),
+      eq(medicalHistoryEntries.active, true)
+    )
+  );
+  const allergyWarnings = allergies
+    .filter(a => a.displayName.toLowerCase().includes(drugName) || drugName.includes(a.displayName.toLowerCase()))
+    .map(a => a.displayName);
+
   const prescription = await repo.createOne({
     visitId,
     patientId: body['patientId'] as string,
@@ -40,5 +56,10 @@ export async function createPrescription(ctx: HandlerContext) {
     dispenseAsWritten: body['dispenseAsWritten'] === true,
   });
 
-  return ctx.json(prescription, 201);
+  return ctx.json({
+    ...prescription,
+    warnings: allergyWarnings.length > 0
+      ? { allergyConflicts: allergyWarnings }
+      : undefined,
+  }, 201);
 }

@@ -50,6 +50,8 @@ export async function DentalMembershipManagement_verifyPin(
 
   if (isValid) {
     const reset = await repo.resetPinAttempts(membershipId);
+    // FR6.4: Track last login for activity visibility
+    await repo.trackLastLogin(membershipId);
     return ctx.json({ success: true, failedAttempts: reset?.pinFailedAttempts ?? 0 });
   }
 

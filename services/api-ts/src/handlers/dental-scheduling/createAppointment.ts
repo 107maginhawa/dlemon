@@ -7,8 +7,11 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
+import { eq } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 
 export async function createAppointment(ctx: HandlerContext) {
@@ -31,6 +34,15 @@ export async function createAppointment(ctx: HandlerContext) {
   const durationMinutes = body['durationMinutes'] as number;
   const dentistMemberId = body['dentistMemberId'] as string;
   const branchId = body['branchId'] as string;
+
+  // FR3.10: Validate against configured working hours (blocking)
+  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
+  if (branch?.workingHours) {
+    const hours = parseWorkingHours(branch.workingHours);
+    if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours)) {
+      throw new BusinessLogicError('Appointment is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
+    }
+  }
 
   // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
   const overlapping = await repo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);

@@ -1,0 +1,137 @@
+/**
+ * Treatment Templates handlers (FR1.8)
+ *
+ * GET    /dental/treatment-templates?branchId=...  — list templates
+ * POST   /dental/treatment-templates               — create template
+ * PATCH  /dental/treatment-templates/:id           — update template
+ * DELETE /dental/treatment-templates/:id           — deactivate template
+ * POST   /dental/visits/:visitId/apply-template/:templateId — apply template to visit
+ */
+
+import type { Context } from 'hono';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
+import { TreatmentRepository } from './repos/treatment.repo';
+import { VisitRepository } from './repos/visit.repo';
+import { eq, and } from 'drizzle-orm';
+
+export async function listTreatmentTemplates(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const branchId = ctx.req.query('branchId');
+
+  const templates = branchId
+    ? await db.select().from(dentalTreatmentTemplates).where(
+        and(eq(dentalTreatmentTemplates.branchId, branchId), eq(dentalTreatmentTemplates.active, true))
+      )
+    : await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.active, true));
+
+  return ctx.json({ templates }, 200);
+}
+
+export async function createTreatmentTemplate(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  let body: any;
+  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
+
+  if (!body.name?.trim()) throw new ValidationError('name is required');
+  if (!body.branchId) throw new ValidationError('branchId is required');
+  if (!Array.isArray(body.items) || body.items.length === 0) throw new ValidationError('items must be a non-empty array');
+
+  const [template] = await db.insert(dentalTreatmentTemplates).values({
+    branchId: body.branchId,
+    name: body.name.trim(),
+    description: body.description ?? null,
+    items: body.items,
+    active: true,
+    createdBy: user.id,
+    updatedBy: user.id,
+  }).returning();
+
+  return ctx.json(template, 201);
+}
+
+export async function updateTreatmentTemplate(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const templateId = ctx.req.param('id');
+  const db = ctx.get('database') as DatabaseInstance;
+  let body: any;
+  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
+
+  const [existing] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
+  if (!existing) throw new NotFoundError('Treatment template not found');
+
+  const updates: any = { updatedAt: new Date(), updatedBy: user.id };
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.description !== undefined) updates.description = body.description;
+  if (body.items !== undefined) updates.items = body.items;
+  if (body.active !== undefined) updates.active = body.active;
+
+  const [updated] = await db.update(dentalTreatmentTemplates).set(updates).where(eq(dentalTreatmentTemplates.id, templateId)).returning();
+  return ctx.json(updated, 200);
+}
+
+export async function deleteTreatmentTemplate(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const templateId = ctx.req.param('id');
+  const db = ctx.get('database') as DatabaseInstance;
+
+  const [existing] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
+  if (!existing) throw new NotFoundError('Treatment template not found');
+
+  await db.update(dentalTreatmentTemplates).set({ active: false, updatedAt: new Date() }).where(eq(dentalTreatmentTemplates.id, templateId));
+  return ctx.json({ success: true }, 200);
+}
+
+export async function applyTemplate(ctx: Context) {
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const visitId = ctx.req.param('visitId');
+  const templateId = ctx.req.param('templateId');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Visit not found');
+
+  // FR1.16: Block on completed/locked
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError(`Cannot apply template to a ${visit.status} visit`, 'VISIT_IMMUTABLE');
+  }
+
+  const [template] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
+  if (!template || !template.active) throw new NotFoundError('Treatment template not found');
+
+  const treatmentRepo = new TreatmentRepository(db);
+  const created = await Promise.all(
+    template.items.map(item =>
+      treatmentRepo.createOne({
+        visitId,
+        patientId: visit.patientId,
+        cdtCode: item.cdtCode,
+        description: item.description,
+        priceCents: item.priceCents,
+        toothNumber: item.toothNumber,
+        surfaces: item.surfaces,
+        status: 'planned',
+        carriedOver: false,
+      })
+    )
+  );
+
+  logger?.info({ action: 'applyTemplate', visitId, templateId, count: created.length }, 'Template applied to visit');
+
+  return ctx.json({ applied: created, count: created.length }, 201);
+}

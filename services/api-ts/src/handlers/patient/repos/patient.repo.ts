@@ -190,7 +190,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
   }
 
   /**
-   * Archive a patient (soft-archive via needsFollowUp reset).
+   * Archive a patient (soft-archive: sets status='archived').
    * EC1: blocks if the patient has an active payment plan.
    */
   async archivePatient(id: string): Promise<ArchiveResult> {
@@ -206,10 +206,68 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       };
     }
 
-    // Clear follow-up flag on archive
-    await this.updateOneById(id, { needsFollowUp: false });
+    if (patient.status === 'archived') {
+      return { success: false, reason: 'Patient is already archived' };
+    }
+
+    await this.updateOneById(id, {
+      status: 'archived',
+      archivedAt: new Date(),
+      needsFollowUp: false,
+    });
 
     return { success: true };
+  }
+
+  /**
+   * Restore an archived patient back to active status.
+   */
+  async restorePatient(id: string): Promise<ArchiveResult> {
+    const patient = await this.findOneById(id);
+    if (!patient) {
+      return { success: false, reason: 'Patient not found' };
+    }
+
+    if (patient.status !== 'archived') {
+      return { success: false, reason: 'Patient is not archived' };
+    }
+
+    await this.updateOneById(id, {
+      status: 'active',
+      archivedAt: null,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Check if a patient with a similar name already exists (FR2.5: duplicate detection).
+   * Returns matching patients for the same branch — non-blocking (caller decides).
+   */
+  async findPotentialDuplicates(firstName: string, lastName: string | null, branchId?: string): Promise<PatientWithPerson[]> {
+    const conditions: SQL<unknown>[] = [
+      ilike(persons.firstName, `%${firstName}%`),
+    ];
+
+    if (lastName) {
+      conditions.push(ilike(persons.lastName, `%${lastName}%`));
+    }
+
+    if (branchId) {
+      conditions.push(eq(patients.preferredBranchId, branchId));
+    }
+
+    const results = await this.db
+      .select({ patient: patients, person: persons })
+      .from(patients)
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .where(and(...conditions))
+      .limit(5);
+
+    return results.map(({ patient, person }) => ({
+      ...patient,
+      person,
+    })) as PatientWithPerson[];
   }
 
 }

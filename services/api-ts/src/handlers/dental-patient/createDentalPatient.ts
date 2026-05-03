@@ -46,6 +46,13 @@ export async function createDentalPatient(ctx: Context): Promise<Response> {
   const firstName = parts[0]!;
   const lastName = parts.slice(1).join(' ') || null;
 
+  // FR2.5: Duplicate detection — non-blocking warning
+  const patientRepo = new PatientRepository(db, logger);
+  const potentialDuplicates = await patientRepo.findPotentialDuplicates(firstName, lastName, body.branchId);
+  const duplicateWarning = potentialDuplicates.length > 0
+    ? { hasDuplicates: true, count: potentialDuplicates.length, duplicateIds: potentialDuplicates.map((p: any) => p.id) }
+    : null;
+
   // Create a new person record for the patient (distinct from the logged-in user)
   const [newPerson] = await db
     .insert(persons)
@@ -65,7 +72,6 @@ export async function createDentalPatient(ctx: Context): Promise<Response> {
   }
 
   // Create patient record linked to the new person
-  const patientRepo = new PatientRepository(db, logger);
   const patient = await patientRepo.createOne({
     person: newPerson.id,
     ...(body.branchId ? { preferredBranchId: body.branchId } : {}),
@@ -81,6 +87,7 @@ export async function createDentalPatient(ctx: Context): Promise<Response> {
       dateOfBirth: newPerson.dateOfBirth,
       gender: newPerson.gender,
     },
+    ...(duplicateWarning ? { warning: duplicateWarning } : {}),
   };
 
   logger?.info({ patientId: patient.id, personId: newPerson.id, createdBy: user.id }, 'Dental patient registered');

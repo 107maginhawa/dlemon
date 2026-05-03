@@ -7,7 +7,7 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { VisitRepository } from './repos/visit.repo';
 import type { DentalVisitStatus } from './repos/visit.schema';
 import type { User } from '@/types/auth';
@@ -26,6 +26,21 @@ export async function updateDentalVisit(ctx: HandlerContext) {
 
   const visit = await repo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
+
+  // FR1.16: Immutability — completed/locked visits cannot be modified
+  if (visit.status === 'locked') {
+    throw new BusinessLogicError('Locked visits cannot be modified', 'VISIT_LOCKED');
+  }
+  if (visit.status === 'completed' && body['status'] !== 'locked') {
+    // Only allowed transition from completed is -> locked
+    if (body['status'] !== undefined && body['status'] !== 'locked') {
+      throw new BusinessLogicError('Completed visits can only be transitioned to locked', 'VISIT_IMMUTABLE');
+    }
+    // chiefComplaint edits also blocked on completed
+    if (body['chiefComplaint'] !== undefined && body['status'] === undefined) {
+      throw new BusinessLogicError('Completed visit notes cannot be edited', 'VISIT_IMMUTABLE');
+    }
+  }
 
   const patch: Partial<{ status: DentalVisitStatus; chiefComplaint: string }> = {};
 
