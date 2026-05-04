@@ -13,41 +13,12 @@
  * Wireframe: docs/prd/context/wireframes/dashboard.html
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { canViewFinancials } from '../../../utils/rbac';
 import { MetricCard } from './metric-card';
 import type { DentalRole } from '../../../utils/rbac';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Appointment {
-  id: string;
-  patientId: string;
-  patientName?: string;
-  scheduledAt: string;
-  durationMinutes?: number;
-  status: string;
-  procedureType?: string;
-}
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  patientName?: string;
-  totalCents: number;
-  paidCents: number;
-  balanceCents: number;
-  status: string;
-  dueDate?: string;
-  createdAt: string;
-}
+import { useDashboardSummary } from '../hooks/use-dashboard-summary';
 
 // ---------------------------------------------------------------------------
 // Pure logic helpers (exported for testing)
@@ -78,14 +49,14 @@ export function calcTrend(today: number, yesterday: number): string {
   return '0%';
 }
 
-export function groupAppointmentsByStatus(appointments: Appointment[]): {
-  done: Appointment[];
-  now: Appointment[];
-  upcoming: Appointment[];
+export function groupAppointmentsByStatus(appointments: { status: string }[]): {
+  done: typeof appointments;
+  now: typeof appointments;
+  upcoming: typeof appointments;
 } {
-  const done: Appointment[] = [];
-  const now: Appointment[] = [];
-  const upcoming: Appointment[] = [];
+  const done: typeof appointments = [];
+  const now: typeof appointments = [];
+  const upcoming: typeof appointments = [];
 
   for (const appt of appointments) {
     switch (appt.status) {
@@ -106,16 +77,18 @@ export function groupAppointmentsByStatus(appointments: Appointment[]): {
   return { done, now, upcoming };
 }
 
-export function getNextAppointment(appointments: Appointment[]): Appointment | null {
+export function getNextAppointment<T extends { status: string; scheduledAt: string }>(
+  appointments: T[],
+): T | null {
   const upcoming = appointments.filter(
-    (a) => a.status === 'scheduled' || a.status === 'checkedIn'
+    (a) => a.status === 'scheduled' || a.status === 'checkedIn',
   );
   if (upcoming.length === 0) return null;
   upcoming.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   return upcoming[0] ?? null;
 }
 
-export function sumOutstanding(invoices: Invoice[]): number {
+export function sumOutstanding(invoices: { balanceCents: number }[]): number {
   return invoices.reduce((sum, inv) => sum + inv.balanceCents, 0);
 }
 
@@ -140,6 +113,31 @@ function getInitials(name?: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function DashboardSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" data-testid="dashboard-skeleton" aria-busy="true" aria-label="Loading dashboard">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-2xl bg-muted/40 h-32 animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-2xl bg-muted/40 h-24 animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+        <div className="rounded-2xl bg-muted/40 h-48 animate-pulse" />
+        <div className="rounded-2xl bg-muted/40 h-48 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -150,93 +148,21 @@ export interface MorningBriefingProps {
 
 export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const navigate = useNavigate();
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
-  const [tomorrowAppointments, setTomorrowAppointments] = useState<Appointment[]>([]);
-  const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
-  const [dailyCollectionsCents, setDailyCollectionsCents] = useState<number | null>(null);
-  const [activePaymentPlans, setActivePaymentPlans] = useState<number | null>(null);
-  const [pendingLabOrders, setPendingLabOrders] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const showFinancials = canViewFinancials(role);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [branchId]);
-
-  async function loadDashboardData() {
-    setLoading(true);
-    setError(null);
-
-    const today = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-
-    try {
-      const fetches: Promise<Response>[] = [
-        fetch(`${API}/dental/appointments?date=${today}`, { credentials: 'include' }),
-        fetch(`${API}/dental/appointments?date=${tomorrow}`, { credentials: 'include' }),
-        fetch(`${API}/dental/dashboard/summary`, { credentials: 'include' }),
-      ];
-
-      if (showFinancials) {
-        fetches.push(
-          fetch(`${API}/dental/billing/invoices?status=overdue`, { credentials: 'include' }),
-          fetch(`${API}/dental/billing/invoices?branchId=${encodeURIComponent(branchId)}`, { credentials: 'include' }),
-        );
-      }
-
-      const responses = await Promise.all(fetches);
-
-      // Only throw on core appointment fetches; summary/financial are best-effort
-      if (!responses[0]!.ok || !responses[1]!.ok) throw new Error('Failed to load appointments');
-
-      const todayData = await responses[0]!.json();
-      const tomorrowData = await responses[1]!.json();
-      const summaryData = responses[2]?.ok ? await responses[2].json() : null;
-
-      setTodayAppointments(
-        Array.isArray(todayData) ? todayData : todayData.appointments ?? []
-      );
-      setTomorrowAppointments(
-        Array.isArray(tomorrowData) ? tomorrowData : tomorrowData.appointments ?? []
-      );
-
-      if (summaryData) {
-        setActivePaymentPlans(summaryData.activePaymentPlans?.count ?? 0);
-        setPendingLabOrders(summaryData.labOrders?.totalPending ?? 0);
-      }
-
-      // Financial data at indices 3 and 4 (pushed conditionally)
-      if (showFinancials && responses[3]) {
-        const invoiceData = await responses[3].json();
-        setOverdueInvoices(
-          Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? []
-        );
-      }
-
-      if (showFinancials && responses[4]) {
-        const allInvoicesData = await responses[4].json();
-        const allInvoices: Invoice[] = Array.isArray(allInvoicesData)
-          ? allInvoicesData
-          : allInvoicesData.invoices ?? [];
-        const todayStr = today;
-        const collected = allInvoices
-          .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
-          .filter((inv) => inv.createdAt?.slice(0, 10) === todayStr)
-          .reduce((sum, inv) => sum + (inv.paidCents ?? inv.totalCents - inv.balanceCents), 0);
-        setDailyCollectionsCents(collected);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data, isLoading, error } = useDashboardSummary({ branchId, showFinancials });
 
   const now = new Date();
   const greeting = getGreeting(now.getHours());
   const dateLabel = formatTodayDate(now);
+
+  const todayAppointments = data?.todayAppointments ?? [];
+  const tomorrowAppointments = data?.tomorrowAppointments ?? [];
+  const overdueInvoices = data?.overdueInvoices ?? [];
+  const dailyCollectionsCents = data?.dailyCollectionsCents ?? null;
+  const activePaymentPlans = data?.activePaymentPlans ?? null;
+  const pendingLabOrders = data?.pendingLabOrders ?? null;
+
   const groups = groupAppointmentsByStatus(todayAppointments);
   const nextAppt = getNextAppointment(todayAppointments);
   const overdueTotal = sumOutstanding(overdueInvoices);
@@ -282,18 +208,14 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
       {/* Error */}
       {error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {error}
+          {error.message}
         </div>
       )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="text-sm text-muted-foreground py-8 text-center">
-          Loading dashboard...
-        </div>
-      )}
+      {/* Loading skeleton */}
+      {isLoading && <DashboardSkeleton />}
 
-      {!loading && (
+      {!isLoading && !error && (
         <>
           {/* Row 1: Schedule, Collections, Overdue */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -367,11 +289,10 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               <MetricCard
                 title="Overdue Alerts"
                 value={overdueInvoices.length}
-                subtitle={`patients with overdue balances`}
+                subtitle="patients with overdue balances"
                 accentColor="red"
                 action={{ label: 'View all', onClick: () => navigate({ to: '/billing' }) }}
               >
-                {/* Overdue patient list (first 3) */}
                 {overdueInvoices.length > 0 && (
                   <div className="flex flex-col mt-2">
                     {overdueInvoices.slice(0, 3).map((inv) => (
@@ -505,7 +426,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               ))}
             </div>
 
-            {/* Reminders (static) */}
+            {/* Reminders (static — no backend endpoint yet) */}
             <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
