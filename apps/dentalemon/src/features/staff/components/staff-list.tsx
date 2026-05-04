@@ -1,34 +1,21 @@
 /**
  * StaffList -- staff management list with role badges and actions
  *
- * Features: fetch members from API, display table with role badges,
- *           status dots, edit/deactivate actions, + Add Staff button
+ * Features: TanStack Query hook for member list, deactivate mutation,
+ *           role badges, status dots, + Add Staff button
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StaffCreateModal } from './staff-create-modal';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { useStaffMembers, useStaffMutations, type MemberRole } from '../hooks/use-staff-members';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type MemberRole = 'dentist_owner' | 'dentist_associate' | 'staff_full' | 'staff_scheduling';
-
-interface Member {
-  id: string;
-  branchId: string;
-  displayName: string;
-  role: MemberRole;
-  status: 'active' | 'inactive';
-  avatarUrl: string | null;
-  createdAt: string;
-}
-
 export interface StaffListProps {
   branchId: string;
+  currentUserRole?: MemberRole;
 }
 
 // FR8.13: Access denied component for non-owner roles
@@ -96,47 +83,28 @@ function getInitials(name: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function StaffList({ branchId }: StaffListProps) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function StaffList({ branchId, currentUserRole }: StaffListProps) {
+  // Read role from localStorage if not passed as prop
+  const role = currentUserRole ?? (
+    typeof localStorage !== 'undefined'
+      ? (localStorage.getItem('currentMemberRole') as MemberRole | null) ?? 'staff_scheduling'
+      : 'staff_scheduling'
+  );
+
+  const { members, isLoading, error } = useStaffMembers(branchId);
+  const { deactivate, deactivateError } = useStaffMutations(branchId);
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // Assume current user is dentist_owner for now (will be wired to auth context later)
-  const currentUserRole: MemberRole = 'dentist_owner';
-
-  async function fetchMembers() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/dental/org/members?branchId=${branchId}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch staff members');
-      const data = await res.json();
-      setMembers(data.items ?? []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchMembers();
-  }, [branchId]);
+  const [deactivateConfirming, setDeactivateConfirming] = useState<string | null>(null);
 
   async function handleDeactivate(memberId: string) {
     if (!confirm('Are you sure you want to deactivate this staff member?')) return;
+    setDeactivateConfirming(memberId);
     try {
-      const res = await fetch(`${API}/dental/org/members/${memberId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to deactivate member');
-      fetchMembers();
-    } catch (err: any) {
-      setError(err.message);
+      await deactivate(memberId);
+    } catch {
+      // deactivateError exposed in UI below
+    } finally {
+      setDeactivateConfirming(null);
     }
   }
 
@@ -150,7 +118,7 @@ export function StaffList({ branchId }: StaffListProps) {
             Manage your team and assign roles
           </p>
         </div>
-        {currentUserRole === 'dentist_owner' && (
+        {role === 'dentist_owner' && (
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
@@ -161,22 +129,27 @@ export function StaffList({ branchId }: StaffListProps) {
         )}
       </div>
 
-      {/* Error */}
+      {/* Errors */}
       {error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {error}
+          {error.message}
+        </div>
+      )}
+      {deactivateError && (
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+          {deactivateError.message}
         </div>
       )}
 
       {/* Loading */}
-      {loading && (
+      {isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="w-6 h-6 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin" />
         </div>
       )}
 
       {/* Empty state */}
-      {!loading && members.length === 0 && !error && (
+      {!isLoading && members.length === 0 && !error && (
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-sm">No staff members found.</p>
           <p className="text-xs mt-1">Add your first staff member to get started.</p>
@@ -184,7 +157,7 @@ export function StaffList({ branchId }: StaffListProps) {
       )}
 
       {/* Table */}
-      {!loading && members.length > 0 && (
+      {!isLoading && members.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full">
             <thead>
@@ -238,13 +211,14 @@ export function StaffList({ branchId }: StaffListProps) {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
-                    {canDeactivate(member.role, currentUserRole) && member.status === 'active' && (
+                    {canDeactivate(member.role, role) && member.status === 'active' && (
                       <button
                         type="button"
                         onClick={() => handleDeactivate(member.id)}
-                        className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                        disabled={deactivateConfirming === member.id}
+                        className="text-xs text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
                       >
-                        Deactivate
+                        {deactivateConfirming === member.id ? 'Deactivating…' : 'Deactivate'}
                       </button>
                     )}
                   </td>
@@ -260,10 +234,7 @@ export function StaffList({ branchId }: StaffListProps) {
         branchId={branchId}
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreated={() => {
-          setShowCreateModal(false);
-          fetchMembers();
-        }}
+        onCreated={() => setShowCreateModal(false)}
       />
     </div>
   );

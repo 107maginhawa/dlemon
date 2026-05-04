@@ -7,9 +7,7 @@
 
 import React, { useState } from 'react';
 import { canAccess, type DentalRole, type DentalModule } from '@/utils/rbac';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { useStaffMutations } from '../hooks/use-staff-members';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -120,12 +118,13 @@ export function buildCreateMemberPayload(form: StaffFormData): {
 // ---------------------------------------------------------------------------
 
 export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCreateModalProps) {
+  const { create, isCreating, createError, resetCreate } = useStaffMutations(branchId);
+
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<string>('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [errors, setErrors] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   if (!open) return null;
 
@@ -134,61 +133,28 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
     setRole('');
     setPin('');
     setConfirmPin('');
-    setErrors([]);
+    setValidationErrors([]);
+    resetCreate();
     onClose();
   }
 
   async function handleSubmit() {
     const form: StaffFormData = { displayName, role, pin, confirmPin, branchId };
-    const validationErrors = validateStaffForm(form);
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
+    const errs = validateStaffForm(form);
+    if (errs.length > 0) {
+      setValidationErrors(errs);
       return;
     }
 
-    setErrors([]);
-    setSaving(true);
+    setValidationErrors([]);
+    resetCreate();
 
     try {
-      const payload = buildCreateMemberPayload(form);
-      // Use the existing TypeSpec route for member creation (sets up PIN server-side)
-      // First create the membership
-      const createRes = await fetch(`${API}/dental/org/members?branchId=${branchId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          displayName: payload.displayName,
-          role: payload.role,
-        }),
-      });
-
-      // Fallback: use the nested TypeSpec route
-      if (!createRes.ok) {
-        setErrors(['Failed to create staff member']);
-        return;
-      }
-
-      const created = await createRes.json();
-
-      // Set the PIN via the reset-pin endpoint
-      const pinRes = await fetch(`${API}/dental/org/members/${created.id}/reset-pin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ pin: payload.pin }),
-      });
-
-      if (!pinRes.ok) {
-        setErrors(['Staff member created but PIN setup failed. Use reset PIN to set the PIN.']);
-        return;
-      }
-
+      await create({ displayName: displayName.trim(), role, pin });
+      handleClose();
       onCreated?.();
-    } catch (err: any) {
-      setErrors([err.message || 'An error occurred']);
-    } finally {
-      setSaving(false);
+    } catch {
+      // createError is exposed in UI
     }
   }
 
@@ -223,9 +189,14 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
           {/* Errors */}
-          {errors.length > 0 && (
+          {validationErrors.length > 0 && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-              {errors.map(e => <p key={e}>{e}</p>)}
+              {validationErrors.map(e => <p key={e}>{e}</p>)}
+            </div>
+          )}
+          {createError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+              {createError.message}
             </div>
           )}
 
@@ -356,10 +327,10 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={isCreating}
             className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
           >
-            {saving ? 'Creating...' : 'Create Staff Member'}
+            {isCreating ? 'Creating...' : 'Create Staff Member'}
           </button>
         </div>
       </div>
