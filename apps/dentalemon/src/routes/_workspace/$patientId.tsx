@@ -8,7 +8,7 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
@@ -32,6 +32,7 @@ const API = apiBaseUrl;
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
@@ -303,6 +304,7 @@ function WorkspacePage() {
         <button
           type="button"
           disabled={pendingCount === 0 && !isReadOnly}
+          onClick={() => navigate({ to: '/billing' })}
           className="rounded-lg bg-[#FFE97D] px-5 py-2 text-sm font-semibold text-[#4A4018] hover:bg-[#F5DC60] min-h-[44px] disabled:opacity-50"
           data-testid="continue-to-payment-btn"
         >
