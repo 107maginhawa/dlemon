@@ -1,85 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { useBranchSettings, useUpdateBranchSettings } from '../hooks/use-branch-settings';
 
 export function ClinicSettings() {
+  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+  const { settings, isLoading } = useBranchSettings(branchId);
+  const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
+
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [errors, setErrors] = useState<string[]>([]);
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
-
+  // Populate form when settings load
   useEffect(() => {
-    if (!branchId) { setLoading(false); return; }
-    fetch(`${API}/dental/branches/${branchId}/settings`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then((data: any) => {
-        if (data?.settings) {
-          const s = data.settings;
-          if (s.clinicName) setName(s.clinicName);
-          if (s.clinicAddress) setAddress(s.clinicAddress);
-          if (s.clinicPhone) setPhone(s.clinicPhone);
-          if (s.clinicEmail) setEmail(s.clinicEmail);
-          if (s.logoUrl) setLogoUrl(s.logoUrl);
-          if (s.dentistLicenseNumber) setLicenseNumber(s.dentistLicenseNumber);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [branchId]);
+    if (!settings) return;
+    setName(settings.clinicName ?? '');
+    setAddress(settings.clinicAddress ?? '');
+    setPhone(settings.clinicPhone ?? '');
+    setEmail(settings.clinicEmail ?? '');
+    setLogoUrl(settings.logoUrl ?? '');
+    setLicenseNumber(settings.dentistLicenseNumber ?? '');
+  }, [settings]);
 
   function validate(): string[] {
     const errs: string[] = [];
     if (!name.trim()) errs.push('Clinic name is required');
     if (!address.trim()) errs.push('Address is required');
+    if (phone.trim() && !/^[\d+\-() ]{7,}$/.test(phone.trim())) errs.push('Invalid phone format');
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.push('Invalid email format');
     return errs;
   }
 
   async function handleSave() {
     const errs = validate();
-    if (errs.length > 0) { setErrors(errs); return; }
-    setErrors([]);
+    if (errs.length > 0) { setValidationErrors(errs); return; }
+    setValidationErrors([]);
+    reset();
 
-    if (!branchId) { setErrors(['No branch selected']); return; }
+    if (!branchId) { setValidationErrors(['No branch selected']); return; }
 
-    await fetch(`${API}/dental/branches/${branchId}/settings`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await update({
         clinicName: name.trim(),
         clinicAddress: address.trim(),
-        clinicPhone: phone.trim(),
-        clinicEmail: email.trim(),
-        logoUrl: logoUrl.trim(),
-        dentistLicenseNumber: licenseNumber.trim(),
-      }),
-    });
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+        clinicPhone: phone.trim() || undefined,
+        clinicEmail: email.trim() || undefined,
+        logoUrl: logoUrl.trim() || undefined,
+        dentistLicenseNumber: licenseNumber.trim() || undefined,
+      });
+    } catch {
+      // error is exposed via saveError
+    }
   }
 
   const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none';
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
 
-  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
     <div className="flex flex-col gap-4 max-w-lg">
-      {errors.length > 0 && (
+      {validationErrors.length > 0 && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {errors.map(e => <p key={e}>{e}</p>)}
+          {validationErrors.map(e => <p key={e}>{e}</p>)}
         </div>
       )}
-      {saved && (
+      {saveError && (
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+          Failed to save: {saveError.message}
+        </div>
+      )}
+      {isSuccess && (
         <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">Settings saved</div>
       )}
       <div><label className={labelClass}>Clinic Name *</label><input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} /></div>
@@ -88,8 +82,13 @@ export function ClinicSettings() {
       <div><label className={labelClass}>Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>Logo URL</label><input type="text" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>License Number</label><input type="text" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className={inputClass} /></div>
-      <button type="button" onClick={handleSave} className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
-        Save Settings
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={isPending}
+        className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60"
+      >
+        {isPending ? 'Saving…' : 'Save Settings'}
       </button>
     </div>
   );

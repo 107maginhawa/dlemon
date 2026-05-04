@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { useBranchSettings, useUpdateBranchSettings } from '../hooks/use-branch-settings';
 
 interface FeeEntry {
   cdtCode: string;
@@ -19,7 +17,6 @@ const DEFAULT_FEES: FeeEntry[] = [
   { cdtCode: 'D7210', description: 'Surgical Extraction', priceCents: 0 },
 ];
 
-// CDT code descriptions map for known codes
 const CDT_DESCRIPTIONS: Record<string, string> = {
   D0120: 'Periodic Exam', D0150: 'Comprehensive Exam', D0274: 'Bitewings (4 films)',
   D1110: 'Prophylaxis', D2391: 'Composite (1 surface)', D2392: 'Composite (2 surfaces)',
@@ -29,32 +26,25 @@ const CDT_DESCRIPTIONS: Record<string, string> = {
 };
 
 export function FeeSchedule() {
-  const [fees, setFees] = useState<FeeEntry[]>(DEFAULT_FEES);
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-
   const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+  const { settings, isLoading } = useBranchSettings(branchId);
+  const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 
+  const [fees, setFees] = useState<FeeEntry[]>(DEFAULT_FEES);
+
+  // Populate fee table from loaded settings
   useEffect(() => {
-    if (!branchId) { setLoading(false); return; }
-    fetch(`${API}/dental/branches/${branchId}/settings`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then((data: any) => {
-        const feeSchedule: Record<string, number> = data?.settings?.feeSchedule ?? {};
-        if (Object.keys(feeSchedule).length > 0) {
-          // Build entries from saved fee schedule, merging with defaults
-          const allCodes = new Set([...DEFAULT_FEES.map(f => f.cdtCode), ...Object.keys(feeSchedule)]);
-          const entries: FeeEntry[] = Array.from(allCodes).map(code => ({
-            cdtCode: code,
-            description: CDT_DESCRIPTIONS[code] ?? DEFAULT_FEES.find(f => f.cdtCode === code)?.description ?? '',
-            priceCents: feeSchedule[code] ?? 0,
-          }));
-          setFees(entries);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [branchId]);
+    if (!settings) return;
+    const feeSchedule: Record<string, number> = settings.feeSchedule ?? {};
+    if (Object.keys(feeSchedule).length === 0) return;
+    const allCodes = new Set([...DEFAULT_FEES.map(f => f.cdtCode), ...Object.keys(feeSchedule)]);
+    const entries: FeeEntry[] = Array.from(allCodes).map(code => ({
+      cdtCode: code,
+      description: CDT_DESCRIPTIONS[code] ?? DEFAULT_FEES.find(f => f.cdtCode === code)?.description ?? '',
+      priceCents: feeSchedule[code] ?? 0,
+    }));
+    setFees(entries);
+  }, [settings]);
 
   function updateFee(index: number, priceCents: number) {
     const updated = [...fees];
@@ -68,26 +58,26 @@ export function FeeSchedule() {
   }
 
   async function handleSave() {
-    if (!branchId) return;
+    reset();
     const feeSchedule: Record<string, number> = {};
     fees.forEach(f => { if (f.cdtCode) feeSchedule[f.cdtCode] = f.priceCents; });
-
-    await fetch(`${API}/dental/branches/${branchId}/settings`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feeSchedule }),
-    });
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await update({ feeSchedule });
+    } catch {
+      // error is exposed via saveError
+    }
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
     <div className="flex flex-col gap-4">
-      {saved && (
+      {saveError && (
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+          Failed to save: {saveError.message}
+        </div>
+      )}
+      {isSuccess && (
         <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">Fee schedule saved</div>
       )}
       <div className="rounded-xl border border-border overflow-hidden">
@@ -132,8 +122,13 @@ export function FeeSchedule() {
         <button type="button" onClick={addRow} className="h-9 px-4 rounded-lg border border-dashed border-border text-sm text-muted-foreground hover:bg-secondary transition-colors">
           + Add Row
         </button>
-        <button type="button" onClick={handleSave} className="h-9 px-6 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
-          Save
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isPending}
+          className="h-9 px-6 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60"
+        >
+          {isPending ? 'Saving…' : 'Save'}
         </button>
       </div>
     </div>
