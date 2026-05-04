@@ -14,6 +14,7 @@ export default defineConfig({
     tanstackRouter({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
+      routeFileIgnorePattern: /\.test\.(ts|tsx)$/,
     }),
     viteReact(),
   ],

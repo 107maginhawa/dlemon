@@ -26,29 +26,31 @@ export const Route = createFileRoute('/_dashboard')({
     // (unless the user is already on the dental-onboarding route itself)
     const pathname = opts.location?.pathname ?? ''
     if (!pathname.includes('dental-onboarding')) {
+      // Always refresh org context from API — ensures localStorage is never stale
+      // (e.g. after re-seeding, branch ID changes, or first load after onboarding)
+      try {
+        const res = await fetch(`${apiBaseUrl}/dental/org/context`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const ctx = await res.json() as any
+          if (ctx.branch?.id) {
+            localStorage.setItem('currentBranchId', ctx.branch.id)
+            if (ctx.org?.id) localStorage.setItem('currentOrgId', ctx.org.id)
+            if (ctx.member?.role) localStorage.setItem('currentMemberRole', ctx.member.role)
+            if (ctx.member?.id) localStorage.setItem('currentMemberId', ctx.member.id)
+            return
+          }
+        }
+      } catch {
+        // API unreachable — fall through to onboarding check
+      }
+
+      // No branch found — redirect to onboarding if localStorage also has nothing
       const currentBranchId = typeof localStorage !== 'undefined'
         ? localStorage.getItem('currentBranchId')
         : null
       if (!currentBranchId) {
-        // Try to auto-detect org/branch from API (e.g. seeded via script)
-        try {
-          const res = await fetch(`${apiBaseUrl}/dental/org/context`, {
-            credentials: 'include',
-          })
-          if (res.ok) {
-            const ctx = await res.json() as any
-            if (ctx.branch?.id) {
-              localStorage.setItem('currentBranchId', ctx.branch.id)
-              if (ctx.org?.id) localStorage.setItem('currentOrgId', ctx.org.id)
-              if (ctx.member?.role) localStorage.setItem('currentMemberRole', ctx.member.role)
-              if (ctx.member?.id) localStorage.setItem('currentMemberId', ctx.member.id)
-              // Context found — continue to dashboard instead of redirecting to onboarding
-              return
-            }
-          }
-        } catch {
-          // API unreachable — fall through to onboarding
-        }
         throw redirect({ to: '/dental-onboarding' as any })
       }
     }
