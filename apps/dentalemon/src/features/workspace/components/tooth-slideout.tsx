@@ -7,7 +7,7 @@
  * Wireframe: docs/prd/context/wireframes/ws-tooth-slideout.html
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiveSurfaceSelector } from './five-surface-selector.tsx';
 import type { ToothSurface } from './five-surface-selector.helpers';
 
@@ -30,7 +30,8 @@ export interface ToothSlideoutData {
   surfaces: ToothSurface[];
   cdtCode?: string;
   description?: string;
-  priceCents?: number;
+  /** Raw price string as entered by the user (e.g. "1500"). No cents conversion. */
+  priceInput?: string;
   conditionCode?: string;
 }
 
@@ -49,8 +50,19 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
   const [surfaces, setSurfaces] = useState<ToothSurface[]>([]);
   const [cdtCode, setCdtCode] = useState('');
   const [description, setDescription] = useState('');
-  const [priceCents, setPriceCents] = useState('');
+  const [priceInput, setPriceInput] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Reset all step state when a different tooth is selected (D11)
+  useEffect(() => {
+    setStep('condition');
+    setState('');
+    setConditionCode('');
+    setSurfaces([]);
+    setCdtCode('');
+    setDescription('');
+    setPriceInput('');
+  }, [toothNumber]);
 
   if (!open || !toothNumber) return null;
 
@@ -71,7 +83,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
         surfaces,
         cdtCode: cdtCode || undefined,
         description: description || undefined,
-        priceCents: priceCents ? parseInt(priceCents) * 100 : undefined,
+        priceInput: priceInput || undefined,
         conditionCode: conditionCode || undefined,
       });
       onClose();
@@ -195,8 +207,8 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
               <input
                 id="treatment-price"
                 type="number"
-                value={priceCents}
-                onChange={e => setPriceCents(e.target.value)}
+                value={priceInput}
+                onChange={e => setPriceInput(e.target.value)}
                 placeholder="0"
                 min="0"
                 className="rounded-lg border border-border px-3 py-2 text-sm"
@@ -228,10 +240,10 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
                   <span className="font-medium">{cdtCode}</span>
                 </div>
               )}
-              {priceCents && (
+              {priceInput && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-medium">₱{parseInt(priceCents).toLocaleString()}</span>
+                  <span className="font-medium">₱{parseFloat(priceInput).toLocaleString('en-PH')}</span>
                 </div>
               )}
             </div>

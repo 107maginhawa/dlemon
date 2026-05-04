@@ -2,7 +2,7 @@
  * Workspace Route — /_workspace/$patientId
  *
  * Full-screen clinical workspace for a patient visit.
- * Left zone: Timeline Carousel + Dental Chart
+ * Left zone: WorkspaceTabs + Timeline Carousel + Dental Chart
  * Right zone: Tooth Slideout (when tooth selected)
  *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
@@ -10,13 +10,19 @@
 
 import { createFileRoute } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
-import type { VisitCard } from '@/features/workspace/components/timeline-carousel';
 import { DentalChart } from '@/features/workspace/components/dental-chart.tsx';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
+import { WorkspaceTabs } from '@/features/workspace/components/workspace-tabs';
+import type { WorkspaceTab } from '@/features/workspace/components/workspace-tabs';
+import { useVisits } from '@/features/workspace/hooks/use-visits';
+import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
+import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { apiBaseUrl } from '@/utils/config';
+import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -26,89 +32,36 @@ const API = apiBaseUrl;
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
-  const [visits, setVisits] = useState<VisitCard[]>([]);
+  const queryClient = useQueryClient();
+
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('odontogram');
   const [pmdShared, setPmdShared] = useState(false);
-  const [teeth, setTeeth] = useState<ToothData[]>([]);
-  const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
-  const [treatments, setTreatments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Load visits for this patient
+  // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
+  const { visits, isLoading: visitsLoading } = useVisits({ patientId });
+  const { teeth, selectedTooth, selectTooth, clearSelection, refetch: refetchChart } =
+    useDentalChart({ visitId: currentVisitId });
+  const { treatments, refetch: refetchTreatments } =
+    useTreatments({ visitId: currentVisitId });
+
+  // Auto-select active or most recent visit once visits load
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`${API}/dental/visits?patientId=${patientId}`, {
-          credentials: 'include',
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        setVisits(data.items ?? []);
+    if (!visits.length) return;
+    if (currentVisitId) return; // already selected
+    const active = visits.find((v) => v.status === 'active');
+    setCurrentVisitId((active ?? visits[0])?.id ?? null);
+  }, [visits]);
 
-        // Auto-select active or most recent visit
-        const active = data.items?.find((v: VisitCard) => v.status === 'active');
-        const recent = data.items?.[0];
-        const auto = active ?? recent;
-        if (auto) {
-          setCurrentVisitId(auto.id);
-          await loadChart(auto.id);
-          await loadTreatments(auto.id);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [patientId]);
+  const currentVisit = visits.find((v) => v.id === currentVisitId);
+  const isReadOnly =
+    currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
 
-  async function loadChart(visitId: string) {
-    const res = await fetch(`${API}/dental/visits/${visitId}/chart`, { credentials: 'include' });
-    if (res.ok) {
-      const chart = await res.json();
-      setTeeth(chart.teeth ?? []);
-    } else {
-      setTeeth([]);
-    }
-  }
-
-  async function loadTreatments(visitId: string) {
-    const res = await fetch(`${API}/dental/visits/${visitId}/treatments`, { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      setTreatments(data.items ?? []);
-    }
-  }
+  // ── Mutations ─────────────────────────────────────────────────────────────
 
   async function handleSelectVisit(visitId: string) {
     setCurrentVisitId(visitId);
-    setSelectedTooth(null);
-    await loadChart(visitId);
-    await loadTreatments(visitId);
-  }
-
-  const currentVisit = visits.find(v => v.id === currentVisitId);
-  const isCompletedVisit = currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
-
-  async function handleSharePMD() {
-    if (!currentVisitId) return;
-    setPmdShared(false);
-    const res = await fetch(`${API}/dental/visits/${currentVisitId}/pmd`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ visitId: currentVisitId, patientId }),
-    });
-    if (res.ok) {
-      const pmd = await res.json();
-      // Trigger device share or show checksum as confirmation
-      if (navigator.share) {
-        navigator.share({
-          title: 'Portable Medical Document',
-          text: `PMD for visit — Checksum: ${pmd.checksum}`,
-        }).catch(() => {});
-      }
-      setPmdShared(true);
-    }
+    clearSelection();
   }
 
   async function handleNewVisit() {
@@ -124,24 +77,39 @@ function WorkspacePage() {
     });
     if (!res.ok) return;
     const visit = await res.json();
-    setVisits(prev => [visit, ...prev]);
+    queryClient.invalidateQueries({ queryKey: ['dental-visits', patientId] });
     setCurrentVisitId(visit.id);
-    setTeeth([]);
-    setTreatments([]);
   }
 
-  function handleSelectTooth(toothNumber: number) {
-    setSelectedTooth(prev => prev === toothNumber ? null : toothNumber);
+  async function handleSharePMD() {
+    if (!currentVisitId) return;
+    const res = await fetch(`${API}/dental/visits/${currentVisitId}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ visitId: currentVisitId, patientId }),
+    });
+    if (res.ok) {
+      const pmd = await res.json();
+      if (navigator.share) {
+        navigator.share({
+          title: 'Portable Medical Document',
+          text: `PMD for visit — Checksum: ${pmd.checksum}`,
+        }).catch(() => {});
+      }
+      setPmdShared(true);
+    }
   }
 
   async function handleSaveToothData(data: ToothSlideoutData) {
     if (!currentVisitId || !selectedTooth) return;
 
-    const updatedTeeth = [...teeth];
-    const idx = updatedTeeth.findIndex(t => t.toothNumber === selectedTooth);
+    // Build updated teeth array for chart save
+    const updatedTeeth: ToothData[] = [...teeth];
+    const idx = updatedTeeth.findIndex((t) => t.toothNumber === selectedTooth);
     const toothEntry: ToothData = {
       toothNumber: selectedTooth,
-      state: data.state,
+      state: data.state as ToothData['state'],
       surfaces: data.surfaces,
       conditionCode: data.conditionCode,
     };
@@ -155,7 +123,8 @@ function WorkspacePage() {
       body: JSON.stringify({ visitId: currentVisitId, patientId, teeth: updatedTeeth }),
     });
 
-    if (data.cdtCode && data.description && data.priceCents) {
+    // Add treatment if a procedure was specified
+    if (data.cdtCode && data.description && data.priceInput) {
       await fetch(`${API}/dental/visits/${currentVisitId}/treatments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,17 +137,22 @@ function WorkspacePage() {
           toothNumber: selectedTooth,
           surfaces: data.surfaces,
           conditionCode: data.conditionCode,
-          priceCents: data.priceCents,
+          // priceInput is a string input; convert to number for the API
+          priceAmount: parseFloat(data.priceInput) || 0,
+          currency: 'PHP',
+          status: 'diagnosed',
         }),
       });
-      await loadTreatments(currentVisitId);
+      refetchTreatments();
     }
 
-    setTeeth(updatedTeeth);
-    setSelectedTooth(null);
+    refetchChart();
+    clearSelection();
   }
 
-  if (loading) {
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  if (visitsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <span className="text-sm text-muted-foreground">Loading workspace…</span>
@@ -186,21 +160,30 @@ function WorkspacePage() {
     );
   }
 
-  const totalCents = treatments.reduce((sum, t) => sum + (t.priceCents ?? 0), 0);
-  const pendingCount = treatments.filter(t => t.status !== 'performed').length;
+  // ── Derived values ────────────────────────────────────────────────────────
+
+  const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+  const pendingCount = treatments.filter(
+    (t) => t.status === 'diagnosed' || t.status === 'planned',
+  ).length;
 
   return (
     <div className="flex h-full flex-col">
+      {/* Workspace tabs */}
+      <div className="shrink-0 border-b px-4 pt-2">
+        <WorkspaceTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+
       {/* Timeline Carousel */}
       <div className="shrink-0 border-b bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between">
           <TimelineCarousel
-            visits={visits}
+            visits={visits as any}
             currentVisitId={currentVisitId ?? undefined}
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
           />
-          {isCompletedVisit && (
+          {isReadOnly && (
             <button
               type="button"
               data-testid="share-pmd-btn"
@@ -219,15 +202,23 @@ function WorkspacePage() {
         {/* Dental Chart + Treatment List zone */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto">
-            {currentVisitId ? (
+            {activeTab === 'odontogram' && currentVisitId ? (
               <DentalChart
                 teeth={teeth}
                 selectedTooth={selectedTooth}
-                onSelectTooth={handleSelectTooth}
+                onSelectTooth={selectTooth}
               />
+            ) : activeTab === 'odontogram' ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Select or create a visit to begin.
+                </p>
+              </div>
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-muted-foreground">Select or create a visit to begin.</p>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {activeTab.replace('-', ' ')} — coming in PR2
+                </p>
               </div>
             )}
           </div>
@@ -238,26 +229,49 @@ function WorkspacePage() {
               <table className="w-full text-sm" aria-label="Treatments">
                 <thead className="sticky top-0 bg-muted/60">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Tooth</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">CDT</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Description</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Amount</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
+                      Tooth
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
+                      CDT
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
+                      Description
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">
+                      Amount
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {treatments.map((t) => (
                     <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
                       <td className="px-4 py-2 font-medium">{t.toothNumber ?? '—'}</td>
-                      <td className="px-4 py-2 font-mono text-xs">{t.cdtCode ?? '—'}</td>
-                      <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">{t.description ?? '—'}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">₱{((t.priceCents ?? 0) / 100).toLocaleString()}</td>
+                      <td className="px-4 py-2 font-mono text-xs">
+                        {(t as any).cdtCode ?? (t as any).procedureCode ?? '—'}
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
+                        {(t as any).description ?? t.procedureName ?? '—'}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums">
+                        {CURRENCY_SYMBOL}
+                        {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}
+                      </td>
                       <td className="px-4 py-2">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                          t.status === 'performed' ? 'bg-green-100 text-green-700' :
-                          t.status === 'proposed' ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-500'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                            t.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : t.status === 'diagnosed' || t.status === 'planned'
+                              ? 'bg-blue-100 text-blue-700'
+                              : t.status === 'in_progress'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
                           {t.status}
                         </span>
                       </td>
@@ -273,9 +287,9 @@ function WorkspacePage() {
         <ToothSlideout
           toothNumber={selectedTooth}
           open={selectedTooth !== null && currentVisitId !== null}
-          onClose={() => setSelectedTooth(null)}
+          onClose={clearSelection}
           onSave={handleSaveToothData}
-          readOnly={isCompletedVisit}
+          readOnly={isReadOnly}
         />
       </div>
 
@@ -284,15 +298,15 @@ function WorkspacePage() {
         <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
           {treatments.length === 0
             ? 'No treatments recorded'
-            : `${treatments.length} treatment${treatments.length !== 1 ? 's' : ''} · ₱${(totalCents / 100).toLocaleString()}`}
+            : `${treatments.length} treatment${treatments.length !== 1 ? 's' : ''} · ${CURRENCY_SYMBOL}${totalAmount.toLocaleString(APP_LOCALE)}`}
         </span>
         <button
           type="button"
-          disabled={pendingCount === 0 && !isCompletedVisit}
+          disabled={pendingCount === 0 && !isReadOnly}
           className="rounded-lg bg-[#FFE97D] px-5 py-2 text-sm font-semibold text-[#4A4018] hover:bg-[#F5DC60] min-h-[44px] disabled:opacity-50"
           data-testid="continue-to-payment-btn"
         >
-          {isCompletedVisit ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
+          {isReadOnly ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
         </button>
       </footer>
     </div>

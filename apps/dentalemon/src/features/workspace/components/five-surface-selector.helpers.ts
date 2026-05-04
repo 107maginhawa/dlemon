@@ -5,7 +5,7 @@
  * Anterior teeth (canines, incisors) have "incisal" instead of "occlusal".
  */
 
-export type ToothSurface = 'mesial' | 'distal' | 'buccal' | 'lingual' | 'occlusal' | 'incisal' | 'cervical';
+export type ToothSurface = 'mesial' | 'distal' | 'buccal' | 'lingual' | 'occlusal' | 'incisal';
 
 /**
  * FDI anterior teeth: 1-digit suffix 1, 2, 3 in any quadrant

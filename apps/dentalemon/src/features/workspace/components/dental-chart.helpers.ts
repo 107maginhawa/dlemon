@@ -9,7 +9,7 @@ export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown'
 
 export interface ToothData {
   toothNumber: number;
-  state: ToothState | string;
+  state: ToothState;
   surfaces?: string[];
   conditionCode?: string;
   note?: string;
@@ -55,6 +55,49 @@ export function buildToothMap(teeth: Array<{ toothNumber: number; state: string 
  * extracted → tooth-extracted
  * watchlist → yellow
  */
+// ─── FDI ↔ Universal (American) numbering adapters ─────────────────────────
+//
+// FDI (international, used by backend + this app):
+//   Upper right: 11–18  Upper left: 21–28
+//   Lower left:  31–38  Lower right: 41–48
+//
+// Universal (American, 1–32, used by some reference libraries):
+//   Upper right: 1–8    Upper left: 9–16
+//   Lower left:  17–24  Lower right: 25–32
+
+const FDI_TO_UNIVERSAL: Record<number, number> = {
+  // Upper right (FDI 11=UR central=U8, FDI 18=UR wisdom=U1)
+  11: 8, 12: 7, 13: 6, 14: 5, 15: 4, 16: 3, 17: 2, 18: 1,
+  // Upper left (FDI 21=UL central=U9, FDI 28=UL wisdom=U16)
+  21: 9, 22: 10, 23: 11, 24: 12, 25: 13, 26: 14, 27: 15, 28: 16,
+  // Lower left (FDI 31=LL central=U24, FDI 38=LL wisdom=U17)
+  31: 24, 32: 23, 33: 22, 34: 21, 35: 20, 36: 19, 37: 18, 38: 17,
+  // Lower right (FDI 41=LR central=U25, FDI 48=LR wisdom=U32)
+  41: 25, 42: 26, 43: 27, 44: 28, 45: 29, 46: 30, 47: 31, 48: 32,
+};
+
+const UNIVERSAL_TO_FDI: Record<number, number> = Object.fromEntries(
+  Object.entries(FDI_TO_UNIVERSAL).map(([fdi, uni]) => [uni, Number(fdi)]),
+);
+
+/**
+ * Convert an FDI tooth number (11–48) to the Universal (American) number (1–32).
+ * Returns NaN for invalid input.
+ */
+export function fdiToUniversal(fdiNumber: number): number {
+  return FDI_TO_UNIVERSAL[fdiNumber] ?? NaN;
+}
+
+/**
+ * Convert a Universal (American) tooth number (1–32) to FDI (11–48).
+ * Returns NaN for invalid input.
+ */
+export function universalToFdi(universalNumber: number): number {
+  return UNIVERSAL_TO_FDI[universalNumber] ?? NaN;
+}
+
+// ─── Color class map ────────────────────────────────────────────────────────
+
 export function getToothColorClass(state: ToothState | string): string {
   switch (state) {
     case 'healthy':   return 'tooth-healthy text-green-600 fill-green-100';
