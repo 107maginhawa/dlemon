@@ -68,7 +68,17 @@ async function seedAll() {
     timezone: 'Asia/Manila',
     active: true,
   });
-  return new MembershipRepository(db);
+  const membershipRepo = new MembershipRepository(db);
+  // Seed caller as dentist_owner so the P0 auth check passes
+  await membershipRepo.createOne({
+    branchId: BRANCH_ID,
+    personId: PERSON_ID,
+    displayName: 'Owner',
+    role: 'dentist_owner',
+    status: 'active',
+    pinFailedAttempts: 0,
+  });
+  return membershipRepo;
 }
 
 describe('resetMemberPin handler', () => {

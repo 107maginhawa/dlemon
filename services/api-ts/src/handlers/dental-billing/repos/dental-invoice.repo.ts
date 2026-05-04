@@ -178,12 +178,12 @@ export class DentalInvoiceRepository {
         balanceCents: sql`${dentalInvoices.totalCents} - GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents})`,
         status: sql`CASE
           WHEN GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents}) = 0
-            THEN CASE WHEN ${dentalInvoices.issuedAt} IS NOT NULL THEN 'issued' ELSE 'draft' END
+            THEN CASE WHEN ${dentalInvoices.issuedAt} IS NOT NULL THEN 'issued'::dental_invoice_status ELSE 'draft'::dental_invoice_status END
           WHEN ${dentalInvoices.totalCents} - GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents}) > 0
-            THEN 'partial'
+            THEN 'partial'::dental_invoice_status
           ELSE ${dentalInvoices.status}
         END`,
-        paidAt: sql`NULL`,
+        paidAt: null,
         updatedAt: new Date(),
       } as any)
       .where(eq(dentalInvoices.id, invoiceId))

@@ -254,7 +254,7 @@ describe('FR8.13: Access Control — dentist_owner only for settings updates', (
     expect(res.status).toBe(403);
   });
 
-  test('user without membership can still update (no role restriction for non-members)', async () => {
+  test('user without membership is blocked (403)', async () => {
     await seedData();
     const unknownUser = { id: '00000000-0000-0000-0000-000000000099', email: 'unknown@test.com' };
     const app = buildTestApp(unknownUser as any); // no membership
@@ -263,8 +263,8 @@ describe('FR8.13: Access Control — dentist_owner only for settings updates', (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: { clinicName: 'Test' } }),
     });
-    // No membership found → no role → not blocked (null role = allowed)
-    expect(res.status).toBe(200);
+    // P0 auth: no membership → not dentist_owner → blocked
+    expect(res.status).toBe(403);
   });
 });
 

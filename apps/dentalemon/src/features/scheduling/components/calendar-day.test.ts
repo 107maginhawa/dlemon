@@ -45,9 +45,9 @@ function groupAppointmentsByHour(appointments: SimpleAppointment[]): Record<numb
 // ---------------------------------------------------------------------------
 
 describe('CalendarDay — generateTimeSlots', () => {
-  test('returns 24 slots (7AM-7PM @ 30min)', () => {
+  test('returns 30 slots (7AM-10PM @ 30min)', () => {
     const slots = generateTimeSlots();
-    expect(slots).toHaveLength(24);
+    expect(slots).toHaveLength(30);
   });
 
   test('first slot is 07:00', () => {
@@ -57,12 +57,12 @@ describe('CalendarDay — generateTimeSlots', () => {
     expect(slots[0].label).toBe('7:00 AM');
   });
 
-  test('last slot is 18:30', () => {
+  test('last slot is 21:30', () => {
     const slots = generateTimeSlots();
     const last = slots[slots.length - 1];
-    expect(last.hour).toBe(18);
+    expect(last.hour).toBe(21);
     expect(last.minute).toBe(30);
-    expect(last.label).toBe('6:30 PM');
+    expect(last.label).toBe('9:30 PM');
   });
 });
 

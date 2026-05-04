@@ -54,9 +54,8 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
 }
 
 export async function recoverPin(ctx: Context): Promise<Response> {
-  const user = ctx.get('user') as User | undefined;
-  if (!user?.id) throw new UnauthorizedError('Authentication required');
-
+  // FR9.7: PIN recovery is intentionally unauthenticated — the user is locked out
+  // and cannot authenticate. The security answer is the auth mechanism here.
   const memberId = ctx.req.param('memberId')!;
   let body: any;
   try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
