@@ -1,8 +1,9 @@
 /**
  * PatientFolderCard
  *
- * A compact card showing a patient's name, avatar initials, visit count,
- * and status indicators (follow-up needed, has balance).
+ * Manila folder–style card showing patient info.
+ * Gold tab strip at top (#FFE97D), horizontal layout (avatar + meta),
+ * status badges for follow-up and outstanding balance.
  *
  * Wireframe: docs/prd/context/wireframes/patient-list.html
  */
@@ -32,7 +33,25 @@ function initials(name: string): string {
   return (words[0] ?? '?').slice(0, 2).toUpperCase();
 }
 
+/** Split "First Last" → ["LAST", "First"] for the manila folder name format. */
+function nameParts(displayName: string): { lastName: string; firstName: string } {
+  const parts = displayName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { lastName: parts[0]!.toUpperCase(), firstName: '' };
+  }
+  const last = parts[parts.length - 1]!;
+  const first = parts.slice(0, -1).join(' ');
+  return { lastName: last.toUpperCase(), firstName: first };
+}
+
+function formatLastVisit(date?: Date): string {
+  if (!date) return 'No visits';
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) {
+  const { lastName, firstName } = nameParts(patient.displayName);
+
   return (
     <div
       data-testid="patient-folder-card"
@@ -41,43 +60,67 @@ export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) 
       aria-label={`Open patient record for ${patient.displayName}`}
       onClick={() => onClick(patient)}
       onKeyDown={(e) => e.key === 'Enter' && onClick(patient)}
-      className="relative flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer w-36"
+      className="relative flex flex-col rounded-xl bg-card border border-border hover:border-primary/60 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer overflow-hidden w-48"
     >
-      {/* Status indicators */}
-      <div className="absolute top-2 right-2 flex gap-1">
-        {patient.needsFollowUp && (
-          <span
-            data-testid="follow-up-indicator"
-            className="w-2 h-2 rounded-full bg-yellow-400"
-            title="Follow-up needed"
-          />
-        )}
-        {patient.hasBalance && (
-          <span
-            data-testid="balance-badge"
-            className="w-2 h-2 rounded-full bg-red-400"
-            title="Outstanding balance"
-          />
-        )}
-      </div>
-
-      {/* Avatar */}
+      {/* Manila folder tab strip */}
       <div
-        data-testid="patient-avatar"
-        className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-base font-bold select-none"
-      >
-        {initials(patient.displayName)}
+        data-testid="folder-tab"
+        className="h-2 w-full bg-[#FFE97D]"
+        aria-hidden="true"
+      />
+
+      {/* Card body */}
+      <div className="flex items-start gap-3 p-3">
+        {/* Avatar */}
+        <div
+          data-testid="patient-avatar"
+          className="w-10 h-10 shrink-0 rounded-full bg-[#FFE97D]/30 flex items-center justify-center text-sm font-bold text-[#4A4018] select-none"
+        >
+          {initials(patient.displayName)}
+        </div>
+
+        {/* Meta */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold tracking-wide truncate text-foreground">
+            {lastName}
+          </p>
+          {firstName && (
+            <p className="text-xs text-muted-foreground truncate">{firstName}</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            {patient.visitCount} {patient.visitCount === 1 ? 'visit' : 'visits'}
+          </p>
+        </div>
       </div>
 
-      {/* Name */}
-      <span className="font-medium text-xs text-center leading-tight line-clamp-2">
-        {patient.displayName}
-      </span>
+      {/* Status badges */}
+      {(patient.needsFollowUp || patient.hasBalance) && (
+        <div className="flex gap-1 px-3 pb-2">
+          {patient.needsFollowUp && (
+            <span
+              data-testid="follow-up-indicator"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium"
+              title="Follow-up needed"
+            >
+              Follow-up
+            </span>
+          )}
+          {patient.hasBalance && (
+            <span
+              data-testid="balance-badge"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium"
+              title="Outstanding balance"
+            >
+              Balance
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Visit count */}
-      <span className="text-xs text-muted-foreground">
-        {patient.visitCount} {patient.visitCount === 1 ? 'visit' : 'visits'}
-      </span>
+      {/* Last visit */}
+      <div className="px-3 pb-2.5">
+        <p className="text-[10px] text-muted-foreground/70">{formatLastVisit(patient.lastVisit)}</p>
+      </div>
     </div>
   );
 }

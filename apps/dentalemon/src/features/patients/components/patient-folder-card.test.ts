@@ -23,9 +23,11 @@ const basePatient = {
 };
 
 describe('PatientFolderCard', () => {
-  test('renders patient display name', () => {
+  test('renders patient last name (uppercase) and first name separately', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
-    expect(screen.getByText('Maria Santos')).toBeTruthy();
+    // New manila folder layout: "SANTOS" on one line, "Maria" on another
+    expect(screen.getByText('SANTOS')).toBeTruthy();
+    expect(screen.getByText('Maria')).toBeTruthy();
   });
 
   test('renders avatar initials from display name', () => {
@@ -76,5 +78,16 @@ describe('PatientFolderCard', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
     const card = screen.getByTestId('patient-folder-card');
     expect(card.getAttribute('role')).toBe('button');
+  });
+
+  test('renders the manila folder tab strip', () => {
+    render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
+    expect(screen.getByTestId('folder-tab')).toBeTruthy();
+  });
+
+  test('folder tab has lemon gold color class', () => {
+    render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
+    const tab = screen.getByTestId('folder-tab');
+    expect(tab.className).toContain('bg-[#FFE97D]');
   });
 });
