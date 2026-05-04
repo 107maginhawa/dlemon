@@ -60,6 +60,8 @@ export interface InvoiceDetailProps {
   open: boolean;
   onClose: () => void;
   onUpdated?: () => void;
+  /** Called when the user clicks "View Payment Plan" */
+  onViewPlan?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +157,7 @@ const METHOD_LABELS: Record<string, string> = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function InvoiceDetail({ invoiceId, open, onClose, onUpdated }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan }: InvoiceDetailProps) {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -546,6 +548,15 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated }: InvoiceDe
                 className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
               >
                 Record Payment
+              </button>
+            )}
+            {onViewPlan && (
+              <button
+                type="button"
+                onClick={onViewPlan}
+                className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors"
+              >
+                View Payment Plan
               </button>
             )}
             {canVoid(invoice.status) && (

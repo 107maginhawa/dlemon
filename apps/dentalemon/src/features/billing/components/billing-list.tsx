@@ -7,10 +7,9 @@
  * Wireframe: docs/prd/context/wireframes/billing-list.html
  */
 
-import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useInvoices } from '../hooks/use-invoices';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -129,33 +128,18 @@ const FILTER_LABELS: Record<FilterTab, string> = {
 // ---------------------------------------------------------------------------
 
 export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
-  useEffect(() => {
-    loadInvoices();
-  }, [activeTab, branchId]);
+  const { invoices, isLoading: loading, error, refetch } = useInvoices({
+    branchId,
+    status: activeTab !== 'all' ? activeTab : undefined,
+  });
 
-  async function loadInvoices() {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (activeTab !== 'all') params.set('status', activeTab);
-      if (branchId) params.set('branchId', branchId);
-      const qs = params.toString();
-      const url = `${API}/dental/billing/invoices${qs ? `?${qs}` : ''}`;
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load invoices');
-      const data = await res.json();
-      setInvoices(Array.isArray(data) ? data : data.invoices ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
+  function handleTabChange(tab: FilterTab) {
+    setActiveTab(tab);
+    // Invalidate so switching tabs always fetches fresh data
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
   }
 
   const summary = summarizeInvoices(invoices);
@@ -204,7 +188,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
             type="button"
             role="tab"
             aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`h-[30px] px-3.5 rounded-lg text-[13px] font-medium tracking-tight transition-colors ${
               activeTab === tab
                 ? 'bg-background shadow-sm font-semibold text-foreground'
@@ -218,8 +202,9 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {error}
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive flex items-center justify-between">
+          <span>{error.message}</span>
+          <button type="button" onClick={() => refetch()} className="text-xs underline ml-2">Retry</button>
         </div>
       )}
 
