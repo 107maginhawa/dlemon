@@ -1,16 +1,19 @@
 /**
  * Calendar page — scheduling view with day/week toggle
  *
- * Fetches appointments from the API and renders CalendarDay or CalendarWeek.
- * Top bar: date navigation, view toggle, new appointment button.
+ * Fetches appointments via useAppointments (TanStack Query).
+ * Top bar: date navigation, view toggle, new appointment / walk-in buttons.
+ * Appointment click opens the edit modal.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { CalendarDay } from '../../features/scheduling/components/calendar-day';
 import { CalendarWeek } from '../../features/scheduling/components/calendar-week';
 import { AppointmentModal } from '../../features/scheduling/components/appointment-modal';
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
+import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { apiBaseUrl } from '@/utils/config';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
@@ -24,15 +27,15 @@ function todayISO(): string {
 }
 
 function getMondayOfWeek(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T12:00:00');
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday = 1
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
 }
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T12:00:00');
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
@@ -49,7 +52,7 @@ function formatDateTitle(dateStr: string): string {
 
 function formatWeekTitle(weekStart: string): string {
   const start = new Date(weekStart + 'T12:00:00');
-  const end = new Date(start);
+  const end = new Date(weekStart + 'T12:00:00');
   end.setDate(end.getDate() + 6);
   const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -57,69 +60,49 @@ function formatWeekTitle(weekStart: string): string {
 }
 
 function CalendarPage() {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<'day' | 'week'>('day');
   const [selectedDate, setSelectedDate] = useState(todayISO());
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
+  const [editAppointmentId, setEditAppointmentId] = useState<string | undefined>();
 
   const weekStart = getMondayOfWeek(selectedDate);
 
-  const loadAppointments = useCallback(async () => {
-    setLoading(true);
-    try {
-      const url = view === 'day'
-        ? `${API}/dental/appointments?date=${selectedDate}`
-        : `${API}/dental/appointments?weekStart=${weekStart}`;
-      const res = await fetch(url, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setAppointments(Array.isArray(data) ? data : data.appointments || []);
-      }
-    } catch {
-      // Network error — keep current data
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDate, weekStart, view]);
+  const { appointments, isLoading, error, refetch } = useAppointments({ date: selectedDate, view });
 
-  useEffect(() => {
-    loadAppointments();
-  }, [loadAppointments]);
+  function invalidateAppointments() {
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+  }
 
   function handlePrev() {
-    if (view === 'day') {
-      setSelectedDate(addDays(selectedDate, -1));
-    } else {
-      setSelectedDate(addDays(selectedDate, -7));
-    }
+    setSelectedDate((d) => addDays(d, view === 'day' ? -1 : -7));
   }
 
   function handleNext() {
-    if (view === 'day') {
-      setSelectedDate(addDays(selectedDate, 1));
-    } else {
-      setSelectedDate(addDays(selectedDate, 7));
-    }
+    setSelectedDate((d) => addDays(d, view === 'day' ? 1 : 7));
   }
 
   function handleToday() {
     setSelectedDate(todayISO());
   }
 
-  function handleSlotClick(time: string) {
+  function handleSlotClick(_time: string) {
+    setEditAppointmentId(undefined);
     setModalInitialDate(selectedDate);
     setModalOpen(true);
   }
 
-  function handleNewAppointment(walkIn = false) {
+  function handleNewAppointment(_walkIn = false) {
+    setEditAppointmentId(undefined);
     setModalInitialDate(selectedDate);
     setModalOpen(true);
   }
 
   function handleAppointmentClick(appointment: Appointment) {
-    // For now, just log — could open detail modal
+    setEditAppointmentId(appointment.id);
+    setModalInitialDate(undefined);
+    setModalOpen(true);
   }
 
   async function handleCheckIn(appointmentId: string) {
@@ -128,11 +111,9 @@ function CalendarPage() {
         method: 'POST',
         credentials: 'include',
       });
-      if (res.ok) {
-        loadAppointments();
-      }
+      if (res.ok) invalidateAppointments();
     } catch {
-      // Network error
+      // Network error — ignore silently
     }
   }
 
@@ -142,7 +123,9 @@ function CalendarPage() {
   }
 
   function handleSaved() {
-    loadAppointments();
+    setModalOpen(false);
+    setEditAppointmentId(undefined);
+    invalidateAppointments();
   }
 
   const dateTitle = view === 'day' ? formatDateTitle(selectedDate) : formatWeekTitle(weekStart);
@@ -230,10 +213,20 @@ function CalendarPage() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="mx-4 mt-3 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive flex items-center justify-between">
+          <span>{error.message}</span>
+          <button type="button" onClick={() => refetch()} className="text-xs underline ml-2">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Calendar content */}
-      {loading && appointments.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Loading appointments...
+      {isLoading && appointments.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm" aria-label="Loading appointments">
+          Loading appointments…
         </div>
       ) : view === 'day' ? (
         <CalendarDay
@@ -252,12 +245,13 @@ function CalendarPage() {
         />
       )}
 
-      {/* Appointment modal */}
+      {/* Appointment modal — create or edit */}
       <AppointmentModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setEditAppointmentId(undefined); }}
         onSaved={handleSaved}
         initialDate={modalInitialDate}
+        appointmentId={editAppointmentId}
       />
     </div>
   );
