@@ -18,6 +18,7 @@ import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
 import { WorkspaceTabs } from '@/features/workspace/components/workspace-tabs';
 import type { WorkspaceTab } from '@/features/workspace/components/workspace-tabs';
+import { MedicalHistoryForm } from '@/features/workspace/components/medical-history-form';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
@@ -215,6 +216,8 @@ function WorkspacePage() {
                   Select or create a visit to begin.
                 </p>
               </div>
+            ) : activeTab === 'notes' ? (
+              <MedicalHistoryForm patientId={patientId} />
             ) : (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground capitalize">
