@@ -5,7 +5,7 @@
  * Line items are derived from dental treatments (performed/verified).
  */
 
-import { pgTable, uuid, text, timestamp, integer, numeric, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, numeric, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
 
 export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
@@ -32,6 +32,7 @@ export const dentalInvoices = pgTable('dental_invoice', {
   paidAt: timestamp('paid_at', { withTimezone: true }),
   voidedAt: timestamp('voided_at', { withTimezone: true }),
 }, (table) => ({
+  invoiceNumberUniq: uniqueIndex('dental_invoice_number_uniq').on(table.invoiceNumber),
   patientIdx: index('dental_invoice_patient_id_idx').on(table.patientId),
   branchIdx: index('dental_invoice_branch_id_idx').on(table.branchId),
   statusIdx: index('dental_invoice_status_idx').on(table.status),

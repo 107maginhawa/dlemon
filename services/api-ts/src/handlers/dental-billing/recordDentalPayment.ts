@@ -35,6 +35,13 @@ export async function recordDentalPayment(
     throw new BusinessLogicError('Invoice is already fully paid', 'ALREADY_PAID');
   }
 
+  if (body.amountCents > invoice.balanceCents) {
+    throw new BusinessLogicError(
+      `Payment amount (${body.amountCents}) exceeds remaining balance (${invoice.balanceCents})`,
+      'OVERPAYMENT',
+    );
+  }
+
   // Create the payment
   const payment = await paymentRepo.createOne({
     invoiceId,

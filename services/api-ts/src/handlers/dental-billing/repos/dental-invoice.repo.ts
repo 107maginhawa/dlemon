@@ -28,19 +28,28 @@ export class DentalInvoiceRepository {
 
   /**
    * Generate a sequential invoice number: INV-{year}-{padded 4-digit sequence}
+   * Uses MAX to find the highest existing sequence (not COUNT, which is vulnerable
+   * to gaps from deleted invoices producing duplicates under concurrency).
    */
   async generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `INV-${year}-`;
 
-    // Count existing invoices for this year to determine sequence
+    // Find the highest existing sequence number for this year
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ maxNum: sql<string>`MAX(${dentalInvoices.invoiceNumber})` })
       .from(dentalInvoices)
       .where(sql`${dentalInvoices.invoiceNumber} LIKE ${prefix + '%'}`);
 
-    const count = result?.[0]?.count ? Number(result[0].count) : 0;
-    const sequence = (count + 1).toString().padStart(4, '0');
+    let nextSeq = 1;
+    const maxNum = result?.[0]?.maxNum;
+    if (maxNum) {
+      const seqStr = maxNum.replace(prefix, '');
+      const parsed = parseInt(seqStr, 10);
+      if (!isNaN(parsed)) nextSeq = parsed + 1;
+    }
+
+    const sequence = nextSeq.toString().padStart(4, '0');
     return `${prefix}${sequence}`;
   }
 
@@ -132,32 +141,26 @@ export class DentalInvoiceRepository {
   }
 
   /**
-   * Add a payment amount to the invoice.
-   * Updates paidCents, balanceCents, and status (partial if partially paid, paid if fully paid).
+   * Add a payment amount to the invoice using atomic SQL arithmetic.
+   * Prevents concurrent payment race conditions by computing new totals in the DB.
    */
   async addPayment(invoiceId: string, amountCents: number): Promise<DentalInvoice | null> {
-    const invoice = await this.findOneById(invoiceId);
-    if (!invoice) return null;
-
-    const newPaidCents = invoice.paidCents + amountCents;
-    const newBalanceCents = invoice.totalCents - newPaidCents;
-
-    let newStatus: DentalInvoice['status'] = invoice.status;
-    if (newBalanceCents <= 0) {
-      newStatus = 'paid';
-    } else if (newPaidCents > 0) {
-      newStatus = 'partial';
-    }
-
     const [updated] = await this.db
       .update(dentalInvoices)
       .set({
-        paidCents: newPaidCents,
-        balanceCents: Math.max(0, newBalanceCents),
-        status: newStatus,
-        paidAt: newBalanceCents <= 0 ? new Date() : null,
+        paidCents: sql`${dentalInvoices.paidCents} + ${amountCents}`,
+        balanceCents: sql`GREATEST(0, ${dentalInvoices.totalCents} - (${dentalInvoices.paidCents} + ${amountCents}))`,
+        status: sql`CASE
+          WHEN ${dentalInvoices.totalCents} - (${dentalInvoices.paidCents} + ${amountCents}) <= 0 THEN 'paid'
+          WHEN ${dentalInvoices.paidCents} + ${amountCents} > 0 THEN 'partial'
+          ELSE ${dentalInvoices.status}
+        END`,
+        paidAt: sql`CASE
+          WHEN ${dentalInvoices.totalCents} - (${dentalInvoices.paidCents} + ${amountCents}) <= 0 THEN NOW()
+          ELSE ${dentalInvoices.paidAt}
+        END`,
         updatedAt: new Date(),
-      })
+      } as any)
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();
     return updated ?? null;
@@ -165,30 +168,24 @@ export class DentalInvoiceRepository {
 
   /**
    * Remove a payment amount from the invoice (used when voiding a payment).
+   * Uses atomic SQL arithmetic to prevent concurrent void race conditions.
    */
   async removePayment(invoiceId: string, amountCents: number): Promise<DentalInvoice | null> {
-    const invoice = await this.findOneById(invoiceId);
-    if (!invoice) return null;
-
-    const newPaidCents = Math.max(0, invoice.paidCents - amountCents);
-    const newBalanceCents = invoice.totalCents - newPaidCents;
-
-    let newStatus: DentalInvoice['status'] = invoice.status;
-    if (newPaidCents === 0) {
-      newStatus = invoice.issuedAt ? 'issued' : 'draft';
-    } else if (newBalanceCents > 0) {
-      newStatus = 'partial';
-    }
-
     const [updated] = await this.db
       .update(dentalInvoices)
       .set({
-        paidCents: newPaidCents,
-        balanceCents: newBalanceCents,
-        status: newStatus,
-        paidAt: null,
+        paidCents: sql`GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents})`,
+        balanceCents: sql`${dentalInvoices.totalCents} - GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents})`,
+        status: sql`CASE
+          WHEN GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents}) = 0
+            THEN CASE WHEN ${dentalInvoices.issuedAt} IS NOT NULL THEN 'issued' ELSE 'draft' END
+          WHEN ${dentalInvoices.totalCents} - GREATEST(0, ${dentalInvoices.paidCents} - ${amountCents}) > 0
+            THEN 'partial'
+          ELSE ${dentalInvoices.status}
+        END`,
+        paidAt: sql`NULL`,
         updatedAt: new Date(),
-      })
+      } as any)
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();
     return updated ?? null;

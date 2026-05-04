@@ -43,14 +43,12 @@ export async function listDentalPatients(ctx: Context) {
   const offset = parseInt(q.offset ?? '0', 10) || 0;
 
   const repo = new PatientRepository(db, logger);
-  const allPatients = await repo.findManyWithPerson(filters, { pagination: { limit, offset } });
+  const [allPatients, total] = await Promise.all([
+    repo.findManyWithPerson(filters, { pagination: { limit, offset } }),
+    repo.countWithPerson(filters),
+  ]);
 
-  // Apply status filter (not yet in base repo)
-  const filtered = q.status
-    ? allPatients.filter((p: any) => p.status === q.status)
-    : allPatients;
-
-  const mapped = filtered.map((p: any) => {
+  const mapped = allPatients.map((p: any) => {
     const person = p.person as any;
     const firstName = person?.firstName ?? '';
     const lastName = person?.lastName ?? '';
@@ -71,5 +69,5 @@ export async function listDentalPatients(ctx: Context) {
 
   logger?.info({ action: 'listDentalPatients', filters, count: mapped.length }, 'Dental patients listed');
 
-  return ctx.json({ patients: mapped, total: mapped.length, limit, offset }, 200);
+  return ctx.json({ patients: mapped, total, limit, offset }, 200);
 }
