@@ -34,8 +34,9 @@ function InnerApp() {
   // an error so guards can route to onboarding without thrashing.
   const personQuery = useQuery({
     ...getPersonOptions({ path: { person: 'me' } }),
+    enabled: !!session?.user,
     retry: (failureCount, error) => {
-      if (error instanceof SdkError && error.status === 404) return false
+      if (error instanceof SdkError && (error.status === 404 || error.status === 401)) return false
       return failureCount < 3
     },
   })
@@ -45,8 +46,8 @@ function InnerApp() {
       ? null
       : personQuery.data ?? null
 
-  // Show loading only on very first fetch before any data/error is received
-  if (sessionPending || personPending) {
+  // Show loading only while session is resolving, or while fetching person for a logged-in user
+  if (sessionPending || (session?.user && personPending)) {
     return <Loading />
   }
 

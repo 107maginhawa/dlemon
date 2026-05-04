@@ -158,8 +158,20 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       );
     }
 
-    if (filters?.branchId) {
-      conditions.push(eq(patients.preferredBranchId, filters.branchId));
+    if (filters?.branchIds && filters.branchIds.length > 0) {
+      conditions.push(
+        or(
+          inArray(patients.preferredBranchId, filters.branchIds),
+          isNull(patients.preferredBranchId)
+        )
+      );
+    } else if (filters?.branchId) {
+      conditions.push(
+        or(
+          eq(patients.preferredBranchId, filters.branchId),
+          isNull(patients.preferredBranchId)
+        )
+      );
     }
 
     if (filters?.needsFollowUp !== undefined) {

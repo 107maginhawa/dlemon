@@ -90,7 +90,7 @@ function PatientsPage() {
     consentGiven: boolean;
   }) {
     // FR2.3/FR2.20: Use dental patient registration endpoint (staff creating patient for another person)
-    await fetch(`${API}/dental/patients`, {
+    const res = await fetch(`${API}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -102,6 +102,13 @@ function PatientsPage() {
         branchId: branchId || undefined,
       }),
     });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      const message = err?.message ?? `Registration failed (${res.status})`;
+      alert(message);
+      return;
+    }
 
     setShowRegistration(false);
     // Refresh list to show newly registered patient

@@ -10,6 +10,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { BranchRepository } from '../dental-org/repos/branch.repo';
 
 export async function listDentalPatients(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -20,7 +21,20 @@ export async function listDentalPatients(ctx: Context) {
   const q = ctx.req.query();
 
   const filters: Record<string, any> = {};
-  if (q.branchId) filters.branchId = q.branchId;
+
+  // When a branchId is provided, expand it to all branches in the same org
+  // so patients from any branch in the org are visible (not just one branch)
+  if (q.branchId) {
+    const branchRepo = new BranchRepository(db, logger);
+    const branch = await branchRepo.findOneById(q.branchId);
+    if (branch?.organizationId) {
+      const orgBranches = await branchRepo.listByOrg(branch.organizationId);
+      filters.branchIds = orgBranches.map((b: any) => b.id);
+    } else {
+      filters.branchId = q.branchId;
+    }
+  }
+
   if (q.q) filters.q = q.q;
   if (q.needsFollowUp === 'true') filters.needsFollowUp = true;
   if (q.status) filters.status = q.status;
