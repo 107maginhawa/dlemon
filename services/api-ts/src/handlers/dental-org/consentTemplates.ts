@@ -51,7 +51,7 @@ export async function createConsentTemplate(ctx: Context): Promise<Response> {
 
   // FR8.13: Only dentist_owner can manage templates
   const role = await getMemberRole(db, user.id, branchId);
-  if (role && role !== 'dentist_owner') {
+  if (!role || role !== 'dentist_owner') {
     throw new ForbiddenError('Only the dentist owner can manage consent templates');
   }
 
@@ -84,7 +84,7 @@ export async function updateConsentTemplate(ctx: Context): Promise<Response> {
   const templateId = ctx.req.param('id') as string;
 
   const role = await getMemberRole(db, user.id, branchId);
-  if (role && role !== 'dentist_owner') {
+  if (!role || role !== 'dentist_owner') {
     throw new ForbiddenError('Only the dentist owner can manage consent templates');
   }
 
@@ -120,7 +120,7 @@ export async function deleteConsentTemplate(ctx: Context): Promise<Response> {
   const templateId = ctx.req.param('id') as string;
 
   const role = await getMemberRole(db, user.id, branchId);
-  if (role && role !== 'dentist_owner') {
+  if (!role || role !== 'dentist_owner') {
     throw new ForbiddenError('Only the dentist owner can manage consent templates');
   }
 

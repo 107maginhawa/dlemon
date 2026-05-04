@@ -7,9 +7,11 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function resetMemberPin(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -28,6 +30,15 @@ export async function resetMemberPin(ctx: Context): Promise<Response> {
   const repo = new MembershipRepository(db, logger);
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
+
+  // Authorization: only dentist_owner of the same branch can reset another member's PIN
+  const [callerMembership] = await db
+    .select({ role: dentalMemberships.role })
+    .from(dentalMemberships)
+    .where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.branchId, member.branchId)));
+  if (!callerMembership || callerMembership.role !== 'dentist_owner') {
+    throw new ForbiddenError('Only the dentist owner can reset member PINs');
+  }
 
   const pinHash = await Bun.password.hash(pin);
   await repo.updatePin(memberId, pinHash);

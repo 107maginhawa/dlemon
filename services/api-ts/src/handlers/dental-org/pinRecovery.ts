@@ -7,11 +7,11 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export async function setSecurityQuestion(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -33,6 +33,17 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
 
+  // Ownership check: user must be the member themselves or a dentist_owner of the same branch
+  if (member.personId !== user.id) {
+    const [callerMembership] = await db
+      .select({ role: dentalMemberships.role })
+      .from(dentalMemberships)
+      .where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.branchId, member.branchId)));
+    if (!callerMembership || callerMembership.role !== 'dentist_owner') {
+      throw new ForbiddenError('Only the member themselves or a dentist owner can set security questions');
+    }
+  }
+
   const answerHash = await Bun.password.hash(answer.toLowerCase().trim(), { algorithm: 'bcrypt', cost: 10 });
 
   await db.update(dentalMemberships)
@@ -43,6 +54,9 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
 }
 
 export async function recoverPin(ctx: Context): Promise<Response> {
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
   const memberId = ctx.req.param('memberId')!;
   let body: any;
   try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }

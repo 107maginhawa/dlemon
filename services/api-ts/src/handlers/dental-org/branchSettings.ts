@@ -44,7 +44,7 @@ export async function updateBranchSettings(ctx: Context) {
 
   // FR8.13: Only dentist_owner can update settings
   const role = await getMemberRole(db, user.id, branchId);
-  if (role && role !== 'dentist_owner') {
+  if (!role || role !== 'dentist_owner') {
     throw new ForbiddenError('Only the dentist owner can update branch settings');
   }
 
