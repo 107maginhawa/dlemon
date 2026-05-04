@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiveSurfaceSelector } from './five-surface-selector.tsx';
 import type { ToothSurface } from './five-surface-selector.helpers';
+import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 type Step = 'condition' | 'surface' | 'treatment' | 'review';
 
@@ -243,7 +244,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
               {priceInput && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-medium">₱{parseFloat(priceInput).toLocaleString('en-PH')}</span>
+                  <span className="font-medium">{CURRENCY_SYMBOL}{parseFloat(priceInput).toLocaleString(APP_LOCALE)}</span>
                 </div>
               )}
             </div>

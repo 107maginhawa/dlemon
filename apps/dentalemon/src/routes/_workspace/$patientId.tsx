@@ -178,7 +178,7 @@ function WorkspacePage() {
       <div className="shrink-0 border-b bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between">
           <TimelineCarousel
-            visits={visits as any}
+            visits={visits}
             currentVisitId={currentVisitId ?? undefined}
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
