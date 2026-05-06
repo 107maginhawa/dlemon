@@ -294,7 +294,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
             type="button"
             onClick={handleSave}
             disabled={saving || !state}
-            className="px-4 py-2 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

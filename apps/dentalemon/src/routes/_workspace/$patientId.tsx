@@ -152,6 +152,8 @@ function WorkspacePage() {
               conditionCode: data.conditionCode,
               priceAmount,
               currency: 'PHP',
+              // Default to 'diagnosed' for new treatments — clinician confirms treatment during session.
+              // 'planned' is used for future treatments scheduled via treatment plan UI (future PR).
               status: 'diagnosed',
             });
           }
@@ -316,7 +318,7 @@ function WorkspacePage() {
           type="button"
           disabled={pendingCount === 0 && !isReadOnly}
           onClick={() => navigate({ to: '/billing' })}
-          className="rounded-lg bg-[#FFE97D] px-5 py-2 text-sm font-semibold text-[#4A4018] hover:bg-[#F5DC60] min-h-[44px] disabled:opacity-50"
+          className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
           data-testid="continue-to-payment-btn"
         >
           {isReadOnly ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
