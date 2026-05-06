@@ -31,8 +31,8 @@ export function useSaveChart(visitId: string | null) {
       if (!res.ok) throw new Error(`Failed to save chart: ${res.status}`);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dental-chart', visitId] });
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['dental-chart', input.visitId] });
     },
   });
 }

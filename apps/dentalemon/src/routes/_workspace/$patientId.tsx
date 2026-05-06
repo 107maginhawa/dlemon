@@ -70,11 +70,17 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
+    const branchId = localStorage.getItem('currentBranchId');
+    const dentistMemberId = localStorage.getItem('currentMemberId');
+    if (!branchId || !dentistMemberId) {
+      console.error('Cannot create visit: currentBranchId or currentMemberId missing from localStorage');
+      return;
+    }
     createVisitMutation.mutate(
       {
         patientId,
-        branchId: localStorage.getItem('currentBranchId') ?? '',
-        dentistMemberId: localStorage.getItem('currentMemberId') ?? '',
+        branchId,
+        dentistMemberId,
       },
       {
         onSuccess: (visit) => {
@@ -105,7 +111,7 @@ function WorkspacePage() {
   function handleSaveToothData(data: ToothSlideoutData) {
     if (!currentVisitId || !selectedTooth) return;
 
-    // Build updated teeth array for chart save (logic stays in component)
+    // Build updated teeth array
     const updatedTeeth: ToothData[] = [...teeth];
     const idx = updatedTeeth.findIndex((t) => t.toothNumber === selectedTooth);
     const toothEntry: ToothData = {
@@ -117,30 +123,41 @@ function WorkspacePage() {
     if (idx >= 0) updatedTeeth[idx] = toothEntry;
     else updatedTeeth.push(toothEntry);
 
+    // BUG-06: validate price before save — reject NaN, don't silently coerce
+    let priceAmount: number | undefined;
+    if (data.cdtCode && data.description && data.priceInput !== undefined && data.priceInput !== '') {
+      const raw = parseFloat(data.priceInput);
+      if (isNaN(raw)) {
+        console.error('Invalid price input — treatment not saved');
+        return;
+      }
+      priceAmount = raw;
+    }
+
+    // WR-02: chain saves sequentially — treatment fires only after chart succeeds
     saveChartMutation.mutate(
       { visitId: currentVisitId, patientId, teeth: updatedTeeth },
       {
         onSuccess: () => {
           clearSelection();
+          // Add treatment only if procedure was fully specified and price is valid
+          if (data.cdtCode && data.description && priceAmount !== undefined) {
+            saveTreatmentMutation.mutate({
+              visitId: currentVisitId!,
+              patientId,
+              cdtCode: data.cdtCode,
+              description: data.description,
+              toothNumber: selectedTooth!,
+              surfaces: data.surfaces,
+              conditionCode: data.conditionCode,
+              priceAmount,
+              currency: 'PHP',
+              status: 'diagnosed',
+            });
+          }
         },
       },
     );
-
-    // Add treatment if a procedure was specified
-    if (data.cdtCode && data.description && data.priceInput) {
-      saveTreatmentMutation.mutate({
-        visitId: currentVisitId,
-        patientId,
-        cdtCode: data.cdtCode,
-        description: data.description,
-        toothNumber: selectedTooth,
-        surfaces: data.surfaces,
-        conditionCode: data.conditionCode,
-        priceAmount: parseFloat(data.priceInput) || 0,
-        currency: 'PHP',
-        status: 'diagnosed',
-      });
-    }
   }
 
   // ── Loading state ─────────────────────────────────────────────────────────

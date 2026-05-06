@@ -35,8 +35,8 @@ export function useSaveTreatment(visitId: string | null) {
       if (!res.ok) throw new Error(`Failed to save treatment: ${res.status}`);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dental-treatments', visitId] });
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['dental-treatments', input.visitId] });
     },
   });
 }
