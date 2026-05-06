@@ -110,6 +110,12 @@ Plans:
 3. `bun run typecheck` clean
 4. Empty state renders correctly when no chart data exists
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Create DentalChartThumbnail, extend PatientCardData, update use-patients mapping
+- [ ] 03-02-PLAN.md — Cascade typecheck guard + structural grep verification
+
 ---
 
 ## Phase 4: Frontend Tests
