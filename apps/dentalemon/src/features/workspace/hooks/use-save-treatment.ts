@@ -21,7 +21,7 @@ interface SaveTreatmentInput {
   status: 'diagnosed' | 'planned';
 }
 
-export function useSaveTreatment(visitId: string | null) {
+export function useSaveTreatment() {
   const queryClient = useQueryClient();
 
   return useMutation({

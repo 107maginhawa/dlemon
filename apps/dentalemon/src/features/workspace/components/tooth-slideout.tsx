@@ -87,7 +87,10 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
         priceInput: priceInput || undefined,
         conditionCode: conditionCode || undefined,
       });
-      onClose();
+      onClose(); // only close on success
+    } catch (err) {
+      // Surface error — do NOT close so user can retry without losing data
+      console.error('Save failed', err);
     } finally {
       setSaving(false);
     }

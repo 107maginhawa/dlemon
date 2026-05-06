@@ -61,8 +61,8 @@ function WorkspacePage() {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
   const sharePMDMutation = useSharePMD();
-  const saveChartMutation = useSaveChart(currentVisitId);
-  const saveTreatmentMutation = useSaveTreatment(currentVisitId);
+  const saveChartMutation = useSaveChart();
+  const saveTreatmentMutation = useSaveTreatment();
 
   async function handleSelectVisit(visitId: string) {
     setCurrentVisitId(visitId);
@@ -109,13 +109,16 @@ function WorkspacePage() {
   }
 
   function handleSaveToothData(data: ToothSlideoutData) {
-    if (!currentVisitId || !selectedTooth) return;
+    // WR-04: capture mutable refs before any async work to avoid stale closure
+    const visitId = currentVisitId;
+    const toothNumber = selectedTooth;
+    if (!visitId || !toothNumber) return;
 
     // Build updated teeth array
     const updatedTeeth: ToothData[] = [...teeth];
-    const idx = updatedTeeth.findIndex((t) => t.toothNumber === selectedTooth);
+    const idx = updatedTeeth.findIndex((t) => t.toothNumber === toothNumber);
     const toothEntry: ToothData = {
-      toothNumber: selectedTooth,
+      toothNumber: toothNumber,
       state: data.state as ToothData['state'],
       surfaces: data.surfaces,
       conditionCode: data.conditionCode,
@@ -136,26 +139,34 @@ function WorkspacePage() {
 
     // WR-02: chain saves sequentially — treatment fires only after chart succeeds
     saveChartMutation.mutate(
-      { visitId: currentVisitId, patientId, teeth: updatedTeeth },
+      { visitId, patientId, teeth: updatedTeeth },
       {
         onSuccess: () => {
           clearSelection();
           // Add treatment only if procedure was fully specified and price is valid
           if (data.cdtCode && data.description && priceAmount !== undefined) {
-            saveTreatmentMutation.mutate({
-              visitId: currentVisitId!,
-              patientId,
-              cdtCode: data.cdtCode,
-              description: data.description,
-              toothNumber: selectedTooth!,
-              surfaces: data.surfaces,
-              conditionCode: data.conditionCode,
-              priceAmount,
-              currency: 'PHP',
-              // Default to 'diagnosed' for new treatments — clinician confirms treatment during session.
-              // 'planned' is used for future treatments scheduled via treatment plan UI (future PR).
-              status: 'diagnosed',
-            });
+            saveTreatmentMutation.mutate(
+              {
+                visitId,
+                patientId,
+                cdtCode: data.cdtCode,
+                description: data.description,
+                toothNumber: toothNumber,
+                surfaces: data.surfaces,
+                conditionCode: data.conditionCode,
+                priceAmount,
+                currency: 'PHP',
+                // Default to 'diagnosed' for new treatments — clinician confirms treatment during session.
+                // 'planned' is used for future treatments scheduled via treatment plan UI (future PR).
+                status: 'diagnosed',
+              },
+              {
+                // CR-03: surface treatment save errors — chart saved but treatment failed
+                onError: (err) => {
+                  console.error('Treatment save failed — chart was saved but treatment was not recorded', err);
+                },
+              },
+            );
           }
         },
       },

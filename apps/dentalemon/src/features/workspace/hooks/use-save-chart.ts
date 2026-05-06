@@ -17,7 +17,7 @@ interface SaveChartInput {
   teeth: ToothData[];
 }
 
-export function useSaveChart(visitId: string | null) {
+export function useSaveChart() {
   const queryClient = useQueryClient();
 
   return useMutation({
