@@ -2,23 +2,19 @@
  * Workspace Route — /_workspace/$patientId
  *
  * Full-screen clinical workspace for a patient visit.
- * Left zone: WorkspaceTabs + Timeline Carousel + Dental Chart
- * Right zone: Tooth Slideout (when tooth selected)
- * Footer: Treatment summary | Action bar | Payment button
+ * Layout: TopBar → YearFilter → 3D Carousel → Divider → TreatmentTable → Footer
+ * Sheets: Notes, TreatmentPlan, Rx, Consent, Lab, PMD, Attachments, Payment
  *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
-import { Pill, FileSignature, FlaskConical, FileText, Upload } from 'lucide-react';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload } from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
-import { DentalChart } from '@/features/workspace/components/dental-chart.tsx';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
-import { WorkspaceTabs } from '@/features/workspace/components/workspace-tabs';
-import type { WorkspaceTab } from '@/features/workspace/components/workspace-tabs';
 import { MedicalHistoryForm } from '@/features/workspace/components/medical-history-form';
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
@@ -27,17 +23,20 @@ import { AttachmentsSheet } from '@/features/workspace/components/attachments-sh
 import { WorkspacePaymentModal } from '@/features/workspace/components/workspace-payment-modal';
 import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
+import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
+import { TreatmentTable } from '@/features/workspace/components/treatment-table';
+import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
+import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
+import { ResizableDivider } from '@/features/workspace/components/resizable-divider';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
-import { TreatmentTable } from '@/features/workspace/components/treatment-table';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveChart } from '@/features/workspace/hooks/use-save-chart';
 import { useSaveTreatment } from '@/features/workspace/hooks/use-save-treatment';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
-import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
@@ -46,11 +45,12 @@ export const Route = createFileRoute('/_workspace/$patientId')({
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
-  const navigate = useNavigate();
 
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('odontogram');
   const [pmdShared, setPmdShared] = useState(false);
+  const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
+  const [splitRatio, setSplitRatio] = useState(0.45);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Sheet open/close state ──────────────────────────────────────────────────
   const [rxSheetOpen, setRxSheetOpen] = useState(false);
@@ -60,6 +60,8 @@ function WorkspacePage() {
   const [pmdImportOpen, setPmdImportOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [notesSheetOpen, setNotesSheetOpen] = useState(false);
+  const [treatmentPlanSheetOpen, setTreatmentPlanSheetOpen] = useState(false);
 
   // prescriberMemberId for RxSheet (WBAR-02) — read once via ref to avoid stale value on re-renders
   const prescriberMemberId = React.useRef(localStorage.getItem('currentMemberId') ?? '').current;
@@ -67,12 +69,11 @@ function WorkspacePage() {
   // branchId for treatment plan (TXPL-01) + visits — read once via ref
   const branchId = React.useRef(localStorage.getItem('currentBranchId')).current;
 
-  // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
+  // ── Data hooks ────────────────────────────────────────────────────────────
   const { visits, isLoading: visitsLoading } = useVisits({ patientId, branchId });
   const { teeth, selectedTooth, selectTooth, clearSelection } =
     useDentalChart({ visitId: currentVisitId });
-  const { treatments } =
-    useTreatments({ visitId: currentVisitId });
+  const { treatments } = useTreatments({ visitId: currentVisitId });
   const { data: treatmentPlan } = useTreatmentPlan({ patientId, branchId });
   const { data: currentPMD } = usePMD(currentVisitId);
 
@@ -89,6 +90,32 @@ function WorkspacePage() {
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
   const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
 
+  // ── Year filter ───────────────────────────────────────────────────────────
+  const years = [
+    'All',
+    ...Array.from(
+      new Set(visits.map((v) => new Date(v.createdAt).getFullYear().toString()))
+    )
+      .sort()
+      .reverse(),
+  ];
+
+  const filteredVisits =
+    yearFilter === 'All'
+      ? visits
+      : visits.filter(
+          (v) => new Date(v.createdAt).getFullYear().toString() === yearFilter
+        );
+
+  // ── Resizable divider ─────────────────────────────────────────────────────
+  function handleResize(delta: number) {
+    setSplitRatio((prev) => {
+      const containerH = containerRef.current?.clientHeight ?? 600;
+      const newRatio = prev + delta / containerH;
+      return Math.min(0.75, Math.max(0.2, newRatio));
+    });
+  }
+
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
   const sharePMDMutation = useSharePMD();
@@ -101,18 +128,14 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
-    const branchId = localStorage.getItem('currentBranchId');
+    const localBranchId = localStorage.getItem('currentBranchId');
     const dentistMemberId = localStorage.getItem('currentMemberId');
-    if (!branchId || !dentistMemberId) {
+    if (!localBranchId || !dentistMemberId) {
       console.error('Cannot create visit: currentBranchId or currentMemberId missing from localStorage');
       return;
     }
     createVisitMutation.mutate(
-      {
-        patientId,
-        branchId,
-        dentistMemberId,
-      },
+      { patientId, branchId: localBranchId, dentistMemberId },
       {
         onSuccess: (visit) => {
           setCurrentVisitId(visit.id);
@@ -134,7 +157,6 @@ function WorkspacePage() {
             }).then(() => {
               setPmdShared(true);
             }).catch((err) => {
-              // AbortError = user cancelled — not an error worth logging
               if (err?.name !== 'AbortError') {
                 console.error('Share failed:', err);
               }
@@ -148,12 +170,10 @@ function WorkspacePage() {
   }
 
   function handleSaveToothData(data: ToothSlideoutData) {
-    // WR-04: capture mutable refs before any async work to avoid stale closure
     const visitId = currentVisitId;
     const toothNumber = selectedTooth;
     if (!visitId || !toothNumber) return;
 
-    // Build updated teeth array
     const updatedTeeth: ToothData[] = [...teeth];
     const idx = updatedTeeth.findIndex((t) => t.toothNumber === toothNumber);
     const toothEntry: ToothData = {
@@ -165,7 +185,6 @@ function WorkspacePage() {
     if (idx >= 0) updatedTeeth[idx] = toothEntry;
     else updatedTeeth.push(toothEntry);
 
-    // BUG-06: validate price before save — reject NaN, don't silently coerce
     let priceAmount: number | undefined;
     if (data.cdtCode && data.description && data.priceInput !== undefined && data.priceInput !== '') {
       const raw = parseFloat(data.priceInput);
@@ -176,13 +195,11 @@ function WorkspacePage() {
       priceAmount = raw;
     }
 
-    // WR-02: chain saves sequentially — treatment fires only after chart succeeds
     saveChartMutation.mutate(
       { visitId, patientId, teeth: updatedTeeth },
       {
         onSuccess: () => {
           clearSelection();
-          // Add treatment only if procedure was fully specified and price is valid
           if (data.cdtCode && data.description && priceAmount !== undefined) {
             saveTreatmentMutation.mutate(
               {
@@ -195,12 +212,9 @@ function WorkspacePage() {
                 conditionCode: data.conditionCode,
                 priceAmount,
                 currency: 'PHP',
-                // Default to 'diagnosed' for new treatments — clinician confirms treatment during session.
-                // 'planned' is used for future treatments scheduled via treatment plan UI (future PR).
                 status: 'diagnosed',
               },
               {
-                // CR-03: surface treatment save errors — chart saved but treatment failed
                 onError: (err) => {
                   console.error('Treatment save failed — chart was saved but treatment was not recorded', err);
                 },
@@ -213,7 +227,6 @@ function WorkspacePage() {
   }
 
   // ── Loading state ─────────────────────────────────────────────────────────
-
   if (visitsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -223,193 +236,117 @@ function WorkspacePage() {
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
-
   const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
   const pendingCount = treatments.filter(
     (t) => t.status === 'diagnosed' || t.status === 'planned',
   ).length;
 
+  const currentVisitDate = currentVisit
+    ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : undefined;
+
   return (
     <div className="flex h-full flex-col">
-      {/* Workspace tabs */}
-      <div className="shrink-0 border-b px-4 pt-2">
-        <WorkspaceTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Top bar with patient avatar + safety floor */}
+      <WorkspaceTopBar
+        patientId={patientId}
+        visitDate={currentVisitDate}
+        onRx={() => setRxSheetOpen(true)}
+        onConsent={() => setConsentSheetOpen(true)}
+        onLab={() => setLabOrdersSheetOpen(true)}
+        onPmd={() => setPmdViewerOpen(true)}
+        onAttachments={() => setAttachmentsOpen(true)}
+        onNotes={() => setNotesSheetOpen(true)}
+        onTreatmentPlan={() => setTreatmentPlanSheetOpen(true)}
+      />
+
+      {/* Year filter */}
+      <div className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 border-b bg-background/80">
+        <YearSegmentControl
+          years={years}
+          selectedYear={yearFilter}
+          onSelect={setYearFilter}
+        />
+        {/* PROF-04: View Profile link */}
+        <Link
+          to="/patients/$patientId"
+          params={{ patientId }}
+          data-testid="view-profile-link"
+          className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Profile
+        </Link>
+        {isReadOnly && (
+          <button
+            type="button"
+            data-testid="share-pmd-btn"
+            onClick={handleSharePMD}
+            className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+            aria-label="Share PMD"
+          >
+            {pmdShared ? '✓ PMD shared' : 'Share PMD'}
+          </button>
+        )}
       </div>
 
-      {/* Timeline Carousel */}
-      <div className="shrink-0 border-b bg-background/80 backdrop-blur">
-        <div className="flex items-center justify-between">
+      {/* Resizable carousel + table zone */}
+      <div ref={containerRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Carousel section */}
+        <div
+          style={{ flexBasis: `${splitRatio * 100}%`, minHeight: '200px', overflow: 'hidden' }}
+          className="shrink-0 border-b bg-background/80 backdrop-blur"
+        >
           <TimelineCarousel
-            visits={visits}
+            visits={filteredVisits}
             currentVisitId={currentVisitId ?? undefined}
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
+            teeth={teeth}
+            onSelectTooth={selectTooth}
           />
-          {/* PROF-04: View Profile link */}
-          <Link
-            to="/patients/$patientId"
-            params={{ patientId }}
-            data-testid="view-profile-link"
-            className="mr-3 shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
-          >
-            Profile
-          </Link>
-          {isReadOnly && (
-            <button
-              type="button"
-              data-testid="share-pmd-btn"
-              onClick={handleSharePMD}
-              className="mr-4 shrink-0 text-xs font-medium text-primary hover:underline flex items-center gap-1"
-              aria-label="Share PMD"
-            >
-              {pmdShared ? '✓ PMD shared' : 'Share PMD'}
-            </button>
-          )}
+        </div>
+
+        {/* Resizable divider */}
+        <ResizableDivider onResize={handleResize} />
+
+        {/* Treatment table section */}
+        <div
+          style={{ flexBasis: `${(1 - splitRatio) * 100}%`, minHeight: '150px', overflow: 'auto' }}
+          className="bg-background"
+        >
+          <TreatmentTable
+            treatments={treatments}
+            carriedOverItems={carriedOverItems}
+            visits={visits}
+          />
         </div>
       </div>
 
-      {/* Main content area */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Dental Chart + Treatment List zone */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto">
-            {activeTab === 'odontogram' && currentVisitId ? (
-              <DentalChart
-                teeth={teeth}
-                selectedTooth={selectedTooth}
-                onSelectTooth={selectTooth}
-              />
-            ) : activeTab === 'odontogram' ? (
-              <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-muted-foreground">
-                  Select or create a visit to begin.
-                </p>
-              </div>
-            ) : activeTab === 'notes' ? (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-auto">
-                  <MedicalHistoryForm patientId={patientId} />
-                </div>
-                {/* WBAR-06: PMDImport accessible from Notes tab */}
-                <div className="shrink-0 border-t px-4 py-3">
-                  <button
-                    type="button"
-                    data-testid="import-pmd-from-notes-btn"
-                    onClick={() => setPmdImportOpen(true)}
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Import External PMD
-                  </button>
-                </div>
-              </div>
-            ) : activeTab === 'treatment-plan' ? (
-              /* TXPL-01: live treatment plan data */
-              <TreatmentPlanTab patientId={patientId} branchId={branchId} />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-muted-foreground capitalize">
-                  {activeTab.replace('-', ' ')} — coming in PR2
-                </p>
-              </div>
-            )}
-          </div>
+      {/* Tooth Slideout */}
+      <ToothSlideout
+        toothNumber={selectedTooth}
+        open={selectedTooth !== null && currentVisitId !== null}
+        onClose={clearSelection}
+        onSave={handleSaveToothData}
+        readOnly={isReadOnly}
+      />
 
-          {/* Treatment table */}
-          <div className="shrink-0 border-t max-h-48 overflow-y-auto bg-background">
-            <TreatmentTable
-              treatments={treatments}
-              carriedOverItems={carriedOverItems}
-              visits={visits}
-            />
-          </div>
-        </div>
-
-        {/* Tooth Slideout */}
-        <ToothSlideout
-          toothNumber={selectedTooth}
-          open={selectedTooth !== null && currentVisitId !== null}
-          onClose={clearSelection}
-          onSave={handleSaveToothData}
-          readOnly={isReadOnly}
-        />
-      </div>
-
-      {/* Footer: Treatment summary | Action bar | Payment button (WBAR-01) */}
+      {/* Footer */}
       <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
         <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
-          {treatments.length === 0
-            ? 'No treatments recorded'
-            : `${treatments.length} treatment${treatments.length !== 1 ? 's' : ''} · ${CURRENCY_SYMBOL}${totalAmount.toLocaleString(APP_LOCALE)}`}
+          {pendingCount === 0
+            ? 'No pending treatments'
+            : `${pendingCount} pending · `}
+          {pendingCount > 0 && (
+            <span className="font-semibold text-foreground">
+              {CURRENCY_SYMBOL}{totalAmount.toLocaleString(APP_LOCALE)}
+            </span>
+          )}
         </span>
-
-        {/* Action bar icons (WBAR-01) */}
-        <div
-          data-testid="workspace-action-bar"
-          className="flex items-center gap-1"
-          role="toolbar"
-          aria-label="Clinical actions"
-        >
-          {/* WBAR-02: Prescriptions */}
-          <button
-            type="button"
-            data-testid="action-bar-rx-btn"
-            aria-label="Write prescription"
-            disabled={!currentVisitId}
-            onClick={() => setRxSheetOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
-          >
-            <Pill className="h-4 w-4" />
-          </button>
-
-          {/* WBAR-03: Consent */}
-          <button
-            type="button"
-            data-testid="action-bar-consent-btn"
-            aria-label="Consent form"
-            disabled={!currentVisitId}
-            onClick={() => setConsentSheetOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
-          >
-            <FileSignature className="h-4 w-4" />
-          </button>
-
-          {/* WBAR-04: Lab orders */}
-          <button
-            type="button"
-            data-testid="action-bar-lab-btn"
-            aria-label="Lab orders"
-            disabled={!currentVisitId}
-            onClick={() => setLabOrdersSheetOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
-          >
-            <FlaskConical className="h-4 w-4" />
-          </button>
-
-          {/* WBAR-05: PMD Viewer */}
-          <button
-            type="button"
-            data-testid="action-bar-pmd-btn"
-            aria-label="Patient Medical Data"
-            disabled={!currentVisitId}
-            onClick={() => setPmdViewerOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
-          >
-            <FileText className="h-4 w-4" />
-          </button>
-
-          {/* WBAR-07: Attachments (ATCH-01/02/03) */}
-          <button
-            type="button"
-            data-testid="action-bar-attachments-btn"
-            aria-label="Attachments"
-            disabled={!currentVisitId}
-            onClick={() => setAttachmentsOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
-          >
-            <Upload className="h-4 w-4" />
-          </button>
-        </div>
 
         {/* PAY-01/PAY-02: open payment modal inline */}
         <button
@@ -424,6 +361,49 @@ function WorkspacePage() {
       </footer>
 
       {/* ── Sheet overlays ──────────────────────────────────────────────────── */}
+
+      {/* Notes sheet (from top bar) */}
+      {notesSheetOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setNotesSheetOpen(false)}>
+          <div
+            className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[85vh] overflow-auto shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h2 className="text-sm font-semibold">Medical History / Notes</h2>
+              <button type="button" onClick={() => setNotesSheetOpen(false)} className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
+            </div>
+            <MedicalHistoryForm patientId={patientId} />
+            <div className="px-4 py-3 border-t">
+              <button
+                type="button"
+                data-testid="import-pmd-from-notes-btn"
+                onClick={() => { setNotesSheetOpen(false); setPmdImportOpen(true); }}
+                className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Upload className="h-4 w-4" />
+                Import External PMD
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Treatment Plan sheet (from top bar) */}
+      {treatmentPlanSheetOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setTreatmentPlanSheetOpen(false)}>
+          <div
+            className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[85vh] overflow-auto shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h2 className="text-sm font-semibold">Treatment Plan</h2>
+              <button type="button" onClick={() => setTreatmentPlanSheetOpen(false)} className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
+            </div>
+            <TreatmentPlanTab patientId={patientId} branchId={branchId} />
+          </div>
+        </div>
+      )}
 
       {/* WBAR-02: RxSheet */}
       {currentVisitId && (
@@ -456,7 +436,7 @@ function WorkspacePage() {
         />
       )}
 
-      {/* WBAR-05: PMDViewerSheet (with WBAR-06 Import button inside) */}
+      {/* WBAR-05: PMDViewerSheet */}
       {currentVisitId && (
         <PMDViewerSheet
           pmd={currentPMD ?? null}
@@ -466,7 +446,7 @@ function WorkspacePage() {
         />
       )}
 
-      {/* WBAR-06: PMDImport (from Notes tab or PMDViewerSheet) */}
+      {/* WBAR-06: PMDImport */}
       {currentVisitId && (
         <PMDImport
           patientId={patientId}
@@ -475,7 +455,7 @@ function WorkspacePage() {
         />
       )}
 
-      {/* WBAR-07: AttachmentsSheet (ATCH-01/02/03) */}
+      {/* WBAR-07: AttachmentsSheet */}
       {currentVisitId && (
         <AttachmentsSheet
           visitId={currentVisitId}
