@@ -23,6 +23,7 @@ export interface Treatment {
   status: 'diagnosed' | 'planned' | 'in_progress' | 'completed' | 'cancelled';
   priceAmount: number;
   currency: string;
+  conditionCode?: string | null;
   note?: string;
   createdAt: string;
 }

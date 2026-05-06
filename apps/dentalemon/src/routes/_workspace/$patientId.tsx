@@ -30,6 +30,8 @@ import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
+import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
+import { TreatmentTable } from '@/features/workspace/components/treatment-table';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveChart } from '@/features/workspace/hooks/use-save-chart';
@@ -59,12 +61,19 @@ function WorkspacePage() {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
+  // prescriberMemberId for RxSheet (WBAR-02) — read once via ref to avoid stale value on re-renders
+  const prescriberMemberId = React.useRef(localStorage.getItem('currentMemberId') ?? '').current;
+
+  // branchId for treatment plan (TXPL-01) + visits — read once via ref
+  const branchId = React.useRef(localStorage.getItem('currentBranchId')).current;
+
   // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
-  const { visits, isLoading: visitsLoading } = useVisits({ patientId });
+  const { visits, isLoading: visitsLoading } = useVisits({ patientId, branchId });
   const { teeth, selectedTooth, selectTooth, clearSelection } =
     useDentalChart({ visitId: currentVisitId });
   const { treatments } =
     useTreatments({ visitId: currentVisitId });
+  const { data: treatmentPlan } = useTreatmentPlan({ patientId, branchId });
   const { data: currentPMD } = usePMD(currentVisitId);
 
   // Auto-select active or most recent visit once visits load
@@ -78,12 +87,7 @@ function WorkspacePage() {
   const currentVisit = visits.find((v) => v.id === currentVisitId);
   const isReadOnly =
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
-
-  // prescriberMemberId for RxSheet (WBAR-02) — read once via ref to avoid stale value on re-renders
-  const prescriberMemberId = React.useRef(localStorage.getItem('currentMemberId') ?? '').current;
-
-  // branchId for treatment plan (TXPL-01) — read once via ref
-  const branchId = React.useRef(localStorage.getItem('currentBranchId')).current;
+  const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
@@ -311,64 +315,14 @@ function WorkspacePage() {
             )}
           </div>
 
-          {/* Treatment list */}
-          {treatments.length > 0 && (
-            <div className="shrink-0 border-t max-h-48 overflow-y-auto bg-background">
-              <table className="w-full text-sm" aria-label="Treatments">
-                <thead className="sticky top-0 bg-muted/60">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
-                      Tooth
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
-                      CDT
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
-                      Description
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">
-                      Amount
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {treatments.map((t) => (
-                    <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
-                      <td className="px-4 py-2 font-medium">{t.toothNumber ?? '—'}</td>
-                      <td className="px-4 py-2 font-mono text-xs">
-                        {t.cdtCode ?? t.procedureCode ?? '—'}
-                      </td>
-                      <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
-                        {t.description ?? t.procedureName ?? '—'}
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {CURRENCY_SYMBOL}
-                        {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                            t.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : t.status === 'diagnosed' || t.status === 'planned'
-                              ? 'bg-blue-100 text-blue-700'
-                              : t.status === 'in_progress'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {t.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {/* Treatment table */}
+          <div className="shrink-0 border-t max-h-48 overflow-y-auto bg-background">
+            <TreatmentTable
+              treatments={treatments}
+              carriedOverItems={carriedOverItems}
+              visits={visits}
+            />
+          </div>
         </div>
 
         {/* Tooth Slideout */}
