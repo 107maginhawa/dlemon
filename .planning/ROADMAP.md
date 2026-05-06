@@ -16,8 +16,8 @@
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Action Bar + Sheet Wiring** - Build footer action bar, wire 5 orphaned sheet components
-- [ ] **Phase 2: Treatment Plan Tab** - Replace placeholder with live treatment plan data
+- [x] **Phase 1: Action Bar + Sheet Wiring** - Build footer action bar, wire 5 orphaned sheet components
+- [x] **Phase 2: Treatment Plan Tab** - Replace placeholder with live treatment plan data
 - [ ] **Phase 3: Patient Profile** - Build patient profile screen from wireframe
 - [ ] **Phase 4: Attachments + Payment Modal** - Clinical file attachments + quick payment recording
 - [ ] **Phase 5: Report Detail + Smoke Test** - Report drilldown + full integration walkthrough
@@ -81,8 +81,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Action Bar + Sheet Wiring | 0/TBD | Not started | - |
-| 2. Treatment Plan Tab | 0/TBD | Not started | - |
+| 1. Action Bar + Sheet Wiring | 1/1 | Complete | 2026-05-06 |
+| 2. Treatment Plan Tab | 1/1 | Complete | 2026-05-06 |
 | 3. Patient Profile | 0/TBD | Not started | - |
 | 4. Attachments + Payment Modal | 0/TBD | Not started | - |
 | 5. Report Detail + Smoke Test | 0/TBD | Not started | - |

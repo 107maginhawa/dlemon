@@ -4,12 +4,14 @@
  * Full-screen clinical workspace for a patient visit.
  * Left zone: WorkspaceTabs + Timeline Carousel + Dental Chart
  * Right zone: Tooth Slideout (when tooth selected)
+ * Footer: Treatment summary | Action bar | Payment button
  *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { Pill, FileSignature, FlaskConical, FileText, Upload } from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { DentalChart } from '@/features/workspace/components/dental-chart.tsx';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
@@ -18,6 +20,11 @@ import type { ToothSlideoutData } from '@/features/workspace/components/tooth-sl
 import { WorkspaceTabs } from '@/features/workspace/components/workspace-tabs';
 import type { WorkspaceTab } from '@/features/workspace/components/workspace-tabs';
 import { MedicalHistoryForm } from '@/features/workspace/components/medical-history-form';
+import { RxSheet } from '@/features/workspace/components/rx-sheet';
+import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
+import { LabOrdersSheet } from '@/features/workspace/components/lab-orders-sheet';
+import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
+import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
@@ -25,6 +32,8 @@ import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveChart } from '@/features/workspace/hooks/use-save-chart';
 import { useSaveTreatment } from '@/features/workspace/hooks/use-save-treatment';
+import { usePMD } from '@/features/workspace/hooks/use-pmd';
+import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
@@ -39,12 +48,20 @@ function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('odontogram');
   const [pmdShared, setPmdShared] = useState(false);
 
+  // ── Sheet open/close state ──────────────────────────────────────────────────
+  const [rxSheetOpen, setRxSheetOpen] = useState(false);
+  const [consentSheetOpen, setConsentSheetOpen] = useState(false);
+  const [labOrdersSheetOpen, setLabOrdersSheetOpen] = useState(false);
+  const [pmdViewerOpen, setPmdViewerOpen] = useState(false);
+  const [pmdImportOpen, setPmdImportOpen] = useState(false);
+
   // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
   const { visits, isLoading: visitsLoading } = useVisits({ patientId });
   const { teeth, selectedTooth, selectTooth, clearSelection } =
     useDentalChart({ visitId: currentVisitId });
   const { treatments } =
     useTreatments({ visitId: currentVisitId });
+  const { data: currentPMD } = usePMD(currentVisitId);
 
   // Auto-select active or most recent visit once visits load
   useEffect(() => {
@@ -52,11 +69,17 @@ function WorkspacePage() {
     if (currentVisitId) return; // already selected
     const active = visits.find((v) => v.status === 'active');
     setCurrentVisitId((active ?? visits[0])?.id ?? null);
-  }, [visits]);
+  }, [visits, currentVisitId]);
 
   const currentVisit = visits.find((v) => v.id === currentVisitId);
   const isReadOnly =
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
+
+  // prescriberMemberId for RxSheet (WBAR-02) — read once via ref to avoid stale value on re-renders
+  const prescriberMemberId = React.useRef(localStorage.getItem('currentMemberId') ?? '').current;
+
+  // branchId for treatment plan (TXPL-01) — read once via ref
+  const branchId = React.useRef(localStorage.getItem('currentBranchId')).current;
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
@@ -100,9 +123,17 @@ function WorkspacePage() {
             navigator.share({
               title: 'Portable Medical Document',
               text: `PMD for visit — Checksum: ${pmd.checksum}`,
-            }).catch(() => {});
+            }).then(() => {
+              setPmdShared(true);
+            }).catch((err) => {
+              // AbortError = user cancelled — not an error worth logging
+              if (err?.name !== 'AbortError') {
+                console.error('Share failed:', err);
+              }
+            });
+          } else {
+            setPmdShared(true);
           }
-          setPmdShared(true);
         },
       },
     );
@@ -238,7 +269,26 @@ function WorkspacePage() {
                 </p>
               </div>
             ) : activeTab === 'notes' ? (
-              <MedicalHistoryForm patientId={patientId} />
+              <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-auto">
+                  <MedicalHistoryForm patientId={patientId} />
+                </div>
+                {/* WBAR-06: PMDImport accessible from Notes tab */}
+                <div className="shrink-0 border-t px-4 py-3">
+                  <button
+                    type="button"
+                    data-testid="import-pmd-from-notes-btn"
+                    onClick={() => setPmdImportOpen(true)}
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import External PMD
+                  </button>
+                </div>
+              </div>
+            ) : activeTab === 'treatment-plan' ? (
+              /* TXPL-01: live treatment plan data */
+              <TreatmentPlanTab patientId={patientId} branchId={branchId} />
             ) : (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground capitalize">
@@ -318,16 +368,73 @@ function WorkspacePage() {
         />
       </div>
 
-      {/* Payment footer */}
+      {/* Footer: Treatment summary | Action bar | Payment button (WBAR-01) */}
       <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
         <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
           {treatments.length === 0
             ? 'No treatments recorded'
             : `${treatments.length} treatment${treatments.length !== 1 ? 's' : ''} · ${CURRENCY_SYMBOL}${totalAmount.toLocaleString(APP_LOCALE)}`}
         </span>
+
+        {/* Action bar icons (WBAR-01) */}
+        <div
+          data-testid="workspace-action-bar"
+          className="flex items-center gap-1"
+          role="toolbar"
+          aria-label="Clinical actions"
+        >
+          {/* WBAR-02: Prescriptions */}
+          <button
+            type="button"
+            data-testid="action-bar-rx-btn"
+            aria-label="Write prescription"
+            disabled={!currentVisitId}
+            onClick={() => setRxSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <Pill className="h-4 w-4" />
+          </button>
+
+          {/* WBAR-03: Consent */}
+          <button
+            type="button"
+            data-testid="action-bar-consent-btn"
+            aria-label="Consent form"
+            disabled={!currentVisitId}
+            onClick={() => setConsentSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <FileSignature className="h-4 w-4" />
+          </button>
+
+          {/* WBAR-04: Lab orders */}
+          <button
+            type="button"
+            data-testid="action-bar-lab-btn"
+            aria-label="Lab orders"
+            disabled={!currentVisitId}
+            onClick={() => setLabOrdersSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <FlaskConical className="h-4 w-4" />
+          </button>
+
+          {/* WBAR-05: PMD Viewer */}
+          <button
+            type="button"
+            data-testid="action-bar-pmd-btn"
+            aria-label="Patient Medical Data"
+            disabled={!currentVisitId}
+            onClick={() => setPmdViewerOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
+        </div>
+
         <button
           type="button"
-          disabled={pendingCount === 0 && !isReadOnly}
+          disabled={treatments.length === 0 && !isReadOnly}
           onClick={() => navigate({ to: '/billing' })}
           className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
           data-testid="continue-to-payment-btn"
@@ -335,6 +442,58 @@ function WorkspacePage() {
           {isReadOnly ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
         </button>
       </footer>
+
+      {/* ── Sheet overlays ──────────────────────────────────────────────────── */}
+
+      {/* WBAR-02: RxSheet */}
+      {currentVisitId && (
+        <RxSheet
+          visitId={currentVisitId}
+          patientId={patientId}
+          prescriberMemberId={prescriberMemberId}
+          open={rxSheetOpen}
+          onClose={() => setRxSheetOpen(false)}
+        />
+      )}
+
+      {/* WBAR-03: ConsentSheet */}
+      {currentVisitId && (
+        <ConsentSheet
+          visitId={currentVisitId}
+          patientId={patientId}
+          open={consentSheetOpen}
+          onClose={() => setConsentSheetOpen(false)}
+        />
+      )}
+
+      {/* WBAR-04: LabOrdersSheet */}
+      {currentVisitId && (
+        <LabOrdersSheet
+          visitId={currentVisitId}
+          patientId={patientId}
+          open={labOrdersSheetOpen}
+          onClose={() => setLabOrdersSheetOpen(false)}
+        />
+      )}
+
+      {/* WBAR-05: PMDViewerSheet (with WBAR-06 Import button inside) */}
+      {currentVisitId && (
+        <PMDViewerSheet
+          pmd={currentPMD ?? null}
+          open={pmdViewerOpen}
+          onClose={() => setPmdViewerOpen(false)}
+          onImportClick={() => setPmdImportOpen(true)}
+        />
+      )}
+
+      {/* WBAR-06: PMDImport (from Notes tab or PMDViewerSheet) */}
+      {currentVisitId && (
+        <PMDImport
+          patientId={patientId}
+          open={pmdImportOpen}
+          onClose={() => setPmdImportOpen(false)}
+        />
+      )}
     </div>
   );
 }
