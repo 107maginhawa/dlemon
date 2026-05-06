@@ -246,10 +246,10 @@ function WorkspacePage() {
                     <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
                       <td className="px-4 py-2 font-medium">{t.toothNumber ?? '—'}</td>
                       <td className="px-4 py-2 font-mono text-xs">
-                        {(t as any).cdtCode ?? (t as any).procedureCode ?? '—'}
+                        {t.cdtCode ?? t.procedureCode ?? '—'}
                       </td>
                       <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
-                        {(t as any).description ?? t.procedureName ?? '—'}
+                        {t.description ?? t.procedureName ?? '—'}
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums">
                         {CURRENCY_SYMBOL}

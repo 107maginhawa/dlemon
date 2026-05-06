@@ -5,12 +5,14 @@
  * The React component (dental-chart.tsx) renders the SVG.
  */
 
+import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
+
 export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';
 
 export interface ToothData {
   toothNumber: number;
   state: ToothState;
-  surfaces?: string[];
+  surfaces?: ToothSurface[];
   conditionCode?: string;
   note?: string;
 }
@@ -32,10 +34,24 @@ export const TOOTH_NUMBERS: number[] = [
 ];
 
 /**
+ * Returns true if n is a valid FDI permanent tooth number (11–18, 21–28, 31–38, 41–48).
+ */
+export function isValidFdiNumber(n: number): boolean {
+  return TOOTH_NUMBERS.includes(n);
+}
+
+/**
+ * Returns true if n is a valid Universal tooth number (1–32).
+ */
+export function isValidUniversalNumber(n: number): boolean {
+  return Number.isInteger(n) && n >= 1 && n <= 32;
+}
+
+/**
  * Build a Map<toothNumber, state> from an array of tooth chart states.
  */
-export function buildToothMap(teeth: Array<{ toothNumber: number; state: string }>): Map<number, string> {
-  const map = new Map<number, string>();
+export function buildToothMap(teeth: Array<{ toothNumber: number; state: ToothState }>): Map<number, ToothState> {
+  const map = new Map<number, ToothState>();
   for (const tooth of teeth) {
     map.set(tooth.toothNumber, tooth.state);
   }
@@ -98,7 +114,7 @@ export function universalToFdi(universalNumber: number): number {
 
 // ─── Color class map ────────────────────────────────────────────────────────
 
-export function getToothColorClass(state: ToothState | string): string {
+export function getToothColorClass(state: ToothState): string {
   switch (state) {
     case 'healthy':   return 'tooth-healthy text-green-600 fill-green-100';
     case 'caries':    return 'tooth-caries text-red-600 fill-red-200';

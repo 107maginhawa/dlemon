@@ -8,15 +8,18 @@
  * API: GET /dental/visits/:visitId/treatments
  */
 import { useQuery } from '@tanstack/react-query';
+import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
 import { apiBaseUrl } from '@/utils/config';
 
 export interface Treatment {
   id: string;
   visitId: string;
   toothNumber: number;
-  surfaces?: string[];
+  surfaces?: ToothSurface[];
   procedureCode: string;
   procedureName: string;
+  cdtCode?: string;
+  description?: string;
   status: 'diagnosed' | 'planned' | 'in_progress' | 'completed' | 'cancelled';
   priceAmount: number;
   currency: string;
