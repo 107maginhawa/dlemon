@@ -26,20 +26,8 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
-import { createDentalPatient } from '@/handlers/dental-patient/createDentalPatient';
-import { listDentalPatients } from '@/handlers/dental-patient/listDentalPatients';
-import { getDentalPatient } from '@/handlers/dental-patient/getDentalPatient';
-import { updateDentalPatient } from '@/handlers/dental-patient/updateDentalPatient';
-import { archiveDentalPatient } from '@/handlers/dental-patient/archiveDentalPatient';
-import { restoreDentalPatient } from '@/handlers/dental-patient/restoreDentalPatient';
-import { bulkArchiveDentalPatients } from '@/handlers/dental-patient/bulkArchiveDentalPatients';
-import { exportDentalPatients } from '@/handlers/dental-patient/exportDentalPatients';
-import { listFollowUpNotes, addFollowUpNote } from '@/handlers/dental-patient/followUpNotes';
-import { getDentalPatientSafetyFloor } from '@/handlers/dental-patient/getDentalPatientSafetyFloor';
-import { getDentalPatientStatement } from '@/handlers/dental-patient/getDentalPatientStatement';
 import { getTreatmentPlan } from '@/handlers/dental-visit/getTreatmentPlan';
 import { carryOverTreatments } from '@/handlers/dental-visit/carryOverTreatments';
-import { initializeDentition } from '@/handlers/dental-visit/initializeDentition';
 import {
   listTreatmentTemplates,
   createTreatmentTemplate,
@@ -57,7 +45,6 @@ import { createMember } from '@/handlers/dental-org/createMember';
 import { listMembers } from '@/handlers/dental-org/listMembers';
 import { resetMemberPin } from '@/handlers/dental-org/resetMemberPin';
 import { getImportedPMD } from '@/handlers/dental-pmd/getImportedPMD';
-import { importPatients } from '@/handlers/dental-patient/importPatients';
 import { exportPMD } from '@/handlers/dental-pmd/exportPMD';
 import { getWorkingHours, updateWorkingHours } from '@/handlers/dental-scheduling/workingHours';
 import { getBranchSettings, updateBranchSettings } from '@/handlers/dental-org/branchSettings';
@@ -138,34 +125,8 @@ export function createApp(config: Config): App {
   // Register API routes
   registerOpenAPIRoutes(app as any);
 
-  // Dental-specific routes (not in TypeSpec, bypass generated validators)
+  // Dental-specific routes (not yet in TypeSpec, bypass generated validators)
   const dentalAuth = authMiddleware({ required: true, roles: ['user'] });
-
-  // FR7.2: CSV / JSON patient import (before /:id to avoid param capture)
-  app.post('/dental/patients/import', dentalAuth, importPatients);
-  // FR2.8: Export must be before /:id to avoid param capture
-  app.get('/dental/patients/export', dentalAuth, exportDentalPatients);
-  // FR2.13: Bulk archive
-  app.post('/dental/patients/bulk-archive', dentalAuth, bulkArchiveDentalPatients);
-
-  // FR2.3: Create patient
-  app.post('/dental/patients', dentalAuth, createDentalPatient);
-  // FR2.1, FR2.2, FR2.10: List / search patients
-  app.get('/dental/patients', dentalAuth, listDentalPatients);
-  // FR2.4: Patient profile
-  app.get('/dental/patients/:id', dentalAuth, getDentalPatient);
-  // FR2.9, FR2.16, FR2.17, FR2.18: Update patient fields
-  app.patch('/dental/patients/:id', dentalAuth, updateDentalPatient);
-  // FR2.7: Archive / Restore
-  app.post('/dental/patients/:id/archive', dentalAuth, archiveDentalPatient);
-  app.post('/dental/patients/:id/restore', dentalAuth, restoreDentalPatient);
-  // FR2.12: Follow-up notes
-  app.get('/dental/patients/:id/follow-up-notes', dentalAuth, listFollowUpNotes);
-  app.post('/dental/patients/:id/follow-up-notes', dentalAuth, addFollowUpNote);
-  // FR2.15: Safety floor
-  app.get('/dental/patients/:id/safety-floor', dentalAuth, getDentalPatientSafetyFloor);
-  // FR2.21: Itemized statement
-  app.get('/dental/patients/:id/statement', dentalAuth, getDentalPatientStatement);
 
   // FR1.8: Treatment templates
   app.get('/dental/treatment-templates', dentalAuth, listTreatmentTemplates);
@@ -175,8 +136,6 @@ export function createApp(config: Config): App {
   app.post('/dental/visits/:visitId/apply-template/:templateId', dentalAuth, applyTemplate);
   // FR1.11: Carry over treatments
   app.post('/dental/visits/:visitId/carry-over', dentalAuth, carryOverTreatments);
-  // FR1.19: Dentition management (deciduous auto-populate)
-  app.post('/dental/patients/:patientId/dentition', dentalAuth, initializeDentition);
   // FR1.22: Treatment plan presentation
   app.get('/dental/patients/:patientId/treatment-plan', dentalAuth, getTreatmentPlan);
 

@@ -297,7 +297,6 @@ namespace DentalPatientModule {
   // Interfaces
   // ==========================================================================
 
-  @route("/dental/patients")
   interface DentalPatientManagement {
 
     @doc("Create a new dental patient")

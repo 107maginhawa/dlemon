@@ -61,7 +61,7 @@ export async function createDentalPatient(
       firstName,
       ...(lastName ? { lastName } : {}),
       ...(body.dateOfBirth ? { dateOfBirth: body.dateOfBirth } : {}),
-      ...(body.gender ? { gender: body.gender } : {}),
+      ...(body.gender ? { gender: body.gender as any } : {}),
       createdBy: user.id,
       updatedBy: user.id,
     })

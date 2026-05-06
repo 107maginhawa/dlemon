@@ -51,12 +51,7 @@ export async function getDentalPatient(
   const invoices = await db
     .select()
     .from(dentalInvoices)
-    .where(
-      and(
-        eq(dentalInvoices.patientId, patientId),
-        // exclude voided
-      )
-    );
+    .where(eq(dentalInvoices.patientId, patientId));
 
   const outstandingCents = invoices
     .filter((inv: any) => inv.status !== 'voided')

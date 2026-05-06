@@ -3,20 +3,6 @@
  * This file is regenerated on each run
  */
 
-import { createDentalPatient } from '../../handlers/dental-patient/createDentalPatient';
-import { listDentalPatients } from '../../handlers/dental-patient/listDentalPatients';
-import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/bulkArchiveDentalPatients';
-import { exportDentalPatients } from '../../handlers/dental-patient/exportDentalPatients';
-import { importPatients } from '../../handlers/dental-patient/importPatients';
-import { getDentalPatient } from '../../handlers/dental-patient/getDentalPatient';
-import { updateDentalPatient } from '../../handlers/dental-patient/updateDentalPatient';
-import { archiveDentalPatient } from '../../handlers/dental-patient/archiveDentalPatient';
-import { listFollowUpNotes } from '../../handlers/dental-patient/listFollowUpNotes';
-import { addFollowUpNote } from '../../handlers/dental-patient/addFollowUpNote';
-import { restoreDentalPatient } from '../../handlers/dental-patient/restoreDentalPatient';
-import { getDentalPatientSafetyFloor } from '../../handlers/dental-patient/getDentalPatientSafetyFloor';
-import { getDentalPatientStatement } from '../../handlers/dental-patient/getDentalPatientStatement';
-import { initializeDentition } from '../../handlers/dental-patient/initializeDentition';
 import { listAuditLogs } from '../../handlers/audit/listAuditLogs';
 import { createInvoice } from '../../handlers/billing/createInvoice';
 import { listInvoices } from '../../handlers/billing/listInvoices';
@@ -107,6 +93,20 @@ import { DentalMembershipManagement_list } from '../../handlers/dental-org/Denta
 import { DentalMembershipManagement_deactivate } from '../../handlers/dental-org/DentalMembershipManagement_deactivate';
 import { DentalMembershipManagement_setPin } from '../../handlers/dental-org/DentalMembershipManagement_setPin';
 import { DentalMembershipManagement_verifyPin } from '../../handlers/dental-org/DentalMembershipManagement_verifyPin';
+import { createDentalPatient } from '../../handlers/dental-patient/createDentalPatient';
+import { listDentalPatients } from '../../handlers/dental-patient/listDentalPatients';
+import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/bulkArchiveDentalPatients';
+import { exportDentalPatients } from '../../handlers/dental-patient/exportDentalPatients';
+import { importPatients } from '../../handlers/dental-patient/importPatients';
+import { getDentalPatient } from '../../handlers/dental-patient/getDentalPatient';
+import { updateDentalPatient } from '../../handlers/dental-patient/updateDentalPatient';
+import { archiveDentalPatient } from '../../handlers/dental-patient/archiveDentalPatient';
+import { listFollowUpNotes } from '../../handlers/dental-patient/listFollowUpNotes';
+import { addFollowUpNote } from '../../handlers/dental-patient/addFollowUpNote';
+import { restoreDentalPatient } from '../../handlers/dental-patient/restoreDentalPatient';
+import { getDentalPatientSafetyFloor } from '../../handlers/dental-patient/getDentalPatientSafetyFloor';
+import { getDentalPatientStatement } from '../../handlers/dental-patient/getDentalPatientStatement';
+import { initializeDentition } from '../../handlers/dental-patient/initializeDentition';
 import { importPMD } from '../../handlers/dental-pmd/importPMD';
 import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
 import { listPMDs } from '../../handlers/dental-pmd/listPMDs';
@@ -177,22 +177,6 @@ import { completeFileUpload } from '../../handlers/storage/completeFileUpload';
 import { getFileDownload } from '../../handlers/storage/getFileDownload';
 
 export const registry = {
-  // Dental-patient handlers
-  createDentalPatient,
-  listDentalPatients,
-  bulkArchiveDentalPatients,
-  exportDentalPatients,
-  importPatients,
-  getDentalPatient,
-  updateDentalPatient,
-  archiveDentalPatient,
-  listFollowUpNotes,
-  addFollowUpNote,
-  restoreDentalPatient,
-  getDentalPatientSafetyFloor,
-  getDentalPatientStatement,
-  initializeDentition,
-
   // Audit handlers
   listAuditLogs,
 
@@ -298,6 +282,22 @@ export const registry = {
   DentalMembershipManagement_deactivate,
   DentalMembershipManagement_setPin,
   DentalMembershipManagement_verifyPin,
+
+  // Dental-patient handlers
+  createDentalPatient,
+  listDentalPatients,
+  bulkArchiveDentalPatients,
+  exportDentalPatients,
+  importPatients,
+  getDentalPatient,
+  updateDentalPatient,
+  archiveDentalPatient,
+  listFollowUpNotes,
+  addFollowUpNote,
+  restoreDentalPatient,
+  getDentalPatientSafetyFloor,
+  getDentalPatientStatement,
+  initializeDentition,
 
   // Dental-pmd handlers
   importPMD,

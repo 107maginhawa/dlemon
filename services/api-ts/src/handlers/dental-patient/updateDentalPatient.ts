@@ -38,32 +38,32 @@ export async function updateDentalPatient(
 
   const updates: Record<string, any> = {};
 
-  if (body.needsFollowUp !== undefined) updates.needsFollowUp = body.needsFollowUp;
-  if (body.dentalHistorySummary !== undefined) updates.dentalHistorySummary = body.dentalHistorySummary;
-  if (body.preferredBranchId !== undefined) updates.preferredBranchId = body.preferredBranchId;
+  if (body['needsFollowUp'] !== undefined) updates['needsFollowUp'] = body['needsFollowUp'];
+  if (body['dentalHistorySummary'] !== undefined) updates['dentalHistorySummary'] = body['dentalHistorySummary'];
+  if (body['preferredBranchId'] !== undefined) updates['preferredBranchId'] = body['preferredBranchId'];
 
   // FR2.9: Status management
-  if (body.status !== undefined) {
-    updates.status = body.status;
-    if (body.status === 'archived') updates.archivedAt = new Date();
-    if (body.status === 'active') updates.archivedAt = null;
+  if (body['status'] !== undefined) {
+    updates['status'] = body['status'];
+    if (body['status'] === 'archived') updates['archivedAt'] = new Date();
+    if (body['status'] === 'active') updates['archivedAt'] = null;
   }
 
   // FR2.16: Emergency contact
-  if (body.emergencyContact !== undefined) {
-    updates.emergencyContact = body.emergencyContact;
+  if (body['emergencyContact'] !== undefined) {
+    updates['emergencyContact'] = body['emergencyContact'];
   }
 
   // FR2.17: Communication preferences
-  if (body.communicationPreferences !== undefined) {
-    updates.communicationPreferences = body.communicationPreferences;
+  if (body['communicationPreferences'] !== undefined) {
+    updates['communicationPreferences'] = body['communicationPreferences'];
   }
 
   // FR2.18: Recall date + note
-  if (body.recallDate !== undefined) updates.recallDate = body.recallDate;
-  if (body.recallNote !== undefined) updates.recallNote = body.recallNote;
+  if (body['recallDate'] !== undefined) updates['recallDate'] = body['recallDate'];
+  if (body['recallNote'] !== undefined) updates['recallNote'] = body['recallNote'];
 
-  updates.updatedBy = user.id;
+  updates['updatedBy'] = user.id;
   const updated = await repo.updateOneById(patientId, updates);
 
   logger?.info({ action: 'updateDentalPatient', patientId, updates }, 'Dental patient updated');

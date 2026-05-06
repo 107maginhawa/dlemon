@@ -315,6 +315,7 @@ namespace MonobaseAPI {
   interface DentalMembershipManagement extends DentalOrgModule.DentalMembershipManagement {}
 
   @tag("Dental:Patient")
+  @route("/dental/patients")
   interface DentalPatientMgmt extends DentalPatientModule.DentalPatientManagement {}
 
   @tag("Dental:Visit")

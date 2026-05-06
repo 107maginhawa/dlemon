@@ -45,20 +45,19 @@ export async function exportDentalPatients(
   const q = ctx.req.valid('query');
 
   // Branch-level authorization
-  if (q.branchId) {
-    await assertBranchAccess(db, user.id, q.branchId);
+  if (q['branchId']) {
+    await assertBranchAccess(db, user.id, q['branchId']);
   }
 
-  const format = q.format === 'csv' ? 'csv' : 'json';
+  const format = q['format'] === 'csv' ? 'csv' : 'json';
   const filters: Record<string, any> = {};
-  if (q.branchId) filters.branchId = q.branchId;
-  if (q.q) filters.q = q.q;
+  if (q.branchId) filters['branchId'] = q.branchId;
 
   const repo = new PatientRepository(db, logger);
   // Fetch up to 10k for export
   const patients = await repo.findManyWithPerson(filters, { pagination: { limit: 10000, offset: 0 } });
 
-  const statusFilter = q.status;
+  const statusFilter = q['status'];
   const filtered = statusFilter
     ? patients.filter((p: any) => p.status === statusFilter)
     : patients;

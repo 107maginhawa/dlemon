@@ -16811,23 +16811,6 @@ export const VoidDentalPaymentRequestSchema = z.object({
   voidReason: z.string()
 });
 
-export const CreateDentalPatientBody = DentalPatientModuleCreateDentalPatientRequestSchema;
-export type CreateDentalPatientBody = z.infer<typeof CreateDentalPatientBody>;
-
-export const CreateDentalPatientResponse = DentalPatientModuleCreateDentalPatientResponseSchema;
-
-export const ListDentalPatientsQuery = z.object({
-  q: z.string().optional(),
-  needsFollowUp: z.coerce.boolean().optional(),
-  status: z.string().optional(),
-  branchId: UUIDSchema.optional(),
-  limit: z.coerce.number().int().optional(),
-  offset: z.coerce.number().int().optional(),
-});
-export type ListDentalPatientsQuery = z.infer<typeof ListDentalPatientsQuery>;
-
-export const ListDentalPatientsResponse = DentalPatientModuleListDentalPatientsResponseSchema;
-
 export const ListAuditLogsQuery = z.object({
   resourceType: SafeQueryStringSchema.optional(),
   resource: UUIDSchema.optional(),
@@ -17242,11 +17225,6 @@ export type GetTimeSlotQuery = z.infer<typeof GetTimeSlotQuery>;
 
 export const GetTimeSlotResponse = TimeSlotSchema;
 
-export const BulkArchiveDentalPatientsBody = DentalPatientModuleBulkArchiveDentalPatientsRequestSchema;
-export type BulkArchiveDentalPatientsBody = z.infer<typeof BulkArchiveDentalPatientsBody>;
-
-export const BulkArchiveDentalPatientsResponse = DentalPatientModuleBulkArchiveDentalPatientsResponseSchema;
-
 export const CreateChatRoomBody = CreateChatRoomRequestSchema;
 export type CreateChatRoomBody = z.infer<typeof CreateChatRoomBody>;
 
@@ -17634,6 +17612,114 @@ export const DentalMembershipManagement_verifyPinBody = DentalOrgModuleVerifyPin
 export type DentalMembershipManagement_verifyPinBody = z.infer<typeof DentalMembershipManagement_verifyPinBody>;
 
 export const DentalMembershipManagement_verifyPinResponse = z.union([DentalOrgModuleVerifyPinResponseSchema, NotFoundErrorSchema, ErrorResponseSchema]);
+
+export const CreateDentalPatientBody = DentalPatientModuleCreateDentalPatientRequestSchema;
+export type CreateDentalPatientBody = z.infer<typeof CreateDentalPatientBody>;
+
+export const CreateDentalPatientResponse = DentalPatientModuleCreateDentalPatientResponseSchema;
+
+export const ListDentalPatientsQuery = z.object({
+  q: z.string().optional(),
+  needsFollowUp: z.coerce.boolean().optional(),
+  status: z.string().optional(),
+  branchId: UUIDSchema.optional(),
+  limit: z.coerce.number().int().optional(),
+  offset: z.coerce.number().int().optional(),
+});
+export type ListDentalPatientsQuery = z.infer<typeof ListDentalPatientsQuery>;
+
+export const ListDentalPatientsResponse = DentalPatientModuleListDentalPatientsResponseSchema;
+
+export const BulkArchiveDentalPatientsBody = DentalPatientModuleBulkArchiveDentalPatientsRequestSchema;
+export type BulkArchiveDentalPatientsBody = z.infer<typeof BulkArchiveDentalPatientsBody>;
+
+export const BulkArchiveDentalPatientsResponse = DentalPatientModuleBulkArchiveDentalPatientsResponseSchema;
+
+export const ExportDentalPatientsQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  format: z.string().optional(),
+  status: z.string().optional(),
+});
+export type ExportDentalPatientsQuery = z.infer<typeof ExportDentalPatientsQuery>;
+
+export const ExportDentalPatientsResponse = DentalPatientModuleExportDentalPatientsResponseSchema;
+
+export const ImportPatientsBody = DentalPatientModuleImportPatientsRequestSchema;
+export type ImportPatientsBody = z.infer<typeof ImportPatientsBody>;
+
+export const ImportPatientsResponse = DentalPatientModuleImportPatientsResponseSchema;
+
+export const GetDentalPatientParams = z.object({
+  id: UUIDSchema,
+});
+export type GetDentalPatientParams = z.infer<typeof GetDentalPatientParams>;
+
+export const GetDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
+
+export const UpdateDentalPatientParams = z.object({
+  id: UUIDSchema,
+});
+export type UpdateDentalPatientParams = z.infer<typeof UpdateDentalPatientParams>;
+
+export const UpdateDentalPatientBody = DentalPatientModuleUpdateDentalPatientRequestSchema;
+export type UpdateDentalPatientBody = z.infer<typeof UpdateDentalPatientBody>;
+
+export const UpdateDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
+
+export const ArchiveDentalPatientParams = z.object({
+  id: UUIDSchema,
+});
+export type ArchiveDentalPatientParams = z.infer<typeof ArchiveDentalPatientParams>;
+
+export const ArchiveDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
+
+export const ListFollowUpNotesParams = z.object({
+  id: UUIDSchema,
+});
+export type ListFollowUpNotesParams = z.infer<typeof ListFollowUpNotesParams>;
+
+export const ListFollowUpNotesResponse = DentalPatientModuleListFollowUpNotesResponseSchema;
+
+export const AddFollowUpNoteParams = z.object({
+  id: UUIDSchema,
+});
+export type AddFollowUpNoteParams = z.infer<typeof AddFollowUpNoteParams>;
+
+export const AddFollowUpNoteBody = DentalPatientModuleAddFollowUpNoteRequestSchema;
+export type AddFollowUpNoteBody = z.infer<typeof AddFollowUpNoteBody>;
+
+export const AddFollowUpNoteResponse = DentalPatientModuleAddFollowUpNoteResponseSchema;
+
+export const RestoreDentalPatientParams = z.object({
+  id: UUIDSchema,
+});
+export type RestoreDentalPatientParams = z.infer<typeof RestoreDentalPatientParams>;
+
+export const RestoreDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
+
+export const GetDentalPatientSafetyFloorParams = z.object({
+  id: UUIDSchema,
+});
+export type GetDentalPatientSafetyFloorParams = z.infer<typeof GetDentalPatientSafetyFloorParams>;
+
+export const GetDentalPatientSafetyFloorResponse = DentalPatientModuleDentalPatientSafetyFloorSchema;
+
+export const GetDentalPatientStatementParams = z.object({
+  id: UUIDSchema,
+});
+export type GetDentalPatientStatementParams = z.infer<typeof GetDentalPatientStatementParams>;
+
+export const GetDentalPatientStatementResponse = DentalPatientModuleDentalPatientStatementSchema;
+
+export const InitializeDentitionParams = z.object({
+  patientId: UUIDSchema,
+});
+export type InitializeDentitionParams = z.infer<typeof InitializeDentitionParams>;
+
+export const InitializeDentitionBody = DentalPatientModuleInitializeDentitionRequestSchema;
+export type InitializeDentitionBody = z.infer<typeof InitializeDentitionBody>;
+
+export const InitializeDentitionResponse = DentalPatientModuleInitializeDentitionResponseSchema;
 
 export const ImportPMDBody = ImportPMDRequestSchema;
 export type ImportPMDBody = z.infer<typeof ImportPMDBody>;
@@ -18227,20 +18313,6 @@ export const ListEMRPatientsResponse = z.object({
 })
 });
 
-export const ExportDentalPatientsQuery = z.object({
-  branchId: UUIDSchema.optional(),
-  format: z.string().optional(),
-  status: z.string().optional(),
-});
-export type ExportDentalPatientsQuery = z.infer<typeof ExportDentalPatientsQuery>;
-
-export const ExportDentalPatientsResponse = DentalPatientModuleExportDentalPatientsResponseSchema;
-
-export const ImportPatientsBody = DentalPatientModuleImportPatientsRequestSchema;
-export type ImportPatientsBody = z.infer<typeof ImportPatientsBody>;
-
-export const ImportPatientsResponse = DentalPatientModuleImportPatientsResponseSchema;
-
 export const ListNotificationsQuery = z.object({
   type: NotificationTypeSchema.optional(),
   channel: NotificationChannelSchema.optional(),
@@ -18629,75 +18701,3 @@ export const GetFileDownloadParams = z.object({
 export type GetFileDownloadParams = z.infer<typeof GetFileDownloadParams>;
 
 export const GetFileDownloadResponse = FileDownloadResponseSchema;
-
-export const GetDentalPatientParams = z.object({
-  id: UUIDSchema,
-});
-export type GetDentalPatientParams = z.infer<typeof GetDentalPatientParams>;
-
-export const GetDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
-
-export const UpdateDentalPatientParams = z.object({
-  id: UUIDSchema,
-});
-export type UpdateDentalPatientParams = z.infer<typeof UpdateDentalPatientParams>;
-
-export const UpdateDentalPatientBody = DentalPatientModuleUpdateDentalPatientRequestSchema;
-export type UpdateDentalPatientBody = z.infer<typeof UpdateDentalPatientBody>;
-
-export const UpdateDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
-
-export const ArchiveDentalPatientParams = z.object({
-  id: UUIDSchema,
-});
-export type ArchiveDentalPatientParams = z.infer<typeof ArchiveDentalPatientParams>;
-
-export const ArchiveDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
-
-export const ListFollowUpNotesParams = z.object({
-  id: UUIDSchema,
-});
-export type ListFollowUpNotesParams = z.infer<typeof ListFollowUpNotesParams>;
-
-export const ListFollowUpNotesResponse = DentalPatientModuleListFollowUpNotesResponseSchema;
-
-export const AddFollowUpNoteParams = z.object({
-  id: UUIDSchema,
-});
-export type AddFollowUpNoteParams = z.infer<typeof AddFollowUpNoteParams>;
-
-export const AddFollowUpNoteBody = DentalPatientModuleAddFollowUpNoteRequestSchema;
-export type AddFollowUpNoteBody = z.infer<typeof AddFollowUpNoteBody>;
-
-export const AddFollowUpNoteResponse = DentalPatientModuleAddFollowUpNoteResponseSchema;
-
-export const RestoreDentalPatientParams = z.object({
-  id: UUIDSchema,
-});
-export type RestoreDentalPatientParams = z.infer<typeof RestoreDentalPatientParams>;
-
-export const RestoreDentalPatientResponse = DentalPatientModuleDentalPatientSchema;
-
-export const GetDentalPatientSafetyFloorParams = z.object({
-  id: UUIDSchema,
-});
-export type GetDentalPatientSafetyFloorParams = z.infer<typeof GetDentalPatientSafetyFloorParams>;
-
-export const GetDentalPatientSafetyFloorResponse = DentalPatientModuleDentalPatientSafetyFloorSchema;
-
-export const GetDentalPatientStatementParams = z.object({
-  id: UUIDSchema,
-});
-export type GetDentalPatientStatementParams = z.infer<typeof GetDentalPatientStatementParams>;
-
-export const GetDentalPatientStatementResponse = DentalPatientModuleDentalPatientStatementSchema;
-
-export const InitializeDentitionParams = z.object({
-  patientId: UUIDSchema,
-});
-export type InitializeDentitionParams = z.infer<typeof InitializeDentitionParams>;
-
-export const InitializeDentitionBody = DentalPatientModuleInitializeDentitionRequestSchema;
-export type InitializeDentitionBody = z.infer<typeof InitializeDentitionBody>;
-
-export const InitializeDentitionResponse = DentalPatientModuleInitializeDentitionResponseSchema;
