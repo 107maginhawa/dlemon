@@ -1,32 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: "v1.1"
-milestone_name: milestone
-status: executing
-last_updated: "2026-05-06T15:00:00.000Z"
+milestone: "v1.2"
+milestone_name: "Wire & Ship"
+status: planning
+last_updated: "2026-05-06T16:00:00.000Z"
 last_activity: 2026-05-06
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
 
-Phase: 05
-Plan: All plans complete
-Status: Milestone complete ✅
-Last activity: 2026-05-06
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-06 — Milestone v1.2 started
 
 ## Accumulated Context
 
 ### Decisions
 
-- Phase numbering reset to 1 for v1.1 (frontend milestone separate from v1.0 backend)
+- Phase numbering reset to 1 for v1.2 (--reset-phase-numbers flag)
+- Assembly-first approach: no TDD retrofit, backend already tested
 - All work on branch `fix/boilerplate-bugs-reviewed`
-- Phase 2 has a cascade guard: re-run typecheck after bug fixes to verify Phase 1 hooks still compile
+- Periodontal tab deferred to v1.3
 
 ### Blockers
 
