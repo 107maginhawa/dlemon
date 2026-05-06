@@ -79,6 +79,13 @@
 4. Invalid FDI numbers are rejected
 5. `bg-lemon` used instead of hardcoded hex in payment footer
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Type tightening: ToothData.surfaces, buildToothMap, getToothColorClass, FDI guards, Treatment cdtCode/description (BUG-04, BUG-05, CR-03)
+- [ ] 02-02-PLAN.md — Hook fixes: CR-01 localStorage guard, CR-02 stale closure, WR-02 sequential saves, BUG-06 NaN guard
+- [ ] 02-03-PLAN.md — Verify BUG-02/BUG-03/BUG-01 already-fixed, BUG-07 color tokens, cascade typecheck guard
+
 ---
 
 ## Phase 3: DentalChartThumbnail + Component Polish
