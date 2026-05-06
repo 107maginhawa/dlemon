@@ -7,6 +7,7 @@
  * FR8.13: Access Control — PUT is restricted to dentist_owner role
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
@@ -14,6 +15,13 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalBranches, type BranchSettings } from './repos/branch.schema';
 import { dentalMemberships } from './repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
+
+const updateBranchSettingsSchema = z.object({
+  settings: z.record(z.unknown()).optional(),
+}).passthrough().refine(
+  (data) => typeof data === 'object' && data !== null,
+  { message: 'settings must be an object' }
+);
 
 async function getMemberRole(db: DatabaseInstance, userId: string, branchId: string): Promise<string | null> {
   const [member] = await db
@@ -57,13 +65,10 @@ export async function updateBranchSettings(ctx: Context) {
     throw new ForbiddenError('Only the dentist owner can update branch settings');
   }
 
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new Error('Invalid JSON'); }
+  const rawBody = await ctx.req.json();
+  const body = updateBranchSettingsSchema.parse(rawBody);
 
   const updates = body.settings ?? body;
-  if (!updates || typeof updates !== 'object') {
-    throw new Error('settings must be an object');
-  }
 
   const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
   if (!branch) throw new NotFoundError('Branch not found');

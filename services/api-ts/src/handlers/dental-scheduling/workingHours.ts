@@ -18,13 +18,32 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { eq } from 'drizzle-orm';
 import { assertBranchAccess } from './utils/assert-branch-access';
+import { z } from 'zod';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const dayScheduleSchema = z.object({
+  enabled: z.boolean(),
+  open: z.string().regex(TIME_RE, 'Must be in HH:MM format').optional(),
+  close: z.string().regex(TIME_RE, 'Must be in HH:MM format').optional(),
+});
+
+const updateWorkingHoursSchema = z.object({
+  workingHours: z.object({
+    monday: dayScheduleSchema.optional(),
+    tuesday: dayScheduleSchema.optional(),
+    wednesday: dayScheduleSchema.optional(),
+    thursday: dayScheduleSchema.optional(),
+    friday: dayScheduleSchema.optional(),
+    saturday: dayScheduleSchema.optional(),
+    sunday: dayScheduleSchema.optional(),
+  }),
+});
 
 export interface DaySchedule {
   enabled: boolean;
@@ -103,30 +122,8 @@ export async function updateWorkingHours(ctx: Context) {
 
   await assertBranchAccess(db, user.id, branchId);
 
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
-
-  const workingHours = body.workingHours;
-  if (!workingHours || typeof workingHours !== 'object') {
-    throw new ValidationError('workingHours is required and must be an object');
-  }
-
-  // Validate structure
-  for (const day of DAYS) {
-    const schedule = workingHours[day] as DaySchedule | undefined;
-    if (!schedule) continue;
-    if (typeof schedule.enabled !== 'boolean') {
-      throw new ValidationError(`workingHours.${day}.enabled must be a boolean`);
-    }
-    if (schedule.enabled) {
-      if (schedule.open && !TIME_RE.test(schedule.open)) {
-        throw new ValidationError(`workingHours.${day}.open must be in HH:MM format`);
-      }
-      if (schedule.close && !TIME_RE.test(schedule.close)) {
-        throw new ValidationError(`workingHours.${day}.close must be in HH:MM format`);
-      }
-    }
-  }
+  const rawBody = await ctx.req.json();
+  const { workingHours } = updateWorkingHoursSchema.parse(rawBody);
 
   await db.update(dentalBranches)
     .set({ workingHours: JSON.stringify(workingHours), updatedAt: new Date(), updatedBy: user.id })

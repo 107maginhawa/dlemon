@@ -4,30 +4,25 @@
  * POST /dental/visits/{visitId}/amendments
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { AmendmentRepository } from './repos/amendment.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
 
-export async function createAmendment(ctx: HandlerContext) {
+export async function createAmendment(
+  ctx: ValidatedContext<CreateAmendmentBody, never, CreateAmendmentParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const visitId = ctx.req.param('visitId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
+  const { visitId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') throw new ValidationError('patientId is required');
-  if (!body['originalRecordType'] || typeof body['originalRecordType'] !== 'string') throw new ValidationError('originalRecordType is required');
-  if (!body['originalRecordId'] || typeof body['originalRecordId'] !== 'string') throw new ValidationError('originalRecordId is required');
-  if (!body['reason'] || typeof body['reason'] !== 'string') throw new ValidationError('reason is required');
-  if (!body['content'] || typeof body['content'] !== 'string') throw new ValidationError('content is required');
-
-  const authorMemberId = typeof body['authorMemberId'] === 'string'
-    ? body['authorMemberId']
-    : user.id;
+  const authorMemberId = body.authorMemberId ?? user.id;
 
   const db = ctx.get('database') as DatabaseInstance;
 
@@ -41,12 +36,12 @@ export async function createAmendment(ctx: HandlerContext) {
 
   const amendment = await repo.createOne({
     visitId,
-    patientId: body['patientId'] as string,
+    patientId: body.patientId,
     authorMemberId,
-    originalRecordType: body['originalRecordType'] as string,
-    originalRecordId: body['originalRecordId'] as string,
-    reason: body['reason'] as string,
-    content: body['content'] as string,
+    originalRecordType: body.originalRecordType,
+    originalRecordId: body.originalRecordId,
+    reason: body.reason,
+    content: body.content,
   });
 
   return ctx.json(amendment, 201);

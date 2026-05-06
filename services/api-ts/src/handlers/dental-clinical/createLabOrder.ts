@@ -4,24 +4,23 @@
  * POST /dental/visits/{visitId}/lab-orders
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { LabOrderRepository } from './repos/lab-order.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { CreateLabOrderBody, CreateLabOrderParams } from '@/generated/openapi/validators';
 
-export async function createLabOrder(ctx: HandlerContext) {
+export async function createLabOrder(
+  ctx: ValidatedContext<CreateLabOrderBody, never, CreateLabOrderParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const visitId = ctx.req.param('visitId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') throw new ValidationError('patientId is required');
-  if (!body['labName'] || typeof body['labName'] !== 'string') throw new ValidationError('labName is required');
-  if (!body['description'] || typeof body['description'] !== 'string') throw new ValidationError('description is required');
+  const { visitId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
 
@@ -34,10 +33,10 @@ export async function createLabOrder(ctx: HandlerContext) {
 
   const order = await repo.createOne({
     visitId,
-    patientId: body['patientId'] as string,
-    labName: body['labName'] as string,
-    description: body['description'] as string,
-    expectedDeliveryDate: body['expectedDeliveryDate'] ? new Date(body['expectedDeliveryDate'] as string) : undefined,
+    patientId: body.patientId,
+    labName: body.labName,
+    description: body.description,
+    expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,
   });
 
   return ctx.json(order, 201);

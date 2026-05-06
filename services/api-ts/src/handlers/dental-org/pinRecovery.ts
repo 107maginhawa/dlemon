@@ -5,6 +5,7 @@
  * POST /dental/org/members/:memberId/recover-pin        — verify answer + reset PIN
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError, ForbiddenError } from '@/core/errors';
@@ -14,20 +15,23 @@ import { MembershipRepository } from '@/handlers/dental-org/repos/membership.rep
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
 
+const setSecurityQuestionSchema = z.object({
+  question: z.string().min(1, 'question is required'),
+  answer: z.string().min(3, 'answer must be at least 3 characters'),
+});
+
+const recoverPinSchema = z.object({
+  answer: z.string().min(1, 'answer is required'),
+  newPin: z.string().regex(/^\d{4,6}$/, 'newPin must be 4-6 digits'),
+});
+
 export async function setSecurityQuestion(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const memberId = ctx.req.param('memberId')!;
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
-
-  const question = body.question as string | undefined;
-  const answer = body.answer as string | undefined;
-
-  if (!question?.trim()) throw new ValidationError('question is required');
-  if (!answer?.trim()) throw new ValidationError('answer is required');
-  if (answer.trim().length < 3) throw new ValidationError('answer must be at least 3 characters');
+  const rawBody = await ctx.req.json();
+  const { question, answer } = setSecurityQuestionSchema.parse(rawBody);
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new MembershipRepository(db);
@@ -48,27 +52,21 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
     }
   }
 
-  const answerHash = await Bun.password.hash(answer.toLowerCase().trim(), { algorithm: 'bcrypt', cost: 10 });
+  const answerHash = await Bun.password.hash(answer.trim().toLowerCase(), { algorithm: 'bcrypt', cost: 10 });
 
   await db.update(dentalMemberships)
-    .set({ securityQuestion: question.trim(), securityAnswerHash: answerHash, updatedAt: new Date() })
+    .set({ securityQuestion: question, securityAnswerHash: answerHash, updatedAt: new Date() })
     .where(eq(dentalMemberships.id, memberId));
 
-  return ctx.json({ success: true, question: question.trim() }, 200);
+  return ctx.json({ success: true, question }, 200);
 }
 
 export async function recoverPin(ctx: Context): Promise<Response> {
   // FR9.7: PIN recovery is intentionally unauthenticated — the user is locked out
   // and cannot authenticate. The security answer is the auth mechanism here.
   const memberId = ctx.req.param('memberId')!;
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
-
-  const answer = body.answer as string | undefined;
-  const newPin = body.newPin as string | undefined;
-
-  if (!answer?.trim()) throw new ValidationError('answer is required');
-  if (!newPin || !/^\d{4,6}$/.test(newPin)) throw new ValidationError('newPin must be 4-6 digits');
+  const rawBody = await ctx.req.json();
+  const { answer, newPin } = recoverPinSchema.parse(rawBody);
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new MembershipRepository(db);

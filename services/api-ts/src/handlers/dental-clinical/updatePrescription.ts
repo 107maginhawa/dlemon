@@ -4,20 +4,23 @@
  * PATCH /dental/visits/{visitId}/prescriptions/{prescriptionId}
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PrescriptionRepository } from './repos/prescription.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { UpdatePrescriptionBody, UpdatePrescriptionParams } from '@/generated/openapi/validators';
 
-export async function updatePrescription(ctx: HandlerContext) {
+export async function updatePrescription(
+  ctx: ValidatedContext<UpdatePrescriptionBody, never, UpdatePrescriptionParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const prescriptionId = ctx.req.param('prescriptionId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
+  const { prescriptionId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new PrescriptionRepository(db);
@@ -31,15 +34,14 @@ export async function updatePrescription(ctx: HandlerContext) {
   if (!visit) throw new NotFoundError('Visit');
   await assertBranchAccess(db, user.id, visit.branchId);
 
-  const patch: Record<string, unknown> = {};
-  if (typeof body['rxNormCode'] === 'string') patch['rxNormCode'] = body['rxNormCode'];
-  if (typeof body['drugName'] === 'string') patch['drugName'] = body['drugName'];
-  if (typeof body['dosage'] === 'string') patch['dosage'] = body['dosage'];
-  if (typeof body['frequency'] === 'string') patch['frequency'] = body['frequency'];
-  if (typeof body['duration'] === 'string') patch['duration'] = body['duration'];
-  if (typeof body['quantity'] === 'string') patch['quantity'] = body['quantity'];
-  if (typeof body['instructions'] === 'string') patch['instructions'] = body['instructions'];
-
-  const updated = await repo.update(prescriptionId, patch as any);
+  const updated = await repo.update(prescriptionId, {
+    rxNormCode: body.rxNormCode,
+    drugName: body.drugName,
+    dosage: body.dosage,
+    frequency: body.frequency,
+    duration: body.duration,
+    quantity: body.quantity,
+    instructions: body.instructions,
+  });
   return ctx.json(updated);
 }

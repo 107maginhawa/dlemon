@@ -4,32 +4,28 @@
  * POST /dental/clinical/medical-history
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
-import { VALID_ENTRY_TYPES } from './repos/medical-history.schema';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { CreateMedicalHistoryEntryBody } from '@/generated/openapi/validators';
 
-export async function createMedicalHistoryEntry(ctx: HandlerContext) {
+export async function createMedicalHistoryEntry(
+  ctx: ValidatedContext<CreateMedicalHistoryEntryBody>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') throw new ValidationError('patientId is required');
-  if (!body['entryType'] || !VALID_ENTRY_TYPES.includes(body['entryType'] as any)) {
-    throw new ValidationError(`entryType must be one of: ${VALID_ENTRY_TYPES.join(', ')}`);
-  }
-  if (!body['displayName'] || typeof body['displayName'] !== 'string') throw new ValidationError('displayName is required');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization via patient's preferred branch
   const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneById(body['patientId'] as string);
+  const patient = await patientRepo.findOneById(body.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
   await assertBranchAccess(db, user.id, patient.preferredBranchId);
@@ -37,14 +33,14 @@ export async function createMedicalHistoryEntry(ctx: HandlerContext) {
   const repo = new MedicalHistoryRepository(db);
 
   const entry = await repo.createOne({
-    patientId: body['patientId'] as string,
-    entryType: body['entryType'] as any,
-    displayName: body['displayName'] as string,
-    codeSystem: typeof body['codeSystem'] === 'string' ? body['codeSystem'] : undefined,
-    code: typeof body['code'] === 'string' ? body['code'] : undefined,
-    notes: typeof body['notes'] === 'string' ? body['notes'] : undefined,
-    onsetDate: typeof body['onsetDate'] === 'string' ? body['onsetDate'] : undefined,
-    resolvedDate: typeof body['resolvedDate'] === 'string' ? body['resolvedDate'] : undefined,
+    patientId: body.patientId,
+    entryType: body.entryType,
+    displayName: body.displayName,
+    codeSystem: body.codeSystem,
+    code: body.code,
+    notes: body.notes,
+    onsetDate: body.onsetDate,
+    resolvedDate: body.resolvedDate,
   });
 
   return ctx.json(entry, 201);

@@ -4,24 +4,23 @@
  * POST /dental/visits/{visitId}/consents/{consentId}/sign
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ConsentFormRepository } from './repos/consent-form.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { SignConsentFormBody, SignConsentFormParams } from '@/generated/openapi/validators';
 
-export async function signConsentForm(ctx: HandlerContext) {
+export async function signConsentForm(
+  ctx: ValidatedContext<SignConsentFormBody, never, SignConsentFormParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const consentId = ctx.req.param('consentId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['signatureData'] || typeof body['signatureData'] !== 'string') {
-    throw new ValidationError('signatureData is required');
-  }
+  const { consentId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new ConsentFormRepository(db);
@@ -39,7 +38,7 @@ export async function signConsentForm(ctx: HandlerContext) {
     throw new ValidationError('Consent form is already signed and cannot be modified');
   }
 
-  const signed = await repo.sign(consentId, body['signatureData'] as string);
+  const signed = await repo.sign(consentId, body.signatureData);
   if (!signed) throw new ValidationError('Could not sign consent form');
 
   return ctx.json(signed);

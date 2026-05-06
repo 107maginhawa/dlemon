@@ -19,6 +19,11 @@ import { TreatmentRepository } from './repos/treatment.repo';
 import { dentalTreatments } from './repos/treatment.schema';
 import { dentalVisits } from './repos/visit.schema';
 import { eq, and, inArray, ne, desc } from 'drizzle-orm';
+import { z } from 'zod';
+
+const carryOverBodySchema = z.object({
+  restoreDismissedIds: z.array(z.string().uuid()).optional(),
+});
 
 export async function carryOverTreatments(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -29,8 +34,8 @@ export async function carryOverTreatments(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  let body: any = {};
-  try { body = await ctx.req.json(); } catch {}
+  const rawBody = await ctx.req.json().catch(() => ({}));
+  const body = carryOverBodySchema.parse(rawBody);
 
   const visitRepo = new VisitRepository(db);
   const treatmentRepo = new TreatmentRepository(db);

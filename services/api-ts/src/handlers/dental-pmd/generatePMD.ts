@@ -6,7 +6,7 @@
  * Only completed or locked visits can generate a PMD.
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
@@ -15,6 +15,7 @@ import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.rep
 import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
+import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
 
 function sha256Hex(content: string): string {
   // Simple checksum using content length + first/last chars for demo
@@ -23,16 +24,14 @@ function sha256Hex(content: string): string {
   return `sha256-${sum.toString(16).padStart(16, '0')}`;
 }
 
-export async function generatePMD(ctx: HandlerContext) {
+export async function generatePMD(
+  ctx: ValidatedContext<GeneratePMDBody, never, GeneratePMDParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const visitId = ctx.req.param('visitId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') {
-    throw new ValidationError('patientId is required');
-  }
+  const { visitId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const visitRepo = new VisitRepository(db);
@@ -53,7 +52,7 @@ export async function generatePMD(ctx: HandlerContext) {
 
   const contentSnapshot = JSON.stringify({
     visitId,
-    patientId: body['patientId'],
+    patientId: body.patientId,
     visitDate: visit.activatedAt ?? visit.createdAt,
     treatments: treatments.map(t => ({
       id: t.id,
@@ -85,7 +84,7 @@ export async function generatePMD(ctx: HandlerContext) {
   if (existing) {
     pmd = await pmdRepo.supersede(existing.id, {
       visitId,
-      patientId: body['patientId'] as string,
+      patientId: body.patientId,
       authorMemberId: user.id,
       branchId: visit.branchId,
       content: contentSnapshot,
@@ -94,7 +93,7 @@ export async function generatePMD(ctx: HandlerContext) {
   } else {
     pmd = await pmdRepo.createOne({
       visitId,
-      patientId: body['patientId'] as string,
+      patientId: body.patientId,
       authorMemberId: user.id,
       branchId: visit.branchId,
       content: contentSnapshot,

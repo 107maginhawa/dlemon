@@ -5,15 +5,20 @@
  * POST /dental/patients/:id/follow-up-notes  — add note
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { FollowUpNote } from '../patient/repos/patient.schema';
 import { sql } from 'drizzle-orm';
 import { patients } from '../patient/repos/patient.schema';
 import { eq } from 'drizzle-orm';
+
+const addFollowUpNoteSchema = z.object({
+  text: z.string().min(1, 'text is required'),
+});
 
 export async function listFollowUpNotes(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -47,15 +52,8 @@ export async function addFollowUpNote(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  let body: any;
-  try {
-    body = await ctx.req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON body');
-  }
-
-  const text = (body?.text ?? '').trim();
-  if (!text) throw new ValidationError('text is required');
+  const rawBody = await ctx.req.json();
+  const { text } = addFollowUpNoteSchema.parse(rawBody);
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);

@@ -10,12 +10,35 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+
+const templateItemSchema = z.object({
+  cdtCode: z.string(),
+  description: z.string(),
+  priceCents: z.number(),
+  toothNumber: z.number().optional(),
+  surfaces: z.array(z.string()).optional(),
+});
+
+const createTemplateSchema = z.object({
+  name: z.string().min(1, 'name is required'),
+  branchId: z.string().uuid('branchId is required'),
+  description: z.string().optional(),
+  items: z.array(templateItemSchema).min(1, 'items must be a non-empty array'),
+});
+
+const updateTemplateSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  items: z.array(templateItemSchema).optional(),
+  active: z.boolean().optional(),
+});
 
 export async function listTreatmentTemplates(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -23,7 +46,7 @@ export async function listTreatmentTemplates(ctx: Context) {
 
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.query('branchId');
-  if (!branchId) throw new ValidationError('branchId query parameter is required');
+  if (!branchId) throw new Error('branchId query parameter is required');
   await assertBranchAccess(db, user.id, branchId);
 
   const templates = await db.select().from(dentalTreatmentTemplates).where(
@@ -38,18 +61,14 @@ export async function createTreatmentTemplate(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
-
-  if (!body.name?.trim()) throw new ValidationError('name is required');
-  if (!body.branchId) throw new ValidationError('branchId is required');
-  if (!Array.isArray(body.items) || body.items.length === 0) throw new ValidationError('items must be a non-empty array');
+  const rawBody = await ctx.req.json();
+  const body = createTemplateSchema.parse(rawBody);
 
   await assertBranchAccess(db, user.id, body.branchId);
 
   const [template] = await db.insert(dentalTreatmentTemplates).values({
     branchId: body.branchId,
-    name: body.name.trim(),
+    name: body.name,
     description: body.description ?? null,
     items: body.items,
     active: true,
@@ -67,8 +86,8 @@ export async function updateTreatmentTemplate(ctx: Context) {
   const templateId = ctx.req.param('id');
   if (!templateId) throw new NotFoundError('Treatment template not found');
   const db = ctx.get('database') as DatabaseInstance;
-  let body: any;
-  try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
+  const rawBody = await ctx.req.json();
+  const body = updateTemplateSchema.parse(rawBody);
 
   const [existing] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
   if (!existing) throw new NotFoundError('Treatment template not found');

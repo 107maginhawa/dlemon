@@ -4,20 +4,31 @@
  * Path: PATCH /dental/org/members/:memberId
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
-import { VALID_MEMBER_ROLES, type MemberRole } from '@/handlers/dental-org/repos/membership.schema';
+import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schema';
+
+const updateMemberSchema = z.object({
+  displayName: z.string().min(1).optional(),
+  role: z.enum(VALID_MEMBER_ROLES).optional(),
+  avatarUrl: z.string().optional().nullable(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: 'No valid fields to update' }
+);
 
 export async function updateMember(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const memberId = ctx.req.param('memberId')!;
-  const body = await ctx.req.json() as Record<string, unknown>;
+  const rawBody = await ctx.req.json();
+  const body = updateMemberSchema.parse(rawBody);
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -30,18 +41,9 @@ export async function updateMember(ctx: Context): Promise<Response> {
 
   // Build update payload from allowed fields
   const updateData: Record<string, unknown> = {};
-  if (body['displayName'] !== undefined) updateData['displayName'] = body['displayName'];
-  if (body['role'] !== undefined) {
-    if (!VALID_MEMBER_ROLES.includes(body['role'] as MemberRole)) {
-      return ctx.json({ error: `Invalid role. Must be one of: ${VALID_MEMBER_ROLES.join(', ')}` }, 400);
-    }
-    updateData['role'] = body['role'];
-  }
-  if (body['avatarUrl'] !== undefined) updateData['avatarUrl'] = body['avatarUrl'];
-
-  if (Object.keys(updateData).length === 0) {
-    return ctx.json({ error: 'No valid fields to update' }, 400);
-  }
+  if (body.displayName !== undefined) updateData['displayName'] = body.displayName;
+  if (body.role !== undefined) updateData['role'] = body.role;
+  if (body.avatarUrl !== undefined) updateData['avatarUrl'] = body.avatarUrl;
 
   try {
     const updated = await repo.updateOneById(memberId, updateData);

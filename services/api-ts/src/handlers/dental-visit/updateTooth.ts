@@ -4,24 +4,24 @@
  * PATCH /dental/visits/{visitId}/chart/teeth/{toothNumber}
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
+import type { UpdateToothBody, UpdateToothParams } from '@/generated/openapi/validators';
 
-export async function updateTooth(ctx: HandlerContext) {
+export async function updateTooth(
+  ctx: ValidatedContext<UpdateToothBody, never, UpdateToothParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const visitId = ctx.req.param('visitId')!;
-  const toothNumber = parseInt(ctx.req.param('toothNumber') ?? '');
-  if (isNaN(toothNumber)) throw new ValidationError('toothNumber must be a number');
+  const { visitId, toothNumber } = ctx.req.valid('param');
 
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-  if (!body['state'] || typeof body['state'] !== 'string') throw new ValidationError('state is required');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
 
@@ -37,10 +37,10 @@ export async function updateTooth(ctx: HandlerContext) {
 
   const updated = await repo.updateTooth(chart.id, {
     toothNumber,
-    state: body['state'] as string,
-    surfaces: Array.isArray(body['surfaces']) ? body['surfaces'] as string[] : undefined,
-    conditionCode: typeof body['conditionCode'] === 'string' ? body['conditionCode'] : undefined,
-    note: typeof body['note'] === 'string' ? body['note'] : undefined,
+    state: body.state,
+    surfaces: body.surfaces,
+    conditionCode: body.conditionCode,
+    note: body.note,
   });
 
   return ctx.json(updated);

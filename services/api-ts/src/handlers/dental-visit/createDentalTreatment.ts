@@ -4,26 +4,24 @@
  * POST /dental/visits/{visitId}/treatments
  */
 
-import type { HandlerContext } from '@/types/app';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError, BusinessLogicError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import type { User } from '@/types/auth';
+import type { CreateDentalTreatmentBody, CreateDentalTreatmentParams } from '@/generated/openapi/validators';
 
-export async function createDentalTreatment(ctx: HandlerContext) {
+export async function createDentalTreatment(
+  ctx: ValidatedContext<CreateDentalTreatmentBody, never, CreateDentalTreatmentParams>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const visitId = ctx.req.param('visitId')!;
-  const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!body['patientId'] || typeof body['patientId'] !== 'string') throw new ValidationError('patientId is required');
-  if (!body['cdtCode'] || typeof body['cdtCode'] !== 'string') throw new ValidationError('cdtCode is required');
-  if (!body['description'] || typeof body['description'] !== 'string') throw new ValidationError('description is required');
-  if (typeof body['priceCents'] !== 'number') throw new ValidationError('priceCents is required and must be a number');
+  const { visitId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new TreatmentRepository(db);
@@ -43,14 +41,14 @@ export async function createDentalTreatment(ctx: HandlerContext) {
   }
 
   // EC2: Block treatment on extracted tooth
-  if (typeof body['toothNumber'] === 'number') {
+  if (body.toothNumber !== undefined) {
     const chartRepo = new DentalChartRepository(db);
-    const chart = visit ? await chartRepo.findByVisit(visit.id) : null;
+    const chart = await chartRepo.findByVisit(visit.id);
     if (chart) {
-      const toothState = chart.teeth.find((t: any) => t.toothNumber === body['toothNumber']);
+      const toothState = chart.teeth.find((t: any) => t.toothNumber === body.toothNumber);
       if (toothState?.state === 'extracted') {
         throw new BusinessLogicError(
-          `Tooth ${body['toothNumber']} is extracted — cannot add pending treatments`,
+          `Tooth ${body.toothNumber} is extracted — cannot add pending treatments`,
           'TOOTH_EXTRACTED'
         );
       }
@@ -59,13 +57,13 @@ export async function createDentalTreatment(ctx: HandlerContext) {
 
   const treatment = await repo.createOne({
     visitId,
-    patientId: body['patientId'] as string,
-    cdtCode: body['cdtCode'] as string,
-    description: body['description'] as string,
-    toothNumber: typeof body['toothNumber'] === 'number' ? body['toothNumber'] : undefined,
-    surfaces: Array.isArray(body['surfaces']) ? body['surfaces'] as string[] : undefined,
-    conditionCode: typeof body['conditionCode'] === 'string' ? body['conditionCode'] : undefined,
-    priceCents: body['priceCents'] as number,
+    patientId: body.patientId,
+    cdtCode: body.cdtCode,
+    description: body.description,
+    toothNumber: body.toothNumber,
+    surfaces: body.surfaces,
+    conditionCode: body.conditionCode,
+    priceCents: body.priceCents,
     carriedOver: false,
   });
 

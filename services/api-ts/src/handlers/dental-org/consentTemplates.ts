@@ -9,13 +9,26 @@
  * FR8.13: Access control — write operations restricted to dentist_owner role.
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalConsentTemplates } from './repos/consent-template.schema';
 import { dentalMemberships } from './repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
+
+const createConsentTemplateSchema = z.object({
+  name: z.string().min(1, 'name is required'),
+  body: z.string().min(1, 'body is required'),
+  requiresWitnessSignature: z.boolean().optional().default(false),
+});
+
+const updateConsentTemplateSchema = z.object({
+  name: z.string().min(1).optional(),
+  body: z.string().min(1).optional(),
+  requiresWitnessSignature: z.boolean().optional(),
+});
 
 async function getMemberRole(db: DatabaseInstance, userId: string, branchId: string): Promise<string | null> {
   const [member] = await db
@@ -62,9 +75,8 @@ export async function createConsentTemplate(ctx: Context): Promise<Response> {
     throw new ForbiddenError('Only the dentist owner can manage consent templates');
   }
 
-  const body = await ctx.req.json().catch(() => null) as any;
-  if (!body?.name) throw new ValidationError('name is required');
-  if (!body?.body) throw new ValidationError('body is required');
+  const rawBody = await ctx.req.json();
+  const body = createConsentTemplateSchema.parse(rawBody);
 
   const [created] = await db
     .insert(dentalConsentTemplates)
@@ -72,7 +84,7 @@ export async function createConsentTemplate(ctx: Context): Promise<Response> {
       branchId,
       name: body.name,
       body: body.body,
-      requiresWitnessSignature: body.requiresWitnessSignature ?? false,
+      requiresWitnessSignature: body.requiresWitnessSignature,
       active: true,
       createdBy: user.id,
       updatedBy: user.id,
@@ -104,7 +116,8 @@ export async function updateConsentTemplate(ctx: Context): Promise<Response> {
     .where(and(eq(dentalConsentTemplates.id, templateId), eq(dentalConsentTemplates.branchId, branchId)));
   if (!existing) throw new NotFoundError('Consent template not found');
 
-  const body = await ctx.req.json().catch(() => ({})) as any;
+  const rawBody = await ctx.req.json();
+  const body = updateConsentTemplateSchema.parse(rawBody);
 
   const [updated] = await db
     .update(dentalConsentTemplates)

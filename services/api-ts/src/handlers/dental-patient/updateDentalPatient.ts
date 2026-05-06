@@ -7,13 +7,26 @@
  * FR2.18: Recall / next visit tracking
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
-const VALID_STATUSES = ['active', 'archived'] as const;
+const updateDentalPatientSchema = z.object({
+  needsFollowUp: z.boolean().optional(),
+  dentalHistorySummary: z.string().optional().nullable(),
+  preferredBranchId: z.string().optional().nullable(),
+  status: z.enum(['active', 'archived']).optional(),
+  emergencyContact: z.any().optional(),
+  communicationPreferences: z.any().optional(),
+  recallDate: z.string().optional().nullable(),
+  recallNote: z.string().optional().nullable(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: 'No updatable fields provided' }
+);
 
 export async function updateDentalPatient(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -24,12 +37,8 @@ export async function updateDentalPatient(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  let body: any;
-  try {
-    body = await ctx.req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON body');
-  }
+  const rawBody = await ctx.req.json();
+  const body = updateDentalPatientSchema.parse(rawBody);
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);
@@ -42,15 +51,12 @@ export async function updateDentalPatient(ctx: Context) {
 
   const updates: Record<string, any> = {};
 
-  if (body.needsFollowUp !== undefined) updates.needsFollowUp = Boolean(body.needsFollowUp);
+  if (body.needsFollowUp !== undefined) updates.needsFollowUp = body.needsFollowUp;
   if (body.dentalHistorySummary !== undefined) updates.dentalHistorySummary = body.dentalHistorySummary;
   if (body.preferredBranchId !== undefined) updates.preferredBranchId = body.preferredBranchId;
 
   // FR2.9: Status management
   if (body.status !== undefined) {
-    if (!VALID_STATUSES.includes(body.status)) {
-      throw new ValidationError(`status must be one of: ${VALID_STATUSES.join(', ')}`);
-    }
     updates.status = body.status;
     if (body.status === 'archived') updates.archivedAt = new Date();
     if (body.status === 'active') updates.archivedAt = null;
@@ -69,10 +75,6 @@ export async function updateDentalPatient(ctx: Context) {
   // FR2.18: Recall date + note
   if (body.recallDate !== undefined) updates.recallDate = body.recallDate;
   if (body.recallNote !== undefined) updates.recallNote = body.recallNote;
-
-  if (Object.keys(updates).length === 0) {
-    throw new ValidationError('No updatable fields provided');
-  }
 
   updates.updatedBy = user.id;
   const updated = await repo.updateOneById(patientId, updates);

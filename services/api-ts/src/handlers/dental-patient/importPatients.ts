@@ -13,6 +13,7 @@
  * JSON: array of { firstName, lastName, dateOfBirth, branchId, gender?, phone?, email? }
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
@@ -20,6 +21,16 @@ import type { User } from '@/types/auth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+
+const patientRowSchema = z.object({
+  firstName: z.string().min(1, 'firstName required'),
+  lastName: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  branchId: z.string().min(1, 'branchId required'),
+});
 
 interface PatientRow {
   firstName: string;
@@ -77,18 +88,13 @@ function validateRows(items: any[]): { rows: PatientRow[]; errors: string[] } {
   const rows: PatientRow[] = [];
 
   for (let i = 0; i < items.length; i++) {
-    const item = items[i] as any;
-    if (!item.firstName?.trim()) { errors.push(`Item ${i}: firstName required`); continue; }
-    if (!item.branchId?.trim())  { errors.push(`Item ${i}: branchId required`);  continue; }
-    rows.push({
-      firstName: item.firstName.trim(),
-      lastName: item.lastName?.trim() || undefined,
-      dateOfBirth: item.dateOfBirth?.trim() || undefined,
-      gender: item.gender?.trim() || undefined,
-      phone: item.phone?.trim() || undefined,
-      email: item.email?.trim() || undefined,
-      branchId: item.branchId.trim(),
-    });
+    const result = patientRowSchema.safeParse(items[i]);
+    if (!result.success) {
+      const msgs = result.error.issues.map(issue => issue.message).join(', ');
+      errors.push(`Item ${i}: ${msgs}`);
+      continue;
+    }
+    rows.push(result.data as PatientRow);
   }
 
   return { rows, errors };

@@ -14,11 +14,17 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { VisitRepository } from './repos/visit.repo';
 import type { ToothChartState } from './repos/dental-chart.schema';
+import { z } from 'zod';
+
+const initializeDentitionSchema = z.object({
+  dateOfBirth: z.string().min(1, 'dateOfBirth is required to determine dentition type'),
+  visitId: z.string().uuid('visitId is required to associate the dental chart'),
+});
 
 // ISO 3950 deciduous tooth numbers (primary dentition)
 // Upper right: 51-55, Upper left: 61-65, Lower left: 71-75, Lower right: 81-85
@@ -65,17 +71,8 @@ export async function initializeDentition(ctx: Context): Promise<Response> {
   const logger = ctx.get('logger');
   const patientId = ctx.req.param('patientId') as string;
 
-  const body = await ctx.req.json().catch(() => ({})) as {
-    dateOfBirth?: string;
-    visitId?: string;
-  };
-
-  if (!body.dateOfBirth) {
-    throw new ValidationError('dateOfBirth is required to determine dentition type');
-  }
-  if (!body.visitId) {
-    throw new ValidationError('visitId is required to associate the dental chart');
-  }
+  const rawBody = await ctx.req.json().catch(() => ({}));
+  const body = initializeDentitionSchema.parse(rawBody);
 
   // Branch authorization — look up visit to get branchId
   const visitRepo = new VisitRepository(db);

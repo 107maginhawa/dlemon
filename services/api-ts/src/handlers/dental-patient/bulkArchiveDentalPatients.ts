@@ -7,31 +7,23 @@
  * Returns per-patient result: { id, success, reason? }
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+
+const bulkArchiveSchema = z.object({
+  patientIds: z.array(z.string()).min(1, 'patientIds must be a non-empty array').max(100, 'Cannot bulk archive more than 100 patients at once'),
+});
 
 export async function bulkArchiveDentalPatients(ctx: Context) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  let body: any;
-  try {
-    body = await ctx.req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON body');
-  }
-
-  const patientIds: string[] = body?.patientIds ?? [];
-  if (!Array.isArray(patientIds) || patientIds.length === 0) {
-    throw new ValidationError('patientIds must be a non-empty array');
-  }
-
-  if (patientIds.length > 100) {
-    throw new ValidationError('Cannot bulk archive more than 100 patients at once');
-  }
+  const rawBody = await ctx.req.json();
+  const { patientIds } = bulkArchiveSchema.parse(rawBody);
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

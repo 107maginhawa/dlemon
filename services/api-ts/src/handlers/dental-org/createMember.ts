@@ -5,33 +5,36 @@
  * Body: { displayName, role, avatarUrl? }
  */
 
+import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
-import { VALID_MEMBER_ROLES, type MemberRole } from '@/handlers/dental-org/repos/membership.schema';
+import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schema';
+
+const createMemberSchema = z.object({
+  displayName: z.string().min(1, 'displayName is required'),
+  role: z.enum(VALID_MEMBER_ROLES, { errorMap: () => ({ message: `role is required and must be one of: ${VALID_MEMBER_ROLES.join(', ')}` }) }),
+  branchId: z.string().uuid().optional(),
+  personId: z.string().uuid().optional().nullable(),
+  avatarUrl: z.string().optional().nullable(),
+  pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits').optional(),
+});
 
 export async function createMember(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const branchId = ctx.req.query('branchId');
-  const body = await ctx.req.json();
+  const branchIdQuery = ctx.req.query('branchId');
+  const rawBody = await ctx.req.json();
+  const body = createMemberSchema.parse(rawBody);
 
   // branchId can come from query param or body
-  const resolvedBranchId = branchId || body.branchId;
+  const resolvedBranchId = branchIdQuery || body.branchId;
   if (!resolvedBranchId) {
     return ctx.json({ error: 'branchId is required (query param or body)' }, 400);
-  }
-
-  if (!body.displayName || typeof body.displayName !== 'string' || !body.displayName.trim()) {
-    return ctx.json({ error: 'displayName is required' }, 400);
-  }
-
-  if (!body.role || !VALID_MEMBER_ROLES.includes(body.role as MemberRole)) {
-    return ctx.json({ error: `role is required and must be one of: ${VALID_MEMBER_ROLES.join(', ')}` }, 400);
   }
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -44,14 +47,14 @@ export async function createMember(ctx: Context): Promise<Response> {
 
   // Optionally accept a PIN and hash it
   let pinHash: string | null = null;
-  if (body.pin && typeof body.pin === 'string' && /^\d{6}$/.test(body.pin)) {
+  if (body.pin) {
     pinHash = await Bun.password.hash(body.pin);
   }
 
   const membership = await repo.createOne({
     branchId: resolvedBranchId,
     displayName: body.displayName.trim(),
-    role: body.role as any,
+    role: body.role,
     personId: body.personId ?? null,
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
