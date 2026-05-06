@@ -64,6 +64,24 @@ describe('useVisits', () => {
     expect(capturedUrl).toContain('patientId=p1');
   });
 
+  test('includes branchId in fetch URL when provided', async () => {
+    let capturedUrl = '';
+    global.fetch = mock((url: string | URL | Request) => {
+      capturedUrl = url.toString();
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [] }) } as Response);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useVisits({ patientId: 'p1', branchId: 'branch-123' }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(capturedUrl).toContain('patientId=p1');
+    expect(capturedUrl).toContain('branchId=branch-123');
+  });
+
   test('activeVisit is the visit with status=active', async () => {
     global.fetch = mock(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockVisits }) } as Response),

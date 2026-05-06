@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
+import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
+import { InvoiceDetailSheet } from './invoice-detail-sheet';
 
 const API = apiBaseUrl;
 
@@ -18,7 +20,7 @@ export interface RevenueReportProps {
 }
 
 function formatCents(cents: number): string {
-  return `₱${(cents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+  return `${CURRENCY_SYMBOL}${(cents / 100).toLocaleString(APP_LOCALE, { minimumFractionDigits: 2 })}`;
 }
 
 export function RevenueReport({ branchId }: RevenueReportProps) {
@@ -29,11 +31,12 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
   const [endDate, setEndDate] = useState(today);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     fetch(`${API}/dental/billing/invoices?branchId=${branchId}`, { credentials: 'include' })
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
       .then((data: Invoice[]) => {
         const filtered = data.filter(i => {
           const d = i.createdAt.slice(0, 10);
@@ -72,7 +75,9 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
     const a = document.createElement('a');
     a.href = url;
     a.download = `revenue-${startDate}-${endDate}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
@@ -81,12 +86,12 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Revenue Report</h2>
         <div className="flex items-center gap-2">
-          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+          <input type="date" aria-label="Start date" value={startDate} onChange={e => setStartDate(e.target.value)}
             className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
           <span className="text-sm text-muted-foreground">to</span>
-          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+          <input type="date" aria-label="End date" value={endDate} onChange={e => setEndDate(e.target.value)}
             className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
-          <button onClick={handleExportCSV}
+          <button type="button" onClick={handleExportCSV}
             className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
             Export CSV
           </button>
@@ -144,8 +149,67 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
               </tbody>
             </table>
           </div>
+
+          {/* RPT-01: individual invoices table — click a row to drilldown */}
+          <div className="rounded-xl border border-border">
+            <div className="px-4 py-3 border-b">
+              <h3 className="text-sm font-semibold">Invoices</h3>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground uppercase tracking-wide">
+                  <th className="px-4 py-2">Invoice #</th>
+                  <th className="px-4 py-2 hidden sm:table-cell">Date</th>
+                  <th className="px-4 py-2 hidden sm:table-cell">Status</th>
+                  <th className="px-4 py-2 text-right">Total</th>
+                  <th className="px-4 py-2 text-right hidden sm:table-cell">Paid</th>
+                  <th className="px-4 py-2 text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map(inv => (
+                  <tr
+                    key={inv.id}
+                    className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors"
+                    onClick={() => setSelectedInvoiceId(inv.id)}
+                  >
+                    <td className="px-4 py-2.5 font-medium text-primary">
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="px-4 py-2.5 hidden sm:table-cell text-muted-foreground">
+                      {inv.createdAt.slice(0, 10)}
+                    </td>
+                    <td className="px-4 py-2.5 hidden sm:table-cell capitalize">
+                      {inv.status}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">{formatCents(inv.totalCents)}</td>
+                    <td className="px-4 py-2.5 text-right text-green-600 hidden sm:table-cell">
+                      {formatCents(inv.paidCents)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-red-600">
+                      {formatCents(inv.balanceCents)}
+                    </td>
+                  </tr>
+                ))}
+                {invoices.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                      No invoices for this period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
+
+      {/* RPT-01/RPT-02: invoice detail sheet */}
+      <InvoiceDetailSheet
+        invoiceId={selectedInvoiceId}
+        open={selectedInvoiceId !== null}
+        onClose={() => setSelectedInvoiceId(null)}
+      />
     </div>
   );
 }

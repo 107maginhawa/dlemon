@@ -192,3 +192,104 @@ describe('Revenue Report — formatCSVRow', () => {
   test('commas in values', () => expect(formatCSVRow(['hello, world', 'test'])).toBe('"hello, world",test'));
   test('empty values', () => expect(formatCSVRow(['', 'test', ''])).toBe(',test,'));
 });
+
+// ---------------------------------------------------------------------------
+// Invoice detail helpers (RPT-01, RPT-02)
+// ---------------------------------------------------------------------------
+
+const INVOICE_STATUSES = ['draft', 'issued', 'partial', 'paid', 'overdue', 'voided'] as const;
+type InvoiceStatus = typeof INVOICE_STATUSES[number];
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: 'Draft',
+  issued: 'Issued',
+  partial: 'Partial',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  voided: 'Voided',
+};
+
+function formatInvoiceStatus(status: InvoiceStatus): string {
+  return STATUS_LABELS[status];
+}
+
+function sumPayments(payments: Payment[]): number {
+  return payments.reduce((sum, p) => sum + p.amountCents, 0);
+}
+
+function sortPaymentsByDate(payments: Array<Payment & { createdAt: string }>): Array<Payment & { createdAt: string }> {
+  return [...payments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+function calcInvoiceBalance(totalCents: number, payments: Payment[]): number {
+  const paid = sumPayments(payments);
+  return Math.max(0, totalCents - paid);
+}
+
+describe('Revenue Report — formatInvoiceStatus (RPT-02)', () => {
+  test.each(INVOICE_STATUSES)('formats %s', (status) => {
+    expect(formatInvoiceStatus(status)).toBeTruthy();
+    expect(typeof formatInvoiceStatus(status)).toBe('string');
+  });
+
+  test('paid returns Paid', () => expect(formatInvoiceStatus('paid')).toBe('Paid'));
+  test('partial returns Partial', () => expect(formatInvoiceStatus('partial')).toBe('Partial'));
+  test('overdue returns Overdue', () => expect(formatInvoiceStatus('overdue')).toBe('Overdue'));
+});
+
+describe('Revenue Report — sumPayments (RPT-02)', () => {
+  test('empty returns 0', () => {
+    expect(sumPayments([])).toBe(0);
+  });
+
+  test('sums multiple payments', () => {
+    const payments: Payment[] = [
+      { method: 'cash', amountCents: 3000 },
+      { method: 'card', amountCents: 2000 },
+    ];
+    expect(sumPayments(payments)).toBe(5000);
+  });
+});
+
+describe('Revenue Report — sortPaymentsByDate (RPT-02)', () => {
+  test('sorts ascending', () => {
+    const payments = [
+      { method: 'cash', amountCents: 1000, createdAt: '2026-01-03T10:00:00Z' },
+      { method: 'card', amountCents: 2000, createdAt: '2026-01-01T10:00:00Z' },
+    ];
+    const sorted = sortPaymentsByDate(payments);
+    expect(sorted[0].createdAt).toBe('2026-01-01T10:00:00Z');
+    expect(sorted[1].createdAt).toBe('2026-01-03T10:00:00Z');
+  });
+
+  test('does not mutate original', () => {
+    const payments = [
+      { method: 'cash', amountCents: 1000, createdAt: '2026-01-02T10:00:00Z' },
+      { method: 'card', amountCents: 2000, createdAt: '2026-01-01T10:00:00Z' },
+    ];
+    const copy = [...payments];
+    sortPaymentsByDate(payments);
+    expect(payments[0].createdAt).toBe(copy[0].createdAt);
+  });
+});
+
+describe('Revenue Report — calcInvoiceBalance (RPT-02)', () => {
+  test('zero payments returns full total', () => {
+    expect(calcInvoiceBalance(10000, [])).toBe(10000);
+  });
+
+  test('fully paid returns 0', () => {
+    const payments: Payment[] = [{ method: 'cash', amountCents: 10000 }];
+    expect(calcInvoiceBalance(10000, payments)).toBe(0);
+  });
+
+  test('partial payment returns remainder', () => {
+    const payments: Payment[] = [{ method: 'cash', amountCents: 4000 }];
+    expect(calcInvoiceBalance(10000, payments)).toBe(6000);
+  });
+
+  test('overpayment clamps to 0', () => {
+    const payments: Payment[] = [{ method: 'cash', amountCents: 12000 }];
+    expect(calcInvoiceBalance(10000, payments)).toBe(0);
+  });
+});

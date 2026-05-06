@@ -22,14 +22,18 @@ export interface Visit {
 
 interface UseVisitsOptions {
   patientId: string;
+  branchId?: string | null;
 }
 
-export function useVisits({ patientId }: UseVisitsOptions) {
+export function useVisits({ patientId, branchId }: UseVisitsOptions) {
   const query = useQuery({
-    queryKey: ['dental-visits', patientId],
+    queryKey: ['dental-visits', patientId, branchId],
     queryFn: async (): Promise<Visit[]> => {
+      const params = new URLSearchParams();
+      params.set('patientId', patientId);
+      if (branchId) params.set('branchId', branchId);
       const res = await fetch(
-        `${apiBaseUrl}/dental/visits?patientId=${encodeURIComponent(patientId)}`,
+        `${apiBaseUrl}/dental/visits?${params.toString()}`,
         { credentials: 'include' },
       );
       if (!res.ok) throw new Error(`Failed to fetch visits (${res.status})`);
