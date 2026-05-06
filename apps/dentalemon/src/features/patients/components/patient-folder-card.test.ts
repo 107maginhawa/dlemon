@@ -88,6 +88,33 @@ describe('PatientFolderCard', () => {
   test('folder tab has lemon gold color class', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
     const tab = screen.getByTestId('folder-tab');
-    expect(tab.className).toContain('bg-[#FFE97D]');
+    expect(tab.className).toContain('bg-lemon');
+  });
+
+  test('folder tab is bg-lemon for active status', () => {
+    render(React.createElement(PatientFolderCard, {
+      patient: { ...basePatient, status: 'active' as const },
+      onClick: () => {},
+    }));
+    const tab = screen.getByTestId('folder-tab');
+    expect(tab.className).toContain('bg-lemon');
+  });
+
+  test('folder tab is bg-muted for archived status', () => {
+    render(React.createElement(PatientFolderCard, {
+      patient: { ...basePatient, status: 'archived' as const },
+      onClick: () => {},
+    }));
+    const tab = screen.getByTestId('folder-tab');
+    expect(tab.className).toContain('bg-muted');
+  });
+
+  test('folder tab is bg-teal-500 for in-session status', () => {
+    render(React.createElement(PatientFolderCard, {
+      patient: { ...basePatient, status: 'in-session' as const },
+      onClick: () => {},
+    }));
+    const tab = screen.getByTestId('folder-tab');
+    expect(tab.className).toContain('bg-teal-500');
   });
 });
