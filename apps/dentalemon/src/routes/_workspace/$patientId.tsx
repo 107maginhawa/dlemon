@@ -10,7 +10,6 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { DentalChart } from '@/features/workspace/components/dental-chart.tsx';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
@@ -22,19 +21,19 @@ import { MedicalHistoryForm } from '@/features/workspace/components/medical-hist
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
-import { apiBaseUrl } from '@/utils/config';
+import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
+import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
+import { useSaveChart } from '@/features/workspace/hooks/use-save-chart';
+import { useSaveTreatment } from '@/features/workspace/hooks/use-save-treatment';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
 });
 
-const API = apiBaseUrl;
-
 function WorkspacePage() {
   const { patientId } = Route.useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('odontogram');
@@ -42,9 +41,9 @@ function WorkspacePage() {
 
   // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
   const { visits, isLoading: visitsLoading } = useVisits({ patientId });
-  const { teeth, selectedTooth, selectTooth, clearSelection, refetch: refetchChart } =
+  const { teeth, selectedTooth, selectTooth, clearSelection } =
     useDentalChart({ visitId: currentVisitId });
-  const { treatments, refetch: refetchTreatments } =
+  const { treatments } =
     useTreatments({ visitId: currentVisitId });
 
   // Auto-select active or most recent visit once visits load
@@ -60,53 +59,53 @@ function WorkspacePage() {
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
 
   // ── Mutations ─────────────────────────────────────────────────────────────
+  const createVisitMutation = useCreateVisit(patientId);
+  const sharePMDMutation = useSharePMD();
+  const saveChartMutation = useSaveChart(currentVisitId);
+  const saveTreatmentMutation = useSaveTreatment(currentVisitId);
 
   async function handleSelectVisit(visitId: string) {
     setCurrentVisitId(visitId);
     clearSelection();
   }
 
-  async function handleNewVisit() {
-    const res = await fetch(`${API}/dental/visits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
+  function handleNewVisit() {
+    createVisitMutation.mutate(
+      {
         patientId,
         branchId: localStorage.getItem('currentBranchId') ?? '',
         dentistMemberId: localStorage.getItem('currentMemberId') ?? '',
-      }),
-    });
-    if (!res.ok) return;
-    const visit = await res.json();
-    queryClient.invalidateQueries({ queryKey: ['dental-visits', patientId] });
-    setCurrentVisitId(visit.id);
+      },
+      {
+        onSuccess: (visit) => {
+          setCurrentVisitId(visit.id);
+        },
+      },
+    );
   }
 
-  async function handleSharePMD() {
+  function handleSharePMD() {
     if (!currentVisitId) return;
-    const res = await fetch(`${API}/dental/visits/${currentVisitId}/pmd`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ visitId: currentVisitId, patientId }),
-    });
-    if (res.ok) {
-      const pmd = await res.json();
-      if (navigator.share) {
-        navigator.share({
-          title: 'Portable Medical Document',
-          text: `PMD for visit — Checksum: ${pmd.checksum}`,
-        }).catch(() => {});
-      }
-      setPmdShared(true);
-    }
+    sharePMDMutation.mutate(
+      { visitId: currentVisitId, patientId },
+      {
+        onSuccess: (pmd) => {
+          if (navigator.share) {
+            navigator.share({
+              title: 'Portable Medical Document',
+              text: `PMD for visit — Checksum: ${pmd.checksum}`,
+            }).catch(() => {});
+          }
+          setPmdShared(true);
+        },
+      },
+    );
   }
 
-  async function handleSaveToothData(data: ToothSlideoutData) {
+  function handleSaveToothData(data: ToothSlideoutData) {
     if (!currentVisitId || !selectedTooth) return;
 
-    // Build updated teeth array for chart save
+    // Build updated teeth array for chart save (logic stays in component)
     const updatedTeeth: ToothData[] = [...teeth];
     const idx = updatedTeeth.findIndex((t) => t.toothNumber === selectedTooth);
     const toothEntry: ToothData = {
@@ -118,38 +117,30 @@ function WorkspacePage() {
     if (idx >= 0) updatedTeeth[idx] = toothEntry;
     else updatedTeeth.push(toothEntry);
 
-    await fetch(`${API}/dental/visits/${currentVisitId}/chart`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ visitId: currentVisitId, patientId, teeth: updatedTeeth }),
-    });
+    saveChartMutation.mutate(
+      { visitId: currentVisitId, patientId, teeth: updatedTeeth },
+      {
+        onSuccess: () => {
+          clearSelection();
+        },
+      },
+    );
 
     // Add treatment if a procedure was specified
     if (data.cdtCode && data.description && data.priceInput) {
-      await fetch(`${API}/dental/visits/${currentVisitId}/treatments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          visitId: currentVisitId,
-          patientId,
-          cdtCode: data.cdtCode,
-          description: data.description,
-          toothNumber: selectedTooth,
-          surfaces: data.surfaces,
-          conditionCode: data.conditionCode,
-          // priceInput is a string input; convert to number for the API
-          priceAmount: parseFloat(data.priceInput) || 0,
-          currency: 'PHP',
-          status: 'diagnosed',
-        }),
+      saveTreatmentMutation.mutate({
+        visitId: currentVisitId,
+        patientId,
+        cdtCode: data.cdtCode,
+        description: data.description,
+        toothNumber: selectedTooth,
+        surfaces: data.surfaces,
+        conditionCode: data.conditionCode,
+        priceAmount: parseFloat(data.priceInput) || 0,
+        currency: 'PHP',
+        status: 'diagnosed',
       });
-      refetchTreatments();
     }
-
-    refetchChart();
-    clearSelection();
   }
 
   // ── Loading state ─────────────────────────────────────────────────────────
