@@ -23,6 +23,8 @@ import { MedicalHistoryForm } from '@/features/workspace/components/medical-hist
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
 import { LabOrdersSheet } from '@/features/workspace/components/lab-orders-sheet';
+import { AttachmentsSheet } from '@/features/workspace/components/attachments-sheet';
+import { WorkspacePaymentModal } from '@/features/workspace/components/workspace-payment-modal';
 import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
@@ -54,6 +56,8 @@ function WorkspacePage() {
   const [labOrdersSheetOpen, setLabOrdersSheetOpen] = useState(false);
   const [pmdViewerOpen, setPmdViewerOpen] = useState(false);
   const [pmdImportOpen, setPmdImportOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   // ── Data hooks (chart + treatments fire in parallel once visitId is set) ──
   const { visits, isLoading: visitsLoading } = useVisits({ patientId });
@@ -439,12 +443,25 @@ function WorkspacePage() {
           >
             <FileText className="h-4 w-4" />
           </button>
+
+          {/* WBAR-07: Attachments (ATCH-01/02/03) */}
+          <button
+            type="button"
+            data-testid="action-bar-attachments-btn"
+            aria-label="Attachments"
+            disabled={!currentVisitId}
+            onClick={() => setAttachmentsOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <Upload className="h-4 w-4" />
+          </button>
         </div>
 
+        {/* PAY-01/PAY-02: open payment modal inline */}
         <button
           type="button"
           disabled={treatments.length === 0 && !isReadOnly}
-          onClick={() => navigate({ to: '/billing' })}
+          onClick={() => setPaymentModalOpen(true)}
           className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
           data-testid="continue-to-payment-btn"
         >
@@ -503,6 +520,32 @@ function WorkspacePage() {
           onClose={() => setPmdImportOpen(false)}
         />
       )}
+
+      {/* WBAR-07: AttachmentsSheet (ATCH-01/02/03) */}
+      {currentVisitId && (
+        <AttachmentsSheet
+          visitId={currentVisitId}
+          patientId={patientId}
+          open={attachmentsOpen}
+          onClose={() => setAttachmentsOpen(false)}
+        />
+      )}
+
+      {/* PAY-01/PAY-02: WorkspacePaymentModal */}
+      <WorkspacePaymentModal
+        patientId={patientId}
+        visitId={currentVisitId}
+        lineItems={treatments.map((t) => ({
+          id: t.id,
+          description: t.description ?? t.procedureName ?? '—',
+          cdtCode: t.cdtCode ?? t.procedureCode,
+          toothNumber: t.toothNumber ?? undefined,
+          priceCents: Math.round((t.priceAmount ?? 0) * 100),
+          status: t.status ?? 'pending',
+        }))}
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+      />
     </div>
   );
 }
