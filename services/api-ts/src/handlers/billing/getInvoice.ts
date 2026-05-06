@@ -11,6 +11,7 @@ import { ForbiddenError, NotFoundError } from '@/core/errors';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { Config } from '@/core/config';
 
 /**
  * getInvoice
@@ -25,6 +26,7 @@ export async function getInvoice(
 ): Promise<Response> {
   const database = ctx.get('database');
   const logger = ctx.get('logger');
+  const config = ctx.get('config') as Config;
 
   // Get authenticated session (guaranteed by middleware)
   const session = ctx.get('session') as Session;
@@ -42,8 +44,8 @@ export async function getInvoice(
   const invoiceRepo = new InvoiceRepository(database, logger);
   const personRepo = new PersonRepository(database, logger);
 
-  // Get invoice (expand handled automatically by generated route wrapper)
-  const invoice = await invoiceRepo.findOneById(invoiceId);
+  // Get invoice with line items
+  const invoice = await invoiceRepo.findOneWithLineItems(invoiceId);
 
   if (!invoice) {
     throw new NotFoundError('Invoice not found', {
@@ -65,9 +67,9 @@ export async function getInvoice(
     });
   }
 
-  // Check if user is merchant or customer
-  if (invoice.merchant !== user.id && invoice.customer !== user.id) {
-    // TODO: Add admin access check
+  // Check if user is merchant, customer, or admin
+  const isAdmin = user.role === 'admin';
+  if (invoice.merchant !== user.id && invoice.customer !== user.id && !isAdmin) {
     throw new ForbiddenError('You can only access invoices where you are the merchant or customer');
   }
 
@@ -84,26 +86,32 @@ export async function getInvoice(
   const response = {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
-    customer: invoice.customer, // Already correct field name
-    merchant: invoice.merchant, // Already correct field name
-    context: null, // TODO: Add context field to schema
+    customer: invoice.customer,
+    merchant: invoice.merchant,
+    context: invoice.context || null,
     status: invoice.status,
     subtotal: invoice.subtotal,
     tax: invoice.tax || null,
     total: invoice.total,
     currency: invoice.currency,
-    paymentCaptureMethod: 'automatic', // TODO: Add to schema
+    paymentCaptureMethod: invoice.paymentCaptureMethod,
     paymentDueAt: invoice.paymentDueAt?.toISOString() || null,
-    lineItems: [], // TODO: Implement proper line items storage
+    lineItems: invoice.lineItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      metadata: item.metadata
+    })),
     paymentStatus: invoice.paymentStatus || null,
     paidAt: invoice.paidAt?.toISOString() || null,
-    paidBy: null, // TODO: Add to schema
+    paidBy: invoice.paidBy || null,
     voidedAt: invoice.voidedAt?.toISOString() || null,
-    voidedBy: null, // TODO: Add to schema
-    voidThresholdMinutes: null, // TODO: Add to schema
-    authorizedAt: null, // TODO: Add to schema
-    authorizedBy: null, // TODO: Add to schema
-    metadata: null, // TODO: Add metadata support
+    voidedBy: invoice.voidedBy || null,
+    voidThresholdMinutes: invoice.voidThresholdMinutes || null,
+    authorizedAt: invoice.authorizedAt?.toISOString() || null,
+    authorizedBy: invoice.authorizedBy || null,
+    metadata: invoice.metadata || null,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString()
   };

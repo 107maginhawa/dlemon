@@ -213,7 +213,19 @@ export function parseConfig(): Config {
         secretKey: process.env['STRIPE_SECRET_KEY'],
         webhookSecret: process.env['STRIPE_WEBHOOK_SECRET'],
         url: process.env['STRIPE_URL'], // For testing with mock Stripe service
-      }
+      },
+      taxRatePct: (() => {
+        const v = process.env['TAX_RATE_PCT'];
+        if (!v) return 0;
+        const parsed = parseFloat(v);
+        return isNaN(parsed) ? 0 : parsed;
+      })(),
+      platformFeePct: (() => {
+        const v = process.env['PLATFORM_FEE_PCT'];
+        if (!v) return 0;
+        const parsed = parseFloat(v);
+        return isNaN(parsed) ? 0 : parsed;
+      })(),
     },
 
     // WebRTC configuration

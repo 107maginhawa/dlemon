@@ -17,6 +17,7 @@ Orchestrator agent for end-to-end feature development.
 
 ### Phase 1: Plan
 
+0. Run `/persona-audit` — validate user journeys for each persona before any code (optional but recommended for new modules)
 1. Run `/prd` to analyze requirements and produce a structured implementation plan
 2. **STOP** — present the plan to the user for review and approval
 3. Incorporate feedback before proceeding
@@ -36,18 +37,24 @@ For each new/modified module in the plan:
 For each module, in dependency order, complete ALL of the following before starting the next module:
 
 **Backend:**
-1. Run `/db-migrate` — create/update database schema and generate migration
-2. Run `/handler` — write tests FIRST (TDD), then implement handler + repository
-3. Run `/test-api` — verify backend tests pass
-4. Run `/typecheck` — verify types are clean
+1. Run `/br-extract` — extract business rules, derive test specs with edge cases
+2. Run `/db-migrate` — create/update database schema and generate migration
+3. Run `/handler` — write tests FIRST (TDD, using BR specs from step 1), then implement handler + repository
+4. Run `/test-api` — verify backend tests pass
+5. Run `/contract-scaffold` — generate FAILING Hurl contract tests from OpenAPI spec
+6. Run `/test-contract` — fix endpoints until contract tests pass
+7. Run `/typecheck` — verify types are clean
 
 **Frontend (if applicable):**
-5. Run `/shadcn` — install any needed UI components
-6. Run `/frontend-module` — build API client, hooks, components, routes
-7. Run `/typecheck` — verify frontend types are clean
+8. Run `/shadcn` — install any needed UI components
+9. Run `/component-test` — write FAILING component and hook tests (RED phase)
+10. Run `/frontend-module` — implement components + hooks until tests pass (GREEN phase)
+11. Run `/e2e-scaffold` — generate Playwright E2E spec for the module's critical journey
+12. Run `/test-e2e` — verify E2E passes
+13. Run `/typecheck` — verify frontend types are clean
 
 **Validate:**
-8. Run `/module-review` — completeness check (MUST pass before next module)
+14. Run `/module-review` — completeness check (MUST pass before next module)
 
 Do NOT proceed to the next module until all steps above pass for the current one.
 
@@ -123,14 +130,20 @@ User provides a PRD for a "Reviews" feature:
    [PAUSE for review]
 
 3. Per-module vertical pass for "reviews":
-   a. /db-migrate → add reviews table
-   b. /handler → write tests FIRST, then implement createReview, getReview, listReviews, deleteReview
-   c. /test-api → verify backend tests pass
-   d. /typecheck → types clean
-   e. /shadcn → add star-rating if needed
-   f. /frontend-module → build reviews UI
-   g. /typecheck → frontend types clean
-   h. /module-review → PASS → module complete
+   a. /br-extract → extract business rules, derive test specs (1-5 rating, one review per person)
+   b. /db-migrate → add reviews table
+   c. /handler → write tests FIRST (using BR specs), implement createReview, getReview, listReviews, deleteReview
+   d. /test-api → verify backend tests pass
+   e. /contract-scaffold → generate failing Hurl scenarios for reviews endpoints
+   f. /test-contract → fix endpoints until Hurl passes
+   g. /typecheck → types clean
+   h. /shadcn → add star-rating if needed
+   i. /component-test → write failing component tests (review form, review list, star selector)
+   j. /frontend-module → build reviews UI until component tests pass
+   k. /e2e-scaffold → generate Playwright spec for "submit review" journey
+   l. /test-e2e → verify E2E passes
+   m. /typecheck → frontend types clean
+   n. /module-review → PASS → module complete
 
 4. /pre-commit → full checks pass
    [PAUSE for review]

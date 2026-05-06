@@ -86,7 +86,10 @@ export async function finalizeInvoice(
   }
 
   // Update invoice status to open and set issued timestamp
-  const finalizedInvoice = await invoiceRepo.updateStatus(invoiceId, 'open', user.id);
+  await invoiceRepo.updateStatus(invoiceId, 'open', user.id);
+  const invoiceWithItems = await invoiceRepo.findOneWithLineItems(invoiceId);
+  if (!invoiceWithItems) throw new NotFoundError('Invoice not found after update');
+  const finalizedInvoice = invoiceWithItems;
 
   logger.info({
     invoiceId,
@@ -103,24 +106,30 @@ export async function finalizeInvoice(
     invoiceNumber: finalizedInvoice.invoiceNumber,
     customer: finalizedInvoice.customer,
     merchant: finalizedInvoice.merchant,
-    context: finalizedInvoice.context,
+    context: finalizedInvoice.context || null,
     status: finalizedInvoice.status,
     subtotal: finalizedInvoice.subtotal,
-    tax: finalizedInvoice.tax,
+    tax: finalizedInvoice.tax || null,
     total: finalizedInvoice.total,
     currency: finalizedInvoice.currency,
     paymentCaptureMethod: finalizedInvoice.paymentCaptureMethod,
-    paymentDueAt: null, // TODO: Add dueAt field to schema
-    lineItems: [], // TODO: Implement proper line items storage
+    paymentDueAt: finalizedInvoice.paymentDueAt?.toISOString() || null,
+    lineItems: finalizedInvoice.lineItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      metadata: item.metadata
+    })),
     paymentStatus: finalizedInvoice.paymentStatus || null,
     paidAt: finalizedInvoice.paidAt?.toISOString() || null,
-    paidBy: null, // TODO: Add to schema
+    paidBy: finalizedInvoice.paidBy || null,
     voidedAt: finalizedInvoice.voidedAt?.toISOString() || null,
-    voidedBy: null, // TODO: Add to schema
-    voidThresholdMinutes: null, // TODO: Add to schema
-    authorizedAt: null, // TODO: Add to schema
-    authorizedBy: null, // TODO: Add to schema
-    metadata: null, // TODO: Add metadata support
+    voidedBy: finalizedInvoice.voidedBy || null,
+    voidThresholdMinutes: finalizedInvoice.voidThresholdMinutes || null,
+    authorizedAt: finalizedInvoice.authorizedAt?.toISOString() || null,
+    authorizedBy: finalizedInvoice.authorizedBy || null,
+    metadata: finalizedInvoice.metadata || null,
     createdAt: finalizedInvoice.createdAt.toISOString(),
     updatedAt: finalizedInvoice.updatedAt.toISOString()
   };

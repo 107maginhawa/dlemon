@@ -10,6 +10,7 @@ import type { PayInvoiceBody, PayInvoiceParams } from '@/generated/openapi/valid
 import type { Session } from '@/types/auth';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { Config } from '@/core/config';
 // Customer and merchant are both persons in monobase
 
 /**
@@ -26,6 +27,7 @@ export async function payInvoice(
   const database = ctx.get('database');
   const logger = ctx.get('logger');
   const billing = ctx.get('billing');
+  const config = ctx.get('config') as Config;
   
   // Get authenticated session (guaranteed by middleware)
   const session = ctx.get('session') as Session;
@@ -113,7 +115,8 @@ export async function payInvoice(
   try {
     // Get pricing from invoice (already in cents as integers)
     const amount = invoice.total;
-    const platformAmount = 0; // TODO: Calculate platform fee
+    const platformFeePct = config.billing.platformFeePct;
+    const platformAmount = Math.round(amount * platformFeePct);
     const currency = invoice.currency;
     
     // Create payment intent with Stripe

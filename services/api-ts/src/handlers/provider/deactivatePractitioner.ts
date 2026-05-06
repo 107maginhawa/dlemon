@@ -1,40 +1,44 @@
 import type { ValidatedContext } from '@/types/app';
+import type { DatabaseInstance } from '@/core/database';
 import {
   UnauthorizedError,
-  ForbiddenError,
   NotFoundError,
-  ValidationError,
-  BusinessLogicError,
 } from '@/core/errors';
 import type { DeactivatePractitionerParams } from '@/generated/openapi/validators';
+import { PractitionerRepository } from './repos/practitioner.repo';
 
 /**
  * deactivatePractitioner
- * 
+ *
  * Path: DELETE /providers/practitioners/{id}
  * OperationId: deactivatePractitioner
+ * Soft delete only — sets active=false, deactivatedAt=now()
  */
 export async function deactivatePractitioner(
   ctx: ValidatedContext<never, never, DeactivatePractitionerParams>
 ): Promise<Response> {
-  // Get authenticated session from Better-Auth
   const session = ctx.get('session');
   if (!session) {
     throw new UnauthorizedError();
   }
-  
-  // Extract validated parameters
+
   const params = ctx.req.valid('param');
-  
-  
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: deactivatePractitioner');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new PractitionerRepository(db, logger);
+  const existing = await repo.findOneById(params.id);
+  if (!existing) {
+    throw new NotFoundError('Practitioner not found', {
+      resourceType: 'practitioner',
+      resource: params.id,
+      suggestions: ['Check practitioner ID format', 'Verify practitioner exists'],
+    });
+  }
+
+  await repo.deactivateById(params.id);
+
+  logger?.info({ practitionerId: params.id, action: 'deactivate' }, 'Practitioner deactivated');
+
+  return new Response(null, { status: 204 });
 }

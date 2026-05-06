@@ -16,6 +16,7 @@ import type { UpdateInvoiceBody, UpdateInvoiceParams } from '@/generated/openapi
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { Config } from '@/core/config';
 
 /**
  * updateInvoice
@@ -30,6 +31,7 @@ export async function updateInvoice(
 ): Promise<Response> {
   const database = ctx.get('database');
   const logger = ctx.get('logger');
+  const config = ctx.get('config') as Config;
 
   // Get authenticated session (guaranteed by middleware)
   const session = ctx.get('session') as Session;
@@ -91,7 +93,22 @@ export async function updateInvoice(
 
   // Handle payment due date update
   if (body.paymentDueAt !== undefined) {
-    updateData.dueAt = body.paymentDueAt ? new Date(body.paymentDueAt) : null;
+    updateData.paymentDueAt = body.paymentDueAt ? new Date(body.paymentDueAt) : null;
+  }
+
+  // Handle paymentCaptureMethod update
+  if (body.paymentCaptureMethod !== undefined) {
+    updateData.paymentCaptureMethod = body.paymentCaptureMethod;
+  }
+
+  // Handle voidThresholdMinutes update
+  if (body.voidThresholdMinutes !== undefined) {
+    updateData.voidThresholdMinutes = body.voidThresholdMinutes;
+  }
+
+  // Handle metadata update
+  if (body.metadata !== undefined) {
+    updateData.metadata = body.metadata;
   }
 
   // Handle line items update
@@ -101,71 +118,67 @@ export async function updateInvoice(
       throw new ValidationError('At least one line item is required');
     }
 
-    // Calculate new amounts
+    // Calculate new amounts using config tax/platform rates
+    const taxRate = config.billing.taxRatePct;
     let subtotal = 0;
-    const processedLineItems = body.lineItems.map((item: any) => {
-      const amount = (item.quantity || 1) * item.unitPrice;
-      subtotal += amount;
-      return {
-        description: item.description,
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice,
-        amount,
-        metadata: item.metadata
-      };
+    body.lineItems.forEach((item: any) => {
+      const quantity = item.quantity || 1;
+      subtotal += quantity * item.unitPrice;
     });
 
-    const tax = 0; // TODO: Calculate tax based on jurisdiction
-    const total = subtotal + tax;
+    const taxCents = Math.round(subtotal * taxRate);
+    const total = subtotal + taxCents;
 
-    // Update amounts and description
-    updateData.amount = total.toString();
-    updateData.providerAmount = total.toString(); // TODO: Calculate after platform fees
-    updateData.platformAmount = '0.00'; // TODO: Calculate platform fees
-    updateData.description = processedLineItems.map((item: any) => item.description).join(', ');
-
-    // TODO: Store line items in proper JSONB field when schema is updated
+    updateData.subtotal = subtotal;
+    updateData.tax = taxCents || undefined;
+    updateData.total = total;
   }
-
-  // TODO: Handle other fields when schema is updated
-  // - paymentCaptureMethod
-  // - voidThresholdMinutes
-  // - metadata
 
   // Update invoice
   const updatedInvoice = await invoiceRepo.updateOneById(invoiceId, updateData);
+
+  // Fetch updated line items
+  const invoiceWithItems = await invoiceRepo.findOneWithLineItems(invoiceId);
 
   logger.info({
     invoiceId,
     invoiceNumber: updatedInvoice.invoiceNumber,
     changes: Object.keys(updateData),
-    newAmount: (updatedInvoice as any).amount
+    total: updatedInvoice.total
   }, 'Invoice updated successfully');
+
+  const lineItems = invoiceWithItems?.lineItems || [];
 
   // Format response to match TypeSpec Invoice model
   const response = {
     id: updatedInvoice.id,
     invoiceNumber: updatedInvoice.invoiceNumber,
-    customer: updatedInvoice.customer, // Already correct field name
-    merchant: updatedInvoice.merchant, // Already correct field name
-    context: null, // TODO: Add context field to schema
+    customer: updatedInvoice.customer,
+    merchant: updatedInvoice.merchant,
+    context: updatedInvoice.context || null,
     status: updatedInvoice.status,
-    subtotal: parseFloat((updatedInvoice as any).amount) - 0, // TODO: Calculate proper subtotal
-    tax: null, // TODO: Implement tax calculation
-    total: parseFloat((updatedInvoice as any).amount),
+    subtotal: updatedInvoice.subtotal,
+    tax: updatedInvoice.tax || null,
+    total: updatedInvoice.total,
     currency: updatedInvoice.currency,
-    paymentCaptureMethod: body.paymentCaptureMethod || 'automatic', // TODO: Add to schema
-    paymentDueAt: (updatedInvoice as any).dueAt?.toISOString() || null,
-    lineItems: body.lineItems || [], // TODO: Store and retrieve from proper field
+    paymentCaptureMethod: updatedInvoice.paymentCaptureMethod,
+    paymentDueAt: updatedInvoice.paymentDueAt?.toISOString() || null,
+    lineItems: lineItems.map((item: any) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      metadata: item.metadata
+    })),
     paymentStatus: updatedInvoice.paymentStatus || null,
     paidAt: updatedInvoice.paidAt?.toISOString() || null,
-    paidBy: null, // TODO: Add to schema
+    paidBy: updatedInvoice.paidBy || null,
     voidedAt: updatedInvoice.voidedAt?.toISOString() || null,
-    voidedBy: null, // TODO: Add to schema
-    voidThresholdMinutes: body.voidThresholdMinutes || null, // TODO: Add to schema
-    authorizedAt: null, // TODO: Add to schema
-    authorizedBy: null, // TODO: Add to schema
-    metadata: body.metadata || null, // TODO: Add metadata support
+    voidedBy: updatedInvoice.voidedBy || null,
+    voidThresholdMinutes: updatedInvoice.voidThresholdMinutes || null,
+    authorizedAt: updatedInvoice.authorizedAt?.toISOString() || null,
+    authorizedBy: updatedInvoice.authorizedBy || null,
+    metadata: updatedInvoice.metadata || null,
     createdAt: updatedInvoice.createdAt.toISOString(),
     updatedAt: updatedInvoice.updatedAt.toISOString()
   };
