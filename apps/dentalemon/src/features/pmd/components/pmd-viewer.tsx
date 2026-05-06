@@ -6,41 +6,10 @@
  */
 
 import React from 'react';
+import type { PMDStatus, PMDTreatment, PMDPrescription, PMDContent, PMDDocument } from '../types';
 
-type PMDStatus = 'generated' | 'signed' | 'superseded';
-
-interface PMDTreatment {
-  cdtCode: string;
-  description: string;
-  toothNumber?: number;
-  priceCents?: number;
-}
-
-interface PMDPrescription {
-  drugName: string;
-  rxNormCode?: string;
-  dosage: string;
-  frequency: string;
-}
-
-interface PMDContent {
-  visitDate?: string;
-  treatments?: PMDTreatment[];
-  prescriptions?: PMDPrescription[];
-}
-
-export interface PMDDocument {
-  id: string;
-  visitId: string;
-  patientId: string;
-  status: PMDStatus;
-  content: string;
-  signature?: string | null;
-  signedAt?: string | null;
-  supersedesId?: string | null;
-  checksum: string;
-  createdAt: string;
-}
+// Re-export for consumers that imported from this file before the types module existed
+export type { PMDDocument };
 
 interface Props {
   pmd: PMDDocument;

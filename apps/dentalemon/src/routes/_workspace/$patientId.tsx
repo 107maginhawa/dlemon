@@ -8,9 +8,9 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload } from 'lucide-react';
+import { Pill, FileSignature, FlaskConical, FileText, Upload } from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { MedicalHistoryForm } from '@/features/workspace/components/medical-history-form';
@@ -269,6 +269,26 @@ function WorkspacePage() {
             carriedOverItems={carriedOverItems}
             visits={visits}
           />
+          {/* PROF-04: View Profile link */}
+          <Link
+            to="/patients/$patientId"
+            params={{ patientId }}
+            data-testid="view-profile-link"
+            className="mr-3 shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          >
+            Profile
+          </Link>
+          {isReadOnly && (
+            <button
+              type="button"
+              data-testid="share-pmd-btn"
+              onClick={handleSharePMD}
+              className="mr-4 shrink-0 text-xs font-medium text-primary hover:underline flex items-center gap-1"
+              aria-label="Share PMD"
+            >
+              {pmdShared ? '✓ PMD shared' : 'Share PMD'}
+            </button>
+          )}
         </div>
       </div>
 

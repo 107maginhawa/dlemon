@@ -107,7 +107,7 @@ function PatientsPage() {
           navigate({ to: '/$patientId', params: { patientId: patient.id } })
         }
         onProfile={(patient: PatientCardData) =>
-          navigate({ to: '/patients/$patientId', params: { patientId: patient.id } })
+          navigate({ to: '/patients/$patientId', params: { patientId: patient.id } } as any)
         }
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

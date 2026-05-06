@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/utils/guards'
-import { apiBaseUrl } from '@/utils/config'
+import { getRuntimeConfig } from '@/utils/config'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
   SidebarProvider,
@@ -29,7 +29,8 @@ export const Route = createFileRoute('/_dashboard')({
       // Always refresh org context from API — ensures localStorage is never stale
       // (e.g. after re-seeding, branch ID changes, or first load after onboarding)
       try {
-        const res = await fetch(`${apiBaseUrl}/dental/org/context`, {
+        const { apiUrl } = await getRuntimeConfig()
+        const res = await fetch(`${apiUrl}/dental/org/context`, {
           credentials: 'include',
         })
         if (res.ok) {

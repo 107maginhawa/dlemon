@@ -5,7 +5,7 @@
   "identifier": "com.monobase.account",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:3002",
+    "devUrl": "http://localhost:3003",
     "beforeDevCommand": "bun dev",
     "beforeBuildCommand": "bun run build"
   },
