@@ -24,6 +24,7 @@ import "./modules/reviews.tsp";
 // DENTALEMON MODULES
 // ============================================================================
 import "./modules/dental-org.tsp";
+import "./modules/dental-patient.tsp";
 import "./modules/dental-visit.tsp";
 import "./modules/dental-clinical.tsp";
 import "./modules/dental-pmd.tsp";
@@ -312,6 +313,9 @@ namespace MonobaseAPI {
   @tag("Dental:Org")
   @route("/dental/organizations/{orgId}/branches/{branchId}/members")
   interface DentalMembershipManagement extends DentalOrgModule.DentalMembershipManagement {}
+
+  @tag("Dental:Patient")
+  interface DentalPatientMgmt extends DentalPatientModule.DentalPatientManagement {}
 
   @tag("Dental:Visit")
   @route("/dental/visits")
