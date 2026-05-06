@@ -8,7 +8,7 @@
  * POST   /dental/visits/:visitId/apply-template/:templateId — apply template to visit
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -40,8 +40,8 @@ const updateTemplateSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export async function listTreatmentTemplates(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function listTreatmentTemplates(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -56,8 +56,8 @@ export async function listTreatmentTemplates(ctx: Context) {
   return ctx.json({ templates }, 200);
 }
 
-export async function createTreatmentTemplate(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function createTreatmentTemplate(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -79,8 +79,8 @@ export async function createTreatmentTemplate(ctx: Context) {
   return ctx.json(template, 201);
 }
 
-export async function updateTreatmentTemplate(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function updateTreatmentTemplate(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const templateId = ctx.req.param('id');
@@ -94,18 +94,18 @@ export async function updateTreatmentTemplate(ctx: Context) {
 
   await assertBranchAccess(db, user.id, existing.branchId);
 
-  const updates: any = { updatedAt: new Date(), updatedBy: user.id };
-  if (body.name !== undefined) updates.name = body.name;
-  if (body.description !== undefined) updates.description = body.description;
-  if (body.items !== undefined) updates.items = body.items;
-  if (body.active !== undefined) updates.active = body.active;
+  const updates: Record<string, unknown> = { updatedAt: new Date(), updatedBy: user.id };
+  if (body['name'] !== undefined) updates['name'] = body['name'];
+  if (body['description'] !== undefined) updates['description'] = body['description'];
+  if (body['items'] !== undefined) updates['items'] = body['items'];
+  if (body['active'] !== undefined) updates['active'] = body['active'];
 
   const [updated] = await db.update(dentalTreatmentTemplates).set(updates).where(eq(dentalTreatmentTemplates.id, templateId)).returning();
   return ctx.json(updated, 200);
 }
 
-export async function deleteTreatmentTemplate(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function deleteTreatmentTemplate(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const templateId = ctx.req.param('id');
@@ -121,8 +121,8 @@ export async function deleteTreatmentTemplate(ctx: Context) {
   return ctx.json({ success: true }, 200);
 }
 
-export async function applyTemplate(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function applyTemplate(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const visitId = ctx.req.param('visitId');

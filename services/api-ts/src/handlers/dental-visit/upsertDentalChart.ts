@@ -9,6 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalChartRepository } from './repos/dental-chart.repo';
+import type { ToothChartState } from './repos/dental-chart.schema';
 import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { UpsertDentalChartBody, UpsertDentalChartParams } from '@/generated/openapi/validators';
@@ -35,7 +36,7 @@ export async function upsertDentalChart(
   const chart = await repo.upsert({
     visitId,
     patientId: body.patientId,
-    teeth: body.teeth as any[],
+    teeth: body.teeth as ToothChartState[],
   });
 
   return ctx.json(chart, 201);

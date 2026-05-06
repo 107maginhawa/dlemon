@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
@@ -20,8 +20,8 @@ const addFollowUpNoteSchema = z.object({
   text: z.string().min(1, 'text is required'),
 });
 
-export async function listFollowUpNotes(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function listFollowUpNotes(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
@@ -38,13 +38,13 @@ export async function listFollowUpNotes(ctx: Context) {
     await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
   }
 
-  const notes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+  const notes: FollowUpNote[] = patient.followUpNotes ?? [];
 
   return ctx.json({ notes, total: notes.length }, 200);
 }
 
-export async function addFollowUpNote(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function addFollowUpNote(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
@@ -71,13 +71,13 @@ export async function addFollowUpNote(ctx: Context) {
     createdBy: user.id,
   };
 
-  const existingNotes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+  const existingNotes: FollowUpNote[] = patient.followUpNotes ?? [];
   const updatedNotes = [...existingNotes, newNote];
 
   // Append note to JSONB array
   await db
     .update(patients)
-    .set({ followUpNotes: updatedNotes as any, updatedAt: new Date() })
+    .set({ followUpNotes: updatedNotes, updatedAt: new Date() })
     .where(eq(patients.id, patientId));
 
   // Also set needsFollowUp=true when a follow-up note is added

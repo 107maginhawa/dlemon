@@ -16,7 +16,7 @@
  * }
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
@@ -94,8 +94,8 @@ export function isWithinWorkingHours(
   return startMins >= openMins && endMins <= closeMins;
 }
 
-export async function getWorkingHours(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getWorkingHours(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId')!;
@@ -110,8 +110,8 @@ export async function getWorkingHours(ctx: Context) {
   return ctx.json({ branchId, workingHours: hours }, 200);
 }
 
-export async function updateWorkingHours(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function updateWorkingHours(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId')!;

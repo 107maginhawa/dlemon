@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -31,8 +31,8 @@ async function getMemberRole(db: DatabaseInstance, userId: string, branchId: str
   return member?.role ?? null;
 }
 
-export async function getBranchSettings(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getBranchSettings(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId');
@@ -48,8 +48,8 @@ export async function getBranchSettings(ctx: Context) {
   return ctx.json({ branchId, settings: branch.settings ?? {} }, 200);
 }
 
-export async function updateBranchSettings(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function updateBranchSettings(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId');

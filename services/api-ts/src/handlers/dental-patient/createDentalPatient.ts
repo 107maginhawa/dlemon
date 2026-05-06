@@ -50,7 +50,7 @@ export async function createDentalPatient(
   const patientRepo = new PatientRepository(db, logger);
   const potentialDuplicates = await patientRepo.findPotentialDuplicates(firstName, lastName, body.branchId);
   const duplicateWarning = potentialDuplicates.length > 0
-    ? { hasDuplicates: true, count: potentialDuplicates.length, duplicateIds: potentialDuplicates.map((p: any) => p.id) }
+    ? { hasDuplicates: true, count: potentialDuplicates.length, duplicateIds: potentialDuplicates.map(p => p.id) }
     : null;
 
   // Create a new person record for the patient (distinct from the logged-in user)
@@ -61,7 +61,7 @@ export async function createDentalPatient(
       firstName,
       ...(lastName ? { lastName } : {}),
       ...(body.dateOfBirth ? { dateOfBirth: body.dateOfBirth } : {}),
-      ...(body.gender ? { gender: body.gender as any } : {}),
+      ...(body.gender ? { gender: body.gender as typeof persons.gender._.data } : {}),
       createdBy: user.id,
       updatedBy: user.id,
     })

@@ -20,7 +20,7 @@ import type { GetDentalPatientSafetyFloorParams } from '@/generated/openapi/vali
 export async function getDentalPatientSafetyFloor(
   ctx: ValidatedContext<never, never, GetDentalPatientSafetyFloorParams>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');

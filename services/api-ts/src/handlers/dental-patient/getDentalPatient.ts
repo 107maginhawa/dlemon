@@ -19,7 +19,7 @@ import type { GetDentalPatientParams } from '@/generated/openapi/validators';
 export async function getDentalPatient(
   ctx: ValidatedContext<never, never, GetDentalPatientParams>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');
@@ -54,10 +54,10 @@ export async function getDentalPatient(
     .where(eq(dentalInvoices.patientId, patientId));
 
   const outstandingCents = invoices
-    .filter((inv: any) => inv.status !== 'voided')
-    .reduce((sum: number, inv: any) => sum + (inv.balanceCents ?? 0), 0);
+    .filter(inv => inv.status !== 'voided')
+    .reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
 
-  const person = patient.person as any;
+  const person = patient.person;
   const firstName = person?.firstName ?? '';
   const lastName = person?.lastName ?? '';
 
@@ -72,12 +72,12 @@ export async function getDentalPatient(
     dentalHistorySummary: patient.dentalHistorySummary ?? null,
     needsFollowUp: patient.needsFollowUp ?? false,
     hasActivePaymentPlan: patient.hasActivePaymentPlan ?? false,
-    status: (patient as any).status ?? 'active',
-    archivedAt: (patient as any).archivedAt ?? null,
-    emergencyContact: (patient as any).emergencyContact ?? null,
-    communicationPreferences: (patient as any).communicationPreferences ?? null,
-    recallDate: (patient as any).recallDate ?? null,
-    recallNote: (patient as any).recallNote ?? null,
+    status: patient.status ?? 'active',
+    archivedAt: patient.archivedAt ?? null,
+    emergencyContact: patient.emergencyContact ?? null,
+    communicationPreferences: patient.communicationPreferences ?? null,
+    recallDate: patient.recallDate ?? null,
+    recallNote: patient.recallNote ?? null,
     // Aggregated data
     visitCount,
     lastVisit,

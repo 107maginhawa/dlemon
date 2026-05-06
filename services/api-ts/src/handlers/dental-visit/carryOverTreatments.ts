@@ -10,7 +10,7 @@
  * Body: { restoreDismissedIds?: string[] }
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -25,8 +25,8 @@ const carryOverBodySchema = z.object({
   restoreDismissedIds: z.array(z.string().uuid()).optional(),
 });
 
-export async function carryOverTreatments(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function carryOverTreatments(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const visitId = ctx.req.param('visitId');

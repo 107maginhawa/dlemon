@@ -4,6 +4,7 @@ import { UnauthorizedError, AppError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { DentalMembershipManagement_createBody, DentalMembershipManagement_createParams } from '@/generated/openapi/validators';
 
 /**
@@ -57,7 +58,7 @@ export async function DentalMembershipManagement_create(
   const membership = await memberRepo.createOne({
     branchId,
     displayName: body.displayName,
-    role: body.role as any,
+    role: body.role as typeof dentalMemberships.role._.data,
     personId: body.personId ?? null,
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',

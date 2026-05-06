@@ -17,7 +17,7 @@ import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/gener
 export async function updateDentalPatient(
   ctx: ValidatedContext<UpdateDentalPatientBody, never, UpdateDentalPatientParams>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');

@@ -3,6 +3,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
+import type { NewDentalOrganization } from '@/handlers/dental-org/repos/organization.schema';
 import type { DentalOrganizationManagement_updateBody, DentalOrganizationManagement_updateParams } from '@/generated/openapi/validators';
 
 /**
@@ -23,7 +24,7 @@ export async function DentalOrganizationManagement_update(
   const logger = ctx.get('logger');
 
   const repo = new OrganizationRepository(db, logger);
-  const org = await repo.updateOne(id, body as any);
+  const org = await repo.updateOne(id, body as Partial<NewDentalOrganization>);
   if (!org) throw new NotFoundError('Organization');
 
   return ctx.json(org);

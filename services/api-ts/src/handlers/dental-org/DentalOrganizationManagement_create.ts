@@ -3,6 +3,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
+import type { OrgTier } from '@/handlers/dental-org/repos/organization.schema';
 import type { DentalOrganizationManagement_createBody } from '@/generated/openapi/validators';
 
 /**
@@ -24,7 +25,7 @@ export async function DentalOrganizationManagement_create(
   const repo = new OrganizationRepository(db, logger);
   const org = await repo.createOne({
     name: body.name,
-    tier: body.tier as any,
+    tier: body.tier as OrgTier,
     countryCode: body.countryCode,
     ownerPersonId: user.id,
     active: true,

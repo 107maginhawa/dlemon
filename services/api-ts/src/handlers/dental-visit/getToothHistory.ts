@@ -51,7 +51,7 @@ export async function getToothHistory(ctx: HandlerContext) {
     const chart = await chartRepo.findByVisit(visit.id);
     if (!chart) continue;
 
-    const tooth = (chart.teeth as any[]).find(t => t.toothNumber === toothNumber);
+    const tooth = chart.teeth.find(t => t.toothNumber === toothNumber);
     if (!tooth) continue;
 
     const treatments = await treatmentRepo.findByVisit(visit.id);

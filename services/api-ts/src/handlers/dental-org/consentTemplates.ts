@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -38,8 +38,8 @@ async function getMemberRole(db: DatabaseInstance, userId: string, branchId: str
   return member?.role ?? null;
 }
 
-export async function listConsentTemplates(ctx: Context): Promise<Response> {
-  const user = ctx.get('user') as any;
+export async function listConsentTemplates(ctx: BaseContext): Promise<Response> {
+  const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -59,8 +59,8 @@ export async function listConsentTemplates(ctx: Context): Promise<Response> {
   return ctx.json({ templates }, 200);
 }
 
-export async function createConsentTemplate(ctx: Context): Promise<Response> {
-  const user = ctx.get('user') as any;
+export async function createConsentTemplate(ctx: BaseContext): Promise<Response> {
+  const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -94,8 +94,8 @@ export async function createConsentTemplate(ctx: Context): Promise<Response> {
   return ctx.json({ template: created }, 201);
 }
 
-export async function updateConsentTemplate(ctx: Context): Promise<Response> {
-  const user = ctx.get('user') as any;
+export async function updateConsentTemplate(ctx: BaseContext): Promise<Response> {
+  const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -134,8 +134,8 @@ export async function updateConsentTemplate(ctx: Context): Promise<Response> {
   return ctx.json({ template: updated }, 200);
 }
 
-export async function deleteConsentTemplate(ctx: Context): Promise<Response> {
-  const user = ctx.get('user') as any;
+export async function deleteConsentTemplate(ctx: BaseContext): Promise<Response> {
+  const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;

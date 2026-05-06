@@ -7,7 +7,7 @@
  * Optional ?branchId= scopes via invoice/visit branchId.
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -17,8 +17,8 @@ import { labOrders } from '@/handlers/dental-clinical/repos/lab-order.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { eq, inArray, and } from 'drizzle-orm';
 
-export async function getDashboardSummary(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getDashboardSummary(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -46,13 +46,13 @@ export async function getDashboardSummary(ctx: Context) {
       ? await db.select().from(dentalPaymentPlans).where(
           and(
             inArray(dentalPaymentPlans.invoiceId, invoiceIds),
-            inArray(dentalPaymentPlans.status, activePlanStatuses as any)
+            inArray(dentalPaymentPlans.status, [...activePlanStatuses])
           )
         )
       : [];
   } else {
     activePlans = await db.select().from(dentalPaymentPlans).where(
-      inArray(dentalPaymentPlans.status, activePlanStatuses as any)
+      inArray(dentalPaymentPlans.status, [...activePlanStatuses])
     );
   }
 
@@ -73,13 +73,13 @@ export async function getDashboardSummary(ctx: Context) {
       ? await db.select().from(labOrders).where(
           and(
             inArray(labOrders.visitId, visitIds),
-            inArray(labOrders.status, pendingLabStatuses as any)
+            inArray(labOrders.status, [...pendingLabStatuses])
           )
         )
       : [];
   } else {
     pendingLabOrders = await db.select().from(labOrders).where(
-      inArray(labOrders.status, pendingLabStatuses as any)
+      inArray(labOrders.status, [...pendingLabStatuses])
     );
   }
 

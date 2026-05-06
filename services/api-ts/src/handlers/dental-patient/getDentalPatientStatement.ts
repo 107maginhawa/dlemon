@@ -19,7 +19,7 @@ import type { GetDentalPatientStatementParams } from '@/generated/openapi/valida
 export async function getDentalPatientStatement(
   ctx: ValidatedContext<never, never, GetDentalPatientStatementParams>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');
@@ -69,16 +69,16 @@ export async function getDentalPatientStatement(
     .orderBy(desc(dentalPayments.createdAt));
 
   const totalBilledCents = invoices
-    .filter((inv: any) => inv.status !== 'voided')
-    .reduce((sum: number, inv: any) => sum + (inv.totalCents ?? 0), 0);
+    .filter(inv => inv.status !== 'voided')
+    .reduce((sum, inv) => sum + (inv.totalCents ?? 0), 0);
 
   const totalPaidCents = invoices
-    .filter((inv: any) => inv.status !== 'voided')
-    .reduce((sum: number, inv: any) => sum + (inv.paidCents ?? 0), 0);
+    .filter(inv => inv.status !== 'voided')
+    .reduce((sum, inv) => sum + (inv.paidCents ?? 0), 0);
 
   const outstandingBalanceCents = totalBilledCents - totalPaidCents;
 
-  const person = patient.person as any;
+  const person = patient.person;
 
   logger?.info({ action: 'getDentalPatientStatement', patientId }, 'Patient statement generated');
 

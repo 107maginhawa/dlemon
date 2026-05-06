@@ -10,13 +10,13 @@
  *   period     — shorthand: 'today' | 'month' | 'year' (overrides from/to)
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
@@ -25,8 +25,8 @@ function endOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 }
 
-export async function getCollectionsSummary(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getCollectionsSummary(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -34,44 +34,44 @@ export async function getCollectionsSummary(ctx: Context) {
   const q = ctx.req.query();
 
   // Branch-level authorization
-  if (!q.branchId) {
+  if (!q['branchId']) {
     throw new ValidationError('branchId query parameter is required');
   }
-  await assertBranchAccess(db, user.id, q.branchId);
+  await assertBranchAccess(db, user.id, q['branchId']);
 
   const now = new Date();
   let from: Date;
   let to: Date;
 
-  if (q.period === 'month') {
+  if (q['period'] === 'month') {
     from = new Date(now.getFullYear(), now.getMonth(), 1);
     to = endOfDay(now);
-  } else if (q.period === 'year') {
+  } else if (q['period'] === 'year') {
     from = new Date(now.getFullYear(), 0, 1);
     to = endOfDay(now);
   } else {
     // default: today
-    from = q.from ? new Date(q.from) : startOfDay(now);
-    to = q.to ? new Date(q.to) : endOfDay(now);
+    from = q['from'] ? new Date(q['from']) : startOfDay(now);
+    to = q['to'] ? new Date(q['to']) : endOfDay(now);
   }
 
-  const invoiceConditions: any[] = [
+  const invoiceConditions: SQL<unknown>[] = [
     gte(dentalInvoices.issuedAt, from),
     lte(dentalInvoices.issuedAt, to),
   ];
-  if (q.branchId) invoiceConditions.push(eq(dentalInvoices.branchId, q.branchId));
+  if (q['branchId']) invoiceConditions.push(eq(dentalInvoices.branchId, q['branchId']));
 
   const issuedInvoices = await db
     .select()
     .from(dentalInvoices)
     .where(and(...invoiceConditions));
 
-  const paymentConditions: any[] = [
+  const paymentConditions: SQL<unknown>[] = [
     gte(dentalPayments.createdAt, from),
     lte(dentalPayments.createdAt, to),
     eq(dentalPayments.isVoid, false),
   ];
-  if (q.branchId) paymentConditions.push(eq(dentalPayments.branchId, q.branchId));
+  if (q['branchId']) paymentConditions.push(eq(dentalPayments.branchId, q['branchId']));
 
   const payments = await db
     .select()

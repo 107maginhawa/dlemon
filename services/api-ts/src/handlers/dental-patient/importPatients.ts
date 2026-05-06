@@ -30,36 +30,36 @@ export async function importPatients(
   if (!rows || rows.length === 0) throw new ValidationError('No rows to import');
 
   // Branch-level authorization: verify access to all unique branchIds
-  const uniqueBranchIds = [...new Set(rows.map((r: any) => r.branchId).filter(Boolean))];
+  const uniqueBranchIds = [...new Set(rows.map(r => r.branchId).filter(Boolean))] as string[];
   for (const branchId of uniqueBranchIds) {
     await assertBranchAccess(db, user.id, branchId);
   }
 
   // All-or-nothing transaction
-  const imported: any[] = [];
+  const imported: Array<{ id: string; personId: string; firstName: string; lastName?: string; branchId?: string }> = [];
 
   try {
-    await (db as any).transaction(async (tx: any) => {
+    await db.transaction(async (tx) => {
       for (const row of rows) {
         const [person] = await tx.insert(persons).values({
           firstName: row.firstName,
           ...(row.lastName ? { lastName: row.lastName } : {}),
           ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
-          ...(row.gender ? { gender: row.gender } : {}),
+          ...(row.gender ? { gender: row.gender as typeof persons.gender._.data } : {}),
           createdBy: user.id,
           updatedBy: user.id,
         }).returning();
 
         const [patient] = await tx.insert(patients).values({
-          person: person.id,
+          person: person!.id,
           preferredBranchId: row.branchId,
           createdBy: user.id,
           updatedBy: user.id,
         }).returning();
 
         imported.push({
-          id: patient.id,
-          personId: person.id,
+          id: patient!.id,
+          personId: person!.id,
           firstName: row.firstName,
           lastName: row.lastName,
           branchId: row.branchId,

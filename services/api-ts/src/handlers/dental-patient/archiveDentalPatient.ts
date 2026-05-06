@@ -14,7 +14,7 @@ import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators'
 export async function archiveDentalPatient(
   ctx: ValidatedContext<never, never, ArchiveDentalPatientParams>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');

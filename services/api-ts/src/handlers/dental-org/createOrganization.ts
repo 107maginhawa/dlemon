@@ -9,7 +9,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError } from '@/core/errors';
 import { OrganizationRepository } from './repos/organization.repo';
-import { VALID_ORG_TIERS } from './repos/organization.schema';
+import { VALID_ORG_TIERS, type OrgTier } from './repos/organization.schema';
 import type { User } from '@/types/auth';
 
 export async function createOrganization(ctx: HandlerContext) {
@@ -42,7 +42,7 @@ export async function createOrganization(ctx: HandlerContext) {
 
   const org = await repo.createOne({
     name: name.trim(),
-    tier: tier as any,
+    tier: tier as OrgTier,
     ownerPersonId: user.id,
     countryCode: countryCode.toUpperCase().slice(0, 2),
     active: true,

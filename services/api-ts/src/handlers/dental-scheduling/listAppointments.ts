@@ -11,7 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import type { User } from '@/types/auth';
-import { eq, and, gte, lt, inArray } from 'drizzle-orm';
+import { eq, and, gte, lt, inArray, type SQL } from 'drizzle-orm';
 import { dentalAppointments } from './repos/dental-appointment.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
@@ -42,7 +42,7 @@ export async function listAppointments(ctx: HandlerContext) {
   const repo = new DentalAppointmentRepository(db);
 
   // Build conditions
-  const conditions: ReturnType<typeof eq>[] = [];
+  const conditions: (SQL<unknown> | undefined)[] = [];
 
   // Authorization: scope results to branches the user has access to
   if (filters.branchId) {
@@ -56,19 +56,19 @@ export async function listAppointments(ctx: HandlerContext) {
       .where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.status, 'active')));
     const accessibleBranchIds = memberships.map(m => m.branchId);
     if (accessibleBranchIds.length === 0) return ctx.json([]);
-    conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds) as any);
+    conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds));
   }
 
   if (filters.dentistMemberId) conditions.push(eq(dentalAppointments.dentistMemberId, filters.dentistMemberId));
-  if (filters.status) conditions.push(eq(dentalAppointments.status, filters.status as any));
+  if (filters.status) conditions.push(eq(dentalAppointments.status, filters.status as typeof dentalAppointments.status._.data));
   if (filters.patientId) conditions.push(eq(dentalAppointments.patientId, filters.patientId));
   if (filters.date) {
     const dayStart = new Date(filters.date + 'T00:00:00.000Z');
     const dayEnd = new Date(filters.date + 'T23:59:59.999Z');
-    conditions.push(gte(dentalAppointments.scheduledAt, dayStart) as any);
-    conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)) as any);
+    conditions.push(gte(dentalAppointments.scheduledAt, dayStart));
+    conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)));
   }
 
-  const appointments = await repo.findManyWithPatientName(conditions as any, limit, offset);
+  const appointments = await repo.findManyWithPatientName(conditions, limit, offset);
   return ctx.json(appointments);
 }

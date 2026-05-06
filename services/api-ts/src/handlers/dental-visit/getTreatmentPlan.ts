@@ -7,7 +7,7 @@
  * Groups treatments by tooth and provides totals.
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -15,8 +15,8 @@ import { dentalTreatments } from './repos/treatment.schema';
 import { dentalVisits } from './repos/visit.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
-export async function getTreatmentPlan(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getTreatmentPlan(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('patientId');

@@ -16,7 +16,7 @@ import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
 export async function listFollowUpNotes(
   ctx: ValidatedContext<never, never, ListFollowUpNotesParams>
 ): Promise<Response> {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');
@@ -33,7 +33,7 @@ export async function listFollowUpNotes(
     await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
   }
 
-  const notes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+  const notes: FollowUpNote[] = patient.followUpNotes ?? [];
 
   return ctx.json({ notes, total: notes.length }, 200);
 }

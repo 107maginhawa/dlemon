@@ -17,7 +17,7 @@ import type { BulkArchiveDentalPatientsBody } from '@/generated/openapi/validato
 export async function bulkArchiveDentalPatients(
   ctx: ValidatedContext<BulkArchiveDentalPatientsBody, never, never>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const { patientIds } = ctx.req.valid('json');

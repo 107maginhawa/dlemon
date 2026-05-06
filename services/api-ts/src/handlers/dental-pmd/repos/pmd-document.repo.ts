@@ -30,7 +30,7 @@ export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPM
     const conditions = [];
     if (filters.patientId) conditions.push(eq(pmdDocuments.patientId, filters.patientId));
     if (filters.visitId) conditions.push(eq(pmdDocuments.visitId, filters.visitId));
-    if (filters.status) conditions.push(eq(pmdDocuments.status, filters.status as any));
+    if (filters.status) conditions.push(eq(pmdDocuments.status, filters.status as typeof pmdDocuments.status._.data));
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 

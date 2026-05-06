@@ -18,7 +18,7 @@ import type { AddFollowUpNoteBody, AddFollowUpNoteParams } from '@/generated/ope
 export async function addFollowUpNote(
   ctx: ValidatedContext<AddFollowUpNoteBody, never, AddFollowUpNoteParams>
 ): Promise<Response> {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const params = ctx.req.valid('param');
@@ -43,13 +43,13 @@ export async function addFollowUpNote(
     createdBy: user.id,
   };
 
-  const existingNotes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+  const existingNotes: FollowUpNote[] = patient.followUpNotes ?? [];
   const updatedNotes = [...existingNotes, newNote];
 
   // Append note to JSONB array
   await db
     .update(patients)
-    .set({ followUpNotes: updatedNotes as any, updatedAt: new Date() })
+    .set({ followUpNotes: updatedNotes, updatedAt: new Date() })
     .where(eq(patients.id, patientId));
 
   // Also set needsFollowUp=true when a follow-up note is added

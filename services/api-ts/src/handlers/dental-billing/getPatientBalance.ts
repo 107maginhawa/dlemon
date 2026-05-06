@@ -4,7 +4,7 @@
  * FR4.4: Per-patient outstanding balance — sum all non-voided invoice balanceCents.
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -12,8 +12,8 @@ import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
-export async function getPatientBalance(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getPatientBalance(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('patientId')!;

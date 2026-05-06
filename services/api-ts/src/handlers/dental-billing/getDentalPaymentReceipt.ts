@@ -5,7 +5,7 @@
  * Returns a receipt object. Frontend renders it for print/PDF.
  */
 
-import type { Context } from 'hono';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -15,8 +15,8 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { persons } from '../person/repos/person.schema';
 import { eq } from 'drizzle-orm';
 
-export async function getDentalPaymentReceipt(ctx: Context) {
-  const user = ctx.get('user') as any;
+export async function getDentalPaymentReceipt(ctx: BaseContext) {
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const invoiceId = ctx.req.param('invoiceId');
@@ -43,7 +43,7 @@ export async function getDentalPaymentReceipt(ctx: Context) {
   // Fetch patient name via patient → person join
   const patientRepo = new PatientRepository(db);
   const patient = await patientRepo.findOneByIdWithPerson(invoice.patientId);
-  const person = patient?.person as any;
+  const person = patient?.person;
   const patientName = person
     ? [person.firstName, person.lastName].filter(Boolean).join(' ')
     : 'Unknown Patient';

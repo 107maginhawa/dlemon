@@ -17,7 +17,7 @@ import type { ListDentalPatientsQuery } from '@/generated/openapi/validators';
 export async function listDentalPatients(
   ctx: ValidatedContext<never, ListDentalPatientsQuery, never>
 ) {
-  const user = ctx.get('user') as any;
+  const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -38,7 +38,7 @@ export async function listDentalPatients(
     const branch = await branchRepo.findOneById(q['branchId']);
     if (branch?.organizationId) {
       const orgBranches = await branchRepo.listByOrg(branch.organizationId);
-      filters['branchIds'] = orgBranches.map((b: any) => b.id);
+      filters['branchIds'] = orgBranches.map(b => b.id);
     } else {
       filters['branchId'] = q['branchId'];
     }
@@ -57,8 +57,8 @@ export async function listDentalPatients(
     repo.countWithPerson(filters),
   ]);
 
-  const mapped = allPatients.map((p: any) => {
-    const person = p.person as any;
+  const mapped = allPatients.map(p => {
+    const person = p.person;
     const firstName = person?.firstName ?? '';
     const lastName = person?.lastName ?? '';
     return {
