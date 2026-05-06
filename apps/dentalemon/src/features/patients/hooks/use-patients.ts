@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiBaseUrl } from '@/utils/config';
 import type { PatientCardData } from '../components/patient-folder-card';
+import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
 
 // ─── Raw API shape ──────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ export interface RawPatient {
   needsFollowUp: boolean;
   hasBalance: boolean;
   hasActivePaymentPlan: boolean;
+  status?: string;
+  latestChartTeeth?: Array<{ toothNumber: number; state: string }>;
 }
 
 // ─── Pure transform ─────────────────────────────────────────────────────────
@@ -57,6 +60,11 @@ export function toPatientCard(p: RawPatient): PatientCardData {
     visitCount: p.visitCount ?? 0,
     needsFollowUp: p.needsFollowUp ?? false,
     hasBalance: p.hasBalance || p.hasActivePaymentPlan || false,
+    status: (p.status as 'active' | 'archived' | 'in-session') ?? undefined,
+    latestChartTeeth: p.latestChartTeeth?.map((t) => ({
+      toothNumber: t.toothNumber,
+      state: t.state as ToothState,
+    })),
   };
 }
 

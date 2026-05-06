@@ -9,6 +9,8 @@
  */
 
 import React from 'react';
+import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import { DentalChartThumbnail } from './dental-chart-thumbnail';
 
 export interface PatientCardData {
   id: string;
@@ -18,11 +20,22 @@ export interface PatientCardData {
   visitCount: number;
   needsFollowUp: boolean;
   hasBalance: boolean;
+  status?: 'active' | 'archived' | 'in-session';
+  latestChartTeeth?: Array<{ toothNumber: number; state: ToothState }>;
 }
 
 interface PatientFolderCardProps {
   patient: PatientCardData;
   onClick: (patient: PatientCardData) => void;
+}
+
+function tabClass(status?: 'active' | 'archived' | 'in-session'): string {
+  switch (status) {
+    case 'active': return 'bg-lemon';
+    case 'archived': return 'bg-muted';
+    case 'in-session': return 'bg-teal-500';
+    default: return 'bg-lemon';
+  }
 }
 
 function initials(name: string): string {
@@ -65,7 +78,7 @@ export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) 
       {/* Manila folder tab strip */}
       <div
         data-testid="folder-tab"
-        className="h-2 w-full bg-[#FFE97D]"
+        className={`h-2 w-full ${tabClass(patient.status)}`}
         aria-hidden="true"
       />
 
@@ -115,6 +128,11 @@ export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) 
             </span>
           )}
         </div>
+      )}
+
+      {/* Dental chart thumbnail */}
+      {patient.latestChartTeeth && patient.latestChartTeeth.length > 0 && (
+        <DentalChartThumbnail teeth={patient.latestChartTeeth} />
       )}
 
       {/* Last visit */}
