@@ -13,6 +13,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { dentalTreatments } from './repos/treatment.schema';
@@ -24,6 +25,7 @@ export async function carryOverTreatments(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const visitId = ctx.req.param('visitId');
+  if (!visitId) throw new NotFoundError('Visit not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -35,6 +37,8 @@ export async function carryOverTreatments(ctx: Context) {
 
   const currentVisit = await visitRepo.findOneById(visitId);
   if (!currentVisit) throw new NotFoundError('Visit not found');
+
+  await assertBranchAccess(db, user.id, currentVisit.branchId);
 
   if (currentVisit.status === 'completed' || currentVisit.status === 'locked') {
     throw new BusinessLogicError('Cannot carry over treatments into a completed/locked visit', 'VISIT_IMMUTABLE');

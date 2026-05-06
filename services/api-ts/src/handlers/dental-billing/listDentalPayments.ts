@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function listDentalPayments(
   ctx: ValidatedContext<never, never, any>
@@ -23,6 +24,9 @@ export async function listDentalPayments(
   const invoiceRepo = new DentalInvoiceRepository(db);
   const invoice = await invoiceRepo.findOneById(invoiceId);
   if (!invoice) throw new NotFoundError('Invoice');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, invoice.branchId);
 
   const paymentRepo = new DentalPaymentRepository(db);
   const payments = await paymentRepo.findByInvoice(invoiceId);

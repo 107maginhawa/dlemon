@@ -12,6 +12,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -20,12 +21,18 @@ export async function getDentalPatientSafetyFloor(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
+  if (!patientId) throw new NotFoundError('Patient not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
 
   // Fetch all active medical history entries for this patient
   const entries = await db

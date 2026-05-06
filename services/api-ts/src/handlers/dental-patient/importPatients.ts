@@ -19,6 +19,7 @@ import { UnauthorizedError, ValidationError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 interface PatientRow {
   firstName: string;
@@ -123,6 +124,12 @@ export async function importPatients(ctx: Context): Promise<Response> {
   }
 
   if (rows.length === 0) throw new ValidationError('No rows to import');
+
+  // Branch-level authorization: verify access to all unique branchIds
+  const uniqueBranchIds = [...new Set(rows.map(r => r.branchId))];
+  for (const branchId of uniqueBranchIds) {
+    await assertBranchAccess(db, user.id, branchId);
+  }
 
   // All-or-nothing transaction
   const imported: any[] = [];

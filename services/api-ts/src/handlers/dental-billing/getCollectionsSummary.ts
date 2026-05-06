@@ -12,7 +12,8 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
 import { and, eq, gte, lte, sql } from 'drizzle-orm';
@@ -31,6 +32,12 @@ export async function getCollectionsSummary(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
   const q = ctx.req.query();
+
+  // Branch-level authorization
+  if (!q.branchId) {
+    throw new ValidationError('branchId query parameter is required');
+  }
+  await assertBranchAccess(db, user.id, q.branchId);
 
   const now = new Date();
   let from: Date;

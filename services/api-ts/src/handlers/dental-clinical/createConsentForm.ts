@@ -6,8 +6,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ConsentFormRepository } from './repos/consent-form.repo';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function createConsentForm(ctx: HandlerContext) {
@@ -22,6 +24,13 @@ export async function createConsentForm(ctx: HandlerContext) {
   if (!body['templateName'] || typeof body['templateName'] !== 'string') throw new ValidationError('templateName is required');
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
   const repo = new ConsentFormRepository(db);
 
   const form = await repo.createOne({

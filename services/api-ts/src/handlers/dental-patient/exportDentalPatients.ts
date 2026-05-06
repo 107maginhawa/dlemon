@@ -9,6 +9,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 function toCSV(patients: any[]): string {
   const headers = ['id', 'displayName', 'dateOfBirth', 'gender', 'status', 'needsFollowUp', 'hasActivePaymentPlan', 'recallDate', 'createdAt'];
@@ -39,6 +40,11 @@ export async function exportDentalPatients(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
   const q = ctx.req.query();
+
+  // Branch-level authorization
+  if (q.branchId) {
+    await assertBranchAccess(db, user.id, q.branchId);
+  }
 
   const format = q.format === 'csv' ? 'csv' : 'json';
   const filters: Record<string, any> = {};

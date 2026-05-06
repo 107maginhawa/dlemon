@@ -7,8 +7,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
+import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function importPMD(ctx: HandlerContext) {
@@ -22,6 +24,14 @@ export async function importPMD(ctx: HandlerContext) {
   if (!body['content'] || typeof body['content'] !== 'string') throw new ValidationError('content is required');
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via patient's preferred branch
+  const patientRepo = new PatientRepository(db);
+  const patient = await patientRepo.findOneById(body['patientId'] as string);
+  if (!patient) throw new NotFoundError('Patient');
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchAccess(db, user.id, patient.preferredBranchId);
+
   const repo = new ImportedPMDRepository(db);
 
   const imported = await repo.createOne({

@@ -11,6 +11,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function bulkArchiveDentalPatients(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -35,6 +36,19 @@ export async function bulkArchiveDentalPatients(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
   const repo = new PatientRepository(db, logger);
+
+  // Branch-level authorization: verify access to all unique branch IDs
+  const patientsToCheck = await Promise.all(
+    patientIds.map(id => repo.findOneById(id))
+  );
+  const uniqueBranchIds = [...new Set(
+    patientsToCheck
+      .filter((p): p is NonNullable<typeof p> => p != null && !!p.preferredBranchId)
+      .map(p => p.preferredBranchId as string)
+  )];
+  for (const branchId of uniqueBranchIds) {
+    await assertBranchAccess(db, user.id, branchId);
+  }
 
   const results = await Promise.all(
     patientIds.map(async (id) => {

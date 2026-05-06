@@ -6,7 +6,8 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, BusinessLogicError, NotFoundError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
@@ -28,9 +29,13 @@ export async function createDentalTreatment(ctx: HandlerContext) {
   const repo = new TreatmentRepository(db);
   const visitRepo = new VisitRepository(db);
 
-  // FR1.16: Immutability — cannot add treatments to completed/locked visits
+  // Branch authorization — look up visit to get branchId
   const visit = await visitRepo.findOneById(visitId);
-  if (visit && (visit.status === 'completed' || visit.status === 'locked')) {
+  if (!visit) throw new NotFoundError('Dental visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
+  // FR1.16: Immutability — cannot add treatments to completed/locked visits
+  if (visit.status === 'completed' || visit.status === 'locked') {
     throw new BusinessLogicError(
       `Cannot add treatments to a ${visit.status} visit`,
       'VISIT_IMMUTABLE'

@@ -13,6 +13,7 @@ import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 function sha256Hex(content: string): string {
@@ -37,6 +38,7 @@ export async function generatePMD(ctx: HandlerContext) {
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   if (visit.status !== 'completed' && visit.status !== 'locked') {
     throw new ValidationError('PMD can only be generated from a completed or locked visit');

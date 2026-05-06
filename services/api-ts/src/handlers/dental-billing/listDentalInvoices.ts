@@ -8,8 +8,9 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, and, sql } from 'drizzle-orm';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
@@ -24,6 +25,12 @@ export async function listDentalInvoices(
 
   const query = ctx.req.valid('query');
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization
+  if (!query.branchId) {
+    throw new ValidationError('branchId query parameter is required');
+  }
+  await assertBranchAccess(db, session.userId, query.branchId);
 
   const conditions = [];
   if (query.patientId) conditions.push(eq(dentalInvoices.patientId, query.patientId));

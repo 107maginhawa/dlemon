@@ -6,9 +6,11 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
 import { AttachmentRepository } from './repos/attachment.repo';
 import { VALID_IMAGE_TYPES } from './repos/attachment.schema';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function createAttachment(ctx: HandlerContext) {
@@ -28,6 +30,13 @@ export async function createAttachment(ctx: HandlerContext) {
   if (!body['mimeType'] || typeof body['mimeType'] !== 'string') throw new ValidationError('mimeType is required');
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
   const repo = new AttachmentRepository(db);
 
   const attachment = await repo.createOne({

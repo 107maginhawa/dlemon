@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function recordDentalPayment(
   ctx: ValidatedContext<any, never, any>
@@ -26,6 +27,9 @@ export async function recordDentalPayment(
 
   const invoice = await invoiceRepo.findOneById(invoiceId);
   if (!invoice) throw new NotFoundError('Invoice');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, invoice.branchId);
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Cannot record payment on a voided invoice', 'VOIDED_INVOICE');

@@ -7,6 +7,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
 
@@ -20,6 +21,8 @@ export async function getDentalVisit(ctx: HandlerContext) {
 
   const visit = await repo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
+
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   return ctx.json(visit);
 }

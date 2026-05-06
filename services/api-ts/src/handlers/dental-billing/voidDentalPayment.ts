@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function voidDentalPayment(
   ctx: ValidatedContext<any, never, any>
@@ -24,6 +25,9 @@ export async function voidDentalPayment(
   const paymentRepo = new DentalPaymentRepository(db);
   const payment = await paymentRepo.findOneById(paymentId);
   if (!payment) throw new NotFoundError('Payment');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, payment.branchId);
 
   if (payment.invoiceId !== invoiceId) {
     throw new BusinessLogicError('Payment does not belong to this invoice', 'PAYMENT_MISMATCH');

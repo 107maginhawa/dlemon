@@ -10,6 +10,8 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { LabOrderRepository } from './repos/lab-order.repo';
 import { VALID_LAB_ORDER_STATUSES } from './repos/lab-order.schema';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function updateLabOrder(ctx: HandlerContext) {
@@ -24,6 +26,12 @@ export async function updateLabOrder(ctx: HandlerContext) {
 
   const existing = await repo.findOneById(orderId);
   if (!existing) throw new NotFoundError('Lab order');
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(existing.visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   // Status transition
   if (body['status'] !== undefined) {

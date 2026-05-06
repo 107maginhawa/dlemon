@@ -17,7 +17,8 @@ import type { MergePatientsBody } from '@/generated/openapi/validators';
 export async function mergePatients(
   ctx: ValidatedContext<MergePatientsBody, never, never>
 ): Promise<Response> {
-  // Public endpoint - no auth required
+  const user = ctx.get('user');
+  if (!user?.id) throw new UnauthorizedError();
   
   
   

@@ -15,7 +15,9 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalChartRepository } from './repos/dental-chart.repo';
+import { VisitRepository } from './repos/visit.repo';
 import type { ToothChartState } from './repos/dental-chart.schema';
 
 // ISO 3950 deciduous tooth numbers (primary dentition)
@@ -74,6 +76,12 @@ export async function initializeDentition(ctx: Context): Promise<Response> {
   if (!body.visitId) {
     throw new ValidationError('visitId is required to associate the dental chart');
   }
+
+  // Branch authorization — look up visit to get branchId
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(body.visitId);
+  if (!visit) throw new NotFoundError('Dental visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   const age = getAgeYears(body.dateOfBirth);
 

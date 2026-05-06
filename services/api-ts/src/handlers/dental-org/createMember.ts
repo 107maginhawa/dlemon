@@ -8,6 +8,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { VALID_MEMBER_ROLES, type MemberRole } from '@/handlers/dental-org/repos/membership.schema';
@@ -35,6 +36,9 @@ export async function createMember(ctx: Context): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, resolvedBranchId);
 
   const repo = new MembershipRepository(db, logger);
 

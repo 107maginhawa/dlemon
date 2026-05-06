@@ -12,6 +12,8 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function exportPMD(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -19,6 +21,13 @@ export async function exportPMD(ctx: Context): Promise<Response> {
 
   const visitId = ctx.req.param('visitId')!;
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
   const repo = new PMDDocumentRepository(db);
 
   const pmds = await repo.findMany({ visitId });

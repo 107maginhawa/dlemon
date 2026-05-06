@@ -9,7 +9,8 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalPaymentPlans } from '@/handlers/dental-billing/repos/dental-payment-plan.schema';
 import { dentalInvoices } from '@/handlers/dental-billing/repos/dental-invoice.schema';
 import { labOrders } from '@/handlers/dental-clinical/repos/lab-order.schema';
@@ -22,6 +23,12 @@ export async function getDashboardSummary(ctx: Context) {
 
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.query('branchId');
+
+  // Branch-level authorization
+  if (!branchId) {
+    throw new ValidationError('branchId query parameter is required');
+  }
+  await assertBranchAccess(db, user.id, branchId);
 
   const activePlanStatuses = ['onTrack', 'behind'] as const;
   const pendingLabStatuses = ['ordered', 'inFabrication'] as const;

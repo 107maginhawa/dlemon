@@ -10,6 +10,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, and, desc } from 'drizzle-orm';
 import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
@@ -20,6 +21,7 @@ export async function getDentalPatient(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
+  if (!patientId) throw new NotFoundError('Patient not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -27,6 +29,11 @@ export async function getDentalPatient(ctx: Context) {
   const patient = await repo.findOneByIdWithPerson(patientId);
 
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
 
   // Visit count + last visit date
   const visits = await db

@@ -8,6 +8,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
 
@@ -22,6 +23,8 @@ export async function createDentalVisit(ctx: HandlerContext) {
   if (!body['dentistMemberId'] || typeof body['dentistMemberId'] !== 'string') throw new ValidationError('dentistMemberId is required');
 
   const db = ctx.get('database') as DatabaseInstance;
+  await assertBranchAccess(db, user.id, body['branchId'] as string);
+
   const repo = new VisitRepository(db);
 
   const visit = await repo.createOne({

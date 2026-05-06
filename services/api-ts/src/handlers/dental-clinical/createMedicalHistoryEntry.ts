@@ -6,9 +6,11 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
 import { VALID_ENTRY_TYPES } from './repos/medical-history.schema';
+import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function createMedicalHistoryEntry(ctx: HandlerContext) {
@@ -24,6 +26,14 @@ export async function createMedicalHistoryEntry(ctx: HandlerContext) {
   if (!body['displayName'] || typeof body['displayName'] !== 'string') throw new ValidationError('displayName is required');
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via patient's preferred branch
+  const patientRepo = new PatientRepository(db);
+  const patient = await patientRepo.findOneById(body['patientId'] as string);
+  if (!patient) throw new NotFoundError('Patient');
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchAccess(db, user.id, patient.preferredBranchId);
+
   const repo = new MedicalHistoryRepository(db);
 
   const entry = await repo.createOne({

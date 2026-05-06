@@ -9,6 +9,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { FollowUpNote } from '../patient/repos/patient.schema';
 import { sql } from 'drizzle-orm';
 import { patients } from '../patient/repos/patient.schema';
@@ -19,12 +20,18 @@ export async function listFollowUpNotes(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
+  if (!patientId) throw new NotFoundError('Patient not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
 
   const notes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
 
@@ -36,6 +43,7 @@ export async function addFollowUpNote(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
+  if (!patientId) throw new NotFoundError('Patient not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -52,6 +60,11 @@ export async function addFollowUpNote(ctx: Context) {
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
 
   const newNote: FollowUpNote = {
     id: crypto.randomUUID(),

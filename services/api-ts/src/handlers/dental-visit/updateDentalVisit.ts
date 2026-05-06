@@ -8,6 +8,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import type { DentalVisitStatus } from './repos/visit.schema';
 import type { User } from '@/types/auth';
@@ -26,6 +27,8 @@ export async function updateDentalVisit(ctx: HandlerContext) {
 
   const visit = await repo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
+
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   // FR1.16: Immutability — completed/locked visits cannot be modified
   if (visit.status === 'locked') {

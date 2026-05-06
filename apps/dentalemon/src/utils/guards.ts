@@ -89,11 +89,11 @@ export async function requireNoPerson({ context }: { context: RouterContext }) {
  * Redirects to verify-email blocker page if email is not verified
  */
 export async function requireEmailVerified({ context }: { context: RouterContext }) {
-  // if (!context.auth.user?.emailVerified) {
-  //   throw redirect({
-  //     to: '/verify-email',
-  //   })
-  // }
+  if (!context.auth.user?.emailVerified) {
+    throw redirect({
+      to: '/verify-email',
+    })
+  }
 }
 
 /**

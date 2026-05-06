@@ -17,6 +17,7 @@ export interface Config {
     host: string;
     port: number;
     publicUrl?: string;
+    internalServiceToken: string;
   };
   
   // Database configuration
@@ -106,6 +107,7 @@ export function parseConfig(): Config {
       host: serverHost,
       port: serverPort,
       publicUrl,
+      internalServiceToken: process.env['INTERNAL_SERVICE_TOKEN'] || crypto.randomUUID(),
     },
     
     // Database configuration (dialect auto-detected from URL)

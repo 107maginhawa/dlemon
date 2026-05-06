@@ -9,6 +9,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import { dentalInvoices, dentalInvoiceLineItems } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
@@ -19,12 +20,18 @@ export async function getDentalPatientStatement(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('id');
+  if (!patientId) throw new NotFoundError('Patient not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneByIdWithPerson(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
 
   // All visits
   const visits = await db

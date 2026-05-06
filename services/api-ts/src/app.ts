@@ -92,10 +92,9 @@ import { createSecurityHeaders, createCorsMiddleware } from '@/middleware/securi
 export function createApp(config: Config): App {
   const app = new Hono<{ Variables: Variables }>();
 
-  // Generate internal service token for secure service-to-service communication
-  // Used for expand requests and future microservice communication
-  // TODO: Move to config/env for production deployments
-  const internalServiceToken = crypto.randomUUID();
+  // Internal service token for secure service-to-service communication.
+  // Set INTERNAL_SERVICE_TOKEN env var in production for stable multi-instance deployments.
+  const internalServiceToken = config.server.internalServiceToken;
 
   // Create core dependencies with config
   const logger = createLogger(config);

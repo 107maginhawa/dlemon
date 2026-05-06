@@ -8,6 +8,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
@@ -21,7 +22,12 @@ export async function getToothHistory(ctx: HandlerContext) {
   const toothNumber = parseInt(ctx.req.param('toothNumber') ?? '');
   if (isNaN(toothNumber)) throw new ValidationError('toothNumber must be a number');
 
+  const branchId = ctx.req.query('branchId');
+  if (!branchId) throw new ValidationError('branchId query parameter is required');
+
   const db = ctx.get('database') as DatabaseInstance;
+  await assertBranchAccess(db, user.id, branchId);
+
   const visitRepo = new VisitRepository(db);
   const chartRepo = new DentalChartRepository(db);
   const treatmentRepo = new TreatmentRepository(db);

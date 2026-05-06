@@ -9,14 +9,23 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
+import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function getPatientBalance(ctx: Context) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('patientId');
+  const patientId = ctx.req.param('patientId')!;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization via patient's preferred branch
+  const patientRepo = new PatientRepository(db);
+  const patient = await patientRepo.findOneById(patientId);
+  if (patient?.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
 
   const invoiceRepo = new DentalInvoiceRepository(db);
   const planRepo = new DentalPaymentPlanRepository(db);

@@ -11,6 +11,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { persons } from '../person/repos/person.schema';
 import { eq } from 'drizzle-orm';
 
@@ -19,7 +20,9 @@ export async function getDentalPaymentReceipt(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const invoiceId = ctx.req.param('invoiceId');
+  if (!invoiceId) throw new NotFoundError('Invoice not found');
   const paymentId = ctx.req.param('paymentId');
+  if (!paymentId) throw new NotFoundError('Payment not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -28,6 +31,9 @@ export async function getDentalPaymentReceipt(ctx: Context) {
 
   const invoice = await invoiceRepo.findOneById(invoiceId);
   if (!invoice) throw new NotFoundError('Invoice not found');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, invoice.branchId);
 
   const payment = await paymentRepo.findOneById(paymentId);
   if (!payment || payment.invoiceId !== invoiceId) {

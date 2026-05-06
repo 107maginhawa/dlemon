@@ -8,6 +8,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError, ForbiddenError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -32,6 +33,9 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
   const repo = new MembershipRepository(db);
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, member.branchId);
 
   // Ownership check: user must be the member themselves or a dentist_owner of the same branch
   if (member.personId !== user.id) {

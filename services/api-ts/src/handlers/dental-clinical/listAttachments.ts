@@ -6,8 +6,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { AttachmentRepository } from './repos/attachment.repo';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function listAttachments(ctx: HandlerContext) {
@@ -16,6 +18,13 @@ export async function listAttachments(ctx: HandlerContext) {
 
   const visitId = ctx.req.param('visitId')!;
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
   const repo = new AttachmentRepository(db);
 
   const items = await repo.findMany({ visitId });

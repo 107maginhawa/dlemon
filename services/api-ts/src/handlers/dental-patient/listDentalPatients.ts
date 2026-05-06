@@ -11,6 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { BranchRepository } from '../dental-org/repos/branch.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function listDentalPatients(ctx: Context) {
   const user = ctx.get('user') as any;
@@ -19,6 +20,11 @@ export async function listDentalPatients(ctx: Context) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
   const q = ctx.req.query();
+
+  // Branch-level authorization
+  if (q.branchId) {
+    await assertBranchAccess(db, user.id, q.branchId);
+  }
 
   const filters: Record<string, any> = {};
 

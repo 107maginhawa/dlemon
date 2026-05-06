@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function createDentalPaymentPlan(
   ctx: ValidatedContext<any, never, any>
@@ -24,6 +25,9 @@ export async function createDentalPaymentPlan(
   const invoiceRepo = new DentalInvoiceRepository(db);
   const invoice = await invoiceRepo.findOneById(invoiceId);
   if (!invoice) throw new NotFoundError('Invoice');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, invoice.branchId);
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Cannot create payment plan for a voided invoice', 'VOIDED_INVOICE');

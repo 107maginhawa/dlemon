@@ -7,7 +7,9 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentRepository } from './repos/treatment.repo';
+import { VisitRepository } from './repos/visit.repo';
 import type { DentalTreatment } from './repos/treatment.schema';
 import type { User } from '@/types/auth';
 
@@ -25,6 +27,11 @@ export async function updateDentalTreatment(ctx: HandlerContext) {
 
   const treatment = await repo.findOneById(treatmentId);
   if (!treatment) throw new NotFoundError('Dental treatment');
+
+  // Branch authorization — look up visit to get branchId
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(treatment.visitId);
+  if (visit) await assertBranchAccess(db, user.id, visit.branchId);
 
   // Validate status if provided
   if (body['status'] !== undefined && !VALID_STATUSES.includes(body['status'] as any)) {

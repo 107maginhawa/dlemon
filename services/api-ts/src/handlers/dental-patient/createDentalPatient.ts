@@ -22,6 +22,7 @@ import { UnauthorizedError, ValidationError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { persons } from '@/handlers/person/repos/person.schema';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function createDentalPatient(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -40,6 +41,11 @@ export async function createDentalPatient(ctx: Context): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization
+  if (body.branchId) {
+    await assertBranchAccess(db, user.id, body.branchId);
+  }
 
   // Split displayName into firstName + lastName
   const parts = body.displayName.trim().split(/\s+/);

@@ -8,6 +8,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -30,6 +31,9 @@ export async function resetMemberPin(ctx: Context): Promise<Response> {
   const repo = new MembershipRepository(db, logger);
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, member.branchId);
 
   // Authorization: only dentist_owner of the same branch can reset another member's PIN
   const [callerMembership] = await db

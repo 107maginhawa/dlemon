@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq } from 'drizzle-orm';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
@@ -29,6 +30,9 @@ export async function getDentalInvoice(
 
   const result = await repo.findWithLineItems(invoiceId);
   if (!result) throw new NotFoundError('Invoice');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, result.invoice.branchId);
 
   // Fetch payments
   const payments = await paymentRepo.findByInvoice(invoiceId);

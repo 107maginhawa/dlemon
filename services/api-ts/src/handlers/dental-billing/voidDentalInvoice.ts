@@ -9,6 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function voidDentalInvoice(
   ctx: ValidatedContext<never, never, any>
@@ -22,6 +23,9 @@ export async function voidDentalInvoice(
 
   const invoice = await repo.findOneById(invoiceId);
   if (!invoice) throw new NotFoundError('Invoice');
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, invoice.branchId);
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Invoice is already voided', 'ALREADY_VOIDED');

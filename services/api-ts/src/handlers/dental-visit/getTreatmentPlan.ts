@@ -9,7 +9,8 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalTreatments } from './repos/treatment.schema';
 import { dentalVisits } from './repos/visit.schema';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -19,7 +20,13 @@ export async function getTreatmentPlan(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const patientId = ctx.req.param('patientId');
+  if (!patientId) throw new ValidationError('patientId is required');
+  const branchId = ctx.req.query('branchId');
+  if (!branchId) throw new ValidationError('branchId query parameter is required');
+
   const db = ctx.get('database') as DatabaseInstance;
+  await assertBranchAccess(db, user.id, branchId);
+
   const logger = ctx.get('logger');
 
   // Find all non-completed/locked visit IDs for this patient

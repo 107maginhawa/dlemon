@@ -8,6 +8,8 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PrescriptionRepository } from './repos/prescription.repo';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function updatePrescription(ctx: HandlerContext) {
@@ -22,6 +24,12 @@ export async function updatePrescription(ctx: HandlerContext) {
 
   const existing = await repo.findOneById(prescriptionId);
   if (!existing) throw new NotFoundError('Prescription');
+
+  // Branch-level authorization via parent visit
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(existing.visitId);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   const patch: Record<string, unknown> = {};
   if (typeof body['rxNormCode'] === 'string') patch['rxNormCode'] = body['rxNormCode'];

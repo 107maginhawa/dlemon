@@ -6,8 +6,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitNotesRepository } from './repos/treatment.repo';
+import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
 
 export async function upsertVisitNotes(ctx: HandlerContext) {
@@ -18,6 +20,13 @@ export async function upsertVisitNotes(ctx: HandlerContext) {
   const body = await ctx.req.json().catch(() => ({})) as Record<string, unknown>;
 
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch authorization — look up visit to get branchId
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Dental visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
   const repo = new VisitNotesRepository(db);
 
   const notes = await repo.upsert({

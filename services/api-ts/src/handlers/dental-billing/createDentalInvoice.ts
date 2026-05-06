@@ -11,6 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
 export async function createDentalInvoice(
@@ -21,6 +22,9 @@ export async function createDentalInvoice(
 
   const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, session.userId, body.branchId);
 
   const invoiceRepo = new DentalInvoiceRepository(db);
   const treatmentRepo = new TreatmentRepository(db);

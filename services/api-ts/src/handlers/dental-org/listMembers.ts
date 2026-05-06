@@ -7,6 +7,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 
@@ -19,8 +20,12 @@ export async function listMembers(ctx: Context): Promise<Response> {
     return ctx.json({ error: 'branchId query parameter is required' }, 400);
   }
 
-  const includeInactive = ctx.req.query('includeInactive') === 'true';
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
+
+  const includeInactive = ctx.req.query('includeInactive') === 'true';
   const logger = ctx.get('logger');
 
   const repo = new MembershipRepository(db, logger);

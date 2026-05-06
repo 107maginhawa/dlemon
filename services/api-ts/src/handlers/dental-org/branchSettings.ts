@@ -10,6 +10,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalBranches, type BranchSettings } from './repos/branch.schema';
 import { dentalMemberships } from './repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
@@ -27,7 +28,11 @@ export async function getBranchSettings(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId');
+  if (!branchId) throw new NotFoundError('Branch not found');
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
 
   const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
   if (!branch) throw new NotFoundError('Branch not found');
@@ -40,7 +45,11 @@ export async function updateBranchSettings(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const branchId = ctx.req.param('branchId');
+  if (!branchId) throw new NotFoundError('Branch not found');
   const db = ctx.get('database') as DatabaseInstance;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
 
   // FR8.13: Only dentist_owner can update settings
   const role = await getMemberRole(db, user.id, branchId);

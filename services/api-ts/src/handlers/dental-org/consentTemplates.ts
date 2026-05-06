@@ -12,6 +12,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalConsentTemplates } from './repos/consent-template.schema';
 import { dentalMemberships } from './repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
@@ -31,6 +32,9 @@ export async function listConsentTemplates(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.param('branchId') as string;
 
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
+
   const templates = await db
     .select()
     .from(dentalConsentTemplates)
@@ -48,6 +52,9 @@ export async function createConsentTemplate(ctx: Context): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.param('branchId') as string;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
 
   // FR8.13: Only dentist_owner can manage templates
   const role = await getMemberRole(db, user.id, branchId);
@@ -82,6 +89,9 @@ export async function updateConsentTemplate(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.param('branchId') as string;
   const templateId = ctx.req.param('id') as string;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
 
   const role = await getMemberRole(db, user.id, branchId);
   if (!role || role !== 'dentist_owner') {
@@ -118,6 +128,9 @@ export async function deleteConsentTemplate(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.param('branchId') as string;
   const templateId = ctx.req.param('id') as string;
+
+  // Branch-level authorization
+  await assertBranchAccess(db, user.id, branchId);
 
   const role = await getMemberRole(db, user.id, branchId);
   if (!role || role !== 'dentist_owner') {

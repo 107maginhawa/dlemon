@@ -11,6 +11,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
@@ -22,12 +23,12 @@ export async function listTreatmentTemplates(ctx: Context) {
 
   const db = ctx.get('database') as DatabaseInstance;
   const branchId = ctx.req.query('branchId');
+  if (!branchId) throw new ValidationError('branchId query parameter is required');
+  await assertBranchAccess(db, user.id, branchId);
 
-  const templates = branchId
-    ? await db.select().from(dentalTreatmentTemplates).where(
-        and(eq(dentalTreatmentTemplates.branchId, branchId), eq(dentalTreatmentTemplates.active, true))
-      )
-    : await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.active, true));
+  const templates = await db.select().from(dentalTreatmentTemplates).where(
+    and(eq(dentalTreatmentTemplates.branchId, branchId), eq(dentalTreatmentTemplates.active, true))
+  );
 
   return ctx.json({ templates }, 200);
 }
@@ -43,6 +44,8 @@ export async function createTreatmentTemplate(ctx: Context) {
   if (!body.name?.trim()) throw new ValidationError('name is required');
   if (!body.branchId) throw new ValidationError('branchId is required');
   if (!Array.isArray(body.items) || body.items.length === 0) throw new ValidationError('items must be a non-empty array');
+
+  await assertBranchAccess(db, user.id, body.branchId);
 
   const [template] = await db.insert(dentalTreatmentTemplates).values({
     branchId: body.branchId,
@@ -62,12 +65,15 @@ export async function updateTreatmentTemplate(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const templateId = ctx.req.param('id');
+  if (!templateId) throw new NotFoundError('Treatment template not found');
   const db = ctx.get('database') as DatabaseInstance;
   let body: any;
   try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
 
   const [existing] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
   if (!existing) throw new NotFoundError('Treatment template not found');
+
+  await assertBranchAccess(db, user.id, existing.branchId);
 
   const updates: any = { updatedAt: new Date(), updatedBy: user.id };
   if (body.name !== undefined) updates.name = body.name;
@@ -84,10 +90,13 @@ export async function deleteTreatmentTemplate(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const templateId = ctx.req.param('id');
+  if (!templateId) throw new NotFoundError('Treatment template not found');
   const db = ctx.get('database') as DatabaseInstance;
 
   const [existing] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
   if (!existing) throw new NotFoundError('Treatment template not found');
+
+  await assertBranchAccess(db, user.id, existing.branchId);
 
   await db.update(dentalTreatmentTemplates).set({ active: false, updatedAt: new Date() }).where(eq(dentalTreatmentTemplates.id, templateId));
   return ctx.json({ success: true }, 200);
@@ -98,13 +107,17 @@ export async function applyTemplate(ctx: Context) {
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const visitId = ctx.req.param('visitId');
+  if (!visitId) throw new NotFoundError('Visit not found');
   const templateId = ctx.req.param('templateId');
+  if (!templateId) throw new NotFoundError('Treatment template not found');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit not found');
+
+  await assertBranchAccess(db, user.id, visit.branchId);
 
   // FR1.16: Block on completed/locked
   if (visit.status === 'completed' || visit.status === 'locked') {
