@@ -40,7 +40,7 @@ export interface ToothSlideoutProps {
   toothNumber: number | null;
   open: boolean;
   onClose: () => void;
-  onSave: (data: ToothSlideoutData) => Promise<void>;
+  onSave: (data: ToothSlideoutData) => void | Promise<void>;
   readOnly?: boolean;
 }
 
