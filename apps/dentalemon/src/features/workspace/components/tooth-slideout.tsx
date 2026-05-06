@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiveSurfaceSelector } from './five-surface-selector.tsx';
 import type { ToothSurface } from './five-surface-selector.helpers';
+import type { ToothState } from './dental-chart.helpers';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 type Step = 'condition' | 'surface' | 'treatment' | 'review';
@@ -27,7 +28,7 @@ const TOOTH_STATES = [
 ] as const;
 
 export interface ToothSlideoutData {
-  state: string;
+  state: ToothState;
   surfaces: ToothSurface[];
   cdtCode?: string;
   description?: string;
@@ -46,7 +47,7 @@ export interface ToothSlideoutProps {
 
 export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: ToothSlideoutProps) {
   const [step, setStep] = useState<Step>('condition');
-  const [state, setState] = useState('');
+  const [state, setState] = useState<ToothState | ''>('');
   const [conditionCode, setConditionCode] = useState('');
   const [surfaces, setSurfaces] = useState<ToothSurface[]>([]);
   const [cdtCode, setCdtCode] = useState('');
@@ -63,7 +64,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
     setCdtCode('');
     setDescription('');
     setPriceInput('');
-  }, [toothNumber]);
+  }, [toothNumber, open]);
 
   if (!open || !toothNumber) return null;
 
@@ -77,6 +78,7 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
   }
 
   async function handleSave() {
+    if (!state) return; // state is required; condition step must be completed
     setSaving(true);
     try {
       await onSave({

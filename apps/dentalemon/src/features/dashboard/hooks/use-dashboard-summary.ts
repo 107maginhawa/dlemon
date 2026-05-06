@@ -60,16 +60,17 @@ async function fetchDashboardSummary(
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
+  const b = encodeURIComponent(branchId);
   const fetches: Promise<Response>[] = [
-    fetch(`${API}/dental/appointments?date=${today}`, { credentials: 'include' }),
-    fetch(`${API}/dental/appointments?date=${tomorrow}`, { credentials: 'include' }),
-    fetch(`${API}/dental/dashboard/summary`, { credentials: 'include' }),
+    fetch(`${API}/dental/appointments?date=${today}&branchId=${b}`, { credentials: 'include' }),
+    fetch(`${API}/dental/appointments?date=${tomorrow}&branchId=${b}`, { credentials: 'include' }),
+    fetch(`${API}/dental/dashboard/summary?branchId=${b}`, { credentials: 'include' }),
   ];
 
   if (showFinancials) {
     fetches.push(
-      fetch(`${API}/dental/billing/invoices?status=overdue`, { credentials: 'include' }),
-      fetch(`${API}/dental/billing/invoices?branchId=${encodeURIComponent(branchId)}`, { credentials: 'include' }),
+      fetch(`${API}/dental/billing/invoices?status=overdue&branchId=${b}`, { credentials: 'include' }),
+      fetch(`${API}/dental/billing/invoices?branchId=${b}`, { credentials: 'include' }),
     );
   }
 

@@ -12,9 +12,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
-import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
-import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
 import { MedicalHistoryForm } from '@/features/workspace/components/medical-history-form';
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
@@ -34,8 +32,7 @@ import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
-import { useSaveChart } from '@/features/workspace/hooks/use-save-chart';
-import { useSaveTreatment } from '@/features/workspace/hooks/use-save-treatment';
+import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
@@ -119,8 +116,13 @@ function WorkspacePage() {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
   const sharePMDMutation = useSharePMD();
-  const saveChartMutation = useSaveChart();
-  const saveTreatmentMutation = useSaveTreatment();
+  const { saveToothData } = useSaveToothFlow({
+    visitId: currentVisitId,
+    patientId,
+    teeth,
+    selectedTooth,
+    onSuccess: clearSelection,
+  });
 
   async function handleSelectVisit(visitId: string) {
     setCurrentVisitId(visitId);
@@ -169,62 +171,6 @@ function WorkspacePage() {
     );
   }
 
-  function handleSaveToothData(data: ToothSlideoutData) {
-    const visitId = currentVisitId;
-    const toothNumber = selectedTooth;
-    if (!visitId || !toothNumber) return;
-
-    const updatedTeeth: ToothData[] = [...teeth];
-    const idx = updatedTeeth.findIndex((t) => t.toothNumber === toothNumber);
-    const toothEntry: ToothData = {
-      toothNumber: toothNumber,
-      state: data.state as ToothData['state'],
-      surfaces: data.surfaces,
-      conditionCode: data.conditionCode,
-    };
-    if (idx >= 0) updatedTeeth[idx] = toothEntry;
-    else updatedTeeth.push(toothEntry);
-
-    let priceAmount: number | undefined;
-    if (data.cdtCode && data.description && data.priceInput !== undefined && data.priceInput !== '') {
-      const raw = parseFloat(data.priceInput);
-      if (isNaN(raw)) {
-        console.error('Invalid price input — treatment not saved');
-        return;
-      }
-      priceAmount = raw;
-    }
-
-    saveChartMutation.mutate(
-      { visitId, patientId, teeth: updatedTeeth },
-      {
-        onSuccess: () => {
-          clearSelection();
-          if (data.cdtCode && data.description && priceAmount !== undefined) {
-            saveTreatmentMutation.mutate(
-              {
-                visitId,
-                patientId,
-                cdtCode: data.cdtCode,
-                description: data.description,
-                toothNumber: toothNumber,
-                surfaces: data.surfaces,
-                conditionCode: data.conditionCode,
-                priceAmount,
-                currency: 'PHP',
-                status: 'diagnosed',
-              },
-              {
-                onError: (err) => {
-                  console.error('Treatment save failed — chart was saved but treatment was not recorded', err);
-                },
-              },
-            );
-          }
-        },
-      },
-    );
-  }
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (visitsLoading) {
@@ -331,7 +277,7 @@ function WorkspacePage() {
         toothNumber={selectedTooth}
         open={selectedTooth !== null && currentVisitId !== null}
         onClose={clearSelection}
-        onSave={handleSaveToothData}
+        onSave={saveToothData}
         readOnly={isReadOnly}
       />
 
