@@ -7,38 +7,25 @@
  * FR2.18: Recall / next visit tracking
  */
 
-import { z } from 'zod';
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 
-const updateDentalPatientSchema = z.object({
-  needsFollowUp: z.boolean().optional(),
-  dentalHistorySummary: z.string().optional().nullable(),
-  preferredBranchId: z.string().optional().nullable(),
-  status: z.enum(['active', 'archived']).optional(),
-  emergencyContact: z.any().optional(),
-  communicationPreferences: z.any().optional(),
-  recallDate: z.string().optional().nullable(),
-  recallNote: z.string().optional().nullable(),
-}).refine(
-  (data) => Object.values(data).some((v) => v !== undefined),
-  { message: 'No updatable fields provided' }
-);
-
-export async function updateDentalPatient(ctx: Context) {
+export async function updateDentalPatient(
+  ctx: ValidatedContext<UpdateDentalPatientBody, never, UpdateDentalPatientParams>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('id');
-  if (!patientId) throw new NotFoundError('Patient not found');
+  const params = ctx.req.valid('param');
+  const patientId = params.id;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const rawBody = await ctx.req.json();
-  const body = updateDentalPatientSchema.parse(rawBody);
+  const body = ctx.req.valid('json');
 
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);

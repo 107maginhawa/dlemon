@@ -16,29 +16,22 @@
  * FR2.9: New patient status is 'active' (Pending status not in schema, maps to active).
  */
 
-import { z } from 'zod';
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { CreateDentalPatientBody } from '@/generated/openapi/validators';
 
-const createDentalPatientSchema = z.object({
-  displayName: z.string().min(1, 'displayName is required'),
-  dateOfBirth: z.string().optional(),
-  gender: z.string().optional(),
-  consentGiven: z.literal(true, { errorMap: () => ({ message: 'Patient consent is required' }) }).optional(),
-  branchId: z.string().uuid().optional(),
-});
-
-export async function createDentalPatient(ctx: Context): Promise<Response> {
+export async function createDentalPatient(
+  ctx: ValidatedContext<CreateDentalPatientBody, never, never>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const rawBody = await ctx.req.json();
-  const body = createDentalPatientSchema.parse(rawBody);
+  const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

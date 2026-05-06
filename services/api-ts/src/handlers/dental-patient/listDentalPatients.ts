@@ -6,20 +6,23 @@
  * FR2.10: Filter by follow-up indicator (needsFollowUp=true)
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { BranchRepository } from '../dental-org/repos/branch.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { ListDentalPatientsQuery } from '@/generated/openapi/validators';
 
-export async function listDentalPatients(ctx: Context) {
+export async function listDentalPatients(
+  ctx: ValidatedContext<never, ListDentalPatientsQuery, never>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
-  const q = ctx.req.query();
+  const q = ctx.req.valid('query');
 
   // Branch-level authorization
   if (q.branchId) {
@@ -42,11 +45,11 @@ export async function listDentalPatients(ctx: Context) {
   }
 
   if (q.q) filters.q = q.q;
-  if (q.needsFollowUp === 'true') filters.needsFollowUp = true;
+  if (q.needsFollowUp === true) filters.needsFollowUp = true;
   if (q.status) filters.status = q.status;
 
-  const limit = Math.min(parseInt(q.limit ?? '50', 10) || 50, 200);
-  const offset = parseInt(q.offset ?? '0', 10) || 0;
+  const limit = Math.min(q.limit ?? 50, 200);
+  const offset = q.offset ?? 0;
 
   const repo = new PatientRepository(db, logger);
   const [allPatients, total] = await Promise.all([

@@ -6,22 +6,24 @@
  *        recall date (FR2.18), and safety floor data (FR2.15).
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
-import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
+import type { GetDentalPatientParams } from '@/generated/openapi/validators';
 
-export async function getDentalPatient(ctx: Context) {
+export async function getDentalPatient(
+  ctx: ValidatedContext<never, never, GetDentalPatientParams>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('id');
-  if (!patientId) throw new NotFoundError('Patient not found');
+  const params = ctx.req.valid('param');
+  const patientId = params.id;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

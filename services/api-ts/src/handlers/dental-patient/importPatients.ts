@@ -3,136 +3,34 @@
  *
  * POST /dental/patients/import
  *
- * Accepts JSON array or CSV body.
+ * Accepts JSON body: { patients: PatientRow[] }
  * Validates all rows up front — returns 422 with errors if any fail.
  * Batch-commits all patients in a transaction (all-or-nothing).
- *
- * CSV columns (header required):
- *   firstName, lastName, dateOfBirth, gender, phone, email, branchId
- *
- * JSON: array of { firstName, lastName, dateOfBirth, branchId, gender?, phone?, email? }
  */
 
-import { z } from 'zod';
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { ImportPatientsBody } from '@/generated/openapi/validators';
 
-const patientRowSchema = z.object({
-  firstName: z.string().min(1, 'firstName required'),
-  lastName: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  gender: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  branchId: z.string().min(1, 'branchId required'),
-});
-
-interface PatientRow {
-  firstName: string;
-  lastName?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  phone?: string;
-  email?: string;
-  branchId: string;
-}
-
-function parseCSV(csv: string): { rows: PatientRow[]; errors: string[] } {
-  const lines = csv.trim().split('\n').map(l => l.replace(/\r$/, ''));
-  if (lines.length < 2) return { rows: [], errors: ['CSV must have a header and at least one data row'] };
-
-  const headers = lines[0]!.split(',').map(h => h.trim().toLowerCase());
-  const colMap: Record<string, number> = {};
-  headers.forEach((h, i) => { colMap[h] = i; });
-
-  const required = ['firstname', 'branchid'];
-  const missing = required.filter(k => colMap[k] === undefined).map(k => `Missing required column: ${k}`);
-  if (missing.length > 0) return { rows: [], errors: missing };
-
-  const errors: string[] = [];
-  const rows: PatientRow[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]!.trim();
-    if (!line) continue;
-    const cells = line.split(',').map(c => c.trim());
-    const get = (key: string) => cells[colMap[key] ?? -1]?.trim() || '';
-
-    const firstName = get('firstname');
-    const branchId = get('branchid');
-
-    if (!firstName) { errors.push(`Row ${i}: firstName is required`); continue; }
-    if (!branchId)  { errors.push(`Row ${i}: branchId is required`);  continue; }
-
-    rows.push({
-      firstName,
-      lastName: get('lastname') || undefined,
-      dateOfBirth: get('dateofbirth') || undefined,
-      gender: get('gender') || undefined,
-      phone: get('phone') || undefined,
-      email: get('email') || undefined,
-      branchId,
-    });
-  }
-
-  return { rows, errors };
-}
-
-function validateRows(items: any[]): { rows: PatientRow[]; errors: string[] } {
-  const errors: string[] = [];
-  const rows: PatientRow[] = [];
-
-  for (let i = 0; i < items.length; i++) {
-    const result = patientRowSchema.safeParse(items[i]);
-    if (!result.success) {
-      const msgs = result.error.issues.map(issue => issue.message).join(', ');
-      errors.push(`Item ${i}: ${msgs}`);
-      continue;
-    }
-    rows.push(result.data as PatientRow);
-  }
-
-  return { rows, errors };
-}
-
-export async function importPatients(ctx: Context): Promise<Response> {
+export async function importPatients(
+  ctx: ValidatedContext<ImportPatientsBody, never, never>
+): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  const contentType = ctx.req.header('Content-Type') ?? '';
+  const body = ctx.req.valid('json');
+  const rows = body.patients;
 
-  let rows: PatientRow[] = [];
-  let parseErrors: string[] = [];
-
-  if (contentType.includes('application/json')) {
-    let body: any;
-    try { body = await ctx.req.json(); } catch { throw new ValidationError('Invalid JSON'); }
-    if (!Array.isArray(body)) throw new ValidationError('Body must be an array');
-    const result = validateRows(body);
-    rows = result.rows;
-    parseErrors = result.errors;
-  } else {
-    const csvText = await ctx.req.text().catch(() => '');
-    const result = parseCSV(csvText);
-    rows = result.rows;
-    parseErrors = result.errors;
-  }
-
-  // Fail-fast: rollback all if any validation errors
-  if (parseErrors.length > 0) {
-    return ctx.json({ success: false, errors: parseErrors, imported: 0, total: rows.length }, 422);
-  }
-
-  if (rows.length === 0) throw new ValidationError('No rows to import');
+  if (!rows || rows.length === 0) throw new ValidationError('No rows to import');
 
   // Branch-level authorization: verify access to all unique branchIds
-  const uniqueBranchIds = [...new Set(rows.map(r => r.branchId))];
+  const uniqueBranchIds = [...new Set(rows.map((r: any) => r.branchId).filter(Boolean))];
   for (const branchId of uniqueBranchIds) {
     await assertBranchAccess(db, user.id, branchId);
   }
@@ -148,8 +46,6 @@ export async function importPatients(ctx: Context): Promise<Response> {
           ...(row.lastName ? { lastName: row.lastName } : {}),
           ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
           ...(row.gender ? { gender: row.gender } : {}),
-          ...(row.phone ? { phone: row.phone } : {}),
-          ...(row.email ? { email: row.email } : {}),
           createdBy: user.id,
           updatedBy: user.id,
         }).returning();

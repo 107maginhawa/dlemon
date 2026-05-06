@@ -5,11 +5,12 @@
  * Query params: format=csv|json, branchId=..., status=...
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';
 
 function toCSV(patients: any[]): string {
   const headers = ['id', 'displayName', 'dateOfBirth', 'gender', 'status', 'needsFollowUp', 'hasActivePaymentPlan', 'recallDate', 'createdAt'];
@@ -33,13 +34,15 @@ function toCSV(patients: any[]): string {
   return [headers.join(','), ...rows].join('\n');
 }
 
-export async function exportDentalPatients(ctx: Context) {
+export async function exportDentalPatients(
+  ctx: ValidatedContext<never, ExportDentalPatientsQuery, never>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
-  const q = ctx.req.query();
+  const q = ctx.req.valid('query');
 
   // Branch-level authorization
   if (q.branchId) {

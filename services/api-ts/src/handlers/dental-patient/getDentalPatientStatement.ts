@@ -5,7 +5,7 @@
  *          and payments for a patient.
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
@@ -14,13 +14,16 @@ import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import { dentalInvoices, dentalInvoiceLineItems } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
 import { eq, desc } from 'drizzle-orm';
+import type { GetDentalPatientStatementParams } from '@/generated/openapi/validators';
 
-export async function getDentalPatientStatement(ctx: Context) {
+export async function getDentalPatientStatement(
+  ctx: ValidatedContext<never, never, GetDentalPatientStatementParams>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('id');
-  if (!patientId) throw new NotFoundError('Patient not found');
+  const params = ctx.req.valid('param');
+  const patientId = params.id;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

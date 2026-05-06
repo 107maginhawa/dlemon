@@ -4,18 +4,21 @@
  * FR2.7: Restore an archived patient back to active status.
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { RestoreDentalPatientParams } from '@/generated/openapi/validators';
 
-export async function restoreDentalPatient(ctx: Context) {
+export async function restoreDentalPatient(
+  ctx: ValidatedContext<never, never, RestoreDentalPatientParams>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('id');
-  if (!patientId) throw new NotFoundError('Patient not found');
+  const params = ctx.req.valid('param');
+  const patientId = params.id;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

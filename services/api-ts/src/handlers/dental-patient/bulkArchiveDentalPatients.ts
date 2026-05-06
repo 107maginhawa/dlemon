@@ -7,23 +7,20 @@
  * Returns per-patient result: { id, success, reason? }
  */
 
-import { z } from 'zod';
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { BulkArchiveDentalPatientsBody } from '@/generated/openapi/validators';
 
-const bulkArchiveSchema = z.object({
-  patientIds: z.array(z.string()).min(1, 'patientIds must be a non-empty array').max(100, 'Cannot bulk archive more than 100 patients at once'),
-});
-
-export async function bulkArchiveDentalPatients(ctx: Context) {
+export async function bulkArchiveDentalPatients(
+  ctx: ValidatedContext<BulkArchiveDentalPatientsBody, never, never>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const rawBody = await ctx.req.json();
-  const { patientIds } = bulkArchiveSchema.parse(rawBody);
+  const { patientIds } = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

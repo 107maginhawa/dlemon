@@ -4,18 +4,21 @@
  * FR2.7: Archive patient with EC1 guard (block if active payment plan).
  */
 
-import type { Context } from 'hono';
+import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators';
 
-export async function archiveDentalPatient(ctx: Context) {
+export async function archiveDentalPatient(
+  ctx: ValidatedContext<never, never, ArchiveDentalPatientParams>
+) {
   const user = ctx.get('user') as any;
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const patientId = ctx.req.param('id');
-  if (!patientId) throw new NotFoundError('Patient not found');
+  const params = ctx.req.valid('param');
+  const patientId = params.id;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

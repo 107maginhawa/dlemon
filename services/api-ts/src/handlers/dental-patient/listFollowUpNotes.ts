@@ -1,40 +1,39 @@
+/**
+ * listFollowUpNotes — GET /dental/patients/:id/follow-up-notes
+ *
+ * FR2.12: List follow-up notes for a patient.
+ * Delegated from followUpNotes.ts; re-exported here for codegen registry.
+ */
+
 import type { ValidatedContext } from '@/types/app';
-import {
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  BusinessLogicError,
-} from '@/core/errors';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { PatientRepository } from '../patient/repos/patient.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import type { FollowUpNote } from '../patient/repos/patient.schema';
 import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
 
-/**
- * listFollowUpNotes
- * 
- * Path: GET /{id}/follow-up-notes
- * OperationId: listFollowUpNotes
- */
 export async function listFollowUpNotes(
   ctx: ValidatedContext<never, never, ListFollowUpNotesParams>
 ): Promise<Response> {
-  // Get authenticated session from Better-Auth
-  const session = ctx.get('session');
-  if (!session) {
-    throw new UnauthorizedError();
-  }
-  
-  // Extract validated parameters
+  const user = ctx.get('user') as any;
+  if (!user) throw new UnauthorizedError('Authentication required');
+
   const params = ctx.req.valid('param');
-  
-  
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: listFollowUpNotes');
+  const patientId = params.id;
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new PatientRepository(db, logger);
+  const patient = await repo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  // Branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  }
+
+  const notes: FollowUpNote[] = (patient as any).followUpNotes ?? [];
+
+  return ctx.json({ notes, total: notes.length }, 200);
 }
