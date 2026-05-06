@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy workspace files
 COPY package.json bun.lockb ./
-COPY apps/account/package.json ./apps/account/
+COPY apps/dentalemon/package.json ./apps/dentalemon/
 COPY packages/sdk-ts/package.json ./packages/sdk-ts/
 COPY specs/api/package.json ./specs/api/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
@@ -16,21 +16,21 @@ RUN bun install --frozen-lockfile
 # Copy all source files
 COPY . .
 
-# Build the account app
-WORKDIR /app/apps/account
+# Build the dentalemon app
+WORKDIR /app/apps/dentalemon
 RUN bun run build
 
 # Production stage using Caddy to serve the SPA
 FROM caddy:2.8-alpine
 
 # Copy the dist folder to Caddy's default serve directory
-COPY --from=builder /app/apps/account/dist /srv
+COPY --from=builder /app/apps/dentalemon/dist /srv
 
 # Copy Caddy configuration
-COPY apps/account/Caddyfile /etc/caddy/Caddyfile
+COPY apps/dentalemon/Caddyfile /etc/caddy/Caddyfile
 
 # Copy and set up entrypoint script
-COPY apps/account/docker-entrypoint.sh /docker-entrypoint.sh
+COPY apps/dentalemon/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Set environment variables for runtime configuration

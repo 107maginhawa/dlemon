@@ -45,10 +45,14 @@ export async function exportDentalPatients(
   const logger = ctx.get('logger');
   const q = ctx.req.valid('query');
 
-  // Branch-level authorization
-  if (q['branchId']) {
-    await assertBranchAccess(db, user.id, q['branchId']);
+  // Branch-level authorization — branchId is required to prevent cross-branch data leaks
+  if (!q['branchId']) {
+    return new Response(JSON.stringify({ error: 'branchId is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
+  await assertBranchAccess(db, user.id, q['branchId']);
 
   const format = q['format'] === 'csv' ? 'csv' : 'json';
   const filters: Record<string, any> = {};

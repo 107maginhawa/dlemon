@@ -24,10 +24,11 @@ export async function listDentalPatients(
   const logger = ctx.get('logger');
   const q = ctx.req.valid('query');
 
-  // Branch-level authorization
-  if (q['branchId']) {
-    await assertBranchAccess(db, user.id, q['branchId']);
+  // Branch-level authorization — branchId is required to prevent cross-branch data leaks
+  if (!q['branchId']) {
+    return ctx.json({ error: 'branchId is required' } as any, 400);
   }
+  await assertBranchAccess(db, user.id, q['branchId']);
 
   const filters: Record<string, any> = {};
 
