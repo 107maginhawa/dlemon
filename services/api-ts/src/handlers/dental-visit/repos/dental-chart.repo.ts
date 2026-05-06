@@ -22,7 +22,7 @@ export interface UpsertChartInput {
 
 export interface UpdateToothInput {
   toothNumber: number;
-  state: string;
+  state?: string;
   surfaces?: string[];
   conditionCode?: string;
   note?: string;
@@ -68,13 +68,14 @@ export class DentalChartRepository {
 
     const existingTeeth = chart.teeth as ToothChartState[];
     const idx = existingTeeth.findIndex(t => t.toothNumber === update.toothNumber);
+    const existingTooth = idx >= 0 ? existingTeeth[idx] : undefined;
 
     const updatedTooth: ToothChartState = {
       toothNumber: update.toothNumber,
-      state: update.state,
-      surfaces: update.surfaces,
-      conditionCode: update.conditionCode,
-      note: update.note,
+      state: update.state ?? existingTooth?.state ?? 'normal',
+      surfaces: update.surfaces ?? existingTooth?.surfaces,
+      conditionCode: update.conditionCode ?? existingTooth?.conditionCode,
+      note: update.note ?? existingTooth?.note,
     };
 
     let newTeeth: ToothChartState[];

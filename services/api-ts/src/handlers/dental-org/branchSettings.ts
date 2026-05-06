@@ -17,7 +17,7 @@ import { dentalMemberships } from './repos/membership.schema';
 import { eq, and } from 'drizzle-orm';
 
 const updateBranchSettingsSchema = z.object({
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 }).passthrough().refine(
   (data) => typeof data === 'object' && data !== null,
   { message: 'settings must be an object' }

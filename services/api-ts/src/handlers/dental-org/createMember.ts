@@ -16,7 +16,7 @@ import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schem
 
 const createMemberSchema = z.object({
   displayName: z.string().min(1, 'displayName is required'),
-  role: z.enum(VALID_MEMBER_ROLES, { errorMap: () => ({ message: `role is required and must be one of: ${VALID_MEMBER_ROLES.join(', ')}` }) }),
+  role: z.enum(VALID_MEMBER_ROLES, { error: () => ({ message: `role is required and must be one of: ${VALID_MEMBER_ROLES.join(', ')}` }) }),
   branchId: z.string().uuid().optional(),
   personId: z.string().uuid().optional().nullable(),
   avatarUrl: z.string().optional().nullable(),

@@ -519,8 +519,6 @@ describe('EC2: pending treatment on extracted tooth is blocked', () => {
       visitId: visit.id,
       patientId: PATIENT_ID,
       teeth: [{ toothNumber: 16, state: 'extracted' }],
-      createdBy: TEST_USER.id,
-      updatedBy: TEST_USER.id,
     });
 
     const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
@@ -550,8 +548,6 @@ describe('EC2: pending treatment on extracted tooth is blocked', () => {
       visitId: visit.id,
       patientId: PATIENT_ID,
       teeth: [{ toothNumber: 16, state: 'caries' }],
-      createdBy: TEST_USER.id,
-      updatedBy: TEST_USER.id,
     });
 
     const res = await app.request(`/dental/visits/${visit.id}/treatments`, {

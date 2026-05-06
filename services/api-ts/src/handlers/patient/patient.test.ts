@@ -82,7 +82,7 @@ function buildTestApp(user?: typeof authedUser) {
       // Simulate authMiddleware: reject unauthenticated requests
       return c.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
     }
-    await next();
+    return await next();
   });
 
   // POST /patients

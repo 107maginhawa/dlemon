@@ -22,7 +22,7 @@ export async function createAmendment(
   const { visitId } = ctx.req.valid('param');
   const body = ctx.req.valid('json');
 
-  const authorMemberId = body.authorMemberId ?? user.id;
+  const authorMemberId = user.id;
 
   const db = ctx.get('database') as DatabaseInstance;
 

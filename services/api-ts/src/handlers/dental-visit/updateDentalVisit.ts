@@ -35,9 +35,9 @@ export async function updateDentalVisit(
   if (visit.status === 'locked') {
     throw new BusinessLogicError('Locked visits cannot be modified', 'VISIT_LOCKED');
   }
-  if (visit.status === 'completed' && body.status !== 'locked') {
+  if (visit.status === 'completed' && (body.status as string) !== 'locked') {
     // Only allowed transition from completed is -> locked
-    if (body.status !== undefined && body.status !== 'locked') {
+    if (body.status !== undefined) {
       throw new BusinessLogicError('Completed visits can only be transitioned to locked', 'VISIT_IMMUTABLE');
     }
     // chiefComplaint edits also blocked on completed

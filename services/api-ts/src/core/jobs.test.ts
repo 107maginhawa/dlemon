@@ -13,10 +13,10 @@ describe('JobScheduler interface', () => {
   test('JobHandler type accepts valid async function', () => {
     const handler: JobHandler = async (ctx: JobContext) => {
       // Handler should receive db, logger, jobId, jobName
-      expect(ctx.db).toBeDefined;
-      expect(ctx.logger).toBeDefined;
-      expect(ctx.jobId).toBeDefined;
-      expect(ctx.jobName).toBeDefined;
+      expect(ctx.db).toBeDefined();
+      expect(ctx.logger).toBeDefined();
+      expect(ctx.jobId).toBeDefined();
+      expect(ctx.jobName).toBeDefined();
     };
     expect(typeof handler).toBe('function');
   });

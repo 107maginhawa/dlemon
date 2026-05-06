@@ -157,6 +157,7 @@ describe('POST /dental/pmd/import with structured content (FR12.5)', () => {
 describe('GET /dental/visits/:visitId/pmd/export (FR12.6)', () => {
   test('returns PMD as downloadable JSON with Content-Disposition', async () => {
     const visit = await seedCompletedVisit();
+    if (!visit) throw new Error('Failed to seed visit');
     // Generate a PMD first
     const app = buildTestApp(TEST_USER);
     await app.request(`/dental/visits/${visit.id}/pmd`, {

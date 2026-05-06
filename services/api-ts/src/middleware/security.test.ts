@@ -20,7 +20,7 @@ function makeConfig(overrides: Partial<Config['cors']> = {}): Config {
     },
     logging: { level: 'info', pretty: false },
     auth: { baseUrl: 'http://localhost:7213', secret: 'test' } as any,
-    server: { host: '0.0.0.0', port: 7213 },
+    server: { host: '0.0.0.0', port: 7213, internalServiceToken: '' },
     database: { url: 'postgres://localhost/test' } as any,
     rateLimit: { enabled: false, max: 100 },
     storage: {} as any,

@@ -25,7 +25,8 @@ export async function listAuditLogs(
     searchParams: filters as any
   });
 
-  const data = response.ok ? await response.json() : null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = response.ok ? await response.json() : null;
 
   return {
     response,
