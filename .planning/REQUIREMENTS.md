@@ -80,33 +80,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WBAR-01 | — | Pending |
-| WBAR-02 | — | Pending |
-| WBAR-03 | — | Pending |
-| WBAR-04 | — | Pending |
-| WBAR-05 | — | Pending |
-| WBAR-06 | — | Pending |
-| TXPL-01 | — | Pending |
-| TXPL-02 | — | Pending |
-| TXPL-03 | — | Pending |
-| PROF-01 | — | Pending |
-| PROF-02 | — | Pending |
-| PROF-03 | — | Pending |
-| PROF-04 | — | Pending |
-| ATCH-01 | — | Pending |
-| ATCH-02 | — | Pending |
-| ATCH-03 | — | Pending |
-| PAY-01 | — | Pending |
-| PAY-02 | — | Pending |
-| PAY-03 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
+| WBAR-01 | Phase 1 | Pending |
+| WBAR-02 | Phase 1 | Pending |
+| WBAR-03 | Phase 1 | Pending |
+| WBAR-04 | Phase 1 | Pending |
+| WBAR-05 | Phase 1 | Pending |
+| WBAR-06 | Phase 1 | Pending |
+| TXPL-01 | Phase 2 | Pending |
+| TXPL-02 | Phase 2 | Pending |
+| TXPL-03 | Phase 2 | Pending |
+| PROF-01 | Phase 3 | Pending |
+| PROF-02 | Phase 3 | Pending |
+| PROF-03 | Phase 3 | Pending |
+| PROF-04 | Phase 3 | Pending |
+| ATCH-01 | Phase 4 | Pending |
+| ATCH-02 | Phase 4 | Pending |
+| ATCH-03 | Phase 4 | Pending |
+| PAY-01 | Phase 4 | Pending |
+| PAY-02 | Phase 4 | Pending |
+| PAY-03 | Phase 4 | Pending |
+| RPT-01 | Phase 5 | Pending |
+| RPT-02 | Phase 5 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 (pending roadmap creation)
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-06 after initial definition*
+*Last updated: 2026-05-06 after roadmap creation*

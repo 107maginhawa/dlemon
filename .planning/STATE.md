@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: "v1.2"
 milestone_name: "Wire & Ship"
 status: planning
-last_updated: "2026-05-06T16:00:00.000Z"
+last_updated: "2026-05-06T17:00:00.000Z"
 last_activity: 2026-05-06
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,10 +15,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-06 — Milestone v1.2 started
+Status: Roadmap approved, ready for phase planning
+Last activity: 2026-05-06 — Roadmap created (5 phases, 21 requirements)
 
 ## Accumulated Context
 
@@ -28,6 +28,9 @@ Last activity: 2026-05-06 — Milestone v1.2 started
 - Assembly-first approach: no TDD retrofit, backend already tested
 - All work on branch `fix/boilerplate-bugs-reviewed`
 - Periodontal tab deferred to v1.3
+- Zero new dependencies — all features map to existing primitives
+- PMDViewer needs wrapper component (no open/onClose props)
+- Action bar replaces existing payment footer, not coexists
 
 ### Blockers
 
