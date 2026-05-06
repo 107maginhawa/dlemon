@@ -82,9 +82,9 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Type tightening: ToothData.surfaces, buildToothMap, getToothColorClass, FDI guards, Treatment cdtCode/description (BUG-04, BUG-05, CR-03)
-- [ ] 02-02-PLAN.md — Hook fixes: CR-01 localStorage guard, CR-02 stale closure, WR-02 sequential saves, BUG-06 NaN guard
-- [ ] 02-03-PLAN.md — Verify BUG-02/BUG-03/BUG-01 already-fixed, BUG-07 color tokens, cascade typecheck guard
+- [x] 02-01-PLAN.md — Type tightening: ToothData.surfaces, buildToothMap, getToothColorClass, FDI guards, Treatment cdtCode/description (BUG-04, BUG-05, CR-03)
+- [x] 02-02-PLAN.md — Hook fixes: CR-01 localStorage guard, CR-02 stale closure, WR-02 sequential saves, BUG-06 NaN guard
+- [x] 02-03-PLAN.md — Verify BUG-02/BUG-03/BUG-01 already-fixed, BUG-07 color tokens, cascade typecheck guard
 
 ---
 
@@ -113,8 +113,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Create DentalChartThumbnail, extend PatientCardData, update use-patients mapping
-- [ ] 03-02-PLAN.md — Cascade typecheck guard + structural grep verification
+- [x] 03-01-PLAN.md — Create DentalChartThumbnail, extend PatientCardData, update use-patients mapping
+- [x] 03-02-PLAN.md — Cascade typecheck guard + structural grep verification
 
 ---
 
@@ -146,6 +146,12 @@ Plans:
 2. All component tests pass
 3. `bun test` clean — no regressions
 4. `bun run typecheck` clean
+
+**Plans:** 2 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Hook tests: useCreateVisit, useSaveChart, useSharePMD
+- [x] 04-02-PLAN.md — Component tests: DentalChartThumbnail, tooth-slideout, patient-folder-card update
 
 ---
 
