@@ -26,6 +26,7 @@ import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dash
 import { Route as DashboardCalendarRouteImport } from './routes/_dashboard/calendar'
 import { Route as DashboardBillingRouteImport } from './routes/_dashboard/billing'
 import { Route as AuthPinEntryMemberIdRouteImport } from './routes/auth/pin-entry.$memberId'
+import { Route as DashboardPatientsPatientIdRouteImport } from './routes/_dashboard/patients_/$patientId'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -111,6 +112,12 @@ const AuthPinEntryMemberIdRoute = AuthPinEntryMemberIdRouteImport.update({
   path: '/auth/pin-entry/$memberId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardPatientsPatientIdRoute =
+  DashboardPatientsPatientIdRouteImport.update({
+    id: '/patients_/$patientId',
+    path: '/patients/$patientId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
 export interface FileRoutesByTo {
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
 export interface FileRoutesById {
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/_workspace/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
 export interface FileRouteTypes {
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
   id:
     | '__root__'
@@ -219,6 +231,7 @@ export interface FileRouteTypes {
     | '/_workspace/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/_dashboard/patients_/$patientId'
     | '/auth/pin-entry/$memberId'
   fileRoutesById: FileRoutesById
 }
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPinEntryMemberIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard/patients_/$patientId': {
+      id: '/_dashboard/patients_/$patientId'
+      path: '/patients/$patientId'
+      fullPath: '/patients/$patientId'
+      preLoaderRoute: typeof DashboardPatientsPatientIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
@@ -366,6 +386,7 @@ interface DashboardRouteChildren {
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStaffRoute: typeof DashboardStaffRoute
+  DashboardPatientsPatientIdRoute: typeof DashboardPatientsPatientIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -377,6 +398,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStaffRoute: DashboardStaffRoute,
+  DashboardPatientsPatientIdRoute: DashboardPatientsPatientIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

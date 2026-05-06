@@ -27,6 +27,7 @@ export interface PatientCardData {
 interface PatientFolderCardProps {
   patient: PatientCardData;
   onClick: (patient: PatientCardData) => void;
+  onProfile?: (patient: PatientCardData) => void;
 }
 
 function tabClass(status?: 'active' | 'archived' | 'in-session'): string {
@@ -62,7 +63,7 @@ function formatLastVisit(date?: Date): string {
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) {
+export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolderCardProps) {
   const { lastName, firstName } = nameParts(patient.displayName);
 
   return (
@@ -105,6 +106,19 @@ export function PatientFolderCard({ patient, onClick }: PatientFolderCardProps) 
           </p>
         </div>
       </div>
+
+      {/* Profile link — PROF-04 */}
+      {onProfile && (
+        <button
+          data-testid="profile-btn"
+          aria-label={`View profile for ${patient.displayName}`}
+          onClick={(e) => { e.stopPropagation(); onProfile(patient); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onProfile(patient); } }}
+          className="mx-3 mb-1 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
+        >
+          View Profile
+        </button>
+      )}
 
       {/* Status badges */}
       {(patient.needsFollowUp || patient.hasBalance) && (

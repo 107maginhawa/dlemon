@@ -15,6 +15,7 @@ interface PatientListProps {
   patients: PatientCardData[];
   isLoading?: boolean;
   onSelect: (patient: PatientCardData) => void;
+  onProfile?: (patient: PatientCardData) => void;
   searchQuery: string;
   onSearchChange?: (q: string) => void;
 }
@@ -23,6 +24,7 @@ export function PatientList({
   patients,
   isLoading = false,
   onSelect,
+  onProfile,
   searchQuery,
   onSearchChange,
 }: PatientListProps) {
@@ -70,7 +72,7 @@ export function PatientList({
       {!isLoading && filtered.length > 0 && (
         <div className="flex flex-wrap gap-4">
           {filtered.map((p) => (
-            <PatientFolderCard key={p.id} patient={p} onClick={onSelect} />
+            <PatientFolderCard key={p.id} patient={p} onClick={onSelect} onProfile={onProfile} />
           ))}
         </div>
       )}

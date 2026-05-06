@@ -9,7 +9,7 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { Pill, FileSignature, FlaskConical, FileText, Upload } from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
@@ -237,6 +237,15 @@ function WorkspacePage() {
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
           />
+          {/* PROF-04: View Profile link */}
+          <Link
+            to="/patients/$patientId"
+            params={{ patientId }}
+            data-testid="view-profile-link"
+            className="mr-3 shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          >
+            Profile
+          </Link>
           {isReadOnly && (
             <button
               type="button"
