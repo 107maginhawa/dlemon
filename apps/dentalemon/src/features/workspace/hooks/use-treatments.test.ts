@@ -23,6 +23,15 @@ function makeWrapper(qc: QueryClient) {
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const mockTreatments = [
   {
     id: 't1',
@@ -33,9 +42,10 @@ const mockTreatments = [
     cdtCode: 'D2391',
     description: 'One surface, posterior',
     status: 'diagnosed',
-    priceAmount: 1500,
+    priceCents: '1500',
     currency: 'PHP',
     createdAt: '2026-05-01T10:00:00Z',
+    updatedAt: '2026-05-01T10:00:00Z',
   },
   {
     id: 't2',
@@ -46,16 +56,17 @@ const mockTreatments = [
     cdtCode: 'D0120',
     description: 'Periodic exam',
     status: 'planned',
-    priceAmount: 500,
+    priceCents: '500',
     currency: 'PHP',
     createdAt: '2026-05-01T10:05:00Z',
+    updatedAt: '2026-05-01T10:05:00Z',
   },
 ];
 
 describe('useTreatments', () => {
   test('returns treatments array on successful fetch', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockTreatments) } as Response),
+      jsonResponse({ data: mockTreatments }),
     );
 
     const qc = freshClient();
@@ -69,9 +80,9 @@ describe('useTreatments', () => {
     expect(result.current.treatments[0]!.id).toBe('t1');
   });
 
-  test('handles wrapped response (items key)', async () => {
+  test('handles wrapped response (data key)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockTreatments }) } as Response),
+      jsonResponse({ data: mockTreatments }),
     );
 
     const qc = freshClient();
@@ -86,7 +97,7 @@ describe('useTreatments', () => {
 
   test('treatment status values are diagnosed or planned (not proposed)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockTreatments) } as Response),
+      jsonResponse({ data: mockTreatments }),
     );
 
     const qc = freshClient();
@@ -106,7 +117,7 @@ describe('useTreatments', () => {
     let fetchCalled = false;
     global.fetch = mock(() => {
       fetchCalled = true;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+      return jsonResponse({ data: [] });
     });
 
     const qc = freshClient();
@@ -122,7 +133,7 @@ describe('useTreatments', () => {
 
   test('returns empty array and error on fetch failure', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
+      jsonResponse({}, 500),
     );
 
     const qc = freshClient();
@@ -138,9 +149,9 @@ describe('useTreatments', () => {
 
   test('includes visitId in fetch URL', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse({ data: [] });
     });
 
     const qc = freshClient();

@@ -10,6 +10,9 @@ import { initAuthClient, AuthClientContext } from './auth'
 import type { ReactNode } from 'react'
 import { useMemo, useRef } from 'react'
 
+// Module-level dedup flag — prevents thundering herd (N concurrent 401s → N redirects)
+let sessionExpiredHandling = false
+
 /**
  * Optional notifier interface — the SDK no longer ships a hard dependency on
  * `sonner` (or any other toast library). The consuming app passes a notifier
@@ -46,6 +49,13 @@ export interface ApiProviderProps {
   queryClient?: QueryClient
   /** Optional notifier — without it, mutations meta.toast is silently ignored. */
   notifier?: SdkNotifier
+  /**
+   * Called when any API response returns 401 (session expired or revoked).
+   * The callback should clear local auth state and redirect to sign-in.
+   * Auth endpoints (/api/auth/*) are excluded — their 401s are expected.
+   * If not provided, 401 responses are handled only by TanStack Query's error state.
+   */
+  onSessionExpired?: () => void
   children: ReactNode
 }
 
@@ -110,6 +120,7 @@ export function ApiProvider({
   queryClient: providedQueryClient,
   apiBaseUrl,
   notifier,
+  onSessionExpired,
   children,
 }: ApiProviderProps) {
   const queryClient = useMemo(
@@ -117,12 +128,27 @@ export function ApiProvider({
     [providedQueryClient, notifier],
   )
 
-  // Install the error interceptor exactly once across the app's lifetime.
-  // Hey-api's `interceptors.error.use(...)` registers globally on the client
-  // instance, so re-running on every render would stack duplicate handlers.
+  // Install interceptors exactly once across the app's lifetime.
+  // Hey-api's interceptor arrays are additive — re-running on every render would stack duplicates.
   const interceptorInstalledRef = useRef(false)
   if (!interceptorInstalledRef.current) {
     generatedClient.interceptors.error.use(errorInterceptor)
+
+    // 401 response interceptor: detect expired/revoked cloud sessions.
+    // Uses response interceptor (not error interceptor) so it runs before the error path,
+    // allowing us to call onSessionExpired before the error propagates to queries.
+    generatedClient.interceptors.response.use((response, request) => {
+      if (response.status === 401 && onSessionExpired && !sessionExpiredHandling) {
+        const url = new URL(request.url)
+        // Skip auth endpoints — 401 is expected during login/signup flows
+        if (!url.pathname.startsWith('/api/auth/')) {
+          sessionExpiredHandling = true
+          onSessionExpired()
+        }
+      }
+      return response
+    })
+
     interceptorInstalledRef.current = true
   }
 

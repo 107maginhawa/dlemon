@@ -50,7 +50,7 @@ export default function App() {
 
       {/* Right panel - only when a tooth is selected */}
       {selectedTooth !== null && (
-        <div style={{ width: 340, flexShrink: 0, borderLeft: '1px solid #e8e6e1', background: '#ffffff', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+        <div style={{ width: 340, flexShrink: 0, borderLeft: '1px solid #e8e6e1', background: '#ffffff', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', zIndex: 10 }}>
           <ToothDetailPanel
             toothNumber={selectedTooth}
             existingConditions={surfaceConditions.filter(sc => sc.toothNumber === selectedTooth)}

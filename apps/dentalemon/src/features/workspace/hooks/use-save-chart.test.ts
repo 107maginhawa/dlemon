@@ -21,6 +21,15 @@ function makeWrapper(qc: QueryClient) {
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 function makeSpyClient() {
   const qc = freshClient();
   const invalidatedKeys: unknown[] = [];
@@ -39,10 +48,7 @@ const input = { visitId: 'visit-1', patientId: 'p1', teeth: [] };
 describe('useSaveChart', () => {
   test('success: invalidates dental-chart query for the saved visitId', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response),
+      jsonResponse({}),
     );
 
     const { qc, invalidatedKeys } = makeSpyClient();
@@ -53,17 +59,17 @@ describe('useSaveChart', () => {
 
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidatedKeys).toContainEqual(['dental-chart', 'visit-1']);
+    const found = invalidatedKeys.some(
+      (k: any) => Array.isArray(k) && k[0] === 'dental-chart' && k[1] === 'visit-1',
+    );
+    expect(found).toBe(true);
   });
 
   test('success: fetch URL contains visitId in path', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse({});
     });
 
     const qc = freshClient();
@@ -79,7 +85,7 @@ describe('useSaveChart', () => {
 
   test('error: sets isError true and skips invalidation', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
+      jsonResponse({}, 500),
     );
 
     const { qc, invalidatedKeys } = makeSpyClient();

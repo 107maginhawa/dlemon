@@ -23,6 +23,15 @@ function makeWrapper(qc: QueryClient) {
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const mockTeeth = [
   { toothNumber: 11, state: 'healthy' },
   { toothNumber: 21, state: 'caries' },
@@ -31,7 +40,7 @@ const mockTeeth = [
 describe('useDentalChart', () => {
   test('returns teeth array on successful fetch', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ teeth: mockTeeth }) } as Response),
+      jsonResponse({ teeth: mockTeeth }),
     );
 
     const qc = freshClient();
@@ -49,7 +58,7 @@ describe('useDentalChart', () => {
     let fetchCalled = false;
     global.fetch = mock(() => {
       fetchCalled = true;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ teeth: [] }) } as Response);
+      return jsonResponse({ teeth: [] });
     });
 
     const qc = freshClient();
@@ -66,7 +75,7 @@ describe('useDentalChart', () => {
 
   test('returns error on fetch failure', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
+      jsonResponse({}, 500),
     );
 
     const qc = freshClient();
@@ -82,7 +91,7 @@ describe('useDentalChart', () => {
 
   test('empty teeth array when response has no teeth field', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response),
+      jsonResponse({}),
     );
 
     const qc = freshClient();
@@ -97,7 +106,7 @@ describe('useDentalChart', () => {
 
   test('selectTooth updates selectedTooth', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ teeth: mockTeeth }) } as Response),
+      jsonResponse({ teeth: mockTeeth }),
     );
 
     const qc = freshClient();
@@ -115,7 +124,7 @@ describe('useDentalChart', () => {
 
   test('selectTooth toggles off when same tooth is selected again', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ teeth: mockTeeth }) } as Response),
+      jsonResponse({ teeth: mockTeeth }),
     );
 
     const qc = freshClient();
@@ -132,7 +141,7 @@ describe('useDentalChart', () => {
 
   test('clearSelection resets selectedTooth to null', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ teeth: mockTeeth }) } as Response),
+      jsonResponse({ teeth: mockTeeth }),
     );
 
     const qc = freshClient();

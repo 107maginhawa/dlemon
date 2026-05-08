@@ -40,7 +40,7 @@ export async function getOrgContext(ctx: Context): Promise<Response> {
   let member = null;
   if (branch) {
     const members = await memberRepo.listByBranch(branch.id);
-    member = members.find(m => m.personId === user.id) ?? members[0] ?? null;
+    member = members.find(m => m.personId === user.id) ?? null;
   }
 
   return ctx.json({

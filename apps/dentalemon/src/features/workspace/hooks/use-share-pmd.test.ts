@@ -21,16 +21,20 @@ function makeWrapper(qc: QueryClient) {
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const input = { visitId: 'v1', patientId: 'p1' };
 
 describe('useSharePMD', () => {
   test('success: returns PMD result with checksum', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ checksum: 'abc123', url: 'https://example.com/pmd' }),
-      } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({ checksum: 'abc123', url: 'https://example.com/pmd' }));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -45,12 +49,9 @@ describe('useSharePMD', () => {
 
   test('success: fetch URL targets pmd endpoint for visitId', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ checksum: 'abc123', url: 'https://example.com/pmd' }),
-      } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse({ checksum: 'abc123', url: 'https://example.com/pmd' });
     });
 
     const qc = freshClient();
@@ -65,9 +66,7 @@ describe('useSharePMD', () => {
   });
 
   test('error: sets isError on fetch failure', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({}, 500));
 
     const qc = freshClient();
     const { result } = renderHook(

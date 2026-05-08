@@ -258,7 +258,7 @@ export function ToothDetailPanel({ toothNumber, existingConditions, onSave, onCl
   const step1Valid = selectedSurfaces.length > 0 && selectedCondition !== null
 
   return (
-    <div style={{
+    <div data-testid="tooth-detail-panel" style={{
       width: 340,
       height: '100%',
       background: '#ffffff',

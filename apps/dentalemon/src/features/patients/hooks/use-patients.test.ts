@@ -27,6 +27,20 @@ function freshClient() {
   });
 }
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
+/** API list response shape for patients */
+function patientListResponse(patients: RawPatient[]) {
+  return { patients, total: patients.length, limit: 50, offset: 0 };
+}
+
 // ─── toPatientCard (pure transform) ────────────────────────────────────────
 
 describe('toPatientCard', () => {
@@ -163,12 +177,7 @@ describe('usePatients', () => {
       },
     ];
 
-    global.fetch = mock(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ items: mockPatients }),
-      } as Response),
-    );
+    global.fetch = mock(() => jsonResponse(patientListResponse(mockPatients)));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -184,17 +193,8 @@ describe('usePatients', () => {
     expect(result.current.error).toBeNull();
   });
 
-  test('handles flat array response (legacy shape)', async () => {
-    const mockPatients: RawPatient[] = [
-      { id: 'p2', person: null, displayName: 'Juan Reyes', visitCount: 2, lastVisit: null, needsFollowUp: false, hasBalance: false, hasActivePaymentPlan: false },
-    ];
-
-    global.fetch = mock(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockPatients),
-      } as Response),
-    );
+  test('returns empty list when no patients', async () => {
+    global.fetch = mock(() => jsonResponse(patientListResponse([])));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -203,18 +203,14 @@ describe('usePatients', () => {
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.patients).toHaveLength(1);
-    expect(result.current.patients[0]!.displayName).toBe('Juan Reyes');
+    expect(result.current.patients).toHaveLength(0);
   });
 
   test('includes branchId and searchQuery in fetch URL', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ items: [] }),
-      } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse(patientListResponse([]));
     });
 
     const qc = freshClient();
@@ -230,9 +226,9 @@ describe('usePatients', () => {
 
   test('includes status=active filter when specified', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [] }) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse(patientListResponse([]));
     });
 
     const qc = freshClient();
@@ -247,9 +243,9 @@ describe('usePatients', () => {
 
   test('includes needsFollowUp=true filter when specified', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [] }) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse(patientListResponse([]));
     });
 
     const qc = freshClient();
@@ -264,11 +260,7 @@ describe('usePatients', () => {
 
   test('returns empty array and error on fetch failure', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-        json: () => Promise.resolve({ message: 'Internal Server Error' }),
-      } as Response),
+      jsonResponse({ message: 'Internal Server Error' }, 500),
     );
 
     const qc = freshClient();

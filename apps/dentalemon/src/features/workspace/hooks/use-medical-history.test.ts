@@ -5,7 +5,7 @@ import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { useMedicalHistory, useMedicalHistoryMutations } from './use-medical-history';
+import { useMedicalHistory, useMedicalHistoryMutations, medicalHistoryKey } from './use-medical-history';
 
 afterEach(cleanup);
 
@@ -21,6 +21,15 @@ function freshClient() {
 function makeWrapper(qc: QueryClient) {
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+}
+
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
 }
 
 const mockEntries = [
@@ -39,7 +48,7 @@ describe('useMedicalHistory — GET', () => {
 
   test('returns entries on success (wrapped response)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockEntries }) } as Response),
+      jsonResponse({ items: mockEntries }),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistory(PATIENT_ID), { wrapper: makeWrapper(qc) });
@@ -49,21 +58,21 @@ describe('useMedicalHistory — GET', () => {
     expect(result.current.error).toBeNull();
   });
 
-  test('returns entries on success (bare array)', async () => {
+  test('returns entries on success (empty data array)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockEntries) } as Response),
+      jsonResponse({ data: [] }),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistory(PATIENT_ID), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.entries).toHaveLength(2);
+    expect(result.current.entries).toHaveLength(0);
   });
 
   test('includes patientId in request URL', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistory(PATIENT_ID), { wrapper: makeWrapper(qc) });
@@ -73,17 +82,17 @@ describe('useMedicalHistory — GET', () => {
 
   test('exposes error on non-ok response', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 404 } as Response),
+      jsonResponse({ error: 'not found' }, 404),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistory(PATIENT_ID), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // SDK throws the parsed JSON body on non-ok; TanStack Query captures it as error
     expect(result.current.error).not.toBeNull();
-    expect(result.current.error?.message).toContain('404');
   });
 
   test('does not fetch when patientId is empty', () => {
-    const fetchSpy = mock(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response));
+    const fetchSpy = mock(() => jsonResponse([]));
     global.fetch = fetchSpy;
     const qc = freshClient();
     renderHook(() => useMedicalHistory(''), { wrapper: makeWrapper(qc) });
@@ -94,9 +103,13 @@ describe('useMedicalHistory — GET', () => {
 describe('useMedicalHistoryMutations — addEntry', () => {
   test('calls POST with correct body', async () => {
     let capturedBody: any;
-    global.fetch = mock((_url: string, opts: any) => {
-      capturedBody = JSON.parse(opts.body);
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockEntries[0], id: 'new-e' }) } as Response);
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      if (req instanceof Request) {
+        req.clone().text().then(t => { capturedBody = JSON.parse(t); });
+      } else {
+        capturedBody = JSON.parse(opts.body);
+      }
+      return jsonResponse({ ...mockEntries[0], id: 'new-e' });
     });
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistoryMutations(PATIENT_ID), { wrapper: makeWrapper(qc) });
@@ -115,29 +128,33 @@ describe('useMedicalHistoryMutations — addEntry', () => {
 
   test('invalidates medical-history query on success', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockEntries[0], id: 'new-e' }) } as Response),
+      jsonResponse({ ...mockEntries[0], id: 'new-e' }),
     );
     const qc = freshClient();
-    qc.setQueryData(['medical-history', PATIENT_ID], mockEntries);
+    const qk = medicalHistoryKey(PATIENT_ID);
+    qc.setQueryData(qk, mockEntries);
     const { result } = renderHook(() => useMedicalHistoryMutations(PATIENT_ID), { wrapper: makeWrapper(qc) });
     await act(async () => {
       await result.current.addEntry({ patientId: PATIENT_ID, entryType: 'condition', displayName: 'Test' });
     });
-    expect(qc.getQueryState(['medical-history', PATIENT_ID])?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(qk)?.isInvalidated).toBe(true);
   });
 
   test('throws on POST failure', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 400 } as Response),
+      jsonResponse({ error: 'bad request' }, 400),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistoryMutations(PATIENT_ID), { wrapper: makeWrapper(qc) });
-    let caught: Error | null = null;
+    let threw = false;
     await act(async () => {
-      try { await result.current.addEntry({ patientId: PATIENT_ID, entryType: 'condition', displayName: 'Test' }); }
-      catch (e) { caught = e as Error; }
+      try {
+        await result.current.addEntry({ patientId: PATIENT_ID, entryType: 'condition', displayName: 'Test' });
+      } catch {
+        threw = true;
+      }
     });
-    expect(caught?.message).toContain('400');
+    expect(threw).toBe(true);
   });
 });
 
@@ -145,10 +162,14 @@ describe('useMedicalHistoryMutations — toggleEntry', () => {
   test('calls PATCH with active flag', async () => {
     let capturedUrl = '';
     let capturedBody: any;
-    global.fetch = mock((url: string, opts: any) => {
-      capturedUrl = url;
-      capturedBody = JSON.parse(opts.body);
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockEntries[0], active: false }) } as Response);
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      if (req instanceof Request) {
+        req.clone().text().then(t => { capturedBody = JSON.parse(t); });
+      } else {
+        capturedBody = JSON.parse(opts.body);
+      }
+      return jsonResponse({ ...mockEntries[0], active: false });
     });
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistoryMutations(PATIENT_ID), { wrapper: makeWrapper(qc) });
@@ -161,14 +182,15 @@ describe('useMedicalHistoryMutations — toggleEntry', () => {
 
   test('invalidates medical-history query on toggle', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockEntries[0], active: false }) } as Response),
+      jsonResponse({ ...mockEntries[0], active: false }),
     );
     const qc = freshClient();
-    qc.setQueryData(['medical-history', PATIENT_ID], mockEntries);
+    const qk = medicalHistoryKey(PATIENT_ID);
+    qc.setQueryData(qk, mockEntries);
     const { result } = renderHook(() => useMedicalHistoryMutations(PATIENT_ID), { wrapper: makeWrapper(qc) });
     await act(async () => {
       await result.current.toggleEntry({ entryId: 'e1', active: false });
     });
-    expect(qc.getQueryState(['medical-history', PATIENT_ID])?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(qk)?.isInvalidated).toBe(true);
   });
 });

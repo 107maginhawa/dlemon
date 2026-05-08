@@ -24,6 +24,15 @@ afterEach(cleanup);
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const PATIENT_ID = 'patient-form-test';
 
 function freshClient() {
@@ -70,7 +79,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('shows error message on non-ok fetch', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
+      jsonResponse({}, 500),
     );
     renderForm();
     await waitFor(() =>
@@ -80,7 +89,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders all preset condition checkboxes after loading', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     renderForm();
     await waitFor(() =>
@@ -93,7 +102,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders all preset allergy checkboxes after loading', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     renderForm();
     await waitFor(() =>
@@ -105,7 +114,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders surgical history textarea after loading', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     renderForm();
     await waitFor(() =>
@@ -115,7 +124,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders pregnancy radio options after loading', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     renderForm();
     await waitFor(() =>
@@ -127,7 +136,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders save button after loading', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     renderForm();
     await waitFor(() =>
@@ -141,7 +150,7 @@ describe('MedicalHistoryForm — rendering', () => {
 describe('MedicalHistoryForm — checkbox active state', () => {
   test('checkbox is aria-checked=true when matching active entry loaded', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([mockEntry]) } as Response),
+      jsonResponse([mockEntry]),
     );
     renderForm();
     await waitFor(() => {
@@ -156,7 +165,7 @@ describe('MedicalHistoryForm — checkbox active state', () => {
   test('checkbox is aria-checked=false when entry is inactive', async () => {
     const inactiveEntry = { ...mockEntry, displayName: 'Diabetes Mellitus Type 2', code: 'E11', active: false };
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([inactiveEntry]) } as Response),
+      jsonResponse([inactiveEntry]),
     );
     renderForm();
     await waitFor(() =>
@@ -177,19 +186,22 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
     let capturedMethod = '';
     let capturedBody: any = null;
 
-    global.fetch = mock((url: string, opts: any) => {
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (opts?.method ?? 'GET');
       requestCount++;
-      if (opts?.method === 'POST') {
+      if (method === 'POST') {
         capturedUrl = url;
-        capturedMethod = opts.method;
-        capturedBody = JSON.parse(opts.body);
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ ...mockEntry, id: 'new-e', entryType: 'allergy', displayName: 'Penicillin' }),
-        } as Response);
+        capturedMethod = method;
+        if (req instanceof Request) {
+          req.clone().text().then(t => { capturedBody = JSON.parse(t); });
+        } else {
+          capturedBody = JSON.parse(opts.body);
+        }
+        return jsonResponse({ ...mockEntry, id: 'new-e', entryType: 'allergy', displayName: 'Penicillin' });
       }
       // GET request — return empty list
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+      return jsonResponse([]);
     });
 
     renderForm();
@@ -222,16 +234,19 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
       active: true,
     };
 
-    global.fetch = mock((url: string, opts: any) => {
-      if (opts?.method === 'PATCH') {
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (opts?.method ?? 'GET');
+      if (method === 'PATCH') {
         capturedPatchUrl = url;
-        capturedPatchBody = JSON.parse(opts.body);
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ ...penicillinEntry, active: false }),
-        } as Response);
+        if (req instanceof Request) {
+          req.clone().text().then(t => { capturedPatchBody = JSON.parse(t); });
+        } else {
+          capturedPatchBody = JSON.parse(opts.body);
+        }
+        return jsonResponse({ ...penicillinEntry, active: false });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([penicillinEntry]) } as Response);
+      return jsonResponse([penicillinEntry]);
     });
 
     renderForm();
@@ -255,15 +270,17 @@ describe('MedicalHistoryForm — save button', () => {
   test('save with text in surgical history textarea calls POST for procedure entry', async () => {
     const postBodies: any[] = [];
 
-    global.fetch = mock((_url: string, opts: any) => {
-      if (opts?.method === 'POST') {
-        postBodies.push(JSON.parse(opts.body));
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ ...mockEntry, id: 'new-e' }),
-        } as Response);
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      const method = req instanceof Request ? req.method : (opts?.method ?? 'GET');
+      if (method === 'POST') {
+        if (req instanceof Request) {
+          req.clone().text().then(t => { postBodies.push(JSON.parse(t)); });
+        } else {
+          postBodies.push(JSON.parse(opts.body));
+        }
+        return jsonResponse({ ...mockEntry, id: 'new-e' });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+      return jsonResponse([]);
     });
 
     renderForm();
@@ -290,15 +307,17 @@ describe('MedicalHistoryForm — save button', () => {
   test('save with pregnancy=pregnant calls POST for Pregnancy: Pregnant entry', async () => {
     const postBodies: any[] = [];
 
-    global.fetch = mock((_url: string, opts: any) => {
-      if (opts?.method === 'POST') {
-        postBodies.push(JSON.parse(opts.body));
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ ...mockEntry, id: 'new-e' }),
-        } as Response);
+    global.fetch = mock((req: Request | string | URL, opts: any) => {
+      const method = req instanceof Request ? req.method : (opts?.method ?? 'GET');
+      if (method === 'POST') {
+        if (req instanceof Request) {
+          req.clone().text().then(t => { postBodies.push(JSON.parse(t)); });
+        } else {
+          postBodies.push(JSON.parse(opts.body));
+        }
+        return jsonResponse({ ...mockEntry, id: 'new-e' });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+      return jsonResponse([]);
     });
 
     renderForm();

@@ -14,7 +14,8 @@ import { Loading } from '@/components/loading'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { useState, useEffect } from 'react'
+import { pinSession } from '@/utils/pin-session'
+import { useState, useEffect, useCallback } from 'react'
 
 const router = createRouter()
 
@@ -79,12 +80,17 @@ function App() {
   useEffect(() => {
     getRuntimeConfig().then(runtimeConfig => {
       setConfig(runtimeConfig)
-      
+
       // Initialize OneSignal with runtime config (optional - only if app ID is set)
       if (runtimeConfig.onesignalAppId) {
         initializeOneSignal()
       }
     })
+  }, [])
+
+  const handleSessionExpired = useCallback(() => {
+    pinSession.clearSession()
+    window.location.assign('/auth/sign-in?session_expired=1')
   }, [])
 
   // Show loading while fetching runtime config
@@ -93,7 +99,7 @@ function App() {
   }
 
   return (
-    <ApiProvider apiBaseUrl={config.apiUrl} notifier={toast}>
+    <ApiProvider apiBaseUrl={config.apiUrl} notifier={toast} onSessionExpired={handleSessionExpired}>
       <InnerApp />
       <TanStackDevtools
         config={{ position: 'bottom-right' }}

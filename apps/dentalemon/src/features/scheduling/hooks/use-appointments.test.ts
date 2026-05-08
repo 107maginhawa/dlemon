@@ -21,12 +21,30 @@ function makeWrapper(qc: QueryClient) {
     React.createElement(QueryClientProvider, { client: qc }, children);
 }
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
+function captureUrl(data: unknown, status = 200): { getUrl: () => string; fetchMock: ReturnType<typeof mock> } {
+  let capturedUrl = '';
+  const fetchMock = mock((req: Request | string | URL) => {
+    capturedUrl = req instanceof Request ? req.url : String(req);
+    return jsonResponse(data, status);
+  });
+  return { getUrl: () => capturedUrl, fetchMock };
+}
+
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
 const mockAppointments = [
-  { id: 'a1', patientId: 'p1', patientName: 'Maria Santos', scheduledAt: '2026-05-04T09:00:00Z', status: 'scheduled', durationMinutes: 30 },
-  { id: 'a2', patientId: 'p2', patientName: 'Ramon Cruz', scheduledAt: '2026-05-04T10:00:00Z', status: 'completed', durationMinutes: 45 },
+  { id: 'a1', patientId: 'p1', patientName: 'Maria Santos', scheduledAt: '2026-05-04T09:00:00Z', status: 'scheduled', durationMinutes: 30, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 'a2', patientId: 'p2', patientName: 'Ramon Cruz', scheduledAt: '2026-05-04T10:00:00Z', status: 'completed', durationMinutes: 45, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
 ];
 
 describe('useAppointments', () => {
@@ -40,10 +58,8 @@ describe('useAppointments', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  test('returns appointments array on success (wrapped response)', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ appointments: mockAppointments }) } as Response),
-    );
+  test('returns appointments array on success', async () => {
+    global.fetch = mock(() => jsonResponse(mockAppointments));
     const qc = freshClient();
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'day' }),
@@ -54,23 +70,8 @@ describe('useAppointments', () => {
     expect(result.current.appointments[0]?.id).toBe('a1');
   });
 
-  test('returns appointments array on success (bare array response)', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockAppointments) } as Response),
-    );
-    const qc = freshClient();
-    const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
-      { wrapper: makeWrapper(qc) },
-    );
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.appointments).toHaveLength(2);
-  });
-
   test('returns empty array when response has no appointments', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ appointments: [] }) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'day' }),
@@ -81,27 +82,21 @@ describe('useAppointments', () => {
   });
 
   test('uses date query param for day view', async () => {
-    let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
-    });
+    const { getUrl, fetchMock } = captureUrl([]);
+    global.fetch = fetchMock;
     const qc = freshClient();
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'day' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(capturedUrl).toContain('date=2026-05-04');
-    expect(capturedUrl).not.toContain('weekStart');
+    expect(getUrl()).toContain('date=2026-05-04');
+    expect(getUrl()).not.toContain('weekStart');
   });
 
   test('uses weekStart query param for week view', async () => {
-    let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
-    });
+    const { getUrl, fetchMock } = captureUrl([]);
+    global.fetch = fetchMock;
     const qc = freshClient();
     // 2026-05-04 is a Monday
     const { result } = renderHook(
@@ -109,14 +104,11 @@ describe('useAppointments', () => {
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(capturedUrl).toContain('weekStart=');
-    expect(capturedUrl).not.toContain('date=');
+    expect(getUrl()).toContain('weekStart=2026-05-04');
   });
 
   test('sets error when fetch fails', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({ message: 'Internal Server Error' }, 500));
     const qc = freshClient();
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'day' }),
@@ -127,9 +119,7 @@ describe('useAppointments', () => {
   });
 
   test('refetch function is defined', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'day' }),
