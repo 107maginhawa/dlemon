@@ -30,15 +30,12 @@ export function SurfaceSelector({
     }));
 
   function handleSvgClick(event: React.MouseEvent<HTMLDivElement>) {
-    let el = event.target as Element | null;
-    for (let i = 0; i < 4 && el; i++, el = el.parentElement) {
-      if (el.id) {
-        for (const surface of surfaces) {
-          if (el.id === `tooth-${toothNumber}_${surface}3`) {
-            onToggle(surface);
-            return;
-          }
-        }
+    const el = (event.target as Element).closest(`[id^="tooth-${toothNumber}_"]`)
+    if (!el) return
+    for (const surface of surfaces) {
+      if (el.id.startsWith(`tooth-${toothNumber}_${surface}`)) {
+        onToggle(surface)
+        return
       }
     }
   }
@@ -70,6 +67,7 @@ export function SurfaceSelector({
           return (
             <button
               key={surface}
+              type="button"
               onClick={() => onToggle(surface)}
               style={{
                 padding: '3px 10px',
