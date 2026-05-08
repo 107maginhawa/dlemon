@@ -5,9 +5,9 @@
 # E2E tests are run with Playwright: bun run test:e2e
 # Bun runs unit tests (src/**/*.test.ts)
 # Playwright runs E2E tests (tests/e2e/**/*.spec.ts)
-ignore = ["**/*.spec.ts"]
+ignore = ["**/*.spec.ts", "tests/**", "tests/e2e/**"]
 
-# Preload happy-dom globals so component tests have a `window` and `document`.
-# Without this, anything using @testing-library/react or window.navigator throws
-# `ReferenceError: document is not defined`.
+# Use bun's native happy-dom environment instead of GlobalRegistrator preload.
+# GlobalRegistrator.register() keeps the event loop alive after tests finish,
+# causing `bun test` to hang indefinitely. The native env handles teardown.
 preload = ["./src/test-setup.ts"]

@@ -24,6 +24,15 @@ function makeWrapper(qc: QueryClient) {
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const mockInvoices = [
   { id: 'inv1', invoiceNumber: 'INV-001', patientId: 'p1', patientName: 'Maria Santos', totalCents: 50000, paidCents: 0, balanceCents: 50000, status: 'issued', createdAt: '2026-05-01T00:00:00Z' },
   { id: 'inv2', invoiceNumber: 'INV-002', patientId: 'p2', patientName: 'Ramon Cruz', totalCents: 20000, paidCents: 20000, balanceCents: 0, status: 'paid', createdAt: '2026-05-02T00:00:00Z' },
@@ -41,9 +50,7 @@ describe('useInvoices', () => {
   });
 
   test('returns invoices on success (wrapped response)', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ invoices: mockInvoices }) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({ invoices: mockInvoices }));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -52,9 +59,7 @@ describe('useInvoices', () => {
   });
 
   test('returns invoices on success (bare array response)', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockInvoices) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse(mockInvoices));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -63,9 +68,9 @@ describe('useInvoices', () => {
 
   test('includes status param in URL when provided', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({ status: 'overdue' }), { wrapper: makeWrapper(qc) });
@@ -75,9 +80,9 @@ describe('useInvoices', () => {
 
   test('includes branchId param in URL when provided', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({ branchId: 'b1' }), { wrapper: makeWrapper(qc) });
@@ -87,9 +92,9 @@ describe('useInvoices', () => {
 
   test('omits status param when not provided', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
@@ -98,9 +103,7 @@ describe('useInvoices', () => {
   });
 
   test('sets error when fetch fails', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({}, 500));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -108,9 +111,7 @@ describe('useInvoices', () => {
   });
 
   test('refetch function is defined', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
-    );
+    global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
