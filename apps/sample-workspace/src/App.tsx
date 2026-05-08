@@ -41,6 +41,7 @@ export default function App() {
             selectedTooth={selectedTooth ?? undefined}
             onToothClick={setSelectedTooth}
             surfaceConditions={surfaceConditions}
+            panelOpen={selectedTooth !== null}
           />
 
           <BreakdownTable notes={mergedNotes} />

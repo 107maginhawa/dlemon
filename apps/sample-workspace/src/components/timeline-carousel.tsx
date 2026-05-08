@@ -16,16 +16,18 @@ interface TimelineCarouselProps {
   selectedTooth?: number
   onToothClick?: (toothNumber: number) => void
   surfaceConditions?: SurfaceCondition[]
+  panelOpen?: boolean
 }
 
-export function TimelineCarousel({ visits, activeIndex, onSlideChange, selectedTooth, onToothClick, surfaceConditions }: TimelineCarouselProps) {
+export function TimelineCarousel({ visits, activeIndex, onSlideChange, selectedTooth, onToothClick, surfaceConditions, panelOpen }: TimelineCarouselProps) {
   const swiperRef = useRef<SwiperType | null>(null)
+  const carouselWidth = panelOpen ? 'calc(100vw - 340px)' : '100vw'
 
   return (
     <div
       className="relative"
       style={{
-        width: '100vw',
+        width: carouselWidth,
         position: 'relative',
         left: '50%',
         transform: 'translateX(-50%)',
