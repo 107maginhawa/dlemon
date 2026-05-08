@@ -4,7 +4,7 @@
  * Mocks all hooks to test rendering logic in isolation.
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import React from 'react';
 import type { PatientProfileData } from '../hooks/use-patient-profile';
 import type { Visit } from '@/features/workspace/hooks/use-visits';
@@ -170,14 +170,14 @@ describe('PatientProfilePage', () => {
     mockVisits = { visits: [], isLoading: false, error: null };
     mockBilling = { invoices: INVOICES, isLoading: false, error: null };
 
-    const { container } = render(React.createElement(PatientProfilePage, { patientId: 'p1' }));
+    render(React.createElement(PatientProfilePage, { patientId: 'p1' }));
 
-    // Click payment tab
-    const paymentTab = container.querySelector('[data-testid="tab-payment"]');
-    paymentTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fireEvent.click(screen.getByTestId('tab-payment'));
 
-    // Tab content should be accessible
-    expect(screen.getByTestId('payment-tab-btn')).toBeTruthy();
+    expect(screen.getByText('INV-001')).toBeTruthy();
+    expect(screen.getByText('paid')).toBeTruthy();
+    // 350000 cents = 3,500
+    expect(screen.getAllByText(/3,500/).length).toBeGreaterThan(0);
   });
 
   test('PROF-04: renders back link to patients list', () => {

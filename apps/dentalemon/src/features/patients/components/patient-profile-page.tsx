@@ -408,9 +408,6 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
           <TabButton id="followup" label="Follow-up Log" active={activeTab === 'followup'} onClick={() => setActiveTab('followup')} />
         </div>
 
-        {/* Hidden button for testability */}
-        <button data-testid="payment-tab-btn" style={{ display: 'none' }} onClick={() => setActiveTab('payment')} />
-
         {/* Tab content */}
         <div className="pt-4">
           {activeTab === 'overview' && <OverviewTab patientId={patientId} />}

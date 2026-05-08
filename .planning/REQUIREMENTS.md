@@ -24,10 +24,10 @@ Requirements for Wire & Ship milestone. Each maps to roadmap phases.
 
 ### Patient Profile
 
-- [ ] **PROF-01**: User can view patient demographics and contact info
-- [ ] **PROF-02**: User can view patient visit history
-- [ ] **PROF-03**: User can view patient balance/statement
-- [ ] **PROF-04**: Patient profile accessible from patient list or workspace
+- [x] **PROF-01**: User can view patient demographics and contact info
+- [x] **PROF-02**: User can view patient visit history
+- [x] **PROF-03**: User can view patient balance/statement
+- [x] **PROF-04**: Patient profile accessible from patient list or workspace
 
 ### Attachments
 
@@ -89,10 +89,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TXPL-01 | Phase 2 | Pending |
 | TXPL-02 | Phase 2 | Pending |
 | TXPL-03 | Phase 2 | Pending |
-| PROF-01 | Phase 3 | Pending |
-| PROF-02 | Phase 3 | Pending |
-| PROF-03 | Phase 3 | Pending |
-| PROF-04 | Phase 3 | Pending |
+| PROF-01 | Phase 3 | Done |
+| PROF-02 | Phase 3 | Done |
+| PROF-03 | Phase 3 | Done |
+| PROF-04 | Phase 3 | Done |
 | ATCH-01 | Phase 4 | Pending |
 | ATCH-02 | Phase 4 | Pending |
 | ATCH-03 | Phase 4 | Pending |
