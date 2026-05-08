@@ -7,9 +7,7 @@
  * API: GET /dental/billing/invoices/:invoiceId
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { getDentalInvoiceOptions } from '@monobase/sdk-ts/generated/react-query';
 
 export interface InvoiceLineItem {
   id: string;
@@ -48,24 +46,15 @@ export interface InvoiceDetail {
   payments: InvoicePayment[];
 }
 
-async function fetchInvoiceDetail(invoiceId: string): Promise<InvoiceDetail> {
-  const res = await fetch(`${API}/dental/billing/invoices/${encodeURIComponent(invoiceId)}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`Failed to load invoice (${res.status})`);
-  return res.json() as Promise<InvoiceDetail>;
-}
-
 export function useInvoiceDetail(invoiceId: string | null) {
   const query = useQuery({
-    queryKey: ['invoice-detail', invoiceId],
-    queryFn: () => fetchInvoiceDetail(invoiceId!),
+    ...getDentalInvoiceOptions({ path: { invoiceId: invoiceId! } }),
     enabled: Boolean(invoiceId),
     staleTime: 30_000,
   });
 
   return {
-    invoice: query.data ?? null,
+    invoice: (query.data as unknown as InvoiceDetail) ?? null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };

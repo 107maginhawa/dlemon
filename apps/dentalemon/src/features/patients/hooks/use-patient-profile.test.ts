@@ -22,6 +22,15 @@ function freshClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 // ─── toPatientProfile (pure transform) ────────────────────────────────────
 
 describe('toPatientProfile', () => {
@@ -157,9 +166,9 @@ describe('usePatientProfile', () => {
       hasBalance: false,
       hasActivePaymentPlan: false,
     };
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockDetail) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse(mockDetail);
     });
 
     const qc = freshClient();
@@ -174,9 +183,7 @@ describe('usePatientProfile', () => {
   });
 
   test('returns null data and error on fetch failure', async () => {
-    global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 404 } as Response),
-    );
+    global.fetch = mock(() => jsonResponse({ error: 'not found' }, 404));
 
     const qc = freshClient();
     const { result } = renderHook(

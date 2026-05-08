@@ -23,6 +23,15 @@ function freshClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 // ─── usePatientBilling ─────────────────────────────────────────────────────
 
 describe('usePatientBilling', () => {
@@ -35,9 +44,9 @@ describe('usePatientBilling', () => {
 
   test('fetches invoices with patientId query param', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ invoices: [] }) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
 
     const qc = freshClient();
@@ -52,9 +61,9 @@ describe('usePatientBilling', () => {
 
   test('includes branchId when provided', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string | URL | Request) => {
-      capturedUrl = url.toString();
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
 
     const qc = freshClient();
@@ -84,7 +93,7 @@ describe('usePatientBilling', () => {
     ];
 
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ invoices: mockInvoices }) } as Response),
+      jsonResponse(mockInvoices),
     );
 
     const qc = freshClient();
@@ -113,7 +122,7 @@ describe('usePatientBilling', () => {
     ];
 
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockInvoices) } as Response),
+      jsonResponse(mockInvoices),
     );
 
     const qc = freshClient();
@@ -128,7 +137,7 @@ describe('usePatientBilling', () => {
 
   test('returns empty array and error on fetch failure', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 500 } as Response),
+      jsonResponse({}, 500),
     );
 
     const qc = freshClient();

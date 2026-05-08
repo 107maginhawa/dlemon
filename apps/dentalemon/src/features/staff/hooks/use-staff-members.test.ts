@@ -31,6 +31,15 @@ function makeWrapper(qc: QueryClient) {
     React.createElement(QueryClientProvider, { client: qc }, children);
 }
 
+function jsonResponse(data: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
 const mockMembers = [
   { id: 'm1', branchId: BRANCH_ID, displayName: 'Dr. Maria Santos', role: 'dentist_owner', status: 'active', avatarUrl: null, createdAt: '2026-05-01T00:00:00Z' },
   { id: 'm2', branchId: BRANCH_ID, displayName: 'Juan Cruz', role: 'staff_full', status: 'active', avatarUrl: null, createdAt: '2026-05-02T00:00:00Z' },
@@ -47,7 +56,7 @@ describe('useStaffMembers — GET', () => {
 
   test('returns members on success (wrapped response)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockMembers }) } as Response),
+      jsonResponse({ items: mockMembers }),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMembers(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -59,7 +68,7 @@ describe('useStaffMembers — GET', () => {
 
   test('returns members on success (bare array response)', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(mockMembers) } as Response),
+      jsonResponse(mockMembers),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMembers(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -69,9 +78,9 @@ describe('useStaffMembers — GET', () => {
 
   test('includes branchId in request URL', async () => {
     let capturedUrl = '';
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      return jsonResponse([]);
     });
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMembers(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -81,7 +90,7 @@ describe('useStaffMembers — GET', () => {
 
   test('exposes error when fetch returns non-ok status', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 403 } as Response),
+      jsonResponse({}, 403),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMembers(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -92,7 +101,7 @@ describe('useStaffMembers — GET', () => {
 
   test('refetch function is defined', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response),
+      jsonResponse([]),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMembers(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -105,13 +114,15 @@ describe('useStaffMutations — create', () => {
   test('calls POST members then POST reset-pin on create', async () => {
     const urls: string[] = [];
     const methods: string[] = [];
-    global.fetch = mock((url: string, opts: any) => {
+    global.fetch = mock((req: Request | string | URL, opts?: any) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (opts?.method ?? 'GET');
       urls.push(url);
-      methods.push(opts?.method ?? 'GET');
+      methods.push(method);
       if (url.includes('reset-pin')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+        return jsonResponse({});
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'new-m', displayName: 'Test User', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '2026-05-01T00:00:00Z' }) } as Response);
+      return jsonResponse({ id: 'new-m', displayName: 'Test User', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '2026-05-01T00:00:00Z' });
     });
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -125,7 +136,7 @@ describe('useStaffMutations — create', () => {
 
   test('throws when POST members fails', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 422 } as Response),
+      jsonResponse({}, 422),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -138,11 +149,12 @@ describe('useStaffMutations — create', () => {
   });
 
   test('throws partial error when PIN reset fails', async () => {
-    global.fetch = mock((url: string) => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
       if (url.includes('reset-pin')) {
-        return Promise.resolve({ ok: false, status: 500 } as Response);
+        return jsonResponse({}, 500);
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'new-m', displayName: 'Test', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '' }) } as Response);
+      return jsonResponse({ id: 'new-m', displayName: 'Test', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '' });
     });
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -155,9 +167,10 @@ describe('useStaffMutations — create', () => {
   });
 
   test('invalidates staff-members query after successful create', async () => {
-    global.fetch = mock((url: string) => {
-      if (url.includes('reset-pin')) return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'new-m', displayName: 'Test', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '' }) } as Response);
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
+      if (url.includes('reset-pin')) return jsonResponse({});
+      return jsonResponse({ id: 'new-m', displayName: 'Test', role: 'staff_full', status: 'active', branchId: BRANCH_ID, avatarUrl: null, createdAt: '' });
     });
     const qc = freshClient();
     qc.setQueryData(['staff-members', BRANCH_ID], mockMembers);
@@ -174,10 +187,10 @@ describe('useStaffMutations — deactivate', () => {
   test('calls DELETE members/{id} on deactivate', async () => {
     let capturedUrl = '';
     let capturedMethod = '';
-    global.fetch = mock((url: string, opts: any) => {
-      capturedUrl = url;
-      capturedMethod = opts?.method ?? 'GET';
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+    global.fetch = mock((req: Request | string | URL, opts?: any) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      capturedMethod = req instanceof Request ? req.method : (opts?.method ?? 'GET');
+      return jsonResponse({});
     });
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -190,7 +203,7 @@ describe('useStaffMutations — deactivate', () => {
 
   test('throws when DELETE fails', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: false, status: 403 } as Response),
+      jsonResponse({}, 403),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
@@ -204,7 +217,7 @@ describe('useStaffMutations — deactivate', () => {
 
   test('invalidates staff-members query after successful deactivate', async () => {
     global.fetch = mock(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response),
+      jsonResponse({}),
     );
     const qc = freshClient();
     qc.setQueryData(['staff-members', BRANCH_ID], mockMembers);

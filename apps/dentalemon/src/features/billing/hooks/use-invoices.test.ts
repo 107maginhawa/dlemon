@@ -49,21 +49,13 @@ describe('useInvoices', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  test('returns invoices on success (wrapped response)', async () => {
-    global.fetch = mock(() => jsonResponse({ invoices: mockInvoices }));
-    const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.invoices).toHaveLength(2);
-    expect(result.current.invoices[0]?.id).toBe('inv1');
-  });
-
-  test('returns invoices on success (bare array response)', async () => {
+  test('returns invoices on success', async () => {
     global.fetch = mock(() => jsonResponse(mockInvoices));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.invoices).toHaveLength(2);
+    expect(result.current.invoices[0]?.id).toBe('inv1');
   });
 
   test('includes status param in URL when provided', async () => {

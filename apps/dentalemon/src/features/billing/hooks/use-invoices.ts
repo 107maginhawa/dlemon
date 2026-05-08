@@ -4,10 +4,9 @@
  * Loads invoices with optional status and branchId filters.
  * Query key includes both filters so the cache is keyed per-filter-combination.
  */
-import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
+import { createDentalInvoice } from '@monobase/sdk-ts/generated';
 
 export interface Invoice {
   id: string;
@@ -26,26 +25,13 @@ export interface Invoice {
 interface UseInvoicesOptions {
   branchId?: string;
   status?: string;
+  patientId?: string;
 }
 
-async function fetchInvoices(branchId?: string, status?: string): Promise<Invoice[]> {
-  const params = new URLSearchParams();
-  if (status) params.set('status', status);
-  if (branchId) params.set('branchId', branchId);
-  const qs = params.toString();
-  const url = `${API}/dental/billing/invoices${qs ? `?${qs}` : ''}`;
-
-  const res = await fetch(url, { credentials: 'include' });
-  if (!res.ok) throw new Error(`Failed to load invoices (${res.status})`);
-
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.invoices ?? [];
-}
-
-export function useInvoices({ branchId, status }: UseInvoicesOptions) {
+export function useInvoices({ branchId, status, patientId }: UseInvoicesOptions) {
   const query = useQuery({
-    queryKey: ['invoices', branchId ?? null, status ?? null],
-    queryFn: () => fetchInvoices(branchId, status),
+    ...listDentalInvoicesOptions({ query: { patientId: patientId, status: status as any, branchId: branchId ?? undefined } }),
+    select: (data) => (data ?? []) as unknown as Invoice[],
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -57,3 +43,5 @@ export function useInvoices({ branchId, status }: UseInvoicesOptions) {
     refetch: query.refetch,
   };
 }
+
+export { createDentalInvoice, listDentalInvoicesQueryKey };
