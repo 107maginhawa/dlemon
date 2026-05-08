@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchSettings, useUpdateBranchSettings } from '../hooks/use-branch-settings';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 interface FeeEntry {
   cdtCode: string;
@@ -26,7 +27,7 @@ const CDT_DESCRIPTIONS: Record<string, string> = {
 };
 
 export function FeeSchedule() {
-  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+  const branchId = useOrgContextStore((s) => s.branchId);
   const { settings, isLoading } = useBranchSettings(branchId);
   const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchSettings, useUpdateBranchSettings } from '../hooks/use-branch-settings';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export function ClinicSettings() {
-  const branchId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+  const branchId = useOrgContextStore((s) => s.branchId);
   const { settings, isLoading } = useBranchSettings(branchId);
   const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 

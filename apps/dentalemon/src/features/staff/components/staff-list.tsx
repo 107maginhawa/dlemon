@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { StaffCreateModal } from './staff-create-modal';
 import { useStaffMembers, useStaffMutations, type MemberRole } from '../hooks/use-staff-members';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,12 +85,9 @@ function getInitials(name: string): string {
 // ---------------------------------------------------------------------------
 
 export function StaffList({ branchId, currentUserRole }: StaffListProps) {
-  // Read role from localStorage if not passed as prop
-  const role = currentUserRole ?? (
-    typeof localStorage !== 'undefined'
-      ? (localStorage.getItem('currentMemberRole') as MemberRole | null) ?? 'staff_scheduling'
-      : 'staff_scheduling'
-  );
+  // Read role from store if not passed as prop
+  const storeRole = useOrgContextStore((s) => s.role);
+  const role = currentUserRole ?? (storeRole as MemberRole | null) ?? 'staff_scheduling';
 
   const { members, isLoading, error } = useStaffMembers(branchId);
   const { deactivate, deactivateError } = useStaffMutations(branchId);

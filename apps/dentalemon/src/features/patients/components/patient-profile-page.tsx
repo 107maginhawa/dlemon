@@ -8,6 +8,7 @@
  */
 import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useOrgContextStore } from '@/stores/org-context.store';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { usePatientProfile } from '../hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
@@ -269,8 +270,7 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const { data, isLoading, error } = usePatientProfile({ patientId });
 
-  const branchId =
-    typeof window !== 'undefined' ? localStorage.getItem('currentBranchId') : null;
+  const branchId = useOrgContextStore((s) => s.branchId);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {

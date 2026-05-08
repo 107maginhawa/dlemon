@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { type LucideIcon, LogOut } from "lucide-react"
+import { useOrgContextStore } from '@/stores/org-context.store'
 import {
   Sidebar,
   SidebarContent,
@@ -40,10 +41,7 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
   const signOut = useSignOut()
 
   async function handleSignOut() {
-    localStorage.removeItem('currentBranchId')
-    localStorage.removeItem('currentOrgId')
-    localStorage.removeItem('currentMemberRole')
-    localStorage.removeItem('currentMemberId')
+    useOrgContextStore.getState().clearContext()
     await signOut.mutateAsync()
     navigate({ to: '/auth/$authView', params: { authView: 'sign-in' } })
   }

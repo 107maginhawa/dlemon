@@ -35,6 +35,7 @@ import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -61,10 +62,10 @@ function WorkspacePage() {
   const [treatmentPlanSheetOpen, setTreatmentPlanSheetOpen] = useState(false);
 
   // prescriberMemberId for RxSheet (WBAR-02) — read once via ref to avoid stale value on re-renders
-  const prescriberMemberId = React.useRef(localStorage.getItem('currentMemberId') ?? '').current;
+  const prescriberMemberId = React.useRef(useOrgContextStore.getState().memberId ?? '').current;
 
   // branchId for treatment plan (TXPL-01) + visits — read once via ref
-  const branchId = React.useRef(localStorage.getItem('currentBranchId')).current;
+  const branchId = React.useRef(useOrgContextStore.getState().branchId).current;
 
   // ── Data hooks ────────────────────────────────────────────────────────────
   const { visits, isLoading: visitsLoading } = useVisits({ patientId, branchId });
@@ -130,10 +131,9 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
-    const localBranchId = localStorage.getItem('currentBranchId');
-    const dentistMemberId = localStorage.getItem('currentMemberId');
+    const { branchId: localBranchId, memberId: dentistMemberId } = useOrgContextStore.getState();
     if (!localBranchId || !dentistMemberId) {
-      console.error('Cannot create visit: currentBranchId or currentMemberId missing from localStorage');
+      console.error('Cannot create visit: branchId or memberId missing from org context store');
       return;
     }
     createVisitMutation.mutate(

@@ -18,6 +18,7 @@ import { PatientFilterTabs, type PatientFilter } from '@/features/patients/compo
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
 import { usePatients } from '@/features/patients/hooks/use-patients';
 import { apiBaseUrl } from '@/utils/config';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/_dashboard/patients')({
   component: PatientsPage,
@@ -32,7 +33,7 @@ function PatientsPage() {
   const [activeFilter, setActiveFilter] = useState<PatientFilter>('all');
   const [showRegistration, setShowRegistration] = useState(false);
 
-  const branchId = localStorage.getItem('currentBranchId') ?? undefined;
+  const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
 
   const { patients, isLoading, error } = usePatients({
     branchId,

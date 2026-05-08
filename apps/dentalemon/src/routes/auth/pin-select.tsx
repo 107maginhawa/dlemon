@@ -10,6 +10,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 const API = apiBaseUrl;
 
@@ -98,7 +99,7 @@ function PinSelectRoute() {
   const [members, setMembers] = useState<PinSelectMember[]>([]);
 
   useEffect(() => {
-    const branchId = localStorage.getItem('currentBranchId');
+    const { branchId } = useOrgContextStore.getState();
     if (!branchId) return;
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',

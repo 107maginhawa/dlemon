@@ -2,14 +2,15 @@ import { createFileRoute } from '@tanstack/react-router'
 import { RevenueReport } from '../../features/reports/components/revenue-report'
 import { canAccessReports } from '../../utils/rbac'
 import type { DentalRole } from '../../utils/rbac'
+import { useOrgContextStore } from '@/stores/org-context.store'
 
 export const Route = createFileRoute('/_dashboard/reports')({
   component: ReportsPage,
 })
 
 function ReportsPage() {
-  const role = (localStorage.getItem('currentMemberRole') ?? 'dentist_owner') as DentalRole;
-  const branchId = localStorage.getItem('currentBranchId') ?? '';
+  const role = (useOrgContextStore((s) => s.role) ?? 'dentist_owner') as DentalRole;
+  const branchId = useOrgContextStore((s) => s.branchId) ?? '';
 
   if (!canAccessReports(role)) {
     return (

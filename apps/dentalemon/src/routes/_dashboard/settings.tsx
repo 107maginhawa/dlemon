@@ -5,6 +5,7 @@ import { FeeSchedule } from '../../features/settings/components/fee-schedule'
 import { LocaleSettings } from '../../features/settings/components/locale-settings'
 import { canAccess } from '../../utils/rbac'
 import type { DentalRole } from '../../utils/rbac'
+import { useOrgContextStore } from '@/stores/org-context.store'
 
 export const Route = createFileRoute('/_dashboard/settings')({
   component: SettingsPage,
@@ -14,7 +15,7 @@ type Tab = 'clinic' | 'fees' | 'locale';
 
 function SettingsPage() {
   const [tab, setTab] = useState<Tab>('clinic');
-  const role = (localStorage.getItem('currentMemberRole') ?? 'dentist_owner') as DentalRole;
+  const role = (useOrgContextStore((s) => s.role) ?? 'dentist_owner') as DentalRole;
 
   if (!canAccess(role, 'settings')) {
     return (

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/utils/guards'
 import { getRuntimeConfig } from '@/utils/config'
+import { useOrgContextStore } from '@/stores/org-context.store'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
   SidebarProvider,
@@ -26,7 +27,7 @@ export const Route = createFileRoute('/_dashboard')({
     // (unless the user is already on the dental-onboarding route itself)
     const pathname = opts.location?.pathname ?? ''
     if (!pathname.includes('dental-onboarding')) {
-      // Always refresh org context from API — ensures localStorage is never stale
+      // Always refresh org context from API
       // (e.g. after re-seeding, branch ID changes, or first load after onboarding)
       try {
         const { apiUrl } = await getRuntimeConfig()
@@ -36,10 +37,12 @@ export const Route = createFileRoute('/_dashboard')({
         if (res.ok) {
           const ctx = await res.json() as any
           if (ctx.branch?.id) {
-            localStorage.setItem('currentBranchId', ctx.branch.id)
-            if (ctx.org?.id) localStorage.setItem('currentOrgId', ctx.org.id)
-            if (ctx.member?.role) localStorage.setItem('currentMemberRole', ctx.member.role)
-            if (ctx.member?.id) localStorage.setItem('currentMemberId', ctx.member.id)
+            useOrgContextStore.getState().setContext({
+              branchId: ctx.branch.id,
+              orgId: ctx.org?.id ?? null,
+              role: ctx.member?.role ?? null,
+              memberId: ctx.member?.id ?? null,
+            })
             return
           }
         }
@@ -47,11 +50,9 @@ export const Route = createFileRoute('/_dashboard')({
         // API unreachable — fall through to onboarding check
       }
 
-      // No branch found — redirect to onboarding if localStorage also has nothing
-      const currentBranchId = typeof localStorage !== 'undefined'
-        ? localStorage.getItem('currentBranchId')
-        : null
-      if (!currentBranchId) {
+      // No branch found — redirect to onboarding if store also has nothing
+      const { branchId } = useOrgContextStore.getState()
+      if (!branchId) {
         throw redirect({ to: '/dental-onboarding' as any })
       }
     }

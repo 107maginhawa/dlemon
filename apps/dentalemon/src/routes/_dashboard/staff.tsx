@@ -1,15 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { StaffList } from '@/features/staff/components/staff-list'
 import { StaffAccessDenied } from '@/features/staff/components/staff-list'
+import { useOrgContextStore } from '@/stores/org-context.store'
 
 export const Route = createFileRoute('/_dashboard/staff')({
   component: StaffPage,
 })
 
 function StaffPage() {
-  const branchId = localStorage.getItem('currentBranchId') ?? ''
+  const branchId = useOrgContextStore((s) => s.branchId) ?? ''
   // FR8.13: Only dentist_owner can access the staff module
-  const memberRole = localStorage.getItem('currentMemberRole') ?? ''
+  const memberRole = useOrgContextStore((s) => s.role) ?? ''
   if (memberRole && memberRole !== 'dentist_owner') {
     return <StaffAccessDenied />
   }

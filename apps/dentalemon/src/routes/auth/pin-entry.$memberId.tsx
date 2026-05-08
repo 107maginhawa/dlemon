@@ -11,6 +11,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { pinSession } from '@/utils/pin-session';
 import { apiBaseUrl } from '@/utils/config';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/auth/pin-entry/$memberId')({
   component: PinEntryRoute,
@@ -228,7 +229,7 @@ function PinEntryRoute() {
   });
 
   useEffect(() => {
-    const branchId = localStorage.getItem('currentBranchId');
+    const { branchId } = useOrgContextStore.getState();
     if (!branchId) return;
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
@@ -242,8 +243,7 @@ function PinEntryRoute() {
   }, [memberId]);
 
   async function handleSubmit(pin: string): Promise<VerifyPinResult | void> {
-    const orgId = localStorage.getItem('currentOrgId');
-    const branchId = localStorage.getItem('currentBranchId');
+    const { orgId, branchId } = useOrgContextStore.getState();
     if (!orgId || !branchId) {
       setErrorMessage('Missing org context');
       return;
@@ -263,8 +263,7 @@ function PinEntryRoute() {
 
     if (data.success) {
       pinSession.startSession({ memberId, displayName: member.displayName, role: member.role });
-      localStorage.setItem('currentMemberId', memberId);
-      localStorage.setItem('currentMemberRole', member.role);
+      useOrgContextStore.getState().setContext({ memberId, role: member.role });
       setFailedAttempts(0);
       // FR9.3: Navigate to role-appropriate landing page
       const destination = ROLE_LANDING[member.role] ?? '/dashboard';

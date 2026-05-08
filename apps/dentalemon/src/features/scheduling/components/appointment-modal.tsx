@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 const DURATION_OPTIONS = [
   { value: 30, label: '30 min' },
@@ -16,10 +17,6 @@ const DURATION_OPTIONS = [
   { value: 90, label: '1.5 hr' },
   { value: 120, label: '2 hr' },
 ] as const;
-
-function getDefaultBranchId(): string {
-  return typeof localStorage !== 'undefined' ? (localStorage.getItem('currentBranchId') ?? '') : '';
-}
 
 export interface AppointmentModalProps {
   open: boolean;
@@ -57,7 +54,7 @@ export function buildAppointmentPayload(form: {
   return {
     patientId: form.patientId.trim(),
     dentistMemberId: form.dentistMemberId.trim() || undefined,
-    branchId: form.branchId.trim() || getDefaultBranchId(),
+    branchId: form.branchId.trim() || useOrgContextStore.getState().branchId || '',
     scheduledAt,
     durationMinutes: form.durationMinutes || 30,
     procedureType: form.procedureType.trim(),
@@ -67,9 +64,10 @@ export function buildAppointmentPayload(form: {
 }
 
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
+  const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
   const [dentistMemberId, setDentistMemberId] = useState('');
-  const [branchId, setBranchId] = useState(getDefaultBranchId);
+  const [branchId, setBranchId] = useState(storeBranchId);
   const [date, setDate] = useState(initialDate || '');
   const [time, setTime] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
@@ -83,12 +81,16 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
     if (initialDate) setDate(initialDate);
   }, [initialDate]);
 
+  useEffect(() => {
+    if (open) setBranchId(storeBranchId);
+  }, [open, storeBranchId]);
+
   if (!open) return null;
 
   function handleClose() {
     setPatientId('');
     setDentistMemberId('');
-    setBranchId(getDefaultBranchId());
+    setBranchId(storeBranchId);
     setDate(initialDate || '');
     setTime('');
     setDurationMinutes(30);

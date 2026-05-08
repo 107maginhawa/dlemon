@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 const API = apiBaseUrl;
 
@@ -202,10 +203,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         throw new Error(err.message || `PIN setup failed (${pinRes.status})`);
       }
 
-      // Store org/branch context in localStorage for PIN auth and dashboard
-      localStorage.setItem('currentOrgId', org.id);
-      localStorage.setItem('currentBranchId', branch.id);
-      localStorage.setItem('currentMemberId', member.id);
+      // Store org/branch context in Zustand store for PIN auth and dashboard
+      useOrgContextStore.getState().setContext({
+        orgId: org.id,
+        branchId: branch.id,
+        memberId: member.id,
+      });
 
       // Create first patient (only if not skipped)
       if (!skipPatient && patientName.trim()) {
