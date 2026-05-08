@@ -19,6 +19,8 @@ interface TreatmentTableProps {
   visits?: VisitCard[];
   onSelectTreatment?: (id: string) => void;
   selectedTreatmentId?: string | null;
+  onMarkDone?: (treatmentId: string, visitId: string) => void;
+  readOnly?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -53,8 +55,12 @@ export function TreatmentTable({
   visits = [],
   onSelectTreatment,
   selectedTreatmentId,
+  onMarkDone,
+  readOnly = false,
 }: TreatmentTableProps) {
   const hasRows = treatments.length > 0 || carriedOverItems.length > 0;
+  const completedCount = treatments.filter((t) => t.status === 'completed').length;
+  const grandTotal = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
 
   if (!hasRows) {
     return (
@@ -65,6 +71,19 @@ export function TreatmentTable({
   }
 
   return (
+    <div>
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="text-sm font-semibold">Treatment Breakdown</span>
+        {completedCount > 0 && (
+          <button
+            type="button"
+            data-testid="view-completed-btn"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            View Completed ({completedCount})
+          </button>
+        )}
+      </div>
     <table className="w-full text-sm" aria-label="Treatments">
       <thead className="sticky top-0 bg-muted/60 z-10">
         <tr>
@@ -104,9 +123,18 @@ export function TreatmentTable({
                 {t.description ?? t.procedureName ?? '—'}
               </td>
               <td className="px-4 py-2 text-center">
-                {t.status === 'completed' && (
+                {t.status === 'completed' ? (
                   <Check className="h-4 w-4 text-green-600 mx-auto" />
-                )}
+                ) : !readOnly ? (
+                  <button
+                    type="button"
+                    data-testid="mark-done-btn"
+                    onClick={() => onMarkDone?.(t.id, t.visitId)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mark Done
+                  </button>
+                ) : null}
               </td>
               <td className="px-4 py-2">
                 <StatusBadge status={t.status} />
@@ -168,7 +196,20 @@ export function TreatmentTable({
             })}
           </>
         )}
+        {/* Grand Total row */}
+        {treatments.length > 0 && (
+          <tr data-testid="grand-total-row" className="border-t-2 border-border font-semibold">
+            <td colSpan={6} className="px-4 py-2 text-right text-sm">
+              Grand Total
+            </td>
+            <td className="px-4 py-2 text-right tabular-nums text-sm">
+              {CURRENCY_SYMBOL}
+              {grandTotal.toLocaleString(APP_LOCALE)}
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
+    </div>
   );
 }
