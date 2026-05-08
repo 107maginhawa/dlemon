@@ -67,7 +67,7 @@ function StepIndicator({ step }: StepIndicatorProps) {
 
   function lineColor(afterIdx: number): string {
     // line between circle afterIdx and afterIdx+1
-    return afterIdx + 1 < step ? '#22c55e' : afterIdx + 1 === step ? '#FFE97D' : '#e5e7eb'
+    return afterIdx + 1 < step ? '#22c55e' : '#e5e7eb'
   }
 
   return (
@@ -175,6 +175,37 @@ function SummaryChip({ condition, surfaces }: SummaryChipProps) {
   )
 }
 
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  border: '1px solid #e5e7eb',
+  borderRadius: 8,
+  padding: '8px 12px',
+  fontSize: 14,
+  fontFamily: 'DM Sans, sans-serif',
+  width: '100%',
+  boxSizing: 'border-box',
+  outline: 'none',
+  color: '#111',
+  background: '#fff',
+}
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  fontFamily: 'Sora, sans-serif',
+  color: '#374151',
+  marginBottom: 4,
+  display: 'block',
+}
+
+const fieldStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 0,
+  marginBottom: 12,
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function ToothDetailPanel({ toothNumber, existingConditions, onSave, onClose }: ToothDetailPanelProps) {
@@ -223,38 +254,8 @@ export function ToothDetailPanel({ toothNumber, existingConditions, onSave, onCl
     setCost('')
   }
 
-  const conditionColor = selectedCondition ? CONDITION_COLORS[selectedCondition] : '#FFE97D'
+  const conditionColor = selectedCondition ? CONDITION_COLORS[selectedCondition] : undefined
   const step1Valid = selectedSurfaces.length > 0 && selectedCondition !== null
-
-  // ── Shared styles ──
-  const inputStyle: React.CSSProperties = {
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    padding: '8px 12px',
-    fontSize: 14,
-    fontFamily: 'DM Sans, sans-serif',
-    width: '100%',
-    boxSizing: 'border-box',
-    outline: 'none',
-    color: '#111',
-    background: '#fff',
-  }
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: 'Sora, sans-serif',
-    color: '#374151',
-    marginBottom: 4,
-    display: 'block',
-  }
-
-  const fieldStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 0,
-    marginBottom: 12,
-  }
 
   return (
     <div style={{
@@ -383,7 +384,7 @@ export function ToothDetailPanel({ toothNumber, existingConditions, onSave, onCl
 
           {/* Treatment fields */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>Treatment Plan <span style={{ color: '#ef4444' }}>*</span></label>
+            <label style={labelStyle}>Treatment Plan <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span></label>
             <input
               type="text"
               value={treatment}
