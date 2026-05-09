@@ -1,0 +1,71 @@
+/**
+ * createDentalTreatment handler
+ *
+ * POST /dental/visits/{visitId}/treatments
+ */
+
+import type { ValidatedContext } from '@/types/app';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError, BusinessLogicError, NotFoundError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { TreatmentRepository } from './repos/treatment.repo';
+import { VisitRepository } from './repos/visit.repo';
+import { DentalChartRepository } from './repos/dental-chart.repo';
+import type { User } from '@/types/auth';
+import type { CreateDentalTreatmentBody, CreateDentalTreatmentParams } from '@/generated/openapi/validators';
+
+export async function createDentalTreatment(
+  ctx: ValidatedContext<CreateDentalTreatmentBody, never, CreateDentalTreatmentParams>
+): Promise<Response> {
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
+  const { visitId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const repo = new TreatmentRepository(db);
+  const visitRepo = new VisitRepository(db);
+
+  // Branch authorization — look up visit to get branchId
+  const visit = await visitRepo.findOneById(visitId);
+  if (!visit) throw new NotFoundError('Dental visit');
+  await assertBranchAccess(db, user.id, visit.branchId);
+
+  // FR1.16: Immutability — cannot add treatments to completed/locked visits
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError(
+      `Cannot add treatments to a ${visit.status} visit`,
+      'VISIT_IMMUTABLE'
+    );
+  }
+
+  // EC2: Block treatment on extracted tooth
+  if (body.toothNumber !== undefined) {
+    const chartRepo = new DentalChartRepository(db);
+    const chart = await chartRepo.findByVisit(visit.id);
+    if (chart) {
+      const toothState = chart.teeth.find((t: any) => t.toothNumber === body.toothNumber);
+      if (toothState?.state === 'extracted') {
+        throw new BusinessLogicError(
+          `Tooth ${body.toothNumber} is extracted — cannot add pending treatments`,
+          'TOOTH_EXTRACTED'
+        );
+      }
+    }
+  }
+
+  const treatment = await repo.createOne({
+    visitId,
+    patientId: body.patientId,
+    cdtCode: body.cdtCode,
+    description: body.description,
+    toothNumber: body.toothNumber,
+    surfaces: body.surfaces,
+    conditionCode: body.conditionCode,
+    priceCents: body.priceCents,
+    carriedOver: false,
+  });
+
+  return ctx.json(treatment, 201);
+}

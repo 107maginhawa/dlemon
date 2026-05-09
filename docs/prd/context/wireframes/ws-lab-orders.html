@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WS-14 · Lab Orders Sheet — Dentalemon</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 60px;
+    padding: 40px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .screen-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    align-self: flex-start;
+    margin-bottom: -40px;
+  }
+
+  /* ── Phone shell ── */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 50px;
+    border: 8px solid #1C1C1E;
+    box-shadow: 0 0 0 1px #3A3A3C, 0 40px 80px rgba(0,0,0,0.35);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    height: 54px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 10px;
+    position: relative;
+    z-index: 10;
+  }
+  .status-bar .time { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* ── Page dimmer ── */
+  .page-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+  }
+  .page-dimmer {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.40);
+    z-index: 20;
+  }
+
+  /* ── Bottom sheet (65% height) ── */
+  .sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65%;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sheet-handle {
+    width: 36px;
+    height: 5px;
+    background: var(--separator-opaque);
+    border-radius: 3px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  /* ── Sheet header ── */
+  .sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 0;
+    flex-shrink: 0;
+  }
+  .sheet-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .close-btn {
+    width: 30px; height: 30px;
+    background: var(--fill-tertiary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    min-width: 44px; min-height: 44px;
+    margin: -7px -7px -7px 0;
+  }
+
+  /* ── Scrollable body ── */
+  .sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sheet-body::-webkit-scrollbar { display: none; }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  /* ── Order card ── */
+  .order-card {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 0 0.5px var(--separator-opaque);
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .order-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .order-treatment {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .order-code {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .status-orange { background: rgba(255,149,0,0.15); color: var(--system-orange); }
+  .status-red    { background: rgba(255,59,48,0.12); color: var(--system-red); }
+  .status-green  { background: rgba(52,199,89,0.15); color: var(--system-green); }
+
+  .order-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .overdue-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--system-red);
+    margin-left: 4px;
+  }
+
+  /* ── Progress stepper ── */
+  .stepper {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+  }
+  .step-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .step-dot.done { background: var(--system-green); color: white; }
+  .step-dot.current { background: var(--system-orange); color: white; }
+  .step-dot.pending { background: var(--fill-tertiary); color: var(--text-tertiary); border: 1.5px solid var(--separator-opaque); }
+  .step-label { font-size: 9px; color: var(--text-tertiary); text-align: center; line-height: 1.2; }
+  .step-label.done-label { color: var(--system-green); }
+  .step-label.current-label { color: var(--system-orange); }
+
+  .step-connector {
+    flex: 0 0 16px;
+    height: 1.5px;
+    background: var(--separator-opaque);
+    margin-bottom: 12px;
+  }
+  .step-connector.done { background: var(--system-green); }
+
+  /* ── Separator ── */
+  .section-sep {
+    height: 0.5px;
+    background: var(--separator-opaque);
+    margin: 4px 0;
+    flex-shrink: 0;
+  }
+
+  /* ── New order form ── */
+  .form-section { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+  .form-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .form-row { display: flex; flex-direction: column; gap: 4px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .form-input {
+    width: 100%;
+    height: 44px;
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    border: 0.5px solid var(--separator-opaque);
+    padding: 0 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+  }
+  .form-input.placeholder { color: var(--text-tertiary); }
+  .form-select {
+    width: 100%;
+    height: 44px;
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    border: 0.5px solid var(--separator-opaque);
+    padding: 0 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .form-select-val { font-size: 15px; color: var(--text-primary); }
+  .form-select-chevron svg { fill: var(--text-tertiary); }
+  .form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-textarea {
+    width: 100%;
+    min-height: 60px;
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    border: 0.5px solid var(--separator-opaque);
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-tertiary);
+    resize: none;
+  }
+
+  .btn-gold {
+    width: 100%;
+    height: 50px;
+    background: var(--gold);
+    color: var(--gold-text);
+    font-size: 17px;
+    font-weight: 600;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<p class="screen-label">WS-14 · Lab Orders Sheet</p>
+
+<div class="phone">
+  <!-- Background page -->
+  <div class="page-bg">
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="status-icons">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="#000"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="1" width="3" height="11" rx="1"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="3" stroke="#000" stroke-width="1" fill="none"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5" fill="#000"/><path d="M22.5 4v4a2 2 0 000-4z" fill="#000"/></svg>
+      </div>
+    </div>
+    <div class="page-dimmer"></div>
+  </div>
+
+  <!-- Sheet -->
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+
+    <!-- Header -->
+    <div class="sheet-header">
+      <span class="sheet-title">Lab Orders</span>
+      <div class="close-btn">
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <path d="M1 1l8 8M9 1L1 9" stroke="#8E8E93" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="sheet-body">
+
+      <!-- Existing orders label -->
+      <div class="section-label">Active Orders</div>
+
+      <!-- Order 1 -->
+      <div class="order-card">
+        <div class="order-card-header">
+          <div>
+            <span class="order-treatment">Tooth #14 · Crown (PFM)</span>
+            <span class="order-code">D2710</span>
+          </div>
+          <span class="status-badge status-orange">In Fabrication</span>
+        </div>
+        <div class="order-meta">
+          Lab: Manila Dental Lab<br />
+          Order date: Jan 10, 2026<br />
+          Expected delivery: Mar 10, 2026
+        </div>
+        <!-- Progress stepper -->
+        <div class="stepper">
+          <div class="step">
+            <div class="step-dot done">✓</div>
+            <div class="step-label done-label">Ordered</div>
+          </div>
+          <div class="step-connector done"></div>
+          <div class="step">
+            <div class="step-dot current">•</div>
+            <div class="step-label current-label">In Fab.</div>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step">
+            <div class="step-dot pending">○</div>
+            <div class="step-label">Delivered</div>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step">
+            <div class="step-dot pending">○</div>
+            <div class="step-label">Fitted</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order 2 (overdue) -->
+      <div class="order-card" style="border-left: 3px solid var(--system-red); border-radius: 12px;">
+        <div class="order-card-header">
+          <div>
+            <span class="order-treatment">Tooth #36 · Bridge Pontic</span>
+          </div>
+          <span class="status-badge status-red">Overdue</span>
+        </div>
+        <div class="order-meta">
+          Lab: Manila Dental Lab<br />
+          Order date: Dec 15, 2025<br />
+          Expected delivery: Feb 28, 2026
+          <span class="overdue-label">— OVERDUE</span>
+        </div>
+        <!-- Progress stepper -->
+        <div class="stepper">
+          <div class="step">
+            <div class="step-dot done">✓</div>
+            <div class="step-label done-label">Ordered</div>
+          </div>
+          <div class="step-connector done"></div>
+          <div class="step">
+            <div class="step-dot" style="background:rgba(255,59,48,0.15);color:var(--system-red);border:1.5px solid var(--system-red);">•</div>
+            <div class="step-label" style="color:var(--system-red);">In Fab.</div>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step">
+            <div class="step-dot pending">○</div>
+            <div class="step-label">Delivered</div>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step">
+            <div class="step-dot pending">○</div>
+            <div class="step-label">Fitted</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New order separator -->
+      <div class="section-sep" style="margin-top:4px;"></div>
+
+      <!-- New order form -->
+      <div class="form-section">
+        <div class="form-section-title">+ New Lab Order</div>
+
+        <div class="form-row">
+          <div class="form-label">Lab Name</div>
+          <div class="form-input">Manila Dental Lab</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label">Linked Treatment</div>
+          <div class="form-select">
+            <span class="form-select-val">Crown (PFM) · Tooth #14</span>
+            <span class="form-select-chevron">
+              <svg width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#C7C7CC" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-row">
+            <div class="form-label">Order Date</div>
+            <div class="form-input">Mar 5, 2026</div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">Expected Delivery</div>
+            <div class="form-input">Apr 5, 2026</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label">Notes</div>
+          <div class="form-textarea">Instructions for lab...</div>
+        </div>
+
+      </div>
+
+      <!-- Create button -->
+      <div class="btn-gold">Create Order</div>
+
+    </div><!-- /sheet-body -->
+  </div><!-- /sheet -->
+</div><!-- /phone -->
+
+</body>
+</html>

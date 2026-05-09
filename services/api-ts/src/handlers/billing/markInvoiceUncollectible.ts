@@ -86,7 +86,10 @@ export async function markInvoiceUncollectible(
   }
 
   // Update invoice status to uncollectible
-  const updatedInvoice = await invoiceRepo.updateStatus(invoiceId, 'uncollectible', user.id);
+  await invoiceRepo.updateStatus(invoiceId, 'uncollectible', user.id);
+  const invoiceWithItems = await invoiceRepo.findOneWithLineItems(invoiceId);
+  if (!invoiceWithItems) throw new NotFoundError('Invoice not found after update');
+  const updatedInvoice = invoiceWithItems;
 
   // TODO: Trigger any necessary cleanup:
   // - Cancel pending payment intents
@@ -107,26 +110,32 @@ export async function markInvoiceUncollectible(
   const response = {
     id: updatedInvoice.id,
     invoiceNumber: updatedInvoice.invoiceNumber,
-    customer: updatedInvoice.customer, // Already correct field name
-    merchant: updatedInvoice.merchant, // Already correct field name
-    context: null, // TODO: Add context field to schema
+    customer: updatedInvoice.customer,
+    merchant: updatedInvoice.merchant,
+    context: updatedInvoice.context || null,
     status: updatedInvoice.status,
     subtotal: updatedInvoice.subtotal,
-    tax: updatedInvoice.tax,
+    tax: updatedInvoice.tax || null,
     total: updatedInvoice.total,
     currency: updatedInvoice.currency,
-    paymentCaptureMethod: 'automatic', // TODO: Add to schema
-    paymentDueAt: null, // TODO: Add dueAt field to schema
-    lineItems: [], // TODO: Implement proper line items storage
+    paymentCaptureMethod: updatedInvoice.paymentCaptureMethod,
+    paymentDueAt: updatedInvoice.paymentDueAt?.toISOString() || null,
+    lineItems: updatedInvoice.lineItems.map((item: any) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      metadata: item.metadata
+    })),
     paymentStatus: updatedInvoice.paymentStatus || null,
     paidAt: updatedInvoice.paidAt?.toISOString() || null,
-    paidBy: null, // TODO: Add to schema
+    paidBy: updatedInvoice.paidBy || null,
     voidedAt: updatedInvoice.voidedAt?.toISOString() || null,
-    voidedBy: null, // TODO: Add to schema
-    voidThresholdMinutes: null, // TODO: Add to schema
-    authorizedAt: null, // TODO: Add to schema
-    authorizedBy: null, // TODO: Add to schema
-    metadata: null, // TODO: Add metadata support
+    voidedBy: updatedInvoice.voidedBy || null,
+    voidThresholdMinutes: updatedInvoice.voidThresholdMinutes || null,
+    authorizedAt: updatedInvoice.authorizedAt?.toISOString() || null,
+    authorizedBy: updatedInvoice.authorizedBy || null,
+    metadata: updatedInvoice.metadata || null,
     createdAt: updatedInvoice.createdAt.toISOString(),
     updatedAt: updatedInvoice.updatedAt.toISOString()
   };

@@ -1,0 +1,1 @@
+ALTER TABLE "dental_membership" ADD COLUMN "last_login_at" timestamp;

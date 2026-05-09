@@ -1,46 +1,42 @@
 import type { ValidatedContext } from '@/types/app';
+import type { DatabaseInstance } from '@/core/database';
 import {
   UnauthorizedError,
-  ForbiddenError,
   NotFoundError,
-  ValidationError,
-  BusinessLogicError,
 } from '@/core/errors';
 import type { GetPractitionerRoleParams } from '@/generated/openapi/validators';
+import { PractitionerRoleRepository } from './repos/practitioner-role.repo';
 
 /**
  * getPractitionerRole
- * 
+ *
  * Path: GET /providers/practitioner-roles/{id}
  * OperationId: getPractitionerRole
  */
 export async function getPractitionerRole(
   ctx: ValidatedContext<never, never, GetPractitionerRoleParams>
 ): Promise<Response> {
-  // Get authenticated session from Better-Auth
   const session = ctx.get('session');
   if (!session) {
     throw new UnauthorizedError();
   }
-  // Note: This endpoint requires ownership validation for 'practitioner:owner'
-  // Check that the authenticated user owns the requested resource
-  // Example:
-  // if (session.user.role === 'patient' && params.patientId !== session.user.id) {
-  //   throw new ForbiddenError('You can only access your own resources');
-  // }
-  
-  // Extract validated parameters
+
   const params = ctx.req.valid('param');
-  
-  
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: getPractitionerRole');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new PractitionerRoleRepository(db, logger);
+  const role = await repo.findOneById(params.id);
+
+  if (!role) {
+    throw new NotFoundError('PractitionerRole not found', {
+      resourceType: 'practitioner-role',
+      resource: params.id,
+      suggestions: ['Check role ID format', 'Verify practitioner role exists'],
+    });
+  }
+
+  logger?.info({ roleId: params.id, action: 'view' }, 'PractitionerRole retrieved');
+
+  return ctx.json(role, 200);
 }

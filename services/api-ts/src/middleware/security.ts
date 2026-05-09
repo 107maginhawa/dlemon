@@ -30,6 +30,7 @@ export function createCorsMiddleware(config: Config, logger?: Logger) {
     origin: originValidator,
     credentials: config.cors.credentials,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // When adding custom headers, add to BOTH allowHeaders AND exposeHeaders
     allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-API-Key'],
     exposeHeaders: ['X-Request-ID'],
     maxAge: 600,

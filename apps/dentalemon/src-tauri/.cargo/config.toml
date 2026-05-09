@@ -1,0 +1,12 @@
+# iOS build configuration for MYCURE Tauri app
+
+[target.aarch64-apple-ios-sim]
+rustflags = ["-C", "link-arg=-mios-simulator-version-min=14.0"]
+
+# Fix rquickjs-sys bindgen on iOS simulator.
+# rquickjs-sys build.rs passes --target=aarch64-apple-ios-sim to clang, but
+# Xcode 17+ clang rejects "sim" — it needs "simulator" with a version number.
+# The bindgen crate checks BINDGEN_EXTRA_CLANG_ARGS_{target} (underscores)
+# and appends these args AFTER the ones from Builder, so the second --target wins.
+[env]
+BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_ios_sim = "--target=arm64-apple-ios14.0-simulator"

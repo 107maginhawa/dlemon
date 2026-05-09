@@ -8,6 +8,7 @@
 # 0. Merchant signup + person + merchant account.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "merch-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -67,6 +68,7 @@ jsonpath "$.onboardingUrl" exists
 # 3. Customer signup + person (cookie jar now holds customer session).
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "cust-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -91,6 +93,7 @@ customer_person_id: jsonpath "$.id"
 # 4. Sign back in as merchant to create the invoice.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "merch-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -131,6 +134,7 @@ jsonpath "$.status" == "open"
 # Asserts the impl enforces the readiness boundary.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "cust-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -151,6 +155,7 @@ jsonpath "$.code" == "PROVIDER_BILLING_INCOMPLETE"
 # invoice without an associated PaymentIntent uses uncollectible to close.)
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "merch-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

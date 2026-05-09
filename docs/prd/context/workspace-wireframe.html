@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentalemon — Apple Chrome + Data Table</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --gold: #FFE97D;
+  --gold-hover: #F5DC60;
+  --gold-text: #4A4018;
+  --gold-soft: rgba(255,233,125,0.15);
+  --text-primary: #000000;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
+  --separator: rgba(60,60,67,0.12);
+  --separator-opaque: #C6C6C8;
+  --fill-tertiary: rgba(118,118,128,0.12);
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-green: #34C759;
+  --system-teal: #5AC8FA;
+}
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg); color: var(--text-primary);
+  height: 100vh; overflow: hidden;
+}
+
+/* APPLE TOP BAR */
+.top-bar {
+  height: 56px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--separator-opaque);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; z-index: 10;
+}
+.patient-selector { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; cursor: pointer; }
+.patient-selector:hover { background: var(--fill-tertiary); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--gold); display: grid; place-items: center; color: var(--gold-text); font-weight: 600; font-size: 12px; }
+.patient-name { font-weight: 600; font-size: 17px; letter-spacing: -0.41px; }
+
+.safety-floor {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,59,48,0.08); border-radius: 8px;
+  padding: 4px 10px; font-size: 12px;
+}
+.safety-label { color: var(--system-red); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.safety-text { color: var(--text-primary); font-weight: 500; }
+.sf-sep { color: var(--text-tertiary); margin: 0 3px; }
+
+.bar-right { display: flex; align-items: center; gap: 4px; }
+.date-label { font-weight: 600; font-size: 17px; letter-spacing: -0.41px; margin-right: 12px; }
+.icon-btn { width: 34px; height: 34px; border: none; background: transparent; border-radius: 7px; cursor: pointer; display: grid; place-items: center; color: var(--gold); font-size: 17px; }
+.icon-btn:hover { background: var(--fill-tertiary); }
+
+.workspace { display: flex; flex-direction: column; height: calc(100vh - 56px - 56px); }
+
+/* APPLE SEGMENTED CONTROL */
+.segment-bar { display: flex; justify-content: center; padding: 8px 16px; }
+.segment-control { display: flex; background: var(--fill-tertiary); border-radius: 8px; padding: 2px; }
+.segment { padding: 5px 20px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; }
+.segment.active { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-weight: 600; }
+
+/* CAROUSEL - APPLE CARDS */
+.carousel-zone {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 0 24px; min-height: 0;
+}
+.card { background: var(--surface); border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
+.card.focal { width: 520px; height: 270px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.card.flanking { width: 300px; height: 210px; opacity: 0.4; transform: perspective(800px) rotateY(6deg) scale(0.82); }
+.card.flanking.right { transform: perspective(800px) rotateY(-6deg) scale(0.82); }
+.card-body { flex: 1; display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(4, 1fr); margin: 10px 12px 0; border: 0.5px solid var(--separator); border-radius: 8px; overflow: hidden; background: var(--bg); }
+.tooth-cell { border-right: 0.5px solid var(--separator); border-bottom: 0.5px solid var(--separator); display: grid; place-items: center; }
+.tooth-cell:nth-child(16n) { border-right: none; }
+.tooth-cell:nth-child(n+49) { border-bottom: none; }
+.tooth-pip { width: 50%; height: 55%; border-radius: 30% 30% 4px 4px; background: var(--text-tertiary); opacity: 0.5; }
+.pip-caries { background: var(--system-red); opacity: 0.4; }
+.pip-treated { background: var(--system-teal); opacity: 0.4; }
+.pip-crown { background: var(--gold); opacity: 0.7; border: 1.5px solid var(--gold-hover); }
+.pip-missing { background: transparent; border: 1.5px dashed var(--text-tertiary); opacity: 0.6; }
+.card-footer { text-align: center; font-weight: 400; font-size: 13px; color: var(--text-secondary); padding: 8px 0; }
+.card.focal .card-footer { color: var(--gold); font-weight: 600; }
+
+.divider { height: 8px; display: flex; align-items: center; justify-content: center; cursor: row-resize; }
+.divider-handle { width: 36px; height: 5px; background: var(--text-tertiary); border-radius: 3px; opacity: 0.5; }
+
+/* DATA TABLE — APPLE TYPOGRAPHY */
+.table-zone {
+  flex: 1; overflow: auto; min-height: 0;
+  background: var(--surface);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  margin: 0 8px;
+}
+
+.breakdown-table { width: 100%; border-collapse: collapse; }
+.breakdown-table thead {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--surface);
+}
+.breakdown-table th {
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  border-bottom: 0.5px solid var(--separator-opaque);
+}
+.breakdown-table td {
+  padding: 8px 14px;
+  border-bottom: 0.5px solid var(--separator);
+  vertical-align: middle;
+  font-size: 14px;
+  letter-spacing: -0.15px;
+}
+.breakdown-table tbody tr:active { background: var(--fill-tertiary); }
+.breakdown-table tbody tr:hover { background: var(--gold-soft); }
+
+/* Carried-over rows */
+.breakdown-table tbody tr.carried {
+  background: rgba(118,118,128,0.04);
+}
+.breakdown-table tbody tr.carried td { color: var(--text-secondary); }
+.breakdown-table tbody tr.carried:hover { background: var(--gold-soft); }
+.carried-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  display: block;
+  margin-top: 1px;
+}
+
+.tooth-num { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.surface { font-size: 13px; }
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+}
+.badge.done { background: rgba(52,199,89,0.15); color: #248A3D; }
+.badge.pending { background: rgba(255,149,0,0.15); color: #CC7700; }
+.check { color: var(--system-green); font-size: 14px; }
+.amount { font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; font-size: 14px; }
+
+/* Section separator in table */
+.section-row td {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-bottom: 0.5px solid var(--separator);
+}
+
+/* APPLE FOOTER */
+.footer {
+  height: 56px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--separator-opaque);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+}
+.footer-info { font-size: 15px; color: var(--text-secondary); letter-spacing: -0.24px; }
+.footer-info strong { font-size: 17px; color: var(--text-primary); margin-left: 6px; font-weight: 600; }
+.cta-btn {
+  background: var(--gold); color: var(--gold-text); border: none;
+  padding: 10px 20px; border-radius: 10px; font-weight: 600;
+  font-size: 15px; cursor: pointer; min-height: 44px;
+}
+.cta-btn:hover { filter: brightness(0.95); }
+.cta-btn:active { transform: scale(0.98); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="patient-selector">
+    <div class="avatar">RH</div>
+    <span class="patient-name">Russel Herrera</span>
+    <span style="color:var(--text-tertiary); font-size:12px">&#9662;</span>
+  </div>
+  <div class="safety-floor">
+    <span>&#9888;&#65039;</span>
+    <span class="safety-label">Allergies</span> <span class="safety-text">Penicillin, Latex</span>
+    <span class="sf-sep">&#183;</span>
+    <span class="safety-label">Meds</span> <span class="safety-text">Warfarin</span>
+    <span class="sf-sep">&#183;</span>
+    <span class="safety-label">Conditions</span> <span class="safety-text">Diabetes</span>
+  </div>
+  <div class="bar-right">
+    <span class="date-label">Mar 5, 2026</span>
+    <button class="icon-btn">&#8478;</button>
+    <button class="icon-btn">&#9998;</button>
+    <button class="icon-btn">&#128206;</button>
+    <button class="icon-btn">&#9881;</button>
+    <button class="icon-btn">&#8862;</button>
+  </div>
+</div>
+
+<div class="workspace">
+  <div class="segment-bar">
+    <div class="segment-control">
+      <button class="segment active">2026</button>
+      <button class="segment">2025</button>
+      <button class="segment">All</button>
+    </div>
+  </div>
+  <div class="carousel-zone">
+    <div class="card flanking"><div class="card-body" id="card1"></div><div class="card-footer">Jan 10, 2026</div></div>
+    <div class="card focal"><div class="card-body" id="card2"></div><div class="card-footer">Mar 5, 2026</div></div>
+    <div class="card flanking right" style="opacity:0.2; display:grid; place-items:center; background:var(--bg);"><div style="font-size:36px; color:var(--text-tertiary); font-weight:200;">+</div><div class="card-footer" style="color:var(--text-tertiary)">New Visit</div></div>
+  </div>
+  <div class="divider"><div class="divider-handle"></div></div>
+
+  <div class="table-zone">
+    <table class="breakdown-table">
+      <thead>
+        <tr>
+          <th>Tooth</th>
+          <th>Surface</th>
+          <th>Condition</th>
+          <th>Treatment Plan</th>
+          <th>Done</th>
+          <th>Status</th>
+          <th style="text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tooth-num">#14</td>
+          <td class="surface">MO</td>
+          <td>Caries</td>
+          <td>Composite Filling</td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="badge done">Done</span></td>
+          <td class="amount">&#8369;2,500</td>
+        </tr>
+        <tr>
+          <td class="tooth-num">#36</td>
+          <td class="surface">B</td>
+          <td>Fracture</td>
+          <td>Crown (PFM)</td>
+          <td></td>
+          <td><span class="badge pending">Pending</span></td>
+          <td class="amount">&#8369;8,000</td>
+        </tr>
+        <tr>
+          <td class="tooth-num">#21</td>
+          <td class="surface">I</td>
+          <td>Abrasion</td>
+          <td>Composite Bonding</td>
+          <td></td>
+          <td><span class="badge pending">Pending</span></td>
+          <td class="amount">&#8369;3,500</td>
+        </tr>
+        <tr>
+          <td class="tooth-num">#46</td>
+          <td class="surface">O</td>
+          <td>Caries</td>
+          <td>Amalgam Filling</td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="badge done">Done</span></td>
+          <td class="amount">&#8369;1,800</td>
+        </tr>
+        <tr class="section-row"><td colspan="7">Carried Over</td></tr>
+        <tr class="carried">
+          <td class="tooth-num">#8</td>
+          <td class="surface">O</td>
+          <td>Caries</td>
+          <td>Sealant <span class="carried-label">from Jan 10</span></td>
+          <td></td>
+          <td><span class="badge pending">Pending</span></td>
+          <td class="amount">&#8369;500</td>
+        </tr>
+        <tr class="carried">
+          <td class="tooth-num">#30</td>
+          <td class="surface">&mdash;</td>
+          <td>Impacted</td>
+          <td>Extraction <span class="carried-label">from Dec 15</span></td>
+          <td></td>
+          <td><span class="badge pending">Pending</span></td>
+          <td class="amount">&#8369;1,500</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-info">4 pending <strong>&#8369;13,500</strong></div>
+  <button class="cta-btn">Continue to Payment</button>
+</div>
+
+<script>
+function fillCard(id, conditions) {
+  const card = document.getElementById(id);
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 16; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'tooth-cell';
+      const pip = document.createElement('div');
+      pip.className = 'tooth-pip';
+      const num = r < 2 ? c + 1 : 32 - c;
+      if (conditions[num]) pip.classList.add('pip-' + conditions[num]);
+      cell.appendChild(pip);
+      card.appendChild(cell);
+    }
+  }
+}
+fillCard('card1', {5:'treated', 8:'caries', 14:'crown', 30:'missing'});
+fillCard('card2', {3:'treated', 9:'caries', 14:'caries', 21:'caries', 36:'crown', 46:'treated'});
+</script>
+</body>
+</html>

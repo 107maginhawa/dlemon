@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — Revenue Report · March 2026</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .logo-icon { font-size: 20px; line-height: 1; }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--gold-text);
+    }
+
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 14px 16px 4px;
+    }
+
+    .nav-item {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      text-decoration: none;
+    }
+
+    .nav-item:hover { background: var(--fill-tertiary); }
+
+    .nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+    .nav-item.active .nav-label { color: var(--gold-text); font-weight: 600; }
+    .nav-item.active .nav-icon svg { stroke: var(--gold-text); }
+
+    .nav-icon {
+      width: 20px; height: 20px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-icon svg {
+      width: 18px; height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.014em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .sidebar-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .sync-row {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .sync-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--system-green);
+    }
+
+    .sync-text {
+      font-size: 11px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .user-mini {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; min-height: 36px;
+    }
+
+    .user-mini-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .user-mini-name {
+      font-size: 12px; font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    .top-bar {
+      height: 56px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .top-bar-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .back-btn {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--gold-text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+      letter-spacing: -0.014em;
+      min-height: 44px;
+    }
+
+    .back-btn svg {
+      width: 16px; height: 16px;
+      stroke: var(--gold-text);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .top-bar-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .top-bar-right {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .btn-outline {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 10px;
+      padding: 0 14px;
+      min-height: 36px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Content */
+    .content-zone {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .card-header {
+      padding: 16px 20px 12px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.018em;
+      color: var(--text-primary);
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      text-align: left;
+      padding: 10px 20px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      background: var(--bg);
+    }
+
+    thead th:not(:first-child) { text-align: right; }
+    thead th:first-child { text-align: left; }
+    thead th:nth-child(2) { text-align: left; }
+
+    tbody tr {
+      height: 48px;
+    }
+
+    tbody tr:not(:last-child) td {
+      border-bottom: 0.5px solid var(--separator);
+    }
+
+    tbody td {
+      padding: 0 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+      letter-spacing: -0.012em;
+    }
+
+    tbody td:not(:first-child):not(:nth-child(2)) { text-align: right; }
+
+    /* Today highlight row */
+    tbody tr.today-row td {
+      background: var(--gold-soft);
+    }
+
+    tbody tr.today-row td:first-child {
+      position: relative;
+    }
+
+    tbody tr.today-row td:first-child::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--gold);
+    }
+
+    .today-badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin-left: 6px;
+      text-transform: uppercase;
+    }
+
+    .text-secondary-sm {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .zero-row td {
+      color: var(--text-tertiary);
+    }
+
+    .outstanding-red {
+      color: var(--system-red);
+      font-weight: 500;
+    }
+
+    .outstanding-zero {
+      color: var(--text-tertiary);
+    }
+
+    /* Ellipsis row */
+    .ellipsis-row td {
+      text-align: center !important;
+      color: var(--text-tertiary);
+      font-size: 18px;
+      letter-spacing: 4px;
+      height: 36px;
+      padding: 0 20px;
+    }
+
+    /* Summary row */
+    .total-row td {
+      font-weight: 600;
+      background: var(--bg);
+      border-top: 0.5px solid var(--separator-opaque);
+    }
+
+    /* Treatment frequency table */
+    .section-divider {
+      padding: 16px 20px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.014em;
+      border-top: 0.5px solid var(--separator-opaque);
+      background: var(--bg);
+    }
+
+    .cdt-code {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-family: 'SF Mono', 'Menlo', monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">🍋</span>
+    <span class="logo-text">Dentalemon</span>
+  </div>
+
+  <div class="nav-scroll">
+    <div class="nav-section-label">Main</div>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+      <span class="nav-label">Calendar</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span class="nav-label">Patients</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+      <span class="nav-label">Workspace</span>
+    </a>
+
+    <div class="nav-section-label">Finance</div>
+
+    <a class="nav-item active" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      <span class="nav-label">Reports</span>
+    </a>
+
+    <div class="nav-section-label">Admin</div>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg></span>
+      <span class="nav-label">Staff</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></span>
+      <span class="nav-label">Settings</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sync-row">
+      <div class="sync-dot"></div>
+      <span class="sync-text">Synced just now</span>
+    </div>
+    <div class="user-mini">
+      <div class="user-mini-avatar">RC</div>
+      <span class="user-mini-name">Dr. Ramon Cruz</span>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <a class="back-btn" href="reports.html">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Reports
+      </a>
+    </div>
+    <div class="top-bar-center">Revenue Report · March 2026</div>
+    <div class="top-bar-right">
+      <button class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+        CSV
+      </button>
+      <button class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-zone">
+
+    <!-- DAILY BREAKDOWN -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Daily Breakdown</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Patients</th>
+            <th>Treatments</th>
+            <th>Collected</th>
+            <th>Outstanding</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Mar 1</td>
+            <td>Saturday</td>
+            <td style="text-align:right">3</td>
+            <td style="text-align:right">6</td>
+            <td style="text-align:right">₱5,200</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr class="zero-row">
+            <td>Mar 2</td>
+            <td>Sunday</td>
+            <td style="text-align:right">—</td>
+            <td style="text-align:right">—</td>
+            <td style="text-align:right">₱0</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr>
+            <td>Mar 3</td>
+            <td>Monday</td>
+            <td style="text-align:right">5</td>
+            <td style="text-align:right">9</td>
+            <td style="text-align:right">₱8,400</td>
+            <td class="outstanding-red" style="text-align:right">₱2,000</td>
+          </tr>
+          <tr>
+            <td>Mar 4</td>
+            <td>Tuesday</td>
+            <td style="text-align:right">4</td>
+            <td style="text-align:right">7</td>
+            <td style="text-align:right">₱6,800</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr class="today-row">
+            <td>Mar 5 <span class="today-badge">Today</span></td>
+            <td>Wednesday</td>
+            <td style="text-align:right">4</td>
+            <td style="text-align:right">8</td>
+            <td style="text-align:right">₱4,300</td>
+            <td class="outstanding-red" style="text-align:right">₱11,500</td>
+          </tr>
+          <tr class="ellipsis-row">
+            <td colspan="6">· · ·</td>
+          </tr>
+          <tr>
+            <td>Mar 28</td>
+            <td>Saturday</td>
+            <td style="text-align:right">3</td>
+            <td style="text-align:right">5</td>
+            <td style="text-align:right">₱4,800</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr class="zero-row">
+            <td>Mar 29</td>
+            <td>Sunday</td>
+            <td style="text-align:right">—</td>
+            <td style="text-align:right">—</td>
+            <td style="text-align:right">₱0</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr>
+            <td>Mar 30</td>
+            <td>Monday</td>
+            <td style="text-align:right">4</td>
+            <td style="text-align:right">7</td>
+            <td style="text-align:right">₱5,600</td>
+            <td class="outstanding-zero" style="text-align:right">₱0</td>
+          </tr>
+          <tr>
+            <td>Mar 31</td>
+            <td>Tuesday</td>
+            <td style="text-align:right">2</td>
+            <td style="text-align:right">5</td>
+            <td style="text-align:right">₱3,100</td>
+            <td class="outstanding-red" style="text-align:right">₱800</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="2">Total — March 2026</td>
+            <td style="text-align:right">23</td>
+            <td style="text-align:right">47</td>
+            <td style="text-align:right">₱45,200</td>
+            <td class="outstanding-red" style="text-align:right">₱28,400</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TREATMENT FREQUENCY -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Treatment Frequency</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Procedure</th>
+            <th style="text-align:left">CDT Code</th>
+            <th>Count</th>
+            <th>Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Composite Filling</td>
+            <td><span class="cdt-code">D2391</span></td>
+            <td style="text-align:right">18</td>
+            <td style="text-align:right">₱45,000</td>
+          </tr>
+          <tr>
+            <td>Extraction</td>
+            <td><span class="cdt-code">D7140</span></td>
+            <td style="text-align:right">6</td>
+            <td style="text-align:right">₱9,000</td>
+          </tr>
+          <tr>
+            <td>Crown PFM</td>
+            <td><span class="cdt-code">D2710</span></td>
+            <td style="text-align:right">3</td>
+            <td style="text-align:right">₱24,000</td>
+          </tr>
+          <tr>
+            <td>Sealant</td>
+            <td><span class="cdt-code">D1351</span></td>
+            <td style="text-align:right">4</td>
+            <td style="text-align:right">₱2,000</td>
+          </tr>
+          <tr>
+            <td>Amalgam Filling</td>
+            <td><span class="cdt-code">D2393</span></td>
+            <td style="text-align:right">5</td>
+            <td style="text-align:right">₱9,000</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="2">Total</td>
+            <td style="text-align:right">36</td>
+            <td style="text-align:right">₱89,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /content-zone -->
+</div><!-- /main -->
+
+</body>
+</html>

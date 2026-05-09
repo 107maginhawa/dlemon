@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WS-15 · Payment Modal — Dentalemon</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --gold: #FFE97D;
+    --gold-hover: #F5DC60;
+    --gold-text: #4A4018;
+    --gold-soft: rgba(255,233,125,0.15);
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --separator: rgba(60,60,67,0.12);
+    --separator-opaque: #C6C6C8;
+    --fill-tertiary: rgba(118,118,128,0.12);
+    --system-red: #FF3B30;
+    --system-orange: #FF9500;
+    --system-green: #34C759;
+    --system-teal: #5AC8FA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 60px;
+    padding: 40px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .screen-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    align-self: flex-start;
+    margin-bottom: -40px;
+  }
+
+  /* ── Desktop-width modal frame ── */
+  .modal-frame {
+    width: 600px;
+    background: var(--bg);
+    border-radius: 20px;
+    border: 8px solid #1C1C1E;
+    box-shadow: 0 0 0 1px #3A3A3C, 0 40px 80px rgba(0,0,0,0.35);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    flex-shrink: 0;
+  }
+
+  /* ── The modal card itself ── */
+  .modal {
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.16), 0 0 0 0.5px var(--separator-opaque);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Modal header ── */
+  .modal-header {
+    padding: 20px 20px 16px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+    flex-shrink: 0;
+  }
+  .modal-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .modal-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .modal-subtitle { font-size: 13px; color: var(--text-secondary); }
+  .close-btn {
+    width: 30px; height: 30px;
+    background: var(--fill-tertiary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    min-width: 44px; min-height: 44px;
+    margin: -7px -7px -7px 0;
+  }
+
+  /* ── Modal body (scrollable) ── */
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 560px;
+    padding: 0;
+  }
+  .modal-body::-webkit-scrollbar { width: 4px; }
+  .modal-body::-webkit-scrollbar-track { background: transparent; }
+  .modal-body::-webkit-scrollbar-thumb { background: var(--separator-opaque); border-radius: 2px; }
+
+  /* ── Line items table ── */
+  .line-items { padding: 0 20px; }
+  .line-items-header {
+    display: grid;
+    grid-template-columns: 1fr 72px 64px 80px;
+    padding: 10px 0 6px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+  }
+  .lih-cell {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .lih-cell:not(:first-child) { text-align: right; }
+
+  .line-item {
+    display: grid;
+    grid-template-columns: 24px 1fr 72px 64px 80px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--separator);
+    gap: 4px;
+  }
+  .li-check {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--separator-opaque);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .li-check.checked { background: var(--system-green); border-color: var(--system-green); }
+  .li-check.checked svg { fill: white; display: block; }
+  .li-check svg { display: none; }
+
+  .li-treatment { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .li-tooth { font-size: 12px; color: var(--text-secondary); }
+  .li-status { font-size: 11px; text-align: right; }
+  .li-status.done { color: var(--system-green); }
+  .li-status.pending { color: var(--text-tertiary); }
+  .li-amount { font-size: 14px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+  .li-amount.dimmed { color: var(--text-tertiary); }
+
+  /* ── Subtotal row ── */
+  .subtotal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--gold-soft);
+    border-bottom: 0.5px solid var(--separator-opaque);
+  }
+  .subtotal-label { font-size: 13px; font-weight: 600; color: var(--gold-text); }
+  .subtotal-amount { font-size: 15px; font-weight: 700; color: var(--gold-text); font-variant-numeric: tabular-nums; }
+
+  /* ── Section groups ── */
+  .modal-section { padding: 14px 20px; border-bottom: 0.5px solid var(--separator-opaque); }
+  .modal-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── Toggle rows ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+  }
+  .toggle-label { font-size: 15px; color: var(--text-primary); }
+  .toggle-right { display: flex; align-items: center; gap: 10px; }
+  .toggle-value { font-size: 15px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+
+  /* iOS-style toggle */
+  .toggle {
+    width: 51px;
+    height: 31px;
+    background: var(--separator-opaque);
+    border-radius: 16px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--system-green); }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 27px; height: 27px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: left 0.2s;
+  }
+  .toggle.on .toggle-thumb { left: 22px; }
+
+  /* Discount input row */
+  .discount-input-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+  }
+  .discount-input-label { font-size: 15px; color: var(--text-primary); }
+  .discount-input-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--fill-tertiary);
+    border-radius: 8px;
+    padding: 0 10px;
+    height: 36px;
+    min-width: 80px;
+    justify-content: flex-end;
+  }
+  .discount-input-field input {
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    outline: none;
+    text-align: right;
+    width: 40px;
+    font-variant-numeric: tabular-nums;
+  }
+  .discount-pct { font-size: 15px; color: var(--text-secondary); }
+
+  .discount-applied {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* ── Grand total ── */
+  .grand-total-section {
+    padding: 16px 20px;
+    border-bottom: 0.5px solid var(--separator-opaque);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .grand-total-label { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .grand-total-amount { font-size: 22px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  /* ── Payment method ── */
+  .payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .pm-btn {
+    height: 52px;
+    border-radius: 12px;
+    background: var(--fill-tertiary);
+    border: 1.5px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 2px;
+  }
+  .pm-btn.active {
+    background: var(--gold);
+    border-color: var(--gold-hover);
+  }
+  .pm-emoji { font-size: 18px; line-height: 1; }
+  .pm-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .pm-btn.active .pm-label { color: var(--gold-text); }
+
+  /* ── Payment amount field ── */
+  .payment-amount-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--fill-tertiary);
+    border-radius: 10px;
+    padding: 0 14px;
+    height: 52px;
+    margin-bottom: 8px;
+  }
+  .payment-amount-label { font-size: 13px; color: var(--text-secondary); }
+  .payment-amount-value { font-size: 20px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  .change-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2px;
+    margin-bottom: 4px;
+  }
+  .change-label { font-size: 13px; color: var(--text-secondary); }
+  .change-value { font-size: 13px; font-weight: 500; color: var(--system-green); font-variant-numeric: tabular-nums; }
+
+  /* ── Footer ── */
+  .modal-footer {
+    padding: 14px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .btn-gold-full {
+    width: 100%;
+    height: 50px;
+    background: var(--gold);
+    color: var(--gold-text);
+    font-size: 17px;
+    font-weight: 600;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .btn-link {
+    text-align: center;
+    font-size: 15px;
+    color: #007AFF;
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ══════════════════════════════════════
+     VOIDED STATE
+  ══════════════════════════════════════ */
+  .voided-frame {
+    width: 600px;
+    background: var(--bg);
+    border-radius: 20px;
+    border: 8px solid #1C1C1E;
+    box-shadow: 0 0 0 1px #3A3A3C, 0 40px 80px rgba(0,0,0,0.35);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    flex-shrink: 0;
+  }
+
+  .modal-void {
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.16), 0 0 0 0.5px var(--separator-opaque);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .modal-header-void {
+    padding: 20px 20px 16px;
+    background: rgba(255,59,48,0.08);
+    border-bottom: 0.5px solid rgba(255,59,48,0.2);
+    flex-shrink: 0;
+  }
+  .modal-header-void .modal-title { color: var(--system-red); }
+
+  /* Void watermark */
+  .void-watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+    transform: rotate(-20deg);
+  }
+  .void-stamp {
+    font-size: 72px;
+    font-weight: 900;
+    color: rgba(255,59,48,0.18);
+    letter-spacing: 0.08em;
+    border: 6px solid rgba(255,59,48,0.18);
+    padding: 4px 16px;
+    border-radius: 8px;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .void-body { padding: 20px; opacity: 0.45; filter: grayscale(0.4); }
+  .void-line-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--separator);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .void-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .void-notice {
+    background: rgba(255,59,48,0.06);
+    border-top: 0.5px solid rgba(255,59,48,0.2);
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--system-red);
+    line-height: 1.5;
+    z-index: 11;
+    position: relative;
+  }
+  .void-notice strong { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<p class="screen-label">WS-15 · Payment Modal — Default State</p>
+
+<!-- ── Default payment modal ── -->
+<div class="modal-frame">
+  <div class="modal">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <span class="modal-title">Payment</span>
+        <div class="close-btn">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path d="M1 1l8 8M9 1L1 9" stroke="#8E8E93" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="modal-subtitle">Russel Herrera &middot; Mar 5, 2026</div>
+    </div>
+
+    <!-- Scrollable body -->
+    <div class="modal-body">
+
+      <!-- Line items -->
+      <div class="line-items">
+        <div class="line-items-header">
+          <div class="lih-cell" style="padding-left:28px;">Treatment</div>
+          <div class="lih-cell">Tooth</div>
+          <div class="lih-cell">Status</div>
+          <div class="lih-cell">Amount</div>
+        </div>
+
+        <!-- Row 1: Composite Filling — checked -->
+        <div class="line-item">
+          <div class="li-check checked">
+            <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </div>
+          <div>
+            <div class="li-treatment">Composite Filling</div>
+          </div>
+          <div class="li-tooth">#14 MO</div>
+          <div class="li-status done">Done ✓</div>
+          <div class="li-amount">₱2,500</div>
+        </div>
+
+        <!-- Row 2: Amalgam — checked -->
+        <div class="line-item">
+          <div class="li-check checked">
+            <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </div>
+          <div>
+            <div class="li-treatment">Amalgam Filling</div>
+          </div>
+          <div class="li-tooth">#46 O</div>
+          <div class="li-status done">Done ✓</div>
+          <div class="li-amount">₱1,800</div>
+        </div>
+
+        <!-- Row 3: Crown — pending, unchecked, dimmed -->
+        <div class="line-item" style="opacity:0.45;">
+          <div class="li-check"></div>
+          <div>
+            <div class="li-treatment" style="color:var(--text-secondary);">Crown (PFM)</div>
+          </div>
+          <div class="li-tooth">#36 B</div>
+          <div class="li-status pending">Pending</div>
+          <div class="li-amount dimmed">₱8,000</div>
+        </div>
+
+        <!-- Row 4: Composite Bonding — pending -->
+        <div class="line-item" style="opacity:0.45;">
+          <div class="li-check"></div>
+          <div>
+            <div class="li-treatment" style="color:var(--text-secondary);">Composite Bonding</div>
+          </div>
+          <div class="li-tooth">#21 I</div>
+          <div class="li-status pending">Pending</div>
+          <div class="li-amount dimmed">₱3,500</div>
+        </div>
+      </div>
+
+      <!-- Subtotal -->
+      <div class="subtotal-row">
+        <span class="subtotal-label">Subtotal (2 items being paid)</span>
+        <span class="subtotal-amount">₱4,300</span>
+      </div>
+
+      <!-- Discounts -->
+      <div class="modal-section">
+        <div class="modal-section-title">Discounts</div>
+
+        <div class="toggle-row">
+          <span class="toggle-label">PWD Discount</span>
+          <div class="toggle"><div class="toggle-thumb"></div></div>
+        </div>
+
+        <div style="height:0.5px;background:var(--separator);margin:2px 0;"></div>
+
+        <div class="toggle-row">
+          <span class="toggle-label">Senior Citizen</span>
+          <div class="toggle"><div class="toggle-thumb"></div></div>
+        </div>
+
+        <div style="height:0.5px;background:var(--separator);margin:2px 0;"></div>
+
+        <div class="discount-input-row">
+          <span class="discount-input-label">Manual Discount</span>
+          <div class="discount-input-field">
+            <input type="text" value="0" />
+            <span class="discount-pct">%</span>
+          </div>
+        </div>
+        <div class="discount-applied">Discount applied: ₱0</div>
+      </div>
+
+      <!-- Tax -->
+      <div class="modal-section">
+        <div class="modal-section-title">Tax</div>
+        <div class="toggle-row">
+          <span class="toggle-label">VAT 12%</span>
+          <div class="toggle-right">
+            <span class="toggle-value">₱0</span>
+            <div class="toggle"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grand total -->
+      <div class="grand-total-section">
+        <span class="grand-total-label">Grand Total</span>
+        <span class="grand-total-amount">₱4,300</span>
+      </div>
+
+      <!-- Payment method + amount -->
+      <div class="modal-section" style="border-bottom:none;">
+        <div class="modal-section-title">Payment Method</div>
+        <div class="payment-methods">
+          <div class="pm-btn active">
+            <span class="pm-emoji">💵</span>
+            <span class="pm-label">Cash</span>
+          </div>
+          <div class="pm-btn">
+            <span class="pm-emoji">💳</span>
+            <span class="pm-label">Card</span>
+          </div>
+          <div class="pm-btn">
+            <span class="pm-emoji">🏦</span>
+            <span class="pm-label">Transfer</span>
+          </div>
+        </div>
+
+        <div class="payment-amount-row">
+          <span class="payment-amount-label">Payment amount</span>
+          <span class="payment-amount-value">₱4,300</span>
+        </div>
+
+        <div class="change-row">
+          <span class="change-label">Change due</span>
+          <span class="change-value">₱0.00</span>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <div class="btn-gold-full">Generate Receipt &amp; Close</div>
+      <div class="btn-link">Partial Payment</div>
+    </div>
+
+  </div><!-- /modal -->
+</div><!-- /modal-frame -->
+
+
+<!-- ── Voided state ── -->
+<p class="screen-label">WS-15b · Payment Modal — Voided State</p>
+
+<div class="voided-frame">
+  <div class="modal-void">
+
+    <!-- Red-tinted header -->
+    <div class="modal-header-void">
+      <div class="modal-header-top">
+        <div>
+          <div class="modal-title">Payment — VOID</div>
+        </div>
+        <div class="close-btn">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path d="M1 1l8 8M9 1L1 9" stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="modal-subtitle" style="color:rgba(255,59,48,0.7);">Russel Herrera &middot; Mar 5, 2026</div>
+    </div>
+
+    <!-- Void watermark -->
+    <div class="void-watermark">
+      <div class="void-stamp">VOID</div>
+    </div>
+
+    <!-- Dimmed content -->
+    <div class="void-body">
+      <div class="void-line-item">
+        <span>Composite Filling · #14 MO</span>
+        <span>₱2,500</span>
+      </div>
+      <div class="void-line-item">
+        <span>Amalgam Filling · #46 O</span>
+        <span>₱1,800</span>
+      </div>
+      <div class="void-total">
+        <span>Total Paid</span>
+        <span>₱4,300</span>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:var(--text-tertiary);">
+        Cash &nbsp;&nbsp;|&nbsp;&nbsp; Receipt #0042 &nbsp;&nbsp;|&nbsp;&nbsp; Mar 5, 2026
+      </div>
+    </div>
+
+    <!-- Void notice -->
+    <div class="void-notice">
+      <strong>This payment was voided on Mar 5, 2026 by Dr. Ramon Cruz.</strong><br />
+      All associated balances have been reversed. A new payment can be recorded from the visit screen.
+    </div>
+
+  </div><!-- /modal-void -->
+</div><!-- /voided-frame -->
+
+</body>
+</html>

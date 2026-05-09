@@ -1,0 +1,772 @@
+/**
+ * dental-patient.test.ts — Module 1: Patient Records (FR2.x)
+ *
+ * FRs covered:
+ *   FR2.1  Patient List (listDentalPatients)
+ *   FR2.2  Patient Search (listDentalPatients?q=)
+ *   FR2.4  Patient Profile (getDentalPatient)
+ *   FR2.5  Duplicate Detection on create (createDentalPatient warning)
+ *   FR2.7  Archive/Restore with EC1 guard
+ *   FR2.8  Data Export CSV/JSON
+ *   FR2.9  Status Management
+ *   FR2.10 Follow-Up Indicators filter
+ *   FR2.12 Follow-Up Notes CRUD
+ *   FR2.13 Bulk Archive with EC1
+ *   FR2.15 Safety Floor aggregation
+ *   FR2.16 Emergency Contact fields
+ *   FR2.17 Communication Preferences fields
+ *   FR2.18 Recall/Next Visit Tracking
+ *   FR2.21 Itemized Statement
+ *   EC1    Archive blocked by active payment plan
+ */
+
+import { describe, test, expect, afterEach } from 'bun:test';
+import { sql, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { createDatabase } from '@/core/database';
+import { AppError } from '@/core/errors';
+import { createDentalPatient } from './createDentalPatient';
+import { listDentalPatients } from './listDentalPatients';
+import { getDentalPatient } from './getDentalPatient';
+import { updateDentalPatient } from './updateDentalPatient';
+import { archiveDentalPatient } from './archiveDentalPatient';
+import { restoreDentalPatient } from './restoreDentalPatient';
+import { bulkArchiveDentalPatients } from './bulkArchiveDentalPatients';
+import { exportDentalPatients } from './exportDentalPatients';
+import { listFollowUpNotes, addFollowUpNote } from './followUpNotes';
+import { getDentalPatientSafetyFloor } from './getDentalPatientSafetyFloor';
+import { getDentalPatientStatement } from './getDentalPatientStatement';
+import { PatientRepository } from '../patient/repos/patient.repo';
+import { patients } from '../patient/repos/patient.schema';
+import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
+import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
+import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
+
+const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+
+const STAFF_USER_ID = 'c1000000-0000-1000-8000-000000000001';
+const authedUser = { id: STAFF_USER_ID, email: 'staff@clinic.com' };
+
+const BRANCH_ID = 'd1000000-0000-1000-8000-000000000001';
+const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+
+// ─── App builder ─────────────────────────────────────────────────────────────
+
+function buildTestApp(user?: typeof authedUser) {
+  const app = new Hono();
+
+  app.onError((err, c) => {
+    if (err instanceof AppError) {
+      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    return c.json({ error: String(err.message) }, 500);
+  });
+
+  app.use('*', async (c, next) => {
+    const ctx = c as any;
+    ctx.set('database', db);
+    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
+    if (user) {
+      ctx.set('user', user);
+      ctx.set('session', { id: 'test-session' });
+    }
+    await next();
+  });
+
+  // Routes — export + bulk-archive must be before /:id
+  app.get('/dental/patients/export', exportDentalPatients as any);
+  app.post('/dental/patients/bulk-archive', bulkArchiveDentalPatients as any);
+  app.post('/dental/patients', createDentalPatient as any);
+  app.get('/dental/patients', listDentalPatients as any);
+  app.get('/dental/patients/:id', getDentalPatient as any);
+  app.patch('/dental/patients/:id', updateDentalPatient as any);
+  app.post('/dental/patients/:id/archive', archiveDentalPatient as any);
+  app.post('/dental/patients/:id/restore', restoreDentalPatient as any);
+  app.get('/dental/patients/:id/follow-up-notes', listFollowUpNotes as any);
+  app.post('/dental/patients/:id/follow-up-notes', addFollowUpNote as any);
+  app.get('/dental/patients/:id/safety-floor', getDentalPatientSafetyFloor as any);
+  app.get('/dental/patients/:id/statement', getDentalPatientStatement as any);
+
+  return app;
+}
+
+// ─── Seed helpers ─────────────────────────────────────────────────────────────
+
+async function createPatient(
+  app: Hono,
+  displayName = 'Maria Santos',
+  extra: Record<string, any> = {}
+) {
+  const res = await app.request('/dental/patients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ displayName, consentGiven: true, branchId: BRANCH_ID, ...extra }),
+  });
+  expect(res.status).toBe(201);
+  return res.json() as Promise<any>;
+}
+
+async function truncate() {
+  await db.execute(sql`TRUNCATE TABLE dental_payment, dental_invoice, medical_history_entry CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE patient CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE person CASCADE`);
+}
+
+// =============================================================================
+// FR2.1: Patient List
+// =============================================================================
+
+describe('FR2.1: listDentalPatients', () => {
+  afterEach(truncate);
+
+  test('returns 200 with patients array', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Juan dela Cruz');
+    await createPatient(app, 'Maria Santos');
+
+    const res = await app.request('/dental/patients');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.patients)).toBe(true);
+    expect(body.patients.length).toBeGreaterThanOrEqual(2);
+    expect(typeof body.total).toBe('number');
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request('/dental/patients');
+    expect(res.status).toBe(401);
+  });
+
+  test('filters by branchId', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Branch Patient', { branchId: BRANCH_ID });
+
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients.every((p: any) => p.preferredBranchId === BRANCH_ID)).toBe(true);
+  });
+
+  test('returns empty array when no patients', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request('/dental/patients');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients).toEqual([]);
+  });
+});
+
+// =============================================================================
+// FR2.2: Patient Search
+// =============================================================================
+
+describe('FR2.2: patient search via ?q= param', () => {
+  afterEach(truncate);
+
+  test('finds patient by first name partial match', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Roberto Lim');
+    await createPatient(app, 'Elena Garcia');
+
+    const res = await app.request('/dental/patients?q=rob');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients.some((p: any) => p.displayName.toLowerCase().includes('roberto'))).toBe(true);
+  });
+
+  test('finds patient by last name partial match', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Carlos Mendoza');
+
+    const res = await app.request('/dental/patients?q=mendoz');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients.length).toBeGreaterThanOrEqual(1);
+    expect(body.patients.some((p: any) => p.displayName.includes('Mendoza'))).toBe(true);
+  });
+
+  test('returns empty when no match', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Maria Santos');
+
+    const res = await app.request('/dental/patients?q=nonexistentxyz');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients.length).toBe(0);
+  });
+});
+
+// =============================================================================
+// FR2.4: Patient Profile
+// =============================================================================
+
+describe('FR2.4: getDentalPatient — patient profile', () => {
+  afterEach(truncate);
+
+  test('returns full profile with visitCount, outstandingBalanceCents', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Elena Garcia');
+
+    const res = await app.request(`/dental/patients/${p.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.id).toBe(p.id);
+    expect(body.displayName).toBe('Elena Garcia');
+    expect(typeof body.visitCount).toBe('number');
+    expect(typeof body.outstandingBalanceCents).toBe('number');
+    expect(body.status).toBe('active');
+  });
+
+  test('returns 404 for non-existent patient', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}`);
+    expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// FR2.5: Duplicate Detection (non-blocking warning)
+// =============================================================================
+
+describe('FR2.5: duplicate detection on create', () => {
+  afterEach(truncate);
+
+  test('creates patient and returns warning when similar name exists', async () => {
+    const app = buildTestApp(authedUser);
+
+    // Create first patient
+    await createPatient(app, 'Maria Santos');
+
+    // Create second with same first name — should get warning
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Maria Santos', consentGiven: true, branchId: BRANCH_ID }),
+    });
+
+    // Non-blocking: still creates (201), but includes warning
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.id).toBeTruthy();
+    expect(body.warning).toBeDefined();
+    expect(body.warning.hasDuplicates).toBe(true);
+    expect(body.warning.count).toBeGreaterThanOrEqual(1);
+  });
+
+  test('no warning when name is unique', async () => {
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Unique Patient XYZ', consentGiven: true }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.warning).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// FR2.7: Archive/Restore + EC1
+// =============================================================================
+
+describe('FR2.7: archive and restore patient (EC1 guard)', () => {
+  afterEach(truncate);
+
+  test('archives an active patient successfully', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Carlos Mendoza');
+
+    const res = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('archived');
+  });
+
+  test('EC1: returns error when patient has active payment plan', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Payment Plan Patient');
+
+    // Set hasActivePaymentPlan=true directly
+    await db.update(patients).set({ hasActivePaymentPlan: true }).where(eq(patients.id, p.id));
+
+    const res = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('ARCHIVE_BLOCKED');
+  });
+
+  test('restore brings patient back to active status', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Roberto Lim');
+
+    // Archive first
+    await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+
+    // Then restore
+    const res = await app.request(`/dental/patients/${p.id}/restore`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('active');
+  });
+
+  test('returns 404 for non-existent patient', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/archive`, { method: 'POST' });
+    expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
+// FR2.8: Data Export
+// =============================================================================
+
+describe('FR2.8: export dental patients', () => {
+  afterEach(truncate);
+
+  test('exports as JSON by default', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Export Test Patient');
+
+    const res = await app.request('/dental/patients/export');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.patients)).toBe(true);
+    expect(typeof body.exportedAt).toBe('string');
+    expect(typeof body.total).toBe('number');
+  });
+
+  test('exports as CSV with correct Content-Type', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'CSV Patient');
+
+    const res = await app.request('/dental/patients/export?format=csv');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/text\/csv/i);
+    const text = await res.text();
+    expect(text).toContain('id,displayName');
+    expect(text).toContain('CSV Patient');
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request('/dental/patients/export');
+    expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// FR2.9: Status Management
+// =============================================================================
+
+describe('FR2.9: patient status management', () => {
+  afterEach(truncate);
+
+  test('new patient has status=active', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Status Patient');
+    expect(p.status).toBe('active');
+  });
+
+  test('PATCH /dental/patients/:id can set status to archived', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Status Patient 2');
+
+    const res = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'archived' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('archived');
+  });
+
+  test('returns 400 for invalid status value', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Status Patient 3');
+
+    const res = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'invalid_status' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+// =============================================================================
+// FR2.10: Follow-Up Indicators
+// =============================================================================
+
+describe('FR2.10: follow-up indicator filter', () => {
+  afterEach(truncate);
+
+  test('filters patients by needsFollowUp=true', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Follow-Up Patient');
+
+    // Set needsFollowUp=true
+    await db.update(patients).set({ needsFollowUp: true }).where(eq(patients.id, p.id));
+
+    const res = await app.request('/dental/patients?needsFollowUp=true');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients.some((pt: any) => pt.id === p.id)).toBe(true);
+    expect(body.patients.every((pt: any) => pt.needsFollowUp === true)).toBe(true);
+  });
+
+  test('patient in list response includes needsFollowUp field', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'NeedsFU Patient');
+
+    const res = await app.request('/dental/patients');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients[0]).toHaveProperty('needsFollowUp');
+  });
+});
+
+// =============================================================================
+// FR2.12: Follow-Up Notes CRUD
+// =============================================================================
+
+describe('FR2.12: follow-up notes CRUD', () => {
+  afterEach(truncate);
+
+  test('adds a follow-up note and returns 201', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Note Patient');
+
+    const res = await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Schedule 3-month recall for crown check' }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.note.text).toBe('Schedule 3-month recall for crown check');
+    expect(body.note.id).toBeTruthy();
+    expect(body.note.createdAt).toBeTruthy();
+    expect(body.total).toBe(1);
+  });
+
+  test('lists follow-up notes for patient', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Note Patient 2');
+
+    await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'First note' }),
+    });
+    await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Second note' }),
+    });
+
+    const res = await app.request(`/dental/patients/${p.id}/follow-up-notes`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.notes.length).toBe(2);
+    expect(body.total).toBe(2);
+  });
+
+  test('returns 400 when note text is empty', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Note Patient 3');
+
+    const res = await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('adding a note sets needsFollowUp=true', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Note Patient 4');
+
+    await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Needs follow-up' }),
+    });
+
+    const profileRes = await app.request(`/dental/patients/${p.id}`);
+    const profile = await profileRes.json() as any;
+    expect(profile.needsFollowUp).toBe(true);
+  });
+
+  test('returns 404 for non-existent patient', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Test' }),
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
+// FR2.13: Bulk Archive with EC1
+// =============================================================================
+
+describe('FR2.13: bulk archive with EC1 guard', () => {
+  afterEach(truncate);
+
+  test('archives multiple patients and returns per-patient results', async () => {
+    const app = buildTestApp(authedUser);
+    const p1 = await createPatient(app, 'Bulk Patient 1');
+    const p2 = await createPatient(app, 'Bulk Patient 2');
+
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientIds: [p1.id, p2.id] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.results.length).toBe(2);
+    expect(body.successCount).toBe(2);
+    expect(body.failCount).toBe(0);
+  });
+
+  test('EC1: reports failure for patients with active payment plans', async () => {
+    const app = buildTestApp(authedUser);
+    const p1 = await createPatient(app, 'Bulk No Plan');
+    const p2 = await createPatient(app, 'Bulk Has Plan');
+
+    // Mark p2 with active payment plan
+    await db.update(patients).set({ hasActivePaymentPlan: true }).where(eq(patients.id, p2.id));
+
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientIds: [p1.id, p2.id] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.successCount).toBe(1);
+    expect(body.failCount).toBe(1);
+    const p2Result = body.results.find((r: any) => r.id === p2.id);
+    expect(p2Result?.success).toBe(false);
+    expect(p2Result?.reason).toMatch(/payment plan/i);
+  });
+
+  test('returns 400 when patientIds is empty', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientIds: [] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientIds: [NONEXISTENT_ID] }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// FR2.15: Safety Floor
+// =============================================================================
+
+describe('FR2.15: patient safety floor', () => {
+  afterEach(truncate);
+
+  test('returns empty safety floor for new patient', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Safety Patient');
+
+    const res = await app.request(`/dental/patients/${p.id}/safety-floor`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patientId).toBe(p.id);
+    expect(body.allergies).toEqual([]);
+    expect(body.medications).toEqual([]);
+    expect(body.conditions).toEqual([]);
+    expect(body.hasAlerts).toBe(false);
+  });
+
+  test('returns allergies and hasAlerts=true when allergies exist', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Allergy Patient');
+
+    // Seed a medical history allergy entry
+    await db.insert(medicalHistoryEntries).values({
+      id: crypto.randomUUID(),
+      patientId: p.id,
+      entryType: 'allergy',
+      displayName: 'Penicillin',
+      active: true,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    });
+
+    const res = await app.request(`/dental/patients/${p.id}/safety-floor`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.hasAlerts).toBe(true);
+    expect(body.allergies.length).toBe(1);
+    expect(body.allergies[0].displayName).toBe('Penicillin');
+  });
+
+  test('returns 404 for non-existent patient', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/safety-floor`);
+    expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
+// FR2.16: Emergency Contact fields
+// =============================================================================
+
+describe('FR2.16: emergency contact', () => {
+  afterEach(truncate);
+
+  test('sets and retrieves emergency contact', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'EC Patient');
+
+    const ec = { name: 'Jose Santos', relationship: 'spouse', phone: '+63 917 123 4567' };
+
+    const patchRes = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emergencyContact: ec }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const getRes = await app.request(`/dental/patients/${p.id}`);
+    const body = await getRes.json() as any;
+    expect(body.emergencyContact.name).toBe('Jose Santos');
+    expect(body.emergencyContact.relationship).toBe('spouse');
+  });
+});
+
+// =============================================================================
+// FR2.17: Communication Preferences
+// =============================================================================
+
+describe('FR2.17: communication preferences', () => {
+  afterEach(truncate);
+
+  test('sets and retrieves communication preferences', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Comms Patient');
+
+    const prefs = { preferredChannel: 'sms', reminderOptIn: true, preferredLanguage: 'fil' };
+
+    const patchRes = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ communicationPreferences: prefs }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const getRes = await app.request(`/dental/patients/${p.id}`);
+    const body = await getRes.json() as any;
+    expect(body.communicationPreferences.preferredChannel).toBe('sms');
+    expect(body.communicationPreferences.reminderOptIn).toBe(true);
+  });
+});
+
+// =============================================================================
+// FR2.18: Recall / Next Visit Tracking
+// =============================================================================
+
+describe('FR2.18: recall / next visit tracking', () => {
+  afterEach(truncate);
+
+  test('sets recall date and note', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Recall Patient');
+
+    const patchRes = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recallDate: '2026-08-15', recallNote: '6-month cleaning' }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const getRes = await app.request(`/dental/patients/${p.id}`);
+    const body = await getRes.json() as any;
+    expect(body.recallDate).toBe('2026-08-15');
+    expect(body.recallNote).toBe('6-month cleaning');
+  });
+
+  test('recall date appears in patient list response', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Recall List Patient');
+
+    await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recallDate: '2026-09-01' }),
+    });
+
+    const listRes = await app.request('/dental/patients');
+    const body = await listRes.json() as any;
+    const found = body.patients.find((pt: any) => pt.id === p.id);
+    expect(found?.recallDate).toBe('2026-09-01');
+  });
+});
+
+// =============================================================================
+// FR2.21: Itemized Statement
+// =============================================================================
+
+describe('FR2.21: itemized patient statement', () => {
+  afterEach(truncate);
+
+  test('returns statement with summary, visits, invoices, payments arrays', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Statement Patient');
+
+    const res = await app.request(`/dental/patients/${p.id}/statement`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patientId).toBe(p.id);
+    expect(body.summary).toBeDefined();
+    expect(typeof body.summary.totalBilledCents).toBe('number');
+    expect(typeof body.summary.totalPaidCents).toBe('number');
+    expect(typeof body.summary.outstandingBalanceCents).toBe('number');
+    expect(Array.isArray(body.visits)).toBe(true);
+    expect(Array.isArray(body.invoices)).toBe(true);
+    expect(Array.isArray(body.payments)).toBe(true);
+    expect(typeof body.generatedAt).toBe('string');
+  });
+
+  test('returns 404 for non-existent patient', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/statement`);
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/statement`);
+    expect(res.status).toBe(401);
+  });
+});

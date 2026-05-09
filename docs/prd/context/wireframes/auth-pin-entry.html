@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — PIN Entry</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 24px 40px;
+    }
+
+    /* Back button */
+    .back-btn {
+      align-self: flex-start;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 17px;
+      color: var(--gold-text);
+      cursor: pointer;
+      min-height: 44px;
+      padding: 0 4px;
+      text-decoration: none;
+      letter-spacing: -0.022em;
+    }
+
+    .back-btn svg {
+      width: 10px;
+      height: 16px;
+      stroke: var(--gold-text);
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    /* ── Normal PIN Entry State ── */
+    .pin-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 320px;
+      padding-top: 16px;
+      padding-bottom: 32px;
+    }
+
+    /* User identity block */
+    .user-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      box-shadow: 0 2px 8px rgba(255,233,125,0.40);
+    }
+
+    .user-name {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+      margin-top: 2px;
+    }
+
+    .user-role {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--text-secondary);
+    }
+
+    /* PIN dots */
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 44px;
+      align-items: center;
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid var(--separator-opaque);
+      background: transparent;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--text-primary);
+      border-color: var(--text-primary);
+      transform: scale(1.05);
+    }
+
+    .pin-dot.filled-gold {
+      background: var(--gold-text);
+      border-color: var(--gold-text);
+    }
+
+    /* Numeric keypad */
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      grid-template-rows: repeat(4, 72px);
+      gap: 12px;
+    }
+
+    .key {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      background: var(--fill-tertiary);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.10s ease, transform 0.08s ease;
+      outline: none;
+      gap: 1px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key:hover {
+      background: var(--gold-soft);
+    }
+
+    .key:active {
+      background: var(--gold);
+      transform: scale(0.94);
+    }
+
+    .key-num {
+      font-size: 24px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .key-alpha {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* Asterisk key (empty placeholder) */
+    .key.key-empty {
+      background: transparent;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* Backspace key */
+    .key.key-back svg {
+      width: 26px;
+      height: 20px;
+      stroke: var(--text-primary);
+      stroke-width: 1.8;
+      fill: none;
+    }
+
+    /* Forgot PIN */
+    .forgot-pin {
+      margin-top: 28px;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: -0.018em;
+      color: var(--text-secondary);
+      cursor: pointer;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      border-bottom: 1px solid var(--separator-opaque);
+    }
+
+    .forgot-pin:hover {
+      color: var(--gold-text);
+    }
+
+    /* ────────────────────────────────────────
+       LOCKOUT STATE VARIANT
+    ──────────────────────────────────────── */
+
+    .lockout-section {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .lockout-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+
+    .lockout-variant {
+      background: var(--surface);
+      border-radius: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px var(--separator-opaque);
+      padding: 28px 24px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Red tint overlay */
+    .lockout-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,59,48,0.04);
+      pointer-events: none;
+      border-radius: 20px;
+    }
+
+    /* Lockout identity */
+    .lockout-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255,59,48,0.12);
+      color: var(--system-red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .lockout-name {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .lockout-role {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    /* Lockout dots */
+    .lockout-dots {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .lockout-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255,59,48,0.25);
+      border: 1.5px solid rgba(255,59,48,0.35);
+    }
+
+    /* Lockout message */
+    .lockout-message {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,59,48,0.09);
+      border: 0.5px solid rgba(255,59,48,0.22);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+
+    .lockout-message svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--system-red);
+      stroke-width: 2;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    .lockout-message-text {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--system-red);
+    }
+
+    .lockout-message-timer {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--system-red);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Lockout keypad (dimmed) */
+    .lockout-keypad-wrap {
+      opacity: 0.32;
+      pointer-events: none;
+    }
+
+    .lockout-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(4, 60px);
+      gap: 10px;
+    }
+
+    .lockout-key {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      background: var(--fill-tertiary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+    }
+
+    .lockout-key-num {
+      font-size: 20px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Section divider */
+    .section-divider {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 48px 0 28px;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 0.5px;
+      background: var(--separator-opaque);
+    }
+
+    .divider-text {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    /* Background decoration */
+    .bg-circle {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bg-circle-1 {
+      width: 300px; height: 300px;
+      top: -60px; right: -60px;
+      background: radial-gradient(circle, rgba(255,233,125,0.10) 0%, transparent 70%);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-circle bg-circle-1"></div>
+
+  <!-- Back navigation -->
+  <a class="back-btn" href="auth-user-select.html" aria-label="Go back to profile selection">
+    <svg viewBox="0 0 10 16"><polyline points="9,1 1,8 9,15"/></svg>
+    Profiles
+  </a>
+
+  <!-- ── Normal PIN Entry State ── -->
+  <div class="pin-container">
+
+    <!-- User identity -->
+    <div class="user-identity">
+      <div class="avatar" aria-hidden="true">RC</div>
+      <div class="user-name">Dr. Ramon Cruz</div>
+      <div class="user-role">Dentist-Owner</div>
+    </div>
+
+    <!-- 6 PIN dots (3 filled, 3 empty = mid-entry state) -->
+    <div class="pin-dots" role="status" aria-label="3 of 6 PIN digits entered">
+      <div class="pin-dot filled" aria-hidden="true"></div>
+      <div class="pin-dot filled" aria-hidden="true"></div>
+      <div class="pin-dot filled" aria-hidden="true"></div>
+      <div class="pin-dot" aria-hidden="true"></div>
+      <div class="pin-dot" aria-hidden="true"></div>
+      <div class="pin-dot" aria-hidden="true"></div>
+    </div>
+
+    <!-- Numeric keypad 3×4 -->
+    <div class="keypad" role="group" aria-label="PIN keypad">
+
+      <!-- Row 1: 1 2 3 -->
+      <button class="key" aria-label="1">
+        <span class="key-num">1</span>
+        <span class="key-alpha"> </span>
+      </button>
+      <button class="key" aria-label="2">
+        <span class="key-num">2</span>
+        <span class="key-alpha">ABC</span>
+      </button>
+      <button class="key" aria-label="3">
+        <span class="key-num">3</span>
+        <span class="key-alpha">DEF</span>
+      </button>
+
+      <!-- Row 2: 4 5 6 -->
+      <button class="key" aria-label="4">
+        <span class="key-num">4</span>
+        <span class="key-alpha">GHI</span>
+      </button>
+      <button class="key" aria-label="5">
+        <span class="key-num">5</span>
+        <span class="key-alpha">JKL</span>
+      </button>
+      <button class="key" aria-label="6">
+        <span class="key-num">6</span>
+        <span class="key-alpha">MNO</span>
+      </button>
+
+      <!-- Row 3: 7 8 9 -->
+      <button class="key" aria-label="7">
+        <span class="key-num">7</span>
+        <span class="key-alpha">PQRS</span>
+      </button>
+      <button class="key" aria-label="8">
+        <span class="key-num">8</span>
+        <span class="key-alpha">TUV</span>
+      </button>
+      <button class="key" aria-label="9">
+        <span class="key-num">9</span>
+        <span class="key-alpha">WXYZ</span>
+      </button>
+
+      <!-- Row 4: * 0 ← -->
+      <button class="key key-empty" aria-hidden="true"></button>
+      <button class="key" aria-label="0">
+        <span class="key-num">0</span>
+      </button>
+      <button class="key key-back" aria-label="Delete last digit">
+        <svg viewBox="0 0 28 22">
+          <path d="M10 1L2 11l8 10h16V1H10z"/>
+          <line x1="14" y1="7.5" x2="22" y2="14.5"/>
+          <line x1="22" y1="7.5" x2="14" y2="14.5"/>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- Forgot PIN -->
+    <a class="forgot-pin" href="#" tabindex="0">Forgot PIN?</a>
+
+  </div>
+
+  <!-- ── Section divider ── -->
+  <div class="section-divider">
+    <div class="divider-line"></div>
+    <span class="divider-text">Lockout state variant</span>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- ── Lockout State Variant ── -->
+  <div class="lockout-section">
+    <p class="lockout-label">Visual state: too many attempts</p>
+
+    <div class="lockout-variant">
+      <div class="lockout-overlay"></div>
+
+      <!-- Identity -->
+      <div class="lockout-avatar">RC</div>
+      <div class="lockout-name">Dr. Ramon Cruz</div>
+      <div class="lockout-role">Dentist-Owner</div>
+
+      <!-- All dots red-tinted = failed -->
+      <div class="lockout-dots" aria-label="PIN locked">
+        <div class="lockout-dot"></div>
+        <div class="lockout-dot"></div>
+        <div class="lockout-dot"></div>
+        <div class="lockout-dot"></div>
+        <div class="lockout-dot"></div>
+        <div class="lockout-dot"></div>
+      </div>
+
+      <!-- Error message -->
+      <div class="lockout-message" role="alert">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span class="lockout-message-text">
+          Too many attempts. Try again in&nbsp;<span class="lockout-message-timer">0:30</span>
+        </span>
+      </div>
+
+      <!-- Dimmed keypad -->
+      <div class="lockout-keypad-wrap" aria-hidden="true">
+        <div class="lockout-keypad">
+          <div class="lockout-key"><span class="lockout-key-num">1</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">2</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">3</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">4</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">5</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">6</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">7</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">8</span></div>
+          <div class="lockout-key"><span class="lockout-key-num">9</span></div>
+          <div class="lockout-key" style="background:transparent;"></div>
+          <div class="lockout-key"><span class="lockout-key-num">0</span></div>
+          <div class="lockout-key" style="background:transparent;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

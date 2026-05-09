@@ -3,7 +3,7 @@
  * Encapsulates all database operations for the patients table
  */
 
-import { eq, and, or, ilike, isNull, inArray, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, ilike, isNull, inArray, sql, type SQL, isNotNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
@@ -19,6 +19,15 @@ export interface PatientFilters {
   person?: string;
   q?: string; // General search query
   ids?: string[]; // Filter by patient IDs using IN query
+  branchId?: string; // Filter by preferred dental branch
+  branchIds?: string[]; // Filter by multiple branch IDs
+  needsFollowUp?: boolean; // Filter by follow-up flag
+  status?: string; // Filter by patient status ('active' | 'archived')
+}
+
+export interface ArchiveResult {
+  success: boolean;
+  reason?: string;
 }
 
 export class PatientRepository extends DatabaseRepository<Patient, NewPatient, PatientFilters> {
@@ -43,6 +52,18 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
 
     if (filters.ids && filters.ids.length > 0) {
       conditions.push(inArray(patients.id, filters.ids));
+    }
+
+    if (filters.branchId) {
+      conditions.push(eq(patients.preferredBranchId, filters.branchId));
+    }
+
+    if (filters.needsFollowUp !== undefined) {
+      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
+    }
+
+    if (filters.status) {
+      conditions.push(eq(patients.status, filters.status));
     }
 
     // General search would require joining with persons table
@@ -108,7 +129,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Find patients with person data joined
    */
   async findManyWithPerson(
-    filters?: PatientFilters & { q?: string },
+    filters?: PatientFilters,
     options?: { pagination?: PaginationOptions }
   ): Promise<PatientWithPerson[]> {
     this.logger?.debug({ filters, options }, 'Finding patients with person data');
@@ -143,6 +164,30 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       );
     }
 
+    if (filters?.branchIds && filters.branchIds.length > 0) {
+      conditions.push(
+        or(
+          inArray(patients.preferredBranchId, filters.branchIds),
+          isNull(patients.preferredBranchId)
+        )
+      );
+    } else if (filters?.branchId) {
+      conditions.push(
+        or(
+          eq(patients.preferredBranchId, filters.branchId),
+          isNull(patients.preferredBranchId)
+        )
+      );
+    }
+
+    if (filters?.needsFollowUp !== undefined) {
+      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
+    }
+
+    if (filters?.status) {
+      conditions.push(eq(patients.status, filters.status));
+    }
+
     if (conditions.length > 0) {
       query.where(and(...conditions));
     }
@@ -163,6 +208,162 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
     return results.map(({ patient, person }) => ({
       ...patient,
       person
+    })) as PatientWithPerson[];
+  }
+
+  /**
+   * Count patients matching filters (for accurate pagination totals).
+   * Mirrors findManyWithPerson filter logic without pagination.
+   */
+  async countWithPerson(
+    filters?: PatientFilters
+  ): Promise<number> {
+    const conditions = [];
+
+    if (filters?.person) {
+      conditions.push(eq(patients.person, filters.person));
+    }
+
+    if (filters?.ids && filters.ids.length > 0) {
+      conditions.push(inArray(patients.id, filters.ids));
+    }
+
+    if (filters?.q) {
+      conditions.push(
+        or(
+          ilike(persons.firstName, `%${filters.q}%`),
+          ilike(persons.lastName, `%${filters.q}%`)
+        )
+      );
+    }
+
+    if (filters?.branchIds && filters.branchIds.length > 0) {
+      conditions.push(
+        or(
+          inArray(patients.preferredBranchId, filters.branchIds),
+          isNull(patients.preferredBranchId)
+        )
+      );
+    } else if (filters?.branchId) {
+      conditions.push(
+        or(
+          eq(patients.preferredBranchId, filters.branchId),
+          isNull(patients.preferredBranchId)
+        )
+      );
+    }
+
+    if (filters?.needsFollowUp !== undefined) {
+      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
+    }
+
+    if (filters?.status) {
+      conditions.push(eq(patients.status, filters.status));
+    }
+
+    const query = this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(patients)
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .$dynamic();
+
+    if (conditions.length > 0) {
+      query.where(and(...conditions));
+    }
+
+    const result = await query;
+    return Number(result[0]?.count ?? 0);
+  }
+
+  /**
+   * Archive a patient (soft-archive: sets status='archived').
+   * EC1: blocks if the patient has an active payment plan.
+   */
+  async archivePatient(id: string): Promise<ArchiveResult> {
+    const patient = await this.findOneById(id);
+    if (!patient) {
+      return { success: false, reason: 'Patient not found' };
+    }
+
+    if (patient.hasActivePaymentPlan) {
+      return {
+        success: false,
+        reason: 'Cannot archive patient with an active payment plan',
+      };
+    }
+
+    if (patient.status === 'archived') {
+      return { success: false, reason: 'Patient is already archived' };
+    }
+
+    // Atomic WHERE guard prevents TOCTOU: concurrent calls both reading status='active'
+    const [updated] = await this.db
+      .update(patients)
+      .set({ status: 'archived', archivedAt: new Date(), needsFollowUp: false, updatedAt: new Date() })
+      .where(and(eq(patients.id, id), eq(patients.status, 'active')))
+      .returning();
+
+    if (!updated) {
+      return { success: false, reason: 'Patient status changed concurrently' };
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Restore an archived patient back to active status.
+   */
+  async restorePatient(id: string): Promise<ArchiveResult> {
+    const patient = await this.findOneById(id);
+    if (!patient) {
+      return { success: false, reason: 'Patient not found' };
+    }
+
+    if (patient.status !== 'archived') {
+      return { success: false, reason: 'Patient is not archived' };
+    }
+
+    // Atomic WHERE guard prevents TOCTOU on concurrent restore calls
+    const [updated] = await this.db
+      .update(patients)
+      .set({ status: 'active', archivedAt: null, updatedAt: new Date() })
+      .where(and(eq(patients.id, id), eq(patients.status, 'archived')))
+      .returning();
+
+    if (!updated) {
+      return { success: false, reason: 'Patient status changed concurrently' };
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Check if a patient with a similar name already exists (FR2.5: duplicate detection).
+   * Returns matching patients for the same branch — non-blocking (caller decides).
+   */
+  async findPotentialDuplicates(firstName: string, lastName: string | null, branchId?: string): Promise<PatientWithPerson[]> {
+    const conditions: SQL<unknown>[] = [
+      ilike(persons.firstName, `%${firstName}%`),
+    ];
+
+    if (lastName) {
+      conditions.push(ilike(persons.lastName, `%${lastName}%`));
+    }
+
+    if (branchId) {
+      conditions.push(eq(patients.preferredBranchId, branchId));
+    }
+
+    const results = await this.db
+      .select({ patient: patients, person: persons })
+      .from(patients)
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .where(and(...conditions))
+      .limit(5);
+
+    return results.map(({ patient, person }) => ({
+      ...patient,
+      person,
     })) as PatientWithPerson[];
   }
 

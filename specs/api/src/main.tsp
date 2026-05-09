@@ -21,6 +21,17 @@ import "./modules/email.tsp";
 import "./modules/reviews.tsp";
 
 // ============================================================================
+// DENTALEMON MODULES
+// ============================================================================
+import "./modules/dental-org.tsp";
+import "./modules/dental-patient.tsp";
+import "./modules/dental-visit.tsp";
+import "./modules/dental-clinical.tsp";
+import "./modules/dental-pmd.tsp";
+import "./modules/dental-scheduling.tsp";
+import "./modules/dental-billing.tsp";
+
+// ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
 // ============================================================================
 
@@ -286,6 +297,90 @@ using TypeSpec.OpenAPI;
   description: "Public health reporting and surveillance. Electronic case reporting (eCR), immunization registry integration (IIS), vital records (birth/death certificates), cancer registry abstraction, syndromic surveillance, electronic lab reporting (ELR), trauma registry."
 })
 namespace MonobaseAPI {
+
+  // ========================================================================
+  // DENTALEMON
+  // ========================================================================
+
+  @tag("Dental:Org")
+  @route("/dental/organizations")
+  interface DentalOrganizationManagement extends DentalOrgModule.DentalOrganizationManagement {}
+
+  @tag("Dental:Org")
+  @route("/dental/organizations/{orgId}/branches")
+  interface DentalBranchManagement extends DentalOrgModule.DentalBranchManagement {}
+
+  @tag("Dental:Org")
+  @route("/dental/organizations/{orgId}/branches/{branchId}/members")
+  interface DentalMembershipManagement extends DentalOrgModule.DentalMembershipManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalPatientMgmt extends DentalPatientModule.DentalPatientManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface DentalVisitMgmt extends DentalVisitModule.DentalVisitManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface DentalChartMgmt extends DentalVisitModule.DentalChartManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface DentalTreatmentMgmt extends DentalVisitModule.DentalTreatmentManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface VisitNotesMgmt extends DentalVisitModule.VisitNotesManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface ToothHistoryMgmt extends DentalVisitModule.ToothHistoryManagement {}
+
+  // Dental Clinical Extras
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface PrescriptionMgmt extends DentalClinicalModule.PrescriptionManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface ConsentFormMgmt extends DentalClinicalModule.ConsentFormManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface AttachmentMgmt extends DentalClinicalModule.AttachmentManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface LabOrderMgmt extends DentalClinicalModule.LabOrderManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/clinical")
+  interface MedicalHistoryMgmt extends DentalClinicalModule.MedicalHistoryManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface AmendmentMgmt extends DentalClinicalModule.AmendmentManagement {}
+
+  // PMD
+  @tag("Dental:PMD")
+  @route("/dental/visits")
+  interface PMDDocumentMgmt extends DentalPMDModule.PMDDocumentManagement {}
+
+  @tag("Dental:PMD")
+  @route("/dental")
+  interface ImportedPMDMgmt extends DentalPMDModule.ImportedPMDManagement {}
+
+  // Dental Scheduling
+  @tag("Dental:Scheduling")
+  @route("/dental/appointments")
+  interface AppointmentMgmt extends DentalSchedulingModule.AppointmentManagement {}
+
+  // Dental Billing
+  @tag("Dental:Billing")
+  @route("/dental/billing")
+  interface DentalBillingMgmt extends DentalBillingModule.InvoiceManagement {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

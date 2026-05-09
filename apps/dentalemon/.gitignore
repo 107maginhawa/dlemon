@@ -1,0 +1,95 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+
+# Build outputs
+dist
+build
+.next
+out
+.nuxt
+.output
+.vercel
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Misc
+.DS_Store
+Thumbs.db
+.cache
+.parcel-cache
+.turbo
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# TanStack Start
+.vinxi
+.output
+.vercel
+.cache
+.env
+.vercel
+.output
+.nitro
+build/
+# TanStack Start generated API routes (build artifacts)
+/api/
+.output/api/
+build/api/
+# Keep source code API directories
+!/src/**/api/
+server/build
+public/build# Sentry Config File
+.env.sentry-build-plugin
+test-results/
+test-results*
+playwright-report/
+blob-report/
+playwright/.cache/
+.tanstack
+
+# Temporary files
+*.tmp
+*.temp
+.tmp
+.temp
+tmp/
+temp/

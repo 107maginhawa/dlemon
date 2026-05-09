@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — Navigation Shell</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* Page layout: label + two variant columns side by side */
+    .page-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 20px;
+    }
+
+    .variants-row {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+    }
+
+    .variant-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .variant-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    /* ── Shell container ── */
+    .shell {
+      display: flex;
+      height: 640px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 0 0 0.5px var(--separator-opaque);
+      background: var(--surface);
+    }
+
+    /* ════════════════════════════════════════
+       EXPANDED SIDEBAR (200px)
+    ════════════════════════════════════════ */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* Logo area */
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .logo-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--gold-text);
+    }
+
+    /* Nav scroll area */
+    .nav-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    /* Section label */
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 14px 16px 4px;
+    }
+
+    /* Nav item */
+    .nav-item {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      border-radius: 0;
+      position: relative;
+      transition: background 0.10s ease;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--fill-tertiary);
+    }
+
+    .nav-item:hover .nav-label {
+      color: var(--text-primary);
+    }
+
+    .nav-item:hover .nav-icon svg {
+      stroke: var(--text-primary);
+    }
+
+    /* Active state */
+    .nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+
+    .nav-item.active .nav-label {
+      color: var(--gold-text);
+      font-weight: 600;
+    }
+
+    .nav-item.active .nav-icon svg {
+      stroke: var(--gold-text);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.014em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    /* Sidebar footer */
+    .sidebar-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .sync-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--system-green);
+      flex-shrink: 0;
+    }
+
+    .sync-text {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-secondary);
+    }
+
+    .user-mini {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      min-height: 36px;
+    }
+
+    .user-mini-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .user-mini-name {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: -0.012em;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ════════════════════════════════════════
+       CONTENT AREA
+    ════════════════════════════════════════ */
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* Glass top bar */
+    .top-bar {
+      height: 56px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .top-bar-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      color: var(--text-primary);
+    }
+
+    /* Content placeholder */
+    .content-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .content-placeholder-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--fill-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content-placeholder-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-tertiary);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .content-placeholder-text {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -0.018em;
+      color: var(--text-tertiary);
+    }
+
+    .content-placeholder-sub {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      letter-spacing: -0.01em;
+    }
+
+    /* ════════════════════════════════════════
+       COLLAPSED SIDEBAR (56px)
+    ════════════════════════════════════════ */
+    .sidebar-collapsed {
+      width: 56px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .sidebar-collapsed-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .collapsed-nav-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .collapsed-nav-item {
+      height: 44px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.10s ease;
+      position: relative;
+    }
+
+    .collapsed-nav-item:hover {
+      background: var(--fill-tertiary);
+    }
+
+    .collapsed-nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+
+    .collapsed-nav-item.active svg {
+      stroke: var(--gold-text) !important;
+    }
+
+    .collapsed-nav-item:hover svg {
+      stroke: var(--text-primary) !important;
+    }
+
+    .collapsed-nav-item svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .collapsed-section-gap {
+      height: 8px;
+    }
+
+    .collapsed-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .collapsed-sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--system-green);
+    }
+
+    .collapsed-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Wider shell for collapsed variant */
+    .shell-collapsed {
+      width: 480px;
+    }
+  </style>
+</head>
+<body>
+
+  <p class="page-title">Navigation Shell — Wireframe Variants</p>
+
+  <div class="variants-row">
+
+    <!-- ──────────────────────────────────────
+         VARIANT A: EXPANDED SIDEBAR
+    ────────────────────────────────────────── -->
+    <div class="variant-wrap">
+      <span class="variant-label">Expanded (200px) — Patients active</span>
+
+      <div class="shell" style="width: 680px;">
+
+        <!-- SIDEBAR -->
+        <nav class="sidebar" aria-label="Main navigation">
+
+          <!-- Logo -->
+          <div class="sidebar-logo">
+            <span class="logo-icon">🍋</span>
+            <span class="logo-text">Dentalemon</span>
+          </div>
+
+          <!-- Nav items -->
+          <div class="nav-scroll">
+
+            <!-- Dashboard -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                </svg>
+              </span>
+              <span class="nav-label">Dashboard</span>
+            </a>
+
+            <!-- CLINICAL -->
+            <div class="nav-section-label">Clinical</div>
+
+            <!-- Patients — ACTIVE -->
+            <a class="nav-item active" href="#" tabindex="0" aria-current="page">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </span>
+              <span class="nav-label">Patients</span>
+            </a>
+
+            <!-- Calendar -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="3" y1="9" x2="21" y2="9"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                </svg>
+              </span>
+              <span class="nav-label">Calendar</span>
+            </a>
+
+            <!-- OPERATIONS -->
+            <div class="nav-section-label">Operations</div>
+
+            <!-- Billing -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+              </span>
+              <span class="nav-label">Billing</span>
+            </a>
+
+            <!-- Reports -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </span>
+              <span class="nav-label">Reports</span>
+            </a>
+
+            <!-- ADMIN -->
+            <div class="nav-section-label">Admin</div>
+
+            <!-- Staff -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  <line x1="19" y1="8" x2="19" y2="14"/>
+                  <line x1="22" y1="11" x2="16" y2="11"/>
+                </svg>
+              </span>
+              <span class="nav-label">Staff</span>
+            </a>
+
+            <!-- Settings -->
+            <a class="nav-item" href="#" tabindex="0">
+              <span class="nav-icon">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </span>
+              <span class="nav-label">Settings</span>
+            </a>
+
+          </div><!-- /nav-scroll -->
+
+          <!-- Footer -->
+          <div class="sidebar-footer">
+            <div class="sync-row">
+              <div class="sync-dot"></div>
+              <span class="sync-text">Synced</span>
+            </div>
+            <div class="user-mini">
+              <div class="user-mini-avatar">RC</div>
+              <span class="user-mini-name">Dr. Ramon Cruz</span>
+            </div>
+          </div>
+
+        </nav>
+        <!-- /SIDEBAR -->
+
+        <!-- CONTENT AREA -->
+        <div class="content-area">
+          <div class="top-bar">
+            <span class="top-bar-title">Patients</span>
+          </div>
+          <div class="content-body">
+            <div class="content-placeholder">
+              <div class="content-placeholder-icon">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="3"/>
+                  <line x1="3" y1="9" x2="21" y2="9"/>
+                  <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+              </div>
+              <span class="content-placeholder-text">Content Area</span>
+              <span class="content-placeholder-sub">Page content renders here</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /shell expanded -->
+    </div><!-- /variant-wrap -->
+
+
+    <!-- ──────────────────────────────────────
+         VARIANT B: COLLAPSED SIDEBAR
+    ────────────────────────────────────────── -->
+    <div class="variant-wrap">
+      <span class="variant-label">Collapsed (56px) — icons only</span>
+
+      <div class="shell shell-collapsed">
+
+        <!-- COLLAPSED SIDEBAR -->
+        <nav class="sidebar-collapsed" aria-label="Collapsed navigation">
+
+          <!-- Logo icon -->
+          <div class="sidebar-collapsed-logo">
+            <span style="font-size:20px;line-height:1;">🍋</span>
+          </div>
+
+          <div class="collapsed-nav-scroll">
+
+            <!-- Dashboard -->
+            <div class="collapsed-nav-item" title="Dashboard" tabindex="0" role="link" aria-label="Dashboard">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </div>
+
+            <div class="collapsed-section-gap"></div>
+
+            <!-- Patients — ACTIVE -->
+            <div class="collapsed-nav-item active" title="Patients" tabindex="0" role="link" aria-label="Patients" aria-current="page">
+              <svg viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+
+            <!-- Calendar -->
+            <div class="collapsed-nav-item" title="Calendar" tabindex="0" role="link" aria-label="Calendar">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+              </svg>
+            </div>
+
+            <div class="collapsed-section-gap"></div>
+
+            <!-- Billing -->
+            <div class="collapsed-nav-item" title="Billing" tabindex="0" role="link" aria-label="Billing">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+                <line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+            </div>
+
+            <!-- Reports -->
+            <div class="collapsed-nav-item" title="Reports" tabindex="0" role="link" aria-label="Reports">
+              <svg viewBox="0 0 24 24">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+            </div>
+
+            <div class="collapsed-section-gap"></div>
+
+            <!-- Staff -->
+            <div class="collapsed-nav-item" title="Staff" tabindex="0" role="link" aria-label="Staff">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+            </div>
+
+            <!-- Settings -->
+            <div class="collapsed-nav-item" title="Settings" tabindex="0" role="link" aria-label="Settings">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </div>
+
+          </div>
+
+          <!-- Collapsed footer -->
+          <div class="collapsed-footer">
+            <div class="collapsed-sync-dot" title="Synced"></div>
+            <div class="collapsed-avatar" title="Dr. Ramon Cruz">RC</div>
+          </div>
+
+        </nav>
+        <!-- /COLLAPSED SIDEBAR -->
+
+        <!-- CONTENT AREA -->
+        <div class="content-area">
+          <div class="top-bar">
+            <span class="top-bar-title">Patients</span>
+          </div>
+          <div class="content-body">
+            <div class="content-placeholder">
+              <div class="content-placeholder-icon">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="3"/>
+                  <line x1="3" y1="9" x2="21" y2="9"/>
+                  <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+              </div>
+              <span class="content-placeholder-text">Content Area</span>
+              <span class="content-placeholder-sub">Page content renders here</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /shell collapsed -->
+    </div><!-- /variant-wrap -->
+
+  </div><!-- /variants-row -->
+
+</body>
+</html>

@@ -81,26 +81,26 @@ export async function listInvoices(
   const formattedInvoices = invoices.map((invoice: any) => ({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
-    customer: invoice.customer, // Already correct field name
-    merchant: invoice.merchant, // Already correct field name
+    customer: invoice.customer,
+    merchant: invoice.merchant,
     context: invoice.context || null,
     status: invoice.status,
     subtotal: invoice.subtotal,
     tax: invoice.tax || null,
     total: invoice.total,
     currency: invoice.currency,
-    paymentCaptureMethod: 'automatic', // TODO: Add to schema
-    paymentDueAt: invoice.dueAt?.toISOString() || null,
-    lineItems: [], // TODO: Implement proper line items storage
+    paymentCaptureMethod: invoice.paymentCaptureMethod,
+    paymentDueAt: invoice.paymentDueAt?.toISOString() || null,
+    lineItems: [],
     paymentStatus: invoice.paymentStatus || null,
     paidAt: invoice.paidAt?.toISOString() || null,
-    paidBy: null, // TODO: Add to schema
+    paidBy: invoice.paidBy || null,
     voidedAt: invoice.voidedAt?.toISOString() || null,
-    voidedBy: null, // TODO: Add to schema
-    voidThresholdMinutes: null, // TODO: Add to schema
-    authorizedAt: null, // TODO: Add to schema
-    authorizedBy: null, // TODO: Add to schema
-    metadata: null, // TODO: Add metadata support
+    voidedBy: invoice.voidedBy || null,
+    voidThresholdMinutes: invoice.voidThresholdMinutes || null,
+    authorizedAt: invoice.authorizedAt?.toISOString() || null,
+    authorizedBy: invoice.authorizedBy || null,
+    metadata: invoice.metadata || null,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString()
   }));

@@ -22,6 +22,8 @@ export interface StripeConfig {
 export interface BillingConfig {
   provider: 'stripe';
   stripe?: StripeConfig;
+  taxRatePct: number; // e.g. 0.10 = 10%, default 0
+  platformFeePct: number; // e.g. 0.02 = 2%, default 0
 }
 
 export interface PaymentIntentData {

@@ -86,9 +86,10 @@ const FORMAT_MAP: Record<PredefinedFormat, string> = {
  * ```
  */
 export function formatDate(
-  date: Date | number | string,
+  date: Date | number | string | null | undefined,
   options: FormatDateOptions = {}
 ): string {
+  if (date == null) return ''
   const opts = { ...DEFAULT_OPTIONS, ...options }
   const dateObj = typeof date === 'object' ? date : new Date(date)
 
@@ -129,9 +130,10 @@ export function formatDate(
  * ```
  */
 export function formatRelativeDate(
-  date: Date | number | string,
+  date: Date | number | string | null | undefined,
   options: FormatRelativeDateOptions = {}
 ): string {
+  if (date == null) return ''
   const {
     style = 'long',
     locale = 'en-US',

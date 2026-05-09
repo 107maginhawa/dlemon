@@ -136,7 +136,7 @@ export function createTrustedOriginsList(corsConfig: Config['cors']): string[] {
     // Add common development ports.
     // 3002 is the apps/account dev port (vite.config.ts) — without it,
     // Better-Auth rejects sign-up callbackURLs with INVALID_CALLBACKURL.
-    const commonPorts = [3000, 3001, 3002, 4000, 5173, 8000, 8080];
+    const commonPorts = [3000, 3001, 3002, 3003, 4000, 5173, 8000, 8080];
     commonPorts.forEach(port => {
       trustedOrigins.push(
         `http://localhost:${port}`,

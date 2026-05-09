@@ -12,6 +12,7 @@ HTTP 401
 # the new user's session after sign-up.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "email-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -28,6 +29,7 @@ HTTP 403
 # session for the rest of the scenario.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "{{admin_email}}",
   "password": "{{admin_password}}"

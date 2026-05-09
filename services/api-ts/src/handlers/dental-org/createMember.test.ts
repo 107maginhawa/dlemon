@@ -1,0 +1,161 @@
+/**
+ * createMember handler tests
+ *
+ * Path: POST /dental/org/members?branchId=...
+ * Tests: 401 unauthenticated, 400 missing branchId, 400 missing displayName,
+ *        400 invalid role, 201 success.
+ */
+
+import { describe, test, expect, afterEach } from 'bun:test';
+import { sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { createDatabase } from '@/core/database';
+import { AppError } from '@/core/errors';
+import { createMember } from './createMember';
+import { OrganizationRepository } from './repos/organization.repo';
+import { BranchRepository } from './repos/branch.repo';
+
+const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+
+const ORG_ID   = 'a1000000-0000-1000-8000-000000000001';
+const BRANCH_ID = 'b1000000-0000-1000-8000-000000000001';
+const PERSON_ID = 'c1000000-0000-1000-8000-000000000001';
+
+const authedUser = { id: PERSON_ID, email: 'owner@clinic.com' };
+
+function buildTestApp(user?: typeof authedUser) {
+  const app = new Hono();
+
+  app.onError((err, c) => {
+    if (err instanceof AppError) {
+      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    return c.json({ error: String(err.message) }, 500);
+  });
+
+  app.use('*', async (c, next) => {
+    const ctx = c as any;
+    ctx.set('database', db);
+    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
+    if (user) {
+      ctx.set('user', user);
+      ctx.set('session', { id: 'test-session' });
+    }
+    await next();
+  });
+
+  app.post('/dental/org/members', createMember);
+
+  return app;
+}
+
+async function seedOrgAndBranch() {
+  const orgRepo = new OrganizationRepository(db);
+  await orgRepo.createOne({
+    id: ORG_ID,
+    name: 'Test Clinic',
+    tier: 'solo',
+    ownerPersonId: PERSON_ID,
+    countryCode: 'PH',
+    active: true,
+  });
+  const branchRepo = new BranchRepository(db);
+  await branchRepo.createOne({
+    id: BRANCH_ID,
+    organizationId: ORG_ID,
+    name: 'Main Branch',
+    timezone: 'Asia/Manila',
+    active: true,
+  });
+}
+
+describe('createMember handler', () => {
+  afterEach(async () => {
+    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
+  });
+
+  // --------------------------------------------------------------------------
+  // Auth
+  // --------------------------------------------------------------------------
+
+  test('returns 401 when user is not authenticated', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(undefined);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Staff Ana', role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  // --------------------------------------------------------------------------
+  // Validation errors
+  // --------------------------------------------------------------------------
+
+  test('returns 400 when branchId is missing', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request('/dental/org/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Staff Ana', role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 when displayName is missing', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 when role is invalid', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Staff Ana', role: 'superuser' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  // --------------------------------------------------------------------------
+  // Success
+  // --------------------------------------------------------------------------
+
+  test('returns 201 with created member on valid input', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Staff Ana', role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.id).toBeTruthy();
+    expect(body.displayName).toBe('Staff Ana');
+    expect(body.role).toBe('staff_full');
+    expect(body.branchId).toBe(BRANCH_ID);
+    expect(body.status).toBe('active');
+    // PIN hash must not be returned
+    expect(body.pinHash).toBeUndefined();
+  });
+});

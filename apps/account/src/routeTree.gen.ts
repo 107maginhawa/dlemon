@@ -14,7 +14,10 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
+import { Route as DashboardStorageRouteImport } from './routes/_dashboard/storage'
 import { Route as DashboardNotificationsRouteImport } from './routes/_dashboard/notifications'
+import { Route as DashboardLicensesRouteImport } from './routes/_dashboard/licenses'
+import { Route as DashboardDevicesRouteImport } from './routes/_dashboard/devices'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardBookingsIndexRouteImport } from './routes/_dashboard/bookings/index'
 import { Route as DashboardSettingsSecurityRouteImport } from './routes/_dashboard/settings/security'
@@ -49,9 +52,24 @@ const AuthAuthViewRoute = AuthAuthViewRouteImport.update({
   path: '/auth/$authView',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardStorageRoute = DashboardStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLicensesRoute = DashboardLicensesRouteImport.update({
+  id: '/licenses',
+  path: '/licenses',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardDevicesRoute = DashboardDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
@@ -112,14 +130,17 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/devices': typeof DashboardDevicesRoute
+  '/licenses': typeof DashboardLicensesRoute
   '/notifications': typeof DashboardNotificationsRoute
+  '/storage': typeof DashboardStorageRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/bookings/$bookingId': typeof DashboardBookingsBookingIdRoute
   '/settings/account': typeof DashboardSettingsAccountRoute
   '/settings/billing': typeof DashboardSettingsBillingRoute
   '/settings/schedule': typeof DashboardSettingsScheduleRoute
   '/settings/security': typeof DashboardSettingsSecurityRoute
-  '/bookings': typeof DashboardBookingsIndexRoute
+  '/bookings/': typeof DashboardBookingsIndexRoute
   '/bookings/host/$personId': typeof DashboardBookingsHostPersonIdRouteWithChildren
   '/bookings/host/$personId/$slotId': typeof DashboardBookingsHostPersonIdSlotIdRoute
 }
@@ -128,7 +149,10 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/devices': typeof DashboardDevicesRoute
+  '/licenses': typeof DashboardLicensesRoute
   '/notifications': typeof DashboardNotificationsRoute
+  '/storage': typeof DashboardStorageRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/bookings/$bookingId': typeof DashboardBookingsBookingIdRoute
   '/settings/account': typeof DashboardSettingsAccountRoute
@@ -146,7 +170,10 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
+  '/_dashboard/devices': typeof DashboardDevicesRoute
+  '/_dashboard/licenses': typeof DashboardLicensesRoute
   '/_dashboard/notifications': typeof DashboardNotificationsRoute
+  '/_dashboard/storage': typeof DashboardStorageRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/_dashboard/bookings/$bookingId': typeof DashboardBookingsBookingIdRoute
   '/_dashboard/settings/account': typeof DashboardSettingsAccountRoute
@@ -164,14 +191,17 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/verify-email'
     | '/dashboard'
+    | '/devices'
+    | '/licenses'
     | '/notifications'
+    | '/storage'
     | '/auth/$authView'
     | '/bookings/$bookingId'
     | '/settings/account'
     | '/settings/billing'
     | '/settings/schedule'
     | '/settings/security'
-    | '/bookings'
+    | '/bookings/'
     | '/bookings/host/$personId'
     | '/bookings/host/$personId/$slotId'
   fileRoutesByTo: FileRoutesByTo
@@ -180,7 +210,10 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/verify-email'
     | '/dashboard'
+    | '/devices'
+    | '/licenses'
     | '/notifications'
+    | '/storage'
     | '/auth/$authView'
     | '/bookings/$bookingId'
     | '/settings/account'
@@ -197,7 +230,10 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/verify-email'
     | '/_dashboard/dashboard'
+    | '/_dashboard/devices'
+    | '/_dashboard/licenses'
     | '/_dashboard/notifications'
+    | '/_dashboard/storage'
     | '/auth/$authView'
     | '/_dashboard/bookings/$bookingId'
     | '/_dashboard/settings/account'
@@ -236,7 +272,7 @@ declare module '@tanstack/react-router' {
     '/_dashboard': {
       id: '/_dashboard'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -254,11 +290,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAuthViewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard/storage': {
+      id: '/_dashboard/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof DashboardStorageRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/notifications': {
       id: '/_dashboard/notifications'
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof DashboardNotificationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/licenses': {
+      id: '/_dashboard/licenses'
+      path: '/licenses'
+      fullPath: '/licenses'
+      preLoaderRoute: typeof DashboardLicensesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/devices': {
+      id: '/_dashboard/devices'
+      path: '/devices'
+      fullPath: '/devices'
+      preLoaderRoute: typeof DashboardDevicesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/dashboard': {
@@ -271,7 +328,7 @@ declare module '@tanstack/react-router' {
     '/_dashboard/bookings/': {
       id: '/_dashboard/bookings/'
       path: '/bookings'
-      fullPath: '/bookings'
+      fullPath: '/bookings/'
       preLoaderRoute: typeof DashboardBookingsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
@@ -344,7 +401,10 @@ const DashboardBookingsHostPersonIdRouteWithChildren =
 
 interface DashboardRouteChildren {
   DashboardDashboardRoute: typeof DashboardDashboardRoute
+  DashboardDevicesRoute: typeof DashboardDevicesRoute
+  DashboardLicensesRoute: typeof DashboardLicensesRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardStorageRoute: typeof DashboardStorageRoute
   DashboardBookingsBookingIdRoute: typeof DashboardBookingsBookingIdRoute
   DashboardSettingsAccountRoute: typeof DashboardSettingsAccountRoute
   DashboardSettingsBillingRoute: typeof DashboardSettingsBillingRoute
@@ -356,7 +416,10 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDashboardRoute: DashboardDashboardRoute,
+  DashboardDevicesRoute: DashboardDevicesRoute,
+  DashboardLicensesRoute: DashboardLicensesRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardStorageRoute: DashboardStorageRoute,
   DashboardBookingsBookingIdRoute: DashboardBookingsBookingIdRoute,
   DashboardSettingsAccountRoute: DashboardSettingsAccountRoute,
   DashboardSettingsBillingRoute: DashboardSettingsBillingRoute,

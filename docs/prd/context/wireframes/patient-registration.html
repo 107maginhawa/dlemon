@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentalemon — New Patient</title>
+<style>
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --gold: #FFE97D;
+  --gold-hover: #F5DC60;
+  --gold-text: #4A4018;
+  --gold-soft: rgba(255,233,125,0.15);
+  --text-primary: #000000;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
+  --separator: rgba(60,60,67,0.12);
+  --separator-opaque: #C6C6C8;
+  --fill-tertiary: rgba(118,118,128,0.12);
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-green: #34C759;
+  --system-teal: #5AC8FA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Background (blurred patient list) ───────────── */
+.bg-blur {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 0;
+}
+
+/* Simulated patient list cards behind the modal */
+.bg-content {
+  position: fixed;
+  inset: 0;
+  padding: 72px 20px 20px 216px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-content: start;
+  filter: blur(6px) brightness(0.9);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bg-card {
+  background: #fff;
+  border-radius: 16px;
+  height: 120px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.bg-card-tab { height: 8px; background: var(--gold); }
+.bg-card-tab.gray { background: var(--fill-tertiary); }
+
+/* ── Overlay scrim ────────────────────────────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Modal ────────────────────────────────────────── */
+.modal {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 600px;
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Modal header ─────────────────────────────────── */
+.modal-header {
+  height: 52px;
+  min-height: 52px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--separator-opaque);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.modal-title {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
+.btn-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--fill-tertiary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.btn-close:hover { background: var(--separator-opaque); }
+
+/* ── Modal body ───────────────────────────────────── */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* ── Section label ────────────────────────────────── */
+.form-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  padding: 18px 24px 8px;
+}
+
+/* ── Form fields ──────────────────────────────────── */
+.form-group {
+  padding: 0 24px;
+  margin-bottom: 12px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.required-star { color: var(--system-red); font-size: 12px; }
+
+.field-row { display: flex; gap: 8px; }
+
+.field-input {
+  width: 100%;
+  height: 44px;
+  background: var(--fill-tertiary);
+  border: 0.5px solid transparent;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  letter-spacing: -0.2px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.field-input:focus {
+  background: var(--surface);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(255,233,125,0.25);
+}
+
+.field-input::placeholder { color: var(--text-tertiary); }
+
+.field-input.small { flex: 0 0 80px; }
+.field-input.mid { flex: 1; }
+
+/* Phone prefix group */
+.phone-group { display: flex; gap: 0; }
+
+.phone-prefix {
+  height: 44px;
+  padding: 0 10px 0 12px;
+  background: var(--fill-tertiary);
+  border: 0.5px solid transparent;
+  border-radius: 10px 0 0 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-secondary);
+  border-right: 0.5px solid var(--separator-opaque);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 4px;
+}
+
+.phone-field {
+  flex: 1;
+  height: 44px;
+  background: var(--fill-tertiary);
+  border: 0.5px solid transparent;
+  border-radius: 0 10px 10px 0;
+  padding: 0 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-field::placeholder { color: var(--text-tertiary); }
+.phone-field:focus { background: var(--surface); border-color: var(--gold); }
+
+/* ── Expandable section ───────────────────────────── */
+.expand-section {
+  border-top: 0.5px solid var(--separator);
+  margin-top: 4px;
+}
+
+.expand-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+}
+
+.expand-header:hover { background: var(--gold-soft); }
+
+.expand-title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+
+.expand-chevron {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.expand-section.open .expand-chevron { transform: rotate(180deg); }
+
+.expand-content {
+  display: none;
+  padding: 0 24px 16px;
+}
+
+.expand-section.open .expand-content { display: block; }
+
+/* ── Segmented control ────────────────────────────── */
+.segmented {
+  display: flex;
+  background: var(--fill-tertiary);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 2px;
+  height: 32px;
+  align-items: center;
+  width: fit-content;
+}
+
+.seg-btn {
+  height: 28px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.1px;
+  transition: background 0.15s;
+}
+
+.seg-btn.active {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  font-weight: 600;
+}
+
+/* ── Checkboxes ───────────────────────────────────── */
+.checkbox-group { display: flex; flex-direction: column; gap: 2px; }
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.checkbox-row:hover { background: var(--fill-tertiary); }
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--separator-opaque);
+  background: var(--surface);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-checkbox.checked {
+  background: var(--gold);
+  border-color: var(--gold-hover);
+  color: var(--gold-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checkbox-label { font-size: 15px; letter-spacing: -0.1px; }
+
+/* ── Toggle ───────────────────────────────────────── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+}
+
+.toggle-label { font-size: 15px; flex: 1; letter-spacing: -0.1px; }
+.toggle-sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+.toggle {
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: var(--separator-opaque);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toggle.on { background: var(--gold); }
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.2s;
+}
+
+.toggle.on .toggle-knob { transform: translateX(20px); }
+
+/* ── Photo upload ─────────────────────────────────── */
+.photo-upload {
+  border: 1.5px dashed var(--separator-opaque);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.photo-upload:hover {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.photo-icon { font-size: 28px; color: var(--text-tertiary); }
+.photo-hint { font-size: 13px; color: var(--text-secondary); letter-spacing: -0.1px; }
+.photo-hint-sub { font-size: 12px; color: var(--text-tertiary); }
+
+/* ── Consent block ────────────────────────────────── */
+.consent-block {
+  margin: 0 24px 16px;
+  background: var(--fill-tertiary);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.consent-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+  line-height: 1.5;
+}
+
+.consent-legal {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+}
+
+/* ── Modal footer ─────────────────────────────────── */
+.modal-footer {
+  height: 60px;
+  min-height: 60px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--separator-opaque);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 12px;
+}
+
+.btn-secondary {
+  height: 44px;
+  padding: 0 20px;
+  background: transparent;
+  border: 1px solid var(--separator-opaque);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  letter-spacing: -0.2px;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover { background: var(--fill-tertiary); }
+
+.btn-primary {
+  height: 44px;
+  padding: 0 20px;
+  background: var(--gold);
+  color: var(--gold-text);
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover { background: var(--gold-hover); }
+
+.info-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--gold-soft);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+</style>
+</head>
+<body>
+
+<!-- Blurred background (patient list) -->
+<div class="bg-blur"></div>
+<div class="bg-content">
+  <div class="bg-card"><div class="bg-card-tab"></div></div>
+  <div class="bg-card"><div class="bg-card-tab"></div></div>
+  <div class="bg-card"><div class="bg-card-tab" style="background:#5AC8FA"></div></div>
+  <div class="bg-card"><div class="bg-card-tab"></div></div>
+  <div class="bg-card"><div class="bg-card-tab gray"></div></div>
+  <div class="bg-card" style="border:1.5px dashed #C6C6C8;background:transparent;box-shadow:none;"></div>
+</div>
+
+<!-- Scrim + Modal -->
+<div class="scrim">
+  <div class="modal">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div style="width:28px;"></div>
+      <div class="modal-title">New Patient</div>
+      <button class="btn-close">✕</button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- Required section -->
+      <div class="form-section-label">Required</div>
+
+      <!-- Full Name -->
+      <div class="form-group">
+        <div class="field-label">
+          Full Name <span class="required-star">*</span>
+        </div>
+        <div class="field-row">
+          <input class="field-input mid" type="text" placeholder="Last Name">
+          <input class="field-input mid" type="text" placeholder="First Name">
+          <input class="field-input small" type="text" placeholder="M.I.">
+        </div>
+      </div>
+
+      <!-- Mobile Number -->
+      <div class="form-group">
+        <div class="field-label">
+          Mobile Number <span class="required-star">*</span>
+        </div>
+        <div class="phone-group">
+          <div class="phone-prefix">🇵🇭 +63 ▾</div>
+          <input class="phone-field" type="tel" placeholder="9XX XXX XXXX">
+        </div>
+      </div>
+
+      <!-- Date of Birth -->
+      <div class="form-group">
+        <div class="field-label">
+          Date of Birth <span class="required-star">*</span>
+        </div>
+        <input class="field-input" type="date" style="width:200px; color:var(--text-secondary);">
+      </div>
+
+      <!-- Patient Photo -->
+      <div class="form-group">
+        <div class="field-label">Patient Photo</div>
+        <div class="photo-upload">
+          <div class="photo-icon">📷</div>
+          <div class="photo-hint">Take photo or upload</div>
+          <div class="photo-hint-sub">JPG or PNG · Max 5MB</div>
+        </div>
+      </div>
+
+      <!-- Expandable: Demographics -->
+      <div class="expand-section open">
+        <div class="expand-header" onclick="this.parentElement.classList.toggle('open')">
+          <span style="font-size:16px;">👤</span>
+          <span class="expand-title">Demographics</span>
+          <span class="expand-chevron">▲</span>
+        </div>
+        <div class="expand-content">
+          <div class="field-label" style="margin-bottom:8px;">Gender</div>
+          <div class="segmented" style="margin-bottom:12px;">
+            <button class="seg-btn active">Male</button>
+            <button class="seg-btn">Female</button>
+            <button class="seg-btn">Other</button>
+          </div>
+          <div class="field-label">Address</div>
+          <input class="field-input" type="text" placeholder="Street, Barangay, City, Province" style="margin-bottom:0;">
+        </div>
+      </div>
+
+      <!-- Expandable: Emergency Contact -->
+      <div class="expand-section">
+        <div class="expand-header" onclick="this.parentElement.classList.toggle('open')">
+          <span style="font-size:16px;">🆘</span>
+          <span class="expand-title">Emergency Contact</span>
+          <span class="expand-chevron">▼</span>
+        </div>
+        <div class="expand-content">
+          <div class="field-row" style="margin-bottom:8px;">
+            <div style="flex:1;">
+              <div class="field-label">Full Name</div>
+              <input class="field-input" type="text" placeholder="Contact name">
+            </div>
+            <div style="flex:1;">
+              <div class="field-label">Relationship</div>
+              <input class="field-input" type="text" placeholder="e.g. Spouse, Parent">
+            </div>
+          </div>
+          <div class="field-label">Phone</div>
+          <div class="phone-group">
+            <div class="phone-prefix">🇵🇭 +63 ▾</div>
+            <input class="phone-field" type="tel" placeholder="9XX XXX XXXX">
+          </div>
+        </div>
+      </div>
+
+      <!-- Expandable: Communication Preferences -->
+      <div class="expand-section">
+        <div class="expand-header" onclick="this.parentElement.classList.toggle('open')">
+          <span style="font-size:16px;">💬</span>
+          <span class="expand-title">Communication Preferences</span>
+          <span class="expand-chevron">▼</span>
+        </div>
+        <div class="expand-content">
+          <div class="field-label" style="margin-bottom:6px;">Preferred Contact Method</div>
+          <div class="checkbox-group">
+            <div class="checkbox-row">
+              <div class="custom-checkbox checked">✓</div>
+              <span class="checkbox-label">📞 Phone Call</span>
+            </div>
+            <div class="checkbox-row">
+              <div class="custom-checkbox checked">✓</div>
+              <span class="checkbox-label">💬 SMS</span>
+            </div>
+            <div class="checkbox-row">
+              <div class="custom-checkbox"></div>
+              <span class="checkbox-label">✉ Email</span>
+            </div>
+            <div class="checkbox-row">
+              <div class="custom-checkbox"></div>
+              <span class="checkbox-label">📱 WhatsApp</span>
+            </div>
+          </div>
+          <div style="height:0.5px;background:var(--separator);margin:10px 0;"></div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Appointment Reminders</div>
+              <div class="toggle-sub">Send reminders 24h before visit</div>
+            </div>
+            <div class="toggle on"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expandable: Medical History -->
+      <div class="expand-section">
+        <div class="expand-header" onclick="this.parentElement.classList.toggle('open')">
+          <span style="font-size:16px;">🩺</span>
+          <span class="expand-title">Medical History</span>
+          <span class="expand-chevron">▼</span>
+        </div>
+        <div class="expand-content">
+          <div class="info-note">
+            <span>ℹ</span>
+            Can be completed at first visit
+          </div>
+          <div style="margin-top:12px;">
+            <a href="medical-history-form.html" style="color:var(--gold-text);font-size:15px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+              <span>📋</span> Open Medical History Form →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consent -->
+      <div style="height:16px;"></div>
+      <div class="consent-block">
+        <div class="consent-row">
+          <div class="custom-checkbox" style="margin-top:2px;flex-shrink:0;"></div>
+          <div>
+            <div class="consent-text">
+              I consent to the storage and processing of my health data by <strong>Cruz Dental</strong> for dental care purposes. <span style="required-star;color:var(--system-red);">*</span>
+            </div>
+            <div class="consent-legal">
+              Your data is protected under the Philippine Data Privacy Act (RA 10173). You may request data deletion at any time. By proceeding, you acknowledge receipt of our Privacy Notice.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="btn-secondary">Save Draft</button>
+      <button class="btn-primary">
+        Save + Start Session ▶
+      </button>
+    </div>
+
+  </div><!-- /modal -->
+</div><!-- /scrim -->
+
+</body>
+</html>

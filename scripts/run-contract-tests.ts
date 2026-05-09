@@ -128,6 +128,27 @@ function envPreflightWarnings(adminTokenAvailable: boolean): string[] {
 const adminToken = await ensureAdminSession()
 const warnings = envPreflightWarnings(adminToken != null)
 
+// Clear stale active dental visits so unique partial index doesn't block re-runs.
+// The dental-visit.hurl and dental-billing.hurl tests use fixed patient UUIDs;
+// if a prior run left an active visit for those patients, activation will fail with 500.
+await clearStaleDentalVisits()
+
+async function clearStaleDentalVisits(): Promise<void> {
+  try {
+    const { spawnSync: runPsql } = await import('child_process')
+    const sql = "UPDATE dental_visit SET status='completed', completed_at=now() WHERE status='active';"
+    const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:password@localhost:5432/monobase'
+    const result = runPsql('psql', [dbUrl, '-c', sql], { stdio: 'pipe' })
+    if (result.error || result.status !== 0) {
+      console.warn('  ⚠ Could not clear stale dental visits (psql not available or DB unreachable). Contract tests may fail if active visits exist.')
+    } else {
+      console.log('  ✓ Stale active dental visits cleared')
+    }
+  } catch {
+    console.warn('  ⚠ Could not clear stale dental visits (psql not available). Contract tests may fail if active visits exist.')
+  }
+}
+
 console.log(`→ ${files.length} contract scenario(s) against ${apiUrl}`)
 console.log(`  suffix=${suffix}`)
 console.log(`  admin_token=${adminToken ? `(captured for ${adminEmail})` : '(unavailable)'}`)

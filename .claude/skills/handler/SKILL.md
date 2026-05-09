@@ -5,7 +5,7 @@ description: Implement API handler business logic and database repository for a 
 
 # handler
 
-Implement API handler business logic and repository layer.
+Implement API handler business logic and repository layer using TDD.
 
 ## Triggers
 
@@ -19,9 +19,60 @@ Implement API handler business logic and repository layer.
 
 Open the stub at `services/api-ts/src/handlers/{module}/{operationId}.ts`. It will have a `throw new Error('Not implemented')` placeholder.
 
-### 2. Implement Handler
+### 2. Write Tests FIRST (RED)
 
-Follow the pattern from `services/api-ts/src/handlers/person/createPerson.ts`:
+> **WHY tests first**: Tests written after implementation only confirm your assumptions. TDD catches design mistakes early — you think about error paths, edge cases, and API contracts before writing a line of production code.
+
+Create colocated test at `services/api-ts/src/handlers/{module}/{operationId}.test.ts`:
+
+```typescript
+import { describe, test, expect } from 'bun:test';
+
+describe('{operationId}', () => {
+  // REQUIRED for ALL handlers:
+
+  test('happy path — returns correct status and body', () => {
+    // Arrange: set up valid input
+    // Act: call the handler
+    // Assert: correct status code + response shape
+  });
+
+  test('validation error — returns 400 for invalid input', () => {
+    // Arrange: set up invalid/missing fields
+    // Act: call the handler
+    // Assert: 400 status + error details
+  });
+
+  // REQUIRED IF handler has these paths (derive from TypeSpec definition):
+
+  // If endpoint requires auth:
+  test('auth error — returns 401/403 without valid credentials', () => {
+    // ...
+  });
+
+  // If endpoint looks up a resource by ID:
+  test('not found — returns 404 for nonexistent resource', () => {
+    // ...
+  });
+
+  // If endpoint has domain-specific constraints:
+  test('business rule — returns 409/422 when constraint violated', () => {
+    // ...
+  });
+});
+```
+
+> **WHY contract-derived categories**: Universal checklists produce meaningless tests for handlers that don't have those paths. A public webhook has no user auth. A create endpoint has no 404. Derive what to test from the TypeSpec definition — if the endpoint declares `@error(404)`, test it. If not, skip it.
+
+**Run the tests and confirm they FAIL (red phase)**:
+
+```bash
+cd services/api-ts && bun test src/handlers/{module}/{operationId}.test.ts
+```
+
+### 3. Implement Handler (GREEN)
+
+Now make the tests pass. Follow the pattern from `services/api-ts/src/handlers/person/createPerson.ts`:
 
 ```typescript
 import type { ValidatedContext } from '@/types/app';
@@ -81,10 +132,9 @@ Key patterns:
 - Get deps from context: `database`, `logger`, `audit`
 - Instantiate repo with `db` and `logger`
 - Always add audit logging for data modifications
-- Use error classes: `ForbiddenError`, `NotFoundError`, `ValidationError`, `ConflictError`, `BusinessLogicError`
 - Never log PII — only IDs
 
-### 3. Create Repository
+### 4. Create Repository
 
 Create `services/api-ts/src/handlers/{module}/repos/{module}.repo.ts`:
 
@@ -142,26 +192,40 @@ export class MyEntityRepository {
 
 Reference: `services/api-ts/src/handlers/person/repos/person.repo.ts`
 
-### 4. Write Unit Test
+### 5. Refactor
 
-Create colocated test `services/api-ts/src/handlers/{module}/{operationId}.test.ts`:
+With green tests, refactor for clarity. Re-run tests after each change to ensure they stay green.
 
-```typescript
-import { describe, test, expect } from 'bun:test';
-// Test implementation
-```
-
-### 5. Verify
+### 6. Verify
 
 ```bash
 cd services/api-ts && bun test
 ```
 
+## Error Handling Rules
+
+Use the correct error class for each situation. Never throw generic `Error`.
+
+| Situation | Error Class | Status |
+|---|---|---|
+| Missing/invalid input fields | `ValidationError` | 400 |
+| No auth token or invalid token | `UnauthorizedError` | 401 |
+| Valid token, insufficient role/ownership | `ForbiddenError` | 403 |
+| Resource ID doesn't exist | `NotFoundError` | 404 |
+| Duplicate/conflict (e.g., already exists) | `ConflictError` | 409 |
+| Domain rule violated (valid input, bad state) | `BusinessLogicError` | 422 |
+| Rate limit exceeded | `RateLimitError` | 429 |
+| External service failure | `ExternalServiceError` | 503 |
+
 ## Critical Rules
 
 - NEVER edit files in `src/generated/`
 - Always use Drizzle ORM — no raw SQL
-- Always add audit logging for sensitive operations
+- Always add audit logging for data modifications
 - Never log PII (names, emails, etc.) — only IDs
 - Check consent fields before accessing sensitive data
-- Use transactions for multi-table operations
+- Use transactions for multi-table operations: `db.transaction(async (tx) => {...})`
+- Validate external URLs before `window.open()` — check http/https scheme, add `noopener`. WHY: XSS via `javascript:` URLs.
+- Use `window.location.href` after auth state changes, not `navigate()`. WHY: TanStack Router cache shows stale pre-auth UI.
+- Document error responses in TypeSpec per-endpoint. WHY: Without it, handler and frontend guess differently about error states.
+- Detect `as any` casts — usually signals type misalignment that hides bugs until runtime.

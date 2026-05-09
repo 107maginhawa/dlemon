@@ -6,9 +6,8 @@ WORKDIR /app
 # Copy workspace files
 COPY package.json bun.lockb ./
 COPY apps/account/package.json ./apps/account/
-COPY packages/sdk/package.json ./packages/sdk/
-COPY packages/ui/package.json ./packages/ui/
-COPY packages/api-spec/package.json ./packages/api-spec/
+COPY packages/sdk-ts/package.json ./packages/sdk-ts/
+COPY specs/api/package.json ./specs/api/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 
 # Install dependencies

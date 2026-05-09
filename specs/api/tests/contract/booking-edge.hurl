@@ -4,6 +4,7 @@
 # 0. Host setup.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "edge-host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -53,6 +54,7 @@ slot_id_2: jsonpath "$[1].id"
 # 1. Client A books and the host rejects.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "edge-client-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -120,6 +122,7 @@ HTTP 404
 # 4. Switch to host and reject the first booking.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "edge-host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -139,6 +142,7 @@ jsonpath "$.status" == "rejected"
 # no-show.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "edge-client-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"
@@ -160,6 +164,7 @@ booking_b_id: jsonpath "$.id"
 
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "edge-host-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest"

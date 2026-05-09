@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/ios-schema.json",
+  "identifier": "ios",
+  "description": "iOS-specific permissions (cloud mode - subset of desktop)",
+  "platforms": ["iOS"],
+  "windows": ["*"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:webview:allow-print",
+    "log:default",
+    "opener:default",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive",
+    "dialog:default",
+    "http:default",
+    "clipboard-manager:allow-read-text"
+  ]
+}

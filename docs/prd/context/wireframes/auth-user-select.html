@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — Choose Profile</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Logo area */
+    .logo-block {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .logo-lemon {
+      font-size: 40px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .logo-wordmark {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--gold-text);
+      position: relative;
+      display: inline-block;
+    }
+
+    .logo-wordmark span {
+      color: var(--gold-text);
+    }
+
+    .logo-wordmark::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+
+    .logo-accent {
+      color: #C89B00;
+    }
+
+    .subtitle {
+      margin-top: 28px;
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: -0.022em;
+      color: var(--text-secondary);
+    }
+
+    /* User cards row */
+    .cards-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-top: 32px;
+    }
+
+    .user-card {
+      width: 140px;
+      background: var(--surface);
+      border-radius: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px var(--separator-opaque);
+      padding: 24px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+      min-height: 44px;
+      position: relative;
+    }
+
+    .user-card:hover {
+      background: var(--gold-soft);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 0 0 0.5px var(--separator-opaque);
+    }
+
+    .user-card:active {
+      transform: translateY(0);
+    }
+
+    /* Add user card */
+    .user-card.add-user {
+      background: transparent;
+      box-shadow: none;
+      border: 1.5px dashed var(--text-tertiary);
+    }
+
+    .user-card.add-user:hover {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+    }
+
+    /* Avatar */
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .avatar-gold {
+      background: var(--gold);
+      color: var(--gold-text);
+    }
+
+    .avatar-fill {
+      background: var(--fill-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .avatar-add {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--fill-tertiary);
+    }
+
+    .avatar-add svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--text-tertiary);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .user-card.add-user:hover .avatar-add svg {
+      stroke: var(--gold-text);
+    }
+
+    /* Card name & role */
+    .card-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.018em;
+      color: var(--text-primary);
+      text-align: center;
+      line-height: 1.25;
+    }
+
+    .user-card.add-user .card-name {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Role badge */
+    .role-badge {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .role-badge-owner {
+      background: rgba(255,233,125,0.3);
+      color: #9A7A00;
+    }
+
+    .role-badge-staff {
+      background: var(--fill-tertiary);
+      color: var(--text-secondary);
+    }
+
+    /* Footer tap hint */
+    .footer-hint {
+      margin-top: 40px;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: -0.012em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-hint svg {
+      width: 14px;
+      height: 14px;
+      stroke: var(--text-tertiary);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    /* Version badge */
+    .version-tag {
+      position: fixed;
+      bottom: 20px;
+      right: 24px;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Selection ring on hover */
+    .user-card:not(.add-user):hover::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 22px;
+      border: 2px solid var(--gold);
+      pointer-events: none;
+    }
+
+    /* Small lock icon on card (indicates PIN auth) */
+    .card-lock {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .user-card:hover .card-lock {
+      opacity: 1;
+    }
+
+    .card-lock svg {
+      width: 12px;
+      height: 12px;
+      stroke: var(--gold-text);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* Background decoration */
+    .bg-circle {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .bg-circle-1 {
+      width: 360px;
+      height: 360px;
+      top: -80px;
+      right: -80px;
+      background: radial-gradient(circle, rgba(255,233,125,0.12) 0%, transparent 70%);
+    }
+
+    .bg-circle-2 {
+      width: 280px;
+      height: 280px;
+      bottom: -60px;
+      left: -60px;
+      background: radial-gradient(circle, rgba(255,233,125,0.08) 0%, transparent 70%);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background decorative elements -->
+  <div class="bg-circle bg-circle-1"></div>
+  <div class="bg-circle bg-circle-2"></div>
+
+  <!-- Logo -->
+  <div class="logo-block">
+    <div class="logo-lemon">🍋</div>
+    <div class="logo-wordmark">Denta<span class="logo-accent">lemon</span></div>
+  </div>
+
+  <!-- Subtitle -->
+  <p class="subtitle">Choose your profile</p>
+
+  <!-- User cards -->
+  <div class="cards-row">
+
+    <!-- Dr. Ramon Cruz — Owner -->
+    <div class="user-card" tabindex="0" role="button" aria-label="Sign in as Dr. Ramon Cruz">
+      <div class="card-lock">
+        <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div class="avatar avatar-gold">RC</div>
+      <span class="card-name">Dr. Ramon Cruz</span>
+      <span class="role-badge role-badge-owner">Dentist-Owner</span>
+    </div>
+
+    <!-- Ana Reyes — Staff -->
+    <div class="user-card" tabindex="0" role="button" aria-label="Sign in as Ana Reyes">
+      <div class="card-lock">
+        <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div class="avatar avatar-fill">AR</div>
+      <span class="card-name">Ana Reyes</span>
+      <span class="role-badge role-badge-staff">Staff</span>
+    </div>
+
+    <!-- Add User placeholder -->
+    <div class="user-card add-user" tabindex="0" role="button" aria-label="Add new user profile">
+      <div class="avatar-add">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <span class="card-name">Add User</span>
+    </div>
+
+  </div>
+
+  <!-- Footer hint -->
+  <p class="footer-hint">
+    <svg viewBox="0 0 24 24"><path d="M18 11V6a6 6 0 0 0-12 0v5"/><rect x="2" y="11" width="20" height="11" rx="2"/></svg>
+    Tap your name to sign in
+  </p>
+
+  <!-- App version -->
+  <div class="version-tag">v1.0.0</div>
+
+</body>
+</html>

@@ -263,13 +263,14 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
     
     // Advanced options
     advanced: {
+      useSecureCookies: config.auth.baseUrl.startsWith('https://'),
       ipAddress: {
         ipAddressHeaders: ["x-client-ip", "x-forwarded-for"],
       },
       defaultCookieAttributes: {
-        secure: cookieConfig.secure,
+        secure: config.auth.baseUrl.startsWith('https://'),
         httpOnly: true,
-        sameSite: cookieConfig.sameSite,
+        sameSite: config.auth.baseUrl.startsWith('https://') ? cookieConfig.sameSite : 'lax',
       },
       database: {
         generateId: () => {

@@ -1,0 +1,25 @@
+/**
+ * Drizzle schema for dental organizations
+ */
+
+import { pgTable, text, boolean, pgEnum, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { baseEntityFields } from '@/core/database.schema';
+
+export const orgTierEnum = pgEnum('org_tier', ['solo', 'clinic', 'group', 'enterprise']);
+
+export const dentalOrganizations = pgTable('dental_organization', {
+  ...baseEntityFields,
+  name: text('name').notNull(),
+  tier: orgTierEnum('tier').notNull(),
+  ownerPersonId: uuid('owner_person_id').notNull(),
+  countryCode: text('country_code').notNull(),
+  active: boolean('active').notNull().default(true),
+}, (table) => ({
+  nameOwnerUnique: uniqueIndex('dental_org_name_owner_unique').on(table.name, table.ownerPersonId),
+}));
+
+export type DentalOrganization = typeof dentalOrganizations.$inferSelect;
+export type NewDentalOrganization = typeof dentalOrganizations.$inferInsert;
+
+export const VALID_ORG_TIERS = ['solo', 'clinic', 'group', 'enterprise'] as const;
+export type OrgTier = typeof VALID_ORG_TIERS[number];

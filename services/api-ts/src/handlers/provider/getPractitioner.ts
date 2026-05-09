@@ -1,46 +1,42 @@
 import type { ValidatedContext } from '@/types/app';
+import type { DatabaseInstance } from '@/core/database';
 import {
   UnauthorizedError,
-  ForbiddenError,
   NotFoundError,
-  ValidationError,
-  BusinessLogicError,
 } from '@/core/errors';
 import type { GetPractitionerParams } from '@/generated/openapi/validators';
+import { PractitionerRepository } from './repos/practitioner.repo';
 
 /**
  * getPractitioner
- * 
+ *
  * Path: GET /providers/practitioners/{id}
  * OperationId: getPractitioner
  */
 export async function getPractitioner(
   ctx: ValidatedContext<never, never, GetPractitionerParams>
 ): Promise<Response> {
-  // Get authenticated session from Better-Auth
   const session = ctx.get('session');
   if (!session) {
     throw new UnauthorizedError();
   }
-  // Note: This endpoint requires ownership validation for 'practitioner:owner'
-  // Check that the authenticated user owns the requested resource
-  // Example:
-  // if (session.user.role === 'patient' && params.patientId !== session.user.id) {
-  //   throw new ForbiddenError('You can only access your own resources');
-  // }
-  
-  // Extract validated parameters
+
   const params = ctx.req.valid('param');
-  
-  
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: getPractitioner');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new PractitionerRepository(db, logger);
+  const practitioner = await repo.findOneById(params.id);
+
+  if (!practitioner) {
+    throw new NotFoundError('Practitioner not found', {
+      resourceType: 'practitioner',
+      resource: params.id,
+      suggestions: ['Check practitioner ID format', 'Verify practitioner exists'],
+    });
+  }
+
+  logger?.info({ practitionerId: params.id, action: 'view' }, 'Practitioner retrieved');
+
+  return ctx.json(practitioner, 200);
 }

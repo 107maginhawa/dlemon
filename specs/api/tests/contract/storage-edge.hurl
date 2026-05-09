@@ -4,6 +4,7 @@
 
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "storage-edge-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -87,6 +88,7 @@ jsonpath "$.filename" == "Anaïs's résumé (final v2).pdf"
 # 6. Another user cannot read someone else's file metadata.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "storage-other-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",

@@ -10,6 +10,7 @@ HTTP 401
 
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "notifs-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",

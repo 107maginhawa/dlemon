@@ -1,0 +1,267 @@
+/**
+ * PMDImport — form for importing an external PMD record
+ *
+ * Steps: enter source facility + content → preview Safety Floor items → confirm import
+ */
+
+import React, { useState } from 'react';
+import { apiBaseUrl } from '@/utils/config';
+
+interface SafetyFloorPreview {
+  conditions: string[];
+  medications: string[];
+  allergies: string[];
+}
+
+function extractPreview(content: string): SafetyFloorPreview {
+  try {
+    const data = JSON.parse(content);
+    return {
+      conditions: Array.isArray(data.conditions) ? data.conditions : [],
+      medications: Array.isArray(data.medications) ? data.medications : [],
+      allergies: Array.isArray(data.allergies) ? data.allergies : [],
+    };
+  } catch {
+    return { conditions: [], medications: [], allergies: [] };
+  }
+}
+
+export interface PMDImportProps {
+  patientId: string;
+  open: boolean;
+  onClose: () => void;
+  onImported?: () => void;
+}
+
+type Step = 'form' | 'preview' | 'done';
+
+export function PMDImport({ patientId, open, onClose, onImported }: PMDImportProps) {
+  const [step, setStep] = useState<Step>('form');
+  const [sourceFacility, setSourceFacility] = useState('');
+  const [sourceReference, setSourceReference] = useState('');
+  const [content, setContent] = useState('');
+  const [preview, setPreview] = useState<SafetyFloorPreview | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  if (!open) return null;
+
+  function validate(): string[] {
+    const errs: string[] = [];
+    if (!sourceFacility.trim()) errs.push('Source facility is required');
+    if (!content.trim()) errs.push('PMD content is required');
+    if (content.trim()) {
+      try { JSON.parse(content); } catch { errs.push('PMD content must be valid JSON'); }
+    }
+    return errs;
+  }
+
+  function handleNext() {
+    const errs = validate();
+    if (errs.length > 0) { setErrors(errs); return; }
+    setErrors([]);
+    setPreview(extractPreview(content));
+    setStep('preview');
+  }
+
+  async function handleConfirm() {
+    setSaving(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/dental/pmd/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientId,
+          sourceFacility: sourceFacility.trim(),
+          sourceReference: sourceReference.trim() || undefined,
+          content: content.trim(),
+        }),
+      });
+      if (!res.ok) { setErrors(['Failed to import PMD']); setStep('form'); return; }
+      setStep('done');
+      onImported?.();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleClose() {
+    setStep('form');
+    setSourceFacility('');
+    setSourceReference('');
+    setContent('');
+    setPreview(null);
+    setErrors([]);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+
+      <div
+        data-testid="pmd-import"
+        className="relative w-full max-h-[80vh] bg-background rounded-t-2xl shadow-2xl flex flex-col"
+      >
+        <div className="flex justify-center pt-2.5 pb-1 flex-shrink-0">
+          <div className="w-9 h-1 bg-muted-foreground/30 rounded-full" />
+        </div>
+
+        <div className="flex items-center justify-between px-5 pb-3 border-b flex-shrink-0">
+          <div>
+            <h2 className="text-base font-semibold">Import External PMD</h2>
+            {step === 'preview' && (
+              <p className="text-xs text-muted-foreground">Review Safety Floor items before confirming</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+          {step === 'form' && (
+            <>
+              {errors.length > 0 && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                  {errors.map(e => <p key={e}>{e}</p>)}
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pmd-facility">
+                  Source Facility *
+                </label>
+                <input
+                  id="pmd-facility"
+                  type="text"
+                  value={sourceFacility}
+                  onChange={e => setSourceFacility(e.target.value)}
+                  placeholder="e.g. City Dental Clinic"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pmd-ref">
+                  Source Reference (optional)
+                </label>
+                <input
+                  id="pmd-ref"
+                  type="text"
+                  value={sourceReference}
+                  onChange={e => setSourceReference(e.target.value)}
+                  placeholder="e.g. REF-2025-001"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pmd-content">
+                  PMD Content (JSON) *
+                </label>
+                <textarea
+                  id="pmd-content"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  placeholder='{"conditions":["I10"],"medications":["Amoxicillin"],"allergies":[]}'
+                  rows={5}
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus:border-[#FFE97D] outline-none resize-none"
+                />
+              </div>
+            </>
+          )}
+
+          {step === 'preview' && preview && (
+            <>
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                The following items from this PMD will be added to the patient's Safety Floor (existing entries are preserved).
+              </div>
+
+              {preview.conditions.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Conditions
+                  </h4>
+                  <ul className="flex flex-col gap-1">
+                    {preview.conditions.map(c => (
+                      <li key={c} className="text-sm bg-secondary rounded-lg px-3 py-2">{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preview.medications.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Medications
+                  </h4>
+                  <ul className="flex flex-col gap-1">
+                    {preview.medications.map(m => (
+                      <li key={m} className="text-sm bg-secondary rounded-lg px-3 py-2">{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preview.allergies.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Allergies
+                  </h4>
+                  <ul className="flex flex-col gap-1">
+                    {preview.allergies.map(a => (
+                      <li key={a} className="text-sm bg-red-50 text-red-700 rounded-lg px-3 py-2">{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preview.conditions.length === 0 && preview.medications.length === 0 && preview.allergies.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No Safety Floor items found in this PMD.</p>
+              )}
+            </>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl">✓</div>
+              <p className="text-sm font-medium">PMD imported successfully</p>
+              <p className="text-xs text-muted-foreground text-center">The patient's Safety Floor has been updated with the imported data.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 px-5 py-4 border-t flex-shrink-0">
+          {step === 'form' && (
+            <>
+              <button type="button" onClick={handleClose} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={handleNext} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
+                Preview
+              </button>
+            </>
+          )}
+          {step === 'preview' && (
+            <>
+              <button type="button" onClick={() => setStep('form')} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">
+                Back
+              </button>
+              <button type="button" onClick={handleConfirm} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+                {saving ? 'Importing…' : 'Confirm Import'}
+              </button>
+            </>
+          )}
+          {step === 'done' && (
+            <button type="button" onClick={handleClose} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
+              Done
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dentalemon — Settings</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --gold: #FFE97D;
+      --gold-hover: #F5DC60;
+      --gold-text: #4A4018;
+      --gold-soft: rgba(255,233,125,0.15);
+      --text-primary: #000000;
+      --text-secondary: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      --separator: rgba(60,60,67,0.12);
+      --separator-opaque: #C6C6C8;
+      --fill-tertiary: rgba(118,118,128,0.12);
+      --system-red: #FF3B30;
+      --system-orange: #FF9500;
+      --system-green: #34C759;
+      --system-teal: #5AC8FA;
+      --system-blue: #007AFF;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 0.5px solid var(--separator-opaque);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 0.5px solid var(--separator-opaque);
+      flex-shrink: 0;
+    }
+
+    .logo-icon { font-size: 20px; line-height: 1; }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--gold-text);
+    }
+
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 14px 16px 4px;
+    }
+
+    .nav-item {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      text-decoration: none;
+    }
+
+    .nav-item:hover { background: var(--fill-tertiary); }
+
+    .nav-item.active {
+      background: var(--gold-soft);
+      border-left-color: var(--gold);
+    }
+    .nav-item.active .nav-label { color: var(--gold-text); font-weight: 600; }
+    .nav-item.active .nav-icon svg { stroke: var(--gold-text); }
+
+    .nav-icon {
+      width: 20px; height: 20px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-icon svg {
+      width: 18px; height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.75;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.014em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .sidebar-footer {
+      border-top: 0.5px solid var(--separator-opaque);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .sync-row {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .sync-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--system-green);
+    }
+
+    .sync-text {
+      font-size: 11px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .user-mini {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; min-height: 36px;
+    }
+
+    .user-mini-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--gold-text);
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .user-mini-name {
+      font-size: 12px; font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    .top-bar {
+      height: 56px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--separator-opaque);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .top-bar-title {
+      font-size: 17px; font-weight: 600;
+      letter-spacing: -0.022em;
+    }
+
+    /* Content */
+    .content-zone {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .settings-column {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      padding-bottom: 48px;
+    }
+
+    /* Section */
+    .settings-section {}
+
+    .settings-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 0 4px 8px;
+    }
+
+    /* Grouped table card */
+    .settings-group {
+      background: var(--surface);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .settings-row {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      border-bottom: 0.5px solid var(--separator);
+      gap: 12px;
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+
+    .settings-row-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .icon-bg-gold { background: var(--gold); }
+    .icon-bg-blue { background: rgba(0,122,255,0.12); }
+    .icon-bg-green { background: rgba(52,199,89,0.12); }
+    .icon-bg-orange { background: rgba(255,149,0,0.12); }
+    .icon-bg-red { background: rgba(255,59,48,0.1); }
+    .icon-bg-teal { background: rgba(90,200,250,0.15); }
+    .icon-bg-purple { background: rgba(175,82,222,0.12); }
+    .icon-bg-gray { background: var(--fill-tertiary); }
+
+    .settings-row-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .settings-row-label {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.016em;
+    }
+
+    .settings-row-value {
+      font-size: 13px;
+      color: var(--text-secondary);
+      letter-spacing: -0.012em;
+      margin-top: 1px;
+    }
+
+    .settings-row-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Edit link */
+    .edit-link {
+      font-size: 14px;
+      color: var(--system-blue);
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0 4px;
+    }
+
+    /* Chevron arrow */
+    .chevron {
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    /* Logo placeholder */
+    .logo-placeholder {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--fill-tertiary);
+      border: 0.5px solid var(--separator-opaque);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    /* Change link */
+    .change-link {
+      font-size: 13px;
+      color: var(--system-blue);
+      cursor: pointer;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      width: 51px; height: 31px;
+      border-radius: 16px;
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-on {
+      background: var(--system-green);
+    }
+
+    .toggle-off {
+      background: var(--separator-opaque);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      width: 27px; height: 27px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      transition: left 0.15s ease;
+    }
+
+    .toggle-on .toggle-thumb { left: 22px; }
+    .toggle-off .toggle-thumb { left: 2px; }
+
+    /* Segmented control */
+    .segmented {
+      display: flex;
+      background: var(--fill-tertiary);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-option {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .seg-option.active {
+      background: var(--surface);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    }
+
+    /* Manual backup button */
+    .btn-outline-sm {
+      background: var(--surface);
+      color: var(--system-blue);
+      border: 0.5px solid var(--separator-opaque);
+      border-radius: 8px;
+      padding: 0 12px;
+      min-height: 32px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .btn-outline-sm:hover { background: var(--fill-tertiary); }
+
+    /* Danger row */
+    .settings-row.danger .settings-row-label { color: var(--system-red); }
+
+    /* Signature on file badge */
+    .sig-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12px;
+      color: var(--system-green);
+      background: rgba(52,199,89,0.1);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    /* Version footer */
+    .version-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">🍋</span>
+    <span class="logo-text">Dentalemon</span>
+  </div>
+
+  <div class="nav-scroll">
+    <div class="nav-section-label">Main</div>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+      <span class="nav-label">Calendar</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span class="nav-label">Patients</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+      <span class="nav-label">Workspace</span>
+    </a>
+
+    <div class="nav-section-label">Finance</div>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      <span class="nav-label">Reports</span>
+    </a>
+
+    <div class="nav-section-label">Admin</div>
+
+    <a class="nav-item" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg></span>
+      <span class="nav-label">Staff</span>
+    </a>
+
+    <a class="nav-item active" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></span>
+      <span class="nav-label">Settings</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sync-row">
+      <div class="sync-dot"></div>
+      <span class="sync-text">Synced just now</span>
+    </div>
+    <div class="user-mini">
+      <div class="user-mini-avatar">RC</div>
+      <span class="user-mini-name">Dr. Ramon Cruz</span>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span class="top-bar-title">Settings</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-zone">
+    <div class="settings-column">
+
+      <!-- ── CLINIC ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">Clinic</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-gold">🏥</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Clinic Name</div>
+              <div class="settings-row-value">Cruz Dental Clinic</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">📍</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Address</div>
+              <div class="settings-row-value">Cruz St., Paco, Manila</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-green">📞</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Contact</div>
+              <div class="settings-row-value">+63 917 555 0000</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-orange">🖼</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Logo</div>
+            </div>
+            <div class="settings-row-right">
+              <div class="logo-placeholder">🦷</div>
+              <a class="change-link" href="#">Change logo</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── DENTIST PROFILE ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">Dentist Profile</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">👤</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Name</div>
+              <div class="settings-row-value">Dr. Ramon Cruz, DDS</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-teal">🪪</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">PRC License</div>
+              <div class="settings-row-value">12345-A · Expires Dec 2027</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-purple">✍️</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">E-Signature</div>
+              <div class="settings-row-value">
+                <span class="sig-badge">✓ Signature on file</span>
+                &nbsp;· Last updated Jan 5, 2026
+              </div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CLINICAL ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">Clinical</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-gold">💰</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Treatment Fee Schedule</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">📋</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Treatment Templates</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-green">📄</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Consent Form Templates</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-orange">🕐</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Working Hours</div>
+              <div class="settings-row-value">Mon–Fri 8:00 AM – 6:00 PM</div>
+            </div>
+            <div class="settings-row-right">
+              <a class="edit-link" href="#">Edit</a>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-teal">📝</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Visit Notes Format</div>
+            </div>
+            <div class="settings-row-right">
+              <div class="segmented">
+                <div class="seg-option active">Free Text</div>
+                <div class="seg-option">SOAP</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── LOCALIZATION ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">Localization</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">🌐</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Language</div>
+              <div class="settings-row-value">English</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-green">₱</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Currency</div>
+              <div class="settings-row-value">Philippine Peso (₱)</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-teal">🦷</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Tooth Notation</div>
+            </div>
+            <div class="settings-row-right">
+              <div class="segmented">
+                <div class="seg-option active">FDI</div>
+                <div class="seg-option">Universal</div>
+                <div class="seg-option">Palmer</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-orange">📅</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Date Format</div>
+              <div class="settings-row-value">MM/DD/YYYY</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── DATA & PRIVACY ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">Data &amp; Privacy</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">☁️</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Cloud Backup</div>
+              <div class="settings-row-value">Last backup: Mar 5, 2026 9:42 AM · 2.3 GB used</div>
+            </div>
+            <div class="settings-row-right">
+              <button class="btn-outline-sm">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.59"/></svg>
+                Backup Now
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-green">📤</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Data Export</div>
+              <div class="settings-row-value">Export all records as CSV/JSON</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-orange">🗓</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Data Retention</div>
+              <div class="settings-row-value">15 years (PH default)</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-teal">🔐</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">PMD Signing Certificate</div>
+              <div class="settings-row-value">Self-signed · Expires Jan 2028</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row danger">
+            <div class="settings-row-icon icon-bg-red">🔒</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Patient Anonymization</div>
+              <div class="settings-row-value" style="color: var(--text-tertiary);">Irreversible — remove identifying data</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron" style="color: var(--system-red);">›</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── APP ── -->
+      <div class="settings-section">
+        <div class="settings-section-label">App</div>
+        <div class="settings-group">
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-orange">🔔</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Overdue Alerts</div>
+              <div class="settings-row-value">Notify when payments are overdue</div>
+            </div>
+            <div class="settings-row-right">
+              <div class="toggle toggle-on">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-blue">💳</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Payment Plan Reminders</div>
+              <div class="settings-row-value">Remind patients of upcoming installments</div>
+            </div>
+            <div class="settings-row-right">
+              <div class="toggle toggle-on">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-gray">💡</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Reset In-App Hints</div>
+              <div class="settings-row-value">Show all onboarding tips again</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-icon icon-bg-gold">💬</div>
+            <div class="settings-row-content">
+              <div class="settings-row-label">Send Feedback</div>
+              <div class="settings-row-value">Report issues or suggest improvements</div>
+            </div>
+            <div class="settings-row-right">
+              <span class="chevron">›</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- VERSION FOOTER -->
+      <div class="version-footer">
+        Dentalemon v1.0.0 (build 202605010)
+      </div>
+
+    </div><!-- /settings-column -->
+  </div><!-- /content-zone -->
+</div><!-- /main -->
+
+</body>
+</html>

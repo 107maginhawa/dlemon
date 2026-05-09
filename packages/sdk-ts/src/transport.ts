@@ -91,10 +91,11 @@ export class HttpTransport implements Transport {
  */
 export class IpcTransport implements Transport {
   private invoke: ((cmd: string, args: any) => Promise<any>) | null = null;
+  private ready: Promise<void>;
 
   constructor() {
     // Dynamically import Tauri API
-    this.initTauri();
+    this.ready = this.initTauri();
   }
 
   private async initTauri() {
@@ -108,6 +109,7 @@ export class IpcTransport implements Transport {
   }
 
   async request(req: TransportRequest): Promise<TransportResponse> {
+    await this.ready;
     if (!this.invoke) {
       throw new Error('Tauri IPC not available');
     }
@@ -115,7 +117,7 @@ export class IpcTransport implements Transport {
     try {
       const result = await this.invoke('api_request', {
         method: req.method,
-        url: req.url,
+        path: req.url,
         body: req.body || null,
         headers: req.headers || {},
       });

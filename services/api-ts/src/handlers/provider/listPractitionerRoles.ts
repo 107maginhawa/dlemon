@@ -1,40 +1,44 @@
 import type { ValidatedContext } from '@/types/app';
-import {
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  BusinessLogicError,
-} from '@/core/errors';
+import type { DatabaseInstance } from '@/core/database';
+import { UnauthorizedError } from '@/core/errors';
 import type { ListPractitionerRolesQuery } from '@/generated/openapi/validators';
+import { PractitionerRoleRepository, type PractitionerRoleFilters } from './repos/practitioner-role.repo';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 
 /**
  * listPractitionerRoles
- * 
+ *
  * Path: GET /providers/practitioner-roles
  * OperationId: listPractitionerRoles
  */
 export async function listPractitionerRoles(
   ctx: ValidatedContext<never, ListPractitionerRolesQuery, never>
 ): Promise<Response> {
-  // Get authenticated session from Better-Auth
   const session = ctx.get('session');
   if (!session) {
     throw new UnauthorizedError();
   }
-  
-  
-  // Extract validated query parameters
+
   const query = ctx.req.valid('query');
-  
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: listPractitionerRoles');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const { limit, offset } = parsePagination(query);
+
+  const filters: PractitionerRoleFilters = {};
+  if ((query as any).practitioner) filters.practitionerId = (query as any).practitioner;
+  if ((query as any).active !== undefined) filters.active = (query as any).active;
+  if ((query as any).specialty) filters.specialty = (query as any).specialty;
+
+  const repo = new PractitionerRoleRepository(db, logger);
+  const [data, totalCount] = await Promise.all([
+    repo.findMany(filters, { pagination: { limit, offset } }),
+    repo.count(filters),
+  ]);
+
+  const pagination = buildPaginationMeta(data, totalCount, limit, offset);
+
+  logger?.info({ filters, pagination: { limit, offset }, resultCount: data.length, totalCount, action: 'list' }, 'PractitionerRoles listed');
+
+  return ctx.json({ data, pagination }, 200);
 }

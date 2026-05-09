@@ -25,9 +25,10 @@ workspace.
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
   - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
-  - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds the Boa JS engine + cadence P2P sync for offline-first operation. Optional — only built when packaging desktop/mobile.
+  - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds api-ts (via the `api-ts-embedded` crate / QuickJS runtime) + the cadence P2P sync engine for offline-first operation. Optional — only built when packaging desktop/mobile.
 - `services/` - Backend services:
   - `api-ts/` - Reference TypeScript API impl (Hono + Drizzle). Sibling impls (`api-rs`, `api-go`, …) are documented in `specs/api/IMPLEMENTING.md` but not yet present.
+  - `api-ts-embedded/` - Rust crate that bundles `api-ts` into a QuickJS runtime (via `rquickjs` + esbuild) for offline-first Tauri embedding. Exposes `ApiTsEmbedded::new(db_path).request(method, path, body, headers) -> ApiTsResponse` to the host. JS bundle (`dist/bundle.js.gz`) is built by `cargo build` via `build.rs`.
   - `cadence/` - P2P sync engine (Rust + Iroh transport, SQLite/Valkey metadata backends, JWT scope auth). Embedded into `apps/account/src-tauri` for offline-first sync; can also run as a standalone hub. See `services/cadence/README.md`.
 - `specs/api/` - TypeSpec API definitions; compiled to OpenAPI + TypeScript types. Also home of the contract docs and Hurl contract tests under `tests/contract/`.
 - `packages/` - Shared packages:
@@ -38,7 +39,7 @@ workspace.
   Note: `@monobase/api-spec` (consumed by SDK + apps for generated OpenAPI types) lives at `specs/api/`, not under `packages/`.
 - `scripts/run-contract-tests.ts` - Runs the Hurl contract suite against `$API_URL`
 - `.github/workflows/contract.yml` - CI: boots the impl, runs Hurl + Schemathesis
-- `.claude/skills/` - 16 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
+- `.claude/skills/` - 17 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, module-review, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
 
 ## Business Domain Modules
 
@@ -146,7 +147,7 @@ notificationRepo.createNotificationForModule({
 ```
 
 ### Module Structure Pattern
-Backend handlers follow: **Router → Validators → Service → Handlers**
+Backend handlers follow: **Router → Validators → Handlers → Repositories**
 
 Each handler directory contains:
 - Handler files (CRUD operations)
@@ -218,6 +219,27 @@ To scaffold a new app, copy `apps/account/` and update `package.json` name + `vi
 
 **Details**: See [CONTRIBUTING.md#testing-requirements](./CONTRIBUTING.md#testing-requirements)
 
+## Development Protocol: Vertical TDD (MANDATORY)
+
+> **Read [docs/development/VERTICAL_TDD.md](./docs/development/VERTICAL_TDD.md) before writing any code. This overrides default agent behavior.**
+
+**Two non-negotiable rules:**
+
+1. **Tests before code, always.** Write failing tests first (RED), then implement (GREEN), then refactor. No exceptions — not for "simple" changes, not for "I'll add them later."
+
+2. **Vertical slices, never horizontal layers.** Each module goes fully end-to-end (TypeSpec → backend tests → backend → contract tests → frontend tests → frontend → E2E → verify) before starting the next module. Never batch "all backends first."
+
+**Per-module 10-step sequence:**
+```
+1. TypeSpec → 2. Codegen → 3. Backend Tests (RED) → 4. Backend Impl (GREEN)
+→ 5. Contract Tests (RED) → 6. Contract Impl (GREEN) → 7. Frontend Tests (RED)
+→ 8. Frontend Impl (GREEN) → 9. E2E Test → 10. Verify Gate
+```
+
+**Gate:** A module is not complete until all test layers pass (backend unit + contract + frontend unit + E2E) and `bun test` + `bun run typecheck` are green with no regressions.
+
+**Full protocol with examples, test locations, and rationalization rejection table:** [docs/development/VERTICAL_TDD.md](./docs/development/VERTICAL_TDD.md)
+
 ## Common Commands Quick Reference
 
 **Full command reference**: See [README.md#available-commands](./README.md#available-commands)
@@ -249,8 +271,9 @@ cd apps/account && bun run test:e2e     # E2E tests
 ### What Exists
 - ✅ **apps/account** - Reference Vite + TanStack Router app
 - ✅ **apps/account/src/components/** - Inlined shadcn/ui primitives
-- ✅ **apps/account/src-tauri/** - Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
+- ✅ **apps/account/src-tauri/** - Tauri 2 desktop/mobile wrapper (Rust + QuickJS via api-ts-embedded + cadence)
 - ✅ **services/api-ts/** - Reference Hono + Drizzle API
+- ✅ **services/api-ts-embedded/** - Rust crate that bundles api-ts into QuickJS for offline Tauri (consumed by account/src-tauri)
 - ✅ **services/cadence/** - Rust P2P sync engine (compiles standalone; embedded by account Tauri)
 - ✅ **specs/api/** (`@monobase/api-spec`) - TypeSpec sources + generated OpenAPI + TS types
 - ✅ **packages/sdk-ts/** - Auto-generated TanStack Query hooks + hand-written client/flows/utils

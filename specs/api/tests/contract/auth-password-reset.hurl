@@ -10,6 +10,7 @@
 # 1. Sign up.
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reset-{{suffix}}@example.org",
   "password": "Sup3rSecret!ContractTest",
@@ -21,6 +22,7 @@ HTTP 200
 # 2. Request a password reset.
 POST {{api}}/auth/forget-password
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reset-{{suffix}}@example.org",
   "redirectTo": "/"
@@ -31,8 +33,8 @@ HTTP 200
 # 3. Poll Mailpit for the reset email.
 GET {{mailpit_api}}/api/v1/search?query=to:reset-{{suffix}}@example.org%20subject:reset&limit=1
 [Options]
-retry: 30
-retry-interval: 500ms
+retry: 60
+retry-interval: 1000ms
 HTTP 200
 [Captures]
 message_id: jsonpath "$.messages[0].ID"
@@ -51,6 +53,7 @@ reset_token: jsonpath "$.Text" regex "/auth/reset-password/([^?\\s]+)"
 # 5. POST the reset with the captured token.
 POST {{api}}/auth/reset-password
 Content-Type: application/json
+Origin: {{api}}
 {
   "token": "{{reset_token}}",
   "newPassword": "NewPassword!ContractTest"
@@ -61,6 +64,7 @@ HTTP 200
 # 6. Sign in with the new password.
 POST {{api}}/auth/sign-in/email
 Content-Type: application/json
+Origin: {{api}}
 {
   "email": "reset-{{suffix}}@example.org",
   "password": "NewPassword!ContractTest"

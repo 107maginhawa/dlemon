@@ -1,7 +1,7 @@
 {
   "extends": "@monobase/typescript-config/api.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {

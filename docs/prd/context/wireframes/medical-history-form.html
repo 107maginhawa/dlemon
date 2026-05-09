@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentalemon — Medical History · Russel Herrera</title>
+<style>
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --gold: #FFE97D;
+  --gold-hover: #F5DC60;
+  --gold-text: #4A4018;
+  --gold-soft: rgba(255,233,125,0.15);
+  --text-primary: #000000;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
+  --separator: rgba(60,60,67,0.12);
+  --separator-opaque: #C6C6C8;
+  --fill-tertiary: rgba(118,118,128,0.12);
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-green: #34C759;
+  --system-teal: #5AC8FA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────────────── */
+.sidebar {
+  width: 200px;
+  min-width: 200px;
+  background: var(--surface);
+  border-right: 0.5px solid var(--separator-opaque);
+  display: flex;
+  flex-direction: column;
+  padding-top: 16px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 20px;
+}
+
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--gold);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.logo-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 0 16px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 8px;
+  margin: 0 8px 2px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: pointer;
+  letter-spacing: -0.1px;
+}
+
+.nav-item:hover { background: var(--fill-tertiary); }
+
+.nav-item.active {
+  background: var(--gold-soft);
+  font-weight: 600;
+  color: var(--gold-text);
+}
+
+.nav-icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-divider { height: 0.5px; background: var(--separator-opaque); margin: 10px 0; }
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 12px 8px;
+  border-top: 0.5px solid var(--separator-opaque);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.user-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-text);
+  flex-shrink: 0;
+}
+
+.user-name-sm { font-size: 12px; font-weight: 600; }
+.user-role-sm { font-size: 11px; color: var(--text-secondary); }
+
+/* ── Main ─────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Top bar ──────────────────────────────────────── */
+.topbar {
+  height: 56px;
+  min-height: 56px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--separator-opaque);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  color: var(--gold-text);
+  font-weight: 500;
+  cursor: pointer;
+  height: 44px;
+  padding: 0 4px;
+  border-radius: 8px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.back-btn:hover { background: var(--gold-soft); }
+
+.topbar-title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  text-align: center;
+}
+
+.topbar-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+
+/* ── Scroll area ──────────────────────────────────── */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Form card ────────────────────────────────────── */
+.form-card {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 760px;
+  overflow: hidden;
+  margin-bottom: 80px;
+}
+
+/* ── Section header ───────────────────────────────── */
+.section-header {
+  padding: 14px 20px 6px;
+  background: var(--bg);
+  border-bottom: 0.5px solid var(--separator-opaque);
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.section-header.danger .section-title {
+  color: #D70015;
+}
+
+.section-header.danger {
+  background: rgba(255,59,48,0.04);
+  border-bottom-color: rgba(255,59,48,0.2);
+}
+
+/* ── Row (checkbox item) ──────────────────────────── */
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 48px;
+  border-bottom: 0.5px solid var(--separator);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.list-row:last-of-type { border-bottom: none; }
+.list-row:hover { background: var(--fill-tertiary); }
+
+/* ── Custom checkbox ──────────────────────────────── */
+.cb {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--separator-opaque);
+  background: var(--surface);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cb.checked {
+  background: var(--gold);
+  border-color: var(--gold-hover);
+  color: var(--gold-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cb.checked.danger-cb {
+  background: rgba(255,59,48,0.15);
+  border-color: rgba(255,59,48,0.3);
+  color: #D70015;
+}
+
+/* ── Row content ──────────────────────────────────── */
+.row-main {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.row-label {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+
+.row-code {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  letter-spacing: -0.1px;
+}
+
+.row-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  padding: 2px 8px;
+  background: var(--fill-tertiary);
+  border-radius: 4px;
+}
+
+.row-note.warn {
+  background: rgba(255,149,0,0.12);
+  color: #CC7700;
+  font-weight: 500;
+}
+
+/* ── Severity badge ───────────────────────────────── */
+.severity {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.severity-severe {
+  background: rgba(255,59,48,0.15);
+  color: #D70015;
+}
+
+.severity-moderate {
+  background: rgba(255,149,0,0.15);
+  color: #CC7700;
+}
+
+/* ── Add row ──────────────────────────────────────── */
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-top: 0.5px solid var(--separator);
+  transition: background 0.1s;
+}
+
+.add-row:hover { background: var(--gold-soft); }
+
+.add-row span {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+}
+
+.add-row.danger span { color: #D70015; }
+.add-row.normal span { color: var(--gold-text); }
+
+/* ── Textarea ─────────────────────────────────────── */
+.form-textarea {
+  width: 100%;
+  min-height: 80px;
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  letter-spacing: -0.2px;
+  line-height: 1.5;
+}
+
+.form-textarea::placeholder { color: var(--text-tertiary); }
+
+/* ── Segmented ────────────────────────────────────── */
+.seg-container {
+  padding: 12px 20px;
+}
+
+.segmented {
+  display: flex;
+  background: var(--fill-tertiary);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 2px;
+  height: 34px;
+  align-items: center;
+  width: fit-content;
+}
+
+.seg-btn {
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.1px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.seg-btn.active {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  font-weight: 600;
+}
+
+/* ── Radio rows ───────────────────────────────────── */
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 48px;
+  border-bottom: 0.5px solid var(--separator);
+  cursor: pointer;
+}
+
+.radio-row:last-of-type { border-bottom: none; }
+.radio-row:hover { background: var(--fill-tertiary); }
+
+.radio-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--separator-opaque);
+  background: var(--surface);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radio-circle.selected {
+  border-color: var(--gold-hover);
+  background: var(--gold);
+}
+
+.radio-circle.selected::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold-text);
+}
+
+.radio-label { font-size: 15px; letter-spacing: -0.2px; }
+
+/* ── Field group inside section ───────────────────── */
+.field-in-section {
+  padding: 12px 20px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.field-in-section:last-child { border-bottom: none; }
+.field-in-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── Sticky footer ────────────────────────────────── */
+.sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 200px;
+  right: 0;
+  height: 68px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--separator-opaque);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 20;
+}
+
+.footer-byline {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  letter-spacing: -0.1px;
+}
+
+.btn-primary {
+  height: 44px;
+  padding: 0 24px;
+  background: var(--gold);
+  color: var(--gold-text);
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover { background: var(--gold-hover); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">🍋</div>
+    <span class="logo-text">Dentalemon</span>
+  </div>
+
+  <div class="sidebar-section-label">Clinic</div>
+  <div class="nav-item"><span class="nav-icon">⊞</span> Dashboard</div>
+  <div class="nav-item"><span class="nav-icon">📅</span> Schedule</div>
+  <div class="nav-item active"><span class="nav-icon">👤</span> Patients</div>
+  <div class="nav-item"><span class="nav-icon">🦷</span> Treatments</div>
+  <div class="nav-divider"></div>
+  <div class="sidebar-section-label">Finance</div>
+  <div class="nav-item"><span class="nav-icon">₱</span> Billing</div>
+  <div class="nav-item"><span class="nav-icon">📊</span> Reports</div>
+  <div class="nav-divider"></div>
+  <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+
+  <div class="sidebar-bottom">
+    <div class="user-chip">
+      <div class="user-avatar-sm">RC</div>
+      <div>
+        <div class="user-name-sm">Dr. Ramon Cruz</div>
+        <div class="user-role-sm">Dentist</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="patient-profile.html">‹ Russel Herrera</a>
+    <div style="flex:1;text-align:center;">
+      <div class="topbar-title">Medical History</div>
+      <div class="topbar-subtitle">Last updated Mar 5, 2026</div>
+    </div>
+    <div style="width:120px;"></div>
+  </div>
+
+  <!-- Scroll area -->
+  <div class="scroll-area">
+    <div class="form-card">
+
+      <!-- ── MEDICAL CONDITIONS ────────────────────── -->
+      <div class="section-header">
+        <div class="section-title">Medical Conditions</div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb checked">✓</div>
+        <div class="row-main">
+          <span class="row-label">Diabetes Mellitus Type 2</span>
+          <span class="row-code">ICD-10: E11</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Hypertension</span>
+          <span class="row-code">I10</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Heart Disease</span>
+          <span class="row-code">I25.10</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Blood Disorders</span>
+          <span class="row-code">D64.9</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">HIV / Hepatitis B / C</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Asthma</span>
+          <span class="row-code">J45.909</span>
+        </div>
+      </div>
+
+      <div class="add-row normal">
+        <span style="font-size:16px;font-weight:300;color:var(--gold-text);">+</span>
+        <span>Add other condition</span>
+      </div>
+
+      <!-- ── CURRENT MEDICATIONS ─────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <div class="section-title">Current Medications</div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb checked">✓</div>
+        <div class="row-main" style="flex-direction:column;align-items:flex-start;gap:2px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="row-label">Warfarin 5mg</span>
+            <span class="row-code">Anticoagulant · RxNorm: 855332</span>
+          </div>
+          <span class="row-note warn">⚠ Monitor bleeding risk</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Blood Pressure Medication</span>
+          <span class="row-code">e.g. Amlodipine</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Bisphosphonates</span>
+          <span class="row-code">e.g. Alendronate</span>
+        </div>
+      </div>
+
+      <div class="add-row normal">
+        <span style="font-size:16px;font-weight:300;color:var(--gold-text);">+</span>
+        <span>Add medication</span>
+      </div>
+
+      <!-- ── ALLERGIES (critical) ────────────────── -->
+      <div class="section-header danger" style="margin-top:4px;">
+        <div class="section-title">⚠ Allergies — Critical</div>
+      </div>
+
+      <div class="list-row" style="background:rgba(255,59,48,0.02);">
+        <div class="cb checked danger-cb">✓</div>
+        <div class="row-main">
+          <span class="row-label">Penicillin</span>
+          <span class="row-code">SNOMED: 372687004</span>
+        </div>
+        <span class="severity severity-severe">Severe</span>
+      </div>
+
+      <div class="list-row" style="background:rgba(255,59,48,0.02);">
+        <div class="cb checked danger-cb">✓</div>
+        <div class="row-main">
+          <span class="row-label">Latex</span>
+        </div>
+        <span class="severity severity-moderate">Moderate</span>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Aspirin</span>
+          <span class="row-code">SNOMED: 387458008</span>
+        </div>
+      </div>
+
+      <div class="list-row">
+        <div class="cb"></div>
+        <div class="row-main">
+          <span class="row-label">Local Anesthetics</span>
+          <span class="row-code">e.g. Lidocaine</span>
+        </div>
+      </div>
+
+      <div class="add-row danger">
+        <span style="font-size:16px;font-weight:300;">+</span>
+        <span>Add allergy</span>
+      </div>
+
+      <!-- ── SURGICAL HISTORY ────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <div class="section-title">Surgical History</div>
+      </div>
+
+      <div style="padding:0;">
+        <textarea class="form-textarea" placeholder="Describe any past surgeries, procedures, or hospitalizations…">No prior surgeries.</textarea>
+      </div>
+
+      <!-- ── PREGNANCY STATUS ────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <div class="section-title">Pregnancy Status</div>
+      </div>
+
+      <div class="radio-row">
+        <div class="radio-circle selected"></div>
+        <span class="radio-label">Not Applicable</span>
+      </div>
+      <div class="radio-row">
+        <div class="radio-circle"></div>
+        <span class="radio-label">Currently Pregnant</span>
+      </div>
+      <div class="radio-row">
+        <div class="radio-circle"></div>
+        <span class="radio-label">Breastfeeding</span>
+      </div>
+
+      <!-- ── LIFESTYLE ───────────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <div class="section-title">Lifestyle</div>
+      </div>
+
+      <div class="field-in-section">
+        <div class="field-in-label">Smoking</div>
+        <div class="segmented">
+          <button class="seg-btn active">Non-smoker</button>
+          <button class="seg-btn">Former</button>
+          <button class="seg-btn">Current</button>
+        </div>
+      </div>
+
+      <div class="field-in-section">
+        <div class="field-in-label">Alcohol Use</div>
+        <div class="segmented">
+          <button class="seg-btn">None</button>
+          <button class="seg-btn active">Occasional</button>
+          <button class="seg-btn">Regular</button>
+          <button class="seg-btn">Heavy</button>
+        </div>
+      </div>
+
+      <!-- Spacer for sticky footer -->
+      <div style="height:20px;"></div>
+
+    </div><!-- /form-card -->
+  </div><!-- /scroll-area -->
+
+</main>
+
+<!-- Sticky footer -->
+<div class="sticky-footer">
+  <div class="footer-byline">
+    Last updated by Dr. Ramon Cruz · Mar 5, 2026
+  </div>
+  <button class="btn-primary">
+    💾 Save Medical History
+  </button>
+</div>
+
+</body>
+</html>

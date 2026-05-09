@@ -1413,6 +1413,15 @@ export async function signInAsUser(page: Page, email: string, password: string) 
 
 ## Testing Requirements
 
+Follow the Vertical TDD protocol: write tests first (RED), implement until they pass (GREEN), then move to the next module. See `.claude/skills/develop/SKILL.md` for the full workflow.
+
+### Data Bootstrap Order
+
+When seeding test data, always follow this order:
+1. Sign up (creates user)
+2. Create person record
+3. Assign roles/membership
+
 ### Unit Tests (API Service)
 
 ```bash
