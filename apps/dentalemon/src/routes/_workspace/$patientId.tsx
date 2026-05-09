@@ -47,8 +47,6 @@ function WorkspacePage() {
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
   const [pmdShared, setPmdShared] = useState(false);
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
-  const [splitRatio, setSplitRatio] = useState(0.45);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Sheet open/close state ──────────────────────────────────────────────────
   const [rxSheetOpen, setRxSheetOpen] = useState(false);
@@ -106,12 +104,7 @@ function WorkspacePage() {
         );
 
   // ── Resizable divider ─────────────────────────────────────────────────────
-  function handleResize(delta: number) {
-    setSplitRatio((prev) => {
-      const containerH = containerRef.current?.clientHeight ?? 600;
-      const newRatio = prev + delta / containerH;
-      return Math.min(0.75, Math.max(0.2, newRatio));
-    });
+  function handleResize(_delta: number) {
   }
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -240,11 +233,12 @@ function WorkspacePage() {
       </div>
 
       {/* Resizable carousel + table zone */}
-      <div ref={containerRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
         {/* Carousel section */}
         <div
-          style={{ flexBasis: `${splitRatio * 100}%`, minHeight: '200px', overflow: 'hidden' }}
-          className="shrink-0 border-b bg-background/80 backdrop-blur"
+          data-testid="workspace-carousel-zone"
+          className="shrink-0 border-b bg-background/80 backdrop-blur overflow-hidden"
+          style={{ minHeight: '200px' }}
         >
           <TimelineCarousel
             visits={filteredVisits}
@@ -261,8 +255,9 @@ function WorkspacePage() {
 
         {/* Treatment table section */}
         <div
-          style={{ flexBasis: `${(1 - splitRatio) * 100}%`, minHeight: '150px', overflow: 'auto' }}
-          className="bg-background"
+          data-testid="workspace-table-zone"
+          className="bg-background overflow-auto"
+          style={{ minHeight: '150px' }}
         >
           <TreatmentTable
             treatments={treatments}
