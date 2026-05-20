@@ -64,6 +64,8 @@ const PERSON_ID = 'e0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = '7b000000-0000-4000-8000-000000000a02';
 const MEMBER_ID = '7c000000-0000-4000-8000-000000000a02';
 const STAFF_MEMBER_ID = '7c000000-0000-4000-8000-000000000a99';
+const SCHEDULING_USER = { id: '00000000-0000-0000-0000-000000000097', email: 'scheduling@clinic.com' };
+const SCHEDULING_MEMBER_ID = '7c000000-0000-4000-8000-000000000a97';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
 const ORG_ID = 'ed000000-0000-1000-8000-000000000001';
 
@@ -75,6 +77,7 @@ beforeAll(async () => {
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Staff', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: STAFF_MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: SCHEDULING_MEMBER_ID, branchId: BRANCH_ID, personId: SCHEDULING_USER.id, displayName: 'Scheduling Staff', role: 'staff_scheduling', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
 });
@@ -1164,6 +1167,13 @@ describe('voidDentalInvoice role gate', () => {
     await db.insert(dm).values({ id: '7c000000-0000-4000-8000-000000000a98', branchId: BRANCH_ID, personId: associateUser.id, displayName: 'Associate', role: 'dentist_associate', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
     const { invoice } = await seedInvoice();
     const app = buildTestApp(associateUser);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_scheduling → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(SCHEDULING_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
     expect(res.status).toBe(403);
   });

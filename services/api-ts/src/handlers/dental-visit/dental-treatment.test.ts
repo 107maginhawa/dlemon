@@ -36,6 +36,8 @@ const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const ORG_ID = 'db000000-0000-1000-8000-000000000002';
 const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
 const STAFF_MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
+const SCHEDULING_USER = { id: '00000000-0000-0000-0000-000000000098', email: 'scheduling@clinic.com' };
+const SCHEDULING_MEMBER_ID = 'c0000000-0000-1000-8000-000000000098';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 
 beforeAll(async () => {
@@ -49,6 +51,7 @@ beforeAll(async () => {
   await db.execute(sql`DELETE FROM dental_membership WHERE person_id = ${TEST_USER.id} AND branch_id = ${BRANCH_ID} AND id != ${DENTIST_MEMBER_ID}`);
   await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test Dentist', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: STAFF_MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: SCHEDULING_MEMBER_ID, branchId: BRANCH_ID, personId: SCHEDULING_USER.id, displayName: 'Scheduling Staff', role: 'staff_scheduling', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Treatment', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
 });
@@ -523,6 +526,17 @@ describe('createDentalTreatment role gate', () => {
     expect(res.status).toBe(403);
   });
 
+  test('staff_scheduling → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(SCHEDULING_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, cdtCode: 'D0120', description: 'Eval', priceCents: 5000, carriedOver: false }),
+    });
+    expect(res.status).toBe(403);
+  });
+
   test('dentist_owner → passes role gate (not 403)', async () => {
     const visit = await seedVisit();
     const app = buildTestApp(TEST_USER);
@@ -545,6 +559,18 @@ describe('updateDentalTreatment role gate', () => {
     const visit = await seedVisit();
     const treatment = await seedTreatment(visit.id);
     const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_scheduling → 403', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(SCHEDULING_USER);
     const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
