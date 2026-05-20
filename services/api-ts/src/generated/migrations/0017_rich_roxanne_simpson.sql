@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "dental_payment_receipt_number_unique" ON "dental_payment" USING btree ("receipt_number");

@@ -5,7 +5,7 @@
  * - Prescription (RxNorm coded)
  * - Consent Form (template + signature, immutable after signing)
  * - Attachment (x-ray/photo, tooth-tagged)
- * - Lab Order (state machine: ordered → inFabrication → delivered → fitted)
+ * - Lab Order (state machine: ordered → in_fabrication → delivered → fitted)
  * - Medical History (ICD-10 / SNOMED CT / RxNorm coded entries)
  * - Amendment (additive-only, links to original record)
  */
@@ -27,7 +27,7 @@ using TypeSpec.OpenAPI;
 
 enum LabOrderStatus {
   ordered,
-  inFabrication,
+  in_fabrication,
   delivered,
   fitted,
   cancelled,
@@ -47,7 +47,7 @@ enum MedicalHistoryEntryType {
   allergy,
   procedure,
   vaccination,
-  familyHistory,
+  family_history,
 }
 
 // ---------------------------------------------------------------------------

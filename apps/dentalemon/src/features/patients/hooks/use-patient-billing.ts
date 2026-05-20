@@ -6,7 +6,7 @@
  * API: GET /dental/billing/invoices?patientId=&branchId=
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { listDentalInvoicesOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { Invoice } from '../../../features/billing/hooks/use-invoices';
 
 export type { Invoice };
@@ -18,17 +18,19 @@ interface UsePatientBillingOptions {
 
 export function usePatientBilling({ patientId, branchId }: UsePatientBillingOptions) {
   const query = useQuery({
-    queryKey: ['patient-billing', patientId, branchId],
-    queryFn: async (): Promise<Invoice[]> => {
-      const params = new URLSearchParams({ patientId });
-      if (branchId) params.set('branchId', branchId);
-      const res = await fetch(
-        `${apiBaseUrl}/dental/billing/invoices?${params.toString()}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to fetch billing (${res.status})`);
-      const data = await res.json();
-      return Array.isArray(data) ? data : (data.invoices ?? []);
+    ...listDentalInvoicesOptions({
+      query: { patientId, branchId: branchId ?? undefined },
+    }),
+    select: (data) => {
+      const raw = data as Record<string, unknown>;
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw.invoices)
+            ? raw.invoices
+            : [];
+      return items as unknown as Invoice[];
     },
     enabled: !!patientId,
   });

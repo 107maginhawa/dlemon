@@ -358,7 +358,7 @@ export class ApiClient {
     }
 
     // Try to create new provider profile
-    const response = await this.fetch('/providers', {
+    const response = await this.fetch('/providers/practitioners', {
       method: 'POST',
       body: providerData
     });

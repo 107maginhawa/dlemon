@@ -5,7 +5,8 @@
  */
 
 import { describe, test, expect, mock, afterEach } from 'bun:test';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { PinSelect } from './pin-select';
 
@@ -20,41 +21,42 @@ const members = [
 describe('PinSelect', () => {
   test('renders a card for each member', () => {
     render(React.createElement(PinSelect, { members, onSelect: () => {} }));
-    expect(screen.getByText('Dr. Ramon Cruz')).toBeTruthy();
-    expect(screen.getByText('Ana Reyes')).toBeTruthy();
-    expect(screen.getByText('Ben Santos')).toBeTruthy();
+    expect(screen.getByText('Dr. Ramon Cruz')).not.toBeNull();
+    expect(screen.getByText('Ana Reyes')).not.toBeNull();
+    expect(screen.getByText('Ben Santos')).not.toBeNull();
   });
 
   test('renders role badge for each member', () => {
     render(React.createElement(PinSelect, { members, onSelect: () => {} }));
     // Should show human-readable role
-    expect(screen.getByText(/Dentist.Owner/i)).toBeTruthy();
+    expect(screen.getByText(/Dentist.Owner/i)).not.toBeNull();
   });
 
   test('renders avatar initials from displayName', () => {
     render(React.createElement(PinSelect, { members: [members[0]!], onSelect: () => {} }));
     // "Dr. Ramon Cruz" → initials "RC" or "DR"
     const avatar = screen.getByTestId('member-avatar-mem-1');
-    expect(avatar.textContent).toBeTruthy();
+    expect(avatar.textContent).not.toBeNull();
   });
 
-  test('calls onSelect with member when card is clicked', () => {
+  test('calls onSelect with member when card is clicked', async () => {
+    const user = userEvent.setup();
     const onSelect = mock(() => {});
     render(React.createElement(PinSelect, { members, onSelect }));
 
-    fireEvent.click(screen.getByText('Ana Reyes'));
+    await user.click(screen.getByText('Ana Reyes'));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect.mock.calls[0]![0]).toEqual(members[1]);
   });
 
   test('renders empty state when no members provided', () => {
     render(React.createElement(PinSelect, { members: [], onSelect: () => {} }));
-    expect(screen.getByTestId('pin-select-empty')).toBeTruthy();
+    expect(screen.getByTestId('pin-select-empty')).not.toBeNull();
   });
 
   test('renders "Choose your profile" heading', () => {
     render(React.createElement(PinSelect, { members, onSelect: () => {} }));
-    expect(screen.getByText(/Choose your profile/i)).toBeTruthy();
+    expect(screen.getByText(/Choose your profile/i)).not.toBeNull();
   });
 
   test('each member card has accessible role="button"', () => {

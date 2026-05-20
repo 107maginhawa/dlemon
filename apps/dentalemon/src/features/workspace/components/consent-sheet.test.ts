@@ -56,7 +56,7 @@ describe('ConsentSheet — validation before sign', () => {
     expect(errors).toContain('signatureData is required');
   });
 
-  test('already signed form produces error (immutable)', () => {
+  test('already signed form produces error (immutable)', () => { // [BR-014]
     const errors = validateConsentBeforeSign({ ...valid, signed: true });
     expect(errors).toContain('Form is already signed and cannot be modified');
   });
@@ -82,7 +82,7 @@ describe('ConsentSheet — signature state', () => {
     expect(signatureData).toBe('');
   });
 
-  test('after signing, form should reflect signed=true', () => {
+  test('after signing, form should reflect signed=true', () => { // [BR-014]
     const form: ConsentFormState = {
       templateId: 'tpl-001',
       templateName: 'General Consent',

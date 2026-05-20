@@ -13,7 +13,7 @@ describe('PhoneInput', () => {
 
     // Should render input element
     const input = container.querySelector('input[type="tel"]')
-    expect(input).toBeDefined()
+    expect(input).not.toBeNull()
   })
 
   test('renders with default country', () => {
@@ -21,7 +21,7 @@ describe('PhoneInput', () => {
     const { container } = render(<PhoneInput onChange={onChange} defaultCountry="CA" />)
 
     const input = container.querySelector('input[type="tel"]')
-    expect(input).toBeDefined()
+    expect(input).not.toBeNull()
   })
 
   test('renders with value', () => {
@@ -44,6 +44,6 @@ describe('PhoneInput', () => {
 
     // Should render country selector button
     const button = container.querySelector('button')
-    expect(button).toBeDefined()
+    expect(button).not.toBeNull()
   })
 })

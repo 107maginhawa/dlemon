@@ -31,7 +31,11 @@ interface UseInvoicesOptions {
 export function useInvoices({ branchId, status, patientId }: UseInvoicesOptions) {
   const query = useQuery({
     ...listDentalInvoicesOptions({ query: { patientId: patientId, status: status as any, branchId: branchId ?? undefined } }),
-    select: (data) => (data ?? []) as unknown as Invoice[],
+    select: (data) => {
+      const raw = data as any;
+      const items = Array.isArray(raw) ? raw : (raw?.data ?? []);
+      return items as Invoice[];
+    },
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

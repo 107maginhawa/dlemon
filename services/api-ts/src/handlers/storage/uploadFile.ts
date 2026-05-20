@@ -36,10 +36,10 @@ export async function uploadFile(
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new StorageFileRepository(db, logger);
   
-  // Check file size limit (50MB)
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+  // Check file size limit (100MB)
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
   if (body.size > MAX_FILE_SIZE) {
-    throw new ValidationError('File size exceeds maximum limit of 50MB');
+    throw new ValidationError('File size exceeds maximum limit of 100MB');
   }
   
   // Generate unique file ID

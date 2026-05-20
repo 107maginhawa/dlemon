@@ -38,45 +38,53 @@ async function signUpAndSetupPractice(page: Page): Promise<{ orgId: string; bran
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  // Create person profile to bypass onboarding redirect
+  // Mark email as verified (required for dashboard access guard)
   await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'Staff', lastName: 'Owner' }),
-    });
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
   }, API);
 
-  // Seed org + branch
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
+  // Create org + branch + membership in one evaluate call so we have personId
+  const ctx = await page.evaluate(async (api) => {
+    // Get current user's personId for membership linkage
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId: string = session?.user?.id ?? '';
+
+    const orgRes = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ name: 'Staff Test Clinic', tier: 'clinic', countryCode: 'PH' }),
     });
-    return res.json();
-  }, API);
-  const orgId = orgRes.id;
+    const org = await orgRes.json() as any;
 
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
+    const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
     });
-    return res.json();
-  }, { api: API, orgId });
-  const branchId = branchRes.id;
+    const branch = await branchRes.json() as any;
 
-  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    // Create membership so getOrgContext returns role = dentist_owner
+    const memberRes = await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Staff Owner', role: 'dentist_owner', personId }),
+    });
+    const member = await memberRes.json() as any;
+
+    return { orgId: org.id, branchId: branch.id, memberId: member.id };
+  }, API);
+  const { orgId, branchId } = ctx;
+
+  await page.evaluate(({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
     localStorage.setItem('currentOrgId', orgId);
     localStorage.setItem('currentBranchId', branchId);
-    // Simulate dentist_owner logged in via PIN (FR8.13 access)
+    localStorage.setItem('currentMemberId', memberId);
     localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, { orgId, branchId });
+  }, ctx);
 
   return { orgId, branchId };
 }
@@ -132,32 +140,84 @@ test.describe('Staff Management', () => {
     await page.getByLabel(/pin.*6 digits/i).fill('111111');
     await page.getByLabel(/confirm pin/i).fill('111111');
 
-    const createResponse = page.waitForResponse(
-      (resp: any) => resp.url().includes('/members') && resp.request().method() === 'POST',
-      { timeout: 10000 },
-    ).catch(() => null);
-
     await page.getByRole('button', { name: /create staff member/i }).click();
-    await createResponse;
 
-    // Staff member should appear in list
-    await page.waitForTimeout(500); // allow list refresh
-    await expect(page.getByText('Nurse Maria')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to close (success) — modal disappears once create + pin-reset both complete
+    await expect(page.getByTestId('staff-create-modal')).not.toBeVisible({ timeout: 10000 });
+
+    // Staff member should appear in list after query invalidation + refetch
+    await expect(page.getByText('Nurse Maria')).toBeVisible({ timeout: 8000 });
   });
 
-  test('FR8.13: non-owner role sees access denied on staff page', async ({ page }) => {
-    await signUpAndSetupPractice(page);
+  test('FR8.13: non-owner role is denied access to staff page', async ({ page }) => {
+    // The RBAC route guard (requireRole) blocks staff_full from /staff at the route level,
+    // redirecting to /dashboard. The StaffAccessDenied component is a secondary in-page
+    // guard shown when the route guard somehow lets a non-owner through (e.g. role changes
+    // after load). This test verifies the route-level denial.
+    const suffix = Date.now();
+    const email = `staff-fr813-${suffix}@example.org`;
+    const password = 'E2eTestPass123!';
 
-    // Override role to staff_full (not owner)
-    await page.evaluate(() => {
-      localStorage.setItem('currentMemberRole', 'staff_full');
-    });
+    await page.goto(`${APP}/auth/sign-up`);
+    await page.waitForLoadState('networkidle');
+    await page.getByLabel('Name', { exact: true }).fill(`Staff Full ${suffix}`);
+    await page.getByLabel('Email', { exact: true }).fill(email);
+    const pwInput = page.locator('input[type="password"]');
+    await pwInput.click();
+    await pwInput.pressSequentially(password, { delay: 10 });
+    await expect(pwInput).not.toHaveValue('');
+    await page.getByRole('button', { name: /create an account/i }).click();
+    await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+
+    await page.evaluate(async (api) => {
+      await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+    }, API);
+
+    const ctx = await page.evaluate(async (api) => {
+      const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+      const session = await sessionRes.json() as any;
+      const personId: string = session?.user?.id ?? '';
+
+      const orgRes = await fetch(`${api}/dental/organizations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: 'Staff Full Clinic', tier: 'clinic', countryCode: 'PH' }),
+      });
+      const org = await orgRes.json() as any;
+
+      const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+      });
+      const branch = await branchRes.json() as any;
+
+      // Create staff_full membership linked to this user
+      const memberRes = await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Staff Member', role: 'staff_full', personId }),
+      });
+      const member = await memberRes.json() as any;
+
+      return { orgId: org.id, branchId: branch.id, memberId: member.id };
+    }, API);
+
+    await page.evaluate((ids: { orgId: string; branchId: string; memberId: string }) => {
+      localStorage.setItem('currentOrgId', ids.orgId);
+      localStorage.setItem('currentBranchId', ids.branchId);
+      localStorage.setItem('currentMemberId', ids.memberId);
+    }, ctx);
 
     await page.goto(`${APP}/staff`);
     await page.waitForLoadState('networkidle');
 
-    // Should show access denied, not the staff list
-    await expect(page.getByTestId('staff-access-denied')).toBeVisible();
-    await expect(page.getByText(/access denied/i)).toBeVisible();
+    // staff_full role cannot access the staff module — route guard redirects to /dashboard
+    await expect(page).toHaveURL(/\/dashboard/);
+    // Staff list heading must NOT be visible (access was denied)
+    await expect(page.getByRole('heading', { name: 'Staff Members' })).not.toBeVisible();
   });
 });

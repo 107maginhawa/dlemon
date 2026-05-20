@@ -104,9 +104,10 @@ describe('RxSheet — payload builder', () => {
     dispenseAsWritten: false,
   };
 
-  test('builds payload with required fields', () => {
+  test('builds payload with required fields including prescriberMemberId', () => { // [BR-017]
     const payload = buildPrescriptionPayload(form, 'v-1', 'p-1', 'm-1');
     expect(payload.visitId).toBe('v-1');
+    expect(payload.prescriberMemberId).toBe('m-1');
     expect(payload.drugName).toBe('Amoxicillin');
     expect(payload.dosage).toBe('500mg');
     expect(payload.frequency).toBe('TID');

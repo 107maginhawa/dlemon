@@ -8,8 +8,9 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from './repos/visit.repo';
+import { VisitNotesRepository } from './repos/treatment.repo';
 import type { User } from '@/types/auth';
 import type { CreateDentalVisitBody } from '@/generated/openapi/validators';
 
@@ -22,7 +23,7 @@ export async function createDentalVisit(
   const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchAccess(db, user.id, body.branchId);
+  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new VisitRepository(db);
 
@@ -31,6 +32,20 @@ export async function createDentalVisit(
     branchId: body.branchId,
     dentistMemberId: body.dentistMemberId,
     chiefComplaint: body.chiefComplaint,
+  });
+
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_visit_create', visitId: visit.id, patientId: visit.patientId, branchId: visit.branchId, by: user.id },
+    'Dental visit created',
+  );
+
+  // Auto-create empty notes row so GET /notes on any new visit returns 200
+  const notesRepo = new VisitNotesRepository(db);
+  await notesRepo.upsert({
+    visitId: visit.id,
+    authorMemberId: visit.dentistMemberId,
+    createdBy: user.id,
+    updatedBy: user.id,
   });
 
   return ctx.json(visit, 201);

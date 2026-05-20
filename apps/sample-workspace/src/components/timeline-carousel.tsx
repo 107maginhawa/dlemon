@@ -45,7 +45,7 @@ export function TimelineCarousel({ visits, activeIndex, onSlideChange, selectedT
         coverflowEffect={{
           rotate: 35,
           stretch: 0,
-          depth: 350,
+          depth: 200,
           modifier: 1,
           scale: 0.72,
           slideShadows: false,

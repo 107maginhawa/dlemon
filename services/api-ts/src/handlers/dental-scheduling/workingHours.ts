@@ -18,7 +18,7 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { eq } from 'drizzle-orm';
 import { assertBranchAccess } from './utils/assert-branch-access';
@@ -122,8 +122,14 @@ export async function updateWorkingHours(ctx: BaseContext) {
 
   await assertBranchAccess(db, user.id, branchId);
 
-  const rawBody = await ctx.req.json();
-  const { workingHours } = updateWorkingHoursSchema.parse(rawBody);
+  let rawBody: unknown;
+  try { rawBody = await ctx.req.json(); } catch { rawBody = {}; }
+  const parsed = updateWorkingHoursSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+    throw new ValidationError(msg || 'Invalid working hours');
+  }
+  const { workingHours } = parsed.data;
 
   await db.update(dentalBranches)
     .set({ workingHours: JSON.stringify(workingHours), updatedAt: new Date(), updatedBy: user.id })

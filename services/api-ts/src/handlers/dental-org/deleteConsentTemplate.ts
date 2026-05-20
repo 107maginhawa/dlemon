@@ -1,0 +1,1 @@
+export { deleteConsentTemplate } from './consentTemplates';

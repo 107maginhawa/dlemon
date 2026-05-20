@@ -15,7 +15,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { VisitRepository } from './repos/visit.repo';
 import type { ToothChartState } from './repos/dental-chart.schema';
@@ -78,7 +78,7 @@ export async function initializeDentition(ctx: Context): Promise<Response> {
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(body.visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   const age = getAgeYears(body.dateOfBirth);
 

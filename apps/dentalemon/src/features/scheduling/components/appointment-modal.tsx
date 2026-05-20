@@ -2,16 +2,16 @@
  * AppointmentModal — slide-up sheet for creating/editing appointments
  *
  * Fields: Patient ID, Dentist Member ID, Branch ID, Date, Time,
- *         Duration, Procedure Type, Notes, Walk-in toggle
+ *         Duration, Service Type, Notes, Walk-in toggle
  *
  * Wireframe: docs/prd/context/wireframes/appointment-modal.html
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { createAppointment } from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
-const DURATION_OPTIONS = [
+export const DURATION_OPTIONS = [
   { value: 30, label: '30 min' },
   { value: 60, label: '1 hr' },
   { value: 90, label: '1.5 hr' },
@@ -28,13 +28,13 @@ export interface AppointmentModalProps {
 
 export function validateAppointmentForm(form: {
   patientId: string;
-  procedureType: string;
+  serviceType: string;
   date: string;
   time: string;
 }): string[] {
   const errors: string[] = [];
   if (!form.patientId.trim()) errors.push('Patient ID is required');
-  if (!form.procedureType.trim()) errors.push('Procedure type is required');
+  if (!form.serviceType.trim()) errors.push('Service type is required');
   if (!form.date.trim() || !form.time.trim()) errors.push('Scheduled date and time are required');
   return errors;
 }
@@ -46,7 +46,7 @@ export function buildAppointmentPayload(form: {
   date: string;
   time: string;
   durationMinutes: number;
-  procedureType: string;
+  serviceType: string;
   notes: string;
   walkIn: boolean;
 }) {
@@ -57,7 +57,7 @@ export function buildAppointmentPayload(form: {
     branchId: form.branchId.trim() || useOrgContextStore.getState().branchId || '',
     scheduledAt,
     durationMinutes: form.durationMinutes || 30,
-    procedureType: form.procedureType.trim(),
+    serviceType: form.serviceType.trim(),
     notes: form.notes.trim() || undefined,
     walkIn: form.walkIn,
   };
@@ -71,7 +71,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   const [date, setDate] = useState(initialDate || '');
   const [time, setTime] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
-  const [procedureType, setProcedureType] = useState('');
+  const [serviceType, setServiceType] = useState('');
   const [notes, setNotes] = useState('');
   const [walkIn, setWalkIn] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -94,7 +94,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
     setDate(initialDate || '');
     setTime('');
     setDurationMinutes(30);
-    setProcedureType('');
+    setServiceType('');
     setNotes('');
     setWalkIn(false);
     setErrors([]);
@@ -102,7 +102,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   }
 
   async function handleSave() {
-    const errs = validateAppointmentForm({ patientId, procedureType, date, time });
+    const errs = validateAppointmentForm({ patientId, serviceType, date, time });
     if (errs.length > 0) {
       setErrors(errs);
       return;
@@ -117,22 +117,15 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
         date,
         time,
         durationMinutes,
-        procedureType,
+        serviceType,
         notes,
         walkIn,
       });
-      const res = await fetch(`${apiBaseUrl}/dental/appointments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setErrors([body.message || 'Failed to create appointment']);
+      const { data: appointment } = await createAppointment({ body: payload as unknown as Parameters<typeof createAppointment>[0]['body'] });
+      if (!appointment) {
+        setErrors(['Failed to create appointment']);
         return;
       }
-      const appointment = await res.json();
       onSaved?.(appointment);
       handleClose();
     } finally {
@@ -270,16 +263,16 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             </div>
           </div>
 
-          {/* Procedure Type */}
+          {/* Service Type */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-procedure">
-              Procedure Type *
+              Service Type *
             </label>
             <input
               id="appt-procedure"
               type="text"
-              value={procedureType}
-              onChange={e => setProcedureType(e.target.value)}
+              value={serviceType}
+              onChange={e => setServiceType(e.target.value)}
               placeholder="e.g. Cleaning, Filling, Crown"
               className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
             />

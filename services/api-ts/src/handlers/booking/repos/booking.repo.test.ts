@@ -47,7 +47,7 @@ const mockLogger = { debug: () => {}, info: () => {}, warn: () => {}, error: () 
 describe('BookingRepository', () => {
   test('constructs without error', () => {
     const repo = new BookingRepository(mockDb, mockLogger);
-    expect(repo).toBeDefined();
+    expect(repo).not.toBeNull();
   });
 
   test('BookingFilters interface supports all filter types', () => {

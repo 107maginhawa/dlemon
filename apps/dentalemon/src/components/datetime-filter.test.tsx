@@ -11,35 +11,36 @@ describe('DateTimeFilter', () => {
     const onChange = () => {}
     const { container } = render(<DateTimeFilter value="any" onChange={onChange} />)
 
-    expect(container).toBeDefined()
+    expect(container).not.toBeNull()
   })
 
   test('displays "Any Time" for "any" value', () => {
     const onChange = () => {}
     render(<DateTimeFilter value="any" onChange={onChange} />)
 
-    expect(screen.getByText('Any Time')).toBeDefined()
+    // SelectContent mock renders items inline, so multiple matches exist — grab first (the SelectValue trigger)
+    expect(screen.getAllByText('Any Time')[0]).not.toBeNull()
   })
 
   test('displays "Today" for "today" value', () => {
     const onChange = () => {}
     render(<DateTimeFilter value="today" onChange={onChange} />)
 
-    expect(screen.getByText('Today')).toBeDefined()
+    expect(screen.getAllByText('Today')[0]).not.toBeNull()
   })
 
   test('displays "Tomorrow" for "tomorrow" value', () => {
     const onChange = () => {}
     render(<DateTimeFilter value="tomorrow" onChange={onChange} />)
 
-    expect(screen.getByText('Tomorrow')).toBeDefined()
+    expect(screen.getAllByText('Tomorrow')[0]).not.toBeNull()
   })
 
   test('displays "This Weekend" for "this-weekend" value', () => {
     const onChange = () => {}
     render(<DateTimeFilter value="this-weekend" onChange={onChange} />)
 
-    expect(screen.getByText('This Weekend')).toBeDefined()
+    expect(screen.getAllByText('This Weekend')[0]).not.toBeNull()
   })
 
   test('displays formatted date for custom date value', () => {
@@ -49,7 +50,7 @@ describe('DateTimeFilter', () => {
 
     // Should display formatted date without year (e.g., "Oct 5")
     const displayText = screen.getByText(/Oct 5/)
-    expect(displayText).toBeDefined()
+    expect(displayText).not.toBeNull()
   })
 
   test('renders with custom className', () => {
@@ -59,24 +60,24 @@ describe('DateTimeFilter', () => {
     )
 
     const trigger = container.querySelector('.custom-class')
-    expect(trigger).toBeDefined()
+    expect(trigger).not.toBeNull()
   })
 
   test('renders Clock icon', () => {
     const onChange = () => {}
     const { container } = render(<DateTimeFilter value="any" onChange={onChange} />)
 
-    // Clock icon should be present (lucide-react icon)
-    const icon = container.querySelector('svg')
-    expect(icon).toBeDefined()
+    // Clock icon is mocked as a span with data-testid="icon-clock"
+    const icon = container.querySelector('[data-testid="icon-clock"]')
+    expect(icon).not.toBeNull()
   })
 
   test('renders all filter options', () => {
     const onChange = () => {}
     render(<DateTimeFilter value="any" onChange={onChange} />)
 
-    // All options should be in the document (even if not visible until dropdown opens)
-    expect(screen.getByText('Any Time')).toBeDefined()
+    // SelectContent mock renders items inline, so multiple matches exist — grab first (the SelectValue trigger)
+    expect(screen.getAllByText('Any Time')[0]).not.toBeNull()
     // Note: Other options are in SelectContent which may not be visible without user interaction
   })
 
@@ -87,6 +88,6 @@ describe('DateTimeFilter', () => {
 
     // Should format the date (e.g., "Dec 25")
     const displayText = screen.getByText(/Dec 25/)
-    expect(displayText).toBeDefined()
+    expect(displayText).not.toBeNull()
   })
 })

@@ -11,6 +11,10 @@ import {
   HeadObjectCommand,
   CreateBucketCommand,
   HeadBucketCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
   type S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -40,6 +44,16 @@ export interface StorageProvider {
   verifyFileExists(fileId: string): Promise<boolean>;
   initializeBucket(): Promise<void>;
   healthCheck(): Promise<boolean>;
+
+  // Multipart upload methods
+  initiateMultipartUpload(fileId: string, filename: string, mimeType: string): Promise<string>;
+  generatePartUploadUrl(fileId: string, uploadId: string, partNumber: number): Promise<string>;
+  completeMultipartUpload(
+    fileId: string,
+    uploadId: string,
+    parts: { partNumber: number; etag: string }[]
+  ): Promise<void>;
+  abortMultipartUpload(fileId: string, uploadId: string): Promise<void>;
 }
 
 export class S3StorageProvider implements StorageProvider {
@@ -103,6 +117,7 @@ export class S3StorageProvider implements StorageProvider {
       Bucket: this.config.bucket,
       Key: fileId,
       ContentType: mimeType,
+      ServerSideEncryption: 'AES256',
     });
 
     // Use publicClient for generating URLs accessible from outside Docker network
@@ -227,16 +242,89 @@ export class S3StorageProvider implements StorageProvider {
     try {
       // Ensure bucket exists (creates if needed)
       await this.ensureBucketExists();
-      
+
       const headCommand = new HeadBucketCommand({
         Bucket: this.config.bucket,
       });
-      
+
       await this.client.send(headCommand);
       return true;
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Initiate a multipart upload — returns the S3 UploadId
+   */
+  async initiateMultipartUpload(fileId: string, filename: string, mimeType: string): Promise<string> {
+    await this.ensureBucketExists();
+    const command = new CreateMultipartUploadCommand({
+      Bucket: this.config.bucket,
+      Key: fileId,
+      ContentType: mimeType,
+      ContentDisposition: `attachment; filename="${filename}"`,
+      ServerSideEncryption: 'AES256',
+    });
+    const result = await this.client.send(command);
+    if (!result.UploadId) {
+      throw new Error('S3 did not return an UploadId for multipart upload');
+    }
+    this.logger?.info({ fileId, filename, mimeType }, 'Multipart upload initiated');
+    return result.UploadId;
+  }
+
+  /**
+   * Generate presigned URL for uploading a single part
+   */
+  async generatePartUploadUrl(fileId: string, uploadId: string, partNumber: number): Promise<string> {
+    await this.ensureBucketExists();
+    const command = new UploadPartCommand({
+      Bucket: this.config.bucket,
+      Key: fileId,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    });
+    const url = await getSignedUrl(this.publicClient, command, {
+      expiresIn: this.config.uploadUrlExpiry,
+    });
+    this.logger?.debug({ fileId, partNumber }, 'Generated multipart part URL');
+    return url;
+  }
+
+  /**
+   * Complete a multipart upload by submitting part ETags
+   */
+  async completeMultipartUpload(
+    fileId: string,
+    uploadId: string,
+    parts: { partNumber: number; etag: string }[]
+  ): Promise<void> {
+    await this.ensureBucketExists();
+    const command = new CompleteMultipartUploadCommand({
+      Bucket: this.config.bucket,
+      Key: fileId,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: parts.map((p) => ({ PartNumber: p.partNumber, ETag: p.etag })),
+      },
+    });
+    await this.client.send(command);
+    this.logger?.info({ fileId, partCount: parts.length }, 'Multipart upload completed');
+  }
+
+  /**
+   * Abort a multipart upload — cleans up all uploaded parts from S3
+   */
+  async abortMultipartUpload(fileId: string, uploadId: string): Promise<void> {
+    await this.ensureBucketExists();
+    const command = new AbortMultipartUploadCommand({
+      Bucket: this.config.bucket,
+      Key: fileId,
+      UploadId: uploadId,
+    });
+    await this.client.send(command);
+    this.logger?.info({ fileId, uploadId }, 'Multipart upload aborted');
   }
 }
 

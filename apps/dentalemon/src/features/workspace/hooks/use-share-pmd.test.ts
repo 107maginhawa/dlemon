@@ -3,32 +3,13 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useSharePMD } from './use-share-pmd';
+import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 const input = { visitId: 'v1', patientId: 'p1' };
 

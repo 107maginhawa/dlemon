@@ -80,5 +80,5 @@ export async function exportDentalPatients(
     });
   }
 
-  return ctx.json({ patients: filtered, exportedAt: new Date().toISOString(), total: filtered.length }, 200);
+  return ctx.json({ data: filtered, exportedAt: new Date().toISOString(), total: filtered.length }, 200);
 }

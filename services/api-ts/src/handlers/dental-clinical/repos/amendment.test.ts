@@ -5,11 +5,8 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { AmendmentRepository } from './amendment.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
 
 const VISIT_1     = 'e6000000-0000-4000-8000-000000000001';
 const PATIENT_1   = 'e6000000-0000-4000-8000-000000000010';
@@ -28,12 +25,15 @@ const baseAmendment = {
 
 describe('AmendmentRepository', () => {
   let repo: AmendmentRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new AmendmentRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE amendment CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new AmendmentRepository(db);
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates an amendment with all required fields', async () => {

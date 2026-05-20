@@ -6,24 +6,58 @@
  * Tests HTTP-level behavior: auth, validation, success on seeded data.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateDentalTreatmentBody, CreateDentalTreatmentParams,
+  UpdateDentalTreatmentBody, UpdateDentalTreatmentParams,
+  CarryOverTreatmentsBody, CarryOverTreatmentsParams,
+} from '@/generated/openapi/validators';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import { VisitRepository } from './repos/visit.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { createDentalTreatment } from './createDentalTreatment';
 import { listDentalTreatments } from './listDentalTreatments';
 import { updateDentalTreatment } from './updateDentalTreatment';
+import { carryOverTreatments } from './carryOverTreatments';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
+const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
+const PERSON_ID  = 'e0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
+const ORG_ID = 'db000000-0000-1000-8000-000000000002';
 const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const STAFF_MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'Treatment Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  // Delete stale membership for this person+branch, then insert with DENTIST_MEMBER_ID
+  // so the seedVisit dentistMemberId FK is valid regardless of prior DB state.
+  await db.execute(sql`DELETE FROM dental_membership WHERE person_id = ${TEST_USER.id} AND branch_id = ${BRANCH_ID} AND id != ${DENTIST_MEMBER_ID}`);
+  await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test Dentist', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: STAFF_MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Treatment', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const TreatmentBodyOnly = CreateDentalTreatmentBody.omit({ visitId: true });
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -46,9 +80,10 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/visits/:visitId/treatments', createDentalTreatment as any);
+  app.post('/dental/visits/:visitId/treatments', zValidator('param', CreateDentalTreatmentParams, ve), zValidator('json', TreatmentBodyOnly, ve), createDentalTreatment as any);
   app.get('/dental/visits/:visitId/treatments', listDentalTreatments as any);
-  app.patch('/dental/visits/:visitId/treatments/:treatmentId', updateDentalTreatment as any);
+  app.patch('/dental/visits/:visitId/treatments/:treatmentId', zValidator('param', UpdateDentalTreatmentParams, ve), zValidator('json', UpdateDentalTreatmentBody, ve), updateDentalTreatment as any);
+  app.post('/dental/visits/:visitId/carry-over', zValidator('param', CarryOverTreatmentsParams, ve), zValidator('json', CarryOverTreatmentsBody, ve), carryOverTreatments as any);
 
   return app;
 }
@@ -204,8 +239,8 @@ describe('listDentalTreatments handler', () => {
     const res = await app.request(`/dental/visits/${visit.id}/treatments`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toEqual([]);
-    expect(body.total).toBe(0);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalCount).toBe(0);
   });
 
   test('returns 200 with seeded treatments for visit', async () => {
@@ -216,9 +251,9 @@ describe('listDentalTreatments handler', () => {
     const res = await app.request(`/dental/visits/${visit.id}/treatments`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(2);
-    expect(body.total).toBe(2);
-    expect(body.items[0].visitId).toBe(visit.id);
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.totalCount).toBe(2);
+    expect(body.data[0].visitId).toBe(visit.id);
   });
 
   test('returns only treatments for the specified visit', async () => {
@@ -230,8 +265,8 @@ describe('listDentalTreatments handler', () => {
     const res = await app.request(`/dental/visits/${visit1.id}/treatments`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(1);
-    expect(body.items[0].visitId).toBe(visit1.id);
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].visitId).toBe(visit1.id);
   });
 });
 
@@ -287,18 +322,16 @@ describe('updateDentalTreatment handler', () => {
     expect(body.status).toBe('planned');
   });
 
-  test('returns 200 and advances treatment to performed', async () => {
+  test('returns 422 when advancing diagnosis directly to performed (skipping planned)', async () => {
     const visit = await seedVisit();
-    const treatment = await seedTreatment(visit.id);
+    const treatment = await seedTreatment(visit.id); // starts at 'diagnosed'
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'performed' }),
     });
-    expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    expect(body.status).toBe('performed');
+    expect(res.status).toBe(422);
   });
 
   test('returns 200 and dismisses treatment with reason', async () => {
@@ -338,6 +371,74 @@ describe('updateDentalTreatment handler', () => {
     expect(body.conditionCode).toBe('K02.9');
   });
 
+  // --- Status transition validation ---
+
+  test('returns 422 on invalid reverse transition (planned → diagnosed)', async () => {
+    const visit = await seedVisit();
+    const repo = new TreatmentRepository(db);
+    const treatment = await repo.createOne({
+      visitId: visit.id,
+      patientId: PATIENT_ID,
+      cdtCode: 'D0120',
+      description: 'Eval',
+      priceCents: 5000,
+      carriedOver: false,
+      status: 'planned',
+    });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'diagnosed' }),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  test('returns 422 when transitioning out of terminal dismissed state', async () => {
+    const visit = await seedVisit();
+    const repo = new TreatmentRepository(db);
+    const treatment = await repo.createOne({
+      visitId: visit.id,
+      patientId: PATIENT_ID,
+      cdtCode: 'D0120',
+      description: 'Eval',
+      priceCents: 5000,
+      carriedOver: false,
+      status: 'dismissed',
+    });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  test('returns 200 dismissing from planned (dismissed reachable from any non-terminal state)', async () => {
+    const visit = await seedVisit();
+    const repo = new TreatmentRepository(db);
+    const treatment = await repo.createOne({
+      visitId: visit.id,
+      patientId: PATIENT_ID,
+      cdtCode: 'D0120',
+      description: 'Eval',
+      priceCents: 5000,
+      carriedOver: false,
+      status: 'planned',
+    });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'dismissed', dismissReason: 'Changed plan' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('dismissed');
+    expect(body.dismissReason).toBe('Changed plan');
+  });
+
   test('EC4: priceCents is locked at creation — update cannot change fee', async () => {
     const visit = await seedVisit();
     const treatment = await seedTreatment(visit.id);
@@ -354,5 +455,166 @@ describe('updateDentalTreatment handler', () => {
     // priceCents must remain at original value — EC4 locks it
     expect(body.priceCents).toBe(treatment.priceCents);
     expect(body.priceCents).not.toBe(99999);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BR-008: Carried-over treatments have visual indicator; not auto-charged
+// ---------------------------------------------------------------------------
+
+describe('BR-008: carry-over treatments', () => {
+  test('carried-over treatments have carriedOver=true flag', async () => {
+    // Seed a "previous" visit with a pending treatment
+    const prevVisit = await seedVisit();
+    const prevTreatment = await seedTreatment(prevVisit.id);
+
+    // Seed a new visit for the same patient
+    const repo = new VisitRepository(db);
+    const newVisit = await repo.createOne({
+      patientId: PATIENT_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: DENTIST_MEMBER_ID,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${newVisit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.carriedOver)).toBe(true);
+    // All carried-over treatments must have carriedOver=true
+    for (const t of body.carriedOver) {
+      expect(t.carriedOver).toBe(true);
+    }
+    // Suppress unused warning — prevTreatment was seeded so carry-over has source data
+    expect(prevTreatment.carriedOver).toBe(false);
+  });
+
+  test('carry-over returns 401 without auth', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(); // no user
+    const res = await app.request(`/dental/visits/${visit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — createDentalTreatment (CIMG note: tests assertBranchRole)
+// staff_full is blocked; dentist_owner is allowed through the gate
+// ---------------------------------------------------------------------------
+
+describe('createDentalTreatment role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, cdtCode: 'D0120', description: 'Eval', priceCents: 5000, carriedOver: false }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, cdtCode: 'D0120', description: 'Eval', priceCents: 5000, carriedOver: false }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — updateDentalTreatment (FIX-05: assertBranchAccess → assertBranchRole)
+// staff_full is blocked; dentist_owner is allowed through the gate
+// ---------------------------------------------------------------------------
+
+describe('updateDentalTreatment role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-02 — clinicalNotes persistence (P0-004)
+// ---------------------------------------------------------------------------
+
+describe('clinicalNotes persistence', () => {
+  test('PATCH with clinicalNotes persists and returns it', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clinicalNotes: 'Sensitivity on cold stimulus, likely reversible pulpitis' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.clinicalNotes).toBe('Sensitivity on cold stimulus, likely reversible pulpitis');
+  });
+
+  test('POST create with clinicalNotes persists and returns it', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        cdtCode: 'D2391',
+        description: 'Resin restoration',
+        priceCents: 12000,
+        clinicalNotes: 'Prep completed, composite placed',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.clinicalNotes).toBe('Prep completed, composite placed');
+  });
+
+  test('clinicalNotes is null when not provided', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.clinicalNotes === null || body.clinicalNotes === undefined).toBe(true);
   });
 });

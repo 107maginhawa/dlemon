@@ -8,8 +8,8 @@
  * API: GET /dental/visits/:visitId/treatments
  */
 import { useQuery } from '@tanstack/react-query';
+import { listDentalTreatmentsOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
-import { apiBaseUrl } from '@/utils/config';
 
 export interface Treatment {
   id: string;
@@ -20,11 +20,12 @@ export interface Treatment {
   procedureName: string;
   cdtCode?: string;
   description?: string;
-  status: 'diagnosed' | 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'diagnosed' | 'planned' | 'performed' | 'verified' | 'dismissed' | 'declined';
   priceAmount: number;
   currency: string;
   conditionCode?: string | null;
   note?: string;
+  clinicalNotes?: string | null;
   createdAt: string;
 }
 
@@ -34,17 +35,15 @@ interface UseTreatmentsOptions {
 
 export function useTreatments({ visitId }: UseTreatmentsOptions) {
   const query = useQuery({
-    queryKey: ['dental-treatments', visitId],
-    queryFn: async (): Promise<Treatment[]> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/visits/${visitId}/treatments`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to fetch treatments (${res.status})`);
-      const data = await res.json();
-      return Array.isArray(data) ? data : (data.items ?? data.data ?? []);
-    },
+    ...listDentalTreatmentsOptions({
+      path: { visitId: visitId as string },
+    }),
     enabled: !!visitId,
+    select: (data) => {
+      const raw = data as unknown as { data?: Treatment[] } | Treatment[];
+      const items: Treatment[] = Array.isArray(raw) ? raw : (raw?.data ?? []);
+      return items;
+    },
   });
 
   return {

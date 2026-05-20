@@ -1,9 +1,9 @@
 /**
  * E2E: Clinical-Billing Handoff — Journey J37
  *
- * Flow: sign up -> create patient -> create visit -> activate -> add treatment ->
- *       complete visit -> create invoice -> verify line items -> record full payment ->
- *       verify invoice status = paid
+ * Flow: sign up -> seed org/branch/member -> create patient -> create visit ->
+ *       activate -> add treatment -> complete visit -> create invoice ->
+ *       verify line items -> record full payment -> verify invoice status = paid
  *
  * Preconditions:
  *  - API running on localhost:7213
@@ -35,45 +35,82 @@ async function setup(page: Page) {
   const response = await signupResponse;
   if (response && response.status() >= 400) {
     const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned \${response.status()}: \${body.slice(0, 500)}`);
+    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
-  // Create patient
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+  // Seed org + branch + owner membership
+  const orgRes = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        name: [{ use: 'official', family: 'Herrera', given: ['Russel'] }],
-        birthDate: '1990-08-20',
-        gender: 'male',
-      }),
+      body: JSON.stringify({ name: 'Handoff Clinic', tier: 'clinic', countryCode: 'PH' }),
+    });
+    return res.json();
+  }, API);
+  const orgId = orgRes.id;
+
+  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
+    });
+    return res.json();
+  }, { api: API, orgId });
+  const branchId = branchRes.id;
+
+  // Create owner membership for session user
+  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId = session?.user?.id;
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Handoff Owner', role: 'dentist_owner', personId }),
+    });
+    return res.json();
+  }, { api: API, orgId, branchId });
+  const memberId = memberRes.id;
+
+  // Create patient via dental patients endpoint
+  const patientRes = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/patients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Russel Herrera', consentGiven: true }),
     });
     return res.json();
   }, API);
 
-  return { patientId: patientRes.id };
+  return { patientId: patientRes.id, branchId, memberId, orgId };
 }
 
-async function createAndCompleteVisit(page: Page, patientId: string) {
+async function createAndCompleteVisit(page: Page, patientId: string, branchId: string, memberId: string) {
   // Create visit
-  const visitRes = await page.evaluate(async ({ api, patientId }) => {
+  const visitRes = await page.evaluate(async ({ api, patientId, branchId, memberId }) => {
     const res = await fetch(`${api}/dental/visits`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
         patientId,
-        branchId: '00000000-0000-4000-8000-000000000001',
-        dentistMemberId: '00000000-0000-4000-8000-000000000002',
+        branchId,
+        dentistMemberId: memberId,
       }),
     });
-    return res.json();
-  }, { api: API, patientId });
+    return { status: res.status, body: await res.json() };
+  }, { api: API, patientId, branchId, memberId });
 
-  const visitId = visitRes.id;
+  if (visitRes.status !== 201 && visitRes.status !== 200) {
+    throw new Error(`Visit creation returned ${visitRes.status}: ${JSON.stringify(visitRes.body)}`);
+  }
+  const visitId = visitRes.body.id;
 
   // Activate
   await page.evaluate(async ({ api, visitId }) => {
@@ -86,7 +123,7 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
   }, { api: API, visitId });
 
   // Add treatment and mark as performed
-  const treatmentId = await page.evaluate(async ({ api, visitId, patientId }) => {
+  const treatmentRes = await page.evaluate(async ({ api, visitId, patientId }) => {
     const res = await fetch(`${api}/dental/visits/${visitId}/treatments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -100,39 +137,68 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
         priceCents: 250000,
       }),
     });
-    const data = await res.json();
-    return data.id;
+    return { status: res.status, body: await res.json() };
   }, { api: API, visitId, patientId });
 
-  await page.evaluate(async ({ api, visitId, treatmentId }) => {
-    return fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
+  if (treatmentRes.status !== 201 && treatmentRes.status !== 200) {
+    throw new Error(`Treatment creation returned ${treatmentRes.status}: ${JSON.stringify(treatmentRes.body)}`);
+  }
+  const treatmentId = treatmentRes.body.id;
+
+  // Transition: diagnosed -> planned -> performed
+  const planRes = await page.evaluate(async ({ api, visitId, treatmentId }) => {
+    const res = await fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    return { status: res.status, body: await res.json() };
+  }, { api: API, visitId, treatmentId });
+
+  if (planRes.status !== 200) {
+    throw new Error(`Treatment plan transition returned ${planRes.status}: ${JSON.stringify(planRes.body)}`);
+  }
+
+  const patchRes = await page.evaluate(async ({ api, visitId, treatmentId }) => {
+    const res = await fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ status: 'performed' }),
     });
+    return { status: res.status, body: await res.json() };
   }, { api: API, visitId, treatmentId });
 
+  if (patchRes.status !== 200) {
+    throw new Error(`Treatment perform transition returned ${patchRes.status}: ${JSON.stringify(patchRes.body)}`);
+  }
+
   // Complete
-  await page.evaluate(async ({ api, visitId }) => {
-    return fetch(`${api}/dental/visits/${visitId}`, {
+  const completeRes = await page.evaluate(async ({ api, visitId }) => {
+    const res = await fetch(`${api}/dental/visits/${visitId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ status: 'completed' }),
     });
+    return { status: res.status, body: await res.json() };
   }, { api: API, visitId });
+
+  if (completeRes.status !== 200) {
+    throw new Error(`Visit complete returned ${completeRes.status}: ${JSON.stringify(completeRes.body)}`);
+  }
 
   return visitId;
 }
 
 test.describe('Clinical-Billing Handoff', () => {
   test('completing a visit creates billable invoice', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const { patientId, branchId, memberId } = await setup(page);
+    const visitId = await createAndCompleteVisit(page, patientId, branchId, memberId);
 
     // Create invoice from completed visit
-    const invoiceRes = await page.evaluate(async ({ api, visitId, patientId }) => {
+    const invoiceRes = await page.evaluate(async ({ api, visitId, patientId, branchId, memberId }) => {
       const res = await fetch(`${api}/dental/billing/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,14 +206,16 @@ test.describe('Clinical-Billing Handoff', () => {
         body: JSON.stringify({
           visitId,
           patientId,
-          branchId: '00000000-0000-4000-8000-000000000001',
-          dentistMemberId: '00000000-0000-4000-8000-000000000002',
+          branchId,
+          dentistMemberId: memberId,
         }),
       });
       return { status: res.status, body: await res.json() };
-    }, { api: API, visitId, patientId });
+    }, { api: API, visitId, patientId, branchId, memberId });
 
-    expect(invoiceRes.status).toBe(201);
+    if (invoiceRes.status !== 201) {
+      throw new Error(`Invoice creation returned ${invoiceRes.status}: ${JSON.stringify(invoiceRes.body)}`);
+    }
     const invoice = invoiceRes.body;
     const invoiceId = invoice.id;
 
@@ -168,7 +236,7 @@ test.describe('Clinical-Billing Handoff', () => {
     }, { api: API, invoiceId });
 
     // Record full payment
-    const paymentRes = await page.evaluate(async ({ api, invoiceId, totalCents }) => {
+    const paymentRes = await page.evaluate(async ({ api, invoiceId, totalCents, memberId }) => {
       const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,11 +245,11 @@ test.describe('Clinical-Billing Handoff', () => {
           amountCents: totalCents,
           method: 'cash',
           receiptNumber: `R-${Date.now()}`,
-          recordedByMemberId: '00000000-0000-4000-8000-000000000002',
+          recordedByMemberId: memberId,
         }),
       });
       return res.status;
-    }, { api: API, invoiceId, totalCents: invoice.totalCents });
+    }, { api: API, invoiceId, totalCents: invoice.totalCents, memberId });
 
     expect(paymentRes).toBe(201);
 

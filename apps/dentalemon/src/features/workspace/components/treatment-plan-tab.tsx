@@ -9,7 +9,7 @@
  *
  * Wireframe: docs/prd/context/wireframes/treatment-plan.html
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useTreatmentPlan, type TreatmentPlanItem } from '../hooks/use-treatment-plan';
 
@@ -20,50 +20,117 @@ interface TreatmentPlanTabProps {
 
 interface TreatmentRowProps {
   treatment: TreatmentPlanItem;
+  onDecline: (treatmentId: string, visitId: string, reason: string) => void;
 }
 
-function TreatmentRow({ treatment }: TreatmentRowProps) {
+function TreatmentRow({ treatment, onDecline }: TreatmentRowProps) {
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState('');
+
   const price = (treatment.priceCents / 100).toLocaleString(APP_LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
+  const handleSave = () => {
+    onDecline(treatment.id, treatment.visitId, reason);
+    setDeclining(false);
+    setReason('');
+  };
+
+  if (treatment.status === 'declined') {
+    return (
+      <div
+        data-testid="treatment-row"
+        className="flex items-start gap-3 px-4 py-3 border-b border-border/40 bg-muted/20 opacity-60"
+      >
+        <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">
+          {treatment.toothNumber ?? '—'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-medium text-muted-foreground line-through">{treatment.description || '—'}</span>
+          <p className="text-xs text-destructive mt-0.5">Declined{treatment.reason ? `: ${treatment.reason}` : ''}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       data-testid="treatment-row"
-      className="flex items-start gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/30 transition-colors"
+      className="flex flex-col border-b border-border/40"
     >
-      {/* Tooth indicator */}
-      <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">
-        {treatment.toothNumber ?? '—'}
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          {treatment.cdtCode && (
-            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-muted-foreground">
-              {treatment.cdtCode}
-            </span>
-          )}
-          <span
-            className="text-sm font-medium text-foreground truncate"
-            title={treatment.description || undefined}
-          >
-            {treatment.description || '—'}
-          </span>
+      <div className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+        {/* Tooth indicator */}
+        <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">
+          {treatment.toothNumber ?? '—'}
         </div>
-        {treatment.surfaces && treatment.surfaces.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Surfaces: {treatment.surfaces.join(', ')}
-          </p>
-        )}
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {treatment.cdtCode && (
+              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-muted-foreground">
+                {treatment.cdtCode}
+              </span>
+            )}
+            <span
+              className="text-sm font-medium text-foreground truncate"
+              title={treatment.description || undefined}
+            >
+              {treatment.description || '—'}
+            </span>
+          </div>
+          {treatment.surfaces && treatment.surfaces.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Surfaces: {treatment.surfaces.join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Price + Decline */}
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <span className="text-sm font-semibold tabular-nums text-foreground">₱{price}</span>
+          <button
+            type="button"
+            data-testid="decline-btn"
+            onClick={() => setDeclining((v) => !v)}
+            className="text-[10px] text-muted-foreground hover:text-destructive underline"
+          >
+            Decline
+          </button>
+        </div>
       </div>
 
-      {/* Price */}
-      <div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-        ₱{price}
-      </div>
+      {declining && (
+        <div className="px-4 pb-3 flex flex-col gap-2 bg-muted/10">
+          <input
+            type="text"
+            aria-label="Refusal reason"
+            placeholder="Enter refusal reason…"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full text-sm border border-border rounded px-2 py-1 bg-background"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => { setDeclining(false); setReason(''); }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              data-testid="confirm-decline-btn"
+              onClick={handleSave}
+              className="text-xs bg-destructive text-destructive-foreground px-3 py-1 rounded hover:opacity-90"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -73,11 +140,13 @@ function GroupSection({
   treatments,
   testId,
   accentColor,
+  onDecline,
 }: {
   title: string;
   treatments: TreatmentPlanItem[];
   testId: string;
   accentColor: string;
+  onDecline: (treatmentId: string, visitId: string, reason: string) => void;
 }) {
   return (
     <section data-testid={testId} className="mb-2" aria-label={title}>
@@ -91,7 +160,7 @@ function GroupSection({
         </span>
       </h3>
       {treatments.map((t) => (
-        <TreatmentRow key={t.id} treatment={t} />
+        <TreatmentRow key={t.id} treatment={t} onDecline={onDecline} />
       ))}
     </section>
   );
@@ -123,7 +192,7 @@ function EmptyState() {
 
 export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps) {
   // Hook must be called unconditionally (Rules of Hooks)
-  const { data, isLoading, error } = useTreatmentPlan({ patientId, branchId });
+  const { data, isLoading, error, acceptPlan, isAccepting, declineTreatment } = useTreatmentPlan({ patientId, branchId });
 
   // P1-A: Empty/null branchId — query is disabled; surface this explicitly
   // so clinicians don't see a misleading "No pending treatments" empty state
@@ -151,9 +220,10 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
 
   const diagnosed = data.treatments.filter((t) => t.status === 'diagnosed');
   const planned = data.treatments.filter((t) => t.status === 'planned');
+  const declined = data.treatments.filter((t) => t.status === 'declined');
 
   // P1-B: All treatments may have non-pending statuses (e.g. in_progress, completed)
-  if (diagnosed.length + planned.length === 0) {
+  if (diagnosed.length + planned.length + declined.length === 0) {
     return <EmptyState />;
   }
 
@@ -163,7 +233,7 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
   });
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden" data-testid="treatment-plan-tab">
       {/* Scrollable treatment groups */}
       <div className="flex-1 overflow-y-auto">
         {diagnosed.length > 0 && (
@@ -172,6 +242,7 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
             treatments={diagnosed}
             testId="group-diagnosed"
             accentColor="#DC2626"
+            onDecline={declineTreatment}
           />
         )}
         {planned.length > 0 && (
@@ -180,19 +251,29 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
             treatments={planned}
             testId="group-planned"
             accentColor={BRAND_GOLD_TEXT}
+            onDecline={declineTreatment}
+          />
+        )}
+        {declined.length > 0 && (
+          <GroupSection
+            title="Declined"
+            treatments={declined}
+            testId="group-declined"
+            accentColor="#6B7280"
+            onDecline={declineTreatment}
           />
         )}
       </div>
 
-      {/* Cost summary — TXPL-03 */}
+      {/* Cost summary + Accept — TXPL-03 / J09 */}
       <div
         data-testid="cost-summary"
         role="region"
         aria-label="Treatment cost summary"
-        className="shrink-0 border-t bg-background px-4 py-3 flex items-center justify-between"
+        className="shrink-0 border-t bg-background px-4 py-3 flex items-center justify-between gap-3"
         style={{ borderTopColor: BRAND_GOLD }}
       >
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground flex-1">
           <span className="font-medium text-foreground">{data.treatmentCount}</span>{' '}
           {data.treatmentCount === 1 ? 'treatment' : 'treatments'}
           {data.toothCount > 0 && (
@@ -202,13 +283,19 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
               {data.toothCount === 1 ? 'tooth' : 'teeth'}
             </>
           )}
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Total estimate</p>
-          <p className="text-base font-bold text-foreground tabular-nums">
-            {CURRENCY_SYMBOL}{totalDisplay}
+          <p className="text-xs mt-0.5">
+            Total: <span className="font-semibold text-foreground">{CURRENCY_SYMBOL}{totalDisplay}</span>
           </p>
         </div>
+        <button
+          type="button"
+          data-testid="accept-plan-btn"
+          onClick={() => acceptPlan()}
+          disabled={isAccepting}
+          className="shrink-0 h-9 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-xs font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+        >
+          {isAccepting ? 'Accepting…' : 'Accept Plan'}
+        </button>
       </div>
     </div>
   );

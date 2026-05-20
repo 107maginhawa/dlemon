@@ -67,7 +67,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
-        status: 'checkedIn',
+        status: 'checked_in',
         checkInTime: new Date(),
         updatedAt: new Date(),
         ...(updatedBy ? { updatedBy } : {}),
@@ -93,7 +93,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checkedIn')),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
       ))
       .returning();
     return updated ?? null;
@@ -107,14 +107,14 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
     const [updated] = await this.db
       .update(dentalAppointments)
       .set({
-        status: 'noShow',
+        status: 'no_show',
         noShowAt: new Date(),
         updatedAt: new Date(),
         ...(updatedBy ? { updatedBy } : {}),
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checkedIn')),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
       ))
       .returning();
     return updated ?? null;
@@ -132,7 +132,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         updatedAt: new Date(),
         ...(updatedBy ? { updatedBy } : {}),
       })
-      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'noShow')))
+      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'no_show')))
       .returning();
     return updated ?? null;
   }
@@ -162,7 +162,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       sql`${dentalAppointments.scheduledAt} + (${dentalAppointments.durationMinutes} * interval '1 minute') > ${startTime.toISOString()}::timestamptz`,
       or(
         eq(dentalAppointments.status, 'scheduled'),
-        eq(dentalAppointments.status, 'checkedIn'),
+        eq(dentalAppointments.status, 'checked_in'),
       )!,
     ];
     if (excludeId) {
@@ -183,7 +183,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         branchId: dentalAppointments.branchId,
         scheduledAt: dentalAppointments.scheduledAt,
         durationMinutes: dentalAppointments.durationMinutes,
-        procedureType: dentalAppointments.procedureType,
+        serviceType: dentalAppointments.serviceType,
         operatoryId: dentalAppointments.operatoryId,
         walkIn: dentalAppointments.walkIn,
         status: dentalAppointments.status,
@@ -227,7 +227,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         branchId: dentalAppointments.branchId,
         scheduledAt: dentalAppointments.scheduledAt,
         durationMinutes: dentalAppointments.durationMinutes,
-        procedureType: dentalAppointments.procedureType,
+        serviceType: dentalAppointments.serviceType,
         operatoryId: dentalAppointments.operatoryId,
         walkIn: dentalAppointments.walkIn,
         status: dentalAppointments.status,

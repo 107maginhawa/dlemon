@@ -1,6 +1,6 @@
 {
   "name": "@monobase/api-ts",
-  "version": "0.1.0",
+  "version": "0.2.0.0",
   "description": "Monobase Application Platform API Service",
   "type": "module",
   "exports": {
@@ -28,6 +28,7 @@
     "@hono/zod-openapi": "^0.18.0",
     "@hono/zod-validator": "^0.4.0",
     "@monobase/api-spec": "workspace:*",
+    "@monobase/ceph-math": "workspace:*",
     "@onesignal/node-onesignal": "^5.2.1-beta1",
     "@scalar/hono-api-reference": "^0.9.16",
     "@vvo/tzdb": "^6.186.0",

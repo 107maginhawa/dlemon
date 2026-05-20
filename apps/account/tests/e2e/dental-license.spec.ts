@@ -89,9 +89,9 @@ test.describe('License & Devices', () => {
     await page.waitForLoadState('networkidle')
 
     // Mock data renders usage items: Devices, Users, Branches
-    await expect(page.getByText(/devices/i)).toBeVisible()
-    await expect(page.getByText(/users/i)).toBeVisible()
-    await expect(page.getByText(/branches/i)).toBeVisible()
+    await expect(page.getByText('Devices', { exact: true })).toBeVisible()
+    await expect(page.getByText('Users', { exact: true })).toBeVisible()
+    await expect(page.getByText('Branches', { exact: true })).toBeVisible()
   })
 
   test('license page does not crash or show error state', async ({ page }) => {

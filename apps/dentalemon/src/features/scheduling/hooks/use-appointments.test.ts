@@ -6,29 +6,10 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useAppointments } from './use-appointments';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 function captureUrl(data: unknown, status = 200): { getUrl: () => string; fetchMock: ReturnType<typeof mock> } {
   let capturedUrl = '';
@@ -94,17 +75,17 @@ describe('useAppointments', () => {
     expect(getUrl()).not.toContain('weekStart');
   });
 
-  test('uses weekStart query param for week view', async () => {
+  test('uses date query param for week view (Monday of the week)', async () => {
     const { getUrl, fetchMock } = captureUrl([]);
     global.fetch = fetchMock;
     const qc = freshClient();
-    // 2026-05-04 is a Monday
+    // 2026-05-04 is a Monday — getMondayOfWeek returns same date
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'week' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getUrl()).toContain('weekStart=2026-05-04');
+    expect(getUrl()).toContain('date=2026-05-04');
   });
 
   test('sets error when fetch fails', async () => {

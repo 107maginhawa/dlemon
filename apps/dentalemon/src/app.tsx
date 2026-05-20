@@ -19,6 +19,16 @@ import { useState, useEffect, useCallback } from 'react'
 
 const router = createRouter()
 
+// Stable no-op used as onSessionExpired for E2E harness routes so that
+// unmocked 401s don't trigger a hard redirect during Playwright tests.
+// provider.tsx installs its interceptor once and closes over this reference,
+// so module-level stability matters.
+const noop = () => {}
+
+function isHarnessRoute() {
+  return /^\/imaging-ceph-report/.test(window.location.pathname)
+}
+
 /**
  * Inner app component that provides auth context to router
  * This must be inside QueryClientProvider and AuthQueryProvider to access auth hooks
@@ -99,7 +109,7 @@ function App() {
   }
 
   return (
-    <ApiProvider apiBaseUrl={config.apiUrl} notifier={toast} onSessionExpired={handleSessionExpired}>
+    <ApiProvider apiBaseUrl={config.apiUrl} notifier={toast} onSessionExpired={isHarnessRoute() ? noop : handleSessionExpired}>
       <InnerApp />
       <TanStackDevtools
         config={{ position: 'bottom-right' }}

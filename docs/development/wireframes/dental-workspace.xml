@@ -1,0 +1,896 @@
+<mxfile>
+  <diagram name="Default" id="default">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== BACKGROUND ===== -->
+        <mxCell id="ws-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TOP BAR (h=56, y=0) ===== -->
+        <mxCell id="ws-topbar-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="56" as="geometry"/>
+        </mxCell>
+        <!-- Patient avatar circle -->
+        <mxCell id="ws-topbar-avatar" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#4A6B7A;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-topbar-avatar-initials" value="JD" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <!-- Patient dropdown -->
+        <mxCell id="ws-topbar-patient" value="Juan Dela Cruz ▾" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="14" width="180" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Center label -->
+        <mxCell id="ws-topbar-center" value="Today's Baseline - Mar 24, 2026" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="14" width="400" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Date picker icon -->
+        <mxCell id="ws-topbar-datepicker" value="▦" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="920" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <!-- Action icons (right side) -->
+        <mxCell id="ws-topbar-rx" value="℞" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-topbar-consent" value="☐" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1252" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-topbar-attach" value="⊕" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1304" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <!-- Separator -->
+        <mxCell id="ws-topbar-sep" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1356" y="10" width="1" height="36" as="geometry"/>
+        </mxCell>
+        <!-- View toggle -->
+        <mxCell id="ws-topbar-view" value="↗" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1366" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TIMELINE CAROUSEL ZONE (y=56, h=500) ===== -->
+        <mxCell id="ws-carousel-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="56" width="1440" height="500" as="geometry"/>
+        </mxCell>
+
+        <!-- Left flanking card (tilted, smaller) -->
+        <mxCell id="ws-card-left" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="120" y="146" width="300" height="280" as="geometry"/>
+        </mxCell>
+        <!-- Dental chart placeholder (oval + grid) -->
+        <mxCell id="ws-card-left-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="190" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-left-grid-h" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="170" y="280" width="200" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-left-grid-v" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;rotation=90;" vertex="1" parent="1">
+          <mxGeometry x="220" y="230" width="180" height="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Center card (largest, focused) -->
+        <mxCell id="ws-card-center" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FFCC5E;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="106" width="400" height="350" as="geometry"/>
+        </mxCell>
+        <!-- Dental chart placeholder (oval + grid) -->
+        <mxCell id="ws-card-center-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="156" width="260" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-center-grid-h" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="590" y="276" width="260" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-center-grid-v" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;rotation=90;" vertex="1" parent="1">
+          <mxGeometry x="590" y="226" width="240" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Tooth number labels on chart -->
+        <mxCell id="ws-card-center-t18" value="18" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="600" y="260" width="20" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-center-t11" value="11" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="710" y="168" width="20" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-center-t28" value="28" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="820" y="260" width="20" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-center-t41" value="41" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="710" y="380" width="20" height="16" as="geometry"/>
+        </mxCell>
+        <!-- Affected tooth highlight -->
+        <mxCell id="ws-card-center-highlight" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=#F59E0B;strokeWidth=1;opacity=40;" vertex="1" parent="1">
+          <mxGeometry x="630" y="220" width="18" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Right flanking card (tilted, smaller) -->
+        <mxCell id="ws-card-right" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="146" width="300" height="280" as="geometry"/>
+        </mxCell>
+        <!-- Dental chart placeholder -->
+        <mxCell id="ws-card-right-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="190" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-right-grid-h" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="280" width="200" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-card-right-grid-v" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;rotation=90;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="230" width="180" height="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Add new baseline button -->
+        <mxCell id="ws-btn-outline-add" value="+" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="276" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- Carousel dots / pagination -->
+        <mxCell id="ws-carousel-dot1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E5E5E5;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="694" y="480" width="8" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-carousel-dot2" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1E3A5F;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="710" y="480" width="8" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-carousel-dot3" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E5E5E5;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="726" y="480" width="8" height="8" as="geometry"/>
+
+        </mxCell>
+        <!-- Carousel prev arrow (WCAG 2.5.7) -->
+        <mxCell id="ws-btn-outline-prev" value="‹" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="284" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <!-- Carousel next arrow (WCAG 2.5.7) -->
+        <mxCell id="ws-btn-outline-next" value="▸" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1336" y="284" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== BREAKDOWN TABLE (y=556) ===== -->
+        <mxCell id="ws-table-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="556" width="1440" height="344" as="geometry"/>
+        </mxCell>
+
+        <!-- Table header row -->
+        <mxCell id="ws-table-header-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="566" width="1400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Header: Treatment Breakdown -->
+        <mxCell id="ws-table-title" value="Treatment Breakdown" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="566" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- View All link -->
+        <mxCell id="ws-btn-ghost-viewall" value="View All" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="566" width="60" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Column headers -->
+        <mxCell id="ws-th-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="606" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-tooth" value="Tooth" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="606" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-surface" value="Surface" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-condition" value="Condition" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="606" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-plan" value="Treatment Plan" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="606" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-done" value="Work Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-status" value="Status" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-total" value="Total" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-th-more" value="⋯" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="606" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 1 (white bg) -->
+        <mxCell id="ws-row1-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="646" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-tooth" value="16" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="646" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-surface" value="M, D" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="646" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-condition" value="Caries" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="646" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-plan" value="Composite Filling" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="646" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-done" value="☑" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="646" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="655" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-status-text" value="Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="655" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-total" value="₱2,500" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="646" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row1-more" value="⋯" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="646" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 2 (alt bg) -->
+        <mxCell id="ws-row2-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="686" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-tooth" value="24" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="686" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-surface" value="O" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="686" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-condition" value="Fracture" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="686" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-plan" value="Porcelain Crown" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="686" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-done" value="☐" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="686" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="695" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-status-text" value="Pending" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#F59E0B;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="695" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-total" value="₱4,000" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="686" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row2-more" value="⋯" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="686" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 3 (white bg) -->
+        <mxCell id="ws-row3-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="726" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-tooth" value="36" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="726" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-surface" value="B, L" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="726" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-condition" value="Periodontal" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="726" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-plan" value="Scaling &amp; Root Planing" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="726" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-done" value="☑" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="726" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="735" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-status-text" value="Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="735" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-total" value="₱1,200" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="726" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row3-more" value="⋯" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="726" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 4 (alt bg) -->
+        <mxCell id="ws-row4-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="766" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-tooth" value="46" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="766" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-surface" value="O, D" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="766" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-condition" value="Caries" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="766" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-plan" value="Amalgam Filling" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="766" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-done" value="☐" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="766" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="775" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-status-text" value="Pending" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#F59E0B;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="775" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-total" value="₱800" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="766" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-row4-more" value="⋯" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="766" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Grand Total row -->
+        <mxCell id="ws-grand-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="806" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-grand-sep" value="" style="line;strokeColor=#1E3A5F;strokeWidth=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="20" y="806" width="1400" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-grand-label" value="Grand Total" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=13;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="806" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-grand-amount" value="₱8,500" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="806" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Footer: Continue to Payment CTA -->
+        <mxCell id="ws-footer-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="850" width="1440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-footer-cta" value="Continue to Payment" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;fontColor=#461402;fontSize=14;fontFamily=Inter;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="858" width="200" height="44" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Empty (New Patient)" id="empty">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== BACKGROUND ===== -->
+        <mxCell id="ws-e-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TOP BAR (h=56, y=0) ===== -->
+        <mxCell id="ws-e-topbar-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-avatar" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#4A6B7A;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-avatar-initials" value="MR" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-patient" value="Maria Reyes ▾" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="14" width="160" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-center" value="Today's Baseline - Mar 24, 2026" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="14" width="400" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-datepicker" value="▦" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="920" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-rx" value="℞" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-consent" value="☐" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1252" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-attach" value="⊕" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1304" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-sep" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1356" y="10" width="1" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-topbar-view" value="↗" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1366" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== EMPTY CAROUSEL ZONE ===== -->
+        <mxCell id="ws-e-carousel-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="56" width="1440" height="500" as="geometry"/>
+        </mxCell>
+        <!-- Single empty card -->
+        <mxCell id="ws-e-card-empty" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;strokeDasharray=8 4;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="520" y="106" width="400" height="350" as="geometry"/>
+        </mxCell>
+        <!-- Tooth icon placeholder -->
+        <mxCell id="ws-e-card-tooth-icon" value="◇" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=48;" vertex="1" parent="1">
+          <mxGeometry x="680" y="210" width="80" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Empty state message -->
+        <mxCell id="ws-e-card-msg1" value="No baselines yet." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="300" width="240" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-card-msg2" value="Tap a tooth to start." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="620" y="328" width="200" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== EMPTY BREAKDOWN TABLE ===== -->
+        <mxCell id="ws-e-table-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="556" width="1440" height="344" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-table-header-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="566" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-e-table-title" value="Treatment Breakdown" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="566" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Empty state -->
+        <mxCell id="ws-e-table-empty" value="No treatments added." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=13;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="520" y="660" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <!-- No footer CTA for empty state -->
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Past Baseline (Read-Only)" id="past-baseline">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== BACKGROUND ===== -->
+        <mxCell id="ws-p-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TOP BAR (h=56, y=0) ===== -->
+        <mxCell id="ws-p-topbar-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-avatar" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#4A6B7A;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-avatar-initials" value="JD" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-patient" value="Juan Dela Cruz ▾" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="14" width="180" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Past date label (no "Today's") -->
+        <mxCell id="ws-p-topbar-center" value="Baseline - Mar 15, 2026" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="14" width="400" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Read-only badge -->
+        <mxCell id="ws-p-topbar-readonly-badge" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="920" y="16" width="80" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-readonly-text" value="Read-only" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="920" y="16" width="80" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-datepicker" value="▦" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-rx" value="℞" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-consent" value="☐" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1252" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-attach" value="⊕" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=16;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1304" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-sep" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1356" y="10" width="1" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-topbar-view" value="↗" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1E3A5F;fontSize=16;fontFamily=Inter;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1366" y="6" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== CAROUSEL ZONE (past baseline focused) ===== -->
+        <mxCell id="ws-p-carousel-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="56" width="1440" height="500" as="geometry"/>
+        </mxCell>
+        <!-- Left flanking card -->
+        <mxCell id="ws-p-card-left" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="120" y="146" width="300" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-left-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="190" width="200" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- Center card (Mar 15 - focused past baseline) -->
+        <mxCell id="ws-p-card-center" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6B7A;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="106" width="400" height="350" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-center-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="156" width="260" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-center-grid-h" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="590" y="276" width="260" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-center-grid-v" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;rotation=90;" vertex="1" parent="1">
+          <mxGeometry x="590" y="226" width="240" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-center-t18" value="18" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="600" y="260" width="20" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-center-t11" value="11" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="710" y="168" width="20" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- Right flanking card (today) -->
+        <mxCell id="ws-p-card-right" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="146" width="300" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-card-right-chart" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="190" width="200" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- No "+" add button in read-only mode -->
+
+        <!-- Carousel dots -->
+        <mxCell id="ws-p-carousel-dot1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E5E5E5;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="694" y="480" width="8" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-carousel-dot2" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1E3A5F;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="710" y="480" width="8" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-carousel-dot3" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E5E5E5;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="726" y="480" width="8" height="8" as="geometry"/>
+
+        </mxCell>
+        <!-- Carousel prev arrow (WCAG 2.5.7) -->
+        <mxCell id="ws-p-btn-outline-prev" value="‹" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="284" width="44" height="44" as="geometry"/>
+        </mxCell>
+        <!-- Carousel next arrow (WCAG 2.5.7) -->
+        <mxCell id="ws-p-btn-outline-next" value="▸" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1336" y="284" width="44" height="44" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== BREAKDOWN TABLE (read-only) ===== -->
+        <mxCell id="ws-p-table-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="556" width="1440" height="344" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-table-header-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="566" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-table-title" value="Treatment Breakdown" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="566" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-btn-ghost-viewall" value="View All" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="566" width="60" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Column headers -->
+        <mxCell id="ws-p-th-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="606" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-tooth" value="Tooth" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="606" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-surface" value="Surface" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-condition" value="Condition" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="606" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-plan" value="Treatment Plan" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="606" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-done" value="Work Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-status" value="Status" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-th-total" value="Total" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <!-- No overflow menu column in read-only -->
+
+        <!-- Row 1 (white bg) - disabled checkbox -->
+        <mxCell id="ws-p-row1-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="646" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-tooth" value="16" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="646" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-surface" value="M, D" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="646" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-condition" value="Caries" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="646" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-plan" value="Composite Filling" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="646" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Disabled (grayed) checkbox -->
+        <mxCell id="ws-p-row1-done" value="☑" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#D1D5DB;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="646" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="655" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-status-text" value="Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="655" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row1-total" value="₱2,500" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="646" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 2 (alt bg) - disabled checkbox -->
+        <mxCell id="ws-p-row2-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="686" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-tooth" value="24" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="686" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-surface" value="O" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="686" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-condition" value="Fracture" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="686" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-plan" value="Porcelain Crown" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="686" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-done" value="☐" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#D1D5DB;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="686" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="695" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-status-text" value="Pending" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#F59E0B;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="695" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row2-total" value="₱4,000" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="686" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 3 (white bg) -->
+        <mxCell id="ws-p-row3-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="726" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-tooth" value="36" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="726" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-surface" value="B, L" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="726" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-condition" value="Periodontal" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="726" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-plan" value="Scaling &amp; Root Planing" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="726" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-done" value="☑" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#D1D5DB;fontSize=16;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="700" y="726" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-status" value="" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="840" y="735" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-status-text" value="Done" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#22C55E;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="735" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-row3-total" value="₱1,200" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="726" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Grand Total row -->
+        <mxCell id="ws-p-grand-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="766" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-grand-sep" value="" style="line;strokeColor=#1E3A5F;strokeWidth=2;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="20" y="766" width="1400" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-grand-label" value="Grand Total" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=13;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="766" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-p-grand-amount" value="₱7,700" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="766" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- No "Continue to Payment" CTA in read-only mode -->
+        <!-- No overflow menus in read-only mode -->
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Post-Payment" id="post-payment">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Background -->
+        <mxCell id="ws-pp-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- Top Bar -->
+        <mxCell id="ws-pp-topbar-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-topbar-avatar" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#4A6B7A;strokeColor=none;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-topbar-initials" value="JD" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-topbar-patient" value="Juan Dela Cruz ▾" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="14" width="180" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-topbar-center" value="Today's Baseline - Mar 24, 2026" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="14" width="400" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Appointment Set indicator (post-payment) -->
+        <mxCell id="ws-pp-appt-badge" value="Appointment Set" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#DBEAFE;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#1D4ED8;" vertex="1" parent="1">
+          <mxGeometry x="940" y="17" width="100" height="22" as="geometry"/>
+        </mxCell>
+
+        <!-- Breakdown Section -->
+        <mxCell id="ws-pp-table-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="556" width="1440" height="344" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-table-header-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="566" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-table-title" value="Treatment Breakdown" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="566" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-btn-ghost-viewall" value="View All" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="568" width="60" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Column headers -->
+        <mxCell id="ws-pp-th-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="606" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-tooth" value="Tooth" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="606" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-surface" value="Surface" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-condition" value="Condition" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="606" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-plan" value="Treatment Plan" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="606" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-done" value="Work Done" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="606" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-status" value="Status" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-th-total" value="Total" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=11;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="606" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 1: PAID (muted, locked checkbox, green filled badge, no overflow) -->
+        <mxCell id="ws-pp-r1-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="646" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-tooth" value="16" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="646" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-surface" value="M, D" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="646" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-condition" value="Caries" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="646" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-plan" value="Composite Filling" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="646" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-chk" value="v" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#D1D5DB;strokeColor=#D1D5DB;fontFamily=Inter;fontSize=12;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="737" y="654" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-badge" value="Paid" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#22C55E;strokeColor=#22C55E;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="840" y="655" width="52" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r1-total" value="P2,500" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="646" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 2: PROPOSED (unchanged, still interactive) -->
+        <mxCell id="ws-pp-r2-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="686" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-tooth" value="24" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="686" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-surface" value="O" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="686" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-condition" value="Fracture" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="686" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-plan" value="Porcelain Crown" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="686" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-chk" value="" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="737" y="694" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-badge" value="Pending" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#F59E0B;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#F59E0B;" vertex="1" parent="1">
+          <mxGeometry x="840" y="695" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-total" value="P4,000" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="686" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r2-overflow" value="..." style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="686" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 3: PAID (muted) -->
+        <mxCell id="ws-pp-r3-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="726" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-tooth" value="36" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="726" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-surface" value="B, L" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="726" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-condition" value="Periodontal" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="726" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-plan" value="Scaling &amp; Root Planing" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="726" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-chk" value="v" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#D1D5DB;strokeColor=#D1D5DB;fontFamily=Inter;fontSize=12;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="737" y="734" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-badge" value="Paid" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#22C55E;strokeColor=#22C55E;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="840" y="735" width="52" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r3-total" value="P1,200" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="726" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 4: PROPOSED (unchanged) -->
+        <mxCell id="ws-pp-r4-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="766" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-tooth" value="46" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="30" y="766" width="80" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-surface" value="O, D" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="130" y="766" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-condition" value="Caries" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="260" y="766" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-plan" value="Amalgam Filling" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="450" y="766" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-chk" value="" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="737" y="774" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-badge" value="Pending" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#F59E0B;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#F59E0B;" vertex="1" parent="1">
+          <mxGeometry x="840" y="775" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-total" value="P800" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="766" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-r4-overflow" value="..." style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#4A6B7A;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="766" width="60" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Grand Total: P0 (no unpaid Done rows) -->
+        <mxCell id="ws-pp-grand-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="806" width="1400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-grand-label" value="Grand Total" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="806" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ws-pp-grand-value" value="P0" style="text;html=1;align=right;verticalAlign=middle;strokeColor=none;fillColor=none;fontColor=#1E3A5F;fontSize=14;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="806" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- NO "Continue to Payment" CTA (Grand Total = 0) -->
+        <!-- "Appointment Set" badge in topbar indicates post-payment state -->
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

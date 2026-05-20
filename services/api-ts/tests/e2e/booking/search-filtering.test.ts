@@ -435,7 +435,7 @@ describe('Booking Search and Filtering E2E Tests', () => {
       expect(result.response.ok).toBe(true);
       expect(result.data?.data).toBeDefined();
       expect(result.data.data.length).toBeLessThanOrEqual(2);
-      expect(result.data.totalCount).toBeDefined();
+      expect(result.data.pagination.totalCount).toBeDefined();
     });
 
     test('should handle no results scenario', async () => {
@@ -476,7 +476,7 @@ describe('Booking Search and Filtering E2E Tests', () => {
 
       expect(result.response.ok).toBe(true);
       expect(result.data?.totalCount).toBeDefined();
-      expect(result.data.totalCount).toBeGreaterThanOrEqual(0);
+      expect(result.data.pagination.totalCount).toBeGreaterThanOrEqual(0);
     });
   });
 });

@@ -17,7 +17,7 @@ export interface DashboardAppointment {
   scheduledAt: string;
   durationMinutes?: number;
   status: string;
-  procedureType?: string;
+  serviceType?: string;
 }
 
 export interface DashboardInvoice {
@@ -40,7 +40,11 @@ export interface DashboardSummary {
   /** Total peso-cents collected today; null when showFinancials=false */
   dailyCollectionsCents: number | null;
   activePaymentPlans: number | null;
+  /** Number of payment plans with "behind" status */
+  paymentPlansBehind: number | null;
   pendingLabOrders: number | null;
+  /** Lab orders past their expected delivery date */
+  overdueLabOrders: number | null;
 }
 
 interface UseDashboardSummaryOptions {
@@ -76,41 +80,51 @@ async function fetchDashboardSummary(
 
   const responses = await Promise.all(fetches);
 
-  if (!responses[0]!.ok || !responses[1]!.ok) {
-    throw new Error('Failed to load appointments');
+  // Check ALL responses — no silent swallowing on any fetch failure
+  const labels = [
+    'today appointments',
+    'tomorrow appointments',
+    'dashboard summary',
+    'overdue invoices',
+    'all invoices',
+  ];
+  for (let i = 0; i < responses.length; i++) {
+    if (!responses[i]!.ok) {
+      throw new Error(
+        `Failed to load ${labels[i] ?? `response[${i}]`} (HTTP ${responses[i]!.status})`,
+      );
+    }
   }
 
   const todayData = await responses[0]!.json();
   const tomorrowData = await responses[1]!.json();
-  const summaryData = responses[2]?.ok ? await responses[2].json() : null;
+  const summaryData = await responses[2]!.json();
 
   const todayAppointments = toAppointments(todayData);
   const tomorrowAppointments = toAppointments(tomorrowData);
 
   const activePaymentPlans = summaryData?.activePaymentPlans?.count ?? null;
+  const paymentPlansBehind = summaryData?.activePaymentPlans?.behindCount ?? null;
   const pendingLabOrders = summaryData?.labOrders?.totalPending ?? null;
+  const overdueLabOrders = summaryData?.labOrders?.overdueDelivery ?? null;
 
   let overdueInvoices: DashboardInvoice[] = [];
   let dailyCollectionsCents: number | null = null;
 
   if (showFinancials && responses[3]) {
-    if (responses[3].ok) {
-      const invoiceData = await responses[3].json();
-      overdueInvoices = Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? [];
-    }
+    const invoiceData = await responses[3].json();
+    overdueInvoices = Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? [];
   }
 
   if (showFinancials && responses[4]) {
-    if (responses[4].ok) {
-      const allInvoicesData = await responses[4].json();
-      const allInvoices: DashboardInvoice[] = Array.isArray(allInvoicesData)
-        ? allInvoicesData
-        : allInvoicesData.invoices ?? [];
-      dailyCollectionsCents = allInvoices
-        .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
-        .filter((inv) => inv.createdAt?.slice(0, 10) === today)
-        .reduce((sum, inv) => sum + (inv.paidCents ?? inv.totalCents - inv.balanceCents), 0);
-    }
+    const allInvoicesData = await responses[4].json();
+    const allInvoices: DashboardInvoice[] = Array.isArray(allInvoicesData)
+      ? allInvoicesData
+      : allInvoicesData.invoices ?? [];
+    dailyCollectionsCents = allInvoices
+      .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
+      .filter((inv) => inv.createdAt?.slice(0, 10) === today)
+      .reduce((sum, inv) => sum + (inv.paidCents ?? inv.totalCents - inv.balanceCents), 0);
   }
 
   return {
@@ -119,7 +133,9 @@ async function fetchDashboardSummary(
     overdueInvoices,
     dailyCollectionsCents,
     activePaymentPlans,
+    paymentPlansBehind,
     pendingLabOrders,
+    overdueLabOrders,
   };
 }
 

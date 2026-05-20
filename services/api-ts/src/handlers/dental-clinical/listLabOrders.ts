@@ -10,6 +10,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { LabOrderRepository } from './repos/lab-order.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
 export async function listLabOrders(ctx: HandlerContext) {
@@ -28,9 +29,14 @@ export async function listLabOrders(ctx: HandlerContext) {
   const repo = new LabOrderRepository(db);
 
   const items = await repo.findMany({ visitId });
-  const limit = parseInt(ctx.req.query('limit') ?? '50');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const totalCount = items.length;
   const page = items.slice(offset, offset + limit);
 
-  return ctx.json({ items: page, total: items.length, limit, offset });
+  const audit = ctx.get('audit') as any;
+  if (audit?.logEvent) {
+    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'lab-order', resource: visitId, description: 'Lab orders listed for visit', details: { resultCount: items.length }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
+  }
+
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

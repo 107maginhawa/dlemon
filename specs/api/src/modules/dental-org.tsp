@@ -36,6 +36,18 @@ namespace DentalOrgModule {
     enterprise: "enterprise",
   }
 
+  @doc("Imaging feature tier (null treated as free)")
+  enum ImagingTier {
+    @doc("No imaging features")
+    free: "free",
+
+    @doc("Basic imaging (study upload, viewer)")
+    basic: "basic",
+
+    @doc("Imaging add-on (cephalometric analysis, measurements)")
+    addon: "addon",
+  }
+
   @doc("Staff role within a branch — drives RBAC")
   enum MemberRole {
     @doc("Practice owner, full access including financials and admin")
@@ -175,6 +187,9 @@ namespace DentalOrgModule {
 
     @doc("New country code")
     countryCode?: string;
+
+    @doc("Imaging feature tier (set to addon to enable cephalometric analysis)")
+    imagingTier?: ImagingTier;
   }
 
   @doc("Create a branch")
@@ -268,10 +283,166 @@ namespace DentalOrgModule {
     total: int32;
   }
 
-  @doc("List of memberships")
-  model MembershipList {
-    items: DentalMembership[];
-    total: int32;
+
+  @doc("Org context for the authenticated user")
+  model OrgContextResponse {
+    organizationId: UUID;
+    branchId: UUID;
+    memberId: UUID;
+    role: MemberRole;
+    orgName: string;
+    branchName: string;
+    timezone: string;
+  }
+
+  @doc("Dashboard summary metrics")
+  model DashboardSummaryResponse {
+    todayVisits: int32;
+    pendingInvoices: int32;
+    totalPatients: int32;
+    revenueThisMonthCents: int32;
+  }
+
+  @doc("Create a flat member (org/branch resolved from auth context)")
+  model CreateFlatMemberRequest {
+    @doc("Display name for PIN select screen")
+    displayName: string;
+
+    @doc("Staff role")
+    role: MemberRole;
+
+    @doc("Person ID from Better-Auth (optional for PIN-only staff)")
+    personId?: UUID;
+
+    @doc("Profile photo URL")
+    avatarUrl?: string;
+  }
+
+  @doc("Reset a member's PIN")
+  model ResetMemberPinRequest {
+    @doc("New 4-8 digit PIN")
+    @minLength(4)
+    @maxLength(8)
+    newPin: string;
+  }
+
+  @doc("Set a security question for PIN recovery")
+  model SetSecurityQuestionRequest {
+    @doc("Security question text")
+    question: string;
+
+    @doc("Answer to the security question")
+    answer: string;
+  }
+
+  @doc("Recover PIN using security question")
+  model RecoverPinRequest {
+    @doc("The security question previously set")
+    securityQuestion: string;
+
+    @doc("Answer to the security question")
+    answer: string;
+  }
+
+  @doc("PIN recovery response")
+  model RecoverPinResponse {
+    @doc("Whether recovery was successful")
+    success: boolean;
+
+    @doc("Temporary PIN if recovery succeeded")
+    temporaryPin?: string;
+  }
+
+  @doc("Working hours for a single day")
+  model DentalWorkingHoursDay {
+    @doc("Opening time (HH:mm)")
+    open: string;
+
+    @doc("Closing time (HH:mm)")
+    close: string;
+
+    @doc("Whether the branch is open on this day")
+    isOpen: boolean;
+  }
+
+  @doc("Weekly working hours configuration for a branch")
+  model DentalWorkingHours {
+    monday?: DentalWorkingHoursDay;
+    tuesday?: DentalWorkingHoursDay;
+    wednesday?: DentalWorkingHoursDay;
+    thursday?: DentalWorkingHoursDay;
+    friday?: DentalWorkingHoursDay;
+    saturday?: DentalWorkingHoursDay;
+    sunday?: DentalWorkingHoursDay;
+  }
+
+  @doc("Branch operational settings")
+  model DentalBranchSettings {
+    @doc("Branch ID")
+    branchId: UUID;
+
+    @doc("Default appointment duration in minutes")
+    appointmentDurationMinutes: int32;
+
+    @doc("Currency code (ISO 4217)")
+    currency: string;
+
+    @doc("Tax rate as a decimal (e.g. 0.12 for 12%)")
+    taxRate: float32;
+
+    @doc("Whether appointment reminders are enabled")
+    appointmentReminderEnabled: boolean;
+  }
+
+  @doc("Update branch settings request")
+  model UpdateDentalBranchSettingsRequest {
+    @doc("Default appointment duration in minutes")
+    appointmentDurationMinutes?: int32;
+
+    @doc("Currency code (ISO 4217)")
+    currency?: string;
+
+    @doc("Tax rate as a decimal")
+    taxRate?: float32;
+
+    @doc("Whether appointment reminders are enabled")
+    appointmentReminderEnabled?: boolean;
+  }
+
+  @doc("Consent form template for a branch")
+  model DentalConsentTemplate extends BaseEntity {
+    @doc("Branch this template belongs to")
+    branchId: UUID;
+
+    @doc("Template title")
+    title: string;
+
+    @doc("Template content (HTML or plain text)")
+    content: string;
+
+    @doc("Whether this template is active")
+    isActive: boolean;
+  }
+
+  @doc("Create a consent template")
+  model CreateDentalConsentTemplateRequest {
+    @doc("Template title")
+    title: string;
+
+    @doc("Template content")
+    content: string;
+  }
+
+  @doc("Update a consent template")
+  model UpdateDentalConsentTemplateRequest {
+    @doc("New title")
+    title?: string;
+
+    @doc("New content")
+    content?: string;
+
+    @doc("Active status")
+    isActive?: boolean;
   }
 
   // ==========================================================================
@@ -346,7 +517,7 @@ namespace DentalOrgModule {
     @doc("List active members for a branch")
     @useAuth(bearerAuth)
     @get
-    list(@path orgId: UUID, @path branchId: UUID): MembershipList | ApiUnauthorizedResponse | ErrorResponse;
+    list(@path orgId: UUID, @path branchId: UUID): ApiOkResponse<PaginatedResponse<DentalMembership>> | ApiUnauthorizedResponse | ErrorResponse;
 
     @doc("Deactivate a member")
     @useAuth(bearerAuth)
@@ -380,5 +551,182 @@ namespace DentalOrgModule {
       @path membershipId: UUID,
       @body body: SetPinRequest,
     ): DentalMembership | NotFoundError | ApiUnauthorizedResponse | ErrorResponse;
+  }
+
+  interface OrgContextManagement {
+    @get
+    @route("/context")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getOrgContext")
+    getOrgContext(): ApiOkResponse<OrgContextResponse>
+      | ApiUnauthorizedResponse;
+  }
+
+  interface DashboardManagement {
+    @get
+    @route("/summary")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getDashboardSummary")
+    getDashboardSummary(
+      @query branchId?: UUID
+    ): ApiOkResponse<DashboardSummaryResponse>
+      | ApiUnauthorizedResponse;
+  }
+
+  interface FlatMemberManagement {
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listMembers")
+    listMembers(
+      @query branchId?: UUID
+    ): ApiOkResponse<PaginatedResponse<DentalMembership>>
+      | ApiUnauthorizedResponse;
+
+    @post
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createMember")
+    createMember(
+      @body body: CreateFlatMemberRequest
+    ): ApiCreatedResponse<DentalMembership>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{memberId}/reset-pin")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("resetMemberPin")
+    resetMemberPin(
+      @path memberId: UUID,
+      @body body: ResetMemberPinRequest
+    ): ApiOkResponse<DentalMembership>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{memberId}/security-question")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("setSecurityQuestion")
+    setSecurityQuestion(
+      @path memberId: UUID,
+      @body body: SetSecurityQuestionRequest
+    ): ApiOkResponse<{}>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{memberId}/recover-pin")
+    @operationId("recoverPin")
+    recoverPin(
+      @path memberId: UUID,
+      @body body: RecoverPinRequest
+    ): ApiOkResponse<RecoverPinResponse>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse;
+  }
+
+  interface BranchConfigManagement {
+    @get
+    @route("/{branchId}/working-hours")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getWorkingHours")
+    getWorkingHours(
+      @path branchId: UUID
+    ): ApiOkResponse<DentalWorkingHours>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @put
+    @route("/{branchId}/working-hours")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateWorkingHours")
+    updateWorkingHours(
+      @path branchId: UUID,
+      @body body: DentalWorkingHours
+    ): ApiOkResponse<DentalWorkingHours>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{branchId}/settings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getBranchSettings")
+    getBranchSettings(
+      @path branchId: UUID
+    ): ApiOkResponse<DentalBranchSettings>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @put
+    @route("/{branchId}/settings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateBranchSettings")
+    updateBranchSettings(
+      @path branchId: UUID,
+      @body body: UpdateDentalBranchSettingsRequest
+    ): ApiOkResponse<DentalBranchSettings>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{branchId}/consent-templates")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listConsentTemplates")
+    listConsentTemplates(
+      @path branchId: UUID
+    ): ApiOkResponse<DentalConsentTemplate[]>
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{branchId}/consent-templates")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createConsentTemplate")
+    createConsentTemplate(
+      @path branchId: UUID,
+      @body body: CreateDentalConsentTemplateRequest
+    ): ApiCreatedResponse<DentalConsentTemplate>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @patch(#{implicitOptionality: true})
+    @route("/{branchId}/consent-templates/{id}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateConsentTemplate")
+    updateConsentTemplate(
+      @path branchId: UUID,
+      @path id: UUID,
+      @body body: UpdateDentalConsentTemplateRequest
+    ): ApiOkResponse<DentalConsentTemplate>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @delete
+    @route("/{branchId}/consent-templates/{id}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("deleteConsentTemplate")
+    deleteConsentTemplate(
+      @path branchId: UUID,
+      @path id: UUID
+    ): ApiOkResponse<{}>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 }

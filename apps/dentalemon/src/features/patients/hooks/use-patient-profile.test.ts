@@ -6,30 +6,8 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { toPatientProfile, usePatientProfile, type RawPatientDetail } from './use-patient-profile';
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function makeWrapper(qc: QueryClient) {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(QueryClientProvider, { client: qc }, children);
-  };
-}
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 // ─── toPatientProfile (pure transform) ────────────────────────────────────
 

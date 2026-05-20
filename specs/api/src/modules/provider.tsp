@@ -376,6 +376,13 @@ model UpdatePractitionerRoleRequest {
  */
 @doc("Type of provider (pre-FHIR enumeration)")
 enum ProviderType {
+  dentist: "dentist",
+  hygienist: "hygienist",
+  orthodontist: "orthodontist",
+  endodontist: "endodontist",
+  periodontist: "periodontist",
+  oral_surgeon: "oral_surgeon",
+  pediatric_dentist: "pediatric_dentist",
   pharmacist: "pharmacist",
   other: "other",
 }

@@ -3,18 +3,17 @@ import { TIMEZONES, type Timezone } from './timezones'
 
 describe('Timezone Constants', () => {
   test('exports timezone options array', () => {
-    expect(TIMEZONES).toBeDefined()
     expect(Array.isArray(TIMEZONES)).toBe(true)
     expect(TIMEZONES.length).toBeGreaterThan(0)
   })
 
   test('each timezone has required fields', () => {
     TIMEZONES.forEach((tz: Timezone) => {
-      expect(tz.code).toBeDefined()
-      expect(tz.name).toBeDefined()
-      expect(tz.offset).toBeDefined()
-      expect(tz.group).toBeDefined()
-      expect(tz.mainCities).toBeDefined()
+      expect(tz.code).not.toBeUndefined()
+      expect(tz.name).not.toBeUndefined()
+      expect(tz.offset).not.toBeUndefined()
+      expect(tz.group).not.toBeUndefined()
+      expect(tz.mainCities).not.toBeUndefined()
       expect(typeof tz.code).toBe('string')
       expect(typeof tz.name).toBe('string')
       expect(typeof tz.offset).toBe('string')
@@ -46,16 +45,16 @@ describe('Timezone Constants', () => {
 
   test('includes common timezones', () => {
     const newYork = TIMEZONES.find(tz => tz.code === 'America/New_York')
-    expect(newYork).toBeDefined()
+    expect(newYork).not.toBeUndefined()
     expect(newYork?.offset).toMatch(/UTC[+-]\d/)
     expect(newYork?.group).toContain('America')
 
     const london = TIMEZONES.find(tz => tz.code === 'Europe/London')
-    expect(london).toBeDefined()
+    expect(london).not.toBeUndefined()
     expect(london?.group).toContain('Europe')
 
     const tokyo = TIMEZONES.find(tz => tz.code === 'Asia/Tokyo')
-    expect(tokyo).toBeDefined()
+    expect(tokyo).not.toBeUndefined()
     expect(tokyo?.group).toContain('Asia')
   })
 
@@ -67,10 +66,10 @@ describe('Timezone Constants', () => {
 
   test('all timezones have non-empty values', () => {
     TIMEZONES.forEach((tz: Timezone) => {
-      expect(tz.code.trim()).toBeTruthy()
-      expect(tz.name.trim()).toBeTruthy()
-      expect(tz.offset.trim()).toBeTruthy()
-      expect(tz.group.trim()).toBeTruthy()
+      expect(tz.code.trim().length).toBeGreaterThan(0)
+      expect(tz.name.trim().length).toBeGreaterThan(0)
+      expect(tz.offset.trim().length).toBeGreaterThan(0)
+      expect(tz.group.trim().length).toBeGreaterThan(0)
     })
   })
 
@@ -91,30 +90,30 @@ describe('Timezone Constants', () => {
   test('major cities are included in mainCities for searchability', () => {
     // Test Asia/Manila specifically - should include Manila and other cities
     const manila = TIMEZONES.find(tz => tz.code === 'Asia/Manila')
-    expect(manila).toBeDefined()
+    expect(manila).not.toBeUndefined()
     expect(manila?.mainCities).toContain('Manila')
     expect(manila?.mainCities).toContain('Quezon City')
     expect(manila?.mainCities.length).toBeGreaterThan(1)
 
     // Test Asia/Tokyo - should have major cities
     const tokyo = TIMEZONES.find(tz => tz.code === 'Asia/Tokyo')
-    expect(tokyo).toBeDefined()
+    expect(tokyo).not.toBeUndefined()
     expect(tokyo?.mainCities.length).toBeGreaterThan(0)
 
     // Test America/New_York - should have major cities
     const newYork = TIMEZONES.find(tz => tz.code === 'America/New_York')
-    expect(newYork).toBeDefined()
+    expect(newYork).not.toBeUndefined()
     expect(newYork?.mainCities.length).toBeGreaterThan(0)
   })
 
   test('mainCities enables fuzzy search for all listed cities', () => {
     // Manila should be searchable even though Quezon City is displayed first
     const manila = TIMEZONES.find(tz => tz.code === 'Asia/Manila')
-    expect(manila?.mainCities).toBeDefined()
+    expect(manila?.mainCities).not.toBeUndefined()
 
     // All cities should be in the array for keyword search
     manila?.mainCities.forEach(city => {
-      expect(city).toBeTruthy()
+      expect(city.length).toBeGreaterThan(0)
       expect(typeof city).toBe('string')
     })
   })

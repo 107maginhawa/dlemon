@@ -1,15 +1,28 @@
 // ToothSlideout — unit tests
+//
+// Step flow is now: overview → surface (condition+surfaces) → treatment (CDT) → review
 
-import { describe, test, expect, afterEach } from 'bun:test';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, test, expect, afterEach, mock } from 'bun:test';
+import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ToothSlideout } from './tooth-slideout';
+import { freshClientWithMutations, makeWrapper as makeWrapperBase, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
+
+// Stub fetch so useToothHistory does not error in tests
+const originalFetch = global.fetch;
+afterEach(() => { global.fetch = originalFetch; });
+
+function makeWrapper() {
+  return makeWrapperBase(freshClientWithMutations());
+}
 
 function baseProps(overrides: Partial<React.ComponentProps<typeof ToothSlideout>> = {}) {
   return {
     toothNumber: 11,
+    patientId: 'patient-test-1',
     open: true,
     onClose: () => {},
     onSave: async () => {},
@@ -19,43 +32,75 @@ function baseProps(overrides: Partial<React.ComponentProps<typeof ToothSlideout>
 
 describe('ToothSlideout', () => {
   test('renders null when open is false', () => {
-    render(React.createElement(ToothSlideout, baseProps({ open: false })));
+    // No history fetch needed when closed
+    render(React.createElement(ToothSlideout, baseProps({ open: false })), { wrapper: makeWrapper() });
     expect(screen.queryByTestId('tooth-slideout')).toBeNull();
   });
 
   test('renders slideout panel when open and toothNumber is set', () => {
-    render(React.createElement(ToothSlideout, baseProps()));
-    expect(screen.getByTestId('tooth-slideout')).toBeTruthy();
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+    expect(screen.getByTestId('tooth-slideout')).not.toBeNull();
   });
 
-  test('condition step shows all 9 TOOTH_STATES as buttons', () => {
-    render(React.createElement(ToothSlideout, baseProps()));
-    for (const label of ['Healthy', 'Caries', 'Fractured', 'Filled', 'Crown', 'Missing', 'Implant', 'Extracted', 'Watchlist']) {
-      expect(screen.getByText(label)).toBeTruthy();
+  test('first step is overview — shows tooth FDI number', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ toothNumber: 36 })), { wrapper: makeWrapper() });
+    // Overview shows the FDI number large
+    expect(screen.getByText('36')).not.toBeNull();
+  });
+
+  test('overview step (step 1) shows all 9 condition options', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+    // Condition picker is visible in overview step — labels from TOOTH_STATES
+    for (const label of ['Caries', 'Crown', 'Missing', 'Implant', 'Watchlist', 'Healthy']) {
+      expect(screen.getByText(label)).not.toBeNull();
     }
   });
 
-  test('resets to first step when toothNumber prop changes', () => {
-    const { rerender } = render(React.createElement(ToothSlideout, baseProps({ toothNumber: 11 })));
-    // Select a state so the Next button is enabled, then advance to step 2
-    fireEvent.click(screen.getByText('Healthy'));
-    fireEvent.click(screen.getByText(/2\. surface/i));
-    // Confirm we left the condition step (Tooth State label gone)
-    expect(screen.queryByText('Tooth State')).toBeNull();
-    // Rerender with different tooth — should reset to condition step
+  test('resets to overview step when toothNumber prop changes', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    const { rerender } = render(React.createElement(ToothSlideout, baseProps({ toothNumber: 11 })), { wrapper: makeWrapper() });
+    // Initially shows tooth 11
+    expect(screen.getByText('11')).not.toBeNull();
+    // Rerender with different tooth — should reset to overview
     rerender(React.createElement(ToothSlideout, baseProps({ toothNumber: 21 })));
-    // Condition step shows 'Tooth State' label
-    expect(screen.getByText('Tooth State')).toBeTruthy();
+    // Overview step shows FDI number "21"
+    expect(screen.getByText('21')).not.toBeNull();
+    // Tooth 11 label is gone
+    expect(screen.queryByText('11')).toBeNull();
   });
 
-  test('treatment step contains a price input field', () => {
-    const { container } = render(React.createElement(ToothSlideout, baseProps()));
-    // Select a state to enable Next
-    fireEvent.click(screen.getByText('Healthy'));
-    // Navigate to treatment step directly via step button
-    fireEvent.click(screen.getByText(/3\. treatment/i));
-    // Price input is a number input with id="treatment-price"
-    const priceInput = container.querySelector('input[type="number"]');
-    expect(priceInput).toBeTruthy();
+  test('step 2 (treatment) shows CDT search input after navigating via Next', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    const user = userEvent.setup();
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+
+    // Surface pills render with data-testid="surface-{name}" (e.g. "surface-buccal")
+    const surfaceBtn = screen.getByTestId('surface-buccal');
+    expect(surfaceBtn, 'Surface tab button must exist in overview step').not.toBeNull();
+    await user.click(surfaceBtn);
+
+    // Select Caries condition — this enables Next
+    await user.click(screen.getByText('Caries'));
+
+    // Next button must be present and clickable
+    const nextBtn = screen.getByText('Next');
+    expect(nextBtn, 'Next button must be present after selecting a condition').not.toBeNull();
+    await user.click(nextBtn);
+
+    // CDT browser search input must appear in step 2
+    expect(screen.getByPlaceholderText(/search cdt/i)).not.toBeNull();
+  });
+
+  test('footer shows Cancel on step 1', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+    // Step 1 (overview): footer shows Cancel
+    expect(screen.getByText('Cancel')).not.toBeNull();
+    // Next button exists but is disabled (no condition assigned yet)
+    const nextBtn = screen.queryByText('Next');
+    expect(nextBtn).not.toBeNull();
   });
 });

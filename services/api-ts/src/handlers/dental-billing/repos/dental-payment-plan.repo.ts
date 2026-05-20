@@ -2,12 +2,14 @@
  * DentalPaymentPlanRepository — data access for payment plans and installments
  *
  * Plans split invoice balances into periodic installments.
- * Status lifecycle: onTrack -> behind | completed | defaulted
+ * Status lifecycle: on_track -> behind | completed | defaulted
+ * Terminal states (completed, defaulted) reject all further transitions.
  * Auto-generates installment records based on frequency/count/startDate.
  */
 
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import { BusinessLogicError } from '@/core/errors';
 import {
   dentalPaymentPlans,
   dentalPaymentPlanInstallments,
@@ -16,6 +18,17 @@ import {
   type DentalPaymentPlanInstallment,
   type NewDentalPaymentPlanInstallment,
 } from './dental-payment-plan.schema';
+
+/**
+ * FSM: allowed transitions for each payment plan status.
+ * Terminal states (completed, defaulted) have no outgoing edges.
+ */
+export const PAYMENT_PLAN_TRANSITIONS: Record<DentalPaymentPlan['status'], DentalPaymentPlan['status'][]> = {
+  on_track:  ['behind', 'completed', 'defaulted'],
+  behind:    ['on_track', 'completed', 'defaulted'],
+  completed: [],
+  defaulted: [],
+};
 
 /**
  * Compute the next due date from a start date given a frequency.
@@ -133,6 +146,33 @@ export class DentalPaymentPlanRepository {
   }
 
   /**
+   * Directly set plan status, enforcing FSM transition rules.
+   * Throws BusinessLogicError (422) for invalid transitions.
+   */
+  async setStatus(
+    planId: string,
+    newStatus: DentalPaymentPlan['status'],
+  ): Promise<DentalPaymentPlan> {
+    const plan = await this.findOneById(planId);
+    if (!plan) throw new Error(`Payment plan ${planId} not found`);
+
+    const allowed = PAYMENT_PLAN_TRANSITIONS[plan.status];
+    if (!allowed.includes(newStatus)) {
+      throw new BusinessLogicError(
+        `Cannot transition payment plan from '${plan.status}' to '${newStatus}'`,
+        'INVALID_TRANSITION',
+      );
+    }
+
+    const [updated] = await this.db
+      .update(dentalPaymentPlans)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(dentalPaymentPlans.id, planId))
+      .returning();
+    return updated!;
+  }
+
+  /**
    * Re-evaluate plan status based on installments.
    * - all paid -> completed
    * - any overdue > 90 days -> defaulted
@@ -151,7 +191,7 @@ export class DentalPaymentPlanRepository {
       i => i.status !== 'paid' && (now.getTime() - new Date(i.dueDate).getTime()) > 90 * 24 * 60 * 60 * 1000,
     );
 
-    let newStatus: DentalPaymentPlan['status'] = 'onTrack';
+    let newStatus: DentalPaymentPlan['status'] = 'on_track';
     if (allPaid) {
       newStatus = 'completed';
     } else if (overdue90) {

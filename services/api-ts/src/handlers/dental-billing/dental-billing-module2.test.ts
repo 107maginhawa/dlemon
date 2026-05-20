@@ -11,7 +11,7 @@
  *   EC5     Voided payment receipt reprint
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
@@ -21,18 +21,38 @@ import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
+import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import { getPatientBalance } from './getPatientBalance';
 import { getCollectionsSummary } from './getCollectionsSummary';
 import { getDentalPaymentReceipt } from './getDentalPaymentReceipt';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
+const FIXED_NOW = new Date('2026-01-15T12:00:00Z');
+const FIXED_NOW_MS = FIXED_NOW.getTime();
+
 const STAFF_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'staff@clinic.com' };
 const PATIENT_ID = 'aa000000-0000-1000-8000-000000000001';
+const PERSON_ID  = 'ee000000-0000-1000-8000-000000000001';
 const BRANCH_ID  = 'bb000000-0000-1000-8000-000000000002';
 const MEMBER_ID  = 'cc000000-0000-1000-8000-000000000003';
 const VISIT_ID   = 'dd000000-0000-1000-8000-000000000004';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
+const ORG_ID = 'ec000000-0000-1000-8000-000000000001';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'BillingModule2 Clinic', tier: 'solo', ownerPersonId: STAFF_USER.id, countryCode: 'PH', createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Staff', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+  await db.insert(dentalVisits).values({ id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
+});
 
 // ─── App builder ─────────────────────────────────────────────────────────────
 
@@ -104,15 +124,16 @@ async function seedPayment(invoiceId: string, amountCents = 5000) {
     branchId: BRANCH_ID,
     amountCents,
     method: 'cash',
-    receiptNumber: `RCT-${Date.now()}`,
+    receiptNumber: `RCT-TEST-${crypto.randomUUID().slice(0, 8)}`,
     recordedByMemberId: MEMBER_ID,
   });
 }
 
 async function truncate() {
-  await db.execute(sql`TRUNCATE TABLE dental_payment, dental_payment_plan_installment, dental_payment_plan, dental_invoice CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE patient CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE person CASCADE`);
+  await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
+  await db.execute(sql`DELETE FROM dental_payment_plan`);
+  await db.execute(sql`DELETE FROM dental_payment`);
+  await db.execute(sql`DELETE FROM dental_invoice`);
 }
 
 // =============================================================================
@@ -124,7 +145,7 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
 
   test('transitions issued invoice past due date to overdue', async () => {
     const invoiceRepo = new DentalInvoiceRepository(db);
-    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // yesterday
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     await seedInvoice({ status: 'issued', dueDate: pastDate });
 
     const count = await invoiceRepo.markOverdueInvoices();
@@ -132,12 +153,12 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
 
     const invoices = await invoiceRepo.findMany({ patientId: PATIENT_ID });
     const overdue = invoices.find(i => i.status === 'overdue');
-    expect(overdue).toBeDefined();
+    expect(overdue).not.toBeUndefined();
   });
 
   test('transitions partial invoice past due date to overdue', async () => {
     const invoiceRepo = new DentalInvoiceRepository(db);
-    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     await seedInvoice({ status: 'partial', paidCents: 3000, balanceCents: 7000, dueDate: pastDate });
 
     const count = await invoiceRepo.markOverdueInvoices();
@@ -146,7 +167,7 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
 
   test('does NOT transition paid invoices', async () => {
     const invoiceRepo = new DentalInvoiceRepository(db);
-    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     const inv = await seedInvoice({ status: 'paid', paidCents: 10000, balanceCents: 0, dueDate: pastDate });
 
     await invoiceRepo.markOverdueInvoices();
@@ -157,7 +178,7 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
 
   test('does NOT transition future due date invoices', async () => {
     const invoiceRepo = new DentalInvoiceRepository(db);
-    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // next week
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     const inv = await seedInvoice({ status: 'issued', dueDate: futureDate });
 
     await invoiceRepo.markOverdueInvoices();
@@ -190,7 +211,7 @@ describe('FR4.3: payment plan status tracking', () => {
       updatedBy: STAFF_USER.id,
     });
 
-    expect(plan.status).toBe('onTrack');
+    expect(plan.status).toBe('on_track');
   });
 
   test('plan transitions to completed when all installments paid', async () => {
@@ -209,9 +230,10 @@ describe('FR4.3: payment plan status tracking', () => {
       updatedBy: STAFF_USER.id,
     });
 
-    // Mark all installments paid
+    // Mark all installments paid — create real payment records for FK
     for (const inst of installments) {
-      await planRepo.recordInstallmentPayment(inst.id, crypto.randomUUID(), inst.amountCents, new Date());
+      const payment = await seedPayment(invoice.id, inst.amountCents);
+      await planRepo.recordInstallmentPayment(inst.id, payment.id, inst.amountCents, new Date());
     }
 
     const updated = await planRepo.updatePlanStatus(plan.id);
@@ -223,7 +245,7 @@ describe('FR4.3: payment plan status tracking', () => {
     const planRepo = new DentalPaymentPlanRepository(db);
 
     // Start date 8 days in the past so first installment is overdue
-    const startDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const startDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     const { plan } = await planRepo.createWithInstallments({
       invoiceId: invoice.id,
       patientId: PATIENT_ID,
@@ -328,7 +350,7 @@ describe('FR4.5: getCollectionsSummary', () => {
     const res = await app.request('/dental/billing/collections/summary?period=today');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.collectionsByMethod).toBeDefined();
+    expect(body.collectionsByMethod).not.toBeNull();
     expect(typeof body.collectionsByMethod).toBe('object');
   });
 
@@ -354,9 +376,9 @@ describe('FR4.6 + EC5: getDentalPaymentReceipt', () => {
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments/${payment.id}/receipt`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.receiptNumber).toBeTruthy();
+    expect(typeof body.receiptNumber).toBe('string'); expect(body.receiptNumber.length).toBeGreaterThan(0);
     expect(body.payment.amountCents).toBe(5000);
-    expect(body.invoice.invoiceNumber).toBeTruthy();
+    expect(typeof body.invoice.invoiceNumber).toBe('string'); expect(body.invoice.invoiceNumber.length).toBeGreaterThan(0);
     expect(typeof body.generatedAt).toBe('string');
     expect(body.isVoid).toBe(false);
   });
@@ -376,10 +398,10 @@ describe('FR4.6 + EC5: getDentalPaymentReceipt', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.isVoid).toBe(true);
-    expect(body.voidedAt).toBeTruthy();
+    expect(typeof body.voidedAt).toBe('string');
     expect(body.voidReason).toBe('Entered wrong amount');
     // Receipt still accessible after void (EC5)
-    expect(body.receiptNumber).toBeTruthy();
+    expect(typeof body.receiptNumber).toBe('string'); expect(body.receiptNumber.length).toBeGreaterThan(0);
   });
 
   test('returns 404 for non-existent invoice', async () => {

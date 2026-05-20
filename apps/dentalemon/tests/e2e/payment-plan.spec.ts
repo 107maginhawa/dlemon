@@ -178,7 +178,85 @@ test.describe('Payment Plan', () => {
     }, { api: API, invoiceId, patientId });
 
     expect(planRes.status).toBe(201);
-    expect(planRes.body.status).toBe('onTrack');
+    expect(planRes.body.status).toBe('on_track');
     expect(planRes.body.installments).toHaveLength(3);
+  });
+
+  test('BR-011: cannot void invoice with active payment plan (AC-PAY-03)', async ({ page }) => {
+    const { patientId } = await setup(page);
+    const visitId = await createAndCompleteVisit(page, patientId);
+
+    // Create invoice
+    const invoiceRes = await page.evaluate(
+      async ({ api, visitId, patientId }) => {
+        const res = await fetch(`${api}/dental/billing/invoices`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            visitId,
+            patientId,
+            branchId: '00000000-0000-4000-8000-000000000001',
+            dentistMemberId: '00000000-0000-4000-8000-000000000002',
+          }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { api: API, visitId, patientId },
+    );
+    expect(invoiceRes.status).toBe(201);
+    const invoiceId = invoiceRes.body.id as string;
+
+    // Issue invoice
+    const issueStatus = await page.evaluate(
+      async ({ api, invoiceId }) => {
+        const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        return res.status;
+      },
+      { api: API, invoiceId },
+    );
+    expect(issueStatus).toBe(200);
+
+    // Create payment plan (locks the invoice from being voided)
+    const planStatus = await page.evaluate(
+      async ({ api, invoiceId, patientId }) => {
+        const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            patientId,
+            frequency: 'monthly',
+            numberOfInstallments: 3,
+            startDate: new Date().toISOString(),
+          }),
+        });
+        return res.status;
+      },
+      { api: API, invoiceId, patientId },
+    );
+    expect(planStatus).toBe(201);
+
+    // Attempt to void the invoice — must be rejected with ACTIVE_PAYMENT_PLAN error
+    const voidRes = await page.evaluate(
+      async ({ api, invoiceId }) => {
+        const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/void`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ voidReason: 'test' }),
+        });
+        const body = await res.json().catch(() => ({}));
+        return { status: res.status, body };
+      },
+      { api: API, invoiceId },
+    );
+
+    // BR-011: void must fail when active payment plan exists
+    expect(voidRes.status).toBeGreaterThanOrEqual(400);
+    expect(JSON.stringify(voidRes.body)).toContain('ACTIVE_PAYMENT_PLAN');
   });
 });

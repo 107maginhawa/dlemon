@@ -32,6 +32,9 @@ export const storedFiles = pgTable('stored_file', {
   
   // File-specific timestamp
   uploadedAt: timestamp('uploaded_at').defaultNow(),
+
+  // Multipart upload tracking — stores S3 UploadId while in-progress
+  multipartUploadId: varchar('multipart_upload_id', { length: 255 }),
 });
 
 // Type exports for TypeScript

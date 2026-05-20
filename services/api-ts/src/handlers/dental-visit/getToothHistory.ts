@@ -12,6 +12,7 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
 export async function getToothHistory(ctx: HandlerContext) {
@@ -22,11 +23,7 @@ export async function getToothHistory(ctx: HandlerContext) {
   const toothNumber = parseInt(ctx.req.param('toothNumber') ?? '');
   if (isNaN(toothNumber)) throw new ValidationError('toothNumber must be a number');
 
-  const branchId = ctx.req.query('branchId');
-  if (!branchId) throw new ValidationError('branchId query parameter is required');
-
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchAccess(db, user.id, branchId);
 
   const visitRepo = new VisitRepository(db);
   const chartRepo = new DentalChartRepository(db);
@@ -34,6 +31,14 @@ export async function getToothHistory(ctx: HandlerContext) {
 
   // Get all visits for this patient (completed/locked)
   const visits = await visitRepo.findMany({ patientId });
+
+  // Derive branch from patient's visits and assert access
+  if (visits.length === 0) {
+    const { limit, offset } = parsePagination(ctx.req.query(), { limit: 20 });
+    return ctx.json({ data: [], pagination: buildPaginationMeta([], 0, limit, offset) });
+  }
+  await assertBranchAccess(db, user.id, visits[0]!.branchId);
+
   const completedVisits = visits.filter(v => v.status === 'completed' || v.status === 'locked');
 
   // Build history entries in reverse chronological order
@@ -71,8 +76,9 @@ export async function getToothHistory(ctx: HandlerContext) {
   // Sort reverse-chronological
   entries.sort((a, b) => b.visitDate.getTime() - a.visitDate.getTime());
 
-  const limit = parseInt(ctx.req.query('limit') ?? '20');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 20 });
+  const totalCount = entries.length;
+  const page = entries.slice(offset, offset + limit);
 
-  return ctx.json({ items: entries.slice(offset, offset + limit), total: entries.length, limit, offset });
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

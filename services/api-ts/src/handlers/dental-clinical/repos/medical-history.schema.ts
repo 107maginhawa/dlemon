@@ -6,6 +6,7 @@
 
 import { pgTable, uuid, text, boolean, pgEnum } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { patients } from '../../patient/repos/patient.schema';
 
 export const medicalHistoryEntryTypeEnum = pgEnum('medical_history_entry_type', [
   'condition',
@@ -13,12 +14,12 @@ export const medicalHistoryEntryTypeEnum = pgEnum('medical_history_entry_type', 
   'allergy',
   'procedure',
   'vaccination',
-  'familyHistory',
+  'family_history',
 ]);
 
 export const medicalHistoryEntries = pgTable('medical_history_entry', {
   ...baseEntityFields,
-  patientId: uuid('patient_id').notNull(),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
   entryType: medicalHistoryEntryTypeEnum('entry_type').notNull(),
   codeSystem: text('code_system'),
   code: text('code'),
@@ -32,5 +33,5 @@ export const medicalHistoryEntries = pgTable('medical_history_entry', {
 export type MedicalHistoryEntry = typeof medicalHistoryEntries.$inferSelect;
 export type NewMedicalHistoryEntry = typeof medicalHistoryEntries.$inferInsert;
 
-export const VALID_ENTRY_TYPES = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'familyHistory'] as const;
+export const VALID_ENTRY_TYPES = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'family_history'] as const;
 export type MedicalHistoryEntryType = typeof VALID_ENTRY_TYPES[number];

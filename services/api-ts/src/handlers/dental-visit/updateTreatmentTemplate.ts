@@ -1,0 +1,1 @@
+export { updateTreatmentTemplate } from './treatmentTemplates';

@@ -248,6 +248,10 @@ test-results/
 playwright-report/
 test-results.json
 
+# Journey harness transient per-journey records (aggregated into journey-results.json)
+apps/dentalemon/.journey-tmp/
+
 # Gemini
 .gemini-clipboard
 .gstack/
+.worktrees/

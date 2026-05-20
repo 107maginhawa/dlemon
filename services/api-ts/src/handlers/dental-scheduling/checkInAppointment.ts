@@ -15,6 +15,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
@@ -36,8 +37,8 @@ export async function checkInAppointment(ctx: HandlerContext) {
 
   await assertBranchAccess(db, user.id, appointment.branchId);
 
-  if (appointment.status !== 'scheduled') {
-    throw new ValidationError('Only scheduled appointments can be checked in');
+  if (!APPOINTMENT_TRANSITIONS[appointment.status].includes('checked_in')) {
+    throw new ValidationError(`Cannot check in appointment with status '${appointment.status}'`);
   }
 
   // EC7: Check for existing in-progress visit BEFORE mutating appointment status

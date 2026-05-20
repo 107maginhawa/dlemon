@@ -61,7 +61,7 @@ export function formatFrequency(frequency: string): string {
 
 export function getPlanStatusClass(status: string): string {
   switch (status) {
-    case 'onTrack':
+    case 'on_track':
       return 'bg-green-100 text-green-700';
     case 'behind':
       return 'bg-red-100 text-red-700';

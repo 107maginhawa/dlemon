@@ -1,0 +1,161 @@
+<mxfile>
+  <diagram name="Default" id="default">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Workspace background placeholder -->
+        <mxCell id="shell-ws-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-ws-placeholder" value="← Workspace (shrunk)" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#4A6B7A;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="0" y="430" width="1117" height="40" as="geometry"/>
+        </mxCell>
+        <!-- 3px amber left accent -->
+        <mxCell id="shell-sheet-accent" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1117" y="0" width="3" height="900" as="geometry"/>
+        </mxCell>
+        <!-- Sheet panel -->
+        <mxCell id="shell-sheet-panel" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="0" width="320" height="900" as="geometry"/>
+        </mxCell>
+        <!-- Title bar -->
+        <mxCell id="shell-sheet-title" value="Tooth #16" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#1E3A5F;" vertex="1" parent="1">
+          <mxGeometry x="1136" y="8" width="240" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-sheet-close" value="✕" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#4A6B7A;" vertex="1" parent="1">
+          <mxGeometry x="1404" y="8" width="28" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-sheet-divider" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="48" width="320" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Stepper: All complete, Review (step 4) active -->
+        <mxCell id="shell-stepper-1" value="✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=11;fontStyle=1;fontColor=#461402;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="1144" y="60" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-line-1" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1168" y="71" width="40" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-2" value="✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=11;fontStyle=1;fontColor=#461402;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="1208" y="60" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-line-2" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1232" y="71" width="40" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-3" value="✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=11;fontStyle=1;fontColor=#461402;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="1272" y="60" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-line-3" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1296" y="71" width="40" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-4" value="4" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=11;fontStyle=1;fontColor=#461402;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="1336" y="60" width="24" height="24" as="geometry"/>
+        </mxCell>
+        <!-- Step labels -->
+        <mxCell id="shell-stepper-label-1" value="Overview" style="text;html=1;align=center;verticalAlign=top;fontFamily=Inter;fontSize=9;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1128" y="86" width="56" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-label-2" value="Condition" style="text;html=1;align=center;verticalAlign=top;fontFamily=Inter;fontSize=9;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1192" y="86" width="56" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-label-3" value="Treatment" style="text;html=1;align=center;verticalAlign=top;fontFamily=Inter;fontSize=9;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1256" y="86" width="56" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-stepper-label-4" value="Review" style="text;html=1;align=center;verticalAlign=top;fontFamily=Inter;fontSize=9;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="86" width="56" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- CONTENT ZONE START - x=1120 y=104 w=320 h=748 -->
+        <!-- 5-Surface Selector (read-only, M,D blue = treated) -->
+        <mxCell id="sr-surface-oval" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="116" width="100" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-B" value="B" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1266" y="118" width="28" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-M-bg" value="" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=none;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="1232" y="146" width="28" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-M" value="M" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="1232" y="148" width="28" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-D-bg" value="" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=none;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="146" width="28" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-D" value="D" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="148" width="28" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-P" value="P" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1266" y="148" width="28" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-surface-I" value="I" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#71717A;" vertex="1" parent="1">
+          <mxGeometry x="1266" y="176" width="28" height="16" as="geometry"/>
+        </mxCell>
+        <!-- Summary of Plans -->
+        <mxCell id="sr-summary-header" value="Summary of Plans" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="1136" y="212" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <!-- Summary Card 1 -->
+        <mxCell id="sr-card-full-1" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1136" y="244" width="288" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-card-full-1-bg" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="0" y="0" width="288" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-card-full-1-surfaces" value="M, D" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="12" y="10" width="48" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-badge-default-cond1" value="Caries" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="64" y="10" width="56" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-badge-default-treat1" value="Composite Filling" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#3B82F6;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="124" y="10" width="110" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Record Note textarea -->
+        <mxCell id="sr-card-full-1-note-label" value="Record Note" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=12;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="12" y="40" width="100" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-textarea-note-1" value="Add notes for this plan..." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#71717A;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;" vertex="1" parent="sr-card-full-1">
+          <mxGeometry x="12" y="60" width="264" height="76" as="geometry"/>
+        </mxCell>
+        <!-- Summary Card 2 -->
+        <mxCell id="sr-card-full-2" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1136" y="400" width="288" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-card-full-2-bg" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="0" y="0" width="288" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-card-full-2-surfaces" value="B" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="12" y="10" width="32" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-badge-default-cond2" value="Fracture" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="48" y="10" width="60" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-badge-default-treat2" value="Crown" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#3B82F6;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="112" y="10" width="56" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-card-full-2-note-label" value="Record Note" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=12;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="12" y="40" width="100" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-textarea-note-2" value="Add notes for this plan..." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#71717A;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;" vertex="1" parent="sr-card-full-2">
+          <mxGeometry x="12" y="60" width="264" height="76" as="geometry"/>
+        </mxCell>
+        <!-- CONTENT ZONE END -->
+
+        <!-- Sticky footer -->
+        <mxCell id="shell-sheet-footer-divider" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="852" width="320" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="shell-sheet-footer" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="852" width="320" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-btn-ghost-back" value="Back" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=14;fontColor=#1E3A5F;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1136" y="862" width="80" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr-btn-default-finalize" value="Finalize Plans" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=#FFCC5E;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1296" y="862" width="128" height="36" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -40,7 +40,7 @@ describe('PractitionerRoleRepository', () => {
   test('constructs without throwing', () => {
     const db = { select: mock(() => ({})), insert: mock(() => ({})), update: mock(() => ({})) } as any;
     const repo = new PractitionerRoleRepository(db);
-    expect(repo).toBeDefined();
+    expect(repo).not.toBeNull();
   });
 
   test('createOne returns created role', async () => {
@@ -63,7 +63,7 @@ describe('PractitionerRoleRepository', () => {
       tenantId: 'default',
     } as any);
 
-    expect(result).toBeDefined();
+    expect(result).not.toBeNull();
     expect(result.id).toBe(role.id);
     expect(result.practitionerId).toBe(role.practitionerId);
     expect(returning).toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe('PractitionerRoleRepository', () => {
 
     const repo = new PractitionerRoleRepository(db);
     const result = await repo.findOneById(role.id);
-    expect(result).toBeDefined();
+    expect(result).not.toBeNull();
     expect(from).toHaveBeenCalled();
   });
 
@@ -115,21 +115,21 @@ describe('PractitionerRoleRepository', () => {
     const repo = new PractitionerRoleRepository(db);
     const result = await repo.deactivateById(deactivated.id);
     expect(result.active).toBe(false);
-    expect(result.deactivatedAt).toBeDefined();
+    expect(result.deactivatedAt).not.toBeUndefined();
   });
 
   test('buildWhereConditions filters by practitionerId', () => {
     const db = { select: mock(() => ({})), insert: mock(() => ({})), update: mock(() => ({})) } as any;
     const repo = new PractitionerRoleRepository(db) as any;
     const cond = repo.buildWhereConditions({ practitionerId: 'pr-id' });
-    expect(cond).toBeDefined();
+    expect(cond).not.toBeNull();
   });
 
   test('buildWhereConditions filters by active', () => {
     const db = { select: mock(() => ({})), insert: mock(() => ({})), update: mock(() => ({})) } as any;
     const repo = new PractitionerRoleRepository(db) as any;
     const cond = repo.buildWhereConditions({ active: true });
-    expect(cond).toBeDefined();
+    expect(cond).not.toBeNull();
   });
 
   test('buildWhereConditions returns undefined for empty filters', () => {
@@ -145,6 +145,6 @@ describe('PractitionerRoleRepository', () => {
     const cond = repo.buildWhereConditions({
       practitionerId: 'pr-00000000-0000-0000-0000-000000000001',
     });
-    expect(cond).toBeDefined();
+    expect(cond).not.toBeNull();
   });
 });

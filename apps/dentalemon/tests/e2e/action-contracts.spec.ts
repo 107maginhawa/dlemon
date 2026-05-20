@@ -14,6 +14,27 @@
 import { test, expect, type Page } from '@playwright/test';
 import { setupDentalOrg, createDentalPatient, APP, API } from './fixtures';
 
+/**
+ * Complete the tooth slideout wizard for a single tooth:
+ * 1. Focus a surface pill (occlusal by default)
+ * 2. Click a condition (Caries by default)
+ * 3. Next → treatment step
+ * 4. Continue → review step
+ */
+async function fillToothSlideout(page: Page, opts: { surface?: string; condition?: string } = {}) {
+  // 'mesial' exists on all teeth (anterior and posterior)
+  const surface = opts.surface ?? 'mesial';
+  const condition = opts.condition ?? 'Caries';
+  // Step 1 (Overview): focus a surface, then pick condition
+  await page.getByTestId(`surface-${surface}`).click();
+  await page.getByRole('button', { name: condition }).first().click();
+  // Advance from overview → treatment
+  await page.getByRole('button', { name: 'Next' }).click();
+  // Treatment step: select first CDT code, then click Continue to advance to review
+  await page.getByRole('option').first().click();
+  await page.getByTestId('cdt-continue-btn').click();
+}
+
 test.describe('Action Contracts: Workspace', () => {
   test('new visit button produces 201 from API', async ({ page }) => {
     const { branchId } = await setupDentalOrg(page);
@@ -64,13 +85,8 @@ test.describe('Action Contracts: Workspace', () => {
     await page.getByTestId('tooth-21').click();
     await expect(page.getByTestId('tooth-slideout')).toBeVisible();
 
-    // Select condition
-    await page.getByRole('button', { name: 'Caries' }).first().click();
-
-    // Advance to surface, then treatment, then review, then save
-    await page.getByRole('button', { name: 'Next' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
+    // Fill slideout: select surface → condition → Next → Continue (to review)
+    await fillToothSlideout(page);
 
     // Listen for chart save
     const chartResponse = page.waitForResponse(
@@ -78,10 +94,74 @@ test.describe('Action Contracts: Workspace', () => {
       { timeout: 10000 },
     );
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
 
     const chartRes = await chartResponse;
     expect(chartRes.status()).toBeLessThan(300);
+  });
+});
+
+test.describe('Action Contracts: Treatment Plan', () => {
+  test('tooth slideout save adds treatment row to plan tab (AC-VISIT)', async ({ page }) => {
+    const { branchId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, {
+      displayName: 'Treatment Row Patient',
+      branchId,
+    });
+
+    await page.goto(`${APP}/${patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Create visit
+    const visitResponse = page.waitForResponse(
+      (resp) => resp.url().includes('/dental/visits') && resp.request().method() === 'POST',
+      { timeout: 10000 },
+    );
+    await page.getByTestId('new-visit-btn').click();
+    const visitRes = await visitResponse;
+    expect(visitRes.status()).toBe(201);
+
+    // Open tooth slideout
+    await page.getByTestId('tooth-21').click();
+    await expect(page.getByTestId('tooth-slideout')).toBeVisible();
+
+    // Fill slideout: select surface → condition → Next → Continue (to review)
+    await fillToothSlideout(page);
+
+    // Save the chart — also wait for treatment POST (triggered after chart success)
+    const chartResponse = page.waitForResponse(
+      (resp) => resp.url().includes('/chart') && resp.request().method() === 'POST',
+      { timeout: 10000 },
+    );
+    const treatmentResponse = page.waitForResponse(
+      (resp) => resp.url().includes('/treatments') && resp.request().method() === 'POST',
+      { timeout: 15000 },
+    );
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    const chartRes = await chartResponse;
+    expect(chartRes.status()).toBeLessThan(300);
+    const txRes = await treatmentResponse;
+    expect(txRes.status()).toBeLessThan(300);
+
+    // Verify the treatment plan API has data before opening the modal
+    const planResponse = await page.evaluate(async ({ api, patientId, branchId }) => {
+      const r = await fetch(`${api}/dental/patients/${patientId}/treatment-plan?branchId=${branchId}`, {
+        credentials: 'include',
+      });
+      if (!r.ok) return { error: r.status, treatments: [] };
+      const data = await r.json();
+      return { treatmentCount: data.treatmentCount, treatments: data.treatments };
+    }, { api: API, patientId, branchId });
+    expect(planResponse.treatmentCount).toBeGreaterThan(0);
+
+    // Open Treatment Plan sheet (top bar button) to verify the row was recorded
+    await page.getByRole('button', { name: 'Treatment Plan' }).click();
+    // Wait for the treatment plan API to respond with data
+    await page.waitForResponse(
+      (resp) => resp.url().includes('/treatment-plan') && resp.request().method() === 'GET',
+      { timeout: 10000 },
+    ).catch(() => null);
+    await expect(page.getByTestId('treatment-row').first()).toBeVisible({ timeout: 12000 });
   });
 });
 

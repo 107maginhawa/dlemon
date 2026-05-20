@@ -67,7 +67,16 @@ async function seedAll() {
     timezone: 'Asia/Manila',
     active: true,
   });
-  return new MembershipRepository(db);
+  const membershipRepo = new MembershipRepository(db);
+  // Seed membership for authedUser so assertBranchAccess passes
+  await membershipRepo.createOne({
+    branchId: BRANCH_ID,
+    personId: PERSON_ID,
+    displayName: 'Owner',
+    role: 'dentist_owner',
+    status: 'active',
+  });
+  return membershipRepo;
 }
 
 describe('listMembers handler', () => {
@@ -105,15 +114,16 @@ describe('listMembers handler', () => {
   // --------------------------------------------------------------------------
 
   test('returns 200 with empty items array when no members exist', async () => {
-    await seedAll();
+    await seedAll(); // seedAll seeds 1 owner membership for auth; expect 1 total
     const app = buildTestApp(authedUser);
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`);
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.total).toBe(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    // Owner membership seeded for assertBranchAccess — count is 1
+    expect(body.pagination.totalCount).toBe(1);
   });
 
   test('returns 200 with members array and strips pinHash', async () => {
@@ -138,11 +148,12 @@ describe('listMembers handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items.length).toBe(2);
-    expect(body.total).toBe(2);
+    expect(Array.isArray(body.data)).toBe(true);
+    // seedAll seeds 1 owner membership for auth + 2 staff = 3 total
+    expect(body.data.length).toBe(3);
+    expect(body.pagination.totalCount).toBe(3);
     // PIN hash must not be returned
-    for (const item of body.items) {
+    for (const item of body.data) {
       expect(item.pinHash).toBeUndefined();
     }
   });
@@ -156,7 +167,7 @@ describe('listMembers handler', () => {
       status: 'active',
       pinFailedAttempts: 0,
     });
-    const inactiveMember = await membershipRepo.createOne({
+    await membershipRepo.createOne({
       branchId: BRANCH_ID,
       displayName: 'Inactive Staff',
       role: 'staff_scheduling',
@@ -169,7 +180,10 @@ describe('listMembers handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(1);
-    expect(body.items[0].displayName).toBe('Active Staff');
+    // seedAll seeds 1 owner (active) + 1 Active Staff (active) = 2; Inactive excluded
+    expect(body.data.length).toBe(2);
+    const names = body.data.map((m: any) => m.displayName);
+    expect(names).toContain('Active Staff');
+    expect(names).not.toContain('Inactive Staff');
   });
 });

@@ -13,36 +13,36 @@ describe('getThumbnailPipClass', () => {
     expect(getThumbnailPipClass('healthy' as ToothState)).toBe('bg-muted');
   });
 
-  test('caries → bg-red-500/40', () => {
-    expect(getThumbnailPipClass('caries' as ToothState)).toBe('bg-red-500/40');
+  test('caries → bg-dental-caries/60', () => {
+    expect(getThumbnailPipClass('caries' as ToothState)).toBe('bg-dental-caries/60');
   });
 
-  test('fractured → bg-amber-400', () => {
-    expect(getThumbnailPipClass('fractured' as ToothState)).toBe('bg-amber-400');
+  test('fractured → bg-dental-fractured/70', () => {
+    expect(getThumbnailPipClass('fractured' as ToothState)).toBe('bg-dental-fractured/70');
   });
 
-  test('filled → bg-green-500', () => {
-    expect(getThumbnailPipClass('filled' as ToothState)).toBe('bg-green-500');
+  test('filled → bg-dental-filled', () => {
+    expect(getThumbnailPipClass('filled' as ToothState)).toBe('bg-dental-filled');
   });
 
-  test('crown → bg-blue-400', () => {
-    expect(getThumbnailPipClass('crown' as ToothState)).toBe('bg-blue-400');
+  test('crown → bg-dental-crown', () => {
+    expect(getThumbnailPipClass('crown' as ToothState)).toBe('bg-dental-crown');
   });
 
-  test('extracted → border border-dashed border-red-500 bg-transparent', () => {
-    expect(getThumbnailPipClass('extracted' as ToothState)).toBe('border border-dashed border-red-500 bg-transparent');
+  test('extracted → border border-dashed border-gray-600 bg-transparent', () => {
+    expect(getThumbnailPipClass('extracted' as ToothState)).toBe('border border-dashed border-gray-600 bg-transparent');
   });
 
-  test('missing → bg-muted/50', () => {
-    expect(getThumbnailPipClass('missing' as ToothState)).toBe('bg-muted/50');
+  test('missing → bg-dental-missing/50', () => {
+    expect(getThumbnailPipClass('missing' as ToothState)).toBe('bg-dental-missing/50');
   });
 
-  test('implant → bg-blue-300', () => {
-    expect(getThumbnailPipClass('implant' as ToothState)).toBe('bg-blue-300');
+  test('implant → bg-[#007AFF]', () => {
+    expect(getThumbnailPipClass('implant' as ToothState)).toBe('bg-[#007AFF]');
   });
 
-  test('watchlist → bg-amber-300', () => {
-    expect(getThumbnailPipClass('watchlist' as ToothState)).toBe('bg-amber-300');
+  test('watchlist → bg-dental-crown/50', () => {
+    expect(getThumbnailPipClass('watchlist' as ToothState)).toBe('bg-dental-crown/50');
   });
 });
 
@@ -66,7 +66,7 @@ describe('DentalChartThumbnail', () => {
       })
     );
     const pip = container.querySelector('[data-tooth="11"]');
-    expect(pip).toBeTruthy();
-    expect((pip as HTMLElement).className).toContain('bg-red-500/40');
+    expect(pip).not.toBeNull();
+    expect((pip as HTMLElement).className).toContain('bg-dental-caries/60');
   });
 });

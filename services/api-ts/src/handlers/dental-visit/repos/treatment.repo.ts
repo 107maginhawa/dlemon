@@ -6,16 +6,20 @@
  * EC4: price locked at recording time (never mutated by this repo after creation)
  */
 
-import { eq, and, inArray, ne } from 'drizzle-orm';
+import { eq, and, inArray, asc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import { createSnapshotVersion } from '@/core/database.schema';
 import {
   dentalTreatments,
   visitNotes,
+  visitNoteVersions,
   type DentalTreatment,
   type NewDentalTreatment,
   type VisitNotes,
   type NewVisitNotes,
+  type VisitNoteVersion,
 } from './treatment.schema';
+import { BusinessLogicError } from '@/core/errors';
 
 export interface CreateCarryOverInput {
   sourceVisitId: string;
@@ -73,7 +77,16 @@ export class TreatmentRepository {
     return updated ?? null;
   }
 
-  async update(id: string, patch: Partial<Pick<DentalTreatment, 'status' | 'dismissReason' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode'>>): Promise<DentalTreatment | null> {
+  async decline(id: string, reason: string): Promise<DentalTreatment | null> {
+    const [updated] = await this.db
+      .update(dentalTreatments)
+      .set({ status: 'declined', refusalReason: reason, updatedAt: new Date() })
+      .where(eq(dentalTreatments.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  async update(id: string, patch: Partial<Pick<DentalTreatment, 'status' | 'dismissReason' | 'refusalReason' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'priceCents' | 'clinicalNotes'>>): Promise<DentalTreatment | null> {
     const [updated] = await this.db
       .update(dentalTreatments)
       .set({ ...patch, updatedAt: new Date() })
@@ -138,6 +151,10 @@ export class VisitNotesRepository {
   async upsert(data: NewVisitNotes): Promise<VisitNotes> {
     const existing = await this.findByVisit(data.visitId!);
     if (existing) {
+      // BR: signed note is immutable — addendum-only post-sign (mirrors TREATMENT_IMMUTABLE)
+      if (existing.signed) {
+        throw new BusinessLogicError('Visit note is signed and cannot be modified', 'NOTE_SIGNED');
+      }
       const [updated] = await this.db
         .update(visitNotes)
         .set({ ...data, updatedAt: new Date() })
@@ -152,5 +169,65 @@ export class VisitNotesRepository {
   async findByVisit(visitId: string): Promise<VisitNotes | null> {
     const [row] = await this.db.select().from(visitNotes).where(eq(visitNotes.visitId, visitId));
     return row ?? null;
+  }
+
+  async findById(id: string): Promise<VisitNotes | null> {
+    const [row] = await this.db.select().from(visitNotes).where(eq(visitNotes.id, id));
+    return row ?? null;
+  }
+
+  /** Sign a note: set signed=true/signedAt/signedBy/lockedAt, freeze v1 snapshot. */
+  async sign(noteId: string, signedBy: string): Promise<{ note: VisitNotes; version: VisitNoteVersion }> {
+    const now = new Date();
+    const [note] = await this.db
+      .update(visitNotes)
+      .set({ signed: true, signedAt: now, signedBy, lockedAt: now, updatedAt: now })
+      .where(eq(visitNotes.id, noteId))
+      .returning();
+    if (!note) throw new Error('VisitNotesRepository.sign: note not found after update');
+
+    const snapshot: Record<string, unknown> = {
+      type: 'sign',
+      subjective: note.subjective,
+      objective: note.objective,
+      assessment: note.assessment,
+      plan: note.plan,
+      notes: note.notes,
+      signedBy,
+      signedAt: now.toISOString(),
+    };
+
+    const version = await createSnapshotVersion(
+      this.db as any,
+      visitNoteVersions,
+      visitNoteVersions.noteId,
+      visitNoteVersions.version,
+      noteId,
+      { noteId, snapshot, createdBy: signedBy },
+    ) as VisitNoteVersion;
+
+    return { note, version };
+  }
+
+  /** Append an addendum version snapshot to a signed note. */
+  async addendum(noteId: string, content: string, reason: string, createdBy: string): Promise<VisitNoteVersion> {
+    const snapshot: Record<string, unknown> = { type: 'addendum', reason, content, addendumBy: createdBy, addendumAt: new Date().toISOString() };
+    return await createSnapshotVersion(
+      this.db as any,
+      visitNoteVersions,
+      visitNoteVersions.noteId,
+      visitNoteVersions.version,
+      noteId,
+      { noteId, snapshot, createdBy },
+    ) as VisitNoteVersion;
+  }
+
+  /** Return all version snapshots for a note, ordered by version ascending. */
+  async history(noteId: string): Promise<VisitNoteVersion[]> {
+    return this.db
+      .select()
+      .from(visitNoteVersions)
+      .where(eq(visitNoteVersions.noteId, noteId))
+      .orderBy(asc(visitNoteVersions.version));
   }
 }

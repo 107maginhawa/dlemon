@@ -11,11 +11,21 @@
  *   EC2     Pending treatments on extracted tooth (blocked)
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql, eq } from 'drizzle-orm';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateDentalVisitBody,
+  UpdateDentalVisitBody, UpdateDentalVisitParams,
+  CreateDentalTreatmentBody, CreateDentalTreatmentParams,
+  UpdateDentalTreatmentBody, UpdateDentalTreatmentParams,
+} from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
@@ -34,15 +44,39 @@ import {
 } from './treatmentTemplates';
 import { carryOverTreatments } from './carryOverTreatments';
 import { getTreatmentPlan } from './getTreatmentPlan';
+import { acceptTreatmentPlan } from './acceptTreatmentPlan';
+import { updateDentalTreatment } from './updateDentalTreatment';
+import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
 import { initializeDentition } from './initializeDentition';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
 const TEST_USER = { id: 'e1000000-0000-1000-8000-000000000001', email: 'dentist@clinic.com' };
 const PATIENT_ID = 'f1000000-0000-1000-8000-000000000001';
+const PERSON_ID  = 'f1ff0000-0000-1000-8000-000000000001';
 const BRANCH_ID  = 'f1000000-0000-1000-8000-000000000002';
-const MEMBER_ID  = 'f1000000-0000-1000-8000-000000000003';
+const ORG_ID     = 'a1000000-0000-1000-8000-000000000003';
+// MEMBER_ID matches the membership row inserted in beforeAll (e1ff0000...)
+const MEMBER_ID  = 'e1ff0000-0000-1000-8000-000000000001';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'Module3 Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  // MEMBER_ID = e1ff0000...001 is the canonical membership for TEST_USER in this branch
+  await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test Dentist', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Module3', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const TreatmentBodyOnly = CreateDentalTreatmentBody.omit({ visitId: true });
 
 // ─── App builder ─────────────────────────────────────────────────────────────
 
@@ -52,6 +86,9 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.onError((err, c) => {
     if (err instanceof AppError) {
       return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    if (err instanceof z.ZodError) {
+      return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
     }
     return c.json({ error: String(err.message) }, 500);
   });
@@ -68,9 +105,9 @@ function buildTestApp(user?: typeof TEST_USER) {
   });
 
   // Visit routes
-  app.post('/dental/visits', createDentalVisit as any);
-  app.patch('/dental/visits/:visitId', updateDentalVisit as any);
-  app.post('/dental/visits/:visitId/treatments', createDentalTreatment as any);
+  app.post('/dental/visits', zValidator('json', CreateDentalVisitBody, ve), createDentalVisit as any);
+  app.patch('/dental/visits/:visitId', zValidator('param', UpdateDentalVisitParams, ve), zValidator('json', UpdateDentalVisitBody, ve), updateDentalVisit as any);
+  app.post('/dental/visits/:visitId/treatments', zValidator('param', CreateDentalTreatmentParams, ve), zValidator('json', TreatmentBodyOnly, ve), createDentalTreatment as any);
   app.post('/dental/visits/:visitId/carry-over', carryOverTreatments as any);
   app.post('/dental/visits/:visitId/apply-template/:templateId', applyTemplate as any);
 
@@ -82,6 +119,8 @@ function buildTestApp(user?: typeof TEST_USER) {
 
   // Treatment plan
   app.get('/dental/patients/:patientId/treatment-plan', getTreatmentPlan as any);
+  app.post('/dental/patients/:patientId/treatment-plan/accept', acceptTreatmentPlan as any);
+  app.patch('/dental/visits/:visitId/treatments/:treatmentId', zValidator('param', UpdateDentalTreatmentParams, ve), zValidator('json', UpdateDentalTreatmentBody, ve), updateDentalTreatment as any);
 
   // FR1.19: Dentition management
   app.post('/dental/patients/:patientId/dentition', initializeDentition as any);
@@ -470,7 +509,7 @@ describe('FR1.22: treatment plan presentation', () => {
 
   test('returns empty plan for patient with no pending treatments', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan`);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.patientId).toBe(PATIENT_ID);
@@ -487,7 +526,7 @@ describe('FR1.22: treatment plan presentation', () => {
     await seedTreatment(v2.id, 'planned');
     await seedTreatment(v2.id, 'performed'); // should NOT appear (not pending)
 
-    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan`);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.treatmentCount).toBe(2); // only diagnosed + planned
@@ -497,7 +536,7 @@ describe('FR1.22: treatment plan presentation', () => {
 
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
-    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan`);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
 });
@@ -657,5 +696,75 @@ describe('FR1.19 — Dentition Management (deciduous auto-populate)', () => {
     });
 
     expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// C1: getTreatmentPlan exposes top-level version field (J09)
+// =============================================================================
+
+describe('C1: getTreatmentPlan returns numeric version', () => {
+  afterEach(async () => {
+    await db.delete(treatmentPlanVersions).where(sql`patient_id = ${PATIENT_ID}::uuid`);
+    await truncate();
+  });
+
+  test('returns version: 0 when no accepted version exists', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(typeof body.version).toBe('number');
+    expect(body.version).toBe(0);
+  });
+
+  test('returns version: 1 after first acceptance', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit('active');
+    await seedTreatment(visit.id, 'planned');
+
+    const acceptRes = await app.request(
+      `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+    );
+    expect(acceptRes.status).toBe(201);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.version).toBe(1);
+  });
+});
+
+// =============================================================================
+// C2: getTreatmentPlan returns declined treatments with reason (J08)
+// =============================================================================
+
+describe('C2: getTreatmentPlan returns declined treatments', () => {
+  afterEach(truncate);
+
+  test('declined treatment appears in plan with status:declined and reason', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit('active');
+    const tx = await seedTreatment(visit.id, 'diagnosed');
+
+    // Decline the treatment via PATCH
+    const declineRes = await app.request(
+      `/dental/visits/${visit.id}/treatments/${tx.id}?branchId=${BRANCH_ID}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'declined', refusalReason: 'Patient declined RCT — cost' }),
+      },
+    );
+    expect(declineRes.status).toBe(200);
+
+    const planRes = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
+    expect(planRes.status).toBe(200);
+    const body = await planRes.json() as any;
+
+    const declined = body.treatments.find((t: any) => t.status === 'declined');
+    expect(declined).toBeDefined();
+    expect(declined.reason).toBe('Patient declined RCT — cost');
   });
 });

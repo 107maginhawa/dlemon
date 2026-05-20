@@ -242,7 +242,7 @@ describe('createAppointment working hours enforcement (FR3.10)', () => {
       branchId: BRANCH_ID,
       scheduledAt,
       durationMinutes,
-      procedureType: 'checkup',
+      serviceType: 'checkup',
     });
   }
 

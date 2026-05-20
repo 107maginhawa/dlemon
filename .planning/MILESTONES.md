@@ -1,5 +1,13 @@
 # MILESTONES.md
 
+## Workspace Reconciliation Phases 1-2
+
+**Completed:** 2026-05-10
+**Phases:** 1-5 + partial Phase 6 (TypeSpec migration: 3/9 groups done)
+**Summary:** Chart core, carousel coverflow, slideout wizard restructure (overview→surface+condition→treatment→review), CdtCodeBrowser, ToothOverviewStep, AmendmentForm, MedicalHistorySheet. Partial TypeSpec migration (dental-pmd, dental-billing, dental-org+visit routes).
+
+---
+
 ## v1.0 Dental Patient Backend
 
 **Completed:** 2026-05-06

@@ -29,8 +29,26 @@ export async function deleteAttachment(ctx: HandlerContext) {
   if (!visit) throw new NotFoundError('Visit');
   await assertBranchAccess(db, user.id, visit.branchId);
 
-  const deleted = await repo.deleteById(attachmentId);
+  const deleted = await repo.softDelete(attachmentId);
   if (!deleted) throw new NotFoundError('Attachment');
+
+  const audit = ctx.get('audit') as any;
+  if (audit?.logEvent) {
+    await audit.logEvent({
+      eventType: 'data-modification',
+      category: 'clinical',
+      action: 'delete',
+      outcome: 'success',
+      user: user.id,
+      userType: 'client',
+      resourceType: 'attachment',
+      resource: attachmentId,
+      description: 'Clinical attachment soft-deleted',
+      details: { visitId: existing.visitId, patientId: existing.patientId },
+      ipAddress: ctx.req.header('x-forwarded-for'),
+      request: ctx.req.header('x-request-id'),
+    }, user.id);
+  }
 
   return ctx.body(null, 204);
 }

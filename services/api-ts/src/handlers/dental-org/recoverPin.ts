@@ -1,0 +1,1 @@
+export { recoverPin } from './pinRecovery';

@@ -8,7 +8,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { getDentalChartOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { ToothData } from '../components/dental-chart.helpers';
 
 interface UseDentalChartOptions {
@@ -19,17 +19,14 @@ export function useDentalChart({ visitId }: UseDentalChartOptions) {
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
 
   const query = useQuery({
-    queryKey: ['dental-chart', visitId],
-    queryFn: async (): Promise<ToothData[]> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/visits/${visitId}/chart`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to fetch chart (${res.status})`);
-      const data = await res.json();
-      return data.teeth ?? [];
-    },
+    ...getDentalChartOptions({
+      path: { visitId: visitId as string },
+    }),
     enabled: !!visitId,
+    select: (data) => {
+      const chart = data as { teeth?: ToothData[] } | null;
+      return chart?.teeth ?? [];
+    },
   });
 
   function selectTooth(toothNumber: number) {

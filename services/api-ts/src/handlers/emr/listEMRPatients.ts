@@ -2,10 +2,12 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
-  ValidationError
+  ValidationError,
+  ForbiddenError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
 import { PatientRepository, type PatientFilters } from '../patient/repos/patient.repo';
+import { ProviderRepository } from '../provider/repos/provider.repo';
 import { parsePagination, parseFilters, buildPaginationMeta, shouldExpand } from '@/utils/query';
 import { subDays } from 'date-fns';
 
@@ -55,9 +57,16 @@ export async function listEMRPatients(ctx: HandlerContext) {
   // Check field expansion options
   const expandPerson = shouldExpand(query, 'person');
 
+  // Resolve provider entity ID from person ID
+  const providerRepo = new ProviderRepository(db, logger);
+  const provider = await providerRepo.findByPersonId(user.id);
+  if (!provider) {
+    throw new ForbiddenError('Provider profile not found for authenticated user');
+  }
+
   // Get consultations by this provider first to find their patients
   const consultationFilters = {
-    provider: user.id, // Only show patients this provider has treated
+    provider: provider.id, // Only show patients this provider has treated
     ...(query.dateStart && query.dateEnd && {
       dateRange: {
         start: query.dateStart,

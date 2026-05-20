@@ -10,11 +10,16 @@
  * - Case-insensitive matching
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll, beforeEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreatePrescriptionBody, CreatePrescriptionParams,
+  CreateMedicalHistoryEntryBody,
+} from '@/generated/openapi/validators';
 import { createPrescription } from './createPrescription';
 import { createMedicalHistoryEntry } from './createMedicalHistoryEntry';
 import { medicalHistoryEntries } from './repos/medical-history.schema';
@@ -23,8 +28,32 @@ const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/mo
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
+const BRANCH_ID = 'b9000000-0000-1000-8000-000000000009';
+const ORG_ID = 'd9000000-0000-1000-8000-000000000009';
+const PERSON_ID = 'f9000000-0000-1000-8000-000000000009';
 const VISIT_ID = 'ee000000-0000-1000-8000-000000000001';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  const { dentalVisits } = await import('@/handlers/dental-visit/repos/visit.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'Module9 Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: 'ee900000-0000-1000-8000-000000000009', branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test User', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalVisits).values({ id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const PrescriptionBodyOnly = CreatePrescriptionBody.omit({ visitId: true });
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -39,8 +68,15 @@ function buildTestApp(user?: typeof TEST_USER) {
     if (user) ctx.set('user', user);
     await next();
   });
-  app.post('/dental/visits/:visitId/prescriptions', createPrescription as any);
-  app.post('/dental/clinical/medical-history', createMedicalHistoryEntry as any);
+  app.post('/dental/visits/:visitId/prescriptions',
+    zValidator('param', CreatePrescriptionParams, ve),
+    zValidator('json', PrescriptionBodyOnly, ve),
+    createPrescription as any,
+  );
+  app.post('/dental/clinical/medical-history',
+    zValidator('json', CreateMedicalHistoryEntryBody, ve),
+    createMedicalHistoryEntry as any,
+  );
   return app;
 }
 
@@ -67,6 +103,12 @@ async function seedAllergy(name: string) {
     }),
   });
 }
+
+beforeEach(async () => {
+  // Re-seed visit after each afterEach truncation
+  const { dentalVisits } = await import('@/handlers/dental-visit/repos/visit.schema');
+  await db.insert(dentalVisits).values({ id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
 
 afterEach(async () => {
   await db.execute(sql`
@@ -110,7 +152,7 @@ describe('FR1.12: Prescription allergy cross-check', () => {
     });
     expect(res.status).toBe(201); // non-blocking — still 201
     const body = await res.json() as any;
-    expect(body.warnings).toBeDefined();
+    expect(body.warnings).not.toBeNull();
     expect(body.warnings.allergyConflicts).toContain('Penicillin');
   });
 

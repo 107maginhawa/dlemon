@@ -6,7 +6,8 @@
  */
 
 import { describe, test, expect, mock, afterEach } from 'bun:test';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { PinEntry } from './pin-entry.$memberId';
 
@@ -21,7 +22,7 @@ describe('PinEntry', () => {
 
   test('renders member name and role', () => {
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack: () => {} }));
-    expect(screen.getByText('Dr. Ramon Cruz')).toBeTruthy();
+    expect(screen.getByText('Dr. Ramon Cruz')).not.toBeNull();
   });
 
   test('renders 6 PIN dot indicators', () => {
@@ -33,32 +34,34 @@ describe('PinEntry', () => {
   test('renders a keypad with digits 0-9', () => {
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack: () => {} }));
     for (let i = 0; i <= 9; i++) {
-      expect(screen.getByLabelText(String(i))).toBeTruthy();
+      expect(screen.getByLabelText(String(i))).not.toBeNull();
     }
   });
 
   test('renders back navigation button', () => {
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack: () => {} }));
-    expect(screen.getByTestId('pin-back-btn')).toBeTruthy();
+    expect(screen.getByTestId('pin-back-btn')).not.toBeNull();
   });
 
   // --------------------------------------------------------------------------
   // PIN input interaction
   // --------------------------------------------------------------------------
 
-  test('pressing a digit fills a dot', () => {
+  test('pressing a digit fills a dot', async () => {
+    const user = userEvent.setup();
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack: () => {} }));
-    fireEvent.click(screen.getByLabelText('1'));
+    await user.click(screen.getByLabelText('1'));
     const filledDots = screen.getAllByTestId(/pin-dot/).filter(d => d.getAttribute('data-filled') === 'true');
     expect(filledDots.length).toBe(1);
   });
 
   test('calls onSubmit with the 6-digit PIN when complete', async () => {
+    const user = userEvent.setup();
     const onSubmit = mock(async () => ({ success: true, failedAttempts: 0 }));
     render(React.createElement(PinEntry, { member, onSubmit, onBack: () => {} }));
 
     for (const digit of ['1', '2', '3', '4', '5', '6']) {
-      fireEvent.click(screen.getByLabelText(digit));
+      await user.click(screen.getByLabelText(digit));
     }
 
     // Wait for async submit
@@ -66,11 +69,12 @@ describe('PinEntry', () => {
     expect(onSubmit).toHaveBeenCalledWith('123456');
   });
 
-  test('backspace removes last digit', () => {
+  test('backspace removes last digit', async () => {
+    const user = userEvent.setup();
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack: () => {} }));
-    fireEvent.click(screen.getByLabelText('5'));
-    fireEvent.click(screen.getByLabelText('5'));
-    fireEvent.click(screen.getByTestId('pin-backspace-btn'));
+    await user.click(screen.getByLabelText('5'));
+    await user.click(screen.getByLabelText('5'));
+    await user.click(screen.getByTestId('pin-backspace-btn'));
 
     const filledDots = screen.getAllByTestId(/pin-dot/).filter(d => d.getAttribute('data-filled') === 'true');
     expect(filledDots.length).toBe(1);
@@ -87,7 +91,7 @@ describe('PinEntry', () => {
       onBack: () => {},
       errorMessage: 'Incorrect PIN. 2 attempts remaining.',
     }));
-    expect(screen.getByText(/Incorrect PIN/i)).toBeTruthy();
+    expect(screen.getByText(/Incorrect PIN/i)).not.toBeNull();
   });
 
   test('shows lockout message and hides keypad when lockedUntil is set', () => {
@@ -98,14 +102,15 @@ describe('PinEntry', () => {
       onBack: () => {},
       lockedUntil,
     }));
-    expect(screen.getByTestId('pin-lockout-message')).toBeTruthy();
+    expect(screen.getByTestId('pin-lockout-message')).not.toBeNull();
     expect(screen.queryByLabelText('1')).toBeNull(); // keypad hidden
   });
 
-  test('calls onBack when back button is clicked', () => {
+  test('calls onBack when back button is clicked', async () => {
+    const user = userEvent.setup();
     const onBack = mock(() => {});
     render(React.createElement(PinEntry, { member, onSubmit: async () => {}, onBack }));
-    fireEvent.click(screen.getByTestId('pin-back-btn'));
+    await user.click(screen.getByTestId('pin-back-btn'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,6 +12,9 @@ import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { BranchRepository } from '../dental-org/repos/branch.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { buildPaginationMeta } from '@/utils/query';
+import { sql, inArray } from 'drizzle-orm';
+import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import type { ListDentalPatientsQuery } from '@/generated/openapi/validators';
 
 export async function listDentalPatients(
@@ -58,10 +61,27 @@ export async function listDentalPatients(
     repo.countWithPerson(filters),
   ]);
 
+  // Batch visit counts + last visit for all patients in one query
+  const patientIds = allPatients.map(p => p.id);
+  const visitStats = patientIds.length > 0
+    ? await db
+        .select({
+          patientId: dentalVisits.patientId,
+          visitCount: sql<number>`count(*)::int`.as('visit_count'),
+          lastVisit: sql<string>`max(${dentalVisits.completedAt})`.as('last_visit'),
+        })
+        .from(dentalVisits)
+        .where(inArray(dentalVisits.patientId, patientIds))
+        .groupBy(dentalVisits.patientId)
+    : [];
+
+  const visitMap = new Map(visitStats.map(v => [v.patientId, v]));
+
   const mapped = allPatients.map(p => {
     const person = p.person;
     const firstName = person?.firstName ?? '';
     const lastName = person?.lastName ?? '';
+    const stats = visitMap.get(p.id);
     return {
       id: p.id,
       displayName: [firstName, lastName].filter(Boolean).join(' ') || 'Unknown',
@@ -72,6 +92,8 @@ export async function listDentalPatients(
       hasActivePaymentPlan: p.hasActivePaymentPlan ?? false,
       status: p.status ?? 'active',
       recallDate: p.recallDate ?? null,
+      visitCount: stats?.visitCount ?? 0,
+      lastVisit: stats?.lastVisit ?? null,
       createdAt: p.createdAt,
       person,
     };
@@ -79,5 +101,5 @@ export async function listDentalPatients(
 
   logger?.info({ action: 'listDentalPatients', filters, count: mapped.length }, 'Dental patients listed');
 
-  return ctx.json({ patients: mapped, total, limit, offset }, 200);
+  return ctx.json({ data: mapped, pagination: buildPaginationMeta(mapped, total, limit, offset) }, 200);
 }

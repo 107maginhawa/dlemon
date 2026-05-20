@@ -7,14 +7,21 @@
  * Wireframe: docs/prd/context/wireframes/ws-lab-orders.html
  */
 
-import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  listLabOrdersOptions,
+  listLabOrdersQueryKey,
+  createLabOrderMutation,
+  updateLabOrderMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { LabOrder } from '@monobase/sdk-ts/generated';
 
-type LabOrderStatus = 'ordered' | 'inFabrication' | 'delivered' | 'fitted' | 'cancelled';
+type LabOrderStatus = 'ordered' | 'in_fabrication' | 'delivered' | 'fitted' | 'cancelled';
 
-const STATUS_LABELS: Record<LabOrderStatus, string> = {
+export const STATUS_LABELS: Record<LabOrderStatus, string> = {
   ordered: 'Ordered',
-  inFabrication: 'In Fabrication',
+  in_fabrication: 'In Fabrication',
   delivered: 'Delivered',
   fitted: 'Fitted',
   cancelled: 'Cancelled',
@@ -22,30 +29,19 @@ const STATUS_LABELS: Record<LabOrderStatus, string> = {
 
 const STATUS_COLORS: Record<LabOrderStatus, string> = {
   ordered: 'bg-blue-100 text-blue-700',
-  inFabrication: 'bg-orange-100 text-orange-700',
+  in_fabrication: 'bg-orange-100 text-orange-700',
   delivered: 'bg-green-100 text-green-700',
   fitted: 'bg-[#FFE97D] text-[#4A4018]',
   cancelled: 'bg-gray-100 text-gray-500',
 };
 
-const NEXT_STATUS: Record<LabOrderStatus, LabOrderStatus | null> = {
-  ordered: 'inFabrication',
-  inFabrication: 'delivered',
+export const NEXT_STATUS: Record<LabOrderStatus, LabOrderStatus | null> = {
+  ordered: 'in_fabrication',
+  in_fabrication: 'delivered',
   delivered: 'fitted',
   fitted: null,
   cancelled: null,
 };
-
-interface LabOrder {
-  id: string;
-  labName: string;
-  description: string;
-  status: LabOrderStatus;
-  orderedAt: string;
-  deliveredAt?: string | null;
-  fittedAt?: string | null;
-  cancelledAt?: string | null;
-}
 
 interface CreateForm {
   labName: string;
@@ -53,7 +49,12 @@ interface CreateForm {
   expectedDeliveryDate: string;
 }
 
-const API = apiBaseUrl;
+export function validateLabOrderForm(form: Pick<CreateForm, 'labName' | 'description'>): string[] {
+  const errs: string[] = [];
+  if (!form.labName.trim()) errs.push('Lab name is required');
+  if (!form.description.trim()) errs.push('Description is required');
+  return errs;
+}
 
 export interface LabOrdersSheetProps {
   visitId: string;
@@ -63,86 +64,66 @@ export interface LabOrdersSheetProps {
 }
 
 export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersSheetProps) {
-  const [orders, setOrders] = useState<LabOrder[]>([]);
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateForm>({ labName: '', description: '', expectedDeliveryDate: '' });
   const [formErrors, setFormErrors] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
-  useEffect(() => {
-    if (open) load();
-    else {
-      setOrders([]);
-      setForm({ labName: '', description: '', expectedDeliveryDate: '' });
-      setFormErrors([]);
+  const queryClient = useQueryClient();
+
+  const { data: ordersResponse, isLoading: loading } = useQuery({
+    ...listLabOrdersOptions({ path: { visitId } }),
+    enabled: open,
+  });
+
+  const orders = (ordersResponse?.data ?? []) as LabOrder[];
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: listLabOrdersQueryKey({ path: { visitId } }) });
+
+  const updateMutation = useMutation({
+    ...updateLabOrderMutation(),
+    onSuccess: invalidate,
+  });
+
+  const createMutation = useMutation({
+    ...createLabOrderMutation(),
+    onSuccess: () => {
+      invalidate();
       setShowCreate(false);
-    }
-  }, [open, visitId]);
+      setForm({ labName: '', description: '', expectedDeliveryDate: '' });
+    },
+  });
 
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/dental/visits/${visitId}/lab-orders`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(data.items ?? []);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAdvanceStatus(order: LabOrder) {
-    const next = NEXT_STATUS[order.status];
+  function handleAdvanceStatus(order: LabOrder) {
+    const next = NEXT_STATUS[order.status as LabOrderStatus];
     if (!next) return;
-    const res = await fetch(`${API}/dental/visits/${visitId}/lab-orders/${order.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ status: next }),
+    updateMutation.mutate({
+      path: { visitId, orderId: order.id },
+      body: { status: next } as Parameters<typeof updateMutation.mutate>[0]['body'],
     });
-    if (res.ok) await load();
   }
 
-  async function handleCancel(order: LabOrder) {
-    const res = await fetch(`${API}/dental/visits/${visitId}/lab-orders/${order.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ status: 'cancelled', cancelReason: 'Cancelled by user' }),
+  function handleCancel(order: LabOrder) {
+    updateMutation.mutate({
+      path: { visitId, orderId: order.id },
+      body: { status: 'cancelled', cancelReason: 'Cancelled by user' } as Parameters<typeof updateMutation.mutate>[0]['body'],
     });
-    if (res.ok) await load();
   }
 
-  async function handleCreate() {
-    const errs: string[] = [];
-    if (!form.labName.trim()) errs.push('Lab name is required');
-    if (!form.description.trim()) errs.push('Description is required');
+  function handleCreate() {
+    const errs = validateLabOrderForm(form);
     if (errs.length > 0) { setFormErrors(errs); return; }
     setFormErrors([]);
-    setSaving(true);
-    try {
-      const res = await fetch(`${API}/dental/visits/${visitId}/lab-orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          visitId,
-          patientId,
-          labName: form.labName.trim(),
-          description: form.description.trim(),
-          expectedDeliveryDate: form.expectedDeliveryDate ? new Date(form.expectedDeliveryDate).toISOString() : undefined,
-        }),
-      });
-      if (res.ok) {
-        setForm({ labName: '', description: '', expectedDeliveryDate: '' });
-        setShowCreate(false);
-        await load();
-      }
-    } finally {
-      setSaving(false);
-    }
+    createMutation.mutate({
+      path: { visitId },
+      body: {
+        visitId,
+        patientId,
+        labName: form.labName.trim(),
+        description: form.description.trim(),
+        expectedDeliveryDate: form.expectedDeliveryDate ? new Date(form.expectedDeliveryDate).toISOString() : undefined,
+      } as Parameters<typeof createMutation.mutate>[0]['body'],
+    });
   }
 
   if (!open) return null;
@@ -231,10 +212,10 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                 <button
                   type="button"
                   onClick={handleCreate}
-                  disabled={saving}
+                  disabled={createMutation.isPending}
                   className="flex-1 h-10 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
                 >
-                  {saving ? 'Creating…' : 'Create order'}
+                  {createMutation.isPending ? 'Creating…' : 'Create order'}
                 </button>
               </div>
             </div>
@@ -246,7 +227,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
             <p className="text-sm text-muted-foreground text-center py-8">No lab orders yet.</p>
           )}
           {orders.map(order => {
-            const next = NEXT_STATUS[order.status];
+            const next = NEXT_STATUS[order.status as LabOrderStatus];
             return (
               <div
                 key={order.id}
@@ -258,8 +239,8 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                     <p className="text-sm font-semibold">{order.description}</p>
                     <p className="text-xs text-muted-foreground">{order.labName}</p>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status]}`}>
-                    {STATUS_LABELS[order.status]}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status as LabOrderStatus]}`}>
+                    {STATUS_LABELS[order.status as LabOrderStatus]}
                   </span>
                 </div>
                 {next && (

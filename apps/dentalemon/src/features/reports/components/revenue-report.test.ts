@@ -228,7 +228,7 @@ function calcInvoiceBalance(totalCents: number, payments: Payment[]): number {
 
 describe('Revenue Report — formatInvoiceStatus (RPT-02)', () => {
   test.each(INVOICE_STATUSES)('formats %s', (status) => {
-    expect(formatInvoiceStatus(status)).toBeTruthy();
+    expect(formatInvoiceStatus(status).length).toBeGreaterThan(0);
     expect(typeof formatInvoiceStatus(status)).toBe('string');
   });
 

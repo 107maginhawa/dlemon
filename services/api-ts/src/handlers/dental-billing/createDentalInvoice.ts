@@ -8,7 +8,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -39,6 +39,11 @@ export async function createDentalInvoice(
 
   // Calculate subtotal from treatments
   const subtotalCents = billable.reduce((sum, t) => sum + t.priceCents, 0);
+
+  if (subtotalCents <= 0) {
+    throw new BusinessLogicError('Invoice total must be positive', 'INVALID_AMOUNT');
+  }
+
   const taxRate = body.taxRate ?? 0;
   const taxCents = Math.round(subtotalCents * taxRate);
   const totalCents = subtotalCents + taxCents;

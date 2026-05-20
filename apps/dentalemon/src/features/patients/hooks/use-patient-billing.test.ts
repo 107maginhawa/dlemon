@@ -6,31 +6,9 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { usePatientBilling } from './use-patient-billing';
 import type { Invoice } from '../../../features/billing/hooks/use-invoices';
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function makeWrapper(qc: QueryClient) {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(QueryClientProvider, { client: qc }, children);
-  };
-}
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 // ─── usePatientBilling ─────────────────────────────────────────────────────
 
@@ -92,8 +70,9 @@ describe('usePatientBilling', () => {
       },
     ];
 
+    // API returns paginated shape: { data: [...], pagination: {...} }
     global.fetch = mock(() =>
-      jsonResponse(mockInvoices),
+      jsonResponse({ data: mockInvoices, pagination: { offset: 0, limit: 50, count: 1, totalCount: 1, totalPages: 1 } }),
     );
 
     const qc = freshClient();
@@ -107,7 +86,7 @@ describe('usePatientBilling', () => {
     expect(result.current.invoices[0]!.invoiceNumber).toBe('INV-001');
   });
 
-  test('handles flat array response shape', async () => {
+  test('handles paginated response shape', async () => {
     const mockInvoices: Invoice[] = [
       {
         id: 'inv-2',
@@ -121,8 +100,9 @@ describe('usePatientBilling', () => {
       },
     ];
 
+    // API returns paginated shape: { data: [...], pagination: {...} }
     global.fetch = mock(() =>
-      jsonResponse(mockInvoices),
+      jsonResponse({ data: mockInvoices, pagination: { offset: 0, limit: 50, count: 1, totalCount: 1, totalPages: 1 } }),
     );
 
     const qc = freshClient();

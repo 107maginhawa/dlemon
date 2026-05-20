@@ -61,7 +61,7 @@ describe('PractitionerRepository', () => {
   test('constructs without throwing', () => {
     const db = makeDb() as any;
     const repo = new PractitionerRepository(db);
-    expect(repo).toBeDefined();
+    expect(repo).not.toBeNull();
   });
 
   test('createOne returns created practitioner with required fields', async () => {
@@ -84,7 +84,7 @@ describe('PractitionerRepository', () => {
       tenantId: 'default',
     } as any);
 
-    expect(result).toBeDefined();
+    expect(result).not.toBeNull();
     expect(result.id).toBe(practitioner.id);
     expect(result.providerId).toBe(practitioner.providerId);
     expect(returning).toHaveBeenCalled();
@@ -136,7 +136,7 @@ describe('PractitionerRepository', () => {
 
     const repo = new PractitionerRepository(db);
     const result = await repo.findOneById(practitioner.id);
-    expect(result).toBeDefined();
+    expect(result).not.toBeNull();
     expect(from).toHaveBeenCalled();
     expect(where).toHaveBeenCalled();
     expect(limit).toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe('PractitionerRepository', () => {
 
     const repo = new PractitionerRepository(db);
     const result = await repo.updateOneById(updated.id, { specialties: [{ text: 'Dentistry' }] } as any);
-    expect(result).toBeDefined();
+    expect(result).not.toBeNull();
     expect(result.specialties).toEqual([{ text: 'Dentistry' }]);
     expect(set).toHaveBeenCalled();
   });
@@ -189,7 +189,7 @@ describe('PractitionerRepository', () => {
     const repo = new PractitionerRepository(db);
     const result = await repo.deactivateById(deactivated.id);
     expect(result.active).toBe(false);
-    expect(result.deactivatedAt).toBeDefined();
+    expect(result.deactivatedAt).not.toBeNull();
     expect(set).toHaveBeenCalled();
   });
 
@@ -229,14 +229,14 @@ describe('PractitionerRepository', () => {
     const db = makeDb() as any;
     const repo = new PractitionerRepository(db) as any;
     const cond = repo.buildWhereConditions({ providerId: 'some-id' });
-    expect(cond).toBeDefined();
+    expect(cond).not.toBeUndefined();
   });
 
   test('buildWhereConditions filters by active=false', () => {
     const db = makeDb() as any;
     const repo = new PractitionerRepository(db) as any;
     const cond = repo.buildWhereConditions({ active: false });
-    expect(cond).toBeDefined();
+    expect(cond).not.toBeUndefined();
   });
 
   test('buildWhereConditions returns undefined for empty filters', () => {

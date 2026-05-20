@@ -5,8 +5,12 @@
  * A new PMD supersedes the previous one via supersedesId.
  */
 
-import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { patients } from '../../patient/repos/patient.schema';
+import { dentalBranches } from '../../dental-org/repos/branch.schema';
+import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 
 export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
   'generated',
@@ -16,10 +20,10 @@ export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
 
 export const pmdDocuments = pgTable('pmd_document', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull(),
-  patientId: uuid('patient_id').notNull(),
-  authorMemberId: uuid('author_member_id').notNull(),
-  branchId: uuid('branch_id').notNull(),
+  visitId: uuid('visit_id').notNull().references(() => dentalVisits.id),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
+  authorMemberId: uuid('author_member_id').notNull().references(() => dentalMemberships.id),
+  branchId: uuid('branch_id').references(() => dentalBranches.id),
   status: pmdDocumentStatusEnum('status').notNull().default('generated'),
   /** JSON snapshot of the visit at generation time */
   content: text('content').notNull(),
@@ -27,14 +31,14 @@ export const pmdDocuments = pgTable('pmd_document', {
   signature: text('signature'),
   signedAt: timestamp('signed_at'),
   /** ID of the older PMD this supersedes */
-  supersedesId: uuid('supersedes_id'),
+  supersedesId: uuid('supersedes_id').references((): AnyPgColumn => pmdDocuments.id, { onDelete: 'set null' }),
   /** SHA-256 checksum of content */
   checksum: text('checksum').notNull(),
 });
 
 export const importedPmds = pgTable('imported_pmd', {
   ...baseEntityFields,
-  patientId: uuid('patient_id').notNull(),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
   sourceFacility: text('source_facility').notNull(),
   sourceReference: text('source_reference'),
   content: text('content').notNull(),

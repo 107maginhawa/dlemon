@@ -10,6 +10,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
 export async function listDentalTreatments(ctx: HandlerContext) {
@@ -28,8 +29,9 @@ export async function listDentalTreatments(ctx: HandlerContext) {
   const repo = new TreatmentRepository(db);
   const treatments = await repo.findByVisit(visitId);
 
-  const limit = parseInt(ctx.req.query('limit') ?? '100');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 100 });
+  const totalCount = treatments.length;
+  const page = treatments.slice(offset, offset + limit);
 
-  return ctx.json({ items: treatments.slice(offset, offset + limit), total: treatments.length, limit, offset });
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

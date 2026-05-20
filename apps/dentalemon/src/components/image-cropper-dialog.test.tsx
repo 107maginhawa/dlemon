@@ -56,7 +56,7 @@ describe('ImageCropperDialog', () => {
       />
     )
 
-    expect(screen.getByText('Cancel')).toBeDefined()
+    expect(screen.getByText('Cancel')).not.toBeNull()
     expect(screen.getAllByText('Crop Image').length).toBeGreaterThan(0)
   })
 
@@ -73,7 +73,7 @@ describe('ImageCropperDialog', () => {
       />
     )
 
-    expect(screen.getByText('Zoom')).toBeDefined()
+    expect(screen.getByText('Zoom')).not.toBeNull()
   })
 
   test('calls onClose when Cancel button is clicked', async () => {
@@ -147,7 +147,7 @@ describe('ImageCropperDialog', () => {
 
     // Should render with defaults (aspectRatio=1, cropShape='round')
     expect(screen.getAllByText('Crop Image').length).toBeGreaterThan(0)
-    expect(screen.getByText('Cancel')).toBeDefined()
+    expect(screen.getByText('Cancel')).not.toBeNull()
   })
 
   test('shows processing state when cropping', async () => {
@@ -169,7 +169,7 @@ describe('ImageCropperDialog', () => {
 
     // Note: We're testing the UI behavior, not the canvas/blob conversion
     // The actual cropping logic is handled by react-easy-crop and canvas APIs
-    expect(cropButton).toBeDefined()
+    expect(cropButton).not.toBeNull()
   })
 
   test('disables buttons during processing', async () => {

@@ -40,7 +40,7 @@ const mockLogger = { debug: () => {}, info: () => {}, warn: () => {}, error: () 
 describe('BookingEventRepository', () => {
   test('constructs without error', () => {
     const repo = new BookingEventRepository(mockDb, mockLogger);
-    expect(repo).toBeDefined();
+    expect(repo).not.toBeNull();
   });
 
   test('BookingEventFilters supports owner filter', () => {

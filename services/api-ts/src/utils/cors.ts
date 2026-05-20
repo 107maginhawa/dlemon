@@ -48,11 +48,10 @@ function matchesTunneling(origin: string): boolean {
  * Create dynamic origin validator based on configuration
  */
 export function createOriginValidator(corsConfig: Config['cors'], logger?: Logger) {
-  return (origin: string, context: Context): string => {
-    // Handle non-browser requests (no origin header) or empty origin
+  return (origin: string, context: Context): string | null => {
+    // Non-browser requests have no Origin header — no ACAO needed.
     if (!origin) {
-      // Return first explicit origin or fallback to wildcard
-      return corsConfig.origins.includes('*') ? '*' : (corsConfig.origins[0] || '*');
+      return null;
     }
 
     // In strict mode, only use explicit origins list
@@ -61,7 +60,7 @@ export function createOriginValidator(corsConfig: Config['cors'], logger?: Logge
       if (logger && !isAllowed) {
         logger.debug({ origin, mode: 'strict' }, 'CORS: Blocked origin in strict mode');
       }
-      return isAllowed ? origin : corsConfig.origins[0] || '*';
+      return isAllowed ? origin : null;
     }
 
     // Check explicit origins first (including wildcard)
@@ -85,18 +84,17 @@ export function createOriginValidator(corsConfig: Config['cors'], logger?: Logge
       return origin;
     }
 
-    // Block unmatched origins - return safe default
+    // Blocked — return null so no ACAO header is set.
     if (logger) {
-      logger.debug({
+      logger.warn({
         origin,
         allowLocalNetwork: corsConfig.allowLocalNetwork,
         allowTunneling: corsConfig.allowTunneling,
         strict: corsConfig.strict
-      }, 'CORS: Blocked unmatched origin, using fallback');
+      }, 'CORS: Blocked unmatched origin');
     }
 
-    // Return first allowed origin or wildcard as fallback
-    return corsConfig.origins.includes('*') ? '*' : (corsConfig.origins[0] || '*');
+    return null;
   };
 }
 
@@ -181,10 +179,12 @@ export function determineCookieConfig(corsConfig: Config['cors'], authConfig: Co
     };
   }
 
-  // For cross-origin scenarios (local network or tunneling enabled), use permissive settings
+  // For cross-origin scenarios (local network or tunneling enabled), use permissive settings.
+  // SameSite 'none' is only safe in non-production; in prod the CSRF guard is the primary
+  // control and SameSite 'lax' is the defense-in-depth layer.
   if (corsConfig.allowLocalNetwork || corsConfig.allowTunneling) {
     return {
-      sameSite: 'none' as const,
+      sameSite: process.env['NODE_ENV'] !== 'production' ? ('none' as const) : ('lax' as const),
       secure: corsConfig.allowTunneling ? true : false, // Tunneling requires HTTPS
     };
   }

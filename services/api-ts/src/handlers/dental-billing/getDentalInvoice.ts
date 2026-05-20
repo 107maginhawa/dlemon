@@ -49,20 +49,27 @@ export async function getDentalInvoice(
     ? [personRow.firstName, personRow.lastName].filter(Boolean).join(' ')
     : undefined;
 
-  // Resolve visit date
-  const visitRows = await db
-    .select({ activatedAt: dentalVisits.activatedAt, completedAt: dentalVisits.completedAt })
-    .from(dentalVisits)
-    .where(eq(dentalVisits.id, result.invoice.visitId));
-
-  const visitRow = visitRows[0];
-  const visitDate = visitRow?.activatedAt ?? visitRow?.completedAt;
+  // Resolve visit date (visitId is nullable on invoice)
+  let visitDate: Date | null | undefined;
+  if (result.invoice.visitId) {
+    const visitRows = await db
+      .select({ activatedAt: dentalVisits.activatedAt, completedAt: dentalVisits.completedAt })
+      .from(dentalVisits)
+      .where(eq(dentalVisits.id, result.invoice.visitId));
+    const visitRow = visitRows[0];
+    visitDate = visitRow?.activatedAt ?? visitRow?.completedAt;
+  }
 
   // Map line items: rename amountCents → priceCents for frontend compatibility
   const lineItems = result.lineItems.map((item) => ({
     ...item,
     priceCents: item.amountCents,
   }));
+
+  const audit = ctx.get('audit') as any;
+  if (audit?.logEvent) {
+    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: session.userId, userType: 'client', resourceType: 'invoice', resource: invoiceId, description: 'Invoice retrieved', details: { resultCount: 1 }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, session.userId);
+  }
 
   return ctx.json({
     ...result.invoice,

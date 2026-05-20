@@ -44,6 +44,7 @@ export type Variables = {
 
   // Internal service authentication
   internalServiceToken?: string;
+  internalServiceExpandEnabled?: boolean;
   isInternalExpand?: boolean;
 };
 

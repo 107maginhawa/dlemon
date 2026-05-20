@@ -6,42 +6,25 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useVisits } from './use-visits';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 const mockVisits = [
   { id: 'v1', patientId: 'p1', status: 'active', chiefComplaint: 'Toothache', createdAt: '2026-05-01T08:00:00Z' },
   { id: 'v2', patientId: 'p1', status: 'completed', chiefComplaint: 'Cleaning', createdAt: '2026-03-10T09:00:00Z' },
 ];
 
+const mockPagination = { offset: 0, limit: 20, count: 2, totalCount: 2, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false };
+
 describe('useVisits', () => {
   test('returns visits array on successful fetch', async () => {
     global.fetch = mock(() =>
-      jsonResponse({ items: mockVisits }),
+      jsonResponse({ data: mockVisits, pagination: mockPagination }),
     );
 
     const qc = freshClient();
@@ -60,7 +43,7 @@ describe('useVisits', () => {
     let capturedUrl = '';
     global.fetch = mock((req: Request | string | URL) => {
       capturedUrl = req instanceof Request ? req.url : String(req);
-      return jsonResponse({ items: [] });
+      return jsonResponse({ data: [], pagination: { offset: 0, limit: 20, count: 0, totalCount: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false } });
     });
 
     const qc = freshClient();
@@ -77,7 +60,7 @@ describe('useVisits', () => {
     let capturedUrl = '';
     global.fetch = mock((req: Request | string | URL) => {
       capturedUrl = req instanceof Request ? req.url : String(req);
-      return jsonResponse({ items: [] });
+      return jsonResponse({ data: [], pagination: { offset: 0, limit: 20, count: 0, totalCount: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false } });
     });
 
     const qc = freshClient();
@@ -91,9 +74,9 @@ describe('useVisits', () => {
     expect(capturedUrl).toContain('branchId=branch-123');
   });
 
-  test('activeVisit is the visit with status=active', async () => {
+  test('activeVisit is the visit with status=active', async () => { // [BR-001]
     global.fetch = mock(() =>
-      jsonResponse({ items: mockVisits }),
+      jsonResponse({ data: mockVisits, pagination: mockPagination }),
     );
 
     const qc = freshClient();
@@ -111,7 +94,7 @@ describe('useVisits', () => {
       { id: 'v2', patientId: 'p1', status: 'completed', chiefComplaint: 'Cleaning', createdAt: '2026-03-10T09:00:00Z' },
     ];
     global.fetch = mock(() =>
-      jsonResponse({ items: completedVisits }),
+      jsonResponse({ data: completedVisits, pagination: { offset: 0, limit: 20, count: 1, totalCount: 1, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false } }),
     );
 
     const qc = freshClient();

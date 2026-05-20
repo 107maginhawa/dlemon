@@ -9,14 +9,12 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { LabOrderRepository } from './lab-order.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const VISIT_1   = 'e4000000-0000-4000-8000-000000000001';
-const PATIENT_1 = 'e4000000-0000-4000-8000-000000000010';
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
 
 const baseOrder = {
   visitId: VISIT_1,
@@ -27,12 +25,16 @@ const baseOrder = {
 
 describe('LabOrderRepository', () => {
   let repo: LabOrderRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new LabOrderRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE lab_order CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new LabOrderRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates an order in ordered status by default', async () => {
@@ -53,14 +55,14 @@ describe('LabOrderRepository', () => {
   describe('state machine transitions', () => {
     test('ordered → inFabrication succeeds', async () => {
       const order = await repo.createOne(baseOrder);
-      const { order: updated, error } = await repo.updateStatus(order.id, 'inFabrication');
+      const { order: updated, error } = await repo.updateStatus(order.id, 'in_fabrication');
       expect(error).toBeUndefined();
-      expect(updated!.status).toBe('inFabrication');
+      expect(updated!.status).toBe('in_fabrication');
     });
 
     test('inFabrication → delivered succeeds and records deliveredAt', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
+      await repo.updateStatus(order.id, 'in_fabrication');
       const { order: updated } = await repo.updateStatus(order.id, 'delivered');
       expect(updated!.status).toBe('delivered');
       expect(updated!.deliveredAt).toBeInstanceOf(Date);
@@ -68,7 +70,7 @@ describe('LabOrderRepository', () => {
 
     test('delivered → fitted succeeds and records fittedAt', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
+      await repo.updateStatus(order.id, 'in_fabrication');
       await repo.updateStatus(order.id, 'delivered');
       const { order: updated } = await repo.updateStatus(order.id, 'fitted');
       expect(updated!.status).toBe('fitted');
@@ -85,41 +87,41 @@ describe('LabOrderRepository', () => {
     test('cannot skip: ordered → delivered is rejected', async () => {
       const order = await repo.createOne(baseOrder);
       const { order: updated, error } = await repo.updateStatus(order.id, 'delivered');
-      expect(error).toBeDefined();
+      expect(error).not.toBeNull();
       expect(updated).toBeNull();
     });
 
     test('cannot go backward: delivered → ordered is rejected', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
+      await repo.updateStatus(order.id, 'in_fabrication');
       await repo.updateStatus(order.id, 'delivered');
       const { order: updated, error } = await repo.updateStatus(order.id, 'ordered');
-      expect(error).toBeDefined();
+      expect(error).not.toBeNull();
       expect(updated).toBeNull();
     });
 
     test('fitted is terminal — no further transitions', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
+      await repo.updateStatus(order.id, 'in_fabrication');
       await repo.updateStatus(order.id, 'delivered');
       await repo.updateStatus(order.id, 'fitted');
       const { order: updated, error } = await repo.updateStatus(order.id, 'cancelled');
-      expect(error).toBeDefined();
+      expect(error).not.toBeNull();
       expect(updated).toBeNull();
     });
 
     test('cancelled is terminal — cannot transition further', async () => {
       const order = await repo.createOne(baseOrder);
       await repo.updateStatus(order.id, 'cancelled');
-      const { error } = await repo.updateStatus(order.id, 'inFabrication');
-      expect(error).toBeDefined();
+      const { error } = await repo.updateStatus(order.id, 'in_fabrication');
+      expect(error).not.toBeNull();
     });
   });
 
   describe('defective', () => {
     test('can mark an order as defective', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
+      await repo.updateStatus(order.id, 'in_fabrication');
       await repo.updateStatus(order.id, 'delivered');
       const updated = await repo.update(order.id, { isDefective: true });
       expect(updated!.isDefective).toBe(true);
@@ -136,15 +138,15 @@ describe('LabOrderRepository', () => {
   describe('findMany', () => {
     test('filters by visitId', async () => {
       await repo.createOne(baseOrder);
-      await repo.createOne({ ...baseOrder, visitId: 'e4000000-0000-4000-8000-000000000002' });
+      await repo.createOne({ ...baseOrder, visitId: CHAIN_IDS.VISIT_2 });
       const results = await repo.findMany({ visitId: VISIT_1 });
       expect(results).toHaveLength(1);
     });
 
     test('filters by status', async () => {
       const order = await repo.createOne(baseOrder);
-      await repo.updateStatus(order.id, 'inFabrication');
-      const results = await repo.findMany({ status: 'inFabrication' });
+      await repo.updateStatus(order.id, 'in_fabrication');
+      const results = await repo.findMany({ status: 'in_fabrication' });
       expect(results.length).toBeGreaterThan(0);
     });
   });

@@ -42,7 +42,7 @@ export async function getPatientBalance(ctx: BaseContext) {
 
   // Active payment plans
   const plans = await planRepo.findByPatient(patientId);
-  const activePlans = plans.filter(p => p.status === 'onTrack' || p.status === 'behind');
+  const activePlans = plans.filter(p => p.status === 'on_track' || p.status === 'behind');
 
   logger?.info({ action: 'getPatientBalance', patientId, outstandingBalanceCents }, 'Patient balance retrieved');
 

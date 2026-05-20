@@ -16,7 +16,7 @@ import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema
 import { eq, and } from 'drizzle-orm';
 
 const resetMemberPinSchema = z.object({
-  pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits'),
+  newPin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits'),
 });
 
 export async function resetMemberPin(ctx: Context): Promise<Response> {
@@ -24,8 +24,10 @@ export async function resetMemberPin(ctx: Context): Promise<Response> {
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const memberId = ctx.req.param('memberId')!;
-  const rawBody = await ctx.req.json();
-  const { pin } = resetMemberPinSchema.parse(rawBody);
+  // In production, body is pre-validated by zValidator as { newPin }.
+  // In unit tests (no middleware), parse directly.
+  const validated = (ctx.req as any).valid?.('json') as { newPin?: string } | undefined;
+  const pin = validated?.newPin ?? resetMemberPinSchema.parse(await ctx.req.json()).newPin;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

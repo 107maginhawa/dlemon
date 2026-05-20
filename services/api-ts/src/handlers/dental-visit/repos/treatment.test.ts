@@ -9,26 +9,26 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { TreatmentRepository } from './treatment.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const VISIT_1  = 'e0000000-0000-1000-8000-000000000001';
-const VISIT_2  = 'e0000000-0000-1000-8000-000000000002';
-const PATIENT_1 = 'b0000000-0000-1000-8000-000000000001';
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
 
 describe('TreatmentRepository', () => {
   let repo: TreatmentRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new TreatmentRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_treatment CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE

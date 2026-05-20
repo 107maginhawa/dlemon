@@ -103,10 +103,18 @@ describe('Comms Module E2E Tests', () => {
     
     // Set booking ID for tests that need it
     bookingId = mockBookingId;
-    
-    // For now, skip chat room creation since it depends on booking module
-    // Tests that require chat rooms will skip or use mock IDs
-    chatRoomId = '';
+
+    // Seed a real chat room so downstream tests are not skipped
+    const { response: roomResponse, data: roomData } = await getOrCreateBookingChatRoom(
+      serviceProviderClient,
+      mockBookingId,
+      clientPersonId,
+      serviceProviderPersonId
+    );
+    expect(roomResponse.ok, `getOrCreateBookingChatRoom failed: ${roomResponse.status}`).toBe(true);
+    expect(roomData, 'No room data returned').toBeTruthy();  // ok here — null check
+    chatRoomId = roomData.id;
+    expect(chatRoomId, 'chatRoomId must be set for chat tests to run').toBeTruthy(); // ok here — existence check
   }, 30000);
 
   afterAll(async () => {

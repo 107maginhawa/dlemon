@@ -1,0 +1,342 @@
+# Dental Imaging + Cephalometric Analysis contract tests
+#
+# Chain:
+#   signup → org (addon tier) → branch → member → patient
+#   → study (cephalometric) → image → calibrate
+#   → batch upsert landmarks (N,S,A,B,Go,Po)
+#   → GET analysis (not 404, empty measurements pre-calibration)
+#   → PATCH landmark N (move) → lock N → locked-PATCH-fails (422)
+#   → report blocked (confirm-gate 422) → confirm A,B,Go,Po
+#   → POST report (201) → GET report → recompute → snapshot unchanged (D-I)
+#
+# Every ceph route must be /dental/imaging-prefixed (route-override regression guard).
+
+
+# ============================================================
+# SETUP
+# ============================================================
+
+# 0. Sign up as a user
+POST {{api}}/auth/sign-up/email
+Content-Type: application/json
+Origin: {{api}}
+{
+  "email": "dental-imaging-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Dr. Imaging Tester"
+}
+HTTP 200
+[Captures]
+session_token: cookie "better-auth.session_token"
+user_id: jsonpath "$.user.id"
+
+
+# 0a. Create a dental organization
+POST {{api}}/dental/organizations
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Imaging Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.id"
+
+
+# 0b. Upgrade org to imaging addon tier (required for ceph endpoints)
+PATCH {{api}}/dental/organizations/{{org_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "imagingTier": "addon"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.imagingTier" == "addon"
+
+
+# 0c. Create a branch
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Imaging Street",
+  "city": "Manila",
+  "phone": "+639001234569"
+}
+HTTP 201
+[Captures]
+branch_id: jsonpath "$.id"
+
+
+# 0d. Create branch membership (grants branch + upload access)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Imaging Tester",
+  "role": "dentist_owner",
+  "personId": "{{user_id}}"
+}
+HTTP 201
+[Captures]
+dentist_member_id: jsonpath "$.id"
+
+
+# 0e. Create a dental patient
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Imaging Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+patient_id: jsonpath "$.id"
+
+
+# ============================================================
+# STUDY + IMAGE CREATION
+# ============================================================
+
+# 1. Create imaging study (modality: cephalometric) — returns presigned upload URL
+POST {{api}}/dental/imaging/studies
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "modality": "cephalometric",
+  "filename": "ceph-lateral.jpg",
+  "mimeType": "image/jpeg",
+  "size": 512000
+}
+HTTP 201
+[Captures]
+study_id: jsonpath "$.study.id"
+image_id: jsonpath "$.image.id"
+[Asserts]
+jsonpath "$.study.modality" == "cephalometric"
+jsonpath "$.uploadUrl" isString
+jsonpath "$.uploadMethod" == "PUT"
+
+
+# 2. Calibrate image (pixelSpacingMm=0.2) — required for calibrated measurements
+PATCH {{api}}/dental/imaging/images/{{image_id}}/calibration
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "pixelSpacingMm": 0.2
+}
+HTTP 200
+[Asserts]
+jsonpath "$.pixelSpacingMm" == 0.2
+
+
+# ============================================================
+# CEPH LANDMARKS — BATCH UPSERT (ROUTE PREFIX CHECK)
+# ============================================================
+
+# 3. Batch upsert 6 landmarks (N,S,A,B,Go,Po) — all 'placed' initially
+# Route: POST /dental/imaging/images/{imageId}/ceph/landmarks  (prefix assertion)
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "landmarks": [
+    { "landmarkCode": "N",  "x": 300, "y": 150, "source": "manual" },
+    { "landmarkCode": "S",  "x": 320, "y": 130, "source": "manual" },
+    { "landmarkCode": "A",  "x": 280, "y": 300, "source": "manual" },
+    { "landmarkCode": "B",  "x": 270, "y": 350, "source": "manual" },
+    { "landmarkCode": "Go", "x": 200, "y": 400, "source": "manual" },
+    { "landmarkCode": "Po", "x": 350, "y": 100, "source": "manual" }
+  ]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count >= 6
+jsonpath "$.analysis.imageId" == "{{image_id}}"
+jsonpath "$.analysis.analysisType" == "steiner_hybrid_sn"
+jsonpath "$.analysis.calibrationMethod" == "manual_ruler"
+jsonpath "$.analysis.calibrationValue" == 0.2
+
+
+# ============================================================
+# CEPH ANALYSIS — GET (EMPTY-STATE CONTRACT)
+# ============================================================
+
+# 4. GET analysis — never 404, returns items + analysis
+# Route: GET /dental/imaging/images/{imageId}/ceph/analysis
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/analysis
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count >= 6
+jsonpath "$.analysis.imageId" == "{{image_id}}"
+jsonpath "$.analysis.analysisType" == "steiner_hybrid_sn"
+
+
+# ============================================================
+# CEPH LANDMARK — PATCH (MOVE + LOCK)
+# ============================================================
+
+# 5. Move landmark N to new coordinates
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "x": 305,
+  "y": 155
+}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count >= 6
+jsonpath "$.analysis.analysisType" == "steiner_hybrid_sn"
+
+
+# 6. Lock landmark N (placed → confirmed → locked requires two steps: first confirm)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed"
+}
+HTTP 200
+
+
+# 7. Lock landmark N (confirmed → locked)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "locked"
+}
+HTTP 200
+
+
+# 8. Attempt coordinate change on locked landmark N → 422 LANDMARK_LOCKED
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "x": 999
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "LANDMARK_LOCKED"
+
+
+# ============================================================
+# CEPH REPORT — CONFIRM-GATE (D-L)
+# ============================================================
+
+# 9. Attempt report creation while A,B,Go,Po are still 'placed' → 422
+# Route: POST /dental/imaging/images/{imageId}/ceph/reports
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "REPORT_GATE_UNCONFIRMED"
+
+
+# 10. Confirm landmark A (placed → confirmed)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/A
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed"
+}
+HTTP 200
+
+
+# 11. Confirm landmark B (placed → confirmed)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/B
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed"
+}
+HTTP 200
+
+
+# 12. Confirm landmark Go (placed → confirmed)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/Go
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed"
+}
+HTTP 200
+
+
+# 13. Confirm landmark Po (placed → confirmed)
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/Po
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed"
+}
+HTTP 200
+
+
+# ============================================================
+# CEPH REPORT — CREATE + VERIFY (D-I IMMUTABILITY)
+# ============================================================
+
+# 14. Create ceph report — A,B,Go,Po now confirmed → should succeed (201)
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 201
+[Captures]
+report_id: jsonpath "$.id"
+report_version: jsonpath "$.version"
+snapshot_analysis_label: jsonpath "$.snapshot.analysis_label"
+snapshot_branch_name: jsonpath "$.snapshot.branch_name"
+[Asserts]
+jsonpath "$.version" == 1
+jsonpath "$.imageId" == "{{image_id}}"
+jsonpath "$.snapshot.analysis_label" == "steiner_hybrid_sn"
+jsonpath "$.snapshot.branch_name" == "Main Branch"
+jsonpath "$.snapshot.calibration.method" == "manual_ruler"
+jsonpath "$.snapshot.software_version" isString
+jsonpath "$.snapshot.landmarks" count >= 6
+
+
+# 15. GET report (latest version) — snapshot must match what was returned on create
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.version" == 1
+jsonpath "$.id" == "{{report_id}}"
+jsonpath "$.snapshot.analysis_label" == "steiner_hybrid_sn"
+
+
+# ============================================================
+# RECOMPUTE — D-I: must NOT mutate snapshot
+# ============================================================
+
+# 16. Recompute ceph analysis (idempotent, does NOT touch existing reports)
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/analysis/recompute
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.imageId" == "{{image_id}}"
+jsonpath "$.analysisType" == "steiner_hybrid_sn"
+
+
+# 17. GET report again — snapshot must be unchanged after recompute (D-I)
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.version" == 1
+jsonpath "$.id" == "{{report_id}}"
+jsonpath "$.snapshot.analysis_label" == "{{snapshot_analysis_label}}"
+jsonpath "$.snapshot.branch_name" == "{{snapshot_branch_name}}"

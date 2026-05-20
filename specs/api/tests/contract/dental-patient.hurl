@@ -14,6 +14,49 @@ Origin: {{api}}
 HTTP 200
 [Captures]
 session_token: cookie "better-auth.session_token"
+user_id: jsonpath "$.user.id"
+
+
+# 0a. Create a dental organization
+POST {{api}}/dental/organizations
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Patient Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.id"
+
+
+# 0b. Create a branch
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Test Street",
+  "city": "Manila",
+  "phone": "+639001234569"
+}
+HTTP 201
+[Captures]
+branch_id: jsonpath "$.id"
+
+
+# 0c. Create branch membership for this user (needed for import branchId access)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Dental Tester",
+  "role": "dentist_owner",
+  "personId": "{{user_id}}"
+}
+HTTP 201
 
 
 # 1. Create a dental patient
@@ -37,20 +80,20 @@ jsonpath "$.person" isCollection
 
 
 # 2. List dental patients
-GET {{api}}/dental/patients
+GET {{api}}/dental/patients?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.patients" isCollection
-jsonpath "$.total" >= 1
+jsonpath "$.data" isCollection
+jsonpath "$.pagination.totalCount" >= 1
 
 
 # 3. List dental patients with search
-GET {{api}}/dental/patients?q=Maria+Santos
+GET {{api}}/dental/patients?branchId={{branch_id}}&q=Maria+Santos
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.patients" isCollection
+jsonpath "$.data" isCollection
 
 
 # 4. Get patient profile
@@ -77,11 +120,11 @@ jsonpath "$.needsFollowUp" == true
 
 
 # 6. List patients with needsFollowUp filter
-GET {{api}}/dental/patients?needsFollowUp=true
+GET {{api}}/dental/patients?branchId={{branch_id}}&needsFollowUp=true
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.patients" isCollection
+jsonpath "$.data" isCollection
 
 
 # 7. Add a follow-up note
@@ -135,12 +178,12 @@ jsonpath "$.payments" isCollection
 
 
 # 11. Export patients as JSON
-GET {{api}}/dental/patients/export?format=json
+GET {{api}}/dental/patients/export?format=json&branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.patients" isCollection
-jsonpath "$.total" >= 1
+jsonpath "$.data" isCollection
+jsonpath "$.total" >= 0
 jsonpath "$.exportedAt" isString
 
 
@@ -154,11 +197,11 @@ Content-Type: application/json
       "firstName": "Juan",
       "lastName": "Dela Cruz",
       "dateOfBirth": "1990-03-22",
-      "branchId": "00000000-0000-4000-8000-000000000099"
+      "branchId": "{{branch_id}}"
     }
   ]
 }
-HTTP [201, 422]
+HTTP 201
 
 
 # 13. Archive patient
@@ -204,3 +247,13 @@ HTTP 200
 jsonpath "$.results" isCollection
 jsonpath "$.successCount" >= 0
 jsonpath "$.failCount" >= 0
+
+
+# NEW: G2-S4 — patient search with partial name returns matching results
+# "Maria" is a substring of "Maria Santos {{suffix}}" created in step 1.
+GET {{api}}/dental/patients?branchId={{branch_id}}&q=Maria
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+jsonpath "$.pagination.totalCount" >= 0

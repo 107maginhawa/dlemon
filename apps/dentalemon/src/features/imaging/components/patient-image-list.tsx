@@ -1,0 +1,121 @@
+import { useState } from 'react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/sheet'
+import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
+import { ImageUpload } from './image-upload'
+
+interface PatientImageListProps {
+  patientId: string
+  branchId: string
+  onSelectImage?: (item: PatientImageItem) => void
+  onCompare?: (items: [PatientImageItem, PatientImageItem]) => void
+}
+
+export function PatientImageList({ patientId, branchId, onSelectImage, onCompare }: PatientImageListProps) {
+  const { data, isLoading, error, refetch } = useImagingStudies(patientId, branchId)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  function toggleSelect(item: PatientImageItem, e: React.ChangeEvent<HTMLInputElement>) {
+    e.stopPropagation()
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(item.id)) {
+        next.delete(item.id)
+      } else if (next.size < 2) {
+        next.add(item.id)
+      }
+      return next
+    })
+  }
+
+  return (
+    <div className="flex flex-col h-full w-[280px] border-r border-zinc-200 bg-white">
+      {/* Header with Upload trigger */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
+        <span className="text-sm font-semibold text-zinc-800">Images</span>
+        {selectedIds.size === 2 && (
+          <button
+            onClick={() => {
+              const selected = (data?.items ?? []).filter(i => selectedIds.has(i.id))
+              if (selected.length === 2) {
+                onCompare?.([selected[0]!, selected[1]!])
+              }
+            }}
+            className="bg-[#FFE97D] text-black text-xs font-semibold px-3 py-1.5 rounded-md"
+            data-testid="compare-btn"
+          >
+            Compare ▶
+          </button>
+        )}
+        <Sheet open={uploadOpen} onOpenChange={setUploadOpen}>
+          <SheetTrigger asChild>
+            <button className="bg-[#FFE97D] text-black text-xs font-semibold px-3 py-1.5 rounded-md">
+              Upload Image
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[320px]">
+            <SheetHeader>
+              <SheetTitle>Upload Image</SheetTitle>
+            </SheetHeader>
+            <ImageUpload
+              patientId={patientId}
+              branchId={branchId}
+              onSuccess={() => {
+                setUploadOpen(false)
+                void refetch()
+              }}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Image list */}
+      {isLoading && <div className="p-4 text-zinc-400 text-sm">Loading images…</div>}
+      {error && <div className="p-4 text-red-400 text-sm">Failed to load images</div>}
+      {!isLoading && !error && !data?.items.length && (
+        <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
+          <p className="text-sm font-medium text-zinc-800 mb-1">No images yet</p>
+          <p className="text-xs text-zinc-500">
+            Upload the first X-ray or photo for this patient.
+          </p>
+        </div>
+      )}
+      <ul className="divide-y divide-zinc-100 flex-1 overflow-y-auto">
+        {data?.items.map((item) => (
+          <li
+            key={item.id}
+            className="flex items-center gap-3 p-3 hover:bg-zinc-50"
+          >
+            <input
+              type="checkbox"
+              checked={selectedIds.has(item.id)}
+              onChange={(e) => toggleSelect(item, e)}
+              className="shrink-0 accent-[#FFE97D]"
+              data-testid={`select-image-${item.id}`}
+            />
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
+              <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
+              <p className="text-xs text-zinc-400 capitalize">
+                {item.modality.replace('_', ' ')}
+              </p>
+            </div>
+            {item.source === 'legacy' && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(255,233,125,0.15)', color: '#4A4018' }}
+              >
+                Legacy
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

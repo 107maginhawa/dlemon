@@ -7,6 +7,7 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
+import { ZodError } from 'zod';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
@@ -30,6 +31,9 @@ function buildTestApp(user?: typeof authedUser) {
   app.onError((err, c) => {
     if (err instanceof AppError) {
       return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    if (err instanceof ZodError) {
+      return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
     }
     return c.json({ error: String(err.message) }, 500);
   });
@@ -96,7 +100,7 @@ describe('resetMemberPin handler', () => {
     const res = await app.request(`/dental/org/members/${NONEXISTENT_ID}/reset-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: '123456' }),
+      body: JSON.stringify({ newPin: '123456' }),
     });
 
     expect(res.status).toBe(401);
@@ -113,7 +117,7 @@ describe('resetMemberPin handler', () => {
     const res = await app.request(`/dental/org/members/${NONEXISTENT_ID}/reset-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: '12345' }), // 5 digits
+      body: JSON.stringify({ newPin: '123' }), // 3 digits — too short
     });
 
     expect(res.status).toBe(400);
@@ -126,7 +130,7 @@ describe('resetMemberPin handler', () => {
     const res = await app.request(`/dental/org/members/${NONEXISTENT_ID}/reset-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: '12345a' }),
+      body: JSON.stringify({ newPin: '12345a' }),
     });
 
     expect(res.status).toBe(400);
@@ -143,7 +147,7 @@ describe('resetMemberPin handler', () => {
     const res = await app.request(`/dental/org/members/${NONEXISTENT_ID}/reset-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: '123456' }),
+      body: JSON.stringify({ newPin: '123456' }),
     });
 
     expect(res.status).toBe(404);
@@ -172,7 +176,7 @@ describe('resetMemberPin handler', () => {
     const res = await app.request(`/dental/org/members/${member.id}/reset-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: '999888' }),
+      body: JSON.stringify({ newPin: '999888' }),
     });
 
     expect(res.status).toBe(200);

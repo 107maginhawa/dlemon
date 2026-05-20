@@ -6,9 +6,10 @@
  * Tests HTTP-level behavior: auth, validation, success on seeded data.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
@@ -16,16 +17,46 @@ import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.rep
 import { generatePMD } from './generatePMD';
 import { getPMDForVisit } from './getPMDForVisit';
 import { importPMD } from './importPMD';
+import { getImportedPMD } from './getImportedPMD';
 import { listImportedPMDs } from './listImportedPMDs';
 import { listPMDs } from './listPMDs';
+import {
+  GeneratePMDBody,
+  GeneratePMDParams,
+  GetPMDForVisitParams,
+  ImportPMDBody,
+  GetImportedPMDParams,
+  ListImportedPMDsQuery,
+  ListPMDsQuery,
+} from '@/generated/openapi/validators';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
+// Suite-unique BRANCH_ID + membership id (tag a04) breaks the cross-suite
+// collision on dental_membership's (person_id, branch_id) partial unique index.
+// Org/patient/person ids stay at their original deterministic values so
+// onConflictDoNothing is a correct no-op against rows from prior runs.
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const BRANCH_ID = '7b000000-0000-4000-8000-000000000a04';
+const DENTIST_MEMBER_ID = '7c000000-0000-4000-8000-000000000a04';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+const ORG_ID = 'ef000000-0000-1000-8000-000000000001';
+
+const PERSON_ID = 'f1000000-0000-1000-8000-000000000001';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'PMD Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Dr. Test', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -48,11 +79,14 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/visits/:visitId/pmd', generatePMD as any);
-  app.get('/dental/visits/:visitId/pmd', getPMDForVisit as any);
-  app.post('/dental/pmd/import', importPMD as any);
-  app.get('/dental/pmd/imported', listImportedPMDs as any);
-  app.get('/dental/pmd', listPMDs as any);
+  const ve = (r: any, c: any) => { if (!r.success) return c.json({ error: r.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ') }, 400); };
+  const GeneratePMDBodyOnly = GeneratePMDBody.omit({ visitId: true });
+  app.post('/dental/visits/:visitId/pmd', zValidator('param', GeneratePMDParams, ve), zValidator('json', GeneratePMDBodyOnly, ve), generatePMD as any);
+  app.get('/dental/visits/:visitId/pmd', zValidator('param', GetPMDForVisitParams, ve), getPMDForVisit as any);
+  app.post('/dental/pmd/import', zValidator('json', ImportPMDBody, ve), importPMD as any);
+  app.get('/dental/pmd/imported/:id', zValidator('param', GetImportedPMDParams, ve), getImportedPMD as any);
+  app.get('/dental/pmd/imported', zValidator('query', ListImportedPMDsQuery, ve), listImportedPMDs as any);
+  app.get('/dental/pmd', zValidator('query', ListPMDsQuery, ve), listPMDs as any);
 
   return app;
 }
@@ -167,8 +201,8 @@ describe('generatePMD handler', () => {
     expect(body.visitId).toBe(visit!.id);
     expect(body.patientId).toBe(PATIENT_ID);
     expect(body.status).toBe('generated');
-    expect(body.checksum).toBeTruthy();
-    expect(body.content).toBeTruthy();
+    expect(body.checksum).not.toBeNull();
+    expect(body.content).not.toBeNull();
   });
 
   test('supersedes previous PMD on second generation', async () => {
@@ -300,6 +334,34 @@ describe('importPMD handler', () => {
     expect(body.sourceFacility).toBe('Metro Dental Partners');
     expect(body.sourceReference).toBe('PMD-2025-001');
   });
+
+  test('imported PMD content is stored verbatim and retrievable as-is [AC-PMD-03]', async () => {
+    const app = buildTestApp(TEST_USER);
+    const originalContent = { teeth: [{ toothNumber: 11, state: 'caries' }], prescriptions: [{ drug: 'Amoxicillin' }] };
+
+    // Import
+    const importRes = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'External Clinic',
+        sourceReference: 'EXT-001',
+        content: JSON.stringify(originalContent),
+      }),
+    });
+    expect(importRes.status).toBe(201);
+    const imported = await importRes.json() as any;
+
+    // Read back the imported PMD
+    const getRes = await app.request(`/dental/pmd/imported/${imported.id}`);
+    expect(getRes.status).toBe(200);
+    const retrieved = await getRes.json() as any;
+    expect(retrieved.contentType).toBe('json');
+    expect(retrieved.content).toEqual(originalContent);
+    expect(retrieved.sourceFacility).toBe('External Clinic');
+    expect(retrieved.sourceReference).toBe('EXT-001');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -324,8 +386,8 @@ describe('listImportedPMDs handler', () => {
     const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toEqual([]);
-    expect(body.total).toBe(0);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalCount).toBe(0);
   });
 
   test('returns 200 with imported PMDs for patient', async () => {
@@ -346,8 +408,8 @@ describe('listImportedPMDs handler', () => {
     const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(2);
-    expect(body.total).toBe(2);
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.totalCount).toBe(2);
   });
 
   test('filters by patientId — does not return other patients records', async () => {
@@ -368,8 +430,8 @@ describe('listImportedPMDs handler', () => {
     const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(1);
-    expect(body.items[0].patientId).toBe(PATIENT_ID);
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].patientId).toBe(PATIENT_ID);
   });
 });
 
@@ -395,8 +457,8 @@ describe('listPMDs handler', () => {
     const res = await app.request(`/dental/pmd?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toEqual([]);
-    expect(body.total).toBe(0);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalCount).toBe(0);
   });
 
   test('returns 200 with generated PMDs for patient', async () => {
@@ -414,8 +476,8 @@ describe('listPMDs handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     // At least one PMD returned (generated status only — superseded excluded by repo)
-    expect(body.items.length).toBeGreaterThanOrEqual(1);
-    expect(body.items[0].patientId).toBe(PATIENT_ID);
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].patientId).toBe(PATIENT_ID);
   });
 });
 

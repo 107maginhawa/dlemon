@@ -15,6 +15,8 @@ import {
   fdiToUniversal,
   universalToFdi,
   buildToothMap,
+  getToothFillColor,
+  type ToothState,
 } from './dental-chart.helpers';
 
 // ─── isValidFdiNumber ──────────────────────────────────────────────────────
@@ -156,6 +158,98 @@ describe('buildToothMap', () => {
     expect(map.size).toBe(32);
     for (const n of TOOTH_NUMBERS) {
       expect(map.get(n)).toBe('healthy');
+    }
+  });
+});
+
+// ─── getToothInfo ──────────────────────────────────────────────────────────
+
+import { getToothInfo } from './dental-chart.helpers';
+
+describe('getToothInfo', () => {
+  test('upper right central incisor (FDI 11)', () => {
+    const info = getToothInfo(11);
+    expect(info.name).toBe('Upper Right Central Incisor');
+    expect(info.type).toBe('anterior');
+  });
+
+  test('upper left canine (FDI 23)', () => {
+    const info = getToothInfo(23);
+    expect(info.name).toBe('Upper Left Canine');
+    expect(info.type).toBe('anterior');
+  });
+
+  test('lower left first molar (FDI 36)', () => {
+    const info = getToothInfo(36);
+    expect(info.name).toBe('Lower Left First Molar');
+    expect(info.type).toBe('posterior');
+  });
+
+  test('lower right third molar (FDI 48)', () => {
+    const info = getToothInfo(48);
+    expect(info.name).toBe('Lower Right Third Molar');
+    expect(info.type).toBe('posterior');
+  });
+
+  test('all 8 positions of upper right quadrant', () => {
+    const expected = [
+      'Central Incisor', 'Lateral Incisor', 'Canine',
+      'First Premolar', 'Second Premolar', 'First Molar', 'Second Molar', 'Third Molar',
+    ];
+    for (let pos = 1; pos <= 8; pos++) {
+      expect(getToothInfo(10 + pos).name).toBe(`Upper Right ${expected[pos - 1]}`);
+    }
+  });
+
+  test('anterior teeth are positions 1-3 across all quadrants', () => {
+    const anteriorFdi = [11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43];
+    for (const fdi of anteriorFdi) {
+      expect(getToothInfo(fdi).type).toBe('anterior');
+    }
+  });
+
+  test('posterior teeth are positions 4-8 across all quadrants', () => {
+    const posteriorFdi = [14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 34, 35, 36, 37, 38, 44, 45, 46, 47, 48];
+    for (const fdi of posteriorFdi) {
+      expect(getToothInfo(fdi).type).toBe('posterior');
+    }
+  });
+
+  test('invalid FDI returns unknown', () => {
+    const info = getToothInfo(99);
+    expect(info.name).toBe('Tooth 99');
+    expect(info.type).toBe('posterior');
+  });
+});
+
+// ─── getToothFillColor ─────────────────────────────────────────────────────
+
+describe('getToothFillColor', () => {
+  test('returns empty string for healthy (no fill — preserves SVG strokes)', () => {
+    expect(getToothFillColor('healthy')).toBe('');
+  });
+
+  test('returns hex string for caries', () => {
+    expect(getToothFillColor('caries')).toBe('#FF3B30');
+  });
+
+  test('returns hex string for crown', () => {
+    expect(getToothFillColor('crown')).toBe('#FFD60A');
+  });
+
+  test('returns #ffffff for unknown state', () => {
+    expect(getToothFillColor('unknown_state' as any)).toBe('#ffffff');
+  });
+
+  test('covers all 9 ToothState values — returns string (empty or hex)', () => {
+    const states: ToothState[] = ['healthy', 'caries', 'fractured', 'filled', 'crown', 'missing', 'implant', 'extracted', 'watchlist'];
+    for (const s of states) {
+      const color = getToothFillColor(s);
+      // healthy returns '' (no fill); all others return a hex color
+      expect(typeof color).toBe('string');
+      if (s !== 'healthy') {
+        expect(color).toMatch(/^#[0-9a-fA-F]{3,8}$/);
+      }
     }
   });
 });

@@ -30,6 +30,7 @@ import "./modules/dental-clinical.tsp";
 import "./modules/dental-pmd.tsp";
 import "./modules/dental-scheduling.tsp";
 import "./modules/dental-billing.tsp";
+import "./modules/dental-imaging.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -296,6 +297,9 @@ using TypeSpec.OpenAPI;
 @tagMetadata("Healthcare:PublicHealth", #{
   description: "Public health reporting and surveillance. Electronic case reporting (eCR), immunization registry integration (IIS), vital records (birth/death certificates), cancer registry abstraction, syndromic surveillance, electronic lab reporting (ELR), trauma registry."
 })
+@tagMetadata("Dental:Imaging", #{
+  description: "Dental imaging workspace. Manages imaging studies (periapical, bitewing, panoramic, cephalometric, intraoral/extraoral photos), presigned upload URLs, and patient image listing with union adapter bridging new imaging studies and legacy dental attachments."
+})
 namespace MonobaseAPI {
 
   // ========================================================================
@@ -338,6 +342,22 @@ namespace MonobaseAPI {
   @route("/dental/visits")
   interface ToothHistoryMgmt extends DentalVisitModule.ToothHistoryManagement {}
 
+  @tag("Dental:Visit")
+  @route("/dental/treatment-templates")
+  interface TreatmentTemplateMgmt extends DentalVisitModule.TreatmentTemplateManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface VisitTemplateActsMgmt extends DentalVisitModule.VisitTemplateActions {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface TreatmentPlanMgmt extends DentalVisitModule.TreatmentPlanPresentation {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface PatientRecordsMgmt extends DentalVisitModule.PatientRecordsView {}
+
   // Dental Clinical Extras
   @tag("Dental:Clinical")
   @route("/dental/visits")
@@ -372,15 +392,50 @@ namespace MonobaseAPI {
   @route("/dental")
   interface ImportedPMDMgmt extends DentalPMDModule.ImportedPMDManagement {}
 
+  @tag("Dental:Org")
+  @route("/dental/org")
+  interface OrgContextMgmt extends DentalOrgModule.OrgContextManagement {}
+
+  @tag("Dental:Org")
+  @route("/dental/dashboard")
+  interface DashboardMgmt extends DentalOrgModule.DashboardManagement {}
+
+  @tag("Dental:Org")
+  @route("/dental/org/members")
+  interface FlatMemberMgmt extends DentalOrgModule.FlatMemberManagement {}
+
+  @tag("Dental:Org")
+  @route("/dental/branches")
+  interface BranchConfigMgmt extends DentalOrgModule.BranchConfigManagement {}
+
   // Dental Scheduling
   @tag("Dental:Scheduling")
   @route("/dental/appointments")
   interface AppointmentMgmt extends DentalSchedulingModule.AppointmentManagement {}
 
   // Dental Billing
+  // Dental Imaging
+  @tag("Dental:Imaging")
+  @route("/dental/imaging")
+  interface ImagingMgmt extends DentalImagingModule.ImagingManagement {}
+
+  @tag("Dental:Imaging")
+  @route("/dental/patients")
+  interface PatientImageMgmt extends DentalImagingModule.PatientImageListing {}
+
+  @tag("Dental:Imaging")
+  interface ImagingFindingsMgmt extends DentalImagingModule.ImagingFindings {}
+
+  @tag("Dental:Imaging")
+  interface CephMgmt extends DentalImagingModule.CephManagement {}
+
   @tag("Dental:Billing")
   @route("/dental/billing")
   interface DentalBillingMgmt extends DentalBillingModule.InvoiceManagement {}
+
+  @tag("Dental:Billing")
+  @route("/dental/billing")
+  interface BillingExtrasMgmt extends DentalBillingModule.BillingExtras {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

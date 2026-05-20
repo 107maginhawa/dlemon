@@ -5,12 +5,10 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { DentalPaymentRepository } from './dental-payment.repo';
 import { DentalInvoiceRepository } from './dental-invoice.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 const INVOICE_ID = 'f0000000-0000-2000-8000-000000000001';
 const PATIENT_1 = 'b0000000-0000-2000-8000-000000000001';
@@ -23,8 +21,10 @@ describe('DentalPaymentRepository', () => {
   let repo: DentalPaymentRepository;
   let invoiceRepo: DentalInvoiceRepository;
   let testInvoiceId: string;
+  let teardown: () => Promise<void>;
 
   beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new DentalPaymentRepository(db);
     invoiceRepo = new DentalInvoiceRepository(db);
 
@@ -35,12 +35,10 @@ describe('DentalPaymentRepository', () => {
       subtotalCents: 10000, totalCents: 10000, balanceCents: 10000,
     });
     testInvoiceId = invoice.id;
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_payment CASCADE`);
-    await db.execute(sql`TRUNCATE TABLE dental_invoice CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE
@@ -58,7 +56,7 @@ describe('DentalPaymentRepository', () => {
       notes: 'Partial payment',
     });
 
-    expect(payment.id).toBeTruthy();
+    expect(payment.id).not.toBeNull();
     expect(payment.amountCents).toBe(5000);
     expect(payment.method).toBe('cash');
     expect(payment.receiptNumber).toBe('REC-001');
@@ -103,7 +101,7 @@ describe('DentalPaymentRepository', () => {
 
     const voided = await repo.voidPayment(payment.id, 'Entry error', MEMBER_1);
     expect(voided!.isVoid).toBe(true);
-    expect(voided!.voidedAt).toBeTruthy();
+    expect(voided!.voidedAt).not.toBeNull();
   });
 
   test('voidPayment stores void reason', async () => {
@@ -128,7 +126,7 @@ describe('DentalPaymentRepository', () => {
 
     // The record still exists (findOneById returns it)
     const found = await repo.findOneById(payment.id);
-    expect(found).toBeTruthy();
+    expect(found).not.toBeNull();
     expect(found!.isVoid).toBe(true);
 
     // But findByInvoice filters it out

@@ -67,7 +67,7 @@ test.describe('Person Profile', () => {
     await expect(page.getByRole('heading', { name: /account settings/i })).toBeVisible()
 
     // Personal information card
-    await expect(page.getByText(/personal information/i)).toBeVisible()
+    await expect(page.getByText('Personal Information', { exact: true })).toBeVisible()
   })
 
   test('personal info form renders with first name and last name fields', async ({ page }) => {

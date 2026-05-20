@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: #f9f9f7;
+  color: #111;
+}
+
+.dental-swiper {
+  width: 100%;
+  padding: 20px 0 48px;
+}
+
+.dental-swiper .swiper-slide {
+  width: 1000px;
+  height: 580px;
+}
+
+.dental-swiper .swiper-pagination-bullet {
+  background: #d1d5db;
+  opacity: 1;
+}
+
+.dental-swiper .swiper-pagination-bullet-active {
+  background: #2563eb;
+}

@@ -6,14 +6,13 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { MembershipRepository } from './membership.repo';
 import { BranchRepository } from './branch.repo';
 import { OrganizationRepository } from './organization.repo';
 import { dentalMemberships } from './membership.schema';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 const ORG_ID = '00000000-0000-0000-0000-111111111111';
 const BRANCH_ID = '00000000-0000-0000-0000-222222222222';
@@ -21,8 +20,12 @@ const PERSON_ID = '00000000-0000-0000-0000-000000000001';
 
 describe('MembershipRepository', () => {
   let repo: MembershipRepository;
+  let db: NodePgDatabase;
+  let teardown: () => Promise<void>;
 
   beforeEach(async () => {
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new MembershipRepository(db);
     // Seed org and branch
     const orgRepo = new OrganizationRepository(db);
@@ -42,11 +45,10 @@ describe('MembershipRepository', () => {
       timezone: 'Asia/Manila',
       active: true,
     });
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE

@@ -6,31 +6,30 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { DentalInvoiceRepository } from './dental-invoice.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const VISIT_1 = 'e0000000-0000-2000-8000-000000000001';
-const VISIT_2 = 'e0000000-0000-2000-8000-000000000002';
-const PATIENT_1 = 'b0000000-0000-2000-8000-000000000001';
-const PATIENT_2 = 'b0000000-0000-2000-8000-000000000002';
-const BRANCH_1 = 'c0000000-0000-2000-8000-000000000001';
-const BRANCH_2 = 'c0000000-0000-2000-8000-000000000002';
-const DENTIST_1 = 'd0000000-0000-2000-8000-000000000001';
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
+const PATIENT_2 = CHAIN_IDS.PATIENT_2;
+const BRANCH_1  = CHAIN_IDS.BRANCH_1;
+const BRANCH_2  = CHAIN_IDS.BRANCH_2;
+const DENTIST_1 = CHAIN_IDS.MEMBERSHIP_1;
 
 describe('DentalInvoiceRepository', () => {
   let repo: DentalInvoiceRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new DentalInvoiceRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_invoice_line_item CASCADE`);
-    await db.execute(sql`TRUNCATE TABLE dental_invoice CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE
@@ -97,7 +96,7 @@ describe('DentalInvoiceRepository', () => {
 
       const issued = await repo.issue(invoice.id);
       expect(issued!.status).toBe('issued');
-      expect(issued!.issuedAt).toBeTruthy();
+      expect(issued!.issuedAt).not.toBeNull();
     });
 
     test('voids invoice: sets voided status and voidedAt', async () => {
@@ -109,7 +108,7 @@ describe('DentalInvoiceRepository', () => {
 
       const voided = await repo.voidInvoice(invoice.id);
       expect(voided!.status).toBe('voided');
-      expect(voided!.voidedAt).toBeTruthy();
+      expect(voided!.voidedAt).not.toBeNull();
     });
   });
 
@@ -140,7 +139,7 @@ describe('DentalInvoiceRepository', () => {
       const updated = await repo.addPayment(invoice.id, 10000);
       expect(updated!.paidCents).toBe(10000);
       expect(updated!.status).toBe('paid');
-      expect(updated!.paidAt).toBeTruthy();
+      expect(updated!.paidAt).not.toBeNull();
     });
 
     test('addPayment correctly updates balanceCents', async () => {
@@ -274,7 +273,7 @@ describe('DentalInvoiceRepository', () => {
       });
 
       const result = await repo.findWithLineItems(invoice.id);
-      expect(result).toBeTruthy();
+      expect(result).not.toBeNull();
       expect(result!.invoice.id).toBe(invoice.id);
       expect(result!.lineItems).toHaveLength(2);
     });

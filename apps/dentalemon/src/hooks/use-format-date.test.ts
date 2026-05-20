@@ -1,6 +1,8 @@
-import { describe, test, expect } from 'bun:test'
-import { renderHook } from '@testing-library/react'
+import { describe, test, expect, afterEach } from 'bun:test'
+import { renderHook, cleanup } from '@testing-library/react'
 import { useFormatDate } from './use-format-date'
+
+afterEach(() => cleanup())
 
 describe('useFormatDate hook', () => {
   const testDate = new Date('2023-10-05T15:30:00.000Z')
@@ -8,11 +10,11 @@ describe('useFormatDate hook', () => {
   test('returns date formatting functions', () => {
     const { result } = renderHook(() => useFormatDate())
 
-    expect(result.current.formatDate).toBeDefined()
+    expect(result.current.formatDate).not.toBeUndefined()
     expect(typeof result.current.formatDate).toBe('function')
-    expect(result.current.formatRelativeDate).toBeDefined()
+    expect(result.current.formatRelativeDate).not.toBeUndefined()
     expect(typeof result.current.formatRelativeDate).toBe('function')
-    expect(result.current.format).toBeDefined()
+    expect(result.current.format).not.toBeUndefined()
   })
 
   test('returns default format value', () => {

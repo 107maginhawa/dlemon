@@ -58,6 +58,12 @@ const validateTimezone = (tz: string): boolean => {
   return timezoneNames.includes(tz);
 };
 
+export const UUIDSchema = z.string().uuid();
+
+export const AcceptTreatmentPlanRequestSchema = z.object({
+  consentFormId: UUIDSchema.optional()
+});
+
 export const AddressSchema = z.object({
   street1: z.string().min(1).max(100),
   street2: z.string().max(100).optional(),
@@ -86,8 +92,6 @@ export const AddressPatchInputSchema = z.object({
 }), z.null()]).optional()
 });
 
-export const UUIDSchema = z.string().uuid();
-
 export const AmendmentSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -107,7 +111,12 @@ export const ApplyDentalDiscountRequestSchema = z.object({
   percentageRate: z.number()
 });
 
-export const AppointmentStatusSchema = z.enum(["scheduled", "checkedIn", "completed", "cancelled", "noShow"]);
+export const ApplyTemplateResponseSchema = z.object({
+  applied: z.number().int(),
+  visitId: UUIDSchema
+});
+
+export const AppointmentStatusSchema = z.enum(["scheduled", "checked_in", "completed", "cancelled", "no_show"]);
 
 export const AuditActionSchema = z.enum(["create", "read", "update", "delete", "login", "logout"]);
 
@@ -448,6 +457,16 @@ export const CancelEmailRequestSchema = z.object({
 
 export const CaptureMethodSchema = z.enum(["automatic", "manual"]);
 
+export const CarryOverTreatmentsRequestSchema = z.object({
+  sourceVisitId: UUIDSchema.optional()
+});
+
+export const CarryOverTreatmentsResponseSchema = z.object({
+  carried: z.number().int()
+});
+
+export const ChartEntryClassificationSchema = z.enum(["existing", "existing_other", "treatment_plan", "condition"]);
+
 export const ChatMessageSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -501,7 +520,7 @@ export const DentalAppointmentSchema = z.object({
   branchId: UUIDSchema,
   scheduledAt: z.string().datetime().transform((str) => new Date(str)),
   durationMinutes: z.number().int(),
-  procedureType: z.string(),
+  serviceType: z.string(),
   operatoryId: UUIDSchema.optional(),
   walkIn: z.boolean(),
   status: AppointmentStatusSchema,
@@ -510,12 +529,18 @@ export const DentalAppointmentSchema = z.object({
   notes: z.string().optional(),
   cancelledAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   cancellationReason: z.string().optional(),
-  noShowAt: z.string().datetime().transform((str) => new Date(str)).optional()
+  no_showAt: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const CheckInResponseSchema = z.object({
   appointment: DentalAppointmentSchema,
   visitId: UUIDSchema
+});
+
+export const CollectionsSummaryResponseSchema = z.object({
+  totalCollectedCents: z.number().int(),
+  period: z.string(),
+  invoiceCount: z.number().int()
 });
 
 export const ConflictErrorSchema = z.object({
@@ -628,7 +653,7 @@ export const CreateAppointmentRequestSchema = z.object({
   branchId: UUIDSchema,
   scheduledAt: z.string().datetime().transform((str) => new Date(str)),
   durationMinutes: z.number().int(),
-  procedureType: z.string(),
+  serviceType: z.string(),
   operatoryId: UUIDSchema.optional(),
   walkIn: z.boolean().optional(),
   notes: z.string().optional()
@@ -706,7 +731,9 @@ export const ToothChartStateSchema = z.object({
   state: ToothStateSchema,
   surfaces: z.array(ToothSurfaceCodeSchema).optional(),
   conditionCode: z.string().optional(),
-  note: z.string().optional()
+  note: z.string().optional(),
+  surfaceConditionMap: z.record(z.string(), z.unknown()).optional(),
+  entryClassification: ChartEntryClassificationSchema.optional()
 });
 
 export const CreateDentalChartRequestSchema = z.object({
@@ -741,7 +768,8 @@ export const CreateDentalTreatmentRequestSchema = z.object({
   cdtCode: z.string(),
   description: z.string(),
   conditionCode: z.string().optional(),
-  priceCents: z.number().int()
+  priceCents: z.number().int(),
+  clinicalNotes: z.string().optional()
 });
 
 export const CreateDentalVisitRequestSchema = z.object({
@@ -778,7 +806,7 @@ export const CreateLabOrderRequestSchema = z.object({
   expectedDeliveryDate: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
-export const MedicalHistoryEntryTypeSchema = z.enum(["condition", "medication", "allergy", "procedure", "vaccination", "familyHistory"]);
+export const MedicalHistoryEntryTypeSchema = z.enum(["condition", "medication", "allergy", "procedure", "vaccination", "family_history"]);
 
 export const CreateMedicalHistoryEntryRequestSchema = z.object({
   patientId: UUIDSchema,
@@ -1060,6 +1088,17 @@ export const CreateTemplateRequestSchema = z.object({
   status: z.enum(["draft", "active", "archived"]).optional()
 });
 
+export const CreateTreatmentTemplateRequestSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  treatments: z.string()
+});
+
+export const CreateVisitNoteAddendumRequestSchema = z.object({
+  reason: z.string(),
+  content: z.string()
+});
+
 export const CredentialStatusSchema = z.enum(["active", "expired", "suspended", "revoked", "pending"]);
 
 export const CredentialTypeSchema = z.enum(["npi", "dea", "state-license", "board-certification", "cme", "other"]);
@@ -1096,6 +1135,228 @@ export const DentalChartSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
   teeth: z.array(ToothChartStateSchema)
+});
+
+export const DentalImagingModuleCephLandmarkCodeSchema = z.enum(["S", "N", "A", "B", "ANS", "PNS", "Go", "Po", "Me", "Or", "Pog", "Gn", "U1T", "U1A", "L1T", "L1A"]);
+
+export const DentalImagingModuleCephLandmarkSourceSchema = z.enum(["manual", "ai", "ai_corrected"]);
+
+export const DentalImagingModuleCephLandmarkStatusSchema = z.enum(["placed", "confirmed", "locked"]);
+
+export const DentalImagingModuleCephLandmarkInputSchema = z.object({
+  landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
+  x: z.number(),
+  y: z.number(),
+  source: DentalImagingModuleCephLandmarkSourceSchema.optional(),
+  confidence: z.number().optional(),
+  status: DentalImagingModuleCephLandmarkStatusSchema.optional()
+});
+
+export const DentalImagingModuleBatchUpsertLandmarksBodySchema = z.object({
+  landmarks: z.array(DentalImagingModuleCephLandmarkInputSchema)
+});
+
+export const DentalImagingModuleCephAnalysisSchema = z.object({
+  imageId: z.string(),
+  analysisType: z.string(),
+  measurements: z.record(z.string(), z.unknown()),
+  missing: z.array(z.string()),
+  uncalibrated: z.boolean(),
+  calibrationValue: z.union([z.number(), z.null()]),
+  calibrationMethod: z.union([z.enum(["dicom_tag", "manual_ruler", "assumed_default", "not_calibrated"]), z.null()]),
+  calibratedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  calibratedBy: z.union([z.string(), z.null()]),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleCephCalibrationMethodSchema = z.enum(["dicom_tag", "manual_ruler", "assumed_default", "not_calibrated"]);
+
+export const DentalImagingModuleCephLandmarkSchema = z.object({
+  id: z.string(),
+  imageId: z.string(),
+  landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
+  x: z.number(),
+  y: z.number(),
+  source: DentalImagingModuleCephLandmarkSourceSchema,
+  confidence: z.union([z.number(), z.null()]),
+  status: DentalImagingModuleCephLandmarkStatusSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleCephLandmarkListResponseSchema = z.object({
+  items: z.array(DentalImagingModuleCephLandmarkSchema),
+  analysis: DentalImagingModuleCephAnalysisSchema
+});
+
+export const DentalImagingModuleCephReportSchema = z.object({
+  id: z.string(),
+  imageId: z.string(),
+  version: z.number().int(),
+  snapshot: z.record(z.string(), z.unknown()),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleImagingFindingTypeSchema = z.enum(["caries", "secondary_caries", "bone_loss", "furcation_involvement", "periapical_lesion", "root_resorption", "calculus", "crown_fracture", "root_fracture", "impacted_tooth", "over_eruption", "open_contact", "overhang", "crown_needed", "implant_needed"]);
+
+export const DentalImagingModuleImagingFindingStatusSchema = z.enum(["suspected", "confirmed", "monitoring", "resolved"]);
+
+export const DentalImagingModuleCreateFindingBodySchema = z.object({
+  type: DentalImagingModuleImagingFindingTypeSchema,
+  status: DentalImagingModuleImagingFindingStatusSchema.optional(),
+  toothNumber: z.number().int().optional(),
+  surfaces: z.array(z.string()).optional(),
+  note: z.string().optional(),
+  annotationId: z.string().optional(),
+  treatmentId: z.string().optional(),
+  visitId: z.string(),
+  patientId: z.string(),
+  branchId: z.string()
+});
+
+export const DentalImagingModuleModalityEnumSchema = z.enum(["periapical", "bitewing", "panoramic", "cephalometric", "intraoral_photo", "extraoral_photo", "other"]);
+
+export const DentalImagingModuleCreateImagingStudyBodySchema = z.object({
+  patientId: z.string(),
+  visitId: z.string().optional(),
+  branchId: z.string(),
+  modality: DentalImagingModuleModalityEnumSchema.optional(),
+  filename: z.string(),
+  mimeType: z.string(),
+  size: z.number().int(),
+  toothNumbers: z.array(z.number().int()).optional(),
+  sequenceNumber: z.number().int().optional()
+});
+
+export const DentalImagingModuleImagingStudySchema = z.object({
+  id: z.string(),
+  patientId: z.string(),
+  visitId: z.union([z.string(), z.null()]),
+  branchId: z.string(),
+  acquiredBy: z.string(),
+  modality: DentalImagingModuleModalityEnumSchema,
+  status: z.enum(["active", "archived"]),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleCreateImagingStudyResponseSchema = z.object({
+  study: DentalImagingModuleImagingStudySchema,
+  uploadUrl: z.string(),
+  uploadMethod: z.string(),
+  fileId: z.string(),
+  expiresAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleCreateMeasurementBodySchema = z.object({
+  type: z.enum(["distance", "angle", "area"]),
+  geometry: z.record(z.string(), z.unknown()),
+  measurementValue: z.number().optional(),
+  measurementUnit: z.string().optional()
+});
+
+export const DentalImagingModuleImagingAnnotationSchema = z.object({
+  id: z.string(),
+  imageId: z.string(),
+  type: z.enum(["line", "angle", "area", "label", "arrow", "freehand", "shape", "tooth"]),
+  geometry: z.record(z.string(), z.unknown()),
+  measurementValue: z.union([z.number(), z.null()]),
+  measurementUnit: z.union([z.string(), z.null()]),
+  toothNumber: z.union([z.number().int(), z.null()]),
+  visible: z.boolean(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleImagingFindingSchema = z.object({
+  id: z.string(),
+  imageId: z.string(),
+  annotationId: z.union([z.string(), z.null()]),
+  treatmentId: z.union([z.string(), z.null()]),
+  visitId: z.string(),
+  patientId: z.string(),
+  branchId: z.string(),
+  type: DentalImagingModuleImagingFindingTypeSchema,
+  status: DentalImagingModuleImagingFindingStatusSchema,
+  toothNumber: z.union([z.number().int(), z.null()]),
+  surfaces: z.union([z.array(z.string()), z.null()]),
+  note: z.union([z.string(), z.null()]),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleImagingFindingListResponseSchema = z.object({
+  items: z.array(DentalImagingModuleImagingFindingSchema)
+});
+
+export const DentalImagingModuleImagingStudyImageSchema = z.object({
+  id: z.string(),
+  studyId: z.string(),
+  fileId: z.string(),
+  pixelSpacingMm: z.union([z.number(), z.null()]),
+  sequenceNumber: z.number().int(),
+  dicomMetadata: z.union([z.record(z.string(), z.unknown()), z.null()]),
+  modality: DentalImagingModuleModalityEnumSchema,
+  status: z.enum(["active", "archived"]),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleImagingStudyWithImagesSchema = z.object({
+  id: z.string(),
+  patientId: z.string(),
+  visitId: z.union([z.string(), z.null()]),
+  branchId: z.string(),
+  acquiredBy: z.string(),
+  modality: DentalImagingModuleModalityEnumSchema,
+  status: z.enum(["active", "archived"]),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  images: z.array(DentalImagingModuleImagingStudyImageSchema)
+});
+
+export const DentalImagingModulePatientImageItemSchema = z.object({
+  id: z.string(),
+  source: z.enum(["imaging", "legacy"]),
+  modality: DentalImagingModuleModalityEnumSchema,
+  fileName: z.string(),
+  mimeType: z.string(),
+  fileSizeBytes: z.number().int(),
+  studyId: z.union([z.string(), z.null()]),
+  visitId: z.union([z.string(), z.null()]),
+  toothNumbers: z.array(z.number().int()),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleListPatientImagesResponseSchema = z.object({
+  items: z.array(DentalImagingModulePatientImageItemSchema),
+  total: z.number().int()
+});
+
+export const DentalImagingModuleMeasurementListResponseSchema = z.object({
+  items: z.array(DentalImagingModuleImagingAnnotationSchema)
+});
+
+export const DentalImagingModuleUpdateCalibrationBodySchema = z.object({
+  pixelSpacingMm: z.number()
+});
+
+export const DentalImagingModuleUpdateFindingBodySchema = z.object({
+  type: DentalImagingModuleImagingFindingTypeSchema.optional(),
+  status: DentalImagingModuleImagingFindingStatusSchema.optional(),
+  toothNumber: z.number().int().optional(),
+  surfaces: z.array(z.string()).optional(),
+  note: z.string().optional(),
+  treatmentId: z.string().optional()
+});
+
+export const DentalImagingModuleUpdateImageModalityBodySchema = z.object({
+  modality: DentalImagingModuleModalityEnumSchema
+});
+
+export const DentalImagingModuleUpdateLandmarkBodySchema = z.object({
+  x: z.number().optional(),
+  y: z.number().optional(),
+  status: DentalImagingModuleCephLandmarkStatusSchema.optional()
 });
 
 export const DentalInvoiceStatusSchema = z.enum(["draft", "issued", "partial", "paid", "overdue", "voided"]);
@@ -1154,6 +1415,18 @@ export const DentalOrgModuleCreateBranchRequestSchema = z.object({
   phone: z.string().optional()
 });
 
+export const DentalOrgModuleCreateDentalConsentTemplateRequestSchema = z.object({
+  title: z.string(),
+  content: z.string()
+});
+
+export const DentalOrgModuleCreateFlatMemberRequestSchema = z.object({
+  displayName: z.string(),
+  role: z.enum(["dentist_owner", "dentist_associate", "staff_full", "staff_scheduling"]),
+  personId: z.string().uuid().optional(),
+  avatarUrl: z.string().optional()
+});
+
 export const DentalOrgModuleCreateMembershipRequestSchema = z.object({
   personId: z.string().uuid().optional(),
   displayName: z.string(),
@@ -1167,8 +1440,36 @@ export const DentalOrgModuleCreateOrganizationRequestSchema = z.object({
   countryCode: z.string()
 });
 
+export const DentalOrgModuleDashboardSummaryResponseSchema = z.object({
+  todayVisits: z.number().int(),
+  pendingInvoices: z.number().int(),
+  totalPatients: z.number().int(),
+  revenueThisMonthCents: z.number().int()
+});
+
 export const DentalOrgModuleDeactivateMembershipRequestSchema = z.object({
   reason: z.string().optional()
+});
+
+export const DentalOrgModuleDentalBranchSettingsSchema = z.object({
+  branchId: z.string().uuid(),
+  appointmentDurationMinutes: z.number().int(),
+  currency: z.string(),
+  taxRate: z.number(),
+  appointmentReminderEnabled: z.boolean()
+});
+
+export const DentalOrgModuleDentalConsentTemplateSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  branchId: z.string().uuid(),
+  title: z.string(),
+  content: z.string(),
+  isActive: z.boolean()
 });
 
 export const DentalOrgModuleDentalMembershipSchema = z.object({
@@ -1203,25 +1504,81 @@ export const DentalOrgModuleDentalOrganizationSchema = z.object({
   active: z.boolean()
 });
 
+export const DentalOrgModuleDentalWorkingHoursDaySchema = z.object({
+  open: z.string(),
+  close: z.string(),
+  isOpen: z.boolean()
+});
+
+export const DentalOrgModuleDentalWorkingHoursSchema = z.object({
+  monday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  tuesday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  wednesday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  thursday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  friday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  saturday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  sunday: DentalOrgModuleDentalWorkingHoursDaySchema.optional()
+});
+
+export const DentalOrgModuleImagingTierSchema = z.enum(["free", "basic", "addon"]);
+
 export const DentalOrgModuleMemberRoleSchema = z.enum(["dentist_owner", "dentist_associate", "staff_full", "staff_scheduling"]);
 
 export const DentalOrgModuleMemberStatusSchema = z.enum(["active", "inactive"]);
 
-export const DentalOrgModuleMembershipListSchema = z.object({
-  items: z.array(DentalOrgModuleDentalMembershipSchema),
-  total: z.number().int()
+export const DentalOrgModuleOrgContextResponseSchema = z.object({
+  organizationId: UUIDSchema,
+  branchId: UUIDSchema,
+  memberId: UUIDSchema,
+  role: DentalOrgModuleMemberRoleSchema,
+  orgName: z.string(),
+  branchName: z.string(),
+  timezone: z.string()
 });
 
 export const DentalOrgModuleOrgTierSchema = z.enum(["solo", "clinic", "group", "enterprise"]);
+
+export const DentalOrgModuleRecoverPinRequestSchema = z.object({
+  securityQuestion: z.string(),
+  answer: z.string()
+});
+
+export const DentalOrgModuleRecoverPinResponseSchema = z.object({
+  success: z.boolean(),
+  temporaryPin: z.string().optional()
+});
+
+export const DentalOrgModuleResetMemberPinRequestSchema = z.object({
+  newPin: z.string().min(4).max(8)
+});
 
 export const DentalOrgModuleSetPinRequestSchema = z.object({
   pin: z.string().min(4).max(8)
 });
 
+export const DentalOrgModuleSetSecurityQuestionRequestSchema = z.object({
+  question: z.string(),
+  answer: z.string()
+});
+
+export const DentalOrgModuleUpdateDentalBranchSettingsRequestSchema = z.object({
+  appointmentDurationMinutes: z.number().int().optional(),
+  currency: z.string().optional(),
+  taxRate: z.number().optional(),
+  appointmentReminderEnabled: z.boolean().optional()
+});
+
+export const DentalOrgModuleUpdateDentalConsentTemplateRequestSchema = z.object({
+  title: z.string().optional(),
+  content: z.string().optional(),
+  isActive: z.boolean().optional()
+});
+
 export const DentalOrgModuleUpdateOrganizationRequestSchema = z.object({
   name: z.string().optional(),
   tier: z.enum(["solo", "clinic", "group", "enterprise"]).optional(),
-  countryCode: z.string().optional()
+  countryCode: z.string().optional(),
+  imagingTier: z.enum(["free", "basic", "addon"]).optional()
 });
 
 export const DentalOrgModuleVerifyPinRequestSchema = z.object({
@@ -1444,13 +1801,6 @@ export const DentalPatientModuleInitializeDentitionResponseSchema = z.object({
   teeth: z.array(DentalPatientModuleInitDentitionToothSchema)
 });
 
-export const DentalPatientModuleListDentalPatientsResponseSchema = z.object({
-  patients: z.array(DentalPatientModuleDentalPatientSchema),
-  total: z.number().int(),
-  limit: z.number().int(),
-  offset: z.number().int()
-});
-
 export const DentalPatientModuleListFollowUpNotesResponseSchema = z.object({
   notes: z.array(DentalPatientModuleFollowUpNoteSchema),
   total: z.number().int()
@@ -1467,7 +1817,7 @@ export const DentalPatientModuleUpdateDentalPatientRequestSchema = z.object({
   recallNote: z.string().optional()
 });
 
-export const PaymentMethodSchema = z.enum(["cash", "card", "bankTransfer"]);
+export const PaymentMethodSchema = z.enum(["cash", "card", "bank_transfer"]);
 
 export const DentalPaymentSchema = z.object({
   id: UUIDSchema,
@@ -1485,7 +1835,7 @@ export const DentalPaymentSchema = z.object({
   createdAt: z.string().datetime().transform((str) => new Date(str))
 });
 
-export const PaymentPlanStatusSchema = z.enum(["onTrack", "behind", "completed", "defaulted"]);
+export const PaymentPlanStatusSchema = z.enum(["on_track", "behind", "completed", "defaulted"]);
 
 export const DentalPaymentPlanSchema = z.object({
   id: UUIDSchema,
@@ -1501,7 +1851,16 @@ export const DentalPaymentPlanSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
-export const DentalTreatmentStatusSchema = z.enum(["diagnosed", "planned", "performed", "verified", "dismissed"]);
+export const DentalPaymentReceiptResponseSchema = z.object({
+  receiptNumber: z.string(),
+  amountCents: z.number().int(),
+  method: PaymentMethodSchema,
+  paidAt: z.string().datetime().transform((str) => new Date(str)),
+  invoiceId: UUIDSchema,
+  patientId: UUIDSchema
+});
+
+export const DentalTreatmentStatusSchema = z.enum(["diagnosed", "planned", "performed", "verified", "dismissed", "declined"]);
 
 export const DentalTreatmentSchema = z.object({
   id: UUIDSchema,
@@ -1516,10 +1875,12 @@ export const DentalTreatmentSchema = z.object({
   conditionCode: z.string().optional(),
   status: DentalTreatmentStatusSchema,
   dismissReason: z.string().optional(),
+  refusalReason: z.string().optional(),
   priceCents: z.number().int(),
   carriedOver: z.boolean(),
   sourceVisitId: UUIDSchema.optional(),
-  autoDismissed: z.boolean().optional()
+  autoDismissed: z.boolean().optional(),
+  clinicalNotes: z.string().optional()
 });
 
 export const DentalVisitStatusSchema = z.enum(["draft", "active", "completed", "locked"]);
@@ -15749,7 +16110,7 @@ export const JoinVideoCallRequestSchema = z.object({
   videoEnabled: z.boolean()
 });
 
-export const LabOrderStatusSchema = z.enum(["ordered", "inFabrication", "delivered", "fitted", "cancelled"]);
+export const LabOrderStatusSchema = z.enum(["ordered", "in_fabrication", "delivered", "fitted", "cancelled"]);
 
 export const LabOrderSchema = z.object({
   id: UUIDSchema,
@@ -15868,6 +16229,31 @@ export const MedicalHistoryEntrySchema = z.object({
 });
 
 export const MessageTypeSchema = z.enum(["text", "system", "video_call"]);
+
+export const MultipartPartSchema = z.object({
+  partNumber: z.number().int().gte(1),
+  etag: z.string()
+});
+
+export const MultipartCompleteRequestSchema = z.object({
+  parts: z.array(MultipartPartSchema)
+});
+
+export const MultipartInitiateRequestSchema = z.object({
+  filename: z.string().max(255),
+  mimeType: z.string().max(100),
+  size: z.number().int().gte(1)
+});
+
+export const MultipartInitiateResponseSchema = z.object({
+  fileId: z.string().uuid(),
+  uploadId: z.string()
+});
+
+export const MultipartPartUrlResponseSchema = z.object({
+  partUrl: z.string().url(),
+  partNumber: z.number().int()
+});
 
 export const NotFoundErrorSchema = z.object({
   code: z.string(),
@@ -16078,6 +16464,25 @@ export const PatientSchema = z.object({
   hasActivePaymentPlan: z.boolean().optional()
 });
 
+export const PatientBalanceResponseSchema = z.object({
+  patientId: UUIDSchema,
+  balanceCents: z.number().int(),
+  overdueInvoices: z.number().int()
+});
+
+export const PatientConditionEntrySchema = z.object({
+  id: z.string(),
+  visitId: UUIDSchema,
+  toothNumber: z.number().int().optional(),
+  status: z.string(),
+  surfaces: z.array(z.string()).optional(),
+  conditionCode: z.string().optional(),
+  state: z.string().optional(),
+  cdtCode: z.string().optional(),
+  description: z.string().optional(),
+  priceCents: z.number().int().optional()
+});
+
 export const PatientLinkTypeSchema = z.enum(["replaced-by", "replaces", "refer", "seealso"]);
 
 export const PatientMergeRequestSchema = z.object({
@@ -16149,10 +16554,30 @@ export const PatientMergeResultSchema = z.object({
   details: z.string().optional()
 });
 
+export const PatientToothEntrySchema = z.object({
+  toothNumber: z.number().int(),
+  state: z.string().optional(),
+  status: z.string().optional(),
+  entryClassification: ChartEntryClassificationSchema.optional(),
+  surfaces: z.array(z.string()).optional(),
+  conditionCode: z.string().optional()
+});
+
 export const PatientUnmergeRequestSchema = z.object({
   targetPatientId: z.string().uuid(),
   sourcePatientId: z.string().uuid(),
   reason: z.string()
+});
+
+export const PatientVisitRecordSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  patientId: UUIDSchema,
+  branchId: UUIDSchema,
+  status: DentalVisitStatusSchema,
+  chiefComplaint: z.string().optional(),
+  teeth: z.array(PatientToothEntrySchema).optional()
 });
 
 export const PaymentRequestSchema = z.object({
@@ -16328,14 +16753,14 @@ export const ProviderSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   person: z.union([UUIDSchema, PersonSchema]),
-  providerType: z.enum(["pharmacist", "other"]),
+  providerType: z.enum(["dentist", "hygienist", "orthodontist", "endodontist", "periodontist", "oral_surgeon", "pediatric_dentist", "pharmacist", "other"]),
   yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
   biography: z.string().max(2000).optional(),
   minorAilmentsSpecialties: z.array(z.string()).optional(),
   minorAilmentsPracticeLocations: z.array(z.string()).optional()
 });
 
-export const ProviderTypeSchema = z.enum(["pharmacist", "other"]);
+export const ProviderTypeSchema = z.enum(["dentist", "hygienist", "orthodontist", "endodontist", "periodontist", "oral_surgeon", "pediatric_dentist", "pharmacist", "other"]);
 
 export const RateLimitErrorSchema = z.object({
   code: z.string(),
@@ -16454,6 +16879,8 @@ export const SignConsentFormRequestSchema = z.object({
   signatureData: z.string()
 });
 
+export const SignVisitNotesRequestSchema = z.record(z.string(), z.unknown());
+
 export const SlotStatusSchema = z.enum(["available", "booked", "blocked"]);
 
 export const StartVideoCallDataSchema = z.object({
@@ -16547,10 +16974,35 @@ export const ToothHistoryEntrySchema = z.object({
   treatmentDescription: z.string().optional()
 });
 
+export const TreatmentPlanResponseSchema = z.object({
+  patientId: UUIDSchema,
+  visits: z.string(),
+  treatments: z.string(),
+  acceptedPlanVersionId: UUIDSchema.optional()
+});
+
+export const TreatmentPlanVersionSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: UUIDSchema.optional(),
+  version: z.number().int(),
+  patientId: UUIDSchema,
+  snapshot: z.record(z.string(), z.unknown())
+});
+
+export const TreatmentTemplateSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  name: z.string(),
+  description: z.string().optional(),
+  treatments: z.string()
+});
+
 export const UpdateAppointmentRequestSchema = z.object({
   scheduledAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   durationMinutes: z.number().int().optional(),
-  procedureType: z.string().optional(),
+  serviceType: z.string().optional(),
   operatoryId: UUIDSchema.optional(),
   notes: z.string().optional(),
   status: AppointmentStatusSchema.optional(),
@@ -16593,11 +17045,14 @@ export const UpdateConsultationRequestSchema = z.object({
 export const UpdateDentalTreatmentRequestSchema = z.object({
   status: DentalTreatmentStatusSchema.optional(),
   dismissReason: z.string().optional(),
+  refusalReason: z.string().optional(),
   toothNumber: z.number().int().optional(),
   surfaces: z.array(ToothSurfaceCodeSchema).optional(),
   cdtCode: z.string().optional(),
   description: z.string().optional(),
-  conditionCode: z.string().optional()
+  conditionCode: z.string().optional(),
+  priceCents: z.number().int().optional(),
+  clinicalNotes: z.string().optional()
 });
 
 export const UpdateDentalVisitRequestSchema = z.object({
@@ -16726,7 +17181,15 @@ export const UpdateToothRequestSchema = z.object({
   state: ToothStateSchema.optional(),
   surfaces: z.array(ToothSurfaceCodeSchema).optional(),
   conditionCode: z.string().optional(),
-  note: z.string().optional()
+  note: z.string().optional(),
+  surfaceConditionMap: z.record(z.string(), z.unknown()).optional(),
+  entryClassification: ChartEntryClassificationSchema.optional()
+});
+
+export const UpdateTreatmentTemplateRequestSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  treatments: z.string().optional()
 });
 
 export const UpsertVisitNotesRequestSchema = z.object({
@@ -16782,6 +17245,15 @@ export const VideoCallJoinResponseSchema = z.object({
 
 export const VideoCallStatusSchema = z.enum(["starting", "active", "ended", "cancelled"]);
 
+export const VisitNoteVersionSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: UUIDSchema.optional(),
+  version: z.number().int(),
+  noteId: UUIDSchema,
+  snapshot: z.record(z.string(), z.unknown())
+});
+
 export const VisitNotesSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -16792,7 +17264,11 @@ export const VisitNotesSchema = z.object({
   objective: z.string().optional(),
   assessment: z.string().optional(),
   plan: z.string().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  signed: z.boolean(),
+  signedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  signedBy: UUIDSchema.optional(),
+  lockedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const VitalsDataSchema = z.object({
@@ -17387,6 +17863,14 @@ export type CheckInAppointmentParams = z.infer<typeof CheckInAppointmentParams>;
 
 export const CheckInAppointmentResponse = CheckInResponseSchema;
 
+export const GetCollectionsSummaryQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  period: z.string().optional(),
+});
+export type GetCollectionsSummaryQuery = z.infer<typeof GetCollectionsSummaryQuery>;
+
+export const GetCollectionsSummaryResponse = CollectionsSummaryResponseSchema;
+
 export const CreateDentalInvoiceBody = CreateDentalInvoiceRequestSchema;
 export type CreateDentalInvoiceBody = z.infer<typeof CreateDentalInvoiceBody>;
 
@@ -17399,7 +17883,19 @@ export const ListDentalInvoicesQuery = z.object({
 });
 export type ListDentalInvoicesQuery = z.infer<typeof ListDentalInvoicesQuery>;
 
-export const ListDentalInvoicesResponse = z.array(DentalInvoiceSchema);
+export const ListDentalInvoicesResponse = z.object({
+  data: z.array(DentalInvoiceSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
 
 export const GetDentalInvoiceParams = z.object({
   invoiceId: UUIDSchema,
@@ -17440,7 +17936,27 @@ export const ListDentalPaymentsParams = z.object({
 });
 export type ListDentalPaymentsParams = z.infer<typeof ListDentalPaymentsParams>;
 
-export const ListDentalPaymentsResponse = z.array(DentalPaymentSchema);
+export const ListDentalPaymentsResponse = z.object({
+  data: z.array(DentalPaymentSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const GetDentalPaymentReceiptParams = z.object({
+  invoiceId: UUIDSchema,
+  paymentId: UUIDSchema,
+});
+export type GetDentalPaymentReceiptParams = z.infer<typeof GetDentalPaymentReceiptParams>;
+
+export const GetDentalPaymentReceiptResponse = DentalPaymentReceiptResponseSchema;
 
 export const VoidDentalPaymentParams = z.object({
   invoiceId: UUIDSchema,
@@ -17477,6 +17993,83 @@ export type VoidDentalInvoiceParams = z.infer<typeof VoidDentalInvoiceParams>;
 
 export const VoidDentalInvoiceResponse = DentalInvoiceSchema;
 
+export const GetPatientBalanceParams = z.object({
+  patientId: UUIDSchema,
+});
+export type GetPatientBalanceParams = z.infer<typeof GetPatientBalanceParams>;
+
+export const GetPatientBalanceResponse = PatientBalanceResponseSchema;
+
+export const ListConsentTemplatesParams = z.object({
+  branchId: UUIDSchema,
+});
+export type ListConsentTemplatesParams = z.infer<typeof ListConsentTemplatesParams>;
+
+export const ListConsentTemplatesResponse = z.array(DentalOrgModuleDentalConsentTemplateSchema);
+
+export const CreateConsentTemplateParams = z.object({
+  branchId: UUIDSchema,
+});
+export type CreateConsentTemplateParams = z.infer<typeof CreateConsentTemplateParams>;
+
+export const CreateConsentTemplateBody = DentalOrgModuleCreateDentalConsentTemplateRequestSchema;
+export type CreateConsentTemplateBody = z.infer<typeof CreateConsentTemplateBody>;
+
+export const CreateConsentTemplateResponse = DentalOrgModuleDentalConsentTemplateSchema;
+
+export const UpdateConsentTemplateParams = z.object({
+  branchId: UUIDSchema,
+  id: UUIDSchema,
+});
+export type UpdateConsentTemplateParams = z.infer<typeof UpdateConsentTemplateParams>;
+
+export const UpdateConsentTemplateBody = DentalOrgModuleUpdateDentalConsentTemplateRequestSchema;
+export type UpdateConsentTemplateBody = z.infer<typeof UpdateConsentTemplateBody>;
+
+export const UpdateConsentTemplateResponse = DentalOrgModuleDentalConsentTemplateSchema;
+
+export const DeleteConsentTemplateParams = z.object({
+  branchId: UUIDSchema,
+  id: UUIDSchema,
+});
+export type DeleteConsentTemplateParams = z.infer<typeof DeleteConsentTemplateParams>;
+
+export const DeleteConsentTemplateResponse = z.record(z.string(), z.unknown());
+
+export const GetBranchSettingsParams = z.object({
+  branchId: UUIDSchema,
+});
+export type GetBranchSettingsParams = z.infer<typeof GetBranchSettingsParams>;
+
+export const GetBranchSettingsResponse = DentalOrgModuleDentalBranchSettingsSchema;
+
+export const UpdateBranchSettingsParams = z.object({
+  branchId: UUIDSchema,
+});
+export type UpdateBranchSettingsParams = z.infer<typeof UpdateBranchSettingsParams>;
+
+export const UpdateBranchSettingsBody = DentalOrgModuleUpdateDentalBranchSettingsRequestSchema;
+export type UpdateBranchSettingsBody = z.infer<typeof UpdateBranchSettingsBody>;
+
+export const UpdateBranchSettingsResponse = DentalOrgModuleDentalBranchSettingsSchema;
+
+export const GetWorkingHoursParams = z.object({
+  branchId: UUIDSchema,
+});
+export type GetWorkingHoursParams = z.infer<typeof GetWorkingHoursParams>;
+
+export const GetWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursSchema;
+
+export const UpdateWorkingHoursParams = z.object({
+  branchId: UUIDSchema,
+});
+export type UpdateWorkingHoursParams = z.infer<typeof UpdateWorkingHoursParams>;
+
+export const UpdateWorkingHoursBody = DentalOrgModuleDentalWorkingHoursSchema;
+export type UpdateWorkingHoursBody = z.infer<typeof UpdateWorkingHoursBody>;
+
+export const UpdateWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursSchema;
+
 export const CreateMedicalHistoryEntryBody = CreateMedicalHistoryEntryRequestSchema;
 export type CreateMedicalHistoryEntryBody = z.infer<typeof CreateMedicalHistoryEntryBody>;
 
@@ -17510,6 +18103,235 @@ export const UpdateMedicalHistoryEntryBody = UpdateMedicalHistoryEntryRequestSch
 export type UpdateMedicalHistoryEntryBody = z.infer<typeof UpdateMedicalHistoryEntryBody>;
 
 export const UpdateMedicalHistoryEntryResponse = MedicalHistoryEntrySchema;
+
+export const GetDashboardSummaryQuery = z.object({
+  branchId: UUIDSchema.optional(),
+});
+export type GetDashboardSummaryQuery = z.infer<typeof GetDashboardSummaryQuery>;
+
+export const GetDashboardSummaryResponse = DentalOrgModuleDashboardSummaryResponseSchema;
+
+export const ImagingFindingsMgmt_updateFindingParams = z.object({
+  findingId: z.string(),
+});
+export type ImagingFindingsMgmt_updateFindingParams = z.infer<typeof ImagingFindingsMgmt_updateFindingParams>;
+
+export const ImagingFindingsMgmt_updateFindingBody = DentalImagingModuleUpdateFindingBodySchema;
+export type ImagingFindingsMgmt_updateFindingBody = z.infer<typeof ImagingFindingsMgmt_updateFindingBody>;
+
+export const ImagingFindingsMgmt_updateFindingResponse = z.union([DentalImagingModuleImagingFindingSchema, ErrorResponseSchema]);
+
+export const ImagingFindingsMgmt_deleteFindingParams = z.object({
+  findingId: z.string(),
+});
+export type ImagingFindingsMgmt_deleteFindingParams = z.infer<typeof ImagingFindingsMgmt_deleteFindingParams>;
+
+export const ImagingFindingsMgmt_deleteFindingResponse = ErrorResponseSchema;
+
+export const ImagingMgmt_deleteImageParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_deleteImageParams = z.infer<typeof ImagingMgmt_deleteImageParams>;
+
+export const ImagingMgmt_deleteImageResponse = ErrorResponseSchema;
+
+export const ImagingMgmt_updateImageCalibrationParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_updateImageCalibrationParams = z.infer<typeof ImagingMgmt_updateImageCalibrationParams>;
+
+export const ImagingMgmt_updateImageCalibrationBody = DentalImagingModuleUpdateCalibrationBodySchema;
+export type ImagingMgmt_updateImageCalibrationBody = z.infer<typeof ImagingMgmt_updateImageCalibrationBody>;
+
+export const ImagingMgmt_updateImageCalibrationResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
+
+export const CephMgmt_getCephAnalysisParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_getCephAnalysisParams = z.infer<typeof CephMgmt_getCephAnalysisParams>;
+
+export const CephMgmt_getCephAnalysisResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
+
+export const CephMgmt_recomputeCephAnalysisParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_recomputeCephAnalysisParams = z.infer<typeof CephMgmt_recomputeCephAnalysisParams>;
+
+export const CephMgmt_recomputeCephAnalysisResponse = z.union([DentalImagingModuleCephAnalysisSchema, ErrorResponseSchema]);
+
+export const CephMgmt_batchUpsertCephLandmarksParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_batchUpsertCephLandmarksParams = z.infer<typeof CephMgmt_batchUpsertCephLandmarksParams>;
+
+export const CephMgmt_batchUpsertCephLandmarksBody = DentalImagingModuleBatchUpsertLandmarksBodySchema;
+export type CephMgmt_batchUpsertCephLandmarksBody = z.infer<typeof CephMgmt_batchUpsertCephLandmarksBody>;
+
+export const CephMgmt_batchUpsertCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
+
+export const CephMgmt_listCephLandmarksParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_listCephLandmarksParams = z.infer<typeof CephMgmt_listCephLandmarksParams>;
+
+export const CephMgmt_listCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
+
+export const CephMgmt_updateCephLandmarkParams = z.object({
+  imageId: z.string(),
+  landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
+});
+export type CephMgmt_updateCephLandmarkParams = z.infer<typeof CephMgmt_updateCephLandmarkParams>;
+
+export const CephMgmt_updateCephLandmarkBody = DentalImagingModuleUpdateLandmarkBodySchema;
+export type CephMgmt_updateCephLandmarkBody = z.infer<typeof CephMgmt_updateCephLandmarkBody>;
+
+export const CephMgmt_updateCephLandmarkResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
+
+export const CephMgmt_deleteCephLandmarkParams = z.object({
+  imageId: z.string(),
+  landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
+});
+export type CephMgmt_deleteCephLandmarkParams = z.infer<typeof CephMgmt_deleteCephLandmarkParams>;
+
+export const CephMgmt_deleteCephLandmarkResponse = ErrorResponseSchema;
+
+export const CephMgmt_createCephReportParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_createCephReportParams = z.infer<typeof CephMgmt_createCephReportParams>;
+
+export const CephMgmt_createCephReportResponse = z.union([DentalImagingModuleCephReportSchema, ErrorResponseSchema]);
+
+export const CephMgmt_getCephReportParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_getCephReportParams = z.infer<typeof CephMgmt_getCephReportParams>;
+
+export const CephMgmt_getCephReportQuery = z.object({
+  version: z.coerce.number().int().optional(),
+});
+export type CephMgmt_getCephReportQuery = z.infer<typeof CephMgmt_getCephReportQuery>;
+
+export const CephMgmt_getCephReportResponse = z.union([DentalImagingModuleCephReportSchema, ErrorResponseSchema]);
+
+export const ImagingFindingsMgmt_createFindingParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingFindingsMgmt_createFindingParams = z.infer<typeof ImagingFindingsMgmt_createFindingParams>;
+
+export const ImagingFindingsMgmt_createFindingBody = DentalImagingModuleCreateFindingBodySchema;
+export type ImagingFindingsMgmt_createFindingBody = z.infer<typeof ImagingFindingsMgmt_createFindingBody>;
+
+export const ImagingFindingsMgmt_createFindingResponse = z.union([DentalImagingModuleImagingFindingSchema, ErrorResponseSchema]);
+
+export const ImagingFindingsMgmt_listFindingsParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingFindingsMgmt_listFindingsParams = z.infer<typeof ImagingFindingsMgmt_listFindingsParams>;
+
+export const ImagingFindingsMgmt_listFindingsResponse = z.union([DentalImagingModuleImagingFindingListResponseSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_createMeasurementParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_createMeasurementParams = z.infer<typeof ImagingMgmt_createMeasurementParams>;
+
+export const ImagingMgmt_createMeasurementBody = DentalImagingModuleCreateMeasurementBodySchema;
+export type ImagingMgmt_createMeasurementBody = z.infer<typeof ImagingMgmt_createMeasurementBody>;
+
+export const ImagingMgmt_createMeasurementResponse = z.union([DentalImagingModuleImagingAnnotationSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_listMeasurementsParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_listMeasurementsParams = z.infer<typeof ImagingMgmt_listMeasurementsParams>;
+
+export const ImagingMgmt_listMeasurementsResponse = z.union([DentalImagingModuleMeasurementListResponseSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_updateImageModalityParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_updateImageModalityParams = z.infer<typeof ImagingMgmt_updateImageModalityParams>;
+
+export const ImagingMgmt_updateImageModalityBody = DentalImagingModuleUpdateImageModalityBodySchema;
+export type ImagingMgmt_updateImageModalityBody = z.infer<typeof ImagingMgmt_updateImageModalityBody>;
+
+export const ImagingMgmt_updateImageModalityResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_deleteMeasurementParams = z.object({
+  measurementId: z.string(),
+});
+export type ImagingMgmt_deleteMeasurementParams = z.infer<typeof ImagingMgmt_deleteMeasurementParams>;
+
+export const ImagingMgmt_deleteMeasurementResponse = ErrorResponseSchema;
+
+export const ImagingMgmt_createImagingStudyBody = DentalImagingModuleCreateImagingStudyBodySchema;
+export type ImagingMgmt_createImagingStudyBody = z.infer<typeof ImagingMgmt_createImagingStudyBody>;
+
+export const ImagingMgmt_createImagingStudyResponse = z.union([DentalImagingModuleCreateImagingStudyResponseSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_getImagingStudyParams = z.object({
+  studyId: z.string(),
+});
+export type ImagingMgmt_getImagingStudyParams = z.infer<typeof ImagingMgmt_getImagingStudyParams>;
+
+export const ImagingMgmt_getImagingStudyResponse = z.union([DentalImagingModuleImagingStudyWithImagesSchema, ErrorResponseSchema]);
+
+export const GetOrgContextResponse = DentalOrgModuleOrgContextResponseSchema;
+
+export const ListMembersQuery = z.object({
+  branchId: UUIDSchema.optional(),
+});
+export type ListMembersQuery = z.infer<typeof ListMembersQuery>;
+
+export const ListMembersResponse = z.object({
+  data: z.array(DentalOrgModuleDentalMembershipSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const CreateMemberBody = DentalOrgModuleCreateFlatMemberRequestSchema;
+export type CreateMemberBody = z.infer<typeof CreateMemberBody>;
+
+export const CreateMemberResponse = DentalOrgModuleDentalMembershipSchema;
+
+export const RecoverPinParams = z.object({
+  memberId: UUIDSchema,
+});
+export type RecoverPinParams = z.infer<typeof RecoverPinParams>;
+
+export const RecoverPinBody = DentalOrgModuleRecoverPinRequestSchema;
+export type RecoverPinBody = z.infer<typeof RecoverPinBody>;
+
+export const RecoverPinResponse = DentalOrgModuleRecoverPinResponseSchema;
+
+export const ResetMemberPinParams = z.object({
+  memberId: UUIDSchema,
+});
+export type ResetMemberPinParams = z.infer<typeof ResetMemberPinParams>;
+
+export const ResetMemberPinBody = DentalOrgModuleResetMemberPinRequestSchema;
+export type ResetMemberPinBody = z.infer<typeof ResetMemberPinBody>;
+
+export const ResetMemberPinResponse = DentalOrgModuleDentalMembershipSchema;
+
+export const SetSecurityQuestionParams = z.object({
+  memberId: UUIDSchema,
+});
+export type SetSecurityQuestionParams = z.infer<typeof SetSecurityQuestionParams>;
+
+export const SetSecurityQuestionBody = DentalOrgModuleSetSecurityQuestionRequestSchema;
+export type SetSecurityQuestionBody = z.infer<typeof SetSecurityQuestionBody>;
+
+export const SetSecurityQuestionResponse = z.record(z.string(), z.unknown());
 
 export const DentalOrganizationManagement_createBody = DentalOrgModuleCreateOrganizationRequestSchema;
 export type DentalOrganizationManagement_createBody = z.infer<typeof DentalOrganizationManagement_createBody>;
@@ -17575,7 +18397,19 @@ export const DentalMembershipManagement_listParams = z.object({
 });
 export type DentalMembershipManagement_listParams = z.infer<typeof DentalMembershipManagement_listParams>;
 
-export const DentalMembershipManagement_listResponse = z.union([DentalOrgModuleMembershipListSchema, ErrorResponseSchema]);
+export const DentalMembershipManagement_listResponse = z.union([z.object({
+  data: z.array(DentalOrgModuleDentalMembershipSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+}), ErrorResponseSchema]);
 
 export const DentalMembershipManagement_deactivateParams = z.object({
   orgId: UUIDSchema,
@@ -17628,7 +18462,19 @@ export const ListDentalPatientsQuery = z.object({
 });
 export type ListDentalPatientsQuery = z.infer<typeof ListDentalPatientsQuery>;
 
-export const ListDentalPatientsResponse = DentalPatientModuleListDentalPatientsResponseSchema;
+export const ListDentalPatientsResponse = z.object({
+  data: z.array(DentalPatientModuleDentalPatientSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
 
 export const BulkArchiveDentalPatientsBody = DentalPatientModuleBulkArchiveDentalPatientsRequestSchema;
 export type BulkArchiveDentalPatientsBody = z.infer<typeof BulkArchiveDentalPatientsBody>;
@@ -17721,6 +18567,91 @@ export type InitializeDentitionBody = z.infer<typeof InitializeDentitionBody>;
 
 export const InitializeDentitionResponse = DentalPatientModuleInitializeDentitionResponseSchema;
 
+export const PatientImageMgmt_listPatientImagesParams = z.object({
+  patientId: z.string(),
+});
+export type PatientImageMgmt_listPatientImagesParams = z.infer<typeof PatientImageMgmt_listPatientImagesParams>;
+
+export const PatientImageMgmt_listPatientImagesQuery = z.object({
+  branchId: z.string(),
+});
+export type PatientImageMgmt_listPatientImagesQuery = z.infer<typeof PatientImageMgmt_listPatientImagesQuery>;
+
+export const PatientImageMgmt_listPatientImagesResponse = z.union([DentalImagingModuleListPatientImagesResponseSchema, ErrorResponseSchema]);
+
+export const GetTreatmentPlanParams = z.object({
+  patientId: UUIDSchema,
+});
+export type GetTreatmentPlanParams = z.infer<typeof GetTreatmentPlanParams>;
+
+export const GetTreatmentPlanResponse = TreatmentPlanResponseSchema;
+
+export const AcceptTreatmentPlanParams = z.object({
+  patientId: UUIDSchema,
+});
+export type AcceptTreatmentPlanParams = z.infer<typeof AcceptTreatmentPlanParams>;
+
+export const AcceptTreatmentPlanBody = AcceptTreatmentPlanRequestSchema;
+export type AcceptTreatmentPlanBody = z.infer<typeof AcceptTreatmentPlanBody>;
+
+export const AcceptTreatmentPlanResponse = TreatmentPlanVersionSchema;
+
+export const GetTreatmentPlanVersionParams = z.object({
+  patientId: UUIDSchema,
+  versionId: UUIDSchema,
+});
+export type GetTreatmentPlanVersionParams = z.infer<typeof GetTreatmentPlanVersionParams>;
+
+export const GetTreatmentPlanVersionResponse = TreatmentPlanVersionSchema;
+
+export const ListPatientConditionsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type ListPatientConditionsParams = z.infer<typeof ListPatientConditionsParams>;
+
+export const ListPatientConditionsQuery = z.object({
+  branchId: UUIDSchema.optional(),
+});
+export type ListPatientConditionsQuery = z.infer<typeof ListPatientConditionsQuery>;
+
+export const ListPatientConditionsResponse = z.object({
+  data: z.array(PatientConditionEntrySchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const ListPatientVisitsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type ListPatientVisitsParams = z.infer<typeof ListPatientVisitsParams>;
+
+export const ListPatientVisitsQuery = z.object({
+  branchId: UUIDSchema.optional(),
+});
+export type ListPatientVisitsQuery = z.infer<typeof ListPatientVisitsQuery>;
+
+export const ListPatientVisitsResponse = z.object({
+  data: z.array(PatientVisitRecordSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
 export const ImportPMDBody = ImportPMDRequestSchema;
 export type ImportPMDBody = z.infer<typeof ImportPMDBody>;
 
@@ -17744,6 +18675,37 @@ export const ListImportedPMDsResponse = z.object({
   hasPreviousPage: z.boolean()
 })
 });
+
+export const GetImportedPMDParams = z.object({
+  id: UUIDSchema,
+});
+export type GetImportedPMDParams = z.infer<typeof GetImportedPMDParams>;
+
+export const GetImportedPMDResponse = ImportedPMDSchema;
+
+export const ListTreatmentTemplatesResponse = z.array(TreatmentTemplateSchema);
+
+export const CreateTreatmentTemplateBody = CreateTreatmentTemplateRequestSchema;
+export type CreateTreatmentTemplateBody = z.infer<typeof CreateTreatmentTemplateBody>;
+
+export const CreateTreatmentTemplateResponse = TreatmentTemplateSchema;
+
+export const UpdateTreatmentTemplateParams = z.object({
+  id: UUIDSchema,
+});
+export type UpdateTreatmentTemplateParams = z.infer<typeof UpdateTreatmentTemplateParams>;
+
+export const UpdateTreatmentTemplateBody = UpdateTreatmentTemplateRequestSchema;
+export type UpdateTreatmentTemplateBody = z.infer<typeof UpdateTreatmentTemplateBody>;
+
+export const UpdateTreatmentTemplateResponse = TreatmentTemplateSchema;
+
+export const DeleteTreatmentTemplateParams = z.object({
+  id: UUIDSchema,
+});
+export type DeleteTreatmentTemplateParams = z.infer<typeof DeleteTreatmentTemplateParams>;
+
+export const DeleteTreatmentTemplateResponse = z.record(z.string(), z.unknown());
 
 export const CreateDentalVisitBody = CreateDentalVisitRequestSchema;
 export type CreateDentalVisitBody = z.infer<typeof CreateDentalVisitBody>;
@@ -17779,7 +18741,7 @@ export const ListDentalVisitsResponse = z.object({
 
 export const GetToothHistoryParams = z.object({
   patientId: UUIDSchema,
-  toothNumber: z.number().int(),
+  toothNumber: z.coerce.number().int(),
 });
 export type GetToothHistoryParams = z.infer<typeof GetToothHistoryParams>;
 
@@ -17862,6 +18824,14 @@ export const ListAmendmentsResponse = z.object({
 })
 });
 
+export const ApplyTemplateParams = z.object({
+  visitId: UUIDSchema,
+  templateId: UUIDSchema,
+});
+export type ApplyTemplateParams = z.infer<typeof ApplyTemplateParams>;
+
+export const ApplyTemplateResponse = ApplyTemplateResponseSchema;
+
 export const CreateAttachmentParams = z.object({
   visitId: UUIDSchema,
 });
@@ -17899,6 +18869,16 @@ export type DeleteAttachmentParams = z.infer<typeof DeleteAttachmentParams>;
 
 export const DeleteAttachmentResponse = z.void();
 
+export const CarryOverTreatmentsParams = z.object({
+  visitId: UUIDSchema,
+});
+export type CarryOverTreatmentsParams = z.infer<typeof CarryOverTreatmentsParams>;
+
+export const CarryOverTreatmentsBody = CarryOverTreatmentsRequestSchema;
+export type CarryOverTreatmentsBody = z.infer<typeof CarryOverTreatmentsBody>;
+
+export const CarryOverTreatmentsResponse = CarryOverTreatmentsResponseSchema;
+
 export const UpsertDentalChartParams = z.object({
   visitId: UUIDSchema,
 });
@@ -17918,7 +18898,7 @@ export const GetDentalChartResponse = DentalChartSchema;
 
 export const UpdateToothParams = z.object({
   visitId: UUIDSchema,
-  toothNumber: z.number().int(),
+  toothNumber: z.coerce.number().int(),
 });
 export type UpdateToothParams = z.infer<typeof UpdateToothParams>;
 
@@ -18024,6 +19004,33 @@ export type GetVisitNotesParams = z.infer<typeof GetVisitNotesParams>;
 
 export const GetVisitNotesResponse = VisitNotesSchema;
 
+export const CreateVisitNoteAddendumParams = z.object({
+  visitId: UUIDSchema,
+});
+export type CreateVisitNoteAddendumParams = z.infer<typeof CreateVisitNoteAddendumParams>;
+
+export const CreateVisitNoteAddendumBody = CreateVisitNoteAddendumRequestSchema;
+export type CreateVisitNoteAddendumBody = z.infer<typeof CreateVisitNoteAddendumBody>;
+
+export const CreateVisitNoteAddendumResponse = VisitNoteVersionSchema;
+
+export const GetVisitNoteHistoryParams = z.object({
+  visitId: UUIDSchema,
+});
+export type GetVisitNoteHistoryParams = z.infer<typeof GetVisitNoteHistoryParams>;
+
+export const GetVisitNoteHistoryResponse = z.array(VisitNoteVersionSchema);
+
+export const SignVisitNotesParams = z.object({
+  visitId: UUIDSchema,
+});
+export type SignVisitNotesParams = z.infer<typeof SignVisitNotesParams>;
+
+export const SignVisitNotesBody = SignVisitNotesRequestSchema;
+export type SignVisitNotesBody = z.infer<typeof SignVisitNotesBody>;
+
+export const SignVisitNotesResponse = VisitNotesSchema;
+
 export const GeneratePMDParams = z.object({
   visitId: UUIDSchema,
 });
@@ -18040,6 +19047,13 @@ export const GetPMDForVisitParams = z.object({
 export type GetPMDForVisitParams = z.infer<typeof GetPMDForVisitParams>;
 
 export const GetPMDForVisitResponse = PMDDocumentSchema;
+
+export const ExportPMDParams = z.object({
+  visitId: UUIDSchema,
+});
+export type ExportPMDParams = z.infer<typeof ExportPMDParams>;
+
+export const ExportPMDResponse = PMDDocumentSchema;
 
 export const CreatePrescriptionParams = z.object({
   visitId: UUIDSchema,
@@ -18701,3 +19715,37 @@ export const GetFileDownloadParams = z.object({
 export type GetFileDownloadParams = z.infer<typeof GetFileDownloadParams>;
 
 export const GetFileDownloadResponse = FileDownloadResponseSchema;
+
+export const InitiateMultipartUploadBody = MultipartInitiateRequestSchema;
+export type InitiateMultipartUploadBody = z.infer<typeof InitiateMultipartUploadBody>;
+
+export const InitiateMultipartUploadResponse = MultipartInitiateResponseSchema;
+
+export const AbortMultipartUploadParams = z.object({
+  file: UUIDSchema,
+});
+export type AbortMultipartUploadParams = z.infer<typeof AbortMultipartUploadParams>;
+
+export const AbortMultipartUploadResponse = z.void();
+
+export const CompleteMultipartUploadParams = z.object({
+  file: UUIDSchema,
+});
+export type CompleteMultipartUploadParams = z.infer<typeof CompleteMultipartUploadParams>;
+
+export const CompleteMultipartUploadBody = MultipartCompleteRequestSchema;
+export type CompleteMultipartUploadBody = z.infer<typeof CompleteMultipartUploadBody>;
+
+export const CompleteMultipartUploadResponse = StoredFileSchema;
+
+export const GenerateMultipartPartUrlParams = z.object({
+  file: UUIDSchema,
+});
+export type GenerateMultipartPartUrlParams = z.infer<typeof GenerateMultipartPartUrlParams>;
+
+export const GenerateMultipartPartUrlQuery = z.object({
+  partNumber: z.coerce.number().int(),
+});
+export type GenerateMultipartPartUrlQuery = z.infer<typeof GenerateMultipartPartUrlQuery>;
+
+export const GenerateMultipartPartUrlResponse = MultipartPartUrlResponseSchema;

@@ -3,14 +3,12 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { MedicalHistoryRepository } from './medical-history.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const PATIENT_1 = 'e5000000-0000-4000-8000-000000000010';
-const PATIENT_2 = 'e5000000-0000-4000-8000-000000000011';
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
+const PATIENT_2 = CHAIN_IDS.PATIENT_2;
 
 const baseEntry = {
   patientId: PATIENT_1,
@@ -20,12 +18,16 @@ const baseEntry = {
 
 describe('MedicalHistoryRepository', () => {
   let repo: MedicalHistoryRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new MedicalHistoryRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE medical_history_entry CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new MedicalHistoryRepository(db);
+    await seedClinicalChain(db, { branches: 1, memberships: 0, visits: 0 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates an active entry by default', async () => {
@@ -80,7 +82,7 @@ describe('MedicalHistoryRepository', () => {
     });
 
     test('accepts all entry types', async () => {
-      const types = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'familyHistory'] as const;
+      const types = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'family_history'] as const;
       for (const entryType of types) {
         const entry = await repo.createOne({ patientId: PATIENT_1, entryType, displayName: `Test ${entryType}` });
         expect(entry.entryType).toBe(entryType);

@@ -229,21 +229,24 @@ function PinEntryRoute() {
   });
 
   useEffect(() => {
-    const { branchId } = useOrgContextStore.getState();
+    const { branchId: storeBranchId } = useOrgContextStore.getState();
+    const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
     if (!branchId) return;
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
     })
       .then(r => r.json())
-      .then((data: { items?: PinEntryMember[] }) => {
-        const found = (data.items ?? []).find((m: PinEntryMember) => m.id === memberId);
+      .then((data: { data?: PinEntryMember[]; items?: PinEntryMember[] }) => {
+        const found = (data.data ?? data.items ?? []).find((m: PinEntryMember) => m.id === memberId);
         if (found) setMember(found);
       })
       .catch(() => {});
   }, [memberId]);
 
   async function handleSubmit(pin: string): Promise<VerifyPinResult | void> {
-    const { orgId, branchId } = useOrgContextStore.getState();
+    const { orgId: storeOrgId, branchId: storeBranchId } = useOrgContextStore.getState();
+    const orgId = storeOrgId ?? localStorage.getItem('currentOrgId');
+    const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
     if (!orgId || !branchId) {
       setErrorMessage('Missing org context');
       return;

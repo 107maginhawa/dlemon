@@ -3,7 +3,7 @@
  *
  * Covers FR3.x:
  * - DentalAppointment: dental-specific appointment wrapping the generic booking
- * - Status lifecycle: scheduled -> checkedIn -> completed | cancelled | noShow
+ * - Status lifecycle: scheduled -> checked_in -> completed | cancelled | no_show
  * - Check-in: creates a draft DentalVisit linked to the appointment
  * - Walk-in support, operatory assignment, procedure type
  * - No-show is reversible (can revert to completed)
@@ -26,10 +26,10 @@ using TypeSpec.OpenAPI;
 
 enum AppointmentStatus {
   scheduled,
-  checkedIn,
+  checked_in,
   completed,
   cancelled,
-  noShow,
+  no_show,
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ model DentalAppointment {
   branchId: UUID;
   scheduledAt: utcDateTime;
   durationMinutes: int32;
-  procedureType: string;
+  serviceType: string;
   operatoryId?: UUID;
   walkIn: boolean;
   status: AppointmentStatus;
@@ -55,7 +55,7 @@ model DentalAppointment {
   notes?: string;
   cancelledAt?: utcDateTime;
   cancellationReason?: string;
-  noShowAt?: utcDateTime;
+  no_showAt?: utcDateTime;
 }
 
 model CreateAppointmentRequest {
@@ -64,7 +64,7 @@ model CreateAppointmentRequest {
   branchId: UUID;
   scheduledAt: utcDateTime;
   durationMinutes: int32;
-  procedureType: string;
+  serviceType: string;
   operatoryId?: UUID;
   walkIn?: boolean;
   notes?: string;
@@ -73,7 +73,7 @@ model CreateAppointmentRequest {
 model UpdateAppointmentRequest {
   scheduledAt?: utcDateTime;
   durationMinutes?: int32;
-  procedureType?: string;
+  serviceType?: string;
   operatoryId?: UUID;
   notes?: string;
   status?: AppointmentStatus;

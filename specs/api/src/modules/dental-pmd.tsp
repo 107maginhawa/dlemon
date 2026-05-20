@@ -123,6 +123,17 @@ namespace DentalPMDModule {
       @query patientId: UUID
     ): ApiOkResponse<PaginatedResponse<PMDDocument>>
       | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{visitId}/pmd/export")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("exportPMD")
+    exportPMD(
+      @path visitId: UUID
+    ): ApiOkResponse<PMDDocument>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   interface ImportedPMDManagement {
@@ -145,6 +156,17 @@ namespace DentalPMDModule {
     listImported(
       @query patientId: UUID
     ): ApiOkResponse<PaginatedResponse<ImportedPMD>>
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/pmd/imported/{id}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getImportedPMD")
+    getImportedPMD(
+      @path id: UUID
+    ): ApiOkResponse<ImportedPMD>
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }
 }

@@ -6,22 +6,20 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { OrganizationRepository } from './organization.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
 
 describe('OrganizationRepository', () => {
   let repo: OrganizationRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new OrganizationRepository(db);
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE

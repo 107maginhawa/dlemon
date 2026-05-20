@@ -1,0 +1,411 @@
+<mxfile>
+  <diagram name="Default" id="pm-default">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Dimmed backdrop -->
+        <mxCell id="pm-backdrop" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=none;opacity=40;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+        <!-- Modal panel -->
+        <mxCell id="pm-modal" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="440" y="110" width="560" height="680" as="geometry"/>
+        </mxCell>
+        <!-- Header: "Payment" title -->
+        <mxCell id="pm-header-title" value="Payment" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=18;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="472" y="126" width="200" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Close button -->
+        <mxCell id="pm-header-close" value="✕" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#4A6B7A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="956" y="126" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <!-- Header divider -->
+        <mxCell id="pm-header-divider" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="440" y="162" width="560" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Invoice Card -->
+        <mxCell id="pm-invoice-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="175" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-number" value="Invoice #INV-2026-0324" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="179" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-total" value="Total: ₱8,500" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="201" width="120" height="20" as="geometry"/>
+        </mxCell>
+        <!-- Open badge (green outline) -->
+        <mxCell id="pm-invoice-badge" value="Open" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="910" y="190" width="52" height="22" as="geometry"/>
+        </mxCell>
+        <!-- PWD Discount toggle row -->
+        <mxCell id="pm-pwd-label" value="PWD Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="239" width="160" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pwd-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="239" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <!-- Senior Citizen Discount toggle row -->
+        <mxCell id="pm-senior-label" value="Senior Citizen Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="271" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-senior-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="271" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <!-- Applied Payments section header -->
+        <mxCell id="pm-applied-header" value="Applied Payments" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="307" width="200" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Payment Card 1: Cash -->
+        <mxCell id="pm-pay1-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="337" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay1-icon" value="$" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="476" y="341" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay1-method" value="Cash" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="341" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay1-amount" value="₱5,000" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="600" y="341" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay1-badge" value="Confirmed" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="343" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay1-attr" value="Received by: Dr. Santos" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=11;fontColor=#71717A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="363" width="200" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Payment Card 2: Credit Card -->
+        <mxCell id="pm-pay2-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="397" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay2-icon" value="■" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="476" y="401" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay2-method" value="Credit Card" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="401" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay2-amount" value="₱2,000" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="620" y="401" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay2-badge" value="Confirmed" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="403" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pay2-attr" value="Received by: Dr. Santos" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=11;fontColor=#71717A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="423" width="200" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Remaining Balance bar (amber) -->
+        <mxCell id="pm-balance-bar" value="" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="461" width="512" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-balance-label" value="Remaining Balance" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#92400E;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="461" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-balance-amount" value="₱1,500" style="text;html=1;align=right;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#92400E;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="800" y="461" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Add Payment form row: Select (2/3) + Input (1/3) -->
+        <mxCell id="pm-add-label" value="Add Payment" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="509" width="160" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Method select (2/3 width) -->
+        <mxCell id="pm-method-select" value="Cash                                    ▾" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#18181B;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="464" y="539" width="332" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Amount input (1/3 width) -->
+        <mxCell id="pm-amount-input" value="₱0.00" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#71717A;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="804" y="539" width="172" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Pay Exact ghost link -->
+        <mxCell id="pm-pay-exact" value="Pay Exact" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=12;fontColor=#1E3A5F;fontStyle=4;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="579" width="76" height="20" as="geometry"/>
+        </mxCell>
+        <!-- Generate Payment Link button -->
+        <mxCell id="pm-gen-link" value="Generate Payment Link" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="607" width="512" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Separator -->
+        <mxCell id="pm-separator" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="464" y="655" width="512" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Receipt section -->
+        <mxCell id="pm-receipt-label" value="Receipt" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="668" width="80" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Receipt ghost buttons -->
+        <mxCell id="pm-receipt-print" value="Print Receipt" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="694" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-receipt-email" value="Send via Email" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="632" y="694" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-receipt-sms" value="Send via SMS" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="800" y="694" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <!-- Pipe separators between receipt buttons -->
+        <mxCell id="pm-receipt-sep1" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="624" y="694" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-receipt-sep2" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="792" y="694" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <!-- Footer: Complete button (full-width amber) -->
+        <mxCell id="pm-complete-btn" value="Complete" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=#FFCC5E;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="738" width="512" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Empty" id="pm-empty">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Dimmed backdrop -->
+        <mxCell id="pm-backdrop" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=none;opacity=40;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+        <!-- Modal panel -->
+        <mxCell id="pm-modal" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="440" y="110" width="560" height="680" as="geometry"/>
+        </mxCell>
+        <!-- Header -->
+        <mxCell id="pm-header-title" value="Payment" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=18;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="472" y="126" width="200" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-header-close" value="✕" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#4A6B7A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="956" y="126" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-header-divider" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="440" y="162" width="560" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Invoice Card (same) -->
+        <mxCell id="pm-invoice-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="175" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-number" value="Invoice #INV-2026-0324" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="179" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-total" value="Total: ₱8,500" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="201" width="120" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-badge" value="Open" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="910" y="190" width="52" height="22" as="geometry"/>
+        </mxCell>
+        <!-- PWD/Senior toggles (same) -->
+        <mxCell id="pm-pwd-label" value="PWD Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="239" width="160" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pwd-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="239" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-senior-label" value="Senior Citizen Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="271" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-senior-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="271" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <!-- Applied Payments: EMPTY STATE -->
+        <mxCell id="pm-empty-section" value="Applied Payments" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="307" width="200" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Empty card -->
+        <mxCell id="pm-empty-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="337" width="512" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-text" value="No payments recorded yet" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#71717A;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="464" y="352" width="512" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-hint" value="Add a payment below to get started" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=12;fontColor=#A1A1AA;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="464" y="374" width="512" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Remaining Balance bar (full total) -->
+        <mxCell id="pm-empty-balance-bar" value="" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="429" width="512" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-balance-label" value="Remaining Balance" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#92400E;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="429" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-balance-amount" value="₱8,500" style="text;html=1;align=right;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#92400E;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="800" y="429" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Add Payment form row -->
+        <mxCell id="pm-empty-add-label" value="Add Payment" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="477" width="160" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-method-select" value="Cash                                    ▾" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#18181B;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="464" y="507" width="332" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-amount-input" value="₱0.00" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#71717A;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="804" y="507" width="172" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-pay-exact" value="Pay Exact" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=12;fontColor=#1E3A5F;fontStyle=4;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="547" width="76" height="20" as="geometry"/>
+        </mxCell>
+        <!-- Generate Payment Link -->
+        <mxCell id="pm-empty-gen-link" value="Generate Payment Link" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#E5E5E5;strokeWidth=1;fontFamily=Inter;fontSize=14;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="575" width="512" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Separator -->
+        <mxCell id="pm-empty-separator" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="464" y="623" width="512" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Receipt section -->
+        <mxCell id="pm-empty-receipt-label" value="Receipt" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="636" width="80" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-receipt-print" value="Print Receipt" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#A1A1AA;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="662" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-receipt-sep1" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="624" y="662" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-receipt-email" value="Send via Email" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#A1A1AA;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="632" y="662" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-receipt-sep2" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="792" y="662" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-empty-receipt-sms" value="Send via SMS" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#A1A1AA;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="800" y="662" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <!-- Footer -->
+        <mxCell id="pm-empty-complete-btn" value="Complete" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=#FFCC5E;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="738" width="512" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Fully Paid" id="pm-fully-paid">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Dimmed backdrop -->
+        <mxCell id="pm-backdrop" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=none;opacity=40;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1440" height="900" as="geometry"/>
+        </mxCell>
+        <!-- Modal panel -->
+        <mxCell id="pm-modal" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;shadow=1;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="440" y="110" width="560" height="680" as="geometry"/>
+        </mxCell>
+        <!-- Header -->
+        <mxCell id="pm-header-title" value="Payment" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=18;fontStyle=1;fontColor=#1E3A5F;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="472" y="126" width="200" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-header-close" value="✕" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#4A6B7A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="956" y="126" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-header-divider" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="440" y="162" width="560" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Invoice Card -->
+        <mxCell id="pm-invoice-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FAFAF8;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="175" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-number" value="Invoice #INV-2026-0324" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="179" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-invoice-total" value="Total: ₱8,500" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="201" width="120" height="20" as="geometry"/>
+        </mxCell>
+        <!-- Paid badge (green filled) -->
+        <mxCell id="pm-paid-invoice-badge" value="Paid" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#22C55E;strokeColor=none;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="910" y="190" width="52" height="22" as="geometry"/>
+        </mxCell>
+        <!-- PWD/Senior toggles -->
+        <mxCell id="pm-pwd-label" value="PWD Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="239" width="160" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-pwd-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="239" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-senior-label" value="Senior Citizen Discount" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="271" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-senior-switch" value="●" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#E5E5E5;strokeColor=#E5E5E5;fontFamily=Inter;fontSize=16;fontColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=3;" vertex="1" parent="1">
+          <mxGeometry x="932" y="271" width="44" height="24" as="geometry"/>
+        </mxCell>
+        <!-- Applied Payments -->
+        <mxCell id="pm-paid-applied-header" value="Applied Payments" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="307" width="200" height="22" as="geometry"/>
+        </mxCell>
+        <!-- Payment Card 1 -->
+        <mxCell id="pm-paid-pay1-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="337" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay1-icon" value="$" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="476" y="341" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay1-method" value="Cash" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="341" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay1-amount" value="₱5,000" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="600" y="341" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay1-badge" value="Confirmed" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="343" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay1-attr" value="Received by: Dr. Santos" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=11;fontColor=#71717A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="363" width="200" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Payment Card 2 -->
+        <mxCell id="pm-paid-pay2-card" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E5E5E5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="397" width="512" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay2-icon" value="■" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="476" y="401" width="28" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay2-method" value="Credit Card" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="401" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay2-amount" value="₱3,500" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="620" y="401" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay2-badge" value="Confirmed" style="rounded=1;arcSize=50;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=#22C55E;strokeWidth=1;fontFamily=Inter;fontSize=10;fontStyle=1;fontColor=#22C55E;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="403" width="72" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-pay2-attr" value="Received by: Dr. Santos" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=11;fontColor=#71717A;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="510" y="423" width="200" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Fully Paid Balance bar (GREEN) -->
+        <mxCell id="pm-paid-balance-bar" value="" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#22C55E;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="464" y="461" width="512" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-balance-label" value="All payments received" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#166534;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="480" y="461" width="200" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-balance-check" value="✓" style="text;html=1;align=right;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#166534;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="900" y="461" width="60" height="36" as="geometry"/>
+        </mxCell>
+        <!-- Separator -->
+        <mxCell id="pm-paid-separator" value="" style="line;strokeColor=#E5E5E5;strokeWidth=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="464" y="513" width="512" height="1" as="geometry"/>
+        </mxCell>
+        <!-- Receipt section -->
+        <mxCell id="pm-paid-receipt-label" value="Receipt" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#18181B;whiteSpace=nowrap;overflow=hidden;" vertex="1" parent="1">
+          <mxGeometry x="464" y="526" width="80" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-receipt-print" value="Print Receipt" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="552" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-receipt-sep1" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="624" y="552" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-receipt-email" value="Send via Email" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="632" y="552" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-receipt-sep2" value="|" style="text;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=13;fontColor=#E5E5E5;" vertex="1" parent="1">
+          <mxGeometry x="792" y="552" width="8" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm-paid-receipt-sms" value="Send via SMS" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=none;strokeColor=none;fontFamily=Inter;fontSize=13;fontColor=#18181B;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="800" y="552" width="160" height="32" as="geometry"/>
+        </mxCell>
+        <!-- Footer -->
+        <mxCell id="pm-paid-complete-btn" value="Complete" style="rounded=1;arcSize=6;whiteSpace=nowrap;overflow=hidden;html=1;fillColor=#FFCC5E;strokeColor=#FFCC5E;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#461402;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="464" y="738" width="512" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

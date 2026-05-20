@@ -11,6 +11,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { setupDentalOrg, createDentalPatient, createAppointment } from './fixtures';
 
 const API = 'http://localhost:7213';
 const APP = 'http://localhost:3003';
@@ -40,6 +41,7 @@ async function signUpAndSeedOrg(page: Page) {
     throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
 
   // Create person profile to bypass onboarding redirect
   await page.evaluate(async (api) => {
@@ -72,13 +74,37 @@ async function signUpAndSeedOrg(page: Page) {
     return res.json();
   }, { api: API, orgId: orgRes.id });
 
-  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
-    localStorage.setItem('currentOrgId', orgId);
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, { orgId: orgRes.id, branchId: branchRes.id });
+  // Create member linked to current user (required for dentistMemberId in appointments)
+  const memberRes = await page.evaluate(
+    async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+      const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+      if (!sessionRes.ok) throw new Error(`Session fetch failed: ${sessionRes.status}`);
+      const session = await sessionRes.json() as any;
+      const personId: string = session?.user?.id;
+      if (!personId) throw new Error('Could not determine personId from session');
+      const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Calendar Owner', role: 'dentist_owner', personId }),
+      });
+      if (!res.ok) throw new Error(`Member creation failed: ${res.status}`);
+      return res.json() as any;
+    },
+    { api: API, orgId: orgRes.id, branchId: branchRes.id },
+  );
 
-  return { orgId: orgRes.id, branchId: branchRes.id };
+  await page.evaluate(
+    ({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
+      localStorage.setItem('currentOrgId', orgId);
+      localStorage.setItem('currentBranchId', branchId);
+      localStorage.setItem('currentMemberId', memberId);
+      localStorage.setItem('currentMemberRole', 'dentist_owner');
+    },
+    { orgId: orgRes.id, branchId: branchRes.id, memberId: memberRes.id },
+  );
+
+  return { orgId: orgRes.id, branchId: branchRes.id, memberId: memberRes.id };
 }
 
 test.describe('Calendar UI (FR3.x)', () => {
@@ -171,7 +197,7 @@ test.describe('Calendar UI (FR3.x)', () => {
           dentistMemberId: memberId,
           scheduledAt: today,
           durationMinutes: 30,
-          procedureType: 'Check-up',
+          serviceType: 'Check-up',
         }),
       });
       if (!apptRes.ok) return null;
@@ -202,5 +228,238 @@ test.describe('Calendar UI (FR3.x)', () => {
     }
     // If no check-in button visible (appointment not on today's calendar view),
     // the test passes as long as the page loaded without errors
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-SCHED-04: Cancel appointment
+// ---------------------------------------------------------------------------
+
+test.describe('Scheduling: Cancel Appointment (AC-SCHED-04)', () => {
+  test('cancel appointment returns status cancelled', async ({ page }) => {
+    const { branchId, memberId } = await signUpAndSeedOrg(page);
+
+    const result = await page.evaluate(async ({ api, branchId, memberId }: { api: string; branchId: string; memberId: string }) => {
+      // Create patient
+      const patientRes = await fetch(`${api}/dental/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Cancel Test Patient', consentGiven: true }),
+      });
+      if (!patientRes.ok) return null;
+      const patient = await patientRes.json() as any;
+
+      // Create appointment
+      const apptRes = await fetch(`${api}/dental/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientId: patient.id,
+          branchId,
+          dentistMemberId: memberId,
+          scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+          durationMinutes: 30,
+          serviceType: 'Cleaning',
+        }),
+      });
+      if (!apptRes.ok) return null;
+      const appt = await apptRes.json() as any;
+
+      // Cancel appointment (returns 204 No Content)
+      const cancelRes = await fetch(`${api}/dental/appointments/${appt.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!cancelRes.ok) return { ok: false, status: cancelRes.status };
+
+      // GET to verify the cancellation persisted
+      const getRes = await fetch(`${api}/dental/appointments/${appt.id}`, { credentials: 'include' });
+      if (!getRes.ok) return { ok: false, status: getRes.status };
+      const updated = await getRes.json() as any;
+      return { ok: true, status: updated.status ?? updated.appointmentStatus };
+    }, { api: API, branchId, memberId });
+
+    if (!result) throw new Error('Seeding failed: appointment cancellation setup returned null');
+
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe('cancelled');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-SCHED-01: Create appointment
+// ---------------------------------------------------------------------------
+
+test.describe('Scheduling: Create Appointment (AC-SCHED-01)', () => {
+  test('created appointment has status scheduled and appears in API list', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, { displayName: 'Sched01 Patient', branchId });
+
+    const tomorrow = new Date(Date.now() + 86400000).toISOString();
+    const appt = await createAppointment(page, {
+      patientId,
+      branchId,
+      memberId,
+      scheduledAt: tomorrow,
+      durationMinutes: 45,
+      serviceType: 'Cleaning',
+    });
+
+    expect(appt.id).toBeTruthy();
+    expect(appt.status).toBe('scheduled');
+    expect(appt.durationMinutes).toBe(45);
+
+    // Verify appointment appears when listing branch appointments
+    const listed = await page.evaluate(async ({ api, branchId, apptId }: { api: string; branchId: string; apptId: string }) => {
+      const r = await fetch(`${api}/dental/appointments?branchId=${branchId}`, { credentials: 'include' });
+      if (!r.ok) return null;
+      const body = await r.json() as any;
+      const items: any[] = body.items ?? body ?? [];
+      return items.find((a: any) => a.id === apptId) ?? null;
+    }, { api: API, branchId, apptId: appt.id });
+
+    expect(listed).not.toBeNull();
+    expect(listed.status).toBe('scheduled');
+  });
+
+  test('double-booking same dentist+slot returns 201 with DOUBLE_BOOKING warning (soft-warn, FR3.7)', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
+    const patientA = await createDentalPatient(page, { displayName: 'SchedA Patient', branchId });
+    const patientB = await createDentalPatient(page, { displayName: 'SchedB Patient', branchId });
+
+    const scheduledAt = new Date(Date.now() + 86400000).toISOString();
+
+    const result = await page.evaluate(async ({ api, branchId, memberId, patientA, patientB, scheduledAt }: any) => {
+      // First booking
+      const r1 = await fetch(`${api}/dental/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ patientId: patientA, branchId, dentistMemberId: memberId, scheduledAt, durationMinutes: 30, serviceType: 'Exam' }),
+      });
+      if (!r1.ok) return { ok: false, step: 'first', status: r1.status };
+
+      // Second booking — same dentist + same slot (double-book)
+      const r2 = await fetch(`${api}/dental/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ patientId: patientB, branchId, dentistMemberId: memberId, scheduledAt, durationMinutes: 30, serviceType: 'Exam' }),
+      });
+      const body2 = await r2.json() as any;
+      return { ok: true, status: r2.status, warning: body2.warning ?? body2.warnings ?? null };
+    }, { api: API, branchId, memberId, patientA, patientB, scheduledAt });
+
+    // FR3.7: double-booking is non-blocking (201) with a DOUBLE_BOOKING warning
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(201);
+    expect(result.warning).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-SCHED-03: Check in from appointment
+// ---------------------------------------------------------------------------
+
+test.describe('Scheduling: Check In (AC-SCHED-03)', () => {
+  test('check-in changes status to checked_in and creates a visit record', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, { displayName: 'Checkin03 Patient', branchId });
+
+    // Schedule appointment for now (check-in requires scheduled status)
+    const appt = await createAppointment(page, {
+      patientId,
+      branchId,
+      memberId,
+      scheduledAt: new Date().toISOString(),
+      durationMinutes: 30,
+      serviceType: 'Check-up',
+    });
+
+    expect(appt.status).toBe('scheduled');
+
+    // Check in
+    const result = await page.evaluate(async ({ api, apptId }: { api: string; apptId: string }) => {
+      const r = await fetch(`${api}/dental/appointments/${apptId}/check-in`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!r.ok) return { ok: false, status: r.status };
+      const body = await r.json() as any;
+      return { ok: true, appointmentStatus: body.appointment?.status, visitId: body.visitId };
+    }, { api: API, apptId: appt.id });
+
+    expect(result.ok).toBe(true);
+    expect(result.appointmentStatus).toBe('checked_in');
+    expect(result.visitId).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-SCHED-02: Edit appointment
+// ---------------------------------------------------------------------------
+
+test.describe('Scheduling: Edit Appointment (AC-SCHED-02)', () => {
+  test('edit appointment persists updated time and notes', async ({ page }) => {
+    const { branchId, memberId } = await signUpAndSeedOrg(page);
+
+    const result = await page.evaluate(async ({ api, branchId, memberId }: { api: string; branchId: string; memberId: string }) => {
+      // Create patient
+      const patientRes = await fetch(`${api}/dental/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Edit Test Patient', consentGiven: true }),
+      });
+      if (!patientRes.ok) return null;
+      const patient = await patientRes.json() as any;
+
+      // Create appointment
+      const originalTime = new Date(Date.now() + 86400000).toISOString();
+      const apptRes = await fetch(`${api}/dental/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientId: patient.id,
+          branchId,
+          dentistMemberId: memberId,
+          scheduledAt: originalTime,
+          durationMinutes: 30,
+          serviceType: 'Exam',
+        }),
+      });
+      if (!apptRes.ok) return null;
+      const appt = await apptRes.json() as any;
+
+      // Edit appointment — change duration and add notes
+      const newTime = new Date(Date.now() + 172800000).toISOString();
+      const patchRes = await fetch(`${api}/dental/appointments/${appt.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          scheduledAt: newTime,
+          durationMinutes: 60,
+          notes: 'Updated via E2E test',
+        }),
+      });
+      if (!patchRes.ok) return { ok: false, status: patchRes.status };
+      const updated = await patchRes.json() as any;
+      return {
+        ok: true,
+        durationMinutes: updated.durationMinutes,
+        notes: updated.notes,
+        scheduledAt: updated.scheduledAt,
+      };
+    }, { api: API, branchId, memberId });
+
+    if (!result) throw new Error('Seeding failed: appointment update setup returned null');
+
+    expect(result.ok).toBe(true);
+    expect(result.durationMinutes).toBe(60);
+    expect(result.notes).toBe('Updated via E2E test');
   });
 });

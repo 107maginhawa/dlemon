@@ -41,6 +41,7 @@ export interface WorkspacePaymentModalProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// price contract: priceCents (API) ÷ 100 → dollars (display)
 function formatCents(cents: number): string {
   return `${CURRENCY_SYMBOL}${(cents / 100).toLocaleString(APP_LOCALE, {
     minimumFractionDigits: 2,
@@ -178,11 +179,15 @@ export function WorkspacePaymentModal({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   async function handleCreateInvoice() {
-    const inv = await createInvoice.mutateAsync({
-      patientId,
-      visitId: visitId ?? undefined,
-    });
-    setInvoiceDetailId(inv.id);
+    try {
+      const inv = await createInvoice.mutateAsync({
+        patientId,
+        visitId: visitId ?? undefined,
+      });
+      setInvoiceDetailId(inv.id);
+    } catch {
+      // error state surfaced via createInvoice.isError / createInvoice.error
+    }
   }
 
   if (!open) return null;

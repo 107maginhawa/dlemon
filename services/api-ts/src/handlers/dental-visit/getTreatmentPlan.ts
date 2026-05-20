@@ -13,7 +13,8 @@ import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalTreatments } from './repos/treatment.schema';
 import { dentalVisits } from './repos/visit.schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 
 export async function getTreatmentPlan(ctx: BaseContext) {
   const user = ctx.get('user');
@@ -22,10 +23,9 @@ export async function getTreatmentPlan(ctx: BaseContext) {
   const patientId = ctx.req.param('patientId');
   if (!patientId) throw new ValidationError('patientId is required');
   const branchId = ctx.req.query('branchId');
-  if (!branchId) throw new ValidationError('branchId query parameter is required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchAccess(db, user.id, branchId);
+  if (branchId) await assertBranchAccess(db, user.id, branchId);
 
   const logger = ctx.get('logger');
 
@@ -37,18 +37,27 @@ export async function getTreatmentPlan(ctx: BaseContext) {
 
   const visitIds = visits.map(v => v.id);
 
+  // Fetch latest accepted version (0 if none)
+  const [latestVersion] = await db
+    .select({ version: treatmentPlanVersions.version })
+    .from(treatmentPlanVersions)
+    .where(eq(treatmentPlanVersions.patientId, patientId))
+    .orderBy(desc(treatmentPlanVersions.version))
+    .limit(1);
+  const currentVersion = latestVersion?.version ?? 0;
+
   if (visitIds.length === 0) {
-    return ctx.json({ patientId, treatments: [], totalEstimateCents: 0, toothCount: 0 }, 200);
+    return ctx.json({ patientId, treatments: [], totalEstimateCents: 0, toothCount: 0, version: currentVersion }, 200);
   }
 
-  // Fetch all pending (diagnosed/planned) treatments
+  // Fetch all pending (diagnosed/planned/declined) treatments
   const pendingTreatments = await db
     .select()
     .from(dentalTreatments)
     .where(
       and(
         inArray(dentalTreatments.visitId, visitIds),
-        inArray(dentalTreatments.status, ['diagnosed', 'planned'])
+        inArray(dentalTreatments.status, ['diagnosed', 'planned', 'declined'])
       )
     );
 
@@ -68,6 +77,7 @@ export async function getTreatmentPlan(ctx: BaseContext) {
       status: t.status,
       conditionCode: t.conditionCode,
       visitId: t.visitId,
+      reason: t.refusalReason ?? undefined,
     });
   }
 
@@ -75,6 +85,7 @@ export async function getTreatmentPlan(ctx: BaseContext) {
 
   return ctx.json({
     patientId,
+    version: currentVersion,
     totalEstimateCents,
     treatmentCount: pendingTreatments.length,
     toothCount: Object.keys(byTooth).filter(k => k !== 'general').length,
@@ -90,6 +101,7 @@ export async function getTreatmentPlan(ctx: BaseContext) {
       conditionCode: t.conditionCode,
       visitId: t.visitId,
       carriedOver: t.carriedOver,
+      reason: t.refusalReason ?? undefined,
     })),
   }, 200);
 }

@@ -9,6 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { VisitRepository, type VisitFilters } from './repos/visit.repo';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { DentalVisitStatus } from './repos/visit.schema';
 import type { User } from '@/types/auth';
 
@@ -32,9 +33,9 @@ export async function listDentalVisits(ctx: HandlerContext) {
   const repo = new VisitRepository(db);
   const visits = await repo.findMany(filters);
 
-  const limit = parseInt(ctx.req.query('limit') ?? '20');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 20 });
+  const totalCount = visits.length;
   const page = visits.slice(offset, offset + limit);
 
-  return ctx.json({ items: page, total: visits.length, limit, offset });
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

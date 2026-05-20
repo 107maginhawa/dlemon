@@ -13,19 +13,30 @@
 import { createDatabase } from '@/core/database';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
-import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { eq } from 'drizzle-orm';
+
+// Seed data modules
+import {
+  ORG_ID, BRANCH_ID, OWNER_PERSON_ID,
+  DR_REYES_MEMBERSHIP_ID, ANA_SANTOS_MEMBERSHIP_ID,
+  PERSON_JUAN_ID, PERSON_ROSA_ID, PERSON_CARLOS_ID, PERSON_LIZA_ID, PERSON_BEN_ID,
+  PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID,
+} from './seed-data/ids';
+import { seedTreatmentTemplates } from './seed-data/treatment-templates';
+import { seedMedicalHistory } from './seed-data/medical-history';
+import { seedAppointments } from './seed-data/appointments';
+import { seedVisits } from './seed-data/visits';
+import { seedBilling } from './seed-data/billing';
+import { seedClinical } from './seed-data/clinical';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 
 const db = createDatabase({ url: DATABASE_URL });
 
-// Fixed IDs for reproducibility
-const ORG_ID    = 'a0000000-0000-1000-8000-000000000001';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000001';
-const OWNER_PERSON_ID = 'c0000000-0000-1000-8000-000000000001';
+// Fixed IDs imported from seed-data/ids.ts
 
 async function seed() {
   console.log('🦷 Seeding Dentalemon demo data...\n');
@@ -80,9 +91,9 @@ async function seed() {
   if (existingPerson.length === 0) {
     await db.insert(persons).values({
       id: ownerId,
-      email: 'demo@dentalemon.com',
       firstName: 'Maria',
       lastName: 'Reyes',
+      contactInfo: { email: 'demo@dentalemon.com' },
     }).onConflictDoNothing();
   }
 
@@ -131,44 +142,34 @@ async function seed() {
   // 5. Create memberships (staff)
   // ------------------------------------------------------------------
   console.log('4. Creating staff memberships...');
-  const memberRepo = new MembershipRepository(db);
   const pinHashReyes = await Bun.password.hash('123456');
   const pinHashSantos = await Bun.password.hash('654321');
 
   // Dr. Reyes — dentist_owner (linked to cloud account via personId)
-  const existingReyes = await memberRepo.listByBranch(BRANCH_ID)
-    .then(members => members.find(m => m.personId === ownerId));
-  if (existingReyes) {
-    console.log('   ℹ️  Dr. Reyes membership already exists');
-  } else {
-    await memberRepo.createOne({
-      branchId: BRANCH_ID,
-      personId: ownerId,
-      displayName: 'Dr. Maria Reyes',
-      role: 'dentist_owner',
-      status: 'active',
-      pinHash: pinHashReyes,
-      pinFailedAttempts: 0,
-    });
-    console.log('   ✅ Dr. Maria Reyes (dentist_owner, PIN: 123456)');
-  }
+  // Use fixed ID for reproducibility
+  await db.insert(dentalMemberships).values({
+    id: DR_REYES_MEMBERSHIP_ID,
+    branchId: BRANCH_ID,
+    personId: ownerId,
+    displayName: 'Dr. Maria Reyes',
+    role: 'dentist_owner',
+    status: 'active',
+    pinHash: pinHashReyes,
+    pinFailedAttempts: 0,
+  }).onConflictDoNothing();
+  console.log('   ✅ Dr. Maria Reyes (dentist_owner, PIN: 123456)');
 
   // Ana Santos — staff_full (PIN only, no cloud account)
-  const existingSantos = await memberRepo.listByBranch(BRANCH_ID)
-    .then(members => members.find(m => m.displayName === 'Ana Santos'));
-  if (existingSantos) {
-    console.log('   ℹ️  Ana Santos membership already exists');
-  } else {
-    await memberRepo.createOne({
-      branchId: BRANCH_ID,
-      displayName: 'Ana Santos',
-      role: 'staff_full',
-      status: 'active',
-      pinHash: pinHashSantos,
-      pinFailedAttempts: 0,
-    });
-    console.log('   ✅ Ana Santos (staff_full, PIN: 654321)');
-  }
+  await db.insert(dentalMemberships).values({
+    id: ANA_SANTOS_MEMBERSHIP_ID,
+    branchId: BRANCH_ID,
+    displayName: 'Ana Santos',
+    role: 'staff_full',
+    status: 'active',
+    pinHash: pinHashSantos,
+    pinFailedAttempts: 0,
+  }).onConflictDoNothing();
+  console.log('   ✅ Ana Santos (staff_full, PIN: 654321)');
 
   // ------------------------------------------------------------------
   // 6. Create demo patients
@@ -176,36 +177,44 @@ async function seed() {
   console.log('5. Creating demo patients...');
 
   const demoPatients = [
-    { firstName: 'Juan', lastName: 'dela Cruz', email: 'juan@example.com', birthday: '1985-03-15', sex: 'M' },
-    { firstName: 'Rosa', lastName: 'Reyes', email: 'rosa@example.com', birthday: '1992-07-22', sex: 'F' },
-    { firstName: 'Carlos', lastName: 'Santos', email: 'carlos@example.com', birthday: '1978-11-08', sex: 'M' },
-    { firstName: 'Liza', lastName: 'Manalang', email: 'liza@example.com', birthday: '2001-04-30', sex: 'F' },
-    { firstName: 'Ben', lastName: 'Aquino', email: 'ben@example.com', birthday: '1965-09-12', sex: 'M' },
+    { personId: PERSON_JUAN_ID, patientId: PATIENT_JUAN_ID, firstName: 'Juan', lastName: 'dela Cruz', dateOfBirth: '1985-03-15', gender: 'male' as const },
+    { personId: PERSON_ROSA_ID, patientId: PATIENT_ROSA_ID, firstName: 'Rosa', lastName: 'Reyes', dateOfBirth: '1992-07-22', gender: 'female' as const },
+    { personId: PERSON_CARLOS_ID, patientId: PATIENT_CARLOS_ID, firstName: 'Carlos', lastName: 'Santos', dateOfBirth: '1978-11-08', gender: 'male' as const },
+    { personId: PERSON_LIZA_ID, patientId: PATIENT_LIZA_ID, firstName: 'Liza', lastName: 'Manalang', dateOfBirth: '2001-04-30', gender: 'female' as const },
+    { personId: PERSON_BEN_ID, patientId: PATIENT_BEN_ID, firstName: 'Ben', lastName: 'Aquino', dateOfBirth: '1965-09-12', gender: 'male' as const },
   ];
 
   for (const p of demoPatients) {
-    // Create person
-    const [person] = await db.insert(persons).values({
-      email: p.email,
+    // Create person with fixed ID
+    await db.insert(persons).values({
+      id: p.personId,
       firstName: p.firstName,
       lastName: p.lastName,
-      phone: '+63 9 1234 5678',
-    }).onConflictDoNothing().returning();
+      dateOfBirth: p.dateOfBirth,
+      gender: p.gender,
+    }).onConflictDoNothing();
 
-    if (!person) {
-      console.log(`   ℹ️  ${p.firstName} ${p.lastName} already exists`);
-      continue;
-    }
-
-    // Create patient record
+    // Create patient record with fixed ID
     await db.insert(patients).values({
-      person: person.id,
+      id: p.patientId,
+      person: p.personId,
       preferredBranchId: BRANCH_ID,
       status: 'active',
     }).onConflictDoNothing();
 
     console.log(`   ✅ Patient: ${p.firstName} ${p.lastName}`);
   }
+
+  // ------------------------------------------------------------------
+  // 7. Clinical seed data (modular)
+  // ------------------------------------------------------------------
+  console.log('6. Seeding clinical data...');
+  await seedTreatmentTemplates(db);
+  await seedMedicalHistory(db);
+  await seedAppointments(db);
+  await seedVisits(db);
+  await seedBilling(db);
+  await seedClinical(db);
 
   // ------------------------------------------------------------------
   // Done

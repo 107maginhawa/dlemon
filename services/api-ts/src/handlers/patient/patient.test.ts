@@ -297,7 +297,7 @@ describe('listPatients handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
-    expect(body.pagination).toBeDefined();
+    expect(body.pagination).not.toBeNull();
     expect(typeof body.pagination.totalCount).toBe('number');
   });
 

@@ -192,7 +192,7 @@ describe('verifyPin handler', () => {
 
     expect(res.status).toBe(429);
     const body = await res.json() as any;
-    expect(body.lockedUntil).toBeTruthy();
+    expect(body.lockedUntil).not.toBeNull();
   });
 
   test('FR9.3: returns 429 with 5-minute lockout after 10 failed attempts', async () => {
@@ -214,7 +214,7 @@ describe('verifyPin handler', () => {
 
     expect(res.status).toBe(429);
     const body = await res.json() as any;
-    expect(body.lockedUntil).toBeTruthy();
+    expect(body.lockedUntil).not.toBeNull();
     // Lockout at 10 attempts should be at least 4 minutes in the future (5-min lockout)
     const lockedUntilTime = new Date(body.lockedUntil).getTime();
     expect(lockedUntilTime).toBeGreaterThan(Date.now() + 4 * 60 * 1000);

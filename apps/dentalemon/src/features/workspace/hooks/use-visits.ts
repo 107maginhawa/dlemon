@@ -7,7 +7,7 @@
  * API: GET /dental/visits?patientId=
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { listDentalVisitsOptions } from '@monobase/sdk-ts/generated/react-query';
 
 export interface Visit {
   id: string;
@@ -27,21 +27,18 @@ interface UseVisitsOptions {
 
 export function useVisits({ patientId, branchId }: UseVisitsOptions) {
   const query = useQuery({
-    queryKey: ['dental-visits', patientId, branchId],
-    queryFn: async (): Promise<Visit[]> => {
-      const params = new URLSearchParams();
-      params.set('patientId', patientId);
-      if (branchId) params.set('branchId', branchId);
-      const res = await fetch(
-        `${apiBaseUrl}/dental/visits?${params.toString()}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to fetch visits (${res.status})`);
-      const data = await res.json();
-      const items: Visit[] = Array.isArray(data) ? data : (data.items ?? data.data ?? []);
+    ...listDentalVisitsOptions({
+      query: {
+        patientId: patientId as string,
+        ...(branchId ? { branchId: branchId as string } : {}),
+      },
+    }),
+    enabled: !!patientId,
+    select: (data) => {
+      const raw = data as unknown as { data?: Visit[] } | Visit[];
+      const items: Visit[] = Array.isArray(raw) ? raw : (raw?.data ?? []);
       return items;
     },
-    enabled: !!patientId,
   });
 
   const visits = query.data ?? [];

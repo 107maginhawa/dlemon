@@ -36,6 +36,20 @@ test.describe('First Launch Onboarding', () => {
       throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
     }
     await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+    await page.waitForLoadState('networkidle');
+
+    // Verify email so subsequent API calls succeed
+    await page.evaluate(async (api) => {
+      await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+    }, API);
+
+    // Get session personId for member creation
+    const personId = await page.evaluate(async (api) => {
+      const res = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+      const session = await res.json();
+      return session?.user?.id as string;
+    }, API);
+    expect(personId).toBeTruthy();
 
     // Create org via API
     const orgRes = await page.evaluate(async (api) => {
@@ -66,21 +80,21 @@ test.describe('First Launch Onboarding', () => {
     expect(branchRes.status).toBe(201);
     const branchId = branchRes.body.id;
 
-    // Create dentist-owner membership
-    const memberRes = await page.evaluate(async ({ api, branchId }) => {
-      const res = await fetch(`${api}/dental/org/members`, {
+    // Create dentist-owner membership (use org-scoped endpoint with personId)
+    const memberRes = await page.evaluate(async ({ api, orgId, branchId, personId }) => {
+      const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ branchId, displayName: 'Dr. Test Owner', role: 'dentist_owner', pin: '123456' }),
+        body: JSON.stringify({ displayName: 'Dr. Test Owner', role: 'dentist_owner', personId }),
       });
       return { status: res.status, body: await res.json() };
-    }, { api: API, branchId });
+    }, { api: API, orgId, branchId, personId });
 
     expect(memberRes.status).toBe(201);
 
-    // Create first patient
-    const patientRes = await page.evaluate(async (api) => {
+    // Create first patient (include branchId for association)
+    const patientRes = await page.evaluate(async ({ api, branchId }) => {
       const res = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,10 +103,12 @@ test.describe('First Launch Onboarding', () => {
           displayName: 'Maria Reyes',
           dateOfBirth: '1985-03-15',
           gender: 'female',
+          branchId,
+          consentGiven: true,
         }),
       });
       return { status: res.status, body: await res.json() };
-    }, API);
+    }, { api: API, branchId });
 
     expect(patientRes.status).toBe(201);
     expect(patientRes.body.id).toBeTruthy();

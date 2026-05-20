@@ -10,6 +10,7 @@ import { UnauthorizedError, ValidationError, NotFoundError, ForbiddenError } fro
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
 export async function listMedicalHistory(ctx: HandlerContext) {
@@ -31,9 +32,14 @@ export async function listMedicalHistory(ctx: HandlerContext) {
   const repo = new MedicalHistoryRepository(db);
 
   const items = await repo.findMany({ patientId });
-  const limit = parseInt(ctx.req.query('limit') ?? '50');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const totalCount = items.length;
   const page = items.slice(offset, offset + limit);
 
-  return ctx.json({ items: page, total: items.length, limit, offset });
+  const audit = ctx.get('audit') as any;
+  if (audit?.logEvent) {
+    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'medical-history', resource: patientId, description: 'Medical history listed for patient', details: { resultCount: items.length }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
+  }
+
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

@@ -3,9 +3,8 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useMedicalHistory, useMedicalHistoryMutations, medicalHistoryKey } from './use-medical-history';
+import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
@@ -13,24 +12,6 @@ const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
 const PATIENT_ID = 'patient-mh-test';
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 const mockEntries = [
   { id: 'e1', patientId: PATIENT_ID, entryType: 'condition', displayName: 'Diabetes Mellitus Type 2', code: 'E11', codeSystem: 'ICD-10', notes: null, active: true, onsetDate: null, resolvedDate: null, createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z' },
@@ -47,8 +28,9 @@ describe('useMedicalHistory — GET', () => {
   });
 
   test('returns entries on success (wrapped response)', async () => {
+    const pagination = { offset: 0, limit: 200, count: 2, totalCount: 2, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false };
     global.fetch = mock(() =>
-      jsonResponse({ items: mockEntries }),
+      jsonResponse({ data: mockEntries, pagination }),
     );
     const qc = freshClient();
     const { result } = renderHook(() => useMedicalHistory(PATIENT_ID), { wrapper: makeWrapper(qc) });

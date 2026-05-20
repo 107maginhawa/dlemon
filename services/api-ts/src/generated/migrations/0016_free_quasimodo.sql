@@ -1,0 +1,1 @@
+ALTER TABLE "dental_attachment" ADD COLUMN "deleted_at" timestamp;

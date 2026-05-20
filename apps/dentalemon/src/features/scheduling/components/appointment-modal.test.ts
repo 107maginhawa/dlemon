@@ -1,55 +1,16 @@
 /**
  * AppointmentModal component tests — pure logic helpers
  *
- * Tests: form validation, payload builder, duration formatter,
- * status badge props, check-in/cancel eligibility
+ * Tests: form validation, payload builder, and duration options
+ * against real production exports only.
  */
 
 import { describe, test, expect } from 'bun:test';
 import {
   validateAppointmentForm,
   buildAppointmentPayload,
+  DURATION_OPTIONS,
 } from './appointment-modal';
-
-// ---------------------------------------------------------------------------
-// Local helpers not exported by the component
-// ---------------------------------------------------------------------------
-
-function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const hrs = minutes / 60;
-  if (Number.isInteger(hrs)) return `${hrs} hr`;
-  return `${hrs} hr`;
-}
-
-function getStatusBadgeProps(status: string): { label: string; className: string } {
-  switch (status) {
-    case 'scheduled':
-      return { label: 'Scheduled', className: 'bg-blue-100 text-blue-700' };
-    case 'checkedIn':
-      return { label: 'Checked In', className: 'bg-green-100 text-green-700' };
-    case 'completed':
-      return { label: 'Completed', className: 'bg-green-100 text-green-700' };
-    case 'cancelled':
-      return { label: 'Cancelled', className: 'bg-gray-100 text-gray-500' };
-    case 'noShow':
-      return { label: 'No Show', className: 'bg-red-100 text-red-700' };
-    default:
-      return { label: status, className: 'bg-gray-100 text-gray-500' };
-  }
-}
-
-function canCheckIn(status: string): boolean {
-  return status === 'scheduled';
-}
-
-function canCancel(status: string): boolean {
-  return status === 'scheduled' || status === 'checkedIn';
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('AppointmentModal — form validation', () => {
   const valid = {
@@ -59,7 +20,7 @@ describe('AppointmentModal — form validation', () => {
     date: '2026-06-01',
     time: '09:00',
     durationMinutes: 30,
-    procedureType: 'Cleaning',
+    serviceType: 'Cleaning',
     notes: '',
     walkIn: false,
   };
@@ -69,7 +30,7 @@ describe('AppointmentModal — form validation', () => {
     expect(payload.patientId).toBe('p-1');
     expect(payload.scheduledAt).toBe('2026-06-01T09:00:00');
     expect(payload.durationMinutes).toBe(30);
-    expect(payload.procedureType).toBe('Cleaning');
+    expect(payload.serviceType).toBe('Cleaning');
     expect(payload.walkIn).toBe(false);
   });
 
@@ -78,9 +39,9 @@ describe('AppointmentModal — form validation', () => {
     expect(errors).toContain('Patient ID is required');
   });
 
-  test('missing procedureType produces error', () => {
-    const errors = validateAppointmentForm({ ...valid, procedureType: '' });
-    expect(errors).toContain('Procedure type is required');
+  test('missing serviceType produces error', () => {
+    const errors = validateAppointmentForm({ ...valid, serviceType: '' });
+    expect(errors).toContain('Service type is required');
   });
 
   test('missing scheduledAt produces error', () => {
@@ -94,78 +55,26 @@ describe('AppointmentModal — form validation', () => {
   });
 });
 
-describe('AppointmentModal — formatDuration', () => {
-  test('formatDuration(30) === "30 min"', () => {
-    expect(formatDuration(30)).toBe('30 min');
+describe('DURATION_OPTIONS', () => {
+  test('has exactly 4 options', () => {
+    expect(DURATION_OPTIONS).toHaveLength(4);
   });
 
-  test('formatDuration(60) === "1 hr"', () => {
-    expect(formatDuration(60)).toBe('1 hr');
+  test('values are 30, 60, 90, 120', () => {
+    expect(DURATION_OPTIONS.map(o => o.value)).toEqual([30, 60, 90, 120]);
   });
 
-  test('formatDuration(90) === "1.5 hr"', () => {
-    expect(formatDuration(90)).toBe('1.5 hr');
+  test('labels match expected display strings', () => {
+    expect(DURATION_OPTIONS[0].label).toBe('30 min');
+    expect(DURATION_OPTIONS[1].label).toBe('1 hr');
+    expect(DURATION_OPTIONS[2].label).toBe('1.5 hr');
+    expect(DURATION_OPTIONS[3].label).toBe('2 hr');
   });
 
-  test('formatDuration(120) === "2 hr"', () => {
-    expect(formatDuration(120)).toBe('2 hr');
-  });
-});
-
-describe('AppointmentModal — getStatusBadgeProps', () => {
-  test('scheduled returns blue', () => {
-    const props = getStatusBadgeProps('scheduled');
-    expect(props.label).toBe('Scheduled');
-    expect(props.className).toContain('blue');
-  });
-
-  test('checkedIn returns green', () => {
-    const props = getStatusBadgeProps('checkedIn');
-    expect(props.label).toBe('Checked In');
-    expect(props.className).toContain('green');
-  });
-
-  test('completed returns green', () => {
-    const props = getStatusBadgeProps('completed');
-    expect(props.label).toBe('Completed');
-    expect(props.className).toContain('green');
-  });
-
-  test('cancelled returns gray', () => {
-    const props = getStatusBadgeProps('cancelled');
-    expect(props.label).toBe('Cancelled');
-    expect(props.className).toContain('gray');
-  });
-
-  test('noShow returns red', () => {
-    const props = getStatusBadgeProps('noShow');
-    expect(props.label).toBe('No Show');
-    expect(props.className).toContain('red');
-  });
-});
-
-describe('AppointmentModal — canCheckIn / canCancel', () => {
-  test('canCheckIn("scheduled") === true', () => {
-    expect(canCheckIn('scheduled')).toBe(true);
-  });
-
-  test('canCheckIn("checkedIn") === false', () => {
-    expect(canCheckIn('checkedIn')).toBe(false);
-  });
-
-  test('canCheckIn("completed") === false', () => {
-    expect(canCheckIn('completed')).toBe(false);
-  });
-
-  test('canCancel("scheduled") === true', () => {
-    expect(canCancel('scheduled')).toBe(true);
-  });
-
-  test('canCancel("checkedIn") === true', () => {
-    expect(canCancel('checkedIn')).toBe(true);
-  });
-
-  test('canCancel("completed") === false', () => {
-    expect(canCancel('completed')).toBe(false);
+  test('each option has value and label', () => {
+    for (const opt of DURATION_OPTIONS) {
+      expect(opt.value).toBeGreaterThan(0);
+      expect(opt.label.length).toBeGreaterThan(0);
+    }
   });
 });

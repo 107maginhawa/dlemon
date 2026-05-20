@@ -1,6 +1,6 @@
 /**
  * Security middleware
- * Provides security headers and CORS configuration
+ * Provides security headers, CORS configuration, and CSRF guard
  */
 
 import { secureHeaders } from 'hono/secure-headers';
@@ -14,8 +14,16 @@ import { createOriginValidator } from '@/utils/cors';
  * Adds CSP, HSTS, X-Frame-Options, and other security headers
  */
 export function createSecurityHeaders(config: Config) {
-  // Return Hono's secureHeaders middleware configured with defaults
-  // Can be extended with config-based customization if needed
+  if (process.env['NODE_ENV'] === 'production') {
+    return secureHeaders({
+      strictTransportSecurity: 'max-age=31536000; includeSubDomains',
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    });
+  }
   return secureHeaders();
 }
 
@@ -52,4 +60,90 @@ export function createCorsMiddleware(config: Config, logger?: Logger) {
   }
 
   return cors(corsConfig);
+}
+
+const CSRF_UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Create CSRF guard middleware.
+ *
+ * Strategy: content-type-agnostic (covers JSON POSTs that Hono's built-in
+ * csrf() would miss). Uses browser fetch metadata + Origin for detection.
+ *
+ * NORMATIVE INVARIANT — do NOT weaken without updating the plan:
+ *   cookie + unsafe method + no Origin + no Referer + no Bearer + no Sec-Fetch-Site → ALLOW
+ * This is the exact request shape of both the Hurl contract suite and the
+ * embedded Tauri/QuickJS path. Browsers always send Sec-Fetch-Site; only
+ * non-browser clients omit all signals. Tightening this to 403 breaks the
+ * contract suite immediately and every embedded clinical write once Tauri
+ * sync is wired.
+ */
+export function createCsrfGuard(config: Config, logger?: Logger) {
+  const originValidator = createOriginValidator(config.cors, logger);
+
+  return async function csrfGuard(c: any, next: () => Promise<void>): Promise<Response | void> {
+    const method = (c.req.method as string).toUpperCase();
+
+    // Safe methods never need CSRF protection
+    if (!CSRF_UNSAFE_METHODS.has(method)) {
+      return next();
+    }
+
+    // Path-based exemptions: Better-Auth manages its own CSRF; Stripe webhook
+    // is not auth-gated and uses signature verification instead
+    const path = c.req.path as string;
+    if (path.startsWith('/auth/') || path === '/billing/webhooks/stripe') {
+      return next();
+    }
+
+    const authHeader = (c.req.header('Authorization') as string | undefined) ?? '';
+    const internalToken = (c.req.header('X-Internal-Service-Token') as string | undefined) ?? '';
+
+    // Bearer token: non-browser client — attackers cannot set Authorization
+    // cross-origin, so no CSRF risk
+    if (authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    // Internal service expand path: explicitly exempted
+    if (internalToken && config.server.internalServiceExpandEnabled) {
+      return next();
+    }
+
+    const secFetchSite = (c.req.header('Sec-Fetch-Site') as string | undefined) ?? '';
+    const origin = (c.req.header('Origin') as string | undefined) ?? '';
+    const referer = (c.req.header('Referer') as string | undefined) ?? '';
+
+    // NORMATIVE INVARIANT (see above): no browser signals → non-browser client → ALLOW
+    if (!secFetchSite && !origin && !referer) {
+      logger?.warn({ method, path }, 'csrf-guard: no browser signals, passing non-browser client');
+      return next();
+    }
+
+    // Sec-Fetch-Site present: most reliable signal (modern browsers)
+    if (secFetchSite) {
+      if (secFetchSite === 'same-origin' || secFetchSite === 'same-site' || secFetchSite === 'none') {
+        return next();
+      }
+      logger?.warn({ method, path, secFetchSite }, 'csrf-guard: cross-site Sec-Fetch-Site rejected');
+      return c.json({ error: 'CSRF check failed' }, 403);
+    }
+
+    // No Sec-Fetch-Site but Origin/Referer present: check against CORS allow-list
+    const requestOrigin = origin || (() => {
+      try { return new URL(referer).origin; } catch { return ''; }
+    })();
+
+    if (requestOrigin) {
+      const allowed = originValidator(requestOrigin, c);
+      if (allowed) {
+        return next();
+      }
+      logger?.warn({ method, path, origin: requestOrigin }, 'csrf-guard: non-allowlisted Origin rejected');
+      return c.json({ error: 'CSRF check failed' }, 403);
+    }
+
+    // Fallback — no actionable signal (guarded by the invariant above, shouldn't reach here)
+    return next();
+  };
 }

@@ -9,11 +9,16 @@
  *   - listAmendments    GET  /dental/visits/:visitId/amendments
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateAttachmentBody, CreateAttachmentParams,
+  CreateAmendmentBody, CreateAmendmentParams,
+} from '@/generated/openapi/validators';
 import { createAttachment } from './createAttachment';
 import { listAttachments } from './listAttachments';
 import { deleteAttachment } from './deleteAttachment';
@@ -26,7 +31,28 @@ const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@cli
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const ORG_ID = 'd0000000-0000-1000-8000-000000000004';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
+
+// Seed org, branch, and membership once so assertBranchAccess passes for TEST_USER
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({
+    id: ORG_ID, name: 'Test Clinic', tier: 'solo', ownerPersonId: TEST_USER.id,
+    countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
+    timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'ee000000-0000-1000-8000-000000000001', branchId: BRANCH_ID, personId: TEST_USER.id,
+    displayName: 'Test User', role: 'dentist_owner', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+});
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -47,10 +73,25 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/visits/:visitId/attachments', createAttachment);
+  // zValidator hook receives { data, success, error, target } — not a raw ZodError
+  const ve = (result: any, c: any) => {
+    if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+  };
+  // Body schemas include visitId (from OpenAPI spec) but it comes from path params — omit from body validation
+  const AttachmentBodyOnly = CreateAttachmentBody.omit({ visitId: true });
+  const AmendmentBodyOnly = CreateAmendmentBody.omit({ visitId: true });
+  app.post('/dental/visits/:visitId/attachments',
+    zValidator('param', CreateAttachmentParams, ve),
+    zValidator('json', AttachmentBodyOnly, ve),
+    createAttachment as any,
+  );
   app.get('/dental/visits/:visitId/attachments', listAttachments);
   app.delete('/dental/visits/:visitId/attachments/:attachmentId', deleteAttachment);
-  app.post('/dental/visits/:visitId/amendments', createAmendment);
+  app.post('/dental/visits/:visitId/amendments',
+    zValidator('param', CreateAmendmentParams, ve),
+    zValidator('json', AmendmentBodyOnly, ve),
+    createAmendment as any,
+  );
   app.get('/dental/visits/:visitId/amendments', listAmendments);
 
   return app;
@@ -205,8 +246,8 @@ describe('listAttachments handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded attachments', async () => {
@@ -231,8 +272,8 @@ describe('listAttachments handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(1);
-    expect(body.total).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.pagination.totalCount).toBe(1);
   });
 });
 
@@ -437,8 +478,8 @@ describe('listAmendments handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded amendments', async () => {
@@ -462,7 +503,92 @@ describe('listAmendments handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(1);
-    expect(body.total).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.pagination.totalCount).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BR-019: Clinical records are append-only; corrections via amendments only
+// ---------------------------------------------------------------------------
+
+describe('BR-019: clinical records append-only', () => {
+  test('createAmendment returns 201 with amendment record', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/visits/${visit.id}/amendments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        originalRecordType: 'prescription',
+        originalRecordId: NONEXISTENT_ID,
+        reason: 'Incorrect dosage recorded',
+        content: 'Corrected: amoxicillin 500mg → 250mg per BR-019 append-only policy',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.id).toBeTruthy();
+    expect(body.originalRecordType).toBe('prescription');
+    expect(body.reason).toBe('Incorrect dosage recorded');
+  });
+
+  test('multiple amendments accumulate — earlier records not mutated', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+
+    // Post first amendment
+    await app.request(`/dental/visits/${visit.id}/amendments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        originalRecordType: 'note',
+        originalRecordId: NONEXISTENT_ID,
+        reason: 'First correction',
+        content: 'Amendment A',
+      }),
+    });
+
+    // Post second amendment on the same record
+    await app.request(`/dental/visits/${visit.id}/amendments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        originalRecordType: 'note',
+        originalRecordId: NONEXISTENT_ID,
+        reason: 'Second correction',
+        content: 'Amendment B',
+      }),
+    });
+
+    // Both amendments must be present — no overwrite
+    const listRes = await app.request(`/dental/visits/${visit.id}/amendments`);
+    expect(listRes.status).toBe(200);
+    const listBody = await listRes.json() as any;
+    expect(listBody.pagination.totalCount).toBeGreaterThanOrEqual(2);
+  });
+
+  test('createAmendment returns 401 without auth', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(); // no user
+
+    const res = await app.request(`/dental/visits/${visit.id}/amendments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        originalRecordType: 'note',
+        originalRecordId: NONEXISTENT_ID,
+        reason: 'Unauthorized attempt',
+        content: 'Should fail',
+      }),
+    });
+
+    expect(res.status).toBe(401);
   });
 });

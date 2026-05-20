@@ -1,15 +1,17 @@
 /**
  * Drizzle schema for lab orders
  *
- * State machine: ordered → inFabrication → delivered → fitted (or cancelled)
+ * State machine: ordered → in_fabrication → delivered → fitted (or cancelled)
  */
 
-import { pgTable, uuid, text, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, timestamp, pgEnum, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { patients } from '../../patient/repos/patient.schema';
 
 export const labOrderStatusEnum = pgEnum('lab_order_status', [
   'ordered',
-  'inFabrication',
+  'in_fabrication',
   'delivered',
   'fitted',
   'cancelled',
@@ -17,8 +19,8 @@ export const labOrderStatusEnum = pgEnum('lab_order_status', [
 
 export const labOrders = pgTable('lab_order', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull(),
-  patientId: uuid('patient_id').notNull(),
+  visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
   labName: text('lab_name').notNull(),
   description: text('description').notNull(),
   status: labOrderStatusEnum('status').notNull().default('ordered'),
@@ -29,19 +31,19 @@ export const labOrders = pgTable('lab_order', {
   cancelledAt: timestamp('cancelled_at'),
   cancelReason: text('cancel_reason'),
   isDefective: boolean('is_defective').notNull().default(false),
-  replacedByOrderId: uuid('replaced_by_order_id'),
+  replacedByOrderId: uuid('replaced_by_order_id').references((): AnyPgColumn => labOrders.id, { onDelete: 'set null' }),
 });
 
 export type LabOrder = typeof labOrders.$inferSelect;
 export type NewLabOrder = typeof labOrders.$inferInsert;
 
-export const VALID_LAB_ORDER_STATUSES = ['ordered', 'inFabrication', 'delivered', 'fitted', 'cancelled'] as const;
+export const VALID_LAB_ORDER_STATUSES = ['ordered', 'in_fabrication', 'delivered', 'fitted', 'cancelled'] as const;
 export type LabOrderStatus = typeof VALID_LAB_ORDER_STATUSES[number];
 
 /** Valid forward-only transitions */
 export const LAB_ORDER_TRANSITIONS: Record<LabOrderStatus, LabOrderStatus[]> = {
-  ordered: ['inFabrication', 'cancelled'],
-  inFabrication: ['delivered', 'cancelled'],
+  ordered: ['in_fabrication', 'cancelled'],
+  in_fabrication: ['delivered', 'cancelled'],
   delivered: ['fitted', 'cancelled'],
   fitted: [],
   cancelled: [],

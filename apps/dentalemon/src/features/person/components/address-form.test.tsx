@@ -1,5 +1,5 @@
 import { describe, test, expect, afterEach } from 'bun:test'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddressForm } from './address-form'
 
@@ -13,11 +13,11 @@ describe('AddressForm', () => {
     render(<AddressForm onSubmit={onSubmit} />)
 
     // Check for form fields - use exact match to avoid matching "Street Address Line 2"
-    expect(screen.getByLabelText(/^street address$/i)).toBeDefined()
-    expect(screen.getByLabelText(/city/i)).toBeDefined()
-    expect(screen.getByLabelText(/state/i)).toBeDefined()
-    expect(screen.getByLabelText(/zip/i)).toBeDefined()
-    expect(screen.getByLabelText(/country/i)).toBeDefined()
+    expect(screen.getByLabelText(/^street address$/i)).not.toBeNull()
+    expect(screen.getByLabelText(/city/i)).not.toBeNull()
+    expect(screen.getByLabelText(/state/i)).not.toBeNull()
+    expect(screen.getByLabelText(/zip/i)).not.toBeNull()
+    expect(screen.getByLabelText(/country/i)).not.toBeNull()
   })
 
   test('renders with default values', () => {
@@ -33,11 +33,11 @@ describe('AddressForm', () => {
     render(<AddressForm defaultValues={defaultValues} onSubmit={onSubmit} />)
 
     const addressInput = screen.getByDisplayValue('123 Main St') as HTMLInputElement
-    expect(addressInput).toBeDefined()
+    expect(addressInput).not.toBeNull()
     expect(addressInput.value).toBe('123 Main St')
 
     const cityInput = screen.getByDisplayValue('Los Angeles') as HTMLInputElement
-    expect(cityInput).toBeDefined()
+    expect(cityInput).not.toBeNull()
     expect(cityInput.value).toBe('Los Angeles')
   })
 
@@ -45,17 +45,18 @@ describe('AddressForm', () => {
     const onSubmit = () => {}
     render(<AddressForm onSubmit={onSubmit} />)
 
-    expect(screen.getByLabelText(/street address line 2/i)).toBeDefined()
+    expect(screen.getByLabelText(/street address line 2/i)).not.toBeNull()
   })
 
   test('validates required fields', async () => {
+    const user = userEvent.setup()
     const onSubmit = () => {}
     render(<AddressForm onSubmit={onSubmit} showButtons={true} required={true} />)
 
     const submitButton = screen.getByRole('button', { name: /continue/i })
 
     // Try to submit without filling required fields
-    fireEvent.click(submitButton)
+    await user.click(submitButton)
 
     // Should show validation errors
     await waitFor(() => {
@@ -66,6 +67,7 @@ describe('AddressForm', () => {
   })
 
   test('handles form submission', async () => {
+    const user = userEvent.setup()
     let submittedData: any = null
     const onSubmit = (data: any) => {
       submittedData = data
@@ -74,25 +76,25 @@ describe('AddressForm', () => {
     render(<AddressForm onSubmit={onSubmit} showButtons={true} />)
 
     // Fill in form fields
-    await userEvent.type(screen.getByLabelText(/^street address$/i), '456 Elm St')
-    await userEvent.type(screen.getByLabelText(/city/i), 'San Francisco')
+    await user.type(screen.getByLabelText(/^street address$/i), '456 Elm St')
+    await user.type(screen.getByLabelText(/city/i), 'San Francisco')
 
     // Select state (assuming it's a select field)
     const stateField = screen.getByLabelText(/state/i)
-    await userEvent.type(stateField, 'CA')
+    await user.type(stateField, 'CA')
 
-    await userEvent.type(screen.getByLabelText(/zip/i), '94102')
+    await user.type(screen.getByLabelText(/zip/i), '94102')
 
     // Select country
     const countryField = screen.getByLabelText(/country/i)
-    fireEvent.click(countryField)
+    await user.click(countryField)
 
     // Submit form
     const submitButton = screen.getByRole('button', { name: /continue/i })
-    fireEvent.click(submitButton)
+    await user.click(submitButton)
 
     await waitFor(() => {
-      expect(submittedData).toBeDefined()
+      expect(submittedData).not.toBeNull()
     })
   })
 })

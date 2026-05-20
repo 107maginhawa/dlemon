@@ -17,6 +17,12 @@ import { PatientRegistrationModal } from '@/features/patients/components/patient
 import { PatientFilterTabs, type PatientFilter } from '@/features/patients/components/patient-filter-tabs';
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
 import { usePatients } from '@/features/patients/hooks/use-patients';
+import {
+  useArchivePatient,
+  useRestorePatient,
+  useBulkArchive,
+  useExportPatients,
+} from '@/features/patients/hooks/use-patient-actions';
 import { apiBaseUrl } from '@/utils/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
@@ -34,6 +40,11 @@ function PatientsPage() {
   const [showRegistration, setShowRegistration] = useState(false);
 
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
+
+  const { archive, isPending: isArchivePending } = useArchivePatient();
+  const { restore, isPending: isRestorePending } = useRestorePatient();
+  const { bulkArchive, isPending: isBulkPending } = useBulkArchive();
+  const { exportPatients, isExporting } = useExportPatients();
 
   const { patients, isLoading, error } = usePatients({
     branchId,
@@ -112,6 +123,13 @@ function PatientsPage() {
         }
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        activeFilter={activeFilter}
+        onArchive={archive}
+        onRestore={restore}
+        onBulkArchive={bulkArchive}
+        onExport={exportPatients}
+        isActionPending={isArchivePending || isRestorePending || isBulkPending}
+        isExporting={isExporting}
       />
 
       <PatientRegistrationModal

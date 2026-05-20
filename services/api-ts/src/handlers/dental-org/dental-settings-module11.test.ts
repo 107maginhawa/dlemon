@@ -19,6 +19,7 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
+import { ZodError } from 'zod';
 import { Hono } from 'hono';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
@@ -47,6 +48,7 @@ function buildTestApp(user?: typeof TEST_USER | typeof OTHER_USER) {
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    if (err instanceof ZodError) return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
     return c.json({ error: String(err.message) }, 500);
   });
   app.use('*', async (c, next) => {
@@ -112,10 +114,11 @@ describe('GET /dental/branches/:branchId/settings', () => {
     expect(body.settings).toEqual({});
   });
 
-  test('404 for unknown branch', async () => {
+  test('403 for unknown branch (no membership → access denied)', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/branches/ffffffff-ffff-1000-8000-ffffffffffff/settings');
-    expect(res.status).toBe(404);
+    // assertBranchAccess runs before existence check — 403 is correct (no info leak)
+    expect(res.status).toBe(403);
   });
 
   test('401 without auth', async () => {

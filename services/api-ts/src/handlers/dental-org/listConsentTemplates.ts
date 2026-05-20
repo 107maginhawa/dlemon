@@ -1,0 +1,1 @@
+export { listConsentTemplates } from './consentTemplates';

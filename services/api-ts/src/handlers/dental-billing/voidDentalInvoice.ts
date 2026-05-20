@@ -9,7 +9,8 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function voidDentalInvoice(
   ctx: ValidatedContext<never, never, any>
@@ -25,12 +26,30 @@ export async function voidDentalInvoice(
   if (!invoice) throw new NotFoundError('Invoice');
 
   // Branch-level authorization
-  await assertBranchAccess(db, session.userId, invoice.branchId);
+  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner']);
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Invoice is already voided', 'ALREADY_VOIDED');
   }
 
+  // NOTE: Voiding from any status (including 'paid') is intentional — allows
+  // admin corrections (e.g., duplicate invoice, billing error). BR-011 guards
+  // against voiding with an active payment plan. No additional role check is
+  // enforced here; all authenticated branch members can void.
+
+  // BR-011: Cannot void invoice with an active payment plan
+  const paymentPlanRepo = new DentalPaymentPlanRepository(db);
+  const plan = await paymentPlanRepo.findByInvoice(invoiceId);
+  if (plan && (plan.status === 'on_track' || plan.status === 'behind')) {
+    throw new BusinessLogicError('Cannot void invoice with active payment plan', 'ACTIVE_PAYMENT_PLAN');
+  }
+
   const voided = await repo.voidInvoice(invoiceId);
+
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_invoice_void', invoiceId, branchId: invoice.branchId, by: session.userId },
+    'Dental invoice voided',
+  );
+
   return ctx.json(voided);
 }

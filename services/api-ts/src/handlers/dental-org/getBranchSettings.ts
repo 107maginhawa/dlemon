@@ -1,0 +1,1 @@
+export { getBranchSettings } from './branchSettings';

@@ -7,7 +7,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { createConsentForm, signConsentForm } from '@monobase/sdk-ts/generated';
+import type { ConsentForm } from '@monobase/sdk-ts/generated';
 
 const CONSENT_TEMPLATES = [
   { id: 'tpl-general', name: 'General Dental Consent' },
@@ -61,19 +62,20 @@ export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: Con
     setTemplateName(tmpl?.name ?? '');
   }
 
-  function startDraw(e: React.MouseEvent<HTMLCanvasElement>) {
+  function startDraw(e: React.PointerEvent<HTMLCanvasElement>) {
     if (signed) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     isDrawing.current = true;
-    const canvas = canvasRef.current!;
+    const canvas = e.currentTarget;
     const ctx = canvas.getContext('2d')!;
     const rect = canvas.getBoundingClientRect();
     ctx.beginPath();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   }
 
-  function draw(e: React.MouseEvent<HTMLCanvasElement>) {
+  function draw(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!isDrawing.current || signed) return;
-    const canvas = canvasRef.current!;
+    const canvas = e.currentTarget;
     const ctx = canvas.getContext('2d')!;
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
@@ -98,23 +100,18 @@ export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: Con
     setSaving(true);
     try {
       // Create the form first
-      const createRes = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/consents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ visitId, patientId, templateId, templateName }),
+      const result = await createConsentForm({
+        path: { visitId },
+        body: { visitId, patientId, templateId, templateName } as Parameters<typeof createConsentForm>[0]['body'],
       });
-      if (!createRes.ok) { setError('Failed to create consent form'); return; }
-      const form = await createRes.json();
+      const form = result.data as ConsentForm;
+      if (!form) { setError('Failed to create consent form'); return; }
 
       // Sign it
-      const signRes = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/consents/${form.id}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ signatureData }),
+      await signConsentForm({
+        path: { visitId, consentId: form.id },
+        body: { signatureData } as Parameters<typeof signConsentForm>[0]['body'],
       });
-      if (!signRes.ok) { setError('Failed to sign consent form'); return; }
 
       setSigned(true);
       onSaved?.();
@@ -206,10 +203,10 @@ export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: Con
                 height={150}
                 className="w-full touch-none cursor-crosshair"
                 aria-label="Signature canvas — signed by patient"
-                onMouseDown={startDraw}
-                onMouseMove={draw}
-                onMouseUp={stopDraw}
-                onMouseLeave={stopDraw}
+                onPointerDown={startDraw}
+                onPointerMove={draw}
+                onPointerUp={stopDraw}
+                onPointerLeave={stopDraw}
               />
             </div>
             {!signatureData && (

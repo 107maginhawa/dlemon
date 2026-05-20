@@ -6,20 +6,10 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useDashboardSummary } from './use-dashboard-summary';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
 
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
@@ -31,7 +21,7 @@ const mockToday = [
 const mockTomorrow = [
   { id: 'a3', patientId: 'p3', patientName: 'Ana Reyes', scheduledAt: '2026-05-05T09:00:00Z', status: 'scheduled' },
 ];
-const mockSummary = { activePaymentPlans: { count: 3 }, labOrders: { totalPending: 2 } };
+const mockSummary = { activePaymentPlans: { count: 3, behindCount: 1 }, labOrders: { totalPending: 2, overdueDelivery: 1 } };
 const mockOverdue = [
   { id: 'i1', invoiceNumber: 'INV-001', patientId: 'p1', patientName: 'Maria Santos', totalCents: 50000, paidCents: 0, balanceCents: 50000, status: 'overdue' },
 ];
@@ -91,7 +81,9 @@ describe('useDashboardSummary', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.activePaymentPlans).toBe(3);
+    expect(result.current.data?.paymentPlansBehind).toBe(1);
     expect(result.current.data?.pendingLabOrders).toBe(2);
+    expect(result.current.data?.overdueLabOrders).toBe(1);
   });
 
   test('returns overdue invoices and daily collections for financial roles', async () => {
@@ -164,6 +156,85 @@ describe('useDashboardSummary', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).not.toBeNull();
+  });
+
+  test('sets error state when summary fetch (response[2]) fails', async () => {
+    let callIdx = 0;
+    global.fetch = mock(() => {
+      const i = callIdx++;
+      if (i < 2) {
+        // today and tomorrow appointments succeed
+        const data = i === 0 ? { appointments: mockToday } : { appointments: mockTomorrow };
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(data) } as Response);
+      }
+      // summary endpoint fails
+      return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useDashboardSummary({ branchId: 'b1', showFinancials: false }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).not.toBeNull();
+    expect((result.current.error as Error).message).toMatch(/dashboard summary/);
+  });
+
+  test('sets error state when overdue invoices fetch (response[3]) fails', async () => {
+    let callIdx = 0;
+    global.fetch = mock(() => {
+      const i = callIdx++;
+      const successes = [
+        { appointments: mockToday },
+        { appointments: mockTomorrow },
+        mockSummary,
+      ];
+      if (i < 3) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(successes[i]) } as Response);
+      }
+      // overdue invoices endpoint fails
+      return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useDashboardSummary({ branchId: 'b1', showFinancials: true }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).not.toBeNull();
+    expect((result.current.error as Error).message).toMatch(/overdue invoices/);
+  });
+
+  test('sets error state when all-invoices fetch (response[4]) fails', async () => {
+    let callIdx = 0;
+    global.fetch = mock(() => {
+      const i = callIdx++;
+      const successes = [
+        { appointments: mockToday },
+        { appointments: mockTomorrow },
+        mockSummary,
+        { invoices: mockOverdue },
+      ];
+      if (i < 4) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(successes[i]) } as Response);
+      }
+      // all-invoices endpoint fails
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useDashboardSummary({ branchId: 'b1', showFinancials: true }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).not.toBeNull();
+    expect((result.current.error as Error).message).toMatch(/all invoices/);
   });
 
   test('refetch function is defined', async () => {

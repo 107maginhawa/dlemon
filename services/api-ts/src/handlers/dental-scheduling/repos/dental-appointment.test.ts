@@ -14,17 +14,20 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { DentalAppointmentRepository } from './dental-appointment.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+// Set in beforeEach to the current transaction db — used for raw SQL in tests
+let db: NodePgDatabase;
 
-const PATIENT_1  = 'a1000000-0000-4000-8000-000000000001';
-const PATIENT_2  = 'a1000000-0000-4000-8000-000000000002';
-const DENTIST_1  = 'a2000000-0000-4000-8000-000000000001';
-const DENTIST_2  = 'a2000000-0000-4000-8000-000000000002';
-const BRANCH_1   = 'a3000000-0000-4000-8000-000000000001';
-const BRANCH_2   = 'a3000000-0000-4000-8000-000000000002';
-const VISIT_1    = 'a4000000-0000-4000-8000-000000000001';
+const PATIENT_1  = CHAIN_IDS.PATIENT_1;
+const PATIENT_2  = CHAIN_IDS.PATIENT_2;
+const DENTIST_1  = CHAIN_IDS.MEMBERSHIP_1;
+const DENTIST_2  = CHAIN_IDS.MEMBERSHIP_2;
+const BRANCH_1   = CHAIN_IDS.BRANCH_1;
+const BRANCH_2   = CHAIN_IDS.BRANCH_2;
+const VISIT_1    = CHAIN_IDS.VISIT_1;
 
 const baseAppointment = {
   patientId: PATIENT_1,
@@ -32,17 +35,22 @@ const baseAppointment = {
   branchId: BRANCH_1,
   scheduledAt: new Date('2025-06-01T09:00:00Z'),
   durationMinutes: 60,
-  procedureType: 'Cleaning',
+  serviceType: 'Cleaning',
 };
 
 describe('DentalAppointmentRepository', () => {
   let repo: DentalAppointmentRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new DentalAppointmentRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_appointment CASCADE`);
+  beforeEach(async () => {
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
+    repo = new DentalAppointmentRepository(db);
+    await seedClinicalChain(db, { visits: 1 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   // ===== CRUD =====
 
@@ -63,9 +71,9 @@ describe('DentalAppointmentRepository', () => {
       expect(appt.walkIn).toBe(true);
     });
 
-    test('stores procedureType and durationMinutes', async () => {
+    test('stores serviceType and durationMinutes', async () => {
       const appt = await repo.createOne(baseAppointment);
-      expect(appt.procedureType).toBe('Cleaning');
+      expect(appt.serviceType).toBe('Cleaning');
       expect(appt.durationMinutes).toBe(60);
     });
 
@@ -118,9 +126,9 @@ describe('DentalAppointmentRepository', () => {
       const appt = await repo.createOne(baseAppointment);
       await repo.checkIn(appt.id);
       await repo.createOne({ ...baseAppointment, patientId: PATIENT_2 });
-      const results = await repo.findMany({ status: 'checkedIn' });
+      const results = await repo.findMany({ status: 'checked_in' });
       expect(results).toHaveLength(1);
-      expect(results[0]!.status).toBe('checkedIn');
+      expect(results[0]!.status).toBe('checked_in');
     });
   });
 
@@ -145,11 +153,11 @@ describe('DentalAppointmentRepository', () => {
       const appt = await repo.createOne(baseAppointment);
       const updated = await repo.updateOneById(appt.id, {
         notes: 'Updated notes',
-        procedureType: 'Extraction',
+        serviceType: 'Extraction',
         durationMinutes: 90,
       });
       expect(updated.notes).toBe('Updated notes');
-      expect(updated.procedureType).toBe('Extraction');
+      expect(updated.serviceType).toBe('Extraction');
       expect(updated.durationMinutes).toBe(90);
     });
   });
@@ -161,7 +169,7 @@ describe('DentalAppointmentRepository', () => {
       const appt = await repo.createOne(baseAppointment);
       const checkedIn = await repo.checkIn(appt.id);
       expect(checkedIn).not.toBeNull();
-      expect(checkedIn!.status).toBe('checkedIn');
+      expect(checkedIn!.status).toBe('checked_in');
       expect(checkedIn!.checkInTime).toBeInstanceOf(Date);
     });
 
@@ -194,7 +202,7 @@ describe('DentalAppointmentRepository', () => {
       const appt = await repo.createOne(baseAppointment);
       const noShow = await repo.markNoShow(appt.id);
       expect(noShow).not.toBeNull();
-      expect(noShow!.status).toBe('noShow');
+      expect(noShow!.status).toBe('no_show');
       expect(noShow!.noShowAt).toBeInstanceOf(Date);
     });
   });
@@ -272,7 +280,7 @@ describe('DentalAppointmentRepository', () => {
       const appt = await repo.createOne(baseAppointment);
       const result = await repo.markNoShow(appt.id);
       expect(result).not.toBeNull();
-      expect(result!.status).toBe('noShow');
+      expect(result!.status).toBe('no_show');
     });
   });
 

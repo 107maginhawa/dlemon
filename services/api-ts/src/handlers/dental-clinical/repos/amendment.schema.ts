@@ -4,12 +4,15 @@
 
 import { pgTable, uuid, text } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { patients } from '../../patient/repos/patient.schema';
+import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 
 export const amendments = pgTable('amendment', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull(),
-  patientId: uuid('patient_id').notNull(),
-  authorMemberId: uuid('author_member_id').notNull(),
+  visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
+  authorMemberId: uuid('author_member_id').notNull().references(() => dentalMemberships.id),
   originalRecordType: text('original_record_type').notNull(),
   originalRecordId: uuid('original_record_id').notNull(),
   reason: text('reason').notNull(),

@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function issueDentalInvoice(
   ctx: ValidatedContext<never, never, any>
@@ -25,12 +25,18 @@ export async function issueDentalInvoice(
   if (!invoice) throw new NotFoundError('Invoice');
 
   // Branch-level authorization
-  await assertBranchAccess(db, session.userId, invoice.branchId);
+  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate']);
 
   if (invoice.status !== 'draft') {
     throw new BusinessLogicError('Only draft invoices can be issued', 'INVALID_STATUS');
   }
 
   const issued = await repo.issue(invoiceId);
+
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_invoice_issue', invoiceId, branchId: invoice.branchId, by: session.userId },
+    'Dental invoice issued',
+  );
+
   return ctx.json(issued);
 }

@@ -1,0 +1,1 @@
+export { updateConsentTemplate } from './consentTemplates';

@@ -23,13 +23,13 @@ describe('WorkspacePage layout', () => {
     });
   });
 
-  describe('ResizableDivider', () => {
-    test('renders <ResizableDivider', async () => {
-      expect(await src()).toMatch(/<ResizableDivider/);
+  describe('ToothSlideout', () => {
+    test('renders <ToothSlideout', async () => {
+      expect(await src()).toMatch(/<ToothSlideout/);
     });
 
-    test('imports ResizableDivider', async () => {
-      expect(await src()).toContain("ResizableDivider");
+    test('imports ToothSlideout', async () => {
+      expect(await src()).toContain("ToothSlideout");
     });
   });
 
@@ -38,8 +38,8 @@ describe('WorkspacePage layout', () => {
       expect(await src()).not.toContain('splitRatio * 100');
     });
 
-    test('uses flex-row outer wrapper for slideout layout', async () => {
-      expect(await src()).toContain('flex-row');
+    test('renders TreatmentTable component', async () => {
+      expect(await src()).toContain('TreatmentTable');
     });
   });
 

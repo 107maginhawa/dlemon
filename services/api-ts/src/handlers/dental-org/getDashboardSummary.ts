@@ -30,8 +30,8 @@ export async function getDashboardSummary(ctx: BaseContext) {
   }
   await assertBranchAccess(db, user.id, branchId);
 
-  const activePlanStatuses = ['onTrack', 'behind'] as const;
-  const pendingLabStatuses = ['ordered', 'inFabrication'] as const;
+  const activePlanStatuses = ['on_track', 'behind'] as const;
+  const pendingLabStatuses = ['ordered', 'in_fabrication'] as const;
 
   // FR0.7: Active payment plans (optionally scoped by branch via invoice.branchId)
   let activePlans;
@@ -86,7 +86,7 @@ export async function getDashboardSummary(ctx: BaseContext) {
   const labOrderSummary = {
     totalPending: pendingLabOrders.length,
     ordered: pendingLabOrders.filter(o => o.status === 'ordered').length,
-    inFabrication: pendingLabOrders.filter(o => o.status === 'inFabrication').length,
+    inFabrication: pendingLabOrders.filter(o => o.status === 'in_fabrication').length,
     overdueDelivery: pendingLabOrders.filter(o => {
       if (!o.expectedDeliveryDate) return false;
       return new Date(o.expectedDeliveryDate) < new Date();

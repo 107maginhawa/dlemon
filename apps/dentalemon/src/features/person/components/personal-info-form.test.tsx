@@ -12,11 +12,11 @@ describe('PersonalInfoForm', () => {
     const onSubmit = () => {}
     render(<PersonalInfoForm onSubmit={onSubmit} />)
 
-    // Check for form fields
-    expect(screen.getByLabelText(/first name/i)).toBeDefined()
-    expect(screen.getByLabelText(/last name/i)).toBeDefined()
-    expect(screen.getByLabelText(/gender/i)).toBeDefined()
-    expect(screen.getByLabelText(/date of birth/i)).toBeDefined()
+    // Text inputs associate labels properly; Select/Popover controls use getByText
+    expect(screen.getByLabelText(/first name/i)).not.toBeNull()
+    expect(screen.getByLabelText(/last name/i)).not.toBeNull()
+    expect(screen.getByText('Gender')).not.toBeNull()
+    expect(screen.getByText(/date of birth/i)).not.toBeNull()
   })
 
   test('renders with default values', () => {
@@ -31,11 +31,11 @@ describe('PersonalInfoForm', () => {
     render(<PersonalInfoForm defaultValues={defaultValues} onSubmit={onSubmit} />)
 
     const firstNameInput = screen.getByDisplayValue('John') as HTMLInputElement
-    expect(firstNameInput).toBeDefined()
+    expect(firstNameInput).not.toBeNull()
     expect(firstNameInput.value).toBe('John')
 
     const lastNameInput = screen.getByDisplayValue('Doe') as HTMLInputElement
-    expect(lastNameInput).toBeDefined()
+    expect(lastNameInput).not.toBeNull()
     expect(lastNameInput.value).toBe('Doe')
   })
 
@@ -43,7 +43,7 @@ describe('PersonalInfoForm', () => {
     const onSubmit = () => {}
     render(<PersonalInfoForm onSubmit={onSubmit} showButtons={true} />)
 
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /continue/i })).not.toBeNull()
   })
 
   test('shows cancel button when onCancel is provided', () => {
@@ -57,7 +57,7 @@ describe('PersonalInfoForm', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /cancel/i })).not.toBeNull()
   })
 
   test('uses custom submit text', () => {
@@ -70,7 +70,7 @@ describe('PersonalInfoForm', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: /update profile/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /update profile/i })).not.toBeNull()
   })
 
   test('handles role-specific rendering', () => {
@@ -78,7 +78,7 @@ describe('PersonalInfoForm', () => {
     render(<PersonalInfoForm onSubmit={onSubmit} role="provider" />)
 
     // Form should render with provider context
-    expect(screen.getByLabelText(/first name/i)).toBeDefined()
+    expect(screen.getByLabelText(/first name/i)).not.toBeNull()
   })
 
   test('shows avatar section when showAvatar is true', () => {
@@ -97,7 +97,7 @@ describe('PersonalInfoForm', () => {
     )
 
     // Should show avatar with camera button
-    expect(screen.getByRole('button', { name: '' })).toBeDefined() // Camera icon button
+    expect(screen.getByRole('button', { name: '' })).not.toBeNull() // Camera icon button
   })
 
   test('pre-fills form fields in create mode when defaultValues are provided', async () => {

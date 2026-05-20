@@ -1,0 +1,1 @@
+ALTER TABLE "dental_treatment" ADD COLUMN "clinical_notes" text;

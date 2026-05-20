@@ -159,7 +159,7 @@ export function PersonalInfoForm({
   }
 
   const handleSubmit = async (data: PersonalInfo) => {
-    const finalData = { ...data }
+    const finalData = { ...data } as any
 
     // Upload avatar if a new file was selected
     if (selectedFile && onAvatarUpload) {

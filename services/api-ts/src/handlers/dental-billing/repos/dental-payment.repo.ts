@@ -24,6 +24,14 @@ export class DentalPaymentRepository {
     return row!;
   }
 
+  async findByReceiptNumber(receiptNumber: string): Promise<DentalPayment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalPayments)
+      .where(eq(dentalPayments.receiptNumber, receiptNumber));
+    return row ?? null;
+  }
+
   async findOneById(id: string): Promise<DentalPayment | null> {
     const [row] = await this.db
       .select()

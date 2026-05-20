@@ -734,3 +734,27 @@ This section clarifies the most frequently confused concepts in the healthcare d
 | Screening | `Observation` or `Procedure` | Population-level evaluation | Prevention, early detection |
 
 **Rule:** All three may use `Observation`. Assessment and Screening are specific categories of Observation. Use the `category` code and the LOINC code on the Observation to distinguish them.
+
+---
+
+## Dental Domain Terms
+
+Dentalemon-specific entities layered on top of the FHIR-generic monobase platform. These terms appear throughout `services/api-ts/src/handlers/dental-*/` and `apps/dentalemon/src/`.
+
+| Term | Definition |
+|------|-----------|
+| **DentalPatient** | A patient record with dental-specific metadata (`preferredBranchId`, `dentalHistorySummary`, `recallDate`, `recallNote`, `followUpNotes`). Shares the `patient` table with the generic Patient entity. Two API surfaces exist: `POST /patients` (generic) and `POST /dental/patients` (dental-specific). |
+| **DentalVisit** | A clinical encounter in the dental workspace. State machine: `draft → active → completed → locked`. Distinct from generic Booking; scoped to a branch and dentist member. |
+| **DentalTreatment** | A procedure planned or performed during a DentalVisit (e.g., extraction, filling, scaling). State machine: `diagnosed → planned → performed → verified`. Only `performed` or `verified` treatments are billable. |
+| **DentalMember** | A staff member linked to a dental branch via `dental_membership`. Has a `role` (`dentist_owner`, `staff_full`, etc.) and may or may not have a `personId` (PIN-only staff are anonymous). |
+| **DentalAppointment** | A scheduled clinical encounter with clinical participant language (`patientId`, `dentistMemberId`). Statuses: `scheduled`, `checked_in`, `completed`, `cancelled`, `no_show`. Distinct from generic Booking. |
+| **DentalInvoice** | A clinical bill auto-derived from performed DentalTreatments. Uses integer `*Cents` amounts (`subtotalCents`, `totalCents`, `balanceCents`). Lifecycle: `draft → open → partial → paid → voided`. Distinct from generic Stripe Invoice. |
+| **DentalPaymentPlan** | An installment plan attached to a DentalInvoice. Frequencies: `weekly`, `biweekly`, `monthly`. Status tracks On Track / Behind / Defaulted. |
+| **ImagingStudy** | A DICOM-based dental imaging session (X-ray, panoramic, CBCT, cephalometric). Linked to a DentalVisit and a dental branch. Stores modality, DICOM metadata, and S3 file references. |
+| **ImagingFinding** | A clinical annotation on an ImagingStudy (e.g., caries on tooth 16, bone loss in quadrant). Has a state machine: `draft → confirmed → dismissed`. |
+| **CephLandmark** | A cephalometric anatomical landmark point identified on a lateral skull radiograph (e.g., Sella `S`, Nasion `N`, Porion `Po`, A-Point, B-Point). Input to the isomorphic `ceph-math` engine. |
+| **CephAnalysis** | A set of cephalometric angular and linear measurements derived from CephLandmarks (e.g., SNA, SNB, ANB, Wits appraisal). Used for orthodontic/orthognathic assessment and treatment planning. |
+| **CephReport** | A structured clinical report generated from a CephAnalysis, containing measurements, classifications, and treatment recommendations. Linked to an ImagingStudy. |
+| **DentalOrg** | A dental organization (clinic group or solo practice). Has a `tier` (`solo`, `clinic`, `group`) and contains one or more DentalBranches. |
+| **DentalBranch** | A physical clinic location within a DentalOrg. All patient records, visits, appointments, and invoices are scoped to a branch. |
+

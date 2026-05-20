@@ -42,76 +42,48 @@ describe('useIsMobile', () => {
 
   afterEach(() => {
     // Restore original values
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: originalInnerWidth
-    })
+    ;(window as any).innerWidth = originalInnerWidth
     window.matchMedia = originalMatchMedia
     cleanup()
   })
 
   test('returns false for desktop viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 1024
-    })
+    ;(window as any).innerWidth = 1024
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(false)
   })
 
   test('returns true for mobile viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 375
-    })
+    ;(window as any).innerWidth = 375
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(true)
   })
 
   test('returns true at breakpoint boundary (767px)', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 767
-    })
+    ;(window as any).innerWidth = 767
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(true)
   })
 
   test('returns false at breakpoint boundary (768px)', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 768
-    })
+    ;(window as any).innerWidth = 768
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(false)
   })
 
   test('returns false for tablet viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 800
-    })
+    ;(window as any).innerWidth = 800
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(false)
   })
 
   test('handles initial undefined state correctly', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 1024
-    })
+    ;(window as any).innerWidth = 1024
 
     const { result } = renderHook(() => useIsMobile())
     // Should return false (!!undefined = false) initially and then false for desktop
@@ -119,22 +91,14 @@ describe('useIsMobile', () => {
   })
 
   test('handles edge case of 0 width', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 0
-    })
+    ;(window as any).innerWidth = 0
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(true)
   })
 
   test('handles very large viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 2560
-    })
+    ;(window as any).innerWidth = 2560
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(false)

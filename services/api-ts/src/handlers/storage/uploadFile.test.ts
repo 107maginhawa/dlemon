@@ -45,7 +45,7 @@ function buildTestApp(user?: { id: string; email: string }) {
 describe('uploadFile handler', () => {
   const authedUser = { id: 'user-1', email: 'test@test.com' };
 
-  test('returns error when file exceeds 50MB', async () => {
+  test('returns error when file exceeds 100MB', async () => {
     const { app } = buildTestApp(authedUser);
 
     const res = await app.request('/storage/files/upload', {
@@ -53,7 +53,7 @@ describe('uploadFile handler', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         filename: 'huge.zip',
-        size: 60 * 1024 * 1024, // 60MB
+        size: 110 * 1024 * 1024, // 110MB
         mimeType: 'application/zip',
       }),
     });
@@ -97,7 +97,7 @@ describe('uploadFile handler', () => {
     expect(res.status).not.toBe(400);
   });
 
-  test('50MB exactly is within limit', async () => {
+  test('50MB is within the 100MB limit', async () => {
     const { app } = buildTestApp(authedUser);
 
     const res = await app.request('/storage/files/upload', {
@@ -110,7 +110,42 @@ describe('uploadFile handler', () => {
       }),
     });
 
-    // 50MB is not > 50MB, so it should pass validation
+    // 50MB is not > 100MB, so it should pass validation
     expect(res.status).not.toBe(400);
+  });
+
+  test('100MB exactly is within limit', async () => {
+    const { app } = buildTestApp(authedUser);
+
+    const res = await app.request('/storage/files/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: 'big-scan.dcm',
+        size: 100 * 1024 * 1024, // exactly 100MB
+        mimeType: 'application/dicom',
+      }),
+    });
+
+    // 100MB is not > 100MB, passes validation
+    expect(res.status).not.toBe(400);
+  });
+
+  test('101MB is rejected', async () => {
+    const { app } = buildTestApp(authedUser);
+
+    const res = await app.request('/storage/files/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: 'oversized.dcm',
+        size: 101 * 1024 * 1024, // 101MB
+        mimeType: 'application/dicom',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('VALIDATION_ERROR');
   });
 });

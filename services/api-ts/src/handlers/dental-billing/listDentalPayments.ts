@@ -11,6 +11,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 
 export async function listDentalPayments(
   ctx: ValidatedContext<never, never, any>
@@ -31,5 +32,8 @@ export async function listDentalPayments(
   const paymentRepo = new DentalPaymentRepository(db);
   const payments = await paymentRepo.findByInvoice(invoiceId);
 
-  return ctx.json(payments);
+  const { limit, offset } = parsePagination(ctx.req.query());
+  const total = payments.length;
+  const page = payments.slice(offset, offset + limit);
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, total, limit, offset) });
 }

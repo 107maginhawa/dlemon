@@ -1,0 +1,233 @@
+{
+  "runAt": "2026-05-19T14:56:57.201Z",
+  "branch": "feat/v1.4-clinical-imaging",
+  "seed": "mixed",
+  "journeys": [
+    {
+      "id": "J01",
+      "name": "New-patient comprehensive oral evaluation",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Status-collapse (Gap #1/#2): slideout exposes no distinct Existing (0) / Existing-Other (0) status controls. A new-patient exam cannot chart pre-existing-vs-elsewhere work, so the goal state (two records with DISTINCT status values) is unreachable.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J01-broken.png",
+      "rubricIds": [
+        "Q6",
+        "Q7",
+        "Q8",
+        "Q9",
+        "Q10"
+      ]
+    },
+    {
+      "id": "J02",
+      "name": "Periodic recall exam (D0120)",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Status-collapse (Gap #1) prevents a watch→diagnosed transition that is distinct from the prior visit record, and the D0120 recall note is local React state with no DB column (P0-004) — confirmed by independent read: GET /dental/visits/unknown/notes → null (no note persisted). Prior baseline was: null…",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J02-broken.png",
+      "rubricIds": [
+        "Q9",
+        "Q10",
+        "Q25"
+      ]
+    },
+    {
+      "id": "J03",
+      "name": "Periodontal charting linked to odontogram",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "No dedicated periodontal capture surface found in the workspace route (no perio/probing affordance in the rendered DOM). Gap #7 confirmed: the journey cannot complete through the UI — no shortcut taken.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J03-broken.png",
+      "rubricIds": [
+        "Q11",
+        "Q12",
+        "Q13",
+        "Q14",
+        "Q16"
+      ]
+    },
+    {
+      "id": "J04",
+      "name": "Revenue chain (flagship)",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "P0-001: two-step Mark-Done PATCH#1=no-resp (), PATCH#2=no-resp (). Independent read: anyPerformed=false, hasInvoice=false. Revenue chain dead end-to-end.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J04-broken.png",
+      "rubricIds": [
+        "Q17",
+        "Q18",
+        "Q19",
+        "Q20",
+        "Q22",
+        "Q23"
+      ]
+    },
+    {
+      "id": "J05",
+      "name": "Status integrity on the odontogram",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Status-collapse (Gap #1/#2): slideout lacks distinct status controls for: existing[- ]other. Distinct enumerated statuses (Existing ≠ Existing-Other ≠ TP ≠ Condition) are unreachable, and Completed depends on the dead revenue chain (P0-001).",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J05-broken.png",
+      "rubricIds": [
+        "Q8",
+        "Q24",
+        "Q25"
+      ]
+    },
+    {
+      "id": "J06",
+      "name": "Multi-visit / phased treatment plan sequencing",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Treatment Plan tab exposes no phase/sequence/priority assignment controls (Gap #14). Phased sequencing cannot be expressed through the UI; the goal state (persisted phase/sequence fields) is unreachable. No out-of-order warning surface either.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J06-broken.png",
+      "rubricIds": [
+        "Q26",
+        "Q27",
+        "Q28"
+      ]
+    },
+    {
+      "id": "J07",
+      "name": "Charting granularity & mixed dentition",
+      "set": "A",
+      "expectedVerdict": "PASS",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Independent read shows no persisted MOD surface set (surfacesPicked=3). Either the chart write did not persist or surface granularity is lost (Gap #9). Provisional PASS flips to BROKEN.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J07-broken.png",
+      "rubricIds": [
+        "Q29",
+        "Q30",
+        "Q31",
+        "Q32",
+        "Q33"
+      ]
+    },
+    {
+      "id": "J08",
+      "name": "Informed refusal",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Treatment Plan tab exposes no decline/refusal control with a reason field (Gap #11). Informed refusal cannot be captured through the UI — legally-critical C4 requirement unmet. Goal state (persisted declined status + reason) unreachable.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J08-broken.png",
+      "rubricIds": [
+        "Q20"
+      ]
+    },
+    {
+      "id": "J09",
+      "name": "Treatment-plan versioning",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Treatment Plan tab exposes no acceptance-capture or version-history control (Gap #6). An accepted plan cannot be frozen as an immutable versioned snapshot through the UI; the goal state (version N frozen, N+1 with the edit) is unreachable.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J09-broken.png",
+      "rubricIds": [
+        "Q34",
+        "Q35"
+      ]
+    },
+    {
+      "id": "J10",
+      "name": "Void / amend a signed entry",
+      "set": "A",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "P0-004 CONFIRMED: notes are local React state with no DB column. Independent read of /dental/visits/unknown/notes → null shows no signed/locked persisted note (hasSignedPersisted=false); UI addendum control present=false. No signed/locked persistence ⇒ no addendum model ⇒ no audit trail for note mutations. The void/amend journey cannot complete through the UI (Gap #3 hard-delete, Gap #5 editable signed notes).",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/J10-broken.png",
+      "rubricIds": [
+        "Q36",
+        "Q37",
+        "Q38",
+        "Q39"
+      ]
+    },
+    {
+      "id": "B01",
+      "name": "Free-tier ceph gate",
+      "set": "B",
+      "expectedVerdict": "BROKEN",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Ceph analysis returned 200 — the seeded demo org has a PAID imaging tier, so the free-tier gate (CIMG-001/002) cannot be exercised with the seeded dentist identity. A dedicated free-tier seed member is required to verify this journey (DONE_WITH_CONCERNS for the runner).",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/B01-broken.png",
+      "rubricIds": [
+        "CIMG-001",
+        "CIMG-002",
+        "CIMG-007"
+      ]
+    },
+    {
+      "id": "B02",
+      "name": "Landmark placement → SNA/SNB numeric",
+      "set": "B",
+      "expectedVerdict": "PASS",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "NUMERIC mismatch — UI→API→math seam drifted from golden. Got SNA=NaN (exp 82), SNB=NaN (exp 80), ANB=NaN (exp 2), convexity=NaN (exp >0). If landmarks were placed via lossy canvas-click mapping this is the confirmed break.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/B02-broken.png",
+      "rubricIds": [
+        "CIMG-003"
+      ]
+    },
+    {
+      "id": "B03",
+      "name": "Locked landmark immutability",
+      "set": "B",
+      "expectedVerdict": "PASS",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Locked landmark S unchanged server-side but the UI palette button is NOT disabled (silent-divergence risk — UI does not visibly prevent the edit).",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/B03-broken.png",
+      "rubricIds": [
+        "CIMG-004"
+      ]
+    },
+    {
+      "id": "B04",
+      "name": "Report gate + immutable versioned snapshot",
+      "set": "B",
+      "expectedVerdict": "PASS",
+      "actualVerdict": "BROKEN",
+      "duration_ms": 0,
+      "failedStep": "Report snapshot integrity failed: numericFrozen=false (SNA=78.5 exp 82, SNB=84.59 exp 80), byteIdentical=true. CIMG-006/008 not satisfied.",
+      "screenshotPath": "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/.journey-tmp/B04-broken.png",
+      "rubricIds": [
+        "CIMG-006",
+        "CIMG-008"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "pass": 0,
+    "broken": 14,
+    "error": 0,
+    "setA": {
+      "pass": 0,
+      "broken": 10
+    },
+    "setB": {
+      "pass": 0,
+      "broken": 4
+    }
+  }
+}

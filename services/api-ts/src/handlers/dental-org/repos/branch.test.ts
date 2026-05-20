@@ -6,19 +6,21 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { BranchRepository } from './branch.repo';
 import { OrganizationRepository } from './organization.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 const ORG_ID = '00000000-0000-0000-0000-111111111111';
 
 describe('BranchRepository', () => {
   let repo: BranchRepository;
+  let db: NodePgDatabase;
+  let teardown: () => Promise<void>;
 
   beforeEach(async () => {
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new BranchRepository(db);
     // Seed a parent org
     const orgRepo = new OrganizationRepository(db);
@@ -30,11 +32,10 @@ describe('BranchRepository', () => {
       countryCode: 'PH',
       active: true,
     });
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE

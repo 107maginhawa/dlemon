@@ -1,0 +1,1 @@
+export { setSecurityQuestion } from './pinRecovery';

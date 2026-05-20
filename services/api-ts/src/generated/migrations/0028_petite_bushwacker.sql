@@ -1,0 +1,1 @@
+DROP INDEX "dental_appointment_no_double_book_idx";

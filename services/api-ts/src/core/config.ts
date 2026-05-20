@@ -18,6 +18,8 @@ export interface Config {
     port: number;
     publicUrl?: string;
     internalServiceToken: string;
+    internalServiceExpandEnabled: boolean;
+    emrTenantEnabled: boolean;
   };
   
   // Database configuration
@@ -101,13 +103,15 @@ export function parseConfig(): Config {
   const serverHost = process.env['SERVER_HOST'] || '0.0.0.0';
   const publicUrl = process.env['SERVER_PUBLIC_URL'] || process.env['PUBLIC_URL'];
 
-  return {
+  const config: Config = {
     // Server configuration
     server: {
       host: serverHost,
       port: serverPort,
       publicUrl,
       internalServiceToken: process.env['INTERNAL_SERVICE_TOKEN'] || crypto.randomUUID(),
+      internalServiceExpandEnabled: parseBool(process.env['INTERNAL_SERVICE_EXPAND_ENABLED'], false),
+      emrTenantEnabled: parseBool(process.env['EMR_TENANT_ENABLED'], true),
     },
     
     // Database configuration (dialect auto-detected from URL)
@@ -120,13 +124,13 @@ export function parseConfig(): Config {
       logging: parseBool(process.env['DB_LOGGING'], false),
     },
     
-    // CORS configuration
+    // CORS configuration — prod defaults are restrictive; dev defaults are permissive.
     cors: {
-      origins: parseList(process.env['CORS_ORIGINS'], ['*']),
+      origins: parseList(process.env['CORS_ORIGINS'], process.env['NODE_ENV'] === 'production' ? [] : ['*']),
       credentials: parseBool(process.env['CORS_CREDENTIALS'], true),
-      allowLocalNetwork: parseBool(process.env['CORS_ALLOW_LOCAL_NETWORK'], true),
-      allowTunneling: parseBool(process.env['CORS_ALLOW_TUNNELING'], true),
-      strict: parseBool(process.env['CORS_STRICT'], false),
+      allowLocalNetwork: parseBool(process.env['CORS_ALLOW_LOCAL_NETWORK'], process.env['NODE_ENV'] !== 'production'),
+      allowTunneling: parseBool(process.env['CORS_ALLOW_TUNNELING'], process.env['NODE_ENV'] !== 'production'),
+      strict: parseBool(process.env['CORS_STRICT'], process.env['NODE_ENV'] === 'production'),
     },
     
     // Logging configuration
@@ -237,4 +241,40 @@ export function parseConfig(): Config {
         : DEFAULT_ICE_SERVERS
     },
   };
+
+  if (process.env['NODE_ENV'] === 'production') {
+    const weak: string[] = [];
+    if (!process.env['AUTH_SECRET'] || process.env['AUTH_SECRET'].length < 32) {
+      weak.push('AUTH_SECRET (must be set and ≥32 chars)');
+    }
+    if (!process.env['INTERNAL_SERVICE_TOKEN'] || process.env['INTERNAL_SERVICE_TOKEN'].length < 32) {
+      weak.push('INTERNAL_SERVICE_TOKEN (must be set and ≥32 chars)');
+    }
+    // Reject insecure infra credential defaults — minioadmin/postgres-password must
+    // not reach production. Operators must set real credentials via environment.
+    if (!process.env['DATABASE_URL'] || process.env['DATABASE_URL'].includes('postgres:password@localhost')) {
+      weak.push('DATABASE_URL (must not use the default localhost/password URL)');
+    }
+    if (!process.env['STORAGE_ACCESS_KEY_ID'] || process.env['STORAGE_ACCESS_KEY_ID'] === 'minioadmin') {
+      weak.push('STORAGE_ACCESS_KEY_ID (must not use the default "minioadmin")');
+    }
+    if (!process.env['STORAGE_SECRET_ACCESS_KEY'] || process.env['STORAGE_SECRET_ACCESS_KEY'] === 'minioadmin') {
+      weak.push('STORAGE_SECRET_ACCESS_KEY (must not use the default "minioadmin")');
+    }
+    if (weak.length > 0) {
+      throw new Error(
+        `[config] Production start refused — missing or weak secrets/credentials:\n  ${weak.join('\n  ')}\n` +
+        `Secrets: openssl rand -base64 32 | Storage/DB: set real credentials via env`
+      );
+    }
+  } else {
+    if (!process.env['AUTH_SECRET']) {
+      console.warn('[config] AUTH_SECRET not set — using insecure random fallback. Set it before going to production.');
+    }
+    if (!process.env['INTERNAL_SERVICE_TOKEN']) {
+      console.warn('[config] INTERNAL_SERVICE_TOKEN not set — random per-boot fallback. Set it before going to production.');
+    }
+  }
+
+  return config;
 }

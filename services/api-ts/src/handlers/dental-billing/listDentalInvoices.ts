@@ -11,6 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import { eq, and, sql } from 'drizzle-orm';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
@@ -26,11 +27,10 @@ export async function listDentalInvoices(
   const query = ctx.req.valid('query');
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Branch-level authorization
-  if (!query.branchId) {
-    throw new ValidationError('branchId query parameter is required');
+  // Branch-level authorization — optional filter; if provided, verify access
+  if (query.branchId) {
+    await assertBranchAccess(db, session.userId, query.branchId);
   }
-  await assertBranchAccess(db, session.userId, query.branchId);
 
   const conditions = [];
   if (query.patientId) conditions.push(eq(dentalInvoices.patientId, query.patientId));
@@ -85,5 +85,8 @@ export async function listDentalInvoices(
     };
   });
 
-  return ctx.json(invoices);
+  const { limit, offset } = parsePagination(query);
+  const total = invoices.length;
+  const page = invoices.slice(offset, offset + limit);
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, total, limit, offset) });
 }

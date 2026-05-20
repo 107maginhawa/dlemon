@@ -6,6 +6,7 @@
  * Only completed or locked visits can generate a PMD.
  */
 
+import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
@@ -14,6 +15,7 @@ import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { User } from '@/types/auth';
 import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
 
@@ -38,6 +40,17 @@ export async function generatePMD(
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
   await assertBranchAccess(db, user.id, visit.branchId);
+
+  // Resolve membership ID from personId + branchId
+  const [membership] = await db
+    .select({ id: dentalMemberships.id })
+    .from(dentalMemberships)
+    .where(and(
+      eq(dentalMemberships.personId, user.id),
+      eq(dentalMemberships.branchId, visit.branchId),
+      eq(dentalMemberships.status, 'active'),
+    ))
+    .limit(1);
 
   if (visit.status !== 'completed' && visit.status !== 'locked') {
     throw new ValidationError('PMD can only be generated from a completed or locked visit');
@@ -85,7 +98,7 @@ export async function generatePMD(
     pmd = await pmdRepo.supersede(existing.id, {
       visitId,
       patientId: body.patientId,
-      authorMemberId: user.id,
+      authorMemberId: membership!.id,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,
@@ -94,7 +107,7 @@ export async function generatePMD(
     pmd = await pmdRepo.createOne({
       visitId,
       patientId: body.patientId,
-      authorMemberId: user.id,
+      authorMemberId: membership!.id,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,

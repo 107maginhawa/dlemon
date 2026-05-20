@@ -15,6 +15,7 @@ import { assertBranchAccess } from './utils/assert-branch-access';
 import { eq } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreateAppointmentBody } from '@/generated/openapi/validators';
+import type { NotificationService } from '@/core/notifs';
 
 export async function createAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -23,6 +24,7 @@ export async function createAppointment(ctx: HandlerContext) {
   const body = ctx.req.valid('json') as CreateAppointmentBody;
 
   const db = ctx.get('database') as DatabaseInstance;
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
 
   // Authorization: user must have active membership in the target branch
   await assertBranchAccess(db, user.id, body.branchId);
@@ -56,13 +58,24 @@ export async function createAppointment(ctx: HandlerContext) {
     branchId,
     scheduledAt,
     durationMinutes,
-    procedureType: body.procedureType,
+    serviceType: body.serviceType,
     operatoryId: body.operatoryId,
     walkIn: body.walkIn ?? false,
     notes: body.notes,
     createdBy: user.id,
     updatedBy: user.id,
   });
+
+  // AC-NOTIF-01: fire booking.created notification to patient (best-effort, non-blocking)
+  notifs?.createNotification({
+    recipient: body.patientId,
+    type: 'booking.created',
+    channel: 'in-app',
+    title: 'Appointment scheduled',
+    message: `Your appointment is confirmed for ${scheduledAt.toISOString()}`,
+    relatedEntityType: 'appointment',
+    relatedEntity: appt.id,
+  }).catch(() => {/* non-blocking */});
 
   return ctx.json({ ...appt, warnings }, 201);
 }

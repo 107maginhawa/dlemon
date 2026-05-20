@@ -41,7 +41,7 @@ async function fetchStaffMembers(branchId: string): Promise<Member[]> {
   });
   if (!res.ok) throw new Error(`Failed to load staff members (${res.status})`);
   const data = await res.json();
-  return Array.isArray(data) ? data : (data.items ?? data.members ?? []);
+  return Array.isArray(data) ? data : (data.data ?? data.items ?? data.members ?? []);
 }
 
 async function createMember(branchId: string, input: CreateMemberInput): Promise<Member> {
@@ -58,7 +58,7 @@ async function createMember(branchId: string, input: CreateMemberInput): Promise
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ pin: input.pin }),
+    body: JSON.stringify({ newPin: input.pin }),
   });
   if (!pinRes.ok) throw new Error('Staff member created but PIN setup failed. Use reset PIN to set the PIN.');
 

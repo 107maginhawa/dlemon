@@ -14,36 +14,22 @@
  *  - Save button calls POST for pregnancy label
  */
 import { describe, test, expect, mock, afterEach } from 'bun:test';
-import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { MedicalHistoryForm } from './medical-history-form';
+import { freshClientWithMutations, makeWrapper as wrap, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
-
 const PATIENT_ID = 'patient-form-test';
 
 function freshClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
-
-function wrap(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
+  return freshClientWithMutations();
 }
 
 function renderForm(qc = freshClient()) {
@@ -88,8 +74,9 @@ describe('MedicalHistoryForm — rendering', () => {
   });
 
   test('renders all preset condition checkboxes after loading', async () => {
+    // SDK listMedicalHistoryResponseTransformer expects { data: [...] } shape
     global.fetch = mock(() =>
-      jsonResponse([]),
+      jsonResponse({ data: [] }),
     );
     renderForm();
     await waitFor(() =>
@@ -102,7 +89,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders all preset allergy checkboxes after loading', async () => {
     global.fetch = mock(() =>
-      jsonResponse([]),
+      jsonResponse({ data: [] }),
     );
     renderForm();
     await waitFor(() =>
@@ -114,7 +101,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders surgical history textarea after loading', async () => {
     global.fetch = mock(() =>
-      jsonResponse([]),
+      jsonResponse({ data: [] }),
     );
     renderForm();
     await waitFor(() =>
@@ -124,7 +111,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders pregnancy radio options after loading', async () => {
     global.fetch = mock(() =>
-      jsonResponse([]),
+      jsonResponse({ data: [] }),
     );
     renderForm();
     await waitFor(() =>
@@ -136,7 +123,7 @@ describe('MedicalHistoryForm — rendering', () => {
 
   test('renders save button after loading', async () => {
     global.fetch = mock(() =>
-      jsonResponse([]),
+      jsonResponse({ data: [] }),
     );
     renderForm();
     await waitFor(() =>
@@ -150,7 +137,7 @@ describe('MedicalHistoryForm — rendering', () => {
 describe('MedicalHistoryForm — checkbox active state', () => {
   test('checkbox is aria-checked=true when matching active entry loaded', async () => {
     global.fetch = mock(() =>
-      jsonResponse([mockEntry]),
+      jsonResponse({ data: [mockEntry] }),
     );
     renderForm();
     await waitFor(() => {
@@ -165,7 +152,7 @@ describe('MedicalHistoryForm — checkbox active state', () => {
   test('checkbox is aria-checked=false when entry is inactive', async () => {
     const inactiveEntry = { ...mockEntry, displayName: 'Diabetes Mellitus Type 2', code: 'E11', active: false };
     global.fetch = mock(() =>
-      jsonResponse([inactiveEntry]),
+      jsonResponse({ data: [inactiveEntry] }),
     );
     renderForm();
     await waitFor(() =>
@@ -200,8 +187,8 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
         }
         return jsonResponse({ ...mockEntry, id: 'new-e', entryType: 'allergy', displayName: 'Penicillin' });
       }
-      // GET request — return empty list
-      return jsonResponse([]);
+      // GET request — return empty list (SDK transformer expects { data: [...] })
+      return jsonResponse({ data: [] });
     });
 
     renderForm();
@@ -209,9 +196,8 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
       expect(document.querySelector('[data-testid="checkbox-penicillin"]')).not.toBeNull(),
     );
 
-    await act(async () => {
-      fireEvent.click(document.querySelector('[data-testid="checkbox-penicillin"]') as HTMLElement);
-    });
+    const user = userEvent.setup();
+    await user.click(document.querySelector('[data-testid="checkbox-penicillin"]') as HTMLElement);
 
     await waitFor(() => expect(capturedMethod).toBe('POST'));
     expect(capturedUrl).toContain('/dental/clinical/medical-history');
@@ -246,7 +232,8 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
         }
         return jsonResponse({ ...penicillinEntry, active: false });
       }
-      return jsonResponse([penicillinEntry]);
+      // GET request — SDK transformer expects { data: [...] }
+      return jsonResponse({ data: [penicillinEntry] });
     });
 
     renderForm();
@@ -255,9 +242,8 @@ describe('MedicalHistoryForm — checkbox interactions', () => {
       return el?.getAttribute('aria-checked') === 'true';
     });
 
-    await act(async () => {
-      fireEvent.click(document.querySelector('[data-testid="checkbox-penicillin"]') as HTMLElement);
-    });
+    const user = userEvent.setup();
+    await user.click(document.querySelector('[data-testid="checkbox-penicillin"]') as HTMLElement);
 
     await waitFor(() => expect(capturedPatchUrl).toContain('/dental/clinical/medical-history/e-penic'));
     expect(capturedPatchBody.active).toBe(false);
@@ -280,7 +266,8 @@ describe('MedicalHistoryForm — save button', () => {
         }
         return jsonResponse({ ...mockEntry, id: 'new-e' });
       }
-      return jsonResponse([]);
+      // GET request — SDK transformer expects { data: [...] }
+      return jsonResponse({ data: [] });
     });
 
     renderForm();
@@ -288,18 +275,16 @@ describe('MedicalHistoryForm — save button', () => {
       expect(document.querySelector('[data-testid="surgical-history-textarea"]')).not.toBeNull(),
     );
 
-    fireEvent.change(
-      document.querySelector('[data-testid="surgical-history-textarea"]') as HTMLElement,
-      { target: { value: 'Appendectomy 2020' } },
-    );
+    const user = userEvent.setup();
+    const textarea = document.querySelector('[data-testid="surgical-history-textarea"]') as HTMLElement;
+    await user.clear(textarea);
+    await user.type(textarea, 'Appendectomy 2020');
 
-    await act(async () => {
-      fireEvent.click(document.querySelector('[data-testid="save-medical-history-btn"]') as HTMLElement);
-    });
+    await user.click(document.querySelector('[data-testid="save-medical-history-btn"]') as HTMLElement);
 
     await waitFor(() => expect(postBodies.length).toBeGreaterThan(0));
     const surgCall = postBodies.find((b) => b.entryType === 'procedure');
-    expect(surgCall).toBeTruthy();
+    expect(surgCall).not.toBeNull();
     expect(surgCall.displayName).toBe('Surgical History');
     expect(surgCall.notes).toBe('Appendectomy 2020');
   });
@@ -317,7 +302,8 @@ describe('MedicalHistoryForm — save button', () => {
         }
         return jsonResponse({ ...mockEntry, id: 'new-e' });
       }
-      return jsonResponse([]);
+      // GET request — SDK transformer expects { data: [...] }
+      return jsonResponse({ data: [] });
     });
 
     renderForm();
@@ -325,15 +311,14 @@ describe('MedicalHistoryForm — save button', () => {
       expect(document.querySelector('[data-testid="pregnancy-pregnant"]')).not.toBeNull(),
     );
 
-    fireEvent.click(document.querySelector('[data-testid="pregnancy-pregnant"]') as HTMLElement);
+    const user = userEvent.setup();
+    await user.click(document.querySelector('[data-testid="pregnancy-pregnant"]') as HTMLElement);
 
-    await act(async () => {
-      fireEvent.click(document.querySelector('[data-testid="save-medical-history-btn"]') as HTMLElement);
-    });
+    await user.click(document.querySelector('[data-testid="save-medical-history-btn"]') as HTMLElement);
 
     await waitFor(() => expect(postBodies.length).toBeGreaterThan(0));
     const pregCall = postBodies.find((b) => b.displayName?.startsWith('Pregnancy:'));
-    expect(pregCall).toBeTruthy();
+    expect(pregCall).not.toBeNull();
     expect(pregCall.displayName).toBe('Pregnancy: Pregnant');
   });
 });

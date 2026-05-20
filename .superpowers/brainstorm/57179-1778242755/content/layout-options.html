@@ -1,0 +1,175 @@
+<h2>Right Panel Layout</h2>
+<p class="subtitle">How should the tooth detail panel sit alongside the dental chart?</p>
+
+<div class="cards">
+  <!-- Option A: Slide-over -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px;">
+      <div style="display: flex; gap: 0; height: 320px; border-radius: 8px; overflow: hidden; border: 1px solid #333;">
+        <!-- Main area -->
+        <div style="flex: 1; background: #1a1a2e; padding: 12px; position: relative;">
+          <div style="font-size: 10px; color: #888; margin-bottom: 8px;">Timeline Carousel</div>
+          <div style="background: #16213e; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-size: 9px; color: #666; margin-bottom: 4px;">Dental Chart Grid</div>
+            <div style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px;">
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;" title="tooth"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #FFE97D; height: 18px; border-radius: 2px; border: 1px solid #FFD700;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="font-size: 9px; color: #666;">Breakdown Table</div>
+          <div style="background: #16213e; border-radius: 4px; padding: 6px; margin-top: 4px;">
+            <div style="height: 8px; background: #0f3460; border-radius: 2px; width: 80%; margin-bottom: 3px;"></div>
+            <div style="height: 8px; background: #0f3460; border-radius: 2px; width: 60%;"></div>
+          </div>
+        </div>
+        <!-- Slide-over panel -->
+        <div style="width: 120px; background: #12122a; border-left: 1px solid #FFE97D; padding: 8px;">
+          <div style="font-size: 9px; color: #FFE97D; font-weight: 600; margin-bottom: 6px;">Tooth #9</div>
+          <div style="display: flex; gap: 2px; margin-bottom: 8px;">
+            <div style="flex:1; height: 3px; background: #FFE97D; border-radius: 2px;"></div>
+            <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+            <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+          </div>
+          <div style="font-size: 8px; color: #888; margin-bottom: 4px;">Surface Map</div>
+          <div style="width: 50px; height: 50px; margin: 0 auto 8px; border: 1px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <div style="font-size: 7px; color: #666;">SVG</div>
+          </div>
+          <div style="font-size: 8px; color: #888; margin-bottom: 4px;">Conditions</div>
+          <div style="height: 6px; background: #333; border-radius: 2px; margin-bottom: 2px;"></div>
+          <div style="height: 6px; background: #333; border-radius: 2px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Fixed Side Panel</h3>
+      <p>Panel pushes content left. Chart and panel always visible together. Like the MYCURE screenshot. Clean split layout.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Overlay -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px;">
+      <div style="display: flex; gap: 0; height: 320px; border-radius: 8px; overflow: hidden; border: 1px solid #333; position: relative;">
+        <!-- Main area (full width, dimmed) -->
+        <div style="flex: 1; background: #1a1a2e; padding: 12px; opacity: 0.5;">
+          <div style="font-size: 10px; color: #888; margin-bottom: 8px;">Timeline Carousel</div>
+          <div style="background: #16213e; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-size: 9px; color: #666; margin-bottom: 4px;">Dental Chart Grid</div>
+            <div style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px;">
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+              <div style="background: #0f3460; height: 18px; border-radius: 2px;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Overlay panel -->
+        <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 130px; background: #12122a; border-left: 2px solid #FFE97D; padding: 8px; box-shadow: -4px 0 20px rgba(0,0,0,0.5);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 9px; color: #FFE97D; font-weight: 600;">Tooth #9</div>
+            <div style="font-size: 10px; color: #888; cursor: pointer;">✕</div>
+          </div>
+          <div style="display: flex; gap: 2px; margin-bottom: 8px;">
+            <div style="flex:1; height: 3px; background: #FFE97D; border-radius: 2px;"></div>
+            <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+            <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+          </div>
+          <div style="font-size: 8px; color: #888; margin-bottom: 4px;">Surface Map</div>
+          <div style="width: 50px; height: 50px; margin: 0 auto 8px; border: 1px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <div style="font-size: 7px; color: #666;">SVG</div>
+          </div>
+          <div style="font-size: 8px; color: #888; margin-bottom: 4px;">Conditions</div>
+          <div style="height: 6px; background: #333; border-radius: 2px; margin-bottom: 2px;"></div>
+          <div style="height: 6px; background: #333; border-radius: 2px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Overlay Drawer</h3>
+      <p>Panel slides over the chart with a backdrop dim. Chart stays full-width but partially obscured. Good for mobile/narrow screens.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Below chart -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px;">
+      <div style="height: 320px; border-radius: 8px; overflow: hidden; border: 1px solid #333; background: #1a1a2e; padding: 12px;">
+        <div style="font-size: 10px; color: #888; margin-bottom: 6px;">Timeline Carousel</div>
+        <div style="background: #16213e; border-radius: 6px; padding: 6px; margin-bottom: 6px;">
+          <div style="font-size: 9px; color: #666; margin-bottom: 3px;">Dental Chart Grid</div>
+          <div style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px;">
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #FFE97D; height: 12px; border-radius: 2px; border: 1px solid #FFD700;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+            <div style="background: #0f3460; height: 12px; border-radius: 2px;"></div>
+          </div>
+        </div>
+        <!-- Detail panel below -->
+        <div style="background: #12122a; border: 1px solid #FFE97D; border-radius: 6px; padding: 8px; display: flex; gap: 12px;">
+          <div style="flex: 0 0 auto;">
+            <div style="font-size: 9px; color: #FFE97D; font-weight: 600; margin-bottom: 4px;">Tooth #9</div>
+            <div style="width: 50px; height: 50px; border: 1px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <div style="font-size: 7px; color: #666;">SVG</div>
+            </div>
+          </div>
+          <div style="flex: 1;">
+            <div style="display: flex; gap: 2px; margin-bottom: 6px;">
+              <div style="flex:1; height: 3px; background: #FFE97D; border-radius: 2px;"></div>
+              <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+              <div style="flex:1; height: 3px; background: #333; border-radius: 2px;"></div>
+            </div>
+            <div style="font-size: 8px; color: #888; margin-bottom: 3px;">Conditions</div>
+            <div style="height: 6px; background: #333; border-radius: 2px; margin-bottom: 2px; width: 70%;"></div>
+            <div style="height: 6px; background: #333; border-radius: 2px; width: 50%;"></div>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: #666; margin-top: 6px;">Breakdown Table (pushed down)</div>
+        <div style="background: #16213e; border-radius: 4px; padding: 4px; margin-top: 3px;">
+          <div style="height: 6px; background: #0f3460; border-radius: 2px; width: 80%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Inline Expand</h3>
+      <p>Detail panel expands below the chart, pushing the breakdown table down. No side panel — everything flows vertically. Simpler but takes vertical space.</p>
+    </div>
+  </div>
+</div>

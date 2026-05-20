@@ -8,7 +8,7 @@
  * registered before the handler in the test app — matching production routes.ts.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
@@ -18,6 +18,8 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 
 import { createDentalInvoice } from './createDentalInvoice';
 import { getDentalInvoice } from './getDentalInvoice';
@@ -51,11 +53,31 @@ import {
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
+// Suite-unique BRANCH_ID + membership id (tag a02) breaks the cross-suite
+// collision on dental_membership's (person_id, branch_id) partial unique index.
+// Org/patient/person ids stay at their original deterministic values so
+// onConflictDoNothing is a correct no-op against rows from prior runs.
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
+const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const PERSON_ID = 'e0000000-0000-1000-8000-000000000001';
+const BRANCH_ID = '7b000000-0000-4000-8000-000000000a02';
+const MEMBER_ID = '7c000000-0000-4000-8000-000000000a02';
+const STAFF_MEMBER_ID = '7c000000-0000-4000-8000-000000000a99';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
+const ORG_ID = 'ed000000-0000-1000-8000-000000000001';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'Billing Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Staff', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: STAFF_MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
 
 const validationErrorHandler = (result: any, c: any) => {
   if (!result.success) {
@@ -242,9 +264,13 @@ async function seedPayment(invoiceId: string) {
 // ---------------------------------------------------------------------------
 
 afterEach(async () => {
-  await db.execute(
-    sql`TRUNCATE TABLE dental_payment_plan_installment, dental_payment_plan, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, dental_visit CASCADE`,
-  );
+  await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
+  await db.execute(sql`DELETE FROM dental_payment_plan`);
+  await db.execute(sql`DELETE FROM dental_payment`);
+  await db.execute(sql`DELETE FROM dental_invoice_line_item`);
+  await db.execute(sql`DELETE FROM dental_invoice`);
+  await db.execute(sql`DELETE FROM dental_treatment`);
+  await db.execute(sql`DELETE FROM dental_visit`);
 });
 
 // ===========================================================================
@@ -371,8 +397,8 @@ describe('listDentalInvoices handler', () => {
     const res = await app.request('/dental/billing/invoices');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(0);
   });
 
   test('returns 200 with invoice list', async () => {
@@ -382,8 +408,8 @@ describe('listDentalInvoices handler', () => {
     const res = await app.request('/dental/billing/invoices');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThan(0);
   });
 
   test('filters by patientId', async () => {
@@ -393,8 +419,8 @@ describe('listDentalInvoices handler', () => {
     const res = await app.request(`/dental/billing/invoices?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.every((inv: any) => inv.patientId === PATIENT_ID)).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.every((inv: any) => inv.patientId === PATIENT_ID)).toBe(true);
   });
 
   test('filters by status', async () => {
@@ -404,7 +430,7 @@ describe('listDentalInvoices handler', () => {
     const res = await app.request('/dental/billing/invoices?status=draft');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.every((inv: any) => inv.status === 'draft')).toBe(true);
+    expect(body.data.every((inv: any) => inv.status === 'draft')).toBe(true);
   });
 });
 
@@ -450,7 +476,7 @@ describe('issueDentalInvoice handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('issued');
-    expect(body.issuedAt).toBeTruthy();
+    expect(body.issuedAt).not.toBeNull();
   });
 });
 
@@ -485,7 +511,7 @@ describe('voidDentalInvoice handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('voided');
-    expect(body.voidedAt).toBeTruthy();
+    expect(body.voidedAt).not.toBeNull();
   });
 
   test('returns error when trying to void an already voided invoice', async () => {
@@ -672,7 +698,7 @@ describe('recordDentalPayment handler', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amountCents: 5000,
-        method: 'bankTransfer',
+        method: 'bank_transfer',
         receiptNumber: 'REC-004',
         recordedByMemberId: MEMBER_ID,
       }),
@@ -730,8 +756,8 @@ describe('listDentalPayments handler', () => {
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(0);
   });
 
   test('returns 200 with list of non-voided payments', async () => {
@@ -742,9 +768,9 @@ describe('listDentalPayments handler', () => {
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.length).toBe(1);
-    expect(body[0].amountCents).toBe(1000);
-    expect(body[0].isVoid).toBe(false);
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].amountCents).toBe(1000);
+    expect(body.data[0].isVoid).toBe(false);
   });
 });
 
@@ -825,7 +851,7 @@ describe('voidDentalPayment handler', () => {
     const { invoice } = await seedInvoice();
     const { payment } = await seedPayment(invoice.id);
     const paymentRepo = new DentalPaymentRepository(db);
-    await paymentRepo.voidPayment(payment.id, 'First void', TEST_USER.id);
+    await paymentRepo.voidPayment(payment.id, 'First void', MEMBER_ID);
 
     const app = buildTestApp(TEST_USER);
     const res = await app.request(
@@ -1101,5 +1127,51 @@ describe('EC6: multiple payment plans per patient', () => {
     const body2 = await res2.json() as any;
     expect(body2.invoiceId).toBe(inv2.id);
     expect(body2.installments).toHaveLength(6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gates — issueDentalInvoice (dentist_* only) + voidDentalInvoice (dentist_owner only)
+// ---------------------------------------------------------------------------
+
+describe('issueDentalInvoice role gate', () => {
+  test('staff_full → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/issue`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/issue`, { method: 'POST' });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+describe('voidDentalInvoice role gate', () => {
+  test('staff_full → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_associate → 403 (owner-only operation)', async () => {
+    const associateUser = { id: '00000000-0000-0000-0000-000000000098', email: 'assoc@clinic.com' };
+    const { dentalMemberships: dm } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dm).values({ id: '7c000000-0000-4000-8000-000000000a98', branchId: BRANCH_ID, personId: associateUser.id, displayName: 'Associate', role: 'dentist_associate', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(associateUser);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    expect(res.status).not.toBe(403);
   });
 });

@@ -149,4 +149,68 @@ describe('parseConfig', () => {
     const config = parseConfig();
     expect(config.billing.provider).toBe('stripe');
   });
+
+  // --------------------------------------------------------------------------
+  // Production guard — insecure credentials are rejected at startup
+  // --------------------------------------------------------------------------
+
+  describe('production guard', () => {
+    beforeEach(() => {
+      process.env['NODE_ENV'] = 'production';
+      process.env['AUTH_SECRET'] = 'a'.repeat(32);
+      process.env['INTERNAL_SERVICE_TOKEN'] = 'b'.repeat(32);
+      process.env['DATABASE_URL'] = 'postgres://app:strong@prod-db:5432/monobase';
+      process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
+      process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+    });
+
+    test('prod-safe env: does not throw', () => {
+      expect(() => parseConfig()).not.toThrow();
+    });
+
+    test('missing AUTH_SECRET throws', () => {
+      delete process.env['AUTH_SECRET'];
+      expect(() => parseConfig()).toThrow('AUTH_SECRET');
+    });
+
+    test('short AUTH_SECRET throws', () => {
+      process.env['AUTH_SECRET'] = 'tooshort';
+      expect(() => parseConfig()).toThrow('AUTH_SECRET');
+    });
+
+    test('missing INTERNAL_SERVICE_TOKEN throws', () => {
+      delete process.env['INTERNAL_SERVICE_TOKEN'];
+      expect(() => parseConfig()).toThrow('INTERNAL_SERVICE_TOKEN');
+    });
+
+    test('default DATABASE_URL (localhost/password) throws', () => {
+      process.env['DATABASE_URL'] = 'postgres://postgres:password@localhost:5432/monobase';
+      expect(() => parseConfig()).toThrow('DATABASE_URL');
+    });
+
+    test('missing DATABASE_URL throws', () => {
+      delete process.env['DATABASE_URL'];
+      expect(() => parseConfig()).toThrow('DATABASE_URL');
+    });
+
+    test('default STORAGE_ACCESS_KEY_ID (minioadmin) throws', () => {
+      process.env['STORAGE_ACCESS_KEY_ID'] = 'minioadmin';
+      expect(() => parseConfig()).toThrow('STORAGE_ACCESS_KEY_ID');
+    });
+
+    test('missing STORAGE_ACCESS_KEY_ID throws', () => {
+      delete process.env['STORAGE_ACCESS_KEY_ID'];
+      expect(() => parseConfig()).toThrow('STORAGE_ACCESS_KEY_ID');
+    });
+
+    test('default STORAGE_SECRET_ACCESS_KEY (minioadmin) throws', () => {
+      process.env['STORAGE_SECRET_ACCESS_KEY'] = 'minioadmin';
+      expect(() => parseConfig()).toThrow('STORAGE_SECRET_ACCESS_KEY');
+    });
+
+    test('missing STORAGE_SECRET_ACCESS_KEY throws', () => {
+      delete process.env['STORAGE_SECRET_ACCESS_KEY'];
+      expect(() => parseConfig()).toThrow('STORAGE_SECRET_ACCESS_KEY');
+    });
+  });
 });

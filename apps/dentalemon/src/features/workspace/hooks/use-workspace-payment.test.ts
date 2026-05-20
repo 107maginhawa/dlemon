@@ -5,25 +5,12 @@
  */
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { QueryClient } from '@tanstack/react-query';
 import { usePatientInvoices, useCreateInvoice } from './use-workspace-payment';
+import { makeWrapper, jsonResponse } from '@/test-utils';
 
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
-
+const originalFetch = global.fetch;
 const mockFetch = mock(() => jsonResponse([]));
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
 
 const INVOICE = {
   id: 'inv-1',
@@ -47,6 +34,7 @@ describe('usePatientInvoices', () => {
   });
 
   afterEach(() => {
+    global.fetch = originalFetch;
     qc.clear();
   });
 
@@ -57,8 +45,9 @@ describe('usePatientInvoices', () => {
   });
 
   it('fetches invoices for patient (PAY-02)', async () => {
+    // SDK transformer expects { data: [...] } shape
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify([INVOICE]), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      new Response(JSON.stringify({ data: [INVOICE] }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
 
     const wrapper = makeWrapper(qc);
@@ -71,8 +60,9 @@ describe('usePatientInvoices', () => {
   });
 
   it('includes patientId in query URL', async () => {
+    // SDK transformer expects { data: [...] } shape
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
 
     const wrapper = makeWrapper(qc);
@@ -85,8 +75,9 @@ describe('usePatientInvoices', () => {
   });
 
   it('handles invoices wrapper response', async () => {
+    // SDK transformer expects { data: [...] } shape (the select fn handles both shapes)
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ invoices: [INVOICE] }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      new Response(JSON.stringify({ data: [INVOICE] }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
 
     const wrapper = makeWrapper(qc);
@@ -116,6 +107,7 @@ describe('useCreateInvoice', () => {
   });
 
   afterEach(() => {
+    global.fetch = originalFetch;
     qc.clear();
   });
 

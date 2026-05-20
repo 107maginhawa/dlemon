@@ -48,6 +48,8 @@ export function useSaveToothFlow({
       state: data.state,
       surfaces: data.surfaces,
       conditionCode: data.conditionCode,
+      surfaceConditionMap: data.surfaceConditionMap,
+      entryClassification: data.entryClassification,
     };
     const idx = updatedTeeth.findIndex((t) => t.toothNumber === toothNumber);
     if (idx >= 0) updatedTeeth[idx] = toothEntry;
@@ -80,7 +82,7 @@ export function useSaveToothFlow({
                 conditionCode: data.conditionCode,
                 priceAmount,
                 currency: 'PHP',
-                status: 'diagnosed',
+                clinicalNotes: data.clinicalNotes,
               },
               {
                 onError: (err) => {

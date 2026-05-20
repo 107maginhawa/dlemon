@@ -35,7 +35,7 @@ export function YearSegmentControl({ years, selectedYear, onSelect }: YearSegmen
             type="button"
             onClick={() => onSelect(year)}
             className={[
-              'px-3 py-1 rounded-full text-sm font-medium transition-all duration-150',
+              'px-3 py-2.5 min-h-[44px] rounded-full text-sm font-medium transition-all duration-150',
               isActive
                 ? 'bg-white shadow text-foreground'
                 : 'text-muted-foreground hover:text-foreground',

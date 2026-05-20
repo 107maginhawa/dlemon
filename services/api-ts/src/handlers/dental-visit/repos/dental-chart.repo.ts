@@ -12,6 +12,7 @@ import {
   type DentalChart,
   type NewDentalChart,
   type ToothChartState,
+  type ChartEntryClassification,
 } from './dental-chart.schema';
 
 export interface UpsertChartInput {
@@ -26,6 +27,8 @@ export interface UpdateToothInput {
   surfaces?: string[];
   conditionCode?: string;
   note?: string;
+  surfaceConditionMap?: Record<string, unknown>;
+  entryClassification?: ChartEntryClassification;
 }
 
 export class DentalChartRepository {
@@ -76,6 +79,8 @@ export class DentalChartRepository {
       surfaces: update.surfaces ?? existingTooth?.surfaces,
       conditionCode: update.conditionCode ?? existingTooth?.conditionCode,
       note: update.note ?? existingTooth?.note,
+      surfaceConditionMap: update.surfaceConditionMap ?? existingTooth?.surfaceConditionMap,
+      entryClassification: update.entryClassification ?? existingTooth?.entryClassification,
     };
 
     let newTeeth: ToothChartState[];

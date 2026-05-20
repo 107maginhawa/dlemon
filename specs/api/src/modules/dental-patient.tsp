@@ -102,13 +102,6 @@ namespace DentalPatientModule {
     recallNote?: string;
   }
 
-  @doc("List dental patients response")
-  model ListDentalPatientsResponse {
-    patients: DentalPatient[];
-    total: int32;
-    limit: int32;
-    offset: int32;
-  }
 
   @doc("Follow-up note")
   model FollowUpNote {
@@ -321,10 +314,8 @@ namespace DentalPatientModule {
       @query branchId?: UUID,
       @query limit?: int32,
       @query offset?: int32,
-    ): {
-      @statusCode statusCode: 200;
-      @body response: ListDentalPatientsResponse;
-    } | ApiUnauthorizedResponse;
+    ): ApiOkResponse<PaginatedResponse<DentalPatient>>
+      | ApiUnauthorizedResponse;
 
     @doc("Import patients from a JSON array")
     @post

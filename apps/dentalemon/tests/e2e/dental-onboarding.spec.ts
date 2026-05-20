@@ -40,23 +40,61 @@ async function signUpAndSetupPerson(page: Page): Promise<void> {
     const body = await res.text().catch(() => '<unreadable>');
     throw new Error(`Sign-up returned ${res.status()}: ${body.slice(0, 300)}`);
   }
-  await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: 15000 });
 
-  // Step 1: Personal info (select DOB)
-  await page.getByLabel(/date of birth/i).click();
-  await page.getByRole('combobox', { name: /choose the year/i }).selectOption('1985');
-  await page.getByRole('combobox', { name: /choose the month/i }).selectOption({ index: 0 });
-  await page.getByRole('button', { name: /January 1st, 1985/i }).click();
-  await page.click('button:has-text("Next")');
+  // Wait for initial navigation after sign-up
+  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
 
-  // Step 2: Skip address
-  await page.getByRole('button', { name: /skip for now/i }).click();
+  // Mark email as verified so the verify-email blocker doesn't stop us
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+  }, API);
 
-  // Should land on dental-onboarding (FR7.5) or dashboard
+  // If stuck on verify-email, navigate to trigger the routing logic
+  if (page.url().includes('/verify-email')) {
+    await page.goto(`${APP}/dashboard`);
+    await page.waitForLoadState('networkidle');
+  }
+
+  // After sign-up, the app may route to /onboarding (person profile) or skip
+  // directly to /dashboard → /dental-onboarding if Better-Auth auto-created
+  // a Person record. Wait for any of these.
   await page.waitForURL(
-    (url) => url.pathname === '/dental-onboarding' || url.pathname === '/dashboard',
+    (url) =>
+      url.pathname === '/onboarding' ||
+      url.pathname === '/dental-onboarding' ||
+      url.pathname === '/dashboard',
     { timeout: 15000 },
   );
+
+  // Complete person profile if we landed on /onboarding
+  if (page.url().includes('/onboarding') && !page.url().includes('/dental-onboarding')) {
+    // Step 1: Personal info (select DOB)
+    await page.getByLabel(/date of birth/i).click();
+    await page.getByRole('combobox', { name: /choose the year/i }).selectOption('1985');
+    await page.getByRole('combobox', { name: /choose the month/i }).selectOption({ index: 0 });
+    await page.getByRole('button', { name: /January 1st, 1985/i }).click();
+    await page.click('button:has-text("Next")');
+
+    // Step 2: Skip address
+    await page.getByRole('button', { name: /skip for now/i }).click();
+
+    // Should land on dental-onboarding (FR7.5) or dashboard
+    await page.waitForURL(
+      (url) => url.pathname === '/dental-onboarding' || url.pathname === '/dashboard',
+      { timeout: 15000 },
+    );
+  }
+
+  // If we're on /dashboard, wait for the redirect to /dental-onboarding
+  if (page.url().includes('/dashboard') && !page.url().includes('/dental-onboarding')) {
+    await page.waitForURL(
+      (url) => url.pathname === '/dental-onboarding',
+      { timeout: 15000 },
+    ).catch(() => {
+      // May already be on dental-onboarding or dashboard stayed
+    });
+  }
 }
 
 /** Navigate through clinic step with valid data */

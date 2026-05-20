@@ -73,19 +73,36 @@ export async function recoverPin(ctx: Context): Promise<Response> {
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
 
+  // Check if currently locked out (same pattern as verifyPin)
+  if (repo.isLockedOut(member)) {
+    return ctx.json(
+      { message: 'Too many failed attempts', lockedUntil: member.pinLockedUntil },
+      429
+    );
+  }
+
+  // Normalize: no security question returns same shape as wrong answer (prevent info leak)
   if (!member.securityAnswerHash) {
-    throw new BusinessLogicError('No security question set for this member', 'NO_SECURITY_QUESTION');
+    return ctx.json({ success: false }, 401);
   }
 
   const isCorrect = await Bun.password.verify(answer.toLowerCase().trim(), member.securityAnswerHash);
   if (!isCorrect) {
-    return ctx.json({ success: false, error: 'Incorrect security answer' }, 401);
+    // Wrong answer — record failed attempt (shares lockout counter with PIN)
+    const updated = await repo.recordFailedPinAttempt(memberId);
+    if (updated && repo.isLockedOut(updated)) {
+      return ctx.json(
+        { message: 'Too many failed attempts', lockedUntil: updated.pinLockedUntil },
+        429
+      );
+    }
+    return ctx.json({ success: false }, 401);
   }
 
-  // Correct answer — set new PIN
+  // Correct answer — reset attempts and set new PIN
+  await repo.resetPinAttempts(memberId);
   const pinHash = await Bun.password.hash(newPin);
   await repo.updatePin(memberId, pinHash);
-  await repo.resetPinAttempts(memberId);
 
   return ctx.json({ success: true }, 200);
 }

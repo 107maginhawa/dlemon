@@ -18,7 +18,7 @@ High-performance API service built with **Bun** runtime and **Hono** web framewo
 
 **Essential Environment Variable:**
 ```bash
-DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/monobase"
 ```
 
 ### S3-Compatible Storage (Required)

@@ -1,5 +1,6 @@
 /**
  * Global E2E test fixtures — extends Playwright's base test with:
+ * - createAppointment helper for scheduling AC tests
  * 1. Console error listener (fails test on uncaught JS errors)
  * 2. Network failure listener (fails test on 4xx/5xx API responses unless expected)
  * 3. Shared dental org setup helper
@@ -79,8 +80,23 @@ export async function setupDentalOrg(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
+  // Mark email as verified so the frontend guard doesn't redirect to /verify-email.
+  // The backend has requireEmailVerification: false but the frontend guard still checks
+  // emailVerified on the session. The /dev/verify-email endpoint is only available in
+  // non-production environments.
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+  }, API);
+
   // Create dental org + branch + member via API
   const ctx = await page.evaluate(async (api) => {
+    // Get the current user's ID so membership can be linked to their person record
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    if (!sessionRes.ok) throw new Error(`Session fetch failed: ${sessionRes.status}`);
+    const session = await sessionRes.json();
+    const personId: string = session?.user?.id;
+    if (!personId) throw new Error('Could not determine current user personId from session');
+
     const orgRes = await fetch(`${api}/dental/organizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -103,7 +119,7 @@ export async function setupDentalOrg(page: Page) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ displayName: 'E2E Dentist', role: 'dentist_owner' }),
+      body: JSON.stringify({ displayName: 'E2E Dentist', role: 'dentist_owner', personId }),
     });
     if (!memberRes.ok) throw new Error(`Member creation failed: ${memberRes.status}`);
     const member = await memberRes.json();
@@ -150,4 +166,38 @@ export async function createDentalPatient(page: Page, opts: {
   }, { api: API, opts });
 
   return res.id as string;
+}
+
+/**
+ * Create a dental appointment within a branch.
+ * Returns the appointment object (id, status, scheduledAt, ...).
+ */
+export async function createAppointment(page: Page, opts: {
+  patientId: string;
+  branchId: string;
+  memberId: string;
+  scheduledAt?: string;
+  durationMinutes?: number;
+  serviceType?: string;
+}) {
+  const res = await page.evaluate(async ({ api, opts }) => {
+    const scheduledAt = opts.scheduledAt ?? new Date(Date.now() + 86400000).toISOString();
+    const r = await fetch(`${api}/dental/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        patientId: opts.patientId,
+        branchId: opts.branchId,
+        dentistMemberId: opts.memberId,
+        scheduledAt,
+        durationMinutes: opts.durationMinutes ?? 30,
+        serviceType: opts.serviceType ?? 'Examination',
+      }),
+    });
+    if (!r.ok) throw new Error(`Appointment creation failed: ${r.status}`);
+    return r.json();
+  }, { api: API, opts });
+
+  return res as { id: string; status: string; scheduledAt: string; durationMinutes: number };
 }

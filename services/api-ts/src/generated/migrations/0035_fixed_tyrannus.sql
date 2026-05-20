@@ -1,0 +1,1 @@
+ALTER TYPE "public"."dental_visit_status" ADD VALUE 'discarded';

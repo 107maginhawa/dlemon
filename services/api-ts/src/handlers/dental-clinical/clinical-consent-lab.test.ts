@@ -10,11 +10,18 @@
  *   - updateLabOrder     PATCH /dental/visits/:visitId/lab-orders/:orderId
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateConsentFormBody, CreateConsentFormParams,
+  SignConsentFormBody, SignConsentFormParams,
+  CreateLabOrderBody, CreateLabOrderParams,
+  UpdateLabOrderBody, UpdateLabOrderParams,
+} from '@/generated/openapi/validators';
 import { createConsentForm } from './createConsentForm';
 import { listConsentForms } from './listConsentForms';
 import { signConsentForm } from './signConsentForm';
@@ -27,8 +34,37 @@ const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/mo
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
+const ORG_ID = 'd1000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({
+    id: ORG_ID, name: 'ConsentLab Clinic', tier: 'solo',
+    ownerPersonId: TEST_USER.id, countryCode: 'PH',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
+    timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'ee100000-0000-1000-8000-000000000002', branchId: BRANCH_ID,
+    personId: TEST_USER.id, displayName: 'Test User', role: 'dentist_owner',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const ConsentBodyOnly = CreateConsentFormBody.omit({ visitId: true });
+const LabOrderBodyOnly = CreateLabOrderBody.omit({ visitId: true });
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -49,12 +85,28 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/visits/:visitId/consents', createConsentForm);
+  app.post('/dental/visits/:visitId/consents',
+    zValidator('param', CreateConsentFormParams, ve),
+    zValidator('json', ConsentBodyOnly, ve),
+    createConsentForm as any,
+  );
   app.get('/dental/visits/:visitId/consents', listConsentForms);
-  app.post('/dental/visits/:visitId/consents/:consentId/sign', signConsentForm);
-  app.post('/dental/visits/:visitId/lab-orders', createLabOrder);
+  app.post('/dental/visits/:visitId/consents/:consentId/sign',
+    zValidator('param', SignConsentFormParams, ve),
+    zValidator('json', SignConsentFormBody, ve),
+    signConsentForm as any,
+  );
+  app.post('/dental/visits/:visitId/lab-orders',
+    zValidator('param', CreateLabOrderParams, ve),
+    zValidator('json', LabOrderBodyOnly, ve),
+    createLabOrder as any,
+  );
   app.get('/dental/visits/:visitId/lab-orders', listLabOrders);
-  app.patch('/dental/visits/:visitId/lab-orders/:orderId', updateLabOrder);
+  app.patch('/dental/visits/:visitId/lab-orders/:orderId',
+    zValidator('param', UpdateLabOrderParams, ve),
+    zValidator('json', UpdateLabOrderBody, ve),
+    updateLabOrder as any,
+  );
 
   return app;
 }
@@ -74,6 +126,7 @@ afterEach(async () => {
   await db.execute(
     sql`TRUNCATE TABLE amendment, consent_form, dental_attachment, lab_order, medical_history_entry, prescription, dental_treatment, dental_visit CASCADE`,
   );
+  // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT truncated here
 });
 
 // ---------------------------------------------------------------------------
@@ -192,8 +245,8 @@ describe('listConsentForms handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded consent forms', async () => {
@@ -214,8 +267,8 @@ describe('listConsentForms handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(1);
-    expect(body.total).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.pagination.totalCount).toBe(1);
   });
 });
 
@@ -313,7 +366,7 @@ describe('signConsentForm handler', () => {
     expect(body.id).toBe(created.id);
     expect(body.signed).toBe(true);
     expect(body.signatureData).toBe('data:image/png;base64,SIGNATUREHERE');
-    expect(body.signedAt).toBeTruthy();
+    expect(body.signedAt).not.toBeNull();
   });
 
   test('returns 400 when trying to sign an already-signed consent form', async () => {
@@ -470,8 +523,8 @@ describe('listLabOrders handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded lab orders', async () => {
@@ -492,8 +545,8 @@ describe('listLabOrders handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(1);
-    expect(body.total).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.pagination.totalCount).toBe(1);
   });
 });
 
@@ -511,7 +564,7 @@ describe('updateLabOrder handler', () => {
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'inFabrication' }),
+        body: JSON.stringify({ status: 'in_fabrication' }),
       },
     );
 
@@ -527,7 +580,7 @@ describe('updateLabOrder handler', () => {
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'inFabrication' }),
+        body: JSON.stringify({ status: 'in_fabrication' }),
       },
     );
 
@@ -610,14 +663,14 @@ describe('updateLabOrder handler', () => {
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'inFabrication' }),
+        body: JSON.stringify({ status: 'in_fabrication' }),
       },
     );
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.id).toBe(created.id);
-    expect(body.status).toBe('inFabrication');
+    expect(body.status).toBe('in_fabrication');
   });
 
   test('returns 200 when updating non-status fields', async () => {

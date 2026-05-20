@@ -184,7 +184,7 @@ test.describe('FR12.6: Share PMD Button on Completed Visits', () => {
       return { patientId: patient.id, visitId: visit.id };
     }, API);
 
-    if (!result) return; // seeding failed
+    if (!result) throw new Error('Seeding failed: patient/visit creation returned null');
 
     await page.goto(`${APP}/${result.patientId}`);
     await page.waitForLoadState('networkidle');

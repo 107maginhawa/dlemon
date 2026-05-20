@@ -3,15 +3,15 @@ import { COUNTRIES, type Country } from './countries'
 
 describe('Country Constants', () => {
   test('exports country options array', () => {
-    expect(COUNTRIES).toBeDefined()
+    expect(COUNTRIES).not.toBeUndefined()
     expect(Array.isArray(COUNTRIES)).toBe(true)
     expect(COUNTRIES.length).toBeGreaterThan(0)
   })
 
   test('each country has required fields', () => {
     COUNTRIES.forEach((country: Country) => {
-      expect(country.code).toBeDefined()
-      expect(country.name).toBeDefined()
+      expect(country.code).not.toBeUndefined()
+      expect(country.name).not.toBeUndefined()
       expect(typeof country.code).toBe('string')
       expect(typeof country.name).toBe('string')
     })
@@ -27,19 +27,19 @@ describe('Country Constants', () => {
 
   test('includes common countries', () => {
     const usa = COUNTRIES.find(c => c.code === 'US')
-    expect(usa).toBeDefined()
+    expect(usa).not.toBeUndefined()
     expect(usa?.name).toContain('United States')
 
     const uk = COUNTRIES.find(c => c.code === 'GB')
-    expect(uk).toBeDefined()
+    expect(uk).not.toBeUndefined()
     expect(uk?.name).toContain('United Kingdom')
 
     const canada = COUNTRIES.find(c => c.code === 'CA')
-    expect(canada).toBeDefined()
+    expect(canada).not.toBeUndefined()
     expect(canada?.name).toBe('Canada')
 
     const japan = COUNTRIES.find(c => c.code === 'JP')
-    expect(japan).toBeDefined()
+    expect(japan).not.toBeUndefined()
     expect(japan?.name).toBe('Japan')
   })
 
@@ -51,8 +51,8 @@ describe('Country Constants', () => {
 
   test('all countries have non-empty values', () => {
     COUNTRIES.forEach((country: Country) => {
-      expect(country.code.trim()).toBeTruthy()
-      expect(country.name.trim()).toBeTruthy()
+      expect(country.code.trim().length).toBeGreaterThan(0)
+      expect(country.name.trim().length).toBeGreaterThan(0)
     })
   })
 

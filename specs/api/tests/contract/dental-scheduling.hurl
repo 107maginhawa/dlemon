@@ -17,17 +17,74 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 1. Create an appointment
-POST {{api}}/dental/appointments/
+# 0a. Create a dental organization
+POST {{api}}/dental/organizations
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f3000000-0000-4000-8000-000000000001",
-  "dentistMemberId": "f3000000-0000-4000-8000-000000000002",
-  "branchId": "f3000000-0000-4000-8000-000000000003",
+  "name": "Scheduling Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.id"
+
+
+# 0b. Create a branch
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Test Street",
+  "city": "Manila",
+  "phone": "+639001234567"
+}
+HTTP 201
+[Captures]
+branch_id: jsonpath "$.id"
+
+
+# 0c. Create a dental patient
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Scheduling Test Patient {{suffix}}",
+  "consentGiven": true
+}
+HTTP 201
+[Captures]
+patient_id: jsonpath "$.id"
+
+
+# 0d. Create branch membership for this user (grants branch access)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Scheduling Tester",
+  "role": "dentist_owner",
+  "personId": "{{user_id}}"
+}
+HTTP 201
+[Captures]
+dentist_member_id: jsonpath "$.id"
+
+
+# 1. Create an appointment
+POST {{api}}/dental/appointments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
   "scheduledAt": "2025-06-01T09:00:00.000Z",
   "durationMinutes": 60,
-  "procedureType": "Cleaning"
+  "serviceType": "Cleaning"
 }
 HTTP 201
 [Captures]
@@ -35,7 +92,7 @@ appointment_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.status" == "scheduled"
 jsonpath "$.walkIn" == false
-jsonpath "$.procedureType" == "Cleaning"
+jsonpath "$.serviceType" == "Cleaning"
 jsonpath "$.durationMinutes" == 60
 
 
@@ -61,7 +118,7 @@ jsonpath "$.notes" == "Updated notes"
 
 
 # 4. List appointments (no filter)
-GET {{api}}/dental/appointments/
+GET {{api}}/dental/appointments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 
@@ -73,21 +130,21 @@ HTTP 200
 [Captures]
 visit_id: jsonpath "$.visitId"
 [Asserts]
-jsonpath "$.appointment.status" == "checkedIn"
+jsonpath "$.appointment.status" == "checked_in"
 jsonpath "$.visitId" isString
 
 
 # 6. Create a second appointment and cancel it
-POST {{api}}/dental/appointments/
+POST {{api}}/dental/appointments
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f3000000-0000-4000-8000-000000000004",
-  "dentistMemberId": "f3000000-0000-4000-8000-000000000002",
-  "branchId": "f3000000-0000-4000-8000-000000000003",
+  "patientId": "{{patient_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
   "scheduledAt": "2025-06-01T10:00:00.000Z",
   "durationMinutes": 30,
-  "procedureType": "Extraction"
+  "serviceType": "Extraction"
 }
 HTTP 201
 [Captures]
@@ -99,16 +156,16 @@ HTTP 204
 
 
 # 7. Walk-in appointment
-POST {{api}}/dental/appointments/
+POST {{api}}/dental/appointments
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f3000000-0000-4000-8000-000000000005",
-  "dentistMemberId": "f3000000-0000-4000-8000-000000000002",
-  "branchId": "f3000000-0000-4000-8000-000000000003",
+  "patientId": "{{patient_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
   "scheduledAt": "2025-06-01T11:00:00.000Z",
   "durationMinutes": 45,
-  "procedureType": "Whitening",
+  "serviceType": "Whitening",
   "walkIn": true
 }
 HTTP 201
@@ -117,6 +174,35 @@ jsonpath "$.walkIn" == true
 
 
 # 8. List with status filter
-GET {{api}}/dental/appointments/?status=checkedIn
+GET {{api}}/dental/appointments?status=checked_in
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+
+
+# NEW: G2-S4 — appointment double-booking returns 201 with DOUBLE_BOOKING warning
+# Creating another appointment for the same dentist at the same time should succeed
+# but include a DOUBLE_BOOKING warning (soft conflict, not a hard 409).
+POST {{api}}/dental/appointments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
+  "scheduledAt": "2025-06-01T09:00:00.000Z",
+  "durationMinutes": 30,
+  "serviceType": "Consultation"
+}
+HTTP 201
+[Captures]
+conflict_appt_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.warnings" includes "DOUBLE_BOOKING"
+
+
+# NEW: G2-S4 — list appointments filtered by a specific date
+GET {{api}}/dental/appointments?date=2025-06-01&branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection

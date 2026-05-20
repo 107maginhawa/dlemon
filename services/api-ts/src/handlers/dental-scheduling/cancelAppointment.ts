@@ -7,8 +7,9 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
 import type { CancelAppointmentParams } from '@/generated/openapi/validators';
@@ -28,7 +29,23 @@ export async function cancelAppointment(
 
   await assertBranchAccess(db, user.id, existing.branchId);
 
-  const result = await repo.cancel(appointmentId, undefined, user.id);
+  if (!APPOINTMENT_TRANSITIONS[existing.status].includes('cancelled')) {
+    throw new ValidationError(`Cannot cancel appointment with status '${existing.status}'`);
+  }
+
+  // Optional body: { cancellationReason?: string }
+  let cancellationReason: string | undefined;
+  const contentType = ctx.req.header('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    try {
+      const body = await ctx.req.json();
+      cancellationReason = body?.cancellationReason ?? undefined;
+    } catch {
+      // No body or invalid JSON — ignore
+    }
+  }
+
+  const result = await repo.cancel(appointmentId, cancellationReason, user.id);
   if (!result) throw new NotFoundError('Appointment');
 
   return ctx.body(null, 204);

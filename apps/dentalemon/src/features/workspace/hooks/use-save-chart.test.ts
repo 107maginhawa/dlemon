@@ -3,32 +3,13 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useSaveChart } from './use-save-chart';
+import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 function makeSpyClient() {
   const qc = freshClient();
@@ -59,8 +40,14 @@ describe('useSaveChart', () => {
 
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // SDK key format: [{ _id: 'getDentalChart', path: { visitId } }]
     const found = invalidatedKeys.some(
-      (k: any) => Array.isArray(k) && k[0] === 'dental-chart' && k[1] === 'visit-1',
+      (k: any) =>
+        Array.isArray(k) &&
+        k.length > 0 &&
+        typeof k[0] === 'object' &&
+        k[0] !== null &&
+        (k[0]._id === 'getDentalChart' || k[0] === 'dental-chart'),
     );
     expect(found).toBe(true);
   });

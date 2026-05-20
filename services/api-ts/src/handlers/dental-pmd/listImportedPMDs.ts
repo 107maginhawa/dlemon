@@ -10,6 +10,7 @@ import { UnauthorizedError, ValidationError, NotFoundError, ForbiddenError } fro
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
 export async function listImportedPMDs(ctx: HandlerContext) {
@@ -31,9 +32,9 @@ export async function listImportedPMDs(ctx: HandlerContext) {
   const repo = new ImportedPMDRepository(db);
 
   const items = await repo.findMany({ patientId });
-  const limit = parseInt(ctx.req.query('limit') ?? '50');
-  const offset = parseInt(ctx.req.query('offset') ?? '0');
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const totalCount = items.length;
   const page = items.slice(offset, offset + limit);
 
-  return ctx.json({ items: page, total: items.length, limit, offset });
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });
 }

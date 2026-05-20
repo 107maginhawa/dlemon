@@ -1,0 +1,137 @@
+/**
+ * usePatientActions — mutation hooks for patient archive, restore, bulk archive, export
+ *
+ * FR2.7: Archive patient
+ * FR2.8: Restore archived patient
+ * FR2.13: Export patients
+ *
+ * Uses generated SDK mutation helpers from @monobase/sdk-ts.
+ * Each mutation invalidates the patient list cache on success.
+ */
+import { useState, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  archiveDentalPatientMutation,
+  restoreDentalPatientMutation,
+  bulkArchiveDentalPatientsMutation,
+  listDentalPatientsQueryKey,
+} from '@monobase/sdk-ts/generated/react-query';
+import { exportDentalPatients } from '@monobase/sdk-ts/generated';
+
+// ─── useArchivePatient ──────────────────────────────────────────────────
+
+export function useArchivePatient() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    ...archiveDentalPatientMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: listDentalPatientsQueryKey(),
+      });
+    },
+  });
+
+  const archive = (patientId: string) => {
+    mutation.mutate({ path: { id: patientId } });
+  };
+
+  return {
+    archive,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
+  };
+}
+
+// ─── useRestorePatient ──────────────────────────────────────────────────
+
+export function useRestorePatient() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    ...restoreDentalPatientMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: listDentalPatientsQueryKey(),
+      });
+    },
+  });
+
+  const restore = (patientId: string) => {
+    mutation.mutate({ path: { id: patientId } });
+  };
+
+  return {
+    restore,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
+  };
+}
+
+// ─── useBulkArchive ─────────────────────────────────────────────────────
+
+export function useBulkArchive() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    ...bulkArchiveDentalPatientsMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: listDentalPatientsQueryKey(),
+      });
+    },
+  });
+
+  const bulkArchive = (patientIds: string[]) => {
+    mutation.mutate({ body: { patientIds } });
+  };
+
+  return {
+    bulkArchive,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
+  };
+}
+
+// ─── useExportPatients ──────────────────────────────────────────────────
+
+export function useExportPatients() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportPatients = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const { data } = await exportDentalPatients({ throwOnError: true });
+      // Serialize to CSV (FR2.13)
+      const headers = ['id', 'name', 'status', 'createdAt'];
+      const rows = (data?.patients ?? []).map((p) => [
+        p.id ?? '',
+        p.displayName ?? '',
+        p.status ?? '',
+        p.createdAt ? new Date(p.createdAt).toISOString() : '',
+      ]);
+      const csvContent = [headers, ...rows]
+        .map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+        )
+        .join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `patients-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return data;
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
+  return {
+    exportPatients,
+    isExporting,
+  };
+}

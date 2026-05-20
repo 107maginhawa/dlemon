@@ -143,6 +143,55 @@ model FileDownloadResponse {
 
 
 
+@doc("Request to initiate a multipart upload")
+model MultipartInitiateRequest {
+  @doc("Original filename")
+  @maxLength(255)
+  filename: string;
+
+  @doc("MIME type")
+  @maxLength(100)
+  mimeType: string;
+
+  @doc("Total file size in bytes")
+  @minValue(1)
+  size: int64;
+}
+
+@doc("Response from initiating a multipart upload")
+model MultipartInitiateResponse {
+  @doc("File record ID (use as {file} path param in subsequent calls)")
+  fileId: UUID;
+
+  @doc("S3 upload ID — must be passed to complete/abort calls")
+  uploadId: string;
+}
+
+@doc("A single completed part's metadata")
+model MultipartPart {
+  @doc("Part number (1-based)")
+  @minValue(1)
+  partNumber: int32;
+
+  @doc("ETag returned by S3 after the PUT")
+  etag: string;
+}
+
+@doc("Request body for completing a multipart upload")
+model MultipartCompleteRequest {
+  @doc("Ordered list of completed parts")
+  parts: MultipartPart[];
+}
+
+@doc("Presigned URL for uploading one part")
+model MultipartPartUrlResponse {
+  @doc("Presigned PUT URL for this part — expires in 15 min")
+  partUrl: Url;
+
+  @doc("Part number this URL is valid for")
+  partNumber: int32;
+}
+
 /**
  * Storage management endpoints - MVP operations only
  */
@@ -224,6 +273,58 @@ namespace StorageModule {
     ): ApiNoContentResponse
       | ApiNotFoundResponse
       | ApiForbiddenResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Initiate multipart upload — Step 1 for files > 50MB. Returns fileId and uploadId. Use fileId as {file} path param in subsequent part-url and complete/abort calls.")
+    @operationId("initiateMultipartUpload")
+    @post
+    @route("/storage/multipart/initiate")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    initiateMultipartUpload(
+      @body request: MultipartInitiateRequest
+    ): ApiCreatedResponse<MultipartInitiateResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Get presigned URL for a single part. Call once per part (1-based partNumber). Client PUTs the chunk to partUrl, then records the ETag from the response header.")
+    @operationId("generateMultipartPartUrl")
+    @get
+    @route("/storage/multipart/{file}/part-url")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user:owner"])
+    generateMultipartPartUrl(
+      @path file: UUID,
+      @query partNumber: int32
+    ): ApiOkResponse<MultipartPartUrlResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Complete multipart upload — submit all part ETags. S3 assembles the parts; file status moves to available.")
+    @operationId("completeMultipartUpload")
+    @post
+    @route("/storage/multipart/{file}/complete")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user:owner"])
+    completeMultipartUpload(
+      @path file: UUID,
+      @body request: MultipartCompleteRequest
+    ): ApiOkResponse<StoredFile>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Abort multipart upload — cancels in-progress upload and removes all uploaded parts from S3 to avoid storage charges.")
+    @operationId("abortMultipartUpload")
+    @delete
+    @route("/storage/multipart/{file}/abort")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user:owner"])
+    abortMultipartUpload(
+      @path file: UUID
+    ): ApiNoContentResponse
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }
 }

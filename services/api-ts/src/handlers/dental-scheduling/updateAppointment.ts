@@ -7,8 +7,9 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchAccess } from './utils/assert-branch-access';
@@ -32,14 +33,25 @@ export async function updateAppointment(ctx: HandlerContext) {
 
   await assertBranchAccess(db, user.id, existing.branchId);
 
-  // Handle status transitions via dedicated methods
-  if (body.status === 'noShow') {
+  // Handle status transitions via dedicated methods — validated against APPOINTMENT_TRANSITIONS
+  if (body.status !== undefined) {
+    const allowed = APPOINTMENT_TRANSITIONS[existing.status];
+    if (!allowed.includes(body.status)) {
+      throw new ValidationError(`Cannot transition appointment from '${existing.status}' to '${body.status}'`);
+    }
+  }
+
+  if (body.status === 'no_show') {
     const result = await repo.markNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');
     return ctx.json(result);
   }
 
-  if (body.status === 'completed' && existing.status === 'noShow') {
+  if (body.status === 'completed') {
+    // Only noShow → completed is supported via PATCH (revert); checkedIn → completed goes via visit checkout
+    if (existing.status !== 'no_show') {
+      throw new ValidationError(`Cannot transition appointment from '${existing.status}' to 'completed' via PATCH — complete the visit via checkout`);
+    }
     const result = await repo.revertNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');
     return ctx.json(result);
@@ -59,7 +71,7 @@ export async function updateAppointment(ctx: HandlerContext) {
     : body.scheduledAt !== undefined ? new Date(String(body.scheduledAt)) : undefined;
   if (newScheduledAt !== undefined) patch['scheduledAt'] = newScheduledAt;
   if (body.durationMinutes !== undefined) patch['durationMinutes'] = body.durationMinutes;
-  if (body.procedureType !== undefined) patch['procedureType'] = body.procedureType;
+  if (body.serviceType !== undefined) patch['serviceType'] = body.serviceType;
   if (body.operatoryId !== undefined) patch['operatoryId'] = body.operatoryId;
   if (body.notes !== undefined) patch['notes'] = body.notes;
 

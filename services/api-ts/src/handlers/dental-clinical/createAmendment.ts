@@ -4,12 +4,13 @@
  * POST /dental/visits/{visitId}/amendments
  */
 
+import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { AmendmentRepository } from './repos/amendment.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { User } from '@/types/auth';
 import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
 
@@ -22,15 +23,25 @@ export async function createAmendment(
   const { visitId } = ctx.req.valid('param');
   const body = ctx.req.valid('json');
 
-  const authorMemberId = user.id;
-
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization via parent visit
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+
+  const [membership] = await db
+    .select({ id: dentalMemberships.id })
+    .from(dentalMemberships)
+    .where(and(
+      eq(dentalMemberships.personId, user.id),
+      eq(dentalMemberships.branchId, visit.branchId),
+      eq(dentalMemberships.status, 'active'),
+    ))
+    .limit(1);
+  if (!membership) throw new ForbiddenError('You do not have access to this branch');
+
+  const authorMemberId = membership.id;
 
   const repo = new AmendmentRepository(db);
 

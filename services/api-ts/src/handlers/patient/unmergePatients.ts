@@ -33,5 +33,9 @@ export async function unmergePatients(
   // throw new ValidationError('Invalid input');
   // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
   
-  throw new Error('Not implemented: unmergePatients');
+  return ctx.json({
+    message: 'unmergePatients is not yet implemented',
+    code: 'NOT_IMPLEMENTED',
+    statusCode: 501,
+  }, 501);
 }

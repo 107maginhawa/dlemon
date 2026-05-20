@@ -31,6 +31,10 @@ export async function recordDentalPayment(
   // Branch-level authorization
   await assertBranchAccess(db, session.userId, invoice.branchId);
 
+  if (body.amountCents <= 0) {
+    throw new BusinessLogicError('Payment amount must be positive', 'INVALID_AMOUNT');
+  }
+
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Cannot record payment on a voided invoice', 'VOIDED_INVOICE');
   }
@@ -44,6 +48,14 @@ export async function recordDentalPayment(
       `Payment amount (${body.amountCents}) exceeds remaining balance (${invoice.balanceCents})`,
       'OVERPAYMENT',
     );
+  }
+
+  // Idempotency: if a payment with same receiptNumber exists, return it
+  if (body.receiptNumber) {
+    const existing = await paymentRepo.findByReceiptNumber(body.receiptNumber);
+    if (existing) {
+      return ctx.json(existing, 200);
+    }
   }
 
   // Create the payment
@@ -60,6 +72,11 @@ export async function recordDentalPayment(
 
   // Update invoice totals
   await invoiceRepo.addPayment(invoiceId, body.amountCents);
+
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_payment_record', paymentId: payment.id, invoiceId, amountCents: body.amountCents, branchId: invoice.branchId, by: session.userId },
+    'Dental payment recorded',
+  );
 
   return ctx.json(payment, 201);
 }

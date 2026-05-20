@@ -6,7 +6,7 @@
  *      and at application level via findActiveByPatient.
  */
 
-import { eq, and, or, lt, inArray } from 'drizzle-orm';
+import { eq, and, or, lt, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -39,8 +39,8 @@ export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVi
   override async findMany(filters?: VisitFilters): Promise<DentalVisit[]> {
     const where = this.buildWhereConditions(filters);
     const rows = where
-      ? await this.db.select().from(dentalVisits).where(where)
-      : await this.db.select().from(dentalVisits);
+      ? await this.db.select().from(dentalVisits).where(where).orderBy(desc(dentalVisits.createdAt))
+      : await this.db.select().from(dentalVisits).orderBy(desc(dentalVisits.createdAt));
     return rows;
   }
 
@@ -96,6 +96,19 @@ export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVi
     const [updated] = await this.db
       .update(dentalVisits)
       .set({ status: 'locked', lockedAt: new Date(), updatedAt: new Date() })
+      .where(eq(dentalVisits.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
+   * BR-005: Auto-discard an empty visit (no treatments, notes, or attachments).
+   * Sets status to 'discarded' instead of 'completed'.
+   */
+  async discard(id: string): Promise<DentalVisit | null> {
+    const [updated] = await this.db
+      .update(dentalVisits)
+      .set({ status: 'discarded', updatedAt: new Date() })
       .where(eq(dentalVisits.id, id))
       .returning();
     return updated ?? null;

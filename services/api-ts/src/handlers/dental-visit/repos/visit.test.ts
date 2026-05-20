@@ -8,27 +8,27 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { VisitRepository } from './visit.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const PATIENT_A = 'b0000000-0000-1000-8000-000000000001';
-const PATIENT_B = 'b0000000-0000-1000-8000-000000000002';
-const BRANCH_1  = 'c0000000-0000-1000-8000-000000000001';
-const DENTIST_1 = 'd0000000-0000-1000-8000-000000000001';
+const PATIENT_A = CHAIN_IDS.PATIENT_1;
+const PATIENT_B = CHAIN_IDS.PATIENT_2;
+const BRANCH_1  = CHAIN_IDS.BRANCH_1;
+const DENTIST_1 = CHAIN_IDS.MEMBERSHIP_1;
 
 describe('VisitRepository', () => {
   let repo: VisitRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new VisitRepository(db);
+    await seedClinicalChain(db, { visits: 0 });
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_treatment, visit_notes, dental_chart, dental_visit CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE — draft
@@ -149,9 +149,8 @@ describe('VisitRepository', () => {
     });
 
     test('findMany filters by branchId', async () => {
-      const BRANCH_2 = 'c0000000-0000-1000-8000-000000000002';
       await repo.createOne({ patientId: PATIENT_A, branchId: BRANCH_1, dentistMemberId: DENTIST_1 });
-      await repo.createOne({ patientId: PATIENT_B, branchId: BRANCH_2, dentistMemberId: DENTIST_1 });
+      await repo.createOne({ patientId: PATIENT_B, branchId: CHAIN_IDS.BRANCH_2, dentistMemberId: DENTIST_1 });
 
       const results = await repo.findMany({ branchId: BRANCH_1 });
       expect(results).toHaveLength(1);

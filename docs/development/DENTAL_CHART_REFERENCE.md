@@ -1,0 +1,1384 @@
+# Dental Chart ASCII Reference Guide
+
+> Design reference for the Dentalemon dental charting application.
+> Universal Numbering System (1-32)
+
+---
+
+## Quick Overview: Full 32-Tooth Matrix
+
+### Compact Linear View (Occlusal Perspective)
+
+```
+═════════════════════════════════════════════════════════════════════════════════════════════════
+                                    UPPER ARCH (Maxillary)
+═════════════════════════════════════════════════════════════════════════════════════════════════
+
+   ┌────── BUCCAL ──────┐    ┌─ LABIAL ─┐           ┌─ LABIAL ─┐    ┌────── BUCCAL ──────┐
+   │     (Posterior)    │    │(Anterior)│           │(Anterior)│    │    (Posterior)     │
+   ▼                    ▼    ▼          ▼           ▼          ▼    ▼                    ▼
+  ┌────┬────┬────┬────┬────┐┌────┬────┬────┐   ║   ┌────┬────┬────┐┌────┬────┬────┬────┬────┐
+  │ 01 │ 02 │ 03 │ 04 │ 05 ││ 06 │ 07 │ 08 │   ║   │ 09 │ 10 │ 11 ││ 12 │ 13 │ 14 │ 15 │ 16 │
+D │ M3 │ M2 │ M1 │ P2 │ P1 ││ C  │ I2 │ I1 │ M ║ M │ I1 │ I2 │ C  ││ P1 │ P2 │ M1 │ M2 │ M3 │ D
+  │(O) │(O) │(O) │(O) │(O) ││(I) │(I) │(I) │   ║   │(I) │(I) │(I) ││(O) │(O) │(O) │(O) │(O) │
+  └────┴────┴────┴────┴────┘└────┴────┴────┘   ║   └────┴────┴────┘└────┴────┴────┴────┴────┘
+        Palatal (towards palate)               ║            Palatal (towards palate)
+  ═════════════════════════════════════════════╬═════════════════════════════════════════════
+              Patient's RIGHT               MIDLINE            Patient's LEFT  
+  ═════════════════════════════════════════════║═════════════════════════════════════════════
+         Lingual (towards tongue)              ║            Lingual (towards tongue)
+  ┌────┬────┬────┬────┬────┐┌────┬────┬────┐   ║   ┌────┬────┬────┐┌────┬────┬────┬────┬────┐
+  │ 32 │ 31 │ 30 │ 29 │ 28 ││ 27 │ 26 │ 25 │   ║   │ 24 │ 23 │ 22 ││ 21 │ 20 │ 19 │ 18 │ 17 │
+D │ M3 │ M2 │ M1 │ P2 │ P1 ││ C  │ I2 │ I1 │ M ║ M │ I1 │ I2 │ C  ││ P1 │ P2 │ M1 │ M2 │ M3 │ D
+  │(O) │(O) │(O) │(O) │(O) ││(I) │(I) │(I) │   ║   │(I) │(I) │(I) ││(O) │(O) │(O) │(O) │(O) │
+  └────┴────┴────┴────┴────┘└────┴────┴────┘   ║   └────┴────┴────┘└────┴────┴────┴────┴────┘
+
+   ▲                    ▲    ▲          ▲           ▲          ▲    ▲                     ▲ 
+   │    (Posterior)     │    │(Anterior)│           │(Anterior)│    │   (Posterior)       │
+   └──── BUCCAL ────────┘    └─ LABIAL ─┘           └─ LABIAL ─┘    └──── BUCCAL ─────────┘
+═════════════════════════════════════════════════════════════════════════════════════════════════
+                                    LOWER ARCH (Mandibular)
+═════════════════════════════════════════════════════════════════════════════════════════════════
+```
+
+**Surface Guide:**
+
+- **D** on sides = DISTAL (away from midline)
+- **BUCCAL** = Outer surface of posterior teeth (molars, premolars) - toward cheek
+- **LABIAL** = Outer surface of anterior teeth (canines, incisors) - toward lips
+- **PALATAL** (upper) / **LINGUAL** (lower) = Inner surface - toward tongue (between the arches)
+
+**Surface Terminology by Tooth Type:**
+
+| Tooth Type                               | Outer Surface  | Inner Surface                     | Biting Surface |
+| ---------------------------------------- | -------------- | --------------------------------- | -------------- |
+| **Molars & Premolars** (Posterior) | BUCCAL (cheek) | PALATAL (upper) / LINGUAL (lower) | OCCLUSAL (O)   |
+| **Canines & Incisors** (Anterior)  | LABIAL (lip)   | PALATAL (upper) / LINGUAL (lower) | INCISAL (I)    |
+
+---
+
+### Standard Grid View
+
+```
+══════════════════════════════════════════════════════════════════════════════════════
+                                  UPPER ARCH (Maxillary)
+══════════════════════════════════════════════════════════════════════════════════════
+
+  ┌────┬────┬────┬────┬────┬────┬────┬────┐   ┌────┬────┬────┬────┬────┬────┬────┬────┐
+  │ 01 │ 02 │ 03 │ 04 │ 05 │ 06 │ 07 │ 08 │   │ 09 │ 10 │ 11 │ 12 │ 13 │ 14 │ 15 │ 16 │
+  │ M3 │ M2 │ M1 │ P2 │ P1 │ C  │ I2 │ I1 │   │ I1 │ I2 │ C  │ P1 │ P2 │ M1 │ M2 │ M3 │
+  └────┴────┴────┴────┴────┴────┴────┴────┘   └────┴────┴────┴────┴────┴────┴────┴────┘
+        Patient's RIGHT (Quadrant 1)        ║        Patient's LEFT (Quadrant 2)
+
+  ══════════════════════════════════════════╬══════════════════════════════════════════
+                                          MIDLINE
+  ══════════════════════════════════════════╬══════════════════════════════════════════
+
+        Patient's RIGHT (Quadrant 4)        ║        Patient's LEFT (Quadrant 3)
+  ┌────┬────┬────┬────┬────┬────┬────┬────┐   ┌────┬────┬────┬────┬────┬────┬────┬────┐
+  │ 32 │ 31 │ 30 │ 29 │ 28 │ 27 │ 26 │ 25 │   │ 24 │ 23 │ 22 │ 21 │ 20 │ 19 │ 18 │ 17 │
+  │ M3 │ M2 │ M1 │ P2 │ P1 │ C  │ I2 │ I1 │   │ I1 │ I2 │ C  │ P1 │ P2 │ M1 │ M2 │ M3 │
+  └────┴────┴────┴────┴────┴────┴────┴────┘   └────┴────┴────┴────┴────┴────┴────┴────┘
+
+══════════════════════════════════════════════════════════════════════════════════════
+                                  LOWER ARCH (Mandibular)
+══════════════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
+**Legend:**
+
+| Code | Tooth Type               | Biting Surface |
+| ---- | ------------------------ | -------------- |
+| M3   | 3rd Molar (Wisdom Tooth) | Occlusal (O)   |
+| M2   | 2nd Molar                | Occlusal (O)   |
+| M1   | 1st Molar                | Occlusal (O)   |
+| P2   | 2nd Premolar (Bicuspid)  | Occlusal (O)   |
+| P1   | 1st Premolar (Bicuspid)  | Occlusal (O)   |
+| C    | Canine (Cuspid)          | Incisal (I)    |
+| I2   | Lateral Incisor          | Incisal (I)    |
+| I1   | Central Incisor          | Incisal (I)    |
+
+**Quadrant Reference:**
+
+- **Quadrant 1**: Upper Right (teeth 1-8)
+- **Quadrant 2**: Upper Left (teeth 9-16)
+- **Quadrant 3**: Lower Left (teeth 17-24)
+- **Quadrant 4**: Lower Right (teeth 25-32)
+
+---
+
+## Section 1: Full 32-Tooth Diagrams (3 Views Each)
+
+Each tooth displays: **Front View** | **Occlusal/Incisal View** | **Back View**
+
+### UPPER ARCH (Maxillary) - Teeth 1-16
+
+**Right Side (Patient's Right) - Teeth 1-8**
+
+```
+    #1          #2          #3          #4          #5          #6          #7          #8
+   3rdM        2ndM        1stM       2ndPM       1stPM      Canine      Lat.I      Cent.I
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │ ╱╲  │    │ ╱╲  │    │ ╱╲  │    │  ∧  │    │  ∧  │    │  △  │    │  ▽  │    │  ▽  │   Front
+  │╱  ╲ │    │╱  ╲ │    │╱  ╲ │    │ / \ │    │ / \ │    │ /|\ │    │ | | │    │ | | │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │ ─── │    │ ─── │    │ ─── │   Occlusal
+  ││ O ││    ││ O ││    ││ O ││    ││ O ││    ││ O ││    │  I  │    │  I  │    │  I  │   /Incisal
+  │└───┘│    │└───┘│    │└───┘│    │└───┘│    │└───┘│    │ ─── │    │ ─── │    │ ─── │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │╲  ╱ │    │╲  ╱ │    │╲  ╱ │    │ \ / │    │ \ / │    │ \|/ │    │ | | │    │ | | │   Back
+  │ ╲╱  │    │ ╲╱  │    │ ╲╱  │    │  ∨  │    │  ∨  │    │  ▽  │    │  △  │    │  △  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+**═══════════════════════════════════════ MIDLINE ═══════════════════════════════════════**
+
+**Left Side (Patient's Left) - Teeth 9-16**
+
+```
+    #9         #10         #11         #12         #13         #14         #15         #16
+  Cent.I      Lat.I      Canine      1stPM       2ndPM       1stM        2ndM        3rdM
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │  ▽  │    │  ▽  │    │  △  │    │  ∧  │    │  ∧  │    │ ╱╲  │    │ ╱╲  │    │ ╱╲  │   Front
+  │ | | │    │ | | │    │ /|\ │    │ / \ │    │ / \ │    │╱  ╲ │    │╱  ╲ │    │╱  ╲ │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ ─── │    │ ─── │    │ ─── │    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│   Occlusal
+  │  I  │    │  I  │    │  I  │    ││ O ││    ││ O ││    ││ O ││    ││ O ││    ││ O ││   /Incisal
+  │ ─── │    │ ─── │    │ ─── │    │└───┘│    │└───┘│    │└───┘│    │└───┘│    │└───┘│
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ | | │    │ | | │    │ \|/ │    │ \ / │    │ \ / │    │╲  ╱ │    │╲  ╱ │    │╲  ╱ │   Back
+  │  △  │    │  △  │    │  ▽  │    │  ∨  │    │  ∨  │    │ ╲╱  │    │ ╲╱  │    │ ╲╱  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+---
+
+### LOWER ARCH (Mandibular) - Teeth 17-32
+
+**Left Side (Patient's Left) - Teeth 17-24**
+
+```
+   #17         #18         #19         #20         #21         #22         #23         #24
+   3rdM        2ndM        1stM       2ndPM       1stPM      Canine      Lat.I      Cent.I
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │ ╲╱  │    │ ╲╱  │    │ ╲╱  │    │  ∨  │    │  ∨  │    │  ▽  │    │  △  │    │  △  │   Front
+  │╲  ╱ │    │╲  ╱ │    │╲  ╱ │    │ \ / │    │ \ / │    │ \|/ │    │ | | │    │ | | │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │ ─── │    │ ─── │    │ ─── │   Occlusal
+  ││ O ││    ││ O ││    ││ O ││    ││ O ││    ││ O ││    │  I  │    │  I  │    │  I  │   /Incisal
+  │└───┘│    │└───┘│    │└───┘│    │└───┘│    │└───┘│    │ ─── │    │ ─── │    │ ─── │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │╱  ╲ │    │╱  ╲ │    │╱  ╲ │    │ / \ │    │ / \ │    │ /|\ │    │ | | │    │ | | │   Back
+  │ ╱╲  │    │ ╱╲  │    │ ╱╲  │    │  ∧  │    │  ∧  │    │  △  │    │  ▽  │    │  ▽  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+**═══════════════════════════════════════ MIDLINE ═══════════════════════════════════════**
+
+**Right Side (Patient's Right) - Teeth 25-32**
+
+```
+   #25         #26         #27         #28         #29         #30         #31         #32
+  Cent.I      Lat.I      Canine      1stPM       2ndPM       1stM        2ndM        3rdM
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │  △  │    │  △  │    │  ▽  │    │  ∨  │    │  ∨  │    │ ╲╱  │    │ ╲╱  │    │ ╲╱  │   Front
+  │ | | │    │ | | │    │ \|/ │    │ \ / │    │ \ / │    │╲  ╱ │    │╲  ╱ │    │╲  ╱ │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ ─── │    │ ─── │    │ ─── │    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│    │┌───┐│   Occlusal
+  │  I  │    │  I  │    │  I  │    ││ O ││    ││ O ││    ││ O ││    ││ O ││    ││ O ││   /Incisal
+  │ ─── │    │ ─── │    │ ─── │    │└───┘│    │└───┘│    │└───┘│    │└───┘│    │└───┘│
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ | | │    │ | | │    │ /|\ │    │ / \ │    │ / \ │    │╱  ╲ │    │╱  ╲ │    │╱  ╲ │   Back
+  │  ▽  │    │  ▽  │    │  △  │    │  ∧  │    │  ∧  │    │ ╱╲  │    │ ╱╲  │    │ ╱╲  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+---
+
+## Section 2: Occlusal View Matrix (All 32 Teeth)
+
+Surface labels: **B** = Buccal | **M** = Mesial | **D** = Distal | **P** = Palatal | **L** = Lingual | **O** = Occlusal | **I** = Incisal
+
+### UPPER ARCH - Occlusal Views (Teeth 1-16)
+
+**Posterior Teeth (Molars & Premolars) - Teeth 1-5**
+
+```
+         #1 (3rdM)           #2 (2ndM)           #3 (1stM)          #4 (2ndPM)          #5 (1stPM)
+            B                   B                   B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M
+       │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P                   P                   P
+```
+
+**Anterior Teeth (Canine & Incisors) - Teeth 6-8**
+
+```
+        #6 (Canine)         #7 (Lat.I)         #8 (Cent.I)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P
+```
+
+**══════════════════════════════════════════ MIDLINE ══════════════════════════════════════════**
+
+**Anterior Teeth (Incisors & Canine) - Teeth 9-11**
+
+```
+        #9 (Cent.I)        #10 (Lat.I)        #11 (Canine)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P
+```
+
+**Posterior Teeth (Premolars & Molars) - Teeth 12-16**
+
+```
+        #12 (1stPM)        #13 (2ndPM)         #14 (1stM)          #15 (2ndM)          #16 (3rdM)
+            B                   B                   B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D
+       │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P                   P                   P
+```
+
+---
+
+### LOWER ARCH - Occlusal Views (Teeth 17-32)
+
+**Posterior Teeth (Molars & Premolars) - Teeth 17-21**
+
+```
+        #17 (3rdM)          #18 (2ndM)          #19 (1stM)         #20 (2ndPM)         #21 (1stPM)
+            B                   B                   B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D
+       │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L                   L                   L
+```
+
+**Anterior Teeth (Canine & Incisors) - Teeth 22-24**
+
+```
+       #22 (Canine)        #23 (Lat.I)        #24 (Cent.I)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L
+```
+
+**══════════════════════════════════════════ MIDLINE ══════════════════════════════════════════**
+
+**Anterior Teeth (Incisors & Canine) - Teeth 25-27**
+
+```
+       #25 (Cent.I)        #26 (Lat.I)        #27 (Canine)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L
+```
+
+**Posterior Teeth (Premolars & Molars) - Teeth 28-32**
+
+```
+        #28 (1stPM)        #29 (2ndPM)         #30 (1stM)          #31 (2ndM)          #32 (3rdM)
+            B                   B                   B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M
+       │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L                   L                   L
+```
+
+---
+
+## Section 2.5: Surface Map Types
+
+Dental charting uses two Surface Map designs based on tooth type. The shape and zones differ between **Anterior** and **Posterior** teeth.
+
+### Surface Map Classification
+
+| Tooth Type | Teeth (Upper) | Teeth (Lower) | Surface Map |
+|------------|---------------|---------------|-------------|
+| **Anterior** (Canines & Incisors) | #6, 7, 8, 9, 10, 11 | #22, 23, 24, 25, 26, 27 | **Incisal Surface Map** |
+| **Posterior** (Molars & Premolars) | #1-5, 12-16 | #17-21, 28-32 | **Occlusal Surface Map** |
+
+---
+
+### Posterior (Occlusal) Surface Map - 5 Zones
+
+Used for: Molars (M3, M2, M1) and Premolars (P2, P1)
+
+```
+         BUCCAL (B)
+    ┌─────────────────┐
+    │░░░░░░░░░░░░░░░░░│
+    │░░░░░░░░░░░░░░░░░│
+ M  │░░░┌─────────┐░░░│  D
+    │░░░│    O    │░░░│     ← OCCLUSAL center zone
+    │░░░└─────────┘░░░│
+    │░░░░░░░░░░░░░░░░░│
+    │░░░░░░░░░░░░░░░░░│
+    └─────────────────┘
+      PALATAL/LINGUAL
+```
+
+**5 Clickable Zones:**
+- **M** (Mesial) - toward midline
+- **O** (Occlusal) - center chewing surface
+- **D** (Distal) - away from midline
+- **B** (Buccal) - toward cheek
+- **L/P** (Lingual/Palatal) - toward tongue
+
+**Shape**: Square/rectangular
+**Dimensions**: 100×100px
+
+---
+
+### Anterior (Incisal) Surface Map - 4 Zones
+
+Used for: Canines (C) and Incisors (I2, I1)
+
+```
+         LABIAL (F)
+    ╭─────────────────╮
+    │░░░░░░░░░░░░░░░░░│
+    │░░░░░░░░░░░░░░░░░│
+ M  │░░░░░░░░░░░░░░░░░│  D
+    │─────────────────│     ← INCISAL edge (horizontal line)
+    │░░░░░░░░░░░░░░░░░│
+    │░░░░░░░░░░░░░░░░░│
+    ╰─────────────────╯
+      PALATAL/LINGUAL
+```
+
+**4 Clickable Zones:**
+- **M** (Mesial) - toward midline
+- **D** (Distal) - away from midline
+- **F** (Facial/Labial) - toward lips
+- **L/P** (Lingual/Palatal) - toward tongue
+
+**NO center zone** - the horizontal line represents the **INCISAL (I)** cutting edge
+
+**Shape**: Oval/rounded (distinct from rectangular posterior)
+**Dimensions**: 100×100px
+
+---
+
+### Design Comparison
+
+| Feature | Posterior (Occlusal) | Anterior (Incisal) |
+|---------|----------------------|--------------------|
+| **Shape** | Rectangular | Oval/Rounded |
+| **Zones** | 5 (M, O, D, B, L/P) | 4 (M, D, F, L/P) |
+| **Center** | OCCLUSAL (O) zone | INCISAL (I) edge line |
+| **Outer Surface** | BUCCAL (B) | LABIAL (F) |
+| **Dimensions** | 100×100px | 100×100px |
+
+---
+
+### Anterior Incisal Surface Maps by Arch
+
+**Upper Arch (Teeth #6-11):**
+
+```
+        #6 (Canine)         #7 (Lat.I)          #8 (Cent.I)
+           LABIAL              LABIAL              LABIAL
+       ╭───────────╮       ╭───────────╮       ╭───────────╮
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+    D  │░░░░░░░░░░░│  M  D │░░░░░░░░░░░│  M  D │░░░░░░░░░░░│  M
+       │───────────│       │───────────│       │───────────│
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+       ╰───────────╯       ╰───────────╯       ╰───────────╯
+          PALATAL             PALATAL             PALATAL
+```
+
+**Lower Arch (Teeth #22-27):**
+
+```
+       #22 (Canine)        #23 (Lat.I)         #24 (Cent.I)
+          LABIAL              LABIAL              LABIAL
+       ╭───────────╮       ╭───────────╮       ╭───────────╮
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+    M  │░░░░░░░░░░░│  D  M │░░░░░░░░░░░│  D  M │░░░░░░░░░░░│  D
+       │───────────│       │───────────│       │───────────│
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+       │░░░░░░░░░░░│       │░░░░░░░░░░░│       │░░░░░░░░░░░│
+       ╰───────────╯       ╰───────────╯       ╰───────────╯
+          LINGUAL             LINGUAL             LINGUAL
+```
+
+> **Note**: Inner surface is **PALATAL** for upper arch, **LINGUAL** for lower arch.
+
+---
+
+### Surface Terminology Reference
+
+| Surface | Code | Description | Applies To |
+|---------|------|-------------|------------|
+| **LABIAL** | F | Outer surface toward lips | Anterior teeth only |
+| **BUCCAL** | B | Outer surface toward cheek | Posterior teeth only |
+| **PALATAL** | P | Inner surface (upper teeth) | All upper teeth |
+| **LINGUAL** | L | Inner surface (lower teeth) | All lower teeth |
+| **MESIAL** | M | Surface toward midline | All teeth |
+| **DISTAL** | D | Surface away from midline | All teeth |
+| **INCISAL** | I | Cutting edge | Anterior teeth only |
+| **OCCLUSAL** | O | Chewing surface | Posterior teeth only |
+
+---
+
+## Section 3: Pediatric Dental Chart (Primary Dentition)
+
+> For patients with primary (deciduous/baby) teeth. Uses letters A-T instead of numbers 1-32.
+
+### Key Differences: Adult vs Pediatric
+
+| Aspect | Adult (Permanent) | Pediatric (Primary) |
+|--------|-------------------|---------------------|
+| **Total Teeth** | 32 | 20 |
+| **Teeth per Quadrant** | 8 | 5 |
+| **Universal Numbering** | 1-32 (numbers) | A-T (letters) |
+| **FDI Quadrants** | 1-4 | 5-8 |
+| **Palmer Notation** | 1-8 per quadrant | A-E per quadrant |
+| **Tooth Types** | M3, M2, M1, P2, P1, C, I2, I1 | m2, m1, c, i2, i1 |
+| **Premolars** | Yes (2 per quadrant) | No |
+| **Wisdom Teeth** | Yes (3rd molars) | No |
+
+---
+
+### Quick Overview: Full 20-Tooth Matrix (Primary)
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+                              UPPER ARCH (Maxillary)
+═══════════════════════════════════════════════════════════════════════════════
+
+      Patient's RIGHT                    ║                    Patient's LEFT
+  ┌────┬────┬────┬────┬────┐            ║            ┌────┬────┬────┬────┬────┐
+  │ A  │ B  │ C  │ D  │ E  │            ║            │ F  │ G  │ H  │ I  │ J  │
+  │ m2 │ m1 │ c  │ i2 │ i1 │            ║            │ i1 │ i2 │ c  │ m1 │ m2 │
+  │(O) │(O) │(I) │(I) │(I) │            ║            │(I) │(I) │(I) │(O) │(O) │
+  └────┴────┴────┴────┴────┘            ║            └────┴────┴────┴────┴────┘
+                                        ║
+  ══════════════════════════════════════╬══════════════════════════════════════
+                                     MIDLINE
+  ══════════════════════════════════════╬══════════════════════════════════════
+                                        ║
+  ┌────┬────┬────┬────┬────┐            ║            ┌────┬────┬────┬────┬────┐
+  │ T  │ S  │ R  │ Q  │ P  │            ║            │ O  │ N  │ M  │ L  │ K  │
+  │ m2 │ m1 │ c  │ i2 │ i1 │            ║            │ i1 │ i2 │ c  │ m1 │ m2 │
+  │(O) │(O) │(I) │(I) │(I) │            ║            │(I) │(I) │(I) │(O) │(O) │
+  └────┴────┴────┴────┴────┘            ║            └────┴────┴────┴────┴────┘
+
+      Patient's RIGHT                    ║                    Patient's LEFT
+
+═══════════════════════════════════════════════════════════════════════════════
+                              LOWER ARCH (Mandibular)
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
+### Section 3.1: Full 20-Tooth Diagrams (3 Views Each)
+
+Each primary tooth displays: **Front View** | **Occlusal/Incisal View** | **Back View**
+
+#### UPPER ARCH (Maxillary) - Teeth A-J
+
+**Right Side (Patient's Right) - Teeth A-E**
+
+```
+     A           B           C           D           E
+   2ndM        1stM       Canine      Lat.I      Cent.I
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │ ╱╲  │    │ ╱╲  │    │  △  │    │  ▽  │    │  ▽  │   Front
+  │╱  ╲ │    │╱  ╲ │    │ /|\ │    │ | | │    │ | | │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │┌───┐│    │┌───┐│    │ ─── │    │ ─── │    │ ─── │   Occlusal
+  ││ O ││    ││ O ││    │  I  │    │  I  │    │  I  │   /Incisal
+  │└───┘│    │└───┘│    │ ─── │    │ ─── │    │ ─── │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │╲  ╱ │    │╲  ╱ │    │ \|/ │    │ | | │    │ | | │   Back
+  │ ╲╱  │    │ ╲╱  │    │  ▽  │    │  △  │    │  △  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+**═══════════════════════════════ MIDLINE ═══════════════════════════════**
+
+**Left Side (Patient's Left) - Teeth F-J**
+
+```
+     F           G           H           I           J
+  Cent.I      Lat.I      Canine       1stM        2ndM
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │  ▽  │    │  ▽  │    │  △  │    │ ╱╲  │    │ ╱╲  │   Front
+  │ | | │    │ | | │    │ /|\ │    │╱  ╲ │    │╱  ╲ │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ ─── │    │ ─── │    │ ─── │    │┌───┐│    │┌───┐│   Occlusal
+  │  I  │    │  I  │    │  I  │    ││ O ││    ││ O ││   /Incisal
+  │ ─── │    │ ─── │    │ ─── │    │└───┘│    │└───┘│
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ | | │    │ | | │    │ \|/ │    │╲  ╱ │    │╲  ╱ │   Back
+  │  △  │    │  △  │    │  ▽  │    │ ╲╱  │    │ ╲╱  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+---
+
+#### LOWER ARCH (Mandibular) - Teeth K-T
+
+**Left Side (Patient's Left) - Teeth K-O**
+
+```
+     K           L           M           N           O
+   2ndM        1stM       Canine      Lat.I      Cent.I
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │ ╲╱  │    │ ╲╱  │    │  ▽  │    │  △  │    │  △  │   Front
+  │╲  ╱ │    │╲  ╱ │    │ \|/ │    │ | | │    │ | | │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │┌───┐│    │┌───┐│    │ ─── │    │ ─── │    │ ─── │   Occlusal
+  ││ O ││    ││ O ││    │  I  │    │  I  │    │  I  │   /Incisal
+  │└───┘│    │└───┘│    │ ─── │    │ ─── │    │ ─── │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │╱  ╲ │    │╱  ╲ │    │ /|\ │    │ | | │    │ | | │   Back
+  │ ╱╲  │    │ ╱╲  │    │  △  │    │  ▽  │    │  ▽  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+**═══════════════════════════════ MIDLINE ═══════════════════════════════**
+
+**Right Side (Patient's Right) - Teeth P-T**
+
+```
+     P           Q           R           S           T
+  Cent.I      Lat.I      Canine       1stM        2ndM
+  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+  │  △  │    │  △  │    │  ▽  │    │ ╲╱  │    │ ╲╱  │   Front
+  │ | | │    │ | | │    │ \|/ │    │╲  ╱ │    │╲  ╱ │
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ ─── │    │ ─── │    │ ─── │    │┌───┐│    │┌───┐│   Occlusal
+  │  I  │    │  I  │    │  I  │    ││ O ││    ││ O ││   /Incisal
+  │ ─── │    │ ─── │    │ ─── │    │└───┘│    │└───┘│
+  ├─────┤    ├─────┤    ├─────┤    ├─────┤    ├─────┤
+  │ | | │    │ | | │    │ /|\ │    │╱  ╲ │    │╱  ╲ │   Back
+  │  ▽  │    │  ▽  │    │  △  │    │ ╱╲  │    │ ╱╲  │
+  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘
+```
+
+---
+
+### Section 3.2: Occlusal View Matrix (All 20 Primary Teeth)
+
+Surface labels: **B** = Buccal | **M** = Mesial | **D** = Distal | **P** = Palatal | **L** = Lingual | **O** = Occlusal | **I** = Incisal
+
+#### UPPER ARCH - Occlusal Views (Teeth A-J)
+
+**Posterior Teeth (Primary Molars) - Teeth A-B**
+
+```
+         A (2ndM)            B (1stM)
+            B                   B
+       ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M
+       │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘
+            P                   P
+```
+
+**Anterior Teeth (Canine & Incisors) - Teeth C-E**
+
+```
+        C (Canine)         D (Lat.I)          E (Cent.I)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P
+```
+
+**══════════════════════════════════ MIDLINE ══════════════════════════════════**
+
+**Anterior Teeth (Incisors & Canine) - Teeth F-H**
+
+```
+        F (Cent.I)         G (Lat.I)          H (Canine)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            P                   P                   P
+```
+
+**Posterior Teeth (Primary Molars) - Teeth I-J**
+
+```
+         I (1stM)            J (2ndM)
+            B                   B
+       ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D
+       │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘
+            P                   P
+```
+
+---
+
+#### LOWER ARCH - Occlusal Views (Teeth K-T)
+
+**Posterior Teeth (Primary Molars) - Teeth K-L**
+
+```
+         K (2ndM)            L (1stM)
+            B                   B
+       ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░┌───┐░░│  D   M  │░░┌───┐░░│  D
+       │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘
+            L                   L
+```
+
+**Anterior Teeth (Canine & Incisors) - Teeth M-O**
+
+```
+        M (Canine)         N (Lat.I)          O (Cent.I)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D   M  │░░░░░░░░░│  D
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L
+```
+
+**══════════════════════════════════ MIDLINE ══════════════════════════════════**
+
+**Anterior Teeth (Incisors & Canine) - Teeth P-R**
+
+```
+        P (Cent.I)         Q (Lat.I)          R (Canine)
+            B                   B                   B
+       ┌─────────┐         ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M   D  │░░░░░░░░░│  M
+       │─────────│         │─────────│         │─────────│
+       │    I    │         │    I    │         │    I    │
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘         └─────────┘
+            L                   L                   L
+```
+
+**Posterior Teeth (Primary Molars) - Teeth S-T**
+
+```
+         S (1stM)            T (2ndM)
+            B                   B
+       ┌─────────┐         ┌─────────┐
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+    D  │░░┌───┐░░│  M   D  │░░┌───┐░░│  M
+       │░░│ O │░░│         │░░│ O │░░│
+       │░░└───┘░░│         │░░└───┘░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       │░░░░░░░░░│         │░░░░░░░░░│
+       └─────────┘         └─────────┘
+            L                   L
+```
+
+---
+
+### Numbering Order (A-T, Counterclockwise)
+
+Universal Numbering for primary teeth follows a counterclockwise pattern:
+
+```
+     A ──► B ──► C ──► D ──► E  ║  F ──► G ──► H ──► I ──► J
+                                ║
+    Upper Right                 ║                 Upper Left
+                                ║
+   ─────────────────────────────╬─────────────────────────────
+                                ║
+    Lower Right                 ║                 Lower Left
+                                ║
+     T ◄── S ◄── R ◄── Q ◄── P  ║  O ◄── N ◄── M ◄── L ◄── K
+```
+
+1. Start at **upper right second molar** (A)
+2. Move toward midline → E
+3. Cross to upper left → F through J
+4. Drop to lower left → K through O
+5. End at **lower right second molar** (T)
+
+---
+
+### Primary Tooth Legend
+
+| Code | Full Name | Biting Surface |
+|------|-----------|----------------|
+| m2 | Second Primary Molar | Occlusal (O) |
+| m1 | First Primary Molar | Occlusal (O) |
+| c | Primary Canine (Cuspid) | Incisal (I) |
+| i2 | Lateral Primary Incisor | Incisal (I) |
+| i1 | Central Primary Incisor | Incisal (I) |
+
+> **Note**: Lowercase letters (m, c, i) distinguish primary teeth from permanent teeth (M, C, I).
+
+### Quadrant Reference (Primary Dentition)
+
+| Quadrant | Location | FDI Codes | Universal Letters |
+|----------|----------|-----------|-------------------|
+| **5** | Upper Right | 51, 52, 53, 54, 55 | A, B, C, D, E |
+| **6** | Upper Left | 61, 62, 63, 64, 65 | F, G, H, I, J |
+| **7** | Lower Left | 71, 72, 73, 74, 75 | K, L, M, N, O |
+| **8** | Lower Right | 81, 82, 83, 84, 85 | P, Q, R, S, T |
+
+---
+
+### Tooth Types by Letter
+
+| Type | Upper Right | Upper Left | Lower Left | Lower Right |
+|------|-------------|------------|------------|-------------|
+| 2nd Molar | A | J | K | T |
+| 1st Molar | B | I | L | S |
+| Canine | C | H | M | R |
+| Lateral Incisor | D | G | N | Q |
+| Central Incisor | E | F | O | P |
+
+---
+
+### Mixed Dentition Period (Ages 6-12)
+
+Children typically have both primary and permanent teeth during the mixed dentition period:
+
+**Eruption Timeline:**
+- **Age 6-7**: First permanent molars erupt (#3, 14, 19, 30) behind primary second molars
+- **Age 6-8**: Primary incisors shed, permanent incisors erupt
+- **Age 9-11**: Primary canines and molars shed
+- **Age 12-13**: All permanent teeth present (except wisdom teeth)
+
+**Charting Mixed Dentition:**
+```
+Example: 8-year-old with some permanent teeth
+
+Upper Arch:
+┌────┬────┬────┬────┬────┬────┬────┬────┐   ┌────┬────┬────┬────┬────┬────┬────┬────┐
+│ #3 │ A  │ B  │ C  │ D  │ #7 │ #8 │ #9 │   │#10 │ G  │ H  │ I  │ J  │#14 │    │    │
+│ M1 │ m2 │ m1 │ c  │ i2 │ I2 │ I1 │ I1 │   │ I2 │ i2 │ c  │ m1 │ m2 │ M1 │    │    │
+└────┴────┴────┴────┴────┴────┴────┴────┘   └────┴────┴────┴────┴────┴────┴────┴────┘
+      ↑ Primary teeth (letters)                  ↑ Permanent teeth (numbers)
+```
+
+- Use **NUMBERS (1-32)** for permanent teeth
+- Use **LETTERS (A-T)** for primary teeth still present
+- Both can appear on the same chart
+
+---
+
+### Tooth Eruption & Shedding Timeline
+
+**Primary Teeth Eruption:**
+
+| Tooth | Upper (months) | Lower (months) |
+|-------|----------------|----------------|
+| Central Incisor | 8-12 | 6-10 |
+| Lateral Incisor | 9-13 | 10-16 |
+| Canine | 16-22 | 17-23 |
+| First Molar | 13-19 | 14-18 |
+| Second Molar | 25-33 | 23-31 |
+
+**Primary Teeth Shedding:**
+
+| Tooth | Upper (years) | Lower (years) |
+|-------|---------------|---------------|
+| Central Incisor | 6-7 | 6-7 |
+| Lateral Incisor | 7-8 | 7-8 |
+| Canine | 10-12 | 9-12 |
+| First Molar | 9-11 | 9-11 |
+| Second Molar | 10-12 | 10-12 |
+
+---
+
+### Charting Symbols for Primary Teeth
+
+All 19 standard charting codes apply to primary teeth with the same rules:
+
+- **Same color coding**: RED = conditions, BLUE = treatments
+- **Same symbol shapes**: X for missing, circle for decay, etc.
+- **Same coverage types**: FULL COLUMN (210×850px) and PARTIAL (100×100px)
+
+The only difference is the **tooth identifier**: use letters (A-T) instead of numbers (1-32).
+
+**Example Charting:**
+```
+Tooth D (Upper Right Lateral Primary Incisor):
+  - Condition: D (Decayed) on Mesial surface
+  - Notation: D-D-M or "Tooth D, Decay, Mesial"
+
+Tooth K (Lower Left Second Primary Molar):
+  - Treatment: F (Filled) on Occlusal surface
+  - Notation: K-F-O or "Tooth K, Filled, Occlusal"
+```
+
+---
+
+### Primary Tooth Illustration Requirements
+
+Primary teeth have different anatomy than permanent teeth. The following specifies what illustrations are needed:
+
+#### Reusable from Adult Set (scale down)
+
+| Primary Tooth | Reuse Adult | Notes |
+|---------------|-------------|-------|
+| **i1** (Central Incisor) | I1 | Similar shape, smaller |
+| **i2** (Lateral Incisor) | I2 | Similar shape, smaller |
+| **c** (Canine) | C | Similar shape, smaller |
+
+#### NEW Illustrations Required
+
+| Primary Tooth | Why New? | Key Anatomical Differences |
+|---------------|----------|----------------------------|
+| **m1** (First Primary Molar) | ❌ Cannot reuse adult | Bulbous crown, pronounced cervical ridge, splayed roots |
+| **m2** (Second Primary Molar) | ❌ Cannot reuse adult | Same as m1; does NOT resemble adult premolars |
+
+#### Anatomical Comparison
+
+```
+ADULT MOLAR                    PRIMARY MOLAR (m1, m2)
+┌─────────────┐                ┌─────────────┐
+│  ▓▓▓▓▓▓▓▓▓  │                │▓▓▓▓▓▓▓▓▓▓▓▓▓│  ← More bulbous crown
+│  ▓▓▓▓▓▓▓▓▓  │                │▓▓▓▓▓▓▓▓▓▓▓▓▓│  ← Pronounced cervical bulge
+│     ▓▓▓     │                │     ▓▓▓     │
+│    ╱   ╲    │                │   ╱     ╲   │  ← Roots more splayed/divergent
+│   ╱     ╲   │                │  ╱       ╲  │    (to accommodate permanent
+│  ╱       ╲  │                │ ╱         ╲ │    tooth buds below)
+└─────────────┘                └─────────────┘
+   Parallel roots                Divergent roots
+```
+
+#### Primary Tooth Illustrations Checklist
+
+| Illustration | Type | Status | File Location |
+|--------------|------|--------|---------------|
+| Primary Central Incisor (i1) | Reuse/Scale | ⏳ Adapt from I1 | `svg/primary/i1-central-incisor.svg` |
+| Primary Lateral Incisor (i2) | Reuse/Scale | ⏳ Adapt from I2 | `svg/primary/i2-lateral-incisor.svg` |
+| Primary Canine (c) | Reuse/Scale | ⏳ Adapt from C | `svg/primary/c-canine.svg` |
+| Primary First Molar (m1) | **NEW** | ⏳ Create | `svg/primary/m1-first-molar.svg` |
+| Primary Second Molar (m2) | **NEW** | ⏳ Create | `svg/primary/m2-second-molar.svg` |
+
+> **Note**: Primary molars require new illustrations because they have distinctive anatomy (bulbous crowns, splayed roots) that differs significantly from adult molars and premolars.
+
+---
+
+## Quick Reference
+
+### Surface Orientation Key
+
+```
+UPPER TEETH (use P for Palatal)          LOWER TEETH (use L for Lingual)
+
+           B (Buccal)                              B (Buccal)
+        ┌───────────┐                           ┌───────────┐
+        │           │                           │           │
+   D ◄──│     O     │──► M                 D ◄──│     O     │──► M
+        │           │                           │           │
+        └───────────┘                           └───────────┘
+           P (Palatal)                            L (Lingual)
+```
+
+### Tooth Types by Number
+
+| Type            | Upper Right | Upper Left | Lower Left | Lower Right |
+| --------------- | ----------- | ---------- | ---------- | ----------- |
+| 3rd Molar       | #1          | #16        | #17        | #32         |
+| 2nd Molar       | #2          | #15        | #18        | #31         |
+| 1st Molar       | #3          | #14        | #19        | #30         |
+| 2nd Premolar    | #4          | #13        | #20        | #29         |
+| 1st Premolar    | #5          | #12        | #21        | #28         |
+| Canine          | #6          | #11        | #22        | #27         |
+| Lateral Incisor | #7          | #10        | #23        | #26         |
+| Central Incisor | #8          | #9         | #24        | #25         |
+
+### Mesial/Distal Orientation Rule
+
+- **Mesial (M)**: Surface facing TOWARD the midline
+- **Distal (D)**: Surface facing AWAY from the midline
+
+For teeth on the **RIGHT side** of the arch (patient's right, Quadrants 1 & 4):
+
+- M is on the **RIGHT** side of the tooth diagram (toward midline)
+- D is on the **LEFT** side of the tooth diagram (away from midline)
+
+For teeth on the **LEFT side** of the arch (patient's left, Quadrants 2 & 3):
+
+- M is on the **LEFT** side of the tooth diagram (toward midline)
+- D is on the **RIGHT** side of the tooth diagram (away from midline)
+
+---
+
+## Charting Symbols: Standard Dental Chart Codes
+
+This section documents the **19 standard dental charting codes** used in clinical practice, organized by **symbol coverage type** for Affinity Designer implementation.
+
+### Color Coding Standard
+
+| Color | Hex Code | Usage |
+|-------|----------|-------|
+| **RED** | `#DC2626` | Conditions (problems requiring attention) |
+| **BLUE** | `#2563EB` | Treatment Plans (work to be done) |
+| **BLUE** (Amalgam) | `#1E40AF` | Metal restorations (darker shade) |
+| **BLUE** (Composite) | `#60A5FA` | Tooth-colored restorations (lighter shade) |
+
+> **Convention**: RED indicates a problem/condition, BLUE indicates the treatment plan or completed work.
+
+### Symbol Coverage Types
+
+| Type | Dimensions | Description |
+|------|------------|-------------|
+| **FULL COLUMN** | 210×850px | Overlays entire tooth column (root + occlusal + facial views) |
+| **PARTIAL - Surface** | 100×100px | Overlays specific tooth surfaces on Surface Map |
+| **PARTIAL - Crown** | Crown area | Overlays crown portion only |
+
+---
+
+## Category 1: CONDITIONS
+
+### FULL COLUMN Conditions (210×850px)
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **M** | Missing (due to Caries) | RED `#DC2626` | X through entire tooth | `M-missing-caries.svg` |
+| **MO** | Missing (Other Causes) | RED `#DC2626` | X through entire tooth | `MO-missing-other.svg` |
+| **Cm** | Congenitally Missing | RED `#DC2626` | X or empty position | `Cm-congenitally-missing.svg` |
+| **RF** | Root Fragment | RED `#DC2626` | Partial X + visible root | `RF-root-fragment.svg` |
+| **Im** | Impacted Tooth | RED `#DC2626` | Dashed oval around tooth | `Im-impacted.svg` |
+| **I** | Caries Indicated for Extraction | RED `#DC2626` | Circle + parallel lines | `I-indicated-extraction.svg` |
+
+#### Symbol Examples - FULL COLUMN Conditions
+
+**M / MO / Cm - Missing Tooth:**
+```
+    MISSING TOOTH (M, MO, Cm)
+   ┌───────────────┐
+   │ ╲           ╱ │
+   │   ╲       ╱   │
+   │     ╲   ╱     │
+   │       ╳       │  ← Large X through
+   │     ╱   ╲     │    entire tooth column
+   │   ╱       ╲   │
+   │ ╱           ╲ │
+   └───────────────┘
+   Color: RED #DC2626
+   ViewBox: 0 0 210 850
+```
+
+**RF - Root Fragment:**
+```
+    ROOT FRAGMENT (RF)
+   ┌───────────────┐
+   │ ╲           ╱ │
+   │   ╲       ╱   │  ← Partial X at crown
+   │     ╲   ╱     │    position only
+   │       ╳       │
+   │               │
+   │      ███      │  ← Root fragment
+   │      ███      │    remains visible
+   │       █       │
+   └───────────────┘
+   Color: RED #DC2626
+```
+
+**Im - Impacted Tooth:**
+```
+    IMPACTED TOOTH (Im)
+   ╭─ ─ ─ ─ ─ ─ ─ ─╮
+   │               │
+   │   ┌───────┐   │  ← Dashed oval
+   │   │ tooth │   │    around entire
+   │   └───────┘   │    impacted tooth
+   │               │
+   ╰─ ─ ─ ─ ─ ─ ─ ─╯
+   Color: RED #DC2626 (dashed stroke)
+```
+
+**I - Indicated for Extraction:**
+```
+    INDICATED FOR EXTRACTION (I)
+   ┌───────────────┐
+   │  ○○○○○○○○○○   │  ← Circle indicates
+   │  ○        ○   │    caries present
+   │  ○        ○   │
+   │  ○○○○○○○○○○   │
+   │  ║       ║    │
+   │  ║       ║    │  ← Plus parallel lines
+   │  ║       ║    │    for extraction
+   │  ║       ║    │
+   └───────────────┘
+   Color: RED #DC2626
+```
+
+### PARTIAL Conditions - Surface Map (100×100px)
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **D** | Decayed (Caries) | RED `#DC2626` | Open circle outline on surface | `D-decayed.svg` |
+
+#### Symbol Example - PARTIAL Condition
+
+**D - Decayed (Caries):**
+```
+    DECAYED (D)
+         B
+    ┌─────────┐
+    │░░░░░░░░░│
+    │░░░○○○░░░│  ← Open circle outline
+ M  │░░○   ○░░│ D   on affected surface
+    │░░░○○○░░░│    (NO fill = untreated)
+    │░░░░░░░░░│
+    └─────────┘
+         L/P
+   Color: RED #DC2626
+   ViewBox: 0 0 100 100
+```
+
+---
+
+## Category 2: RESTORATION & PROSTHETICS
+
+### PARTIAL Restorations - Surface Map (100×100px)
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **F** | Filled (Generic) | BLUE `#2563EB` | Shaded/filled surface | `F-filled.svg` |
+| **A** | Amalgam Filing | BLUE `#1E40AF` | Dark shaded surface | `A-amalgam.svg` |
+| **FX** | Fixed Cure Composite | BLUE `#60A5FA` | Light shaded surface | `FX-composite.svg` |
+| **In** | Inlay | BLUE `#2563EB` | Outlined occlusal area | `In-inlay.svg` |
+
+#### Symbol Examples - PARTIAL Restorations
+
+**F / A / FX - Filled Surface:**
+```
+    FILLED (F, A, FX)
+         B
+    ┌─────────┐
+    │░░░░░░░░░│
+    │░░█████░░│  ← Shaded/filled area
+ M  │░░█████░░│ D   indicates restoration
+    │░░█████░░│
+    │░░░░░░░░░│
+    └─────────┘
+         L/P
+   Color: BLUE #2563EB (F)
+          BLUE #1E40AF (A - darker)
+          BLUE #60A5FA (FX - lighter)
+   ViewBox: 0 0 100 100
+```
+
+**In - Inlay:**
+```
+    INLAY (In)
+         B
+    ┌─────────┐
+    │░░░░░░░░░│
+    │░░┌───┐░░│  ← Outlined occlusal
+ M  │░░│ ▓ │░░│ D   with partial fill
+    │░░└───┘░░│
+    │░░░░░░░░░│
+    └─────────┘
+         L/P
+   Color: BLUE #2563EB
+```
+
+### PARTIAL Restorations - Crown View
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **J** | Jacket Crown | BLUE `#2563EB` | Circle around crown | `J-jacket-crown.svg` |
+| **A-B** | Abutment | BLUE `#2563EB` | Crown with connector | `A-B-abutment.svg` |
+| **P** | Pontic | BLUE `#2563EB` | False tooth marker | `P-pontic.svg` |
+
+#### Symbol Examples - Crown Restorations
+
+**J - Jacket Crown:**
+```
+    JACKET CROWN (J)
+    ╭───────────╮
+    │ ○○○○○○○○○ │
+    │ ○       ○ │  ← Circle around
+    │ ○   O   ○ │    crown portion
+    │ ○       ○ │
+    │ ○○○○○○○○○ │
+    ╰───────────╯
+        │││
+        └┴┘
+   Color: BLUE #2563EB
+```
+
+**A-B - Abutment (Bridge Support):**
+```
+    ABUTMENT (A-B)
+    ╭───────────╮──┐
+    │ ○○○○○○○○○ │  │  ← Crown with
+    │ ○       ○ │  │    bridge connector
+    │ ○   O   ○ │  │    extending to
+    │ ○       ○ │  │    pontic position
+    │ ○○○○○○○○○ │  │
+    ╰───────────╯──┘
+        │││
+        └┴┘
+   Color: BLUE #2563EB
+```
+
+**P - Pontic (False Tooth):**
+```
+    PONTIC (P)
+    ╭───────────╮
+    │▓▓▓▓▓▓▓▓▓▓▓│
+    │▓▓▓▓▓▓▓▓▓▓▓│  ← Shaded crown
+    │▓▓▓▓ O ▓▓▓▓│    (no root - false
+    │▓▓▓▓▓▓▓▓▓▓▓│    tooth in bridge)
+    │▓▓▓▓▓▓▓▓▓▓▓│
+    ╰───────────╯
+         ×
+   Color: BLUE #2563EB
+```
+
+### FULL COLUMN Prosthetics (210×850px)
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **Rm** | Removable Denture | BLUE `#2563EB` | Bracket notation | `Rm-removable-denture.svg` |
+
+**Rm - Removable Denture:**
+```
+    REMOVABLE DENTURE (Rm)
+   ┌───────────────┐
+   │  ┌─────────┐  │
+   │  │▓▓▓▓▓▓▓▓▓│  │  ← Bracket around
+   │  │▓▓▓▓▓▓▓▓▓│  │    denture tooth
+   │  │▓▓▓ O ▓▓▓│  │
+   │  │▓▓▓▓▓▓▓▓▓│  │
+   │  │▓▓▓▓▓▓▓▓▓│  │
+   │  └─────────┘  │
+   │      [ ]      │  ← Bracket indicates
+   └───────────────┘    removable
+   Color: BLUE #2563EB
+```
+
+---
+
+## Category 3: SURGERY
+
+### FULL COLUMN Surgery Symbols (210×850px)
+
+| Code | Name | Color | Symbol | SVG File |
+|------|------|-------|--------|----------|
+| **X** | Extraction (due to Caries) | BLUE `#2563EB` | ∥ parallel vertical lines | `X-extraction-caries.svg` |
+| **XO** | Extraction (Other Causes) | BLUE `#2563EB` | ∥ parallel vertical lines | `XO-extraction-other.svg` |
+| **Sp** | Supernumerary | RED `#DC2626` | Extra tooth indicator | `Sp-supernumerary.svg` |
+
+### Special Notation
+
+| Code | Name | Symbol | Notes |
+|------|------|--------|-------|
+| **✓** | Present Teeth | No overlay | Indicates healthy tooth, no symbol needed |
+
+#### Symbol Examples - Surgery
+
+**X / XO - Extraction Planned:**
+```
+    EXTRACTION (X, XO)
+   ┌───────────────┐
+   │  ║       ║    │
+   │  ║       ║    │
+   │  ║       ║    │  ← Two parallel
+   │  ║       ║    │    vertical lines
+   │  ║       ║    │    through tooth
+   │  ║       ║    │
+   │  ║       ║    │
+   └───────────────┘
+   Color: BLUE #2563EB
+   Note: X = due to caries
+         XO = due to other causes
+```
+
+> **Important**: ∥ (parallel lines) = Extraction PLANNED, while × (X) = Already MISSING
+
+**Sp - Supernumerary:**
+```
+    SUPERNUMERARY (Sp)
+    ┌───────────────┐
+    │      +        │
+    │    ┌───┐      │  ← Plus sign or
+    │    │ + │      │    extra tooth
+    │    └───┘      │    indicator
+    │      +        │
+    └───────────────┘
+   Color: RED #DC2626
+```
+
+---
+
+## Quick Reference Card
+
+### By Coverage Type
+
+**FULL COLUMN (210×850px):**
+```
+CONDITIONS (RED):     M, MO, Cm, RF, Im, I, Sp
+TREATMENTS (BLUE):    X, XO, Rm
+```
+
+**PARTIAL - Surface (100×100px):**
+```
+CONDITIONS (RED):     D
+TREATMENTS (BLUE):    F, A, FX, In
+```
+
+**PARTIAL - Crown:**
+```
+TREATMENTS (BLUE):    J, A-B, P
+```
+
+### All 19 Codes Summary
+
+| Code | Full Name | Coverage | Color |
+|------|-----------|----------|-------|
+| D | Decayed | PARTIAL (Surface) | RED |
+| M | Missing (Caries) | FULL COLUMN | RED |
+| F | Filled | PARTIAL (Surface) | BLUE |
+| I | Indicated for Extraction | FULL COLUMN | RED |
+| RF | Root Fragment | FULL COLUMN | RED |
+| MO | Missing (Other) | FULL COLUMN | RED |
+| Im | Impacted | FULL COLUMN | RED |
+| J | Jacket Crown | PARTIAL (Crown) | BLUE |
+| A | Amalgam | PARTIAL (Surface) | BLUE |
+| A-B | Abutment | PARTIAL (Crown) | BLUE |
+| P | Pontic | PARTIAL (Crown) | BLUE |
+| In | Inlay | PARTIAL (Surface) | BLUE |
+| FX | Fixed Composite | PARTIAL (Surface) | BLUE |
+| Rm | Removable Denture | FULL COLUMN | BLUE |
+| X | Extraction (Caries) | FULL COLUMN | BLUE |
+| XO | Extraction (Other) | FULL COLUMN | BLUE |
+| ✓ | Present Teeth | NONE | — |
+| Cm | Congenitally Missing | FULL COLUMN | RED |
+| Sp | Supernumerary | FULL COLUMN | RED |
+
+---
+
+## Surface Abbreviations
+
+| Code | Surface |
+|------|---------|
+| M | Mesial |
+| O | Occlusal |
+| D | Distal |
+| B | Buccal |
+| L | Lingual |
+| P | Palatal |
+| F | Facial |
+| I | Incisal |
+
+**Combined Examples:**
+- **MOD** = Mesial-Occlusal-Distal
+- **DO** = Distal-Occlusal
+- **MO** = Mesial-Occlusal
+- **MODBL** = All surfaces (full coverage)
+
+---
+
+**Sources:**
+
+- [Open Dental - Chart Graphic Colors](https://www.opendental.com/manual/definitionschartgraphiccolors.html)
+- [XLDent - Red-Green-Blue Colors](https://www.xldent.com/whats-new/redgreenblue-colors-tooth-chart)
+- [Kiroku Blog - Dental Charting Symbols](https://www.trykiroku.com/blog/dental-charting-symbols)
+- [Augusta University - Charting Cheat Sheet](https://www.augusta.edu/dentaltable/pdfs/patientexam/CheatSheetofChartingSymbols)

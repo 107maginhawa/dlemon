@@ -37,6 +37,7 @@ enum DentalTreatmentStatus {
   performed,
   verified,
   dismissed,
+  declined,
 }
 
 enum ToothState {
@@ -59,6 +60,13 @@ enum ToothSurfaceCode {
   occlusal,
   incisal,
   cervical,
+}
+
+enum ChartEntryClassification {
+  existing,
+  existing_other,
+  treatment_plan,
+  condition,
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +106,8 @@ model ToothChartState {
   surfaces?: ToothSurfaceCode[];
   conditionCode?: string;
   note?: string;
+  surfaceConditionMap?: Record<string>;
+  entryClassification?: ChartEntryClassification;
 }
 
 model DentalChart {
@@ -121,6 +131,8 @@ model UpdateToothRequest {
   surfaces?: ToothSurfaceCode[];
   conditionCode?: string;
   note?: string;
+  surfaceConditionMap?: Record<string>;
+  entryClassification?: ChartEntryClassification;
 }
 
 model DentalTreatment {
@@ -136,11 +148,13 @@ model DentalTreatment {
   conditionCode?: string;
   status: DentalTreatmentStatus;
   dismissReason?: string;
+  refusalReason?: string;
   /** Price in cents, locked at recording time (EC4) */
-  priceCents: int64;
+  priceCents: int32;
   carriedOver: boolean;
   sourceVisitId?: UUID;
   autoDismissed?: boolean;
+  clinicalNotes?: string;
 }
 
 model CreateDentalTreatmentRequest {
@@ -151,17 +165,21 @@ model CreateDentalTreatmentRequest {
   cdtCode: string;
   description: string;
   conditionCode?: string;
-  priceCents: int64;
+  priceCents: int32;
+  clinicalNotes?: string;
 }
 
 model UpdateDentalTreatmentRequest {
   status?: DentalTreatmentStatus;
   dismissReason?: string;
+  refusalReason?: string;
   toothNumber?: int32;
   surfaces?: ToothSurfaceCode[];
   cdtCode?: string;
   description?: string;
   conditionCode?: string;
+  priceCents?: int32;
+  clinicalNotes?: string;
 }
 
 model VisitNotes {
@@ -175,6 +193,19 @@ model VisitNotes {
   assessment?: string;
   plan?: string;
   notes?: string;
+  signed: boolean;
+  signedAt?: utcDateTime;
+  signedBy?: UUID;
+  lockedAt?: utcDateTime;
+}
+
+model VisitNoteVersion {
+  id: UUID;
+  createdAt: utcDateTime;
+  createdBy?: UUID;
+  version: int32;
+  noteId: UUID;
+  snapshot: Record<unknown>;
 }
 
 model UpsertVisitNotesRequest {
@@ -186,6 +217,13 @@ model UpsertVisitNotesRequest {
   notes?: string;
 }
 
+model SignVisitNotesRequest {}
+
+model CreateVisitNoteAddendumRequest {
+  reason: string;
+  content: string;
+}
+
 model ToothHistoryEntry {
   visitId: UUID;
   visitDate: utcDateTime;
@@ -194,6 +232,96 @@ model ToothHistoryEntry {
   conditionCode?: string;
   treatmentCdtCode?: string;
   treatmentDescription?: string;
+}
+
+model TreatmentTemplate {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  name: string;
+  description?: string;
+  treatments: string;
+}
+
+model CreateTreatmentTemplateRequest {
+  name: string;
+  description?: string;
+  treatments: string;
+}
+
+model UpdateTreatmentTemplateRequest {
+  name?: string;
+  description?: string;
+  treatments?: string;
+}
+
+model ApplyTemplateResponse {
+  applied: int32;
+  visitId: UUID;
+}
+
+model CarryOverTreatmentsRequest {
+  sourceVisitId?: UUID;
+}
+
+model CarryOverTreatmentsResponse {
+  carried: int32;
+}
+
+model TreatmentPlanResponse {
+  patientId: UUID;
+  visits: string;
+  treatments: string;
+  acceptedPlanVersionId?: UUID;
+}
+
+model TreatmentPlanVersion {
+  id: UUID;
+  createdAt: utcDateTime;
+  createdBy?: UUID;
+  version: int32;
+  patientId: UUID;
+  snapshot: Record<unknown>;
+}
+
+model AcceptTreatmentPlanRequest {
+  consentFormId?: UUID;
+}
+
+/** Per-tooth entry with entryClassification surfaced as `status` */
+model PatientToothEntry {
+  toothNumber: int32;
+  state?: string;
+  status?: string;
+  entryClassification?: ChartEntryClassification;
+  surfaces?: string[];
+  conditionCode?: string;
+}
+
+/** Patient visit summary with embedded chart teeth (entryClassification → status) */
+model PatientVisitRecord {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  patientId: UUID;
+  branchId: UUID;
+  status: DentalVisitStatus;
+  chiefComplaint?: string;
+  teeth?: PatientToothEntry[];
+}
+
+/** Patient-level condition / chart-entry record (status = entryClassification or treatment status) */
+model PatientConditionEntry {
+  id: string;
+  visitId: UUID;
+  toothNumber?: int32;
+  status: string;
+  surfaces?: string[];
+  conditionCode?: string;
+  state?: string;
+  cdtCode?: string;
+  description?: string;
+  priceCents?: int32;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,6 +478,43 @@ namespace DentalVisitModule {
     ): ApiOkResponse<VisitNotes>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{visitId}/notes/sign")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("signVisitNotes")
+    signNotes(
+      @path visitId: UUID,
+      @body body: SignVisitNotesRequest
+    ): ApiOkResponse<VisitNotes>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{visitId}/notes/addendum")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createVisitNoteAddendum")
+    createAddendum(
+      @path visitId: UUID,
+      @body body: CreateVisitNoteAddendumRequest
+    ): ApiCreatedResponse<VisitNoteVersion>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{visitId}/notes/history")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getVisitNoteHistory")
+    getNoteHistory(
+      @path visitId: UUID
+    ): ApiOkResponse<VisitNoteVersion[]>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   interface ToothHistoryManagement {
@@ -363,6 +528,139 @@ namespace DentalVisitModule {
       @path toothNumber: int32
     ): ApiOkResponse<PaginatedResponse<ToothHistoryEntry>>
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface TreatmentTemplateManagement {
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listTreatmentTemplates")
+    listTreatmentTemplates(): ApiOkResponse<TreatmentTemplate[]>
+      | ApiUnauthorizedResponse;
+
+    @post
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createTreatmentTemplate")
+    createTreatmentTemplate(
+      @body body: CreateTreatmentTemplateRequest
+    ): ApiCreatedResponse<TreatmentTemplate>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @patch(#{implicitOptionality: true})
+    @route("/{id}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateTreatmentTemplate")
+    updateTreatmentTemplate(
+      @path id: UUID,
+      @body body: UpdateTreatmentTemplateRequest
+    ): ApiOkResponse<TreatmentTemplate>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @delete
+    @route("/{id}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("deleteTreatmentTemplate")
+    deleteTreatmentTemplate(
+      @path id: UUID
+    ): ApiOkResponse<{}>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface VisitTemplateActions {
+    @post
+    @route("/{visitId}/apply-template/{templateId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("applyTemplate")
+    applyTemplate(
+      @path visitId: UUID,
+      @path templateId: UUID
+    ): ApiOkResponse<ApplyTemplateResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{visitId}/carry-over")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("carryOverTreatments")
+    carryOverTreatments(
+      @path visitId: UUID,
+      @body body: CarryOverTreatmentsRequest
+    ): ApiOkResponse<CarryOverTreatmentsResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface TreatmentPlanPresentation {
+    @get
+    @route("/{patientId}/treatment-plan")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getTreatmentPlan")
+    getTreatmentPlan(
+      @path patientId: UUID
+    ): ApiOkResponse<TreatmentPlanResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{patientId}/treatment-plan/accept")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("acceptTreatmentPlan")
+    acceptTreatmentPlan(
+      @path patientId: UUID,
+      @body body: AcceptTreatmentPlanRequest
+    ): ApiCreatedResponse<TreatmentPlanVersion>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{patientId}/treatment-plan/versions/{versionId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getTreatmentPlanVersion")
+    getTreatmentPlanVersion(
+      @path patientId: UUID,
+      @path versionId: UUID
+    ): ApiOkResponse<TreatmentPlanVersion>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface PatientRecordsView {
+    @get
+    @route("/{patientId}/visits")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listPatientVisits")
+    listPatientVisits(
+      @path patientId: UUID,
+      @query branchId?: UUID
+    ): ApiOkResponse<PaginatedResponse<PatientVisitRecord>>
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{patientId}/treatments")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listPatientConditions")
+    listPatientConditions(
+      @path patientId: UUID,
+      @query branchId?: UUID
+    ): ApiOkResponse<PaginatedResponse<PatientConditionEntry>>
       | ApiUnauthorizedResponse;
   }
 }

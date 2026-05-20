@@ -31,8 +31,8 @@ describe('PaymentPlanView -- formatFrequency', () => {
 });
 
 describe('PaymentPlanView -- getPlanStatusClass', () => {
-  test('getPlanStatusClass("onTrack") includes "green"', () => {
-    expect(getPlanStatusClass('onTrack')).toContain('green');
+  test('getPlanStatusClass("on_track") includes "green"', () => {
+    expect(getPlanStatusClass('on_track')).toContain('green');
   });
 
   test('getPlanStatusClass("behind") includes "red"', () => {

@@ -35,11 +35,12 @@ function InnerApp() {
   const personQuery = useQuery({
     ...getPersonOptions({ path: { person: 'me' } }),
     retry: (failureCount, error) => {
-      if (error instanceof SdkError && error.status === 404) return false
+      if (error instanceof SdkError && (error.status === 404 || error.status === 401)) return false
       return failureCount < 3
     },
+    enabled: !sessionPending && !!session?.user,
   })
-  const personPending = personQuery.isPending
+  const personPending = personQuery.isLoading
   const person =
     personQuery.error instanceof SdkError && personQuery.error.status === 404
       ? null

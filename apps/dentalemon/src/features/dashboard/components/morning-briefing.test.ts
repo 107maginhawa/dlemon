@@ -15,6 +15,10 @@ import {
   groupAppointmentsByStatus,
   getNextAppointment,
   sumOutstanding,
+  formatPaymentPlanSubtitle,
+  formatLabOrderSubtitle,
+  countPendingTreatments,
+  formatDailyCollections,
 } from './morning-briefing';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +33,7 @@ interface Payment {
 interface Treatment {
   id: string;
   status: string;
-  procedureType?: string;
+  serviceType?: string;
 }
 
 interface PaymentPlan {
@@ -148,9 +152,9 @@ describe('MorningBriefing -- groupAppointmentsByStatus', () => {
   test('splits appointments into done, now, upcoming', () => {
     const appts = [
       { id: '1', patientId: 'p1', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
-      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:00:00Z', status: 'checkedIn' },
+      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:00:00Z', status: 'checked_in' },
       { id: '3', patientId: 'p3', scheduledAt: '2026-05-02T10:00:00Z', status: 'scheduled' },
-      { id: '4', patientId: 'p4', scheduledAt: '2026-05-02T11:00:00Z', status: 'noShow' },
+      { id: '4', patientId: 'p4', scheduledAt: '2026-05-02T11:00:00Z', status: 'no_show' },
     ];
     const result = groupAppointmentsByStatus(appts);
     expect(result.done.length).toBe(2);
@@ -170,7 +174,7 @@ describe('MorningBriefing -- getNextAppointment', () => {
   test('returns first scheduled/checkedIn appointment by time', () => {
     const appts = [
       { id: '1', patientId: 'p1', scheduledAt: '2026-05-02T14:00:00Z', status: 'scheduled' },
-      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:30:00Z', status: 'checkedIn' },
+      { id: '2', patientId: 'p2', scheduledAt: '2026-05-02T09:30:00Z', status: 'checked_in' },
       { id: '3', patientId: 'p3', scheduledAt: '2026-05-02T08:00:00Z', status: 'completed' },
     ];
     const result = getNextAppointment(appts);
@@ -236,9 +240,9 @@ describe('MorningBriefing -- sumOutstanding', () => {
 describe('MorningBriefing -- getPlansBehind', () => {
   test('filters to behind plans only', () => {
     const plans: PaymentPlan[] = [
-      { id: '1', status: 'onTrack', patientName: 'Russel' },
+      { id: '1', status: 'on_track', patientName: 'Russel' },
       { id: '2', status: 'behind', patientName: 'Juan' },
-      { id: '3', status: 'onTrack', patientName: 'Maria' },
+      { id: '3', status: 'on_track', patientName: 'Maria' },
     ];
     const result = getPlansBehind(plans);
     expect(result.length).toBe(1);
@@ -247,9 +251,109 @@ describe('MorningBriefing -- getPlansBehind', () => {
 
   test('returns empty when none behind', () => {
     const plans: PaymentPlan[] = [
-      { id: '1', status: 'onTrack' },
+      { id: '1', status: 'on_track' },
     ];
     expect(getPlansBehind(plans)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR0.7: Payment Plans — "behind" badge logic
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- payment plans behind badge', () => {
+  test('formatPaymentPlanSubtitle shows "behind" count when > 0', () => {
+    const result = formatPaymentPlanSubtitle(5, 2);
+    expect(result).toContain('2');
+    expect(result).toContain('behind');
+  });
+
+  test('formatPaymentPlanSubtitle shows "active plans" only when behind is 0', () => {
+    const result = formatPaymentPlanSubtitle(5, 0);
+    expect(result).toBe('active plans');
+    expect(result).not.toContain('behind');
+  });
+
+  test('formatPaymentPlanSubtitle shows "active plans" when behind is null', () => {
+    const result = formatPaymentPlanSubtitle(5, null);
+    expect(result).toBe('active plans');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR0.8: Lab Orders — overdue display logic
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- lab order status display', () => {
+  test('formatLabOrderSubtitle shows pending and overdue when both > 0', () => {
+    const result = formatLabOrderSubtitle(4, 2);
+    expect(result).toContain('4');
+    expect(result).toContain('pending');
+    expect(result).toContain('2');
+    expect(result).toContain('overdue');
+  });
+
+  test('formatLabOrderSubtitle shows only pending when overdue is 0', () => {
+    const result = formatLabOrderSubtitle(3, 0);
+    expect(result).toContain('pending');
+    expect(result).not.toContain('overdue');
+  });
+
+  test('formatLabOrderSubtitle shows only pending when overdue is null', () => {
+    const result = formatLabOrderSubtitle(3, null);
+    expect(result).toContain('pending');
+    expect(result).not.toContain('overdue');
+  });
+
+  test('formatLabOrderSubtitle handles zero pending', () => {
+    const result = formatLabOrderSubtitle(0, 0);
+    expect(result).toContain('pending');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR0.3: Pending treatments count
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- pending treatments count', () => {
+  test('countPendingTreatments returns count of scheduled appointments', () => {
+    const appts = [
+      { status: 'scheduled' },
+      { status: 'completed' },
+      { status: 'scheduled' },
+      { status: 'checked_in' },
+    ];
+    expect(countPendingTreatments(appts)).toBe(2);
+  });
+
+  test('countPendingTreatments returns 0 for empty array', () => {
+    expect(countPendingTreatments([])).toBe(0);
+  });
+
+  test('countPendingTreatments returns 0 when all completed', () => {
+    const appts = [{ status: 'completed' }, { status: 'no_show' }];
+    expect(countPendingTreatments(appts)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR0.4: Daily collections formatting
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- daily collections display', () => {
+  test('formatDailyCollections returns formatted peso amount', () => {
+    const result = formatDailyCollections(1250000);
+    expect(result).toContain('12,500');
+  });
+
+  test('formatDailyCollections returns dash for null', () => {
+    const result = formatDailyCollections(null);
+    expect(result).toContain('\u2014');
+  });
+
+  test('formatDailyCollections returns zero amount for 0', () => {
+    const result = formatDailyCollections(0);
+    expect(result).toContain('0');
   });
 });
 

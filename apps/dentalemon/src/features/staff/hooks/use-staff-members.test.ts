@@ -11,9 +11,8 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useStaffMembers, useStaffMutations } from './use-staff-members';
+import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
@@ -21,24 +20,6 @@ const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
 const BRANCH_ID = 'branch-xyz';
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 const mockMembers = [
   { id: 'm1', branchId: BRANCH_ID, displayName: 'Dr. Maria Santos', role: 'dentist_owner', status: 'active', avatarUrl: null, createdAt: '2026-05-01T00:00:00Z' },

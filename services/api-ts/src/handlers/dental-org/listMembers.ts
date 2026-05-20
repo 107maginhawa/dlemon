@@ -8,6 +8,7 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 
@@ -27,12 +28,15 @@ export async function listMembers(ctx: Context): Promise<Response> {
 
   const includeInactive = ctx.req.query('includeInactive') === 'true';
   const logger = ctx.get('logger');
+  const { limit, offset } = parsePagination(ctx.req.query());
 
   const repo = new MembershipRepository(db, logger);
-  const items = await repo.listByBranch(branchId, { includeInactive });
+  const allItems = await repo.listByBranch(branchId, { includeInactive });
 
   // Strip pinHash from each member
-  const safeItems = items.map(({ pinHash, ...rest }) => rest);
+  const safeItems = allItems.map(({ pinHash, ...rest }) => rest);
+  const total = safeItems.length;
+  const page = safeItems.slice(offset, offset + limit);
 
-  return ctx.json({ items: safeItems, total: safeItems.length });
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, total, limit, offset) });
 }

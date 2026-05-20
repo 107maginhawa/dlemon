@@ -1103,6 +1103,22 @@ function convertParameterToZod(param: any): string {
     }
   }
   
+  // Path params arrive as strings — coerce numeric types
+  if (param.in === 'path') {
+    if (param.schema?.type === 'integer' || param.type === 'integer') {
+      let baseType = 'z.coerce.number().int()';
+      if (param.schema?.minimum !== undefined) {
+        baseType += param.schema.exclusiveMinimum ? `.gt(${param.schema.minimum})` : `.gte(${param.schema.minimum})`;
+      }
+      if (param.schema?.maximum !== undefined) {
+        baseType += param.schema.exclusiveMaximum ? `.lt(${param.schema.maximum})` : `.lte(${param.schema.maximum})`;
+      }
+      zodType = baseType;
+    } else if (param.schema?.type === 'number' || param.type === 'number') {
+      zodType = 'z.coerce.number()';
+    }
+  }
+
   // Add query parameter specific transformations
   if (param.in === 'query') {
     // Detect union types with enum arrays (e.g., EmailQueueStatus | EmailQueueStatus[])

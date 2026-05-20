@@ -1,0 +1,7 @@
+[test]
+coverage = true
+
+[test.coverageThreshold]
+line = 62
+function = 61
+branch = 40

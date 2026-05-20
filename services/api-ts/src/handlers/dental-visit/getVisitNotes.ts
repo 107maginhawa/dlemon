@@ -29,5 +29,7 @@ export async function getVisitNotes(ctx: HandlerContext) {
   const notes = await repo.findByVisit(visitId);
   if (!notes) throw new NotFoundError('Visit notes');
 
-  return ctx.json(notes);
+  const history = await repo.history(notes.id);
+
+  return ctx.json({ ...notes, history });
 }

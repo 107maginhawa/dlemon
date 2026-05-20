@@ -1,0 +1,1 @@
+CREATE TYPE "public"."chart_entry_classification" AS ENUM('existing', 'existing_other', 'treatment_plan', 'condition');

@@ -13,6 +13,7 @@ import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/cons
 import { usePatientProfile } from '../hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
+import { FollowUpNotes } from './follow-up-notes';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -252,16 +253,8 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
 
 // ─── Follow-up Tab ─────────────────────────────────────────────────────────
 
-function FollowupTab() {
-  return (
-    <div className="rounded-xl border border-border bg-card p-8 text-center">
-      <div className="text-3xl mb-3">📋</div>
-      <p className="text-sm font-semibold mb-1">Follow-Up Log</p>
-      <p className="text-sm text-muted-foreground">
-        No follow-up notes yet. Add one after the next visit.
-      </p>
-    </div>
-  );
+function FollowupTab({ patientId }: { patientId: string }) {
+  return <FollowUpNotes patientId={patientId} />;
 }
 
 // ─── Main component ────────────────────────────────────────────────────────
@@ -412,7 +405,7 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
         <div className="pt-4">
           {activeTab === 'overview' && <OverviewTab patientId={patientId} />}
           {activeTab === 'payment' && <PaymentTab patientId={patientId} branchId={branchId} />}
-          {activeTab === 'followup' && <FollowupTab />}
+          {activeTab === 'followup' && <FollowupTab patientId={patientId} />}
         </div>
 
       </div>

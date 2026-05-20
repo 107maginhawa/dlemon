@@ -78,6 +78,21 @@ async function signUpAndSeedBilling(page: Page) {
     localStorage.setItem('currentMemberRole', 'dentist_owner');
   }, { orgId: orgRes.id, branchId: branchRes.id });
 
+  // Create owner membership so assertBranchAccess + requireRole guards pass
+  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId = session?.user?.id;
+    if (personId) {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Billing Owner', role: 'dentist_owner', personId }),
+      });
+    }
+  }, { api: API, orgId: orgRes.id, branchId: branchRes.id });
+
   return { orgId: orgRes.id, branchId: branchRes.id };
 }
 
@@ -99,16 +114,8 @@ test.describe('Billing (FR4.x)', () => {
     await page.goto(`${APP}/billing`);
     await page.waitForLoadState('networkidle');
 
-    // No invoice rows visible — empty state or empty table
-    const rows = page.locator('tr[data-testid], tbody tr');
-    const count = await rows.count();
-    // Either 0 rows or an empty-state message
-    if (count === 0) {
-      // Empty list — correct
-    } else {
-      // If rows exist, they should show actual invoice data (not errors)
-      await expect(page.getByTestId('billing-list')).toBeVisible();
-    }
+    // Billing list container must always be visible — either showing rows or an empty state
+    await expect(page.getByTestId('billing-list')).toBeVisible();
   });
 
   test('FR4.1b: invoice status filter is visible on billing page', async ({ page }) => {
@@ -204,10 +211,7 @@ test.describe('Billing (FR4.x)', () => {
       return { invoiceId: invoice.id };
     }, { api: API, branchId });
 
-    if (!result) {
-      // Seeding failed — skip (member not available in test env)
-      return;
-    }
+    expect(result, 'Seeding failed: member lookup or invoice creation returned null').not.toBeNull();
 
     await page.goto(`${APP}/billing`);
     await page.waitForLoadState('networkidle');

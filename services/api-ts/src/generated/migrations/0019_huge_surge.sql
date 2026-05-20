@@ -1,0 +1,1 @@
+ALTER TABLE "stored_file" ADD COLUMN "multipart_upload_id" varchar(255);

@@ -6,7 +6,7 @@
  * API: GET /dental/patients/:patientId
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { getDentalPatientOptions } from '@monobase/sdk-ts/generated/react-query';
 
 // ─── Raw API shape ─────────────────────────────────────────────────────────
 
@@ -100,15 +100,8 @@ interface UsePatientProfileOptions {
 
 export function usePatientProfile({ patientId }: UsePatientProfileOptions) {
   const query = useQuery({
-    queryKey: ['dental-patient-profile', patientId],
-    queryFn: async (): Promise<PatientProfileData> => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to fetch patient profile (${res.status})`);
-      const data: RawPatientDetail = await res.json();
-      return toPatientProfile(data);
-    },
+    ...getDentalPatientOptions({ path: { id: patientId } }),
+    select: (data) => toPatientProfile(data as unknown as RawPatientDetail),
     enabled: !!patientId,
   });
 

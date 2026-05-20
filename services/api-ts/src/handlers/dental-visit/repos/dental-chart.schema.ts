@@ -6,6 +6,8 @@
 
 import { pgTable, uuid, jsonb, integer, text, index, pgEnum } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalVisits } from './visit.schema';
+import { patients } from '../../patient/repos/patient.schema';
 
 export const toothStateEnum = pgEnum('tooth_state', [
   'healthy',
@@ -29,18 +31,29 @@ export const toothSurfaceEnum = pgEnum('tooth_surface', [
   'cervical',
 ]);
 
+export const chartEntryClassificationEnum = pgEnum('chart_entry_classification', [
+  'existing',
+  'existing_other',
+  'treatment_plan',
+  'condition',
+]);
+
+export type ChartEntryClassification = typeof chartEntryClassificationEnum.enumValues[number];
+
 export interface ToothChartState {
   toothNumber: number;
   state: string;
   surfaces?: string[];
   conditionCode?: string;
   note?: string;
+  surfaceConditionMap?: Record<string, unknown>;
+  entryClassification?: ChartEntryClassification;
 }
 
 export const dentalCharts = pgTable('dental_chart', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull(),
-  patientId: uuid('patient_id').notNull(),
+  visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
   teeth: jsonb('teeth').notNull().$type<ToothChartState[]>(),
 }, (table) => ({
   visitIdx: index('dental_chart_visit_id_idx').on(table.visitId),

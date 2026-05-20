@@ -1390,12 +1390,12 @@ const { response, data } = await listBookings(providerClient);
           // Should have the booking where dualRole booked with us
           const dualBooking = data!.data.find(b => b.id === clientBookingId);
           expect(dualBooking).toBeDefined();
-          expect(dualBooking!.provider).toBe(providerPersonId);
+          expect(dualBooking!.host).toBe(providerPersonId);
           
           // Should have the booking where secondPatient booked with us
           const secondPatientBooking = data!.data.find(b => b.id === secondPatientBookingId);
           expect(secondPatientBooking).toBeDefined();
-          expect(secondPatientBooking!.provider).toBe(providerPersonId);
+          expect(secondPatientBooking!.host).toBe(providerPersonId);
           
           // Should NOT have secondProvider's bookings (isolation check)
           const leakedBooking = data!.data.find(b => b.id === secondProviderBookingId);
@@ -1413,7 +1413,7 @@ const { response, data } = await listBookings(providerClient, {
           // Verify all returned bookings have provider as provider (person ID)
           if (data!.data.length > 0) {
             data!.data.forEach(booking => {
-              expect(booking.provider).toBe(providerPersonId);
+              expect(booking.host).toBe(providerPersonId);
             });
           }
         });
@@ -1459,7 +1459,7 @@ const { response, data } = await listBookings(providerClient);
           if (data!.data.length > 0) {
             // Should include bookings where user is EITHER client OR provider (person ID)
             const hasClientAppointment = data!.data.some(booking => booking.client === dualRolePersonId);
-            const hasProviderAppointment = data!.data.some(booking => booking.provider === dualRolePersonId);
+            const hasProviderAppointment = data!.data.some(booking => booking.host === dualRolePersonId);
 
             // User should have at least one type of booking
             expect(hasClientAppointment || hasProviderAppointment).toBe(true);
@@ -1495,7 +1495,7 @@ const { response, data } = await listBookings(providerClient);
           // All returned bookings must have dual-role user as provider (person ID)
           if (data!.data.length > 0) {
             data!.data.forEach(booking => {
-              expect(booking.provider).toBe(dualRolePersonId);
+              expect(booking.host).toBe(dualRolePersonId);
             });
           }
         });
@@ -1511,7 +1511,7 @@ const { response, data } = await listBookings(providerClient);
             // Each booking should have user as EITHER client OR provider (person ID)
             data!.data.forEach(booking => {
               const isClient = booking.client === dualRolePersonId;
-              const isProvider = booking.provider === dualRolePersonId;
+              const isProvider = booking.host === dualRolePersonId;
 
               // User must be involved in at least one role
               expect(isClient || isProvider).toBe(true);
@@ -1565,7 +1565,7 @@ const { response, data } = await listBookings(providerClient);
           // Provider1 should have bookings where they are the provider
           const provider1Booking = provider1Data!.data.find(b => b.id === clientBookingId || b.id === secondPatientBookingId);
           expect(provider1Booking).toBeDefined();
-          expect(provider1Booking!.provider).toBe(providerPersonId);
+          expect(provider1Booking!.host).toBe(providerPersonId);
           
           // Provider1 should NOT have secondProvider's booking
           const leakedFromProvider2 = provider1Data!.data.find(b => b.id === secondProviderBookingId);
@@ -1574,7 +1574,7 @@ const { response, data } = await listBookings(providerClient);
           // SecondProvider should have their own booking
           const provider2Booking = provider2Data!.data.find(b => b.id === secondProviderBookingId);
           expect(provider2Booking).toBeDefined();
-          expect(provider2Booking!.provider).toBe(secondProviderPersonId);
+          expect(provider2Booking!.host).toBe(secondProviderPersonId);
           
           // SecondProvider should NOT have provider1's bookings
           const leakedFromProvider1 = provider2Data!.data.find(b => b.id === clientBookingId || b.id === secondPatientBookingId);
@@ -1711,7 +1711,7 @@ const { response, data } = await listBookings(providerClient);
           // Should have the booking where client booked with us
           const ourBooking = data!.data.find(b => b.id === firstBooking!.id);
           expect(ourBooking).toBeDefined();
-          expect(ourBooking!.provider).toBe(providerPersonId);
+          expect(ourBooking!.host).toBe(providerPersonId);
           
           const scheduledAt = new Date(ourBooking!.scheduledAt);
           expect(scheduledAt.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
@@ -2047,7 +2047,7 @@ const { response, data } = await listBookings(providerClient);
       expect(booking!.status).toBe('pending');
 
       // Verify booking details are correct (person ID)
-      expect(booking!.provider).toBe(providerPersonId);
+      expect(booking!.host).toBe(providerPersonId);
       expect(booking!.scheduledAt).toBeDefined();
       expect(booking!.durationMinutes).toBeGreaterThan(0);
 

@@ -9,12 +9,16 @@ import type { ToothSurface } from '@/features/workspace/components/five-surface-
 
 export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';
 
+export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
+
 export interface ToothData {
   toothNumber: number;
   state: ToothState;
   surfaces?: ToothSurface[];
   conditionCode?: string;
   note?: string;
+  surfaceConditionMap?: Record<string, ToothState>;
+  entryClassification?: ChartEntryClassification;
 }
 
 /**
@@ -31,6 +35,18 @@ export const TOOTH_NUMBERS: number[] = [
   31, 32, 33, 34, 35, 36, 37, 38,
   // Lower right (from midline out)
   41, 42, 43, 44, 45, 46, 47, 48,
+];
+
+/**
+ * FDI primary (deciduous/pediatric) tooth numbering — 20 teeth:
+ * Upper right: 51–55, Upper left: 61–65
+ * Lower left: 71–75, Lower right: 81–85
+ */
+export const PEDIATRIC_TOOTH_NUMBERS: number[] = [
+  51, 52, 53, 54, 55,
+  61, 62, 63, 64, 65,
+  71, 72, 73, 74, 75,
+  81, 82, 83, 84, 85,
 ];
 
 /**
@@ -116,15 +132,76 @@ export function universalToFdi(universalNumber: number): number {
 
 export function getToothColorClass(state: ToothState): string {
   switch (state) {
-    case 'healthy':   return 'tooth-healthy text-green-600 fill-green-100';
-    case 'caries':    return 'tooth-caries text-red-600 fill-red-200';
-    case 'fractured': return 'tooth-fractured text-orange-600 fill-orange-200';
-    case 'filled':    return 'tooth-filled fill-teal-300 text-teal-800';
-    case 'crown':     return 'tooth-crown fill-[#FFE97D] text-[#4A4018]';
-    case 'missing':   return 'tooth-missing fill-gray-100 stroke-gray-400 stroke-dashed';
-    case 'implant':   return 'tooth-implant fill-blue-200 text-blue-800';
-    case 'extracted': return 'tooth-extracted fill-gray-300 text-gray-600';
-    case 'watchlist': return 'tooth-watchlist fill-yellow-100 text-yellow-700';
-    default:          return 'tooth-unknown fill-white text-gray-400';
+    case 'healthy':   return 'tooth-healthy text-green-700 bg-green-50';
+    case 'caries':    return 'tooth-caries text-[#FF3B30] bg-red-50';
+    case 'fractured': return 'tooth-fractured text-[#FF9500] bg-orange-50';
+    case 'filled':    return 'tooth-filled text-[#5AC8FA] bg-cyan-50';
+    case 'crown':     return 'tooth-crown text-[#B8960A] bg-yellow-50';
+    case 'missing':   return 'tooth-missing text-[#C7C7CC] bg-gray-50';
+    case 'implant':   return 'tooth-implant text-[#007AFF] bg-blue-50';
+    case 'extracted': return 'tooth-extracted text-gray-600 bg-gray-100';
+    case 'watchlist': return 'tooth-watchlist text-yellow-700 bg-yellow-50';
+    default:          return 'tooth-unknown text-gray-400 bg-white';
   }
+}
+
+/**
+ * Map tooth state to a hex fill color for use with UniversalTooth's fillColor prop.
+ * These match the visual intent of getToothColorClass but as hex strings.
+ */
+// ─── FDI tooth naming ────────────────────────────────────────────────────────
+
+const QUADRANT_LABELS: Record<number, string> = {
+  1: 'Upper Right',
+  2: 'Upper Left',
+  3: 'Lower Left',
+  4: 'Lower Right',
+};
+
+const POSITION_NAMES = [
+  'Central Incisor',
+  'Lateral Incisor',
+  'Canine',
+  'First Premolar',
+  'Second Premolar',
+  'First Molar',
+  'Second Molar',
+  'Third Molar',
+];
+
+/**
+ * Convert an FDI tooth number to a human-readable name and anterior/posterior type.
+ * Quadrant: tens digit (1=Upper Right, 2=Upper Left, 3=Lower Left, 4=Lower Right)
+ * Position: units digit (1=Central Incisor … 8=Third Molar)
+ * Anterior = positions 1–3, Posterior = positions 4–8.
+ */
+export function getToothInfo(fdi: number): { name: string; type: 'anterior' | 'posterior' } {
+  const quadrant = Math.floor(fdi / 10);
+  const position = fdi % 10;
+  const quadrantLabel = QUADRANT_LABELS[quadrant];
+  const positionName = POSITION_NAMES[position - 1];
+
+  if (!quadrantLabel || !positionName) {
+    return { name: `Tooth ${fdi}`, type: 'posterior' };
+  }
+
+  return {
+    name: `${quadrantLabel} ${positionName}`,
+    type: position <= 3 ? 'anterior' : 'posterior',
+  };
+}
+
+export function getToothFillColor(state: ToothState): string {
+  const colors: Record<ToothState, string> = {
+    healthy:   '', // empty — no fill applied, preserves SVG strokes
+    caries:    '#FF3B30', // Apple systemRed — matches --dental-caries
+    fractured: '#FF9500', // Apple systemOrange — matches --dental-fractured
+    filled:    '#5AC8FA', // Apple systemTeal — matches --dental-filled
+    crown:     '#FFD60A', // Apple systemYellow (≠ primary #FFE97D, avoids collision)
+    missing:   '#C7C7CC', // Apple systemGray4 — matches --dental-missing
+    implant:   '#007AFF', // Apple systemBlue
+    extracted: '#757575', // spec §4.2 dark grey (was #111111 — near-black, invisible in dark mode)
+    watchlist: '#fef9c3', // light yellow
+  };
+  return colors[state] ?? '#ffffff';
 }

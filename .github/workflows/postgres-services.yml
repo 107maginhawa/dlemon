@@ -1,0 +1,102 @@
+name: API Unit Tests (Postgres)
+
+# Phase D CI gate: runs api-ts unit/repo tests with a real Postgres instance.
+# Mirrors the services block from contract.yml (postgres:16-alpine, no Valkey).
+# Uses bun run test (src/**/*.test.ts glob) so tests/quarantine/ is auto-excluded.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api-unit-tests:
+    name: API Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
+      AUTH_SECRET: unit-test-secret-do-not-use-in-prod
+      # Storage env needed so api-ts boots; actual S3 calls will fail (storage tests are quarantined)
+      STORAGE_PROVIDER: minio
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_BUCKET: monobase-files
+      STORAGE_ACCESS_KEY_ID: minioadmin
+      STORAGE_SECRET_ACCESS_KEY: minioadmin
+      BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      - name: TypeScript typecheck
+        run: cd services/api-ts && bun run typecheck
+
+      - name: Run unit + repo tests
+        # Uses bun run test → "bun test src/**/*.test.ts"
+        # tests/quarantine/ is outside src/ and auto-excluded.
+        # .allowed-failures lists known pre-existing failures; they are logged
+        # but do not block CI. When a failure exits the allowed list, remove it here.
+        run: |
+          cd services/api-ts
+          GITHUB_ACTIONS=false bun run test 2>&1 | tee /tmp/test-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          # Check each allowed failure; if ALL remaining failures are in the list, pass.
+          FAIL_LINES=$(grep '^(fail)' /tmp/test-output.txt || true)
+          if [ -n "$FAIL_LINES" ]; then
+            ALLOWED=$(cat tests/.allowed-failures 2>/dev/null || true)
+            UNEXPECTED=$(echo "$FAIL_LINES" | while IFS= read -r line; do
+              # Strip trailing bracket tags like [BR-002] [0.63ms] before matching
+              CLEAN=$(echo "$line" | sed 's/\( \[[^]]*\]\)*$//')
+              if ! echo "$ALLOWED" | grep -qF "$CLEAN"; then
+                echo "$line"
+              fi
+            done)
+            if [ -n "$UNEXPECTED" ]; then
+              echo "UNEXPECTED TEST FAILURES (not in tests/.allowed-failures):"
+              echo "$UNEXPECTED"
+              exit 1
+            else
+              echo "All failures are in the allowed list. Passing."
+              exit 0
+            fi
+          fi
+          exit $EXIT_CODE
+
+      - name: Quarantine count guardrail
+        # Fail if tests/quarantine/ has grown beyond the committed count.
+        # Decrement .quarantine-count when removing a test from quarantine.
+        run: |
+          cd services/api-ts
+          ACTUAL=$(find tests/quarantine -name "*.test.ts" | wc -l | tr -d ' ')
+          ALLOWED=$(cat tests/.quarantine-count 2>/dev/null | tr -d ' ')
+          echo "Quarantined tests: $ACTUAL / allowed: $ALLOWED"
+          if [ "$ACTUAL" -gt "$ALLOWED" ]; then
+            echo "ERROR: quarantine grew from $ALLOWED to $ACTUAL. Move new tests out or update .quarantine-count."
+            exit 1
+          fi

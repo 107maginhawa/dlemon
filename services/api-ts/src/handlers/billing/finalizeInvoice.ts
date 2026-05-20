@@ -13,6 +13,7 @@ import {
 import type { ValidatedContext } from '@/types/app';
 import type { FinalizeInvoiceParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
+import type { NotificationService } from '@/core/notifs';
 import { InvoiceRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
 
@@ -29,6 +30,7 @@ export async function finalizeInvoice(
 ): Promise<Response> {
   const database = ctx.get('database');
   const logger = ctx.get('logger');
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
 
   // Get authenticated session (guaranteed by middleware)
   const session = ctx.get('session') as Session;
@@ -133,6 +135,17 @@ export async function finalizeInvoice(
     createdAt: finalizedInvoice.createdAt.toISOString(),
     updatedAt: finalizedInvoice.updatedAt.toISOString()
   };
+
+  // AC-NOTIF-02: fire billing notification to customer on invoice issue (best-effort)
+  notifs?.createNotification({
+    recipient: finalizedInvoice.customer,
+    type: 'billing',
+    channel: 'in-app',
+    title: 'Invoice issued',
+    message: `Invoice ${finalizedInvoice.invoiceNumber} for ${finalizedInvoice.total} ${finalizedInvoice.currency} has been issued`,
+    relatedEntityType: 'invoice',
+    relatedEntity: finalizedInvoice.id,
+  }).catch(() => {/* non-blocking */});
 
   return ctx.json(response, 200);
 }

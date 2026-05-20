@@ -9,7 +9,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
-import { useInvoiceDetail } from '../../billing/hooks/use-invoice-detail';
+import { useInvoiceDetail } from '@/features/billing/hooks/use-invoice-detail';
 
 // ---------------------------------------------------------------------------
 // Props

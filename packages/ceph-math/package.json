@@ -1,0 +1,19 @@
+{
+  "name": "@monobase/ceph-math",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "devDependencies": {
+    "@monobase/typescript-config": "workspace:*",
+    "bun-types": "^1.2.21",
+    "typescript": "^5.9.2"
+  }
+}

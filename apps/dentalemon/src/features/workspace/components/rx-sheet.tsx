@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { createPrescription } from '@monobase/sdk-ts/generated';
 
 const FREQUENCY_OPTIONS = [
   'OD (once daily)',
@@ -56,11 +56,9 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
     setErrors([]);
     setSaving(true);
     try {
-      const res = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/prescriptions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await createPrescription({
+        path: { visitId },
+        body: {
           visitId,
           patientId,
           prescriberMemberId,
@@ -72,12 +70,8 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           quantity: quantity.trim() || undefined,
           instructions: instructions.trim() || undefined,
           dispenseAsWritten,
-        }),
+        } as Parameters<typeof createPrescription>[0]['body'],
       });
-      if (!res.ok) {
-        setErrors(['Failed to save prescription']);
-        return;
-      }
       onSaved?.();
       onClose();
     } finally {

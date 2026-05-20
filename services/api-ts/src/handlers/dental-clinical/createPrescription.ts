@@ -10,7 +10,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PrescriptionRepository } from './repos/prescription.repo';
 import { medicalHistoryEntries } from './repos/medical-history.schema';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreatePrescriptionBody, CreatePrescriptionParams } from '@/generated/openapi/validators';
@@ -30,7 +30,7 @@ export async function createPrescription(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new PrescriptionRepository(db);
 
@@ -60,6 +60,11 @@ export async function createPrescription(
     instructions: body.instructions,
     dispenseAsWritten: body.dispenseAsWritten ?? false,
   });
+
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_prescription_create', prescriptionId: prescription.id, visitId, prescriberMemberId: body.prescriberMemberId, by: user.id },
+    'Prescription created',
+  );
 
   return ctx.json({
     ...prescription,

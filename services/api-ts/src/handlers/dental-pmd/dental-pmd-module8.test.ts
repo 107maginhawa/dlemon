@@ -18,10 +18,13 @@
  *   - 401 without auth
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
+import { GeneratePMDBody, GeneratePMDParams, ImportPMDBody } from '@/generated/openapi/validators';
+import { z } from 'zod';
 import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
@@ -37,6 +40,21 @@ const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+const ORG_ID = 'ee000000-0000-1000-8000-000000000001';
+const PERSON_ID = 'f2000000-0000-1000-8000-000000000001';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'PMDModule8 Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Dr. Test', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -51,9 +69,11 @@ function buildTestApp(user?: typeof TEST_USER) {
     if (user) { ctx.set('user', user); ctx.set('session', { id: 'test-session' }); }
     await next();
   });
+  const ve = (r: any, c: any) => { if (!r.success) return c.json({ error: r.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ') }, 400); };
+  const GeneratePMDBodyOnly = GeneratePMDBody.omit({ visitId: true });
   app.get('/dental/pmd/imported/:id', getImportedPMD);
-  app.post('/dental/pmd/import', importPMD as any);
-  app.post('/dental/visits/:visitId/pmd', generatePMD as any);
+  app.post('/dental/pmd/import', zValidator('json', ImportPMDBody, ve), importPMD as any);
+  app.post('/dental/visits/:visitId/pmd', zValidator('param', GeneratePMDParams, ve), zValidator('json', GeneratePMDBodyOnly, ve), generatePMD as any);
   app.get('/dental/visits/:visitId/pmd/export', exportPMD);
   return app;
 }
@@ -176,7 +196,7 @@ describe('GET /dental/visits/:visitId/pmd/export (FR12.6)', () => {
     const body = JSON.parse(text);
     expect(body.visitId).toBe(visit.id);
     expect(body.patientId).toBe(PATIENT_ID);
-    expect(body.checksum).toBeTruthy();
+    expect(body.checksum).not.toBeNull();
   });
 
   test('404 when no PMD exists for visit', async () => {

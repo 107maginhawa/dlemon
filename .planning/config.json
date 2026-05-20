@@ -1,0 +1,65 @@
+{
+  "model_profile": "balanced",
+  "commit_docs": true,
+  "parallelization": true,
+  "search_gitignored": false,
+  "brave_search": false,
+  "firecrawl": false,
+  "exa_search": false,
+  "git": {
+    "branching_strategy": "none",
+    "phase_branch_template": "gsd/phase-{phase}-{slug}",
+    "milestone_branch_template": "gsd/{milestone}-{slug}",
+    "quick_branch_template": null
+  },
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "nyquist_validation": true,
+    "auto_advance": false,
+    "node_repair": true,
+    "node_repair_budget": 2,
+    "ui_phase": true,
+    "ui_safety_gate": true,
+    "ai_integration_phase": true,
+    "tdd_mode": false,
+    "text_mode": false,
+    "research_before_questions": false,
+    "discuss_mode": "discuss",
+    "skip_discuss": false,
+    "code_review": true,
+    "code_review_depth": "standard",
+    "code_review_command": null,
+    "pattern_mapper": true,
+    "plan_bounce": false,
+    "plan_bounce_script": null,
+    "plan_bounce_passes": 2,
+    "auto_prune_state": false,
+    "post_planning_gaps": true,
+    "security_enforcement": true,
+    "security_asvs_level": 1,
+    "security_block_on": "high"
+  },
+  "hooks": {
+    "context_warnings": true
+  },
+  "project_code": null,
+  "phase_naming": "sequential",
+  "agent_skills": {},
+  "claude_md_path": "./CLAUDE.md",
+  "resolve_model_ids": "omit",
+  "graduation": {
+    "p0_max": 0,
+    "audit_health_min": 9.0,
+    "compliance_health_min": 9.0,
+    "confidence_min": 9.0,
+    "max_cycles": 3,
+    "rationale": "Dentist-facing clinical product: ≥9 required — treatment decisions, PHI, prescriptions, billing all carry clinical/legal risk"
+  },
+  "brownfield": {
+    "execution_state": "planned",
+    "execution_state_updated": "2026-05-20",
+    "execution_state_rationale": "ROADMAP exists; G1/G2/G3/G5/G6 waves not started; G4 feature-complete pending CI green (F-016)"
+  }
+}

@@ -7,28 +7,32 @@
 
 import { pgTable, uuid, text, timestamp, boolean, integer, pgEnum, index } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { patients } from '../../patient/repos/patient.schema';
+import { dentalMemberships } from '../../dental-org/repos/membership.schema';
+import { dentalBranches } from '../../dental-org/repos/branch.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 
 export const appointmentStatusEnum = pgEnum('appointment_status', [
   'scheduled',
-  'checkedIn',
+  'checked_in',
   'completed',
   'cancelled',
-  'noShow',
+  'no_show',
 ]);
 
 export const dentalAppointments = pgTable('dental_appointment', {
   ...baseEntityFields,
-  patientId: uuid('patient_id').notNull(),
-  dentistMemberId: uuid('dentist_member_id').notNull(),
-  branchId: uuid('branch_id').notNull(),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
+  dentistMemberId: uuid('dentist_member_id').notNull().references(() => dentalMemberships.id),
+  branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(30),
-  procedureType: text('procedure_type').notNull(),
+  serviceType: text('service_type').notNull(),
   operatoryId: uuid('operatory_id'),
   walkIn: boolean('walk_in').notNull().default(false),
   status: appointmentStatusEnum('status').notNull().default('scheduled'),
   checkInTime: timestamp('check_in_time', { withTimezone: true }),
-  visitId: uuid('visit_id'),
+  visitId: uuid('visit_id').references(() => dentalVisits.id),
   notes: text('notes'),
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   cancellationReason: text('cancellation_reason'),
@@ -43,5 +47,21 @@ export const dentalAppointments = pgTable('dental_appointment', {
 export type DentalAppointment = typeof dentalAppointments.$inferSelect;
 export type NewDentalAppointment = typeof dentalAppointments.$inferInsert;
 
-export const VALID_APPOINTMENT_STATUSES = ['scheduled', 'checkedIn', 'completed', 'cancelled', 'noShow'] as const;
+export const VALID_APPOINTMENT_STATUSES = ['scheduled', 'checked_in', 'completed', 'cancelled', 'no_show'] as const;
 export type AppointmentStatus = typeof VALID_APPOINTMENT_STATUSES[number];
+
+/**
+ * Valid state-machine transitions for appointments.
+ * scheduled → checkedIn | cancelled | noShow
+ * checkedIn → completed | cancelled | noShow
+ * completed → [] (terminal)
+ * cancelled   → [] (terminal)
+ * no_show     → completed (reversible)
+ */
+export const APPOINTMENT_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  scheduled: ['checked_in', 'cancelled', 'no_show'],
+  checked_in: ['completed', 'cancelled', 'no_show'],
+  completed: [],
+  cancelled: [],
+  no_show: ['completed'],
+};

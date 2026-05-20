@@ -82,7 +82,7 @@ test.describe('Billing Settings', () => {
     await expect(page.locator('[aria-label="Set up merchant account"]')).toBeVisible({ timeout: 15000 })
 
     // The setup button should be interactive (not disabled during idle state)
-    const setupBtn = page.getByRole('button', { name: /set up payment account/i })
+    const setupBtn = page.getByRole('button', { name: /set up merchant account/i })
     await expect(setupBtn).toBeVisible()
     await expect(setupBtn).toBeEnabled()
   })

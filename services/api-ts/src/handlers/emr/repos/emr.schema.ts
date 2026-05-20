@@ -41,6 +41,14 @@ export const consultationNotes = pgTable('consultation_note', {
     .notNull()
     .references(() => providers.id, { onDelete: 'cascade' }),
 
+  // Tenant isolation — nullable and intentionally NOT the isolation mechanism.
+  // Clinical PHI lives in per-user embedded SQLite (api-ts-embedded / Tauri rusqlite).
+  // Cross-device/branch isolation is enforced by cadence P2P sync scope claims
+  // (org/workspace/user/facility via filter_changes), not this column.
+  // tenant_id is retained nullable for potential future cadence scope mapping.
+  // No NOT-NULL migration planned — that would be the wrong primitive here.
+  tenantId: varchar('tenant_id', { length: 255 }),
+
   // Optional context field for idempotency per TypeSpec
   context: varchar('context', { length: 255 }),
   

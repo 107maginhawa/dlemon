@@ -171,11 +171,6 @@ test.describe('Onboarding Flow', () => {
     await expect(page.getByTestId('morning-briefing')).toBeVisible()
   })
 
-  // FIXME: This test is flaky due to session persistence issues with persistClient=false
-  // The test works manually in browser but fails in Playwright
-  // Issue: After completing onboarding and navigating to dashboard, a subsequent
-  // page.goto('/onboarding') causes session to appear lost, even though cookies exist
-  // Likely related to timing of React Query refetch and Router context updates
   test('redirects to dashboard if user already completed onboarding', async ({ page }) => {
     const user = await signUpNewUser(page)
     await expect(page).toHaveURL('/onboarding')
@@ -191,11 +186,11 @@ test.describe('Onboarding Flow', () => {
     await page.waitForLoadState('networkidle')
     await expect(page.getByTestId('morning-briefing')).toBeVisible()
 
-    // Give extra time for React Query and Router context to fully stabilize
-    await page.waitForTimeout(1000)
-
-    // Try to access onboarding again - should redirect since profile exists
-    await page.goto('/onboarding')
+    // Try to access onboarding again - should redirect since profile exists.
+    // waitUntil:'networkidle' ensures the TanStack Router loader (which fetches
+    // person profile to decide whether to redirect) fully resolves before we
+    // assert the final URL.
+    await page.goto('/onboarding', { waitUntil: 'networkidle' })
 
     // Should redirect back to dashboard (already has profile)
     await expect(page).toHaveURL('/dashboard', { timeout: 15000 })

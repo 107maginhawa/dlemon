@@ -8,12 +8,14 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
+import { ZodError } from 'zod';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { createMember } from './createMember';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
+import { MembershipRepository } from './repos/membership.repo';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
@@ -29,6 +31,9 @@ function buildTestApp(user?: typeof authedUser) {
   app.onError((err, c) => {
     if (err instanceof AppError) {
       return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    if (err instanceof ZodError) {
+      return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
     }
     return c.json({ error: String(err.message) }, 500);
   });
@@ -66,6 +71,15 @@ async function seedOrgAndBranch() {
     name: 'Main Branch',
     timezone: 'Asia/Manila',
     active: true,
+  });
+  // Seed membership for authedUser so assertBranchAccess passes
+  const membershipRepo = new MembershipRepository(db);
+  await membershipRepo.createOne({
+    branchId: BRANCH_ID,
+    personId: PERSON_ID,
+    displayName: 'Owner',
+    role: 'dentist_owner',
+    status: 'active',
   });
 }
 

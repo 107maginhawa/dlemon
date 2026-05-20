@@ -5,8 +5,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { QueryClient } from '@tanstack/react-query';
+const originalFetch = global.fetch;
 import {
   useAttachments,
   useUploadAttachment,
@@ -14,22 +14,9 @@ import {
   IMAGE_TYPE_LABELS,
   IMAGE_TYPES,
 } from './use-attachments';
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
+import { makeWrapper, jsonResponse } from '@/test-utils';
 
 const mockFetch = mock(() => jsonResponse({ data: [], pagination: {} }));
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
 
 const ATTACHMENT = {
   id: 'att-1',
@@ -48,7 +35,7 @@ const ATTACHMENT = {
 describe('IMAGE_TYPE_LABELS', () => {
   it('has label for every image type', () => {
     for (const t of IMAGE_TYPES) {
-      expect(IMAGE_TYPE_LABELS[t]).toBeTruthy();
+      expect(IMAGE_TYPE_LABELS[t]!.length).toBeGreaterThan(0);
     }
   });
 });
@@ -63,6 +50,7 @@ describe('useAttachments', () => {
   });
 
   afterEach(() => {
+    global.fetch = originalFetch;
     qc.clear();
   });
 
@@ -133,6 +121,7 @@ describe('useUploadAttachment', () => {
   });
 
   afterEach(() => {
+    global.fetch = originalFetch;
     qc.clear();
   });
 
@@ -214,6 +203,7 @@ describe('useDeleteAttachment', () => {
   });
 
   afterEach(() => {
+    global.fetch = originalFetch;
     qc.clear();
   });
 

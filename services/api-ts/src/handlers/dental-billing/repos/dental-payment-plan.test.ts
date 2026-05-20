@@ -6,12 +6,10 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { DentalPaymentPlanRepository } from './dental-payment-plan.repo';
 import { DentalInvoiceRepository } from './dental-invoice.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 const PATIENT_1 = 'b0000000-0000-2000-8000-000000000001';
 const PATIENT_2 = 'b0000000-0000-2000-8000-000000000002';
@@ -26,8 +24,10 @@ describe('DentalPaymentPlanRepository', () => {
   let invoiceRepo: DentalInvoiceRepository;
   let testInvoiceId: string;
   let testInvoiceId2: string;
+  let teardown: () => Promise<void>;
 
   beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
     repo = new DentalPaymentPlanRepository(db);
     invoiceRepo = new DentalInvoiceRepository(db);
 
@@ -44,13 +44,10 @@ describe('DentalPaymentPlanRepository', () => {
       subtotalCents: 6000, totalCents: 6000, balanceCents: 6000,
     });
     testInvoiceId2 = invoice2.id;
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_payment_plan_installment CASCADE`);
-    await db.execute(sql`TRUNCATE TABLE dental_payment_plan CASCADE`);
-    await db.execute(sql`TRUNCATE TABLE dental_invoice CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // CREATE WITH INSTALLMENTS
@@ -67,7 +64,7 @@ describe('DentalPaymentPlanRepository', () => {
       amountPerInstallmentCents: 4000,
     });
 
-    expect(plan.status).toBe('onTrack');
+    expect(plan.status).toBe('on_track');
     expect(plan.numberOfInstallments).toBe(3);
     expect(plan.frequency).toBe('monthly');
     expect(installments).toHaveLength(3);

@@ -1,0 +1,1 @@
+ALTER TABLE "consultation_note" ADD COLUMN "tenant_id" varchar(255);

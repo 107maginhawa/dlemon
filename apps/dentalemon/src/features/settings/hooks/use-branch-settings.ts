@@ -26,6 +26,10 @@ export interface BranchSettings {
   locale?: string;
   currency?: string;
   toothNotation?: string;
+  // Working hours (JSON string)
+  workingHours?: string;
+  // Notification preferences
+  notificationPreferences?: Record<string, unknown>;
   // Any other settings fields
   [key: string]: unknown;
 }

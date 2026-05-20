@@ -6,7 +6,7 @@
  * Returns PMD payload including checksum for Web Share API.
  */
 import { useMutation } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { generatePmd } from '@monobase/sdk-ts/generated';
 
 interface SharePMDInput {
   visitId: string;
@@ -21,14 +21,12 @@ interface PMDResult {
 export function useSharePMD() {
   return useMutation({
     mutationFn: async (input: SharePMDInput): Promise<PMDResult> => {
-      const res = await fetch(`${apiBaseUrl}/dental/visits/${input.visitId}/pmd`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(input),
+      const { data } = await generatePmd({
+        path: { visitId: input.visitId },
+        body: { patientId: input.patientId } as Parameters<typeof generatePmd>[0]['body'],
+        throwOnError: true,
       });
-      if (!res.ok) throw new Error(`Failed to share PMD: ${res.status}`);
-      return res.json();
+      return data as unknown as PMDResult;
     },
   });
 }

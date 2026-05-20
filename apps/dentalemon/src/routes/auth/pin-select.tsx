@@ -99,14 +99,15 @@ function PinSelectRoute() {
   const [members, setMembers] = useState<PinSelectMember[]>([]);
 
   useEffect(() => {
-    const { branchId } = useOrgContextStore.getState();
+    const { branchId: storeBranchId } = useOrgContextStore.getState();
+    const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
     if (!branchId) return;
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
     })
       .then(r => r.json())
       .then(data => {
-        const items: PinSelectMember[] = data.items ?? [];
+        const items: PinSelectMember[] = data.data ?? data.items ?? [];
         setMembers(items);
         // FR9.2: Single user = auto-select (navigate directly to PIN entry)
         if (items.length === 1) {

@@ -638,7 +638,7 @@ export function validateBookingResponse(booking: any): boolean {
     booking &&
     booking.id &&
     booking.client &&
-    booking.provider &&
+    booking.host &&
     booking.slot &&
     booking.status &&
     booking.scheduledAt

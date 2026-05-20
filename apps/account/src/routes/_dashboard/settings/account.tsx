@@ -82,7 +82,16 @@ function AccountSettingsPage() {
           <PersonalInfoForm
             defaultValues={person as never}
             onSubmit={async (data) => {
-              await submitUpdate(data as PersonUpdateRequest)
+              const patch = { ...data } as any
+              // Convert dateOfBirth from Date object to YYYY-MM-DD string for the API
+              if (patch.dateOfBirth instanceof Date) {
+                patch.dateOfBirth = patch.dateOfBirth.toISOString().split('T')[0]
+              }
+              // Strip empty gender string — API expects a valid enum or omission
+              if (patch.gender === '') {
+                delete patch.gender
+              }
+              await submitUpdate(patch as PersonUpdateRequest)
             }}
             mode="edit"
             memberSince={person?.createdAt}

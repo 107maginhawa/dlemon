@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { buildToothMap, getToothColorClass, TOOTH_NUMBERS } from './dental-chart.helpers';
+import { buildToothMap, getToothColorClass, TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS } from './dental-chart.helpers';
 
 describe('DentalChart helpers', () => {
   describe('TOOTH_NUMBERS', () => {
@@ -28,6 +28,29 @@ describe('DentalChart helpers', () => {
       expect(hasUpperLeft).toBe(true);
       expect(hasLowerLeft).toBe(true);
       expect(hasLowerRight).toBe(true);
+    });
+  });
+
+  describe('PEDIATRIC_TOOTH_NUMBERS', () => {
+    test('contains exactly 20 primary teeth (AC-CHART-01)', () => {
+      expect(PEDIATRIC_TOOTH_NUMBERS).toHaveLength(20);
+    });
+
+    test('includes all 4 pediatric quadrants', () => {
+      const hasUpperRight = PEDIATRIC_TOOTH_NUMBERS.some(n => n >= 51 && n <= 55);
+      const hasUpperLeft  = PEDIATRIC_TOOTH_NUMBERS.some(n => n >= 61 && n <= 65);
+      const hasLowerLeft  = PEDIATRIC_TOOTH_NUMBERS.some(n => n >= 71 && n <= 75);
+      const hasLowerRight = PEDIATRIC_TOOTH_NUMBERS.some(n => n >= 81 && n <= 85);
+      expect(hasUpperRight).toBe(true);
+      expect(hasUpperLeft).toBe(true);
+      expect(hasLowerLeft).toBe(true);
+      expect(hasLowerRight).toBe(true);
+    });
+
+    test('has no overlap with permanent TOOTH_NUMBERS', () => {
+      const permanent = new Set(TOOTH_NUMBERS);
+      const overlap = PEDIATRIC_TOOTH_NUMBERS.filter(n => permanent.has(n));
+      expect(overlap).toHaveLength(0);
     });
   });
 

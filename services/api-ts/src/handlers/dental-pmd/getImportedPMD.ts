@@ -43,6 +43,11 @@ export async function getImportedPMD(ctx: Context): Promise<Response> {
     parsedContent = record.content;
   }
 
+  const audit = ctx.get('audit') as any;
+  if (audit?.logEvent) {
+    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'imported-pmd', resource: id, description: 'Imported PMD retrieved', details: { resultCount: 1 }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
+  }
+
   return ctx.json({
     id: record.id,
     patientId: record.patientId,

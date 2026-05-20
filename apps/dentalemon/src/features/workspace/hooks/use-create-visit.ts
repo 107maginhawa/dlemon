@@ -3,10 +3,11 @@
  *
  * Replaces the inline fetch in handleNewVisit() in $patientId.tsx.
  * API: POST /dental/visits
- * On success: invalidates ['dental-visits', patientId] so the timeline refreshes.
+ * On success: invalidates listDentalVisits query so the timeline refreshes.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { createDentalVisit } from '@monobase/sdk-ts/generated';
+import { listDentalVisitsQueryKey } from '@monobase/sdk-ts/generated/react-query';
 
 interface CreateVisitInput {
   patientId: string;
@@ -26,17 +27,16 @@ export function useCreateVisit(patientId: string) {
 
   return useMutation({
     mutationFn: async (input: CreateVisitInput): Promise<CreatedVisit> => {
-      const res = await fetch(`${apiBaseUrl}/dental/visits`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(input),
+      const { data } = await createDentalVisit({
+        body: input as Parameters<typeof createDentalVisit>[0]['body'],
+        throwOnError: true,
       });
-      if (!res.ok) throw new Error(`Failed to create visit: ${res.status}`);
-      return res.json();
+      return data as unknown as CreatedVisit;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dental-visits', patientId] });
+      queryClient.invalidateQueries({
+        queryKey: listDentalVisitsQueryKey({ query: { patientId } }),
+      });
     },
   });
 }

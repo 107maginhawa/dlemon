@@ -7,7 +7,7 @@
  * API: GET /dental/patients?branchId=&q=&status=&needsFollowUp=
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { listDentalPatientsOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { PatientCardData } from '../components/patient-folder-card';
 import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
 
@@ -85,27 +85,23 @@ export function usePatients(options: UsePatientsOptions) {
   const { branchId, searchQuery, status, needsFollowUp } = options;
 
   const query = useQuery({
-    queryKey: ['dental-patients', { branchId, searchQuery, status, needsFollowUp }],
-    queryFn: async (): Promise<PatientCardData[]> => {
-      const params = new URLSearchParams();
-      if (branchId) params.set('branchId', branchId);
-      if (searchQuery) params.set('q', searchQuery);
-      if (status && status !== 'all') params.set('status', status);
-      if (needsFollowUp) params.set('needsFollowUp', 'true');
-
-      const qs = params.toString();
-      const url = `${apiBaseUrl}/dental/patients${qs ? `?${qs}` : ''}`;
-      const res = await fetch(url, { credentials: 'include' });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch patients (${res.status})`);
-      }
-
-      const data = await res.json();
+    ...listDentalPatientsOptions({
+      query: {
+        branchId: branchId ?? undefined,
+        q: searchQuery,
+        status: status === 'all' ? undefined : status,
+        needsFollowUp,
+      },
+    }),
+    select: (data) => {
+      const raw = data as Record<string, unknown>;
       const items: RawPatient[] = Array.isArray(data)
         ? data
-        : (data.patients ?? data.data ?? data.items ?? []);
-
+        : Array.isArray(raw.data)
+          ? (raw.data as RawPatient[])
+          : Array.isArray(raw.patients)
+            ? (raw.patients as RawPatient[])
+            : [];
       return items.map(toPatientCard);
     },
   });

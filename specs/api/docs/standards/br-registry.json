@@ -1,3 +1,486 @@
 {
-  "modules": {}
+  "version": "1.6",
+  "generatedFrom": "docs/prd/BUSINESS_RULES.md",
+  "generatedAt": "2026-05-20",
+  "modules": {
+    "dental-visit": {
+      "description": "Visit lifecycle, treatment, and chart rules",
+      "rules": [
+        {
+          "id": "BR-001",
+          "description": "A patient cannot have two active visits simultaneously. A new check-in is blocked if an active visit already exists for that patient at the same branch.",
+          "type": "conflict-prevention",
+          "status": "implemented",
+          "source": "dental-visit handlers"
+        },
+        {
+          "id": "BR-002",
+          "description": "Visit state transitions are strictly linear: draft → active → completed → locked. No state reversal is permitted.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "dental-visit handlers"
+        },
+        {
+          "id": "BR-003",
+          "description": "A visit is immutable after status reaches completed or locked. Chart entries, treatments, prescriptions, and lab orders cannot be added, edited, or deleted.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "_workspace/$patientId.tsx — isReadOnly flag"
+        },
+        {
+          "id": "BR-005",
+          "description": "A new visit created from the workspace carousel auto-discards if no chart entries or treatments are saved within the same session.",
+          "type": "lifecycle-guard",
+          "status": "not-implemented",
+          "source": "not yet enforced — planned",
+          "notes": "Deferred to v1.3 — requires session timeout infrastructure"
+        },
+        {
+          "id": "BR-006",
+          "description": "Treatment state transitions are forward-only: diagnosed → planned → performed → verified. dismissed is reachable from any non-terminal state. No reversal is permitted.",
+          "type": "state-guard",
+          "status": "partial",
+          "source": "treatment.schema.ts — TREATMENT_TRANSITIONS"
+        },
+        {
+          "id": "BR-007",
+          "description": "A completed treatment is immutable — its procedure code, tooth, surface, and price cannot be changed.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "dental-clinical handlers"
+        },
+        {
+          "id": "BR-008",
+          "description": "Carried-over treatments from a treatment plan appear in the workspace treatment table as a visual indicator. They are not auto-added as charges until the dentist explicitly records them in the current visit.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "_workspace/$patientId.tsx — carriedOverItems"
+        }
+      ]
+    },
+    "dental-scheduling": {
+      "description": "Appointment scheduling and check-in rules",
+      "rules": [
+        {
+          "id": "BR-004",
+          "description": "An appointment check-in creates a visit record. Deleting the appointment does not delete the visit.",
+          "type": "lifecycle-coupling",
+          "status": "implemented",
+          "source": "dental-scheduling + dental-visit handlers"
+        }
+      ]
+    },
+    "dental-billing": {
+      "description": "Invoice and payment rules",
+      "rules": [
+        {
+          "id": "BR-009",
+          "description": "An invoice requires at least one treatment line item. Creating an invoice with zero items is rejected.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "dental-billing handlers"
+        },
+        {
+          "id": "BR-010",
+          "description": "Tax is always 0. Fee schedule prices are pre-tax. Tax calculation is a stub pending per-country tax rules in Phase 2.",
+          "type": "calculation-stub",
+          "status": "partial",
+          "source": "dental-billing/createInvoice.ts (TODO comment)"
+        },
+        {
+          "id": "BR-011",
+          "description": "An active payment plan blocks invoice archival (void or uncollectible). Staff must resolve the payment plan before voiding.",
+          "type": "lifecycle-guard",
+          "status": "implemented",
+          "source": "dental-billing handlers"
+        },
+        {
+          "id": "BR-012",
+          "description": "Invoice state lifecycle: draft → sent → paid / partial / overdue / void. partial status requires a payment plan record.",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "dental-billing handlers"
+        },
+        {
+          "id": "BR-013",
+          "description": "Dental invoices do not support an uncollectible status. The dental invoice status enum is closed.",
+          "type": "deferred",
+          "status": "deferred",
+          "source": "dental-billing/repos/dental-invoice.schema.ts — no uncollectible in status enum",
+          "notes": "Base billing module has markInvoiceUncollectible but it does not apply to dental invoices"
+        }
+      ]
+    },
+    "dental-clinical": {
+      "description": "Consent, prescription, and lab order rules",
+      "rules": [
+        {
+          "id": "BR-014",
+          "description": "Consent form is immutable once signed. No edits, no re-signing, no deletion. The signed record is append-only.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "dental-clinical handlers + consent-sheet.tsx"
+        },
+        {
+          "id": "BR-015",
+          "description": "Patient registration requires explicit consent (consentGiven: true). Registration is rejected without it.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "dental-patient handlers + patient-registration-modal.tsx"
+        },
+        {
+          "id": "BR-017",
+          "description": "Prescription creation requires a prescriberMemberId — the ID of a dentist-role member. Non-dentist staff cannot write prescriptions.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "dental-clinical handlers + rx-sheet.tsx"
+        },
+        {
+          "id": "BR-018",
+          "description": "Lab order state lifecycle: ordered → in_progress → completed / cancelled. A completed order cannot transition to any other state.",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "dental-clinical handlers"
+        }
+      ]
+    },
+    "dental-org": {
+      "description": "Authorization and membership rules",
+      "rules": [
+        {
+          "id": "BR-016",
+          "description": "Branch membership is required for all clinical data access. Every handler calls assertBranchAccess which verifies the requesting user holds a DentalMembership record for the requested branch.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "assert-branch-access.ts"
+        }
+      ]
+    },
+    "dental-patient": {
+      "description": "Patient record rules",
+      "rules": [
+        {
+          "id": "BR-019",
+          "description": "Clinical records are immutable and append-only. Corrections are additive amendments — the original entry is preserved.",
+          "type": "compliance",
+          "status": "partial",
+          "source": "Per V3 PRD §2.3 constraints",
+          "notes": "Enforced at API level; no amendment UI yet"
+        },
+        {
+          "id": "BR-020",
+          "description": "Patient merge and unmerge are not implemented. Duplicate patients must be manually managed.",
+          "type": "implementation-gap",
+          "status": "not-implemented",
+          "source": "dental-patient/mergePatients.ts, unmergePatients.ts (TODO)"
+        }
+      ]
+    },
+    "dental-pmd": {
+      "description": "Portable Medical Document rules",
+      "rules": [
+        {
+          "id": "BR-021",
+          "description": "A PMD is generated per-visit and verified by checksum. Future changes to the visit record do not alter the PMD — it is a snapshot.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "dental-pmd handlers"
+        },
+        {
+          "id": "BR-022",
+          "description": "An imported external PMD is stored as-is (read-only). Its data is not merged into the patient's editable records automatically.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "dental-pmd handlers"
+        }
+      ]
+    },
+    "dental-imaging": {
+      "description": "Imaging workspace, finding state machine, and ceph analysis rules",
+      "rules": [
+        {
+          "id": "BR-023",
+          "description": "Annotations are non-destructive overlays on top of immutable images. Geometry is stored in imaging_annotation.data (JSONB); the underlying image record is never mutated.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "imaging.schema.ts:89–109, updateAnnotation.ts"
+        },
+        {
+          "id": "BR-024",
+          "description": "Panoramic images display a measurement-accuracy warning until the branch has set calibration data for that image.",
+          "type": "ux-guard",
+          "status": "partial",
+          "source": "updateImageCalibration.ts, calibration endpoint",
+          "notes": "Warning delivery is Phase 3a; calibration endpoint exists"
+        },
+        {
+          "id": "BR-025",
+          "description": "An image must be linked to a patient (patient_id NOT NULL). It may optionally be linked to a visit and/or specific teeth via join table.",
+          "type": "referential-integrity",
+          "status": "implemented",
+          "source": "imaging.schema.ts:56–87"
+        },
+        {
+          "id": "BR-026",
+          "description": "Image deletion is default-deny. Only dentist and associate roles may delete images. All other roles receive 403.",
+          "type": "access-control",
+          "status": "implemented",
+          "source": "deleteImage.ts:21,43–46 — ROLES_ALLOWED_TO_DELETE"
+        },
+        {
+          "id": "BR-027",
+          "description": "An associate may only delete images they personally acquired (acquiredBy === user.id). Attempting to delete another user's image returns 403.",
+          "type": "access-control",
+          "status": "implemented",
+          "source": "deleteImage.ts:49–51"
+        },
+        {
+          "id": "BR-028",
+          "description": "Image deletion is soft-only. DELETE sets status='archived'; no row is physically removed.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "imaging.repo.ts:110–114 — archiveImage()"
+        },
+        {
+          "id": "BR-029",
+          "description": "Branch isolation applies to all 13 imaging endpoints. Every handler calls assertBranchAccess. Finding details are hidden from users without branch membership.",
+          "type": "multi-tenancy",
+          "status": "implemented",
+          "source": "All 13 imaging handlers"
+        },
+        {
+          "id": "BR-030",
+          "description": "Legacy dental_attachment records are surfaced as imaging items via a union adapter in listPatientImages. Document and deleted attachments are excluded.",
+          "type": "backwards-compatibility",
+          "status": "implemented",
+          "source": "listPatientImages.ts:82–130"
+        },
+        {
+          "id": "BR-031",
+          "description": "Images are cached locally in IndexedDB for offline access in the imaging workspace.",
+          "type": "offline-ux",
+          "status": "unauditable",
+          "source": "Frontend feature only; backend unaffected"
+        },
+        {
+          "id": "BR-032",
+          "description": "Image modality is non-nullable with default 'other'. Applies to both study and individual image records.",
+          "type": "schema-constraint",
+          "status": "implemented",
+          "source": "imaging.schema.ts:62,75"
+        },
+        {
+          "id": "BR-033",
+          "description": "Maximum upload file size is 100 MB. Enforcement is delegated to the storage multipart layer.",
+          "type": "validation",
+          "status": "partial",
+          "source": "createImagingStudy.ts, storage multipart",
+          "notes": "Handler delegates; no explicit byte-count guard at handler level"
+        },
+        {
+          "id": "BR-034",
+          "description": "Allowed image formats: JPEG, PNG, TIFF, BMP. Uploads with other MIME types are rejected with 422.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "createImagingStudy.ts:39–43 — ALLOWED_IMAGING_MIME_TYPES"
+        },
+        {
+          "id": "BR-035",
+          "description": "Concurrent annotation writes use last-write-wins (no optimistic locking). The most recently committed write takes effect.",
+          "type": "concurrency",
+          "status": "implemented",
+          "source": "imaging.repo.ts"
+        },
+        {
+          "id": "CIMG-001",
+          "description": "Cephalometric features require a paid imaging tier. If the branch's imagingTier is 'free' or null, all CephMgmt_* endpoints return 403.",
+          "type": "access-control",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers — tier check before any DB write"
+        },
+        {
+          "id": "CIMG-002",
+          "description": "A null imagingTier is treated identically to 'free' — 403 returned. Absence of tier data is never interpreted as unlimited access.",
+          "type": "access-control",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers"
+        },
+        {
+          "id": "CIMG-003",
+          "description": "Ceph landmark status transitions are strictly forward: placed → confirmed → locked. locked is terminal — no further status changes are permitted.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "imaging_ceph.schema.ts — CEPH_LANDMARK_TRANSITIONS"
+        },
+        {
+          "id": "CIMG-004",
+          "description": "A locked landmark is fully immutable. Any PATCH to coordinates or status, or DELETE, returns 422 with code LANDMARK_LOCKED.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "CephMgmt_updateCephLandmark.ts, CephMgmt_deleteCephLandmark.ts"
+        },
+        {
+          "id": "CIMG-005",
+          "description": "Invalid landmark status transitions (e.g., confirmed → placed, locked → confirmed) are rejected with 422 and code INVALID_STATUS_TRANSITION.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "CephMgmt_updateCephLandmark.ts"
+        },
+        {
+          "id": "CIMG-006",
+          "description": "Ceph report generation is gated on four required landmarks (A, B, Go, Po) all having status confirmed. Attempting to generate a report without all four confirmed returns a validation error.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "imaging_ceph.schema.ts — CEPH_REPORT_GATE_LANDMARKS, CephMgmt_createCephReport.ts"
+        },
+        {
+          "id": "CIMG-007",
+          "description": "Branch isolation applies to all ceph endpoints. A non-member requesting any CephMgmt_* endpoint receives 404 (not 403) to avoid leaking branch existence.",
+          "type": "multi-tenancy",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers — assertBranchAccess"
+        },
+        {
+          "id": "CIMG-008",
+          "description": "Ceph reports are immutable versioned snapshots. Each report has a monotonically incrementing version per image (1, 2, 3…). No update or delete handlers exist.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "imaging_ceph.schema.ts — imagingCephReports (no update handler)"
+        },
+        {
+          "id": "CIMG-009",
+          "description": "Every write handler (batchUpsertCephLandmarks, updateCephLandmark) triggers an inline analysis recompute and returns { items, analysis }. Analysis is always fresh after any landmark write.",
+          "type": "response-contract",
+          "status": "implemented",
+          "source": "CephMgmt_batchUpsertCephLandmarks.ts, CephMgmt_updateCephLandmark.ts"
+        },
+        {
+          "id": "CIMG-010",
+          "description": "The analysisType field on all analysis responses is always 'steiner_hybrid_sn'. No other analysis type exists in v1.4.",
+          "type": "response-contract",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers returning analysis"
+        },
+        {
+          "id": "CIMG-011",
+          "description": "createCephReport returns 201 with { id, imageId, version, snapshot, createdAt }. The snapshot is a frozen JSON blob containing all measurement data at creation time and never changes afterwards.",
+          "type": "response-contract",
+          "status": "implemented",
+          "source": "CephMgmt_createCephReport.ts"
+        },
+        {
+          "id": "CIMG-012",
+          "description": "Version numbers for ceph reports are monotonically increasing per image (1, 2, 3…). A DB unique constraint on (imageId, version) prevents duplicate versions.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "imaging_ceph.schema.ts — unique index on (imageId, version); createReportVersion()"
+        },
+        {
+          "id": "CIMG-013",
+          "description": "updateCephLandmark (PATCH) returns { items, analysis } — the full landmark list plus recomputed analysis, not just the patched landmark.",
+          "type": "response-contract",
+          "status": "implemented",
+          "source": "CephMgmt_updateCephLandmark.ts"
+        },
+        {
+          "id": "CIMG-014",
+          "description": "A locked landmark is immutable across all three mutation axes: coordinate PATCH → 422 LANDMARK_LOCKED; status PATCH → 422 LANDMARK_LOCKED; DELETE → 422 LANDMARK_LOCKED.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "CephMgmt_updateCephLandmark.ts, CephMgmt_deleteCephLandmark.ts"
+        },
+        {
+          "id": "CIMG-015",
+          "description": "recomputeCephAnalysis (POST /analysis/recompute) returns a single CephAnalysis object — not { items, analysis }. The endpoint is idempotent.",
+          "type": "response-contract",
+          "status": "implemented",
+          "source": "CephMgmt_recomputeCephAnalysis.ts"
+        },
+        {
+          "id": "BR-036",
+          "description": "Ceph landmark batch upsert is idempotent — upserting the same landmark id with new coordinates replaces the existing entry without creating a duplicate row. Upsert semantics are enforced at the DB layer via onConflictDoUpdate.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "CephMgmt_batchUpsertCephLandmarks.ts; imaging_ceph.repo.ts — upsertLandmarks()"
+        },
+        {
+          "id": "BR-037",
+          "description": "A batch upsert of landmarks is rejected in its entirety if any landmark in the batch is locked. The handler skips locked landmarks silently (no partial application, no error). This protects locked entries without requiring the caller to pre-filter.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "CephMgmt_batchUpsertCephLandmarks.ts — locked-skip logic before upsert"
+        },
+        {
+          "id": "BR-038",
+          "description": "recomputeCephAnalysis is idempotent — calling it multiple times with unchanged landmark state produces identical measurement output each time. It writes to imagingCephAnalyses only and never creates a report row.",
+          "type": "computation-contract",
+          "status": "implemented",
+          "source": "CephMgmt_recomputeCephAnalysis.ts; design decision D-I"
+        },
+        {
+          "id": "BR-039",
+          "description": "Calibration provenance is captured in the report snapshot at creation time. The pixelSpacingMm value used to compute measurements is frozen into snapshot.calibration. Subsequent calibration changes do not retroactively update existing report snapshots.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "CephMgmt_createCephReport.ts snapshot builder — calibration: { value, method }"
+        },
+        {
+          "id": "BR-040",
+          "description": "Ceph analysis requires calibration (pixelSpacingMm > 0) to display mm-unit measurements. When pixelSpacingMm is null or 0, raw pixel distances are computed but the calibration method is 'not_calibrated' — clients must label uncalibrated measurements visually to prevent clinical misinterpretation.",
+          "type": "ux-guard",
+          "status": "implemented",
+          "source": "CephMgmt_recomputeCephAnalysis.ts — calibrationMethod logic; CephMgmt_createCephReport.ts snapshot"
+        },
+        {
+          "id": "BR-041",
+          "description": "Any CephMgmt_* operation on a non-existent image returns 404. Non-members also receive 404 (not 403) to avoid leaking image existence. 403 is never returned for missing images.",
+          "type": "multi-tenancy",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers — assertBranchAccess produces 404; ImagingRepository.getById returns 404"
+        },
+        {
+          "id": "BR-042",
+          "description": "Ceph report version numbers are monotonically increasing per image (1, 2, 3…). Gaps in version numbers are not permitted. A DB unique constraint on (imageId, version) enforces this and makes concurrent report creation race-safe.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "imaging_ceph.schema.ts — unique index on (imageId, version); ImagingCephRepository.createReportVersion()"
+        },
+        {
+          "id": "BR-043",
+          "description": "The steiner_hybrid_sn label is the mandatory analysis type for all v1.4 ceph analysis responses. Deviating from this label in analysis computations or response payloads is a schema violation. No other analysis type exists in v1.4.",
+          "type": "schema-constraint",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers returning analysis; @monobase/ceph-math computeCephAnalysis"
+        },
+        {
+          "id": "BR-044",
+          "description": "DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkId is permitted on landmarks with status confirmed or placed. Only locked landmarks are fully protected from deletion (returns 422 LANDMARK_LOCKED). Successful deletion resets the analysis state (triggers recompute or marks stale).",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "CephMgmt_deleteCephLandmark.ts — lock check; CIMG-014 lock matrix"
+        },
+        {
+          "id": "BR-045",
+          "description": "Ceph report snapshot measurement fields (sna, snb, anb, witsAppraisal, etc.) are nullable. If a required landmark is absent at report-creation time, the corresponding measurement is null in the snapshot rather than blocking report creation. Missing measurements produce null values — not errors.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "CephMgmt_createCephReport.ts snapshot — measurements from computeCephAnalysis; D-4 snapshot completeness"
+        },
+        {
+          "id": "BR-046",
+          "description": "After a landmark's coordinates are updated via PATCH, the ceph analysis is marked stale. The analysis is not automatically recomputed — the user must explicitly trigger POST /analysis/recompute. Until recomputed, the { items, analysis } response from updateCephLandmark reflects the freshly recomputed state inline (CIMG-009), but subsequent getCephAnalysis reads may reflect pre-patch data until a standalone recompute is triggered.",
+          "type": "computation-contract",
+          "status": "implemented",
+          "source": "CephMgmt_updateCephLandmark.ts — inline recompute on write (CIMG-009); CephMgmt_recomputeCephAnalysis.ts"
+        },
+        {
+          "id": "BR-047",
+          "description": "All image-scoped CephMgmt_* routes require a valid imageId that exists in the imagingImages table. A request for a ceph operation on an imageId that does not exist returns 404. There is no study-level ceph endpoint — all ceph operations are image-scoped.",
+          "type": "referential-integrity",
+          "status": "implemented",
+          "source": "All CephMgmt_*.ts handlers — ImagingRepository.getById() guard"
+        }
+      ]
+    }
+  }
 }

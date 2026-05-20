@@ -8,8 +8,8 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import React from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, ChevronDown } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature } from 'lucide-react';
 import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 
@@ -23,6 +23,8 @@ interface WorkspaceTopBarProps {
   onAttachments: () => void;
   onNotes: () => void;
   onTreatmentPlan: () => void;
+  onCompleteVisit: () => void;
+  visitStatus?: 'draft' | 'active' | 'completed' | 'locked';
 }
 
 function IconButton({
@@ -42,10 +44,38 @@ function IconButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
+      className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
     >
       {children}
     </button>
+  );
+}
+
+function FullscreenButton() {
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => typeof document !== 'undefined' && !!document.fullscreenElement
+  );
+
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  }, []);
+
+  return (
+    <IconButton label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggle}>
+      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+    </IconButton>
   );
 }
 
@@ -59,6 +89,8 @@ export function WorkspaceTopBar({
   onAttachments,
   onNotes,
   onTreatmentPlan,
+  onCompleteVisit,
+  visitStatus,
 }: WorkspaceTopBarProps) {
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
@@ -132,6 +164,9 @@ export function WorkspaceTopBar({
         <IconButton label="Write prescription" onClick={onRx}>
           <Pill className="h-4 w-4" />
         </IconButton>
+        <IconButton label="Consent" onClick={onConsent}>
+          <FileSignature className="h-4 w-4" />
+        </IconButton>
         <IconButton label="Notes / Medical History" onClick={onNotes}>
           <Pencil className="h-4 w-4" />
         </IconButton>
@@ -141,9 +176,14 @@ export function WorkspaceTopBar({
         <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
           <List className="h-4 w-4" />
         </IconButton>
-        <IconButton label="Fullscreen" onClick={() => {}}>
-          <Maximize2 className="h-4 w-4" />
+        <IconButton
+          label="Complete visit"
+          onClick={onCompleteVisit}
+          disabled={visitStatus !== 'active'}
+        >
+          <CheckCircle2 className="h-4 w-4" />
         </IconButton>
+        <FullscreenButton />
       </div>
     </header>
   );

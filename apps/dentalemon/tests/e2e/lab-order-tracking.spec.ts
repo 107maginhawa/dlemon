@@ -127,11 +127,11 @@ test.describe('Lab Order Tracking (J56)', () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ status: 'inFabrication' }),
+        body: JSON.stringify({ status: 'in_fabrication' }),
       });
       return res.json();
     }, { api: API, visitId, orderId });
-    expect(inFab.status).toBe('inFabrication');
+    expect(inFab.status).toBe('in_fabrication');
 
     // inFabrication → delivered
     const delivered = await page.evaluate(async ({ api, visitId, orderId }) => {

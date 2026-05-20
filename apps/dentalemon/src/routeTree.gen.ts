@@ -14,6 +14,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ImagingCephReportImageIdRouteImport } from './routes/imaging-ceph-report.$imageId'
 import { Route as AuthPinSelectRouteImport } from './routes/auth/pin-select'
 import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
 import { Route as WorkspacePatientIdRouteImport } from './routes/_workspace/$patientId'
@@ -51,6 +52,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImagingCephReportImageIdRoute =
+  ImagingCephReportImageIdRouteImport.update({
+    id: '/imaging-ceph-report/$imageId',
+    path: '/imaging-ceph-report/$imageId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthPinSelectRoute = AuthPinSelectRouteImport.update({
   id: '/auth/pin-select',
   path: '/auth/pin-select',
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
@@ -152,6 +160,7 @@ export interface FileRoutesByTo {
   '/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
@@ -173,6 +182,7 @@ export interface FileRoutesById {
   '/_workspace/$patientId': typeof WorkspacePatientIdRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
   fileRoutesByTo: FileRoutesByTo
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
   id:
@@ -231,6 +243,7 @@ export interface FileRouteTypes {
     | '/_workspace/$patientId'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/imaging-ceph-report/$imageId'
     | '/_dashboard/patients_/$patientId'
     | '/auth/pin-entry/$memberId'
   fileRoutesById: FileRoutesById
@@ -243,6 +256,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   AuthAuthViewRoute: typeof AuthAuthViewRoute
   AuthPinSelectRoute: typeof AuthPinSelectRoute
+  ImagingCephReportImageIdRoute: typeof ImagingCephReportImageIdRoute
   AuthPinEntryMemberIdRoute: typeof AuthPinEntryMemberIdRoute
 }
 
@@ -281,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/imaging-ceph-report/$imageId': {
+      id: '/imaging-ceph-report/$imageId'
+      path: '/imaging-ceph-report/$imageId'
+      fullPath: '/imaging-ceph-report/$imageId'
+      preLoaderRoute: typeof ImagingCephReportImageIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/pin-select': {
@@ -425,6 +446,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   AuthAuthViewRoute: AuthAuthViewRoute,
   AuthPinSelectRoute: AuthPinSelectRoute,
+  ImagingCephReportImageIdRoute: ImagingCephReportImageIdRoute,
   AuthPinEntryMemberIdRoute: AuthPinEntryMemberIdRoute,
 }
 export const routeTree = rootRouteImport

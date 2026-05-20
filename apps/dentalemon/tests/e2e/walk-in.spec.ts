@@ -26,15 +26,15 @@ async function setup(page: Page) {
   await pwInput.click();
   await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
   await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
+  const signupResponsePromise = page.waitForResponse(
     (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
     { timeout: 10000 },
-  ).catch(() => null);
+  );
   await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
+  const response = await signupResponsePromise;
+  if (response.status() >= 400) {
     const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned \${response.status()}: \${body.slice(0, 500)}`);
+    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
@@ -75,7 +75,7 @@ test.describe('Walk-In Appointment', () => {
           dentistMemberId: '00000000-0000-4000-8000-000000000002',
           scheduledAt,
           durationMinutes: 30,
-          procedureType: 'Walk-In Consultation',
+          serviceType: 'Walk-In Consultation',
           walkIn: true,
         }),
       });
@@ -85,7 +85,7 @@ test.describe('Walk-In Appointment', () => {
     expect(apptRes.status).toBe(201);
     expect(apptRes.body.walkIn).toBe(true);
     expect(apptRes.body.patientId).toBe(patientId);
-    expect(apptRes.body.procedureType).toBe('Walk-In Consultation');
+    expect(apptRes.body.serviceType).toBe('Walk-In Consultation');
 
     // Verify appointment can be retrieved directly
     const getRes = await page.evaluate(async ({ api, appointmentId }) => {

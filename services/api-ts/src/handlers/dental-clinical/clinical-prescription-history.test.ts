@@ -10,11 +10,18 @@
  *   - updateMedicalHistoryEntry   PATCH /dental/clinical/medical-history/:entryId
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreatePrescriptionBody, CreatePrescriptionParams,
+  UpdatePrescriptionBody, UpdatePrescriptionParams,
+  CreateMedicalHistoryEntryBody,
+  UpdateMedicalHistoryEntryBody, UpdateMedicalHistoryEntryParams,
+} from '@/generated/openapi/validators';
 import { createPrescription } from './createPrescription';
 import { listPrescriptions } from './listPrescriptions';
 import { updatePrescription } from './updatePrescription';
@@ -25,10 +32,59 @@ import { updateMedicalHistoryEntry } from './updateMedicalHistoryEntry';
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
+const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
+const ORG_ID = 'd2000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const STAFF_MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
+
+const PERSON_ID = 'f2000000-0000-1000-8000-000000000002';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  await db.insert(dentalOrganizations).values({
+    id: ORG_ID, name: 'PrescriptionHistory Clinic', tier: 'solo',
+    ownerPersonId: TEST_USER.id, countryCode: 'PH',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
+    timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'ee200000-0000-1000-8000-000000000002', branchId: BRANCH_ID,
+    personId: TEST_USER.id, displayName: 'Test Dentist', role: 'dentist_owner',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: STAFF_MEMBER_ID, branchId: BRANCH_ID,
+    personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  // Seed person + patient for medical history tests (handler checks patient exists + has preferredBranchId)
+  await db.insert(persons).values({
+    id: PERSON_ID, firstName: 'Test', lastName: 'Patient',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(patients).values({
+    id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const PrescriptionBodyOnly = CreatePrescriptionBody.omit({ visitId: true });
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -49,12 +105,27 @@ function buildTestApp(user?: typeof TEST_USER) {
     await next();
   });
 
-  app.post('/dental/visits/:visitId/prescriptions', createPrescription);
+  app.post('/dental/visits/:visitId/prescriptions',
+    zValidator('param', CreatePrescriptionParams, ve),
+    zValidator('json', PrescriptionBodyOnly, ve),
+    createPrescription as any,
+  );
   app.get('/dental/visits/:visitId/prescriptions', listPrescriptions);
-  app.patch('/dental/visits/:visitId/prescriptions/:prescriptionId', updatePrescription);
-  app.post('/dental/clinical/medical-history', createMedicalHistoryEntry);
+  app.patch('/dental/visits/:visitId/prescriptions/:prescriptionId',
+    zValidator('param', UpdatePrescriptionParams, ve),
+    zValidator('json', UpdatePrescriptionBody, ve),
+    updatePrescription as any,
+  );
+  app.post('/dental/clinical/medical-history',
+    zValidator('json', CreateMedicalHistoryEntryBody, ve),
+    createMedicalHistoryEntry as any,
+  );
   app.get('/dental/clinical/medical-history', listMedicalHistory);
-  app.patch('/dental/clinical/medical-history/:entryId', updateMedicalHistoryEntry);
+  app.patch('/dental/clinical/medical-history/:entryId',
+    zValidator('param', UpdateMedicalHistoryEntryParams, ve),
+    zValidator('json', UpdateMedicalHistoryEntryBody, ve),
+    updateMedicalHistoryEntry as any,
+  );
 
   return app;
 }
@@ -241,8 +312,8 @@ describe('listPrescriptions handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded prescriptions', async () => {
@@ -265,8 +336,8 @@ describe('listPrescriptions handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(1);
-    expect(body.total).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.pagination.totalCount).toBe(1);
   });
 });
 
@@ -435,7 +506,7 @@ describe('createMedicalHistoryEntry handler', () => {
 
   test('returns 201 for all valid entryType values', async () => {
     const app = buildTestApp(TEST_USER);
-    const validTypes = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'familyHistory'];
+    const validTypes = ['condition', 'medication', 'allergy', 'procedure', 'vaccination', 'family_history'];
 
     for (const entryType of validTypes) {
       const res = await app.request('/dental/clinical/medical-history', {
@@ -481,8 +552,8 @@ describe('listMedicalHistory handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(0);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(0);
   });
 
   test('returns 200 with seeded entries for patient', async () => {
@@ -512,8 +583,8 @@ describe('listMedicalHistory handler', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toHaveLength(2);
-    expect(body.total).toBe(2);
+    expect(body.data).toHaveLength(2);
+    expect(body.pagination.totalCount).toBe(2);
   });
 });
 
@@ -612,5 +683,33 @@ describe('updateMedicalHistoryEntry handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.active).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — createPrescription (dentist_* only)
+// ---------------------------------------------------------------------------
+
+describe('createPrescription role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+    });
+    expect(res.status).not.toBe(403);
   });
 });

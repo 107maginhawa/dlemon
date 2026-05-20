@@ -18,10 +18,13 @@ import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { dentalPaymentPlans } from '@/handlers/dental-billing/repos/dental-payment-plan.schema';
 import { dentalInvoices } from '@/handlers/dental-billing/repos/dental-invoice.schema';
 import { labOrders } from '@/handlers/dental-clinical/repos/lab-order.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import { getDashboardSummary } from './getDashboardSummary';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
@@ -30,8 +33,10 @@ const TEST_USER = { id: '00000000-0000-0000-0000-000000000077', email: 'test@cli
 const ORG_ID = 'eeeeeeee-0000-1000-8000-000000000077';
 const BRANCH_ID = 'bbbbbbbb-0000-1000-8000-000000000077';
 const PATIENT_ID = 'aaaaaaaa-0000-1000-8000-000000000077';
+const PERSON_ID = 'eeeeeeee-0000-1000-8000-000000000088';
 const INVOICE_ID = 'ffffffff-0000-1000-8000-000000000077';
 const VISIT_ID = 'cccccccc-0000-1000-8000-000000000077';
+const MEMBER_ID = 'dddddddd-0000-1000-8000-000000000077';
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -62,33 +67,47 @@ async function seedBaseData() {
     timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 
-  // No direct patient table seed needed — payment plans and lab orders
-  // are scoped via invoice.branchId and visit.branchId respectively
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+
+  // Seed membership for TEST_USER so assertBranchAccess passes + visit FK
+  await db.insert(dentalMemberships).values({
+    id: MEMBER_ID,
+    branchId: BRANCH_ID, personId: TEST_USER.id,
+    displayName: 'Test Owner', role: 'dentist_owner', status: 'active',
+    pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalVisits).values({
+    id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
+    dentistMemberId: MEMBER_ID, status: 'completed',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
 
   await db.insert(dentalInvoices).values({
     id: INVOICE_ID, patientId: PATIENT_ID, visitId: VISIT_ID, branchId: BRANCH_ID,
-    dentistMemberId: TEST_USER.id,
+    dentistMemberId: MEMBER_ID,
     invoiceNumber: 'INV-TEST-001',
     subtotalCents: 50000, totalCents: 50000,
     status: 'issued', issuedAt: new Date(),
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 
-  await db.insert(dentalVisits).values({
-    id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
-    dentistMemberId: TEST_USER.id, status: 'completed',
-    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
-  }).onConflictDoNothing();
 }
 
 afterEach(async () => {
-  await db.execute(sql`
-    TRUNCATE lab_order, dental_payment_plan, dental_payment_plan_installment,
-             dental_invoice, dental_invoice_line_item,
-             dental_visit,
-             dental_branch, dental_organization
-    RESTART IDENTITY CASCADE
-  `);
+  await db.execute(sql`DELETE FROM lab_order`);
+  await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
+  await db.execute(sql`DELETE FROM dental_payment_plan`);
+  await db.execute(sql`DELETE FROM dental_invoice_line_item`);
+  await db.execute(sql`DELETE FROM dental_invoice`);
+  await db.execute(sql`DELETE FROM dental_visit`);
+  await db.execute(sql`DELETE FROM patient`);
+  await db.execute(sql`DELETE FROM dental_membership`);
+  await db.execute(sql`DELETE FROM dental_branch`);
+  await db.execute(sql`DELETE FROM dental_organization`);
+  await db.execute(sql`DELETE FROM person WHERE id = ${PERSON_ID}`);
 });
 
 // ---------------------------------------------------------------------------
@@ -99,7 +118,7 @@ describe('GET /dental/dashboard/summary', () => {
   test('returns zeros when no data', async () => {
     await seedBaseData();
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(0);
@@ -108,7 +127,7 @@ describe('GET /dental/dashboard/summary', () => {
 
   test('401 without auth', async () => {
     const app = buildTestApp();
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
 
@@ -120,11 +139,11 @@ describe('GET /dental/dashboard/summary', () => {
       totalCents: 30000, numberOfInstallments: 3,
       amountPerInstallmentCents: 10000,
       frequency: 'monthly', startDate: new Date(),
-      status: 'onTrack',
+      status: 'on_track',
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(1);
     expect(body.activePaymentPlans.behindCount).toBe(0);
@@ -138,7 +157,7 @@ describe('GET /dental/dashboard/summary', () => {
         invoiceId: INVOICE_ID, patientId: PATIENT_ID,
         totalCents: 10000, numberOfInstallments: 2, amountPerInstallmentCents: 5000,
         frequency: 'monthly', startDate: new Date(),
-        status: 'onTrack',
+        status: 'on_track',
         createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
       },
       {
@@ -151,7 +170,7 @@ describe('GET /dental/dashboard/summary', () => {
       },
     ]);
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(2);
     expect(body.activePaymentPlans.behindCount).toBe(1);
@@ -168,7 +187,7 @@ describe('GET /dental/dashboard/summary', () => {
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(0);
   });
@@ -188,13 +207,13 @@ describe('GET /dental/dashboard/summary', () => {
         id: crypto.randomUUID(),
         visitId: VISIT_ID, patientId: PATIENT_ID,
         labName: 'LabCo', description: 'Bridge',
-        status: 'inFabrication',
+        status: 'in_fabrication',
         orderedAt: new Date(),
         createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
       },
     ]);
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.totalPending).toBe(2);
     expect(body.labOrders.ordered).toBe(1);
@@ -212,7 +231,7 @@ describe('GET /dental/dashboard/summary', () => {
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.totalPending).toBe(0);
   });
@@ -224,13 +243,13 @@ describe('GET /dental/dashboard/summary', () => {
       id: crypto.randomUUID(),
       visitId: VISIT_ID, patientId: PATIENT_ID,
       labName: 'LabCo', description: 'Crown',
-      status: 'inFabrication',
+      status: 'in_fabrication',
       orderedAt: new Date(),
       expectedDeliveryDate: pastDate,
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/dashboard/summary');
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.overdueDelivery).toBe(1);
   });

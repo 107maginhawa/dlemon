@@ -1,136 +1,83 @@
 /**
- * LabOrdersSheet component tests
+ * LabOrdersSheet — pure-logic unit tests
  *
- * Tests: form validation, status display labels, valid/invalid transitions.
+ * Tests: form validation, status labels, and NEXT_STATUS transitions
+ * against real production exports (not local reimplementations).
  */
 
 import { describe, test, expect } from 'bun:test';
+import {
+  validateLabOrderForm,
+  STATUS_LABELS,
+  NEXT_STATUS,
+} from './lab-orders-sheet';
 
-// ---------------------------------------------------------------------------
-// Pure logic helpers
-// ---------------------------------------------------------------------------
-
-type LabOrderStatus = 'ordered' | 'inFabrication' | 'delivered' | 'fitted' | 'cancelled';
-
-const STATUS_LABELS: Record<LabOrderStatus, string> = {
-  ordered: 'Ordered',
-  inFabrication: 'In Fabrication',
-  delivered: 'Delivered',
-  fitted: 'Fitted',
-  cancelled: 'Cancelled',
-};
-
-const VALID_TRANSITIONS: Record<LabOrderStatus, LabOrderStatus[]> = {
-  ordered: ['inFabrication', 'cancelled'],
-  inFabrication: ['delivered', 'cancelled'],
-  delivered: ['fitted', 'cancelled'],
-  fitted: [],
-  cancelled: [],
-};
-
-interface CreateLabOrderForm {
-  labName: string;
-  description: string;
-  expectedDeliveryDate: string;
-}
-
-function validateCreateLabOrder(form: CreateLabOrderForm): string[] {
-  const errors: string[] = [];
-  if (!form.labName.trim()) errors.push('labName is required');
-  if (!form.description.trim()) errors.push('description is required');
-  return errors;
-}
-
-function canTransition(from: LabOrderStatus, to: LabOrderStatus): boolean {
-  return VALID_TRANSITIONS[from].includes(to);
-}
-
-function getStatusLabel(status: LabOrderStatus): string {
-  return STATUS_LABELS[status];
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('LabOrdersSheet — create form validation', () => {
-  const valid: CreateLabOrderForm = {
-    labName: 'Precision Dental Lab',
-    description: 'PFM Crown tooth 21',
-    expectedDeliveryDate: '2025-12-01',
-  };
+describe('validateLabOrderForm', () => {
+  const valid = { labName: 'Precision Dental Lab', description: 'PFM Crown tooth 21' };
 
   test('valid form produces no errors', () => {
-    expect(validateCreateLabOrder(valid)).toHaveLength(0);
+    expect(validateLabOrderForm(valid)).toHaveLength(0);
   });
 
-  test('missing labName produces error', () => {
-    const errors = validateCreateLabOrder({ ...valid, labName: '' });
-    expect(errors).toContain('labName is required');
+  test('missing labName — exact production error message', () => {
+    const errors = validateLabOrderForm({ ...valid, labName: '' });
+    expect(errors).toContain('Lab name is required');
   });
 
-  test('missing description produces error', () => {
-    const errors = validateCreateLabOrder({ ...valid, description: '' });
-    expect(errors).toContain('description is required');
+  test('whitespace-only labName is rejected', () => {
+    expect(validateLabOrderForm({ ...valid, labName: '   ' })).toContain('Lab name is required');
   });
 
-  test('expectedDeliveryDate is optional', () => {
-    const errors = validateCreateLabOrder({ ...valid, expectedDeliveryDate: '' });
-    expect(errors).toHaveLength(0);
-  });
-});
-
-describe('LabOrdersSheet — status labels', () => {
-  test('ordered displays correctly', () => {
-    expect(getStatusLabel('ordered')).toBe('Ordered');
+  test('missing description — exact production error message', () => {
+    const errors = validateLabOrderForm({ ...valid, description: '' });
+    expect(errors).toContain('Description is required');
   });
 
-  test('inFabrication displays with spaces', () => {
-    expect(getStatusLabel('inFabrication')).toBe('In Fabrication');
-  });
-
-  test('delivered displays correctly', () => {
-    expect(getStatusLabel('delivered')).toBe('Delivered');
-  });
-
-  test('fitted displays correctly', () => {
-    expect(getStatusLabel('fitted')).toBe('Fitted');
-  });
-
-  test('cancelled displays correctly', () => {
-    expect(getStatusLabel('cancelled')).toBe('Cancelled');
+  test('both missing returns two errors', () => {
+    expect(validateLabOrderForm({ labName: '', description: '' })).toHaveLength(2);
   });
 });
 
-describe('LabOrdersSheet — transition validation', () => {
-  test('ordered → inFabrication allowed', () => {
-    expect(canTransition('ordered', 'inFabrication')).toBe(true);
+describe('STATUS_LABELS', () => {
+  test('all five statuses have labels', () => {
+    const statuses = ['ordered', 'in_fabrication', 'delivered', 'fitted', 'cancelled'] as const;
+    for (const s of statuses) {
+      expect(STATUS_LABELS[s]!.length, `STATUS_LABELS["${s}"] should be a non-empty string`).toBeGreaterThan(0);
+    }
   });
 
-  test('ordered → delivered not allowed (skip)', () => {
-    expect(canTransition('ordered', 'delivered')).toBe(false);
+  test('in_fabrication (not inFabrication) maps to readable label', () => {
+    expect(STATUS_LABELS['in_fabrication']).toBe('In Fabrication');
   });
 
-  test('inFabrication → delivered allowed', () => {
-    expect(canTransition('inFabrication', 'delivered')).toBe(true);
+  test('fitted maps to Fitted', () => {
+    expect(STATUS_LABELS['fitted']).toBe('Fitted');
+  });
+});
+
+describe('NEXT_STATUS (linear advance chain)', () => {
+  test('ordered advances to in_fabrication', () => {
+    expect(NEXT_STATUS['ordered']).toBe('in_fabrication');
   });
 
-  test('delivered → fitted allowed', () => {
-    expect(canTransition('delivered', 'fitted')).toBe(true);
+  test('in_fabrication advances to delivered', () => {
+    expect(NEXT_STATUS['in_fabrication']).toBe('delivered');
   });
 
-  test('fitted → cancelled not allowed (terminal)', () => {
-    expect(canTransition('fitted', 'cancelled')).toBe(false);
+  test('delivered advances to fitted', () => {
+    expect(NEXT_STATUS['delivered']).toBe('fitted');
   });
 
-  test('cancelled → ordered not allowed (backward)', () => {
-    expect(canTransition('cancelled', 'ordered')).toBe(false);
+  test('fitted is terminal (null)', () => {
+    expect(NEXT_STATUS['fitted']).toBeNull();
   });
 
-  test('any status can go to cancelled except fitted', () => {
-    expect(canTransition('ordered', 'cancelled')).toBe(true);
-    expect(canTransition('inFabrication', 'cancelled')).toBe(true);
-    expect(canTransition('delivered', 'cancelled')).toBe(true);
-    expect(canTransition('fitted', 'cancelled')).toBe(false);
+  test('cancelled is terminal (null)', () => {
+    expect(NEXT_STATUS['cancelled']).toBeNull();
+  });
+
+  test('no status advances to cancelled via NEXT_STATUS (cancellation is a separate action)', () => {
+    const values = Object.values(NEXT_STATUS);
+    expect(values).not.toContain('cancelled');
   });
 });

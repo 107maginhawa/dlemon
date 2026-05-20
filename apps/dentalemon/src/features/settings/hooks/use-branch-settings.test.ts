@@ -12,23 +12,13 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useBranchSettings, useUpdateBranchSettings } from './use-branch-settings';
+import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
-
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
 
 const BRANCH_ID = 'branch-abc';
 const mockSettings = {
@@ -140,6 +130,7 @@ describe('useUpdateBranchSettings — PUT', () => {
     const qc = freshClient();
     const { result } = renderHook(() => useUpdateBranchSettings(BRANCH_ID), { wrapper: makeWrapper(qc) });
     await act(async () => {
+      // eslint-disable-next-line no-empty
       try { await result.current.update({ clinicName: '' }); } catch {}
     });
     await waitFor(() => expect(result.current.error).not.toBeNull());
@@ -183,6 +174,7 @@ describe('useUpdateBranchSettings — PUT', () => {
     const qc = freshClient();
     const { result } = renderHook(() => useUpdateBranchSettings(BRANCH_ID), { wrapper: makeWrapper(qc) });
     await act(async () => {
+      // eslint-disable-next-line no-empty
       try { await result.current.update({}); } catch {}
     });
     await waitFor(() => expect(result.current.error).not.toBeNull());

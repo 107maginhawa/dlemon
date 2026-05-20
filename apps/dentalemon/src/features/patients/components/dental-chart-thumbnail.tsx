@@ -17,21 +17,21 @@ export function getThumbnailPipClass(state: ToothState): string {
     case 'healthy':
       return 'bg-muted';
     case 'caries':
-      return 'bg-red-500/40';
+      return 'bg-dental-caries/60';
     case 'fractured':
-      return 'bg-amber-400';
+      return 'bg-dental-fractured/70';
     case 'filled':
-      return 'bg-green-500';
+      return 'bg-dental-filled';
     case 'crown':
-      return 'bg-blue-400';
+      return 'bg-dental-crown';
     case 'extracted':
-      return 'border border-dashed border-red-500 bg-transparent';
+      return 'border border-dashed border-gray-600 bg-transparent';
     case 'missing':
-      return 'bg-muted/50';
+      return 'bg-dental-missing/50';
     case 'implant':
-      return 'bg-blue-300';
+      return 'bg-[#007AFF]';
     case 'watchlist':
-      return 'bg-amber-300';
+      return 'bg-dental-crown/50';
     default:
       return 'bg-muted';
   }

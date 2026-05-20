@@ -1,12 +1,14 @@
-import { describe, test, expect } from 'bun:test'
-import { renderHook } from '@testing-library/react'
+import { describe, test, expect, afterEach } from 'bun:test'
+import { renderHook, cleanup } from '@testing-library/react'
 import { useFormatCurrency } from './use-format-currency'
+
+afterEach(() => cleanup())
 
 describe('useFormatCurrency hook', () => {
   test('returns formatCurrency function', () => {
     const { result } = renderHook(() => useFormatCurrency())
 
-    expect(result.current.formatCurrency).toBeDefined()
+    expect(result.current.formatCurrency).not.toBeUndefined()
     expect(typeof result.current.formatCurrency).toBe('function')
   })
 

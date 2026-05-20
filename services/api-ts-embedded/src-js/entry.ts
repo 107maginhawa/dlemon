@@ -56,6 +56,8 @@ const config: Config = {
   server: {
     host: "localhost",
     port: 0, // Not used in embedded mode
+    internalServiceExpandEnabled: false,
+    emrTenantEnabled: false, // SQLite schema doesn't have tenant_id yet (Migration B pending)
   },
   database: {
     url: "sqlite://:embedded:",

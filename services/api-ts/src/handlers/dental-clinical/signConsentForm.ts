@@ -41,5 +41,10 @@ export async function signConsentForm(
   const signed = await repo.sign(consentId, body.signatureData);
   if (!signed) throw new ValidationError('Could not sign consent form');
 
+  ctx.get('logger')?.info(
+    { requestId: ctx.get('requestId'), action: 'dental_consent_sign', consentId, visitId: existing.visitId, by: user.id },
+    'Consent form signed',
+  );
+
   return ctx.json(signed);
 }

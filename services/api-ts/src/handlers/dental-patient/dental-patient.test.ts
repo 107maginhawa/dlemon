@@ -20,11 +20,25 @@
  *   EC1    Archive blocked by active payment plan
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateDentalPatientBody,
+  ListDentalPatientsQuery,
+  GetDentalPatientParams,
+  UpdateDentalPatientBody, UpdateDentalPatientParams,
+  ArchiveDentalPatientParams,
+  RestoreDentalPatientParams,
+  BulkArchiveDentalPatientsBody,
+  ExportDentalPatientsQuery,
+  AddFollowUpNoteBody, AddFollowUpNoteParams,
+  GetDentalPatientSafetyFloorParams,
+  GetDentalPatientStatementParams,
+} from '@/generated/openapi/validators';
 import { createDentalPatient } from './createDentalPatient';
 import { listDentalPatients } from './listDentalPatients';
 import { getDentalPatient } from './getDentalPatient';
@@ -48,7 +62,21 @@ const STAFF_USER_ID = 'c1000000-0000-1000-8000-000000000001';
 const authedUser = { id: STAFF_USER_ID, email: 'staff@clinic.com' };
 
 const BRANCH_ID = 'd1000000-0000-1000-8000-000000000001';
+const ORG_ID = 'e1000000-0000-1000-8000-000000000001';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'DentalPatient Clinic', tier: 'solo', ownerPersonId: STAFF_USER_ID, countryCode: 'PH', createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: 'eedd0000-0000-1000-8000-000000000001', branchId: BRANCH_ID, personId: STAFF_USER_ID, displayName: 'Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ') }, 400);
+};
 
 // ─── App builder ─────────────────────────────────────────────────────────────
 
@@ -74,18 +102,18 @@ function buildTestApp(user?: typeof authedUser) {
   });
 
   // Routes — export + bulk-archive must be before /:id
-  app.get('/dental/patients/export', exportDentalPatients as any);
-  app.post('/dental/patients/bulk-archive', bulkArchiveDentalPatients as any);
-  app.post('/dental/patients', createDentalPatient as any);
-  app.get('/dental/patients', listDentalPatients as any);
-  app.get('/dental/patients/:id', getDentalPatient as any);
-  app.patch('/dental/patients/:id', updateDentalPatient as any);
-  app.post('/dental/patients/:id/archive', archiveDentalPatient as any);
-  app.post('/dental/patients/:id/restore', restoreDentalPatient as any);
-  app.get('/dental/patients/:id/follow-up-notes', listFollowUpNotes as any);
-  app.post('/dental/patients/:id/follow-up-notes', addFollowUpNote as any);
-  app.get('/dental/patients/:id/safety-floor', getDentalPatientSafetyFloor as any);
-  app.get('/dental/patients/:id/statement', getDentalPatientStatement as any);
+  app.get('/dental/patients/export', zValidator('query', ExportDentalPatientsQuery, ve), exportDentalPatients as any);
+  app.post('/dental/patients/bulk-archive', zValidator('json', BulkArchiveDentalPatientsBody, ve), bulkArchiveDentalPatients as any);
+  app.post('/dental/patients', zValidator('json', CreateDentalPatientBody, ve), createDentalPatient as any);
+  app.get('/dental/patients', zValidator('query', ListDentalPatientsQuery, ve), listDentalPatients as any);
+  app.get('/dental/patients/:id', zValidator('param', GetDentalPatientParams, ve), getDentalPatient as any);
+  app.patch('/dental/patients/:id', zValidator('param', UpdateDentalPatientParams, ve), zValidator('json', UpdateDentalPatientBody, ve), updateDentalPatient as any);
+  app.post('/dental/patients/:id/archive', zValidator('param', ArchiveDentalPatientParams, ve), archiveDentalPatient as any);
+  app.post('/dental/patients/:id/restore', zValidator('param', RestoreDentalPatientParams, ve), restoreDentalPatient as any);
+  app.get('/dental/patients/:id/follow-up-notes', zValidator('param', AddFollowUpNoteParams, ve), listFollowUpNotes as any);
+  app.post('/dental/patients/:id/follow-up-notes', zValidator('param', AddFollowUpNoteParams, ve), zValidator('json', AddFollowUpNoteBody, ve), addFollowUpNote as any);
+  app.get('/dental/patients/:id/safety-floor', zValidator('param', GetDentalPatientSafetyFloorParams, ve), getDentalPatientSafetyFloor as any);
+  app.get('/dental/patients/:id/statement', zValidator('param', GetDentalPatientStatementParams, ve), getDentalPatientStatement as any);
 
   return app;
 }
@@ -124,17 +152,17 @@ describe('FR2.1: listDentalPatients', () => {
     await createPatient(app, 'Juan dela Cruz');
     await createPatient(app, 'Maria Santos');
 
-    const res = await app.request('/dental/patients');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.patients)).toBe(true);
-    expect(body.patients.length).toBeGreaterThanOrEqual(2);
-    expect(typeof body.total).toBe('number');
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThanOrEqual(2);
+    expect(typeof body.pagination.totalCount).toBe('number');
   });
 
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
-    const res = await app.request('/dental/patients');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
 
@@ -145,15 +173,15 @@ describe('FR2.1: listDentalPatients', () => {
     const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients.every((p: any) => p.preferredBranchId === BRANCH_ID)).toBe(true);
+    expect(body.data.every((p: any) => p.preferredBranchId === BRANCH_ID)).toBe(true);
   });
 
   test('returns empty array when no patients', async () => {
     const app = buildTestApp(authedUser);
-    const res = await app.request('/dental/patients');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 
@@ -169,31 +197,31 @@ describe('FR2.2: patient search via ?q= param', () => {
     await createPatient(app, 'Roberto Lim');
     await createPatient(app, 'Elena Garcia');
 
-    const res = await app.request('/dental/patients?q=rob');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=rob`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients.some((p: any) => p.displayName.toLowerCase().includes('roberto'))).toBe(true);
+    expect(body.data.some((p: any) => p.displayName.toLowerCase().includes('roberto'))).toBe(true);
   });
 
   test('finds patient by last name partial match', async () => {
     const app = buildTestApp(authedUser);
     await createPatient(app, 'Carlos Mendoza');
 
-    const res = await app.request('/dental/patients?q=mendoz');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=mendoz`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients.length).toBeGreaterThanOrEqual(1);
-    expect(body.patients.some((p: any) => p.displayName.includes('Mendoza'))).toBe(true);
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data.some((p: any) => p.displayName.includes('Mendoza'))).toBe(true);
   });
 
   test('returns empty when no match', async () => {
     const app = buildTestApp(authedUser);
     await createPatient(app, 'Maria Santos');
 
-    const res = await app.request('/dental/patients?q=nonexistentxyz');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=nonexistentxyz`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients.length).toBe(0);
+    expect(body.data.length).toBe(0);
   });
 });
 
@@ -254,8 +282,8 @@ describe('FR2.5: duplicate detection on create', () => {
     // Non-blocking: still creates (201), but includes warning
     expect(res.status).toBe(201);
     const body = await res.json() as any;
-    expect(body.id).toBeTruthy();
-    expect(body.warning).toBeDefined();
+    expect(body.id).not.toBeNull();
+    expect(body.warning).not.toBeNull();
     expect(body.warning.hasDuplicates).toBe(true);
     expect(body.warning.count).toBeGreaterThanOrEqual(1);
   });
@@ -337,10 +365,10 @@ describe('FR2.8: export dental patients', () => {
     const app = buildTestApp(authedUser);
     await createPatient(app, 'Export Test Patient');
 
-    const res = await app.request('/dental/patients/export');
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.patients)).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
     expect(typeof body.exportedAt).toBe('string');
     expect(typeof body.total).toBe('number');
   });
@@ -349,7 +377,7 @@ describe('FR2.8: export dental patients', () => {
     const app = buildTestApp(authedUser);
     await createPatient(app, 'CSV Patient');
 
-    const res = await app.request('/dental/patients/export?format=csv');
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}&format=csv`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/text\/csv/i);
     const text = await res.text();
@@ -359,7 +387,7 @@ describe('FR2.8: export dental patients', () => {
 
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
-    const res = await app.request('/dental/patients/export');
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
 });
@@ -418,21 +446,21 @@ describe('FR2.10: follow-up indicator filter', () => {
     // Set needsFollowUp=true
     await db.update(patients).set({ needsFollowUp: true }).where(eq(patients.id, p.id));
 
-    const res = await app.request('/dental/patients?needsFollowUp=true');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&needsFollowUp=true`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients.some((pt: any) => pt.id === p.id)).toBe(true);
-    expect(body.patients.every((pt: any) => pt.needsFollowUp === true)).toBe(true);
+    expect(body.data.some((pt: any) => pt.id === p.id)).toBe(true);
+    expect(body.data.every((pt: any) => pt.needsFollowUp === true)).toBe(true);
   });
 
   test('patient in list response includes needsFollowUp field', async () => {
     const app = buildTestApp(authedUser);
     await createPatient(app, 'NeedsFU Patient');
 
-    const res = await app.request('/dental/patients');
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.patients[0]).toHaveProperty('needsFollowUp');
+    expect(body.data[0]).toHaveProperty('needsFollowUp');
   });
 });
 
@@ -455,8 +483,8 @@ describe('FR2.12: follow-up notes CRUD', () => {
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.note.text).toBe('Schedule 3-month recall for crown check');
-    expect(body.note.id).toBeTruthy();
-    expect(body.note.createdAt).toBeTruthy();
+    expect(body.note.id).not.toBeNull();
+    expect(body.note.createdAt).not.toBeNull();
     expect(body.total).toBe(1);
   });
 
@@ -726,9 +754,9 @@ describe('FR2.18: recall / next visit tracking', () => {
       body: JSON.stringify({ recallDate: '2026-09-01' }),
     });
 
-    const listRes = await app.request('/dental/patients');
+    const listRes = await app.request(`/dental/patients?branchId=${BRANCH_ID}`);
     const body = await listRes.json() as any;
-    const found = body.patients.find((pt: any) => pt.id === p.id);
+    const found = body.data.find((pt: any) => pt.id === p.id);
     expect(found?.recallDate).toBe('2026-09-01');
   });
 });
@@ -748,7 +776,7 @@ describe('FR2.21: itemized patient statement', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.patientId).toBe(p.id);
-    expect(body.summary).toBeDefined();
+    expect(body.summary).not.toBeNull();
     expect(typeof body.summary.totalBilledCents).toBe('number');
     expect(typeof body.summary.totalPaidCents).toBe('number');
     expect(typeof body.summary.outstandingBalanceCents).toBe('number');

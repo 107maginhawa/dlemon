@@ -12,10 +12,14 @@ Origin: {{api}}
   "name": "Dr. Practice Owner"
 }
 HTTP 200
+[Captures]
+session_token: cookie "better-auth.session_token"
+user_id: jsonpath "$.user.id"
 
 
 # 1. Create a dental organization
-POST {{api}}/dental/organizations/
+POST {{api}}/dental/organizations
+Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "name": "Bright Smiles Dental {{suffix}}",
@@ -35,6 +39,7 @@ jsonpath "$.id" isString
 
 # 2. Get the created organization
 GET {{api}}/dental/organizations/{{org_id}}
+Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{org_id}}"
@@ -43,6 +48,7 @@ jsonpath "$.name" contains "Bright Smiles Dental"
 
 # 3. Update the organization name
 PATCH {{api}}/dental/organizations/{{org_id}}
+Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "name": "Bright Smiles Dental Group {{suffix}}"
@@ -54,7 +60,8 @@ jsonpath "$.tier" == "clinic"
 
 
 # 4. Create a branch under the organization
-POST {{api}}/dental/organizations/{{org_id}}/branches/
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "name": "Main Clinic",
@@ -74,7 +81,8 @@ jsonpath "$.active" == true
 
 
 # 5. List branches for the organization
-GET {{api}}/dental/organizations/{{org_id}}/branches/
+GET {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.items" isCollection
@@ -82,7 +90,8 @@ jsonpath "$.items[0].id" == "{{branch_id}}"
 
 
 # 6. Create a staff membership (PIN-only staff, no cloud account)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "displayName": "Staff Ana Cruz",
@@ -99,15 +108,17 @@ jsonpath "$.status" == "active"
 
 
 # 7. List members for the branch
-GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/
+GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" isCollection
-jsonpath "$.items[0].id" == "{{membership_id}}"
+jsonpath "$.data" isCollection
+jsonpath "$.data[0].id" == "{{membership_id}}"
 
 
 # 8. Deactivate the member
 POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/{{membership_id}}/deactivate
+Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "reason": "Staff left the clinic"
@@ -118,7 +129,49 @@ jsonpath "$.status" == "inactive"
 
 
 # 9. Confirm member is no longer in active list
-GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/
+GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.total" == 0
+jsonpath "$.pagination.totalCount" == 0
+
+
+# NEW: G2-S4 — create a second staff member for PIN flow
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Staff Ben Reyes",
+  "role": "staff_full"
+}
+HTTP 201
+[Captures]
+pin_member_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.role" == "staff_full"
+jsonpath "$.status" == "active"
+
+
+# NEW: G2-S4 — membership role update via set-pin (PIN assignment for staff member)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/{{pin_member_id}}/set-pin
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "pin": "4321"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{pin_member_id}}"
+jsonpath "$.status" == "active"
+
+
+# NEW: G2-S4 — verify PIN for the staff member
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/{{pin_member_id}}/verify-pin
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "pin": "4321"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.success" == true

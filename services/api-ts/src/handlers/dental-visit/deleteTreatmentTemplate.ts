@@ -1,0 +1,1 @@
+export { deleteTreatmentTemplate } from './treatmentTemplates';

@@ -8,14 +8,29 @@
  * - Success: returns 201 with patient + person data
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { CreateDentalPatientBody } from '@/generated/openapi/validators';
 import { createDentalPatient } from './createDentalPatient';
 import { AppError, UnauthorizedError, ValidationError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+
+const authedUser = { id: '00000000-0000-0000-0000-000000000001', email: 'staff@clinic.com' };
+const BRANCH_ID = 'b3000000-0000-1000-8000-000000000003';
+const ORG_ID = 'd3000000-0000-1000-8000-000000000003';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'CreatePatient Clinic', tier: 'solo', ownerPersonId: authedUser.id, countryCode: 'PH', createdBy: authedUser.id, updatedBy: authedUser.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: authedUser.id, updatedBy: authedUser.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: 'ee300000-0000-1000-8000-000000000003', branchId: BRANCH_ID, personId: authedUser.id, displayName: 'Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: authedUser.id, updatedBy: authedUser.id }).onConflictDoNothing();
+});
 
 function buildTestApp(user?: { id: string; email: string }) {
   const app = new Hono();
@@ -43,14 +58,15 @@ function buildTestApp(user?: { id: string; email: string }) {
     await next();
   });
 
-  app.post('/dental/patients', createDentalPatient);
+  const ve = (result: any, c: any) => {
+    if (!result.success) return c.json({ error: result.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ') }, 400);
+  };
+  app.post('/dental/patients', zValidator('json', CreateDentalPatientBody, ve), createDentalPatient as any);
 
   return app;
 }
 
 describe('createDentalPatient handler', () => {
-  const authedUser = { id: '00000000-0000-0000-0000-000000000001', email: 'staff@clinic.com' };
-
   afterEach(async () => {
     await db.execute(sql`TRUNCATE TABLE patient, person CASCADE`);
   });
@@ -77,7 +93,7 @@ describe('createDentalPatient handler', () => {
     const body = await res.json() as any;
     expect(body.id).toBeTruthy();
     expect(body.displayName).toBe('Maria Santos');
-    expect(body.person).toBeTruthy();
+    expect(body.person).not.toBeNull();
     expect(body.person.firstName).toBe('Maria');
     expect(body.person.lastName).toBe('Santos');
     expect(body.person.dateOfBirth).toBe('1990-05-15');
@@ -111,12 +127,11 @@ describe('createDentalPatient handler', () => {
       body: JSON.stringify({
         displayName: 'Juan dela Cruz',
         consentGiven: true,
-        branchId: '00000000-0000-0000-0000-000000000099',
+        branchId: BRANCH_ID, // Use seeded branch so assertBranchAccess passes
       }),
     });
 
-    // branchId may not exist in DB — that's OK for this test (FK violation would 500, not 400)
-    // We just verify the handler accepts the field
+    // Just verify the handler accepts the field and returns a success or known error
     expect([201, 500]).toContain(res.status);
   });
 

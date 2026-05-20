@@ -2,7 +2,7 @@
  * AttachmentRepository — data access for dental attachments (x-ray/photo)
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalAttachments, type DentalAttachment, type NewDentalAttachment } from './attachment.schema';
@@ -18,29 +18,30 @@ export class AttachmentRepository extends DatabaseRepository<DentalAttachment, N
   }
 
   protected buildWhereConditions(filters?: AttachmentFilters) {
-    if (!filters) return undefined;
-    const conditions = [];
-    if (filters.visitId) conditions.push(eq(dentalAttachments.visitId, filters.visitId));
-    if (filters.patientId) conditions.push(eq(dentalAttachments.patientId, filters.patientId));
-    return conditions.length > 0 ? and(...conditions) : undefined;
+    const conditions = [isNull(dentalAttachments.deletedAt)];
+    if (filters?.visitId) conditions.push(eq(dentalAttachments.visitId, filters.visitId));
+    if (filters?.patientId) conditions.push(eq(dentalAttachments.patientId, filters.patientId));
+    return and(...conditions);
   }
 
   override async findMany(filters?: AttachmentFilters): Promise<DentalAttachment[]> {
     const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(dentalAttachments).where(where)
-      : await this.db.select().from(dentalAttachments);
+    return await this.db.select().from(dentalAttachments).where(where);
   }
 
   override async findOneById(id: string): Promise<DentalAttachment | null> {
-    const [row] = await this.db.select().from(dentalAttachments).where(eq(dentalAttachments.id, id));
+    const [row] = await this.db
+      .select()
+      .from(dentalAttachments)
+      .where(and(eq(dentalAttachments.id, id), isNull(dentalAttachments.deletedAt)));
     return row ?? null;
   }
 
-  async deleteById(id: string): Promise<boolean> {
+  async softDelete(id: string): Promise<boolean> {
     const result = await this.db
-      .delete(dentalAttachments)
-      .where(eq(dentalAttachments.id, id))
+      .update(dentalAttachments)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(dentalAttachments.id, id), isNull(dentalAttachments.deletedAt)))
       .returning({ id: dentalAttachments.id });
     return result.length > 0;
   }

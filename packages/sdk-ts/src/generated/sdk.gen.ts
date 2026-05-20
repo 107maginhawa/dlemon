@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import { cancelBookingResponseTransformer, cancelEmailQueueItemResponseTransformer, captureInvoicePaymentResponseTransformer, completeFileUploadResponseTransformer, confirmBookingResponseTransformer, createBookingEventResponseTransformer, createBookingResponseTransformer, createChatRoomResponseTransformer, createEmailTemplateResponseTransformer, createInvoiceResponseTransformer, createMerchantAccountResponseTransformer, createPersonResponseTransformer, createReviewResponseTransformer, createScheduleExceptionResponseTransformer, finalizeInvoiceResponseTransformer, getBookingEventResponseTransformer, getBookingResponseTransformer, getChatMessagesResponseTransformer, getChatRoomResponseTransformer, getEmailQueueItemResponseTransformer, getEmailTemplateResponseTransformer, getFileDownloadResponseTransformer, getFileResponseTransformer, getInvoiceResponseTransformer, getMerchantAccountResponseTransformer, getMerchantDashboardResponseTransformer, getNotificationResponseTransformer, getPersonResponseTransformer, getReviewResponseTransformer, getScheduleExceptionResponseTransformer, getTimeSlotResponseTransformer, joinVideoCallResponseTransformer, listAuditLogsResponseTransformer, listBookingEventsResponseTransformer, listBookingsResponseTransformer, listChatRoomsResponseTransformer, listEmailQueueItemsResponseTransformer, listEmailTemplatesResponseTransformer, listEventSlotsResponseTransformer, listFilesResponseTransformer, listInvoicesResponseTransformer, listNotificationsResponseTransformer, listPersonsResponseTransformer, listReviewsResponseTransformer, listScheduleExceptionsResponseTransformer, markInvoiceUncollectibleResponseTransformer, markNoShowBookingResponseTransformer, markNotificationAsReadResponseTransformer, rejectBookingResponseTransformer, retryEmailQueueItemResponseTransformer, sendChatMessageResponseTransformer, testEmailTemplateResponseTransformer, updateBookingEventResponseTransformer, updateEmailTemplateResponseTransformer, updateInvoiceResponseTransformer, updatePersonResponseTransformer, updateVideoCallParticipantResponseTransformer, uploadFileResponseTransformer, voidInvoiceResponseTransformer } from './transformers.gen';
-import type { CancelBookingData, CancelBookingErrors, CancelBookingResponses, CancelEmailQueueItemData, CancelEmailQueueItemErrors, CancelEmailQueueItemResponses, CaptureInvoicePaymentData, CaptureInvoicePaymentErrors, CaptureInvoicePaymentResponses, CompleteFileUploadData, CompleteFileUploadErrors, CompleteFileUploadResponses, ConfirmBookingData, ConfirmBookingErrors, ConfirmBookingResponses, CreateBookingData, CreateBookingErrors, CreateBookingEventData, CreateBookingEventErrors, CreateBookingEventResponses, CreateBookingResponses, CreateChatRoomData, CreateChatRoomErrors, CreateChatRoomResponses, CreateEmailTemplateData, CreateEmailTemplateErrors, CreateEmailTemplateResponses, CreateInvoiceData, CreateInvoiceErrors, CreateInvoiceResponses, CreateMerchantAccountData, CreateMerchantAccountErrors, CreateMerchantAccountResponses, CreatePersonData, CreatePersonErrors, CreatePersonResponses, CreateReviewData, CreateReviewErrors, CreateReviewResponses, CreateScheduleExceptionData, CreateScheduleExceptionErrors, CreateScheduleExceptionResponses, DeleteBookingEventData, DeleteBookingEventErrors, DeleteBookingEventResponses, DeleteFileData, DeleteFileErrors, DeleteFileResponses, DeleteInvoiceData, DeleteInvoiceErrors, DeleteInvoiceResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, DeleteScheduleExceptionData, DeleteScheduleExceptionErrors, DeleteScheduleExceptionResponses, EndVideoCallData, EndVideoCallErrors, EndVideoCallResponses, FinalizeInvoiceData, FinalizeInvoiceErrors, FinalizeInvoiceResponses, GetBookingData, GetBookingErrors, GetBookingEventData, GetBookingEventErrors, GetBookingEventResponses, GetBookingResponses, GetChatMessagesData, GetChatMessagesErrors, GetChatMessagesResponses, GetChatRoomData, GetChatRoomErrors, GetChatRoomResponses, GetEmailQueueItemData, GetEmailQueueItemErrors, GetEmailQueueItemResponses, GetEmailTemplateData, GetEmailTemplateErrors, GetEmailTemplateResponses, GetFileData, GetFileDownloadData, GetFileDownloadErrors, GetFileDownloadResponses, GetFileErrors, GetFileResponses, GetIceServersData, GetIceServersErrors, GetIceServersResponses, GetInvoiceData, GetInvoiceErrors, GetInvoiceResponses, GetMerchantAccountData, GetMerchantAccountErrors, GetMerchantAccountResponses, GetMerchantDashboardData, GetMerchantDashboardErrors, GetMerchantDashboardResponses, GetNotificationData, GetNotificationErrors, GetNotificationResponses, GetPersonData, GetPersonErrors, GetPersonResponses, GetReviewData, GetReviewErrors, GetReviewResponses, GetScheduleExceptionData, GetScheduleExceptionErrors, GetScheduleExceptionResponses, GetTimeSlotData, GetTimeSlotErrors, GetTimeSlotResponses, HandleStripeWebhookData, HandleStripeWebhookErrors, HandleStripeWebhookResponses, JoinVideoCallData, JoinVideoCallErrors, JoinVideoCallResponses, LeaveVideoCallData, LeaveVideoCallErrors, LeaveVideoCallResponses, ListAuditLogsData, ListAuditLogsErrors, ListAuditLogsResponses, ListBookingEventsData, ListBookingEventsErrors, ListBookingEventsResponses, ListBookingsData, ListBookingsErrors, ListBookingsResponses, ListChatRoomsData, ListChatRoomsErrors, ListChatRoomsResponses, ListEmailQueueItemsData, ListEmailQueueItemsErrors, ListEmailQueueItemsResponses, ListEmailTemplatesData, ListEmailTemplatesErrors, ListEmailTemplatesResponses, ListEventSlotsData, ListEventSlotsErrors, ListEventSlotsResponses, ListFilesData, ListFilesErrors, ListFilesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListNotificationsData, ListNotificationsErrors, ListNotificationsResponses, ListPersonsData, ListPersonsErrors, ListPersonsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListScheduleExceptionsData, ListScheduleExceptionsErrors, ListScheduleExceptionsResponses, MarkAllNotificationsAsReadData, MarkAllNotificationsAsReadErrors, MarkAllNotificationsAsReadResponses, MarkInvoiceUncollectibleData, MarkInvoiceUncollectibleErrors, MarkInvoiceUncollectibleResponses, MarkNoShowBookingData, MarkNoShowBookingErrors, MarkNoShowBookingResponses, MarkNotificationAsReadData, MarkNotificationAsReadErrors, MarkNotificationAsReadResponses, OnboardMerchantAccountData, OnboardMerchantAccountErrors, OnboardMerchantAccountResponses, PayInvoiceData, PayInvoiceErrors, PayInvoiceResponses, RefundInvoicePaymentData, RefundInvoicePaymentErrors, RefundInvoicePaymentResponses, RejectBookingData, RejectBookingErrors, RejectBookingResponses, RetryEmailQueueItemData, RetryEmailQueueItemErrors, RetryEmailQueueItemResponses, SendChatMessageData, SendChatMessageErrors, SendChatMessageResponses, TestEmailTemplateData, TestEmailTemplateErrors, TestEmailTemplateResponses, UpdateBookingEventData, UpdateBookingEventErrors, UpdateBookingEventResponses, UpdateEmailTemplateData, UpdateEmailTemplateErrors, UpdateEmailTemplateResponses, UpdateInvoiceData, UpdateInvoiceErrors, UpdateInvoiceResponses, UpdatePersonData, UpdatePersonErrors, UpdatePersonResponses, UpdateVideoCallParticipantData, UpdateVideoCallParticipantErrors, UpdateVideoCallParticipantResponses, UploadFileData, UploadFileErrors, UploadFileResponses, VoidInvoiceData, VoidInvoiceErrors, VoidInvoiceResponses } from './types.gen';
+import { acceptTreatmentPlanResponseTransformer, applyDentalDiscountResponseTransformer, archiveDentalPatientResponseTransformer, cancelBookingResponseTransformer, cancelEmailQueueItemResponseTransformer, captureInvoicePaymentResponseTransformer, cephMgmtDeleteCephLandmarkResponseTransformer, checkInAppointmentResponseTransformer, completeFileUploadResponseTransformer, completeMultipartUploadResponseTransformer, confirmBookingResponseTransformer, createAmendmentResponseTransformer, createAppointmentResponseTransformer, createAttachmentResponseTransformer, createBookingEventResponseTransformer, createBookingResponseTransformer, createChatRoomResponseTransformer, createConsentFormResponseTransformer, createConsentTemplateResponseTransformer, createConsultationResponseTransformer, createDentalInvoiceResponseTransformer, createDentalPatientResponseTransformer, createDentalPaymentPlanResponseTransformer, createDentalTreatmentResponseTransformer, createDentalVisitResponseTransformer, createEmailTemplateResponseTransformer, createInvoiceResponseTransformer, createLabOrderResponseTransformer, createMedicalHistoryEntryResponseTransformer, createMemberResponseTransformer, createMerchantAccountResponseTransformer, createPatientResponseTransformer, createPersonResponseTransformer, createPractitionerResponseTransformer, createPractitionerRoleResponseTransformer, createPrescriptionResponseTransformer, createReviewResponseTransformer, createScheduleExceptionResponseTransformer, createTreatmentTemplateResponseTransformer, createVisitNoteAddendumResponseTransformer, exportDentalPatientsResponseTransformer, exportPmdResponseTransformer, finalizeConsultationResponseTransformer, finalizeInvoiceResponseTransformer, generatePmdResponseTransformer, getAppointmentResponseTransformer, getBookingEventResponseTransformer, getBookingResponseTransformer, getChatMessagesResponseTransformer, getChatRoomResponseTransformer, getConsultationResponseTransformer, getDentalChartResponseTransformer, getDentalInvoiceResponseTransformer, getDentalPatientResponseTransformer, getDentalPatientStatementResponseTransformer, getDentalPaymentPlanResponseTransformer, getDentalPaymentReceiptResponseTransformer, getDentalVisitResponseTransformer, getEmailQueueItemResponseTransformer, getEmailTemplateResponseTransformer, getFileDownloadResponseTransformer, getFileResponseTransformer, getImportedPmdResponseTransformer, getInvoiceResponseTransformer, getMerchantAccountResponseTransformer, getMerchantDashboardResponseTransformer, getNotificationResponseTransformer, getPatientResponseTransformer, getPersonResponseTransformer, getPmdForVisitResponseTransformer, getPractitionerResponseTransformer, getPractitionerRoleResponseTransformer, getReviewResponseTransformer, getScheduleExceptionResponseTransformer, getTimeSlotResponseTransformer, getToothHistoryResponseTransformer, getTreatmentPlanVersionResponseTransformer, getVisitNoteHistoryResponseTransformer, getVisitNotesResponseTransformer, imagingFindingsMgmtDeleteFindingResponseTransformer, imagingMgmtDeleteImageResponseTransformer, imagingMgmtDeleteMeasurementResponseTransformer, importPmdResponseTransformer, issueDentalInvoiceResponseTransformer, joinVideoCallResponseTransformer, listAmendmentsResponseTransformer, listAppointmentsResponseTransformer, listAttachmentsResponseTransformer, listAuditLogsResponseTransformer, listBookingEventsResponseTransformer, listBookingsResponseTransformer, listChatRoomsResponseTransformer, listConsentFormsResponseTransformer, listConsentTemplatesResponseTransformer, listConsultationsResponseTransformer, listDentalInvoicesResponseTransformer, listDentalPatientsResponseTransformer, listDentalPaymentsResponseTransformer, listDentalTreatmentsResponseTransformer, listDentalVisitsResponseTransformer, listEmailQueueItemsResponseTransformer, listEmailTemplatesResponseTransformer, listEmrPatientsResponseTransformer, listEventSlotsResponseTransformer, listFilesResponseTransformer, listImportedPmdsResponseTransformer, listInvoicesResponseTransformer, listLabOrdersResponseTransformer, listMedicalHistoryResponseTransformer, listMembersResponseTransformer, listNotificationsResponseTransformer, listPatientsResponseTransformer, listPersonsResponseTransformer, listPmdsResponseTransformer, listPractitionerRolesResponseTransformer, listPractitionersResponseTransformer, listPrescriptionsResponseTransformer, listReviewsResponseTransformer, listScheduleExceptionsResponseTransformer, listTreatmentTemplatesResponseTransformer, markInvoiceUncollectibleResponseTransformer, markNoShowBookingResponseTransformer, markNotificationAsReadResponseTransformer, mergePatientsResponseTransformer, recordDentalPaymentResponseTransformer, rejectBookingResponseTransformer, resetMemberPinResponseTransformer, restoreDentalPatientResponseTransformer, retryEmailQueueItemResponseTransformer, sendChatMessageResponseTransformer, signConsentFormResponseTransformer, signVisitNotesResponseTransformer, testEmailTemplateResponseTransformer, unmergePatientsResponseTransformer, updateAppointmentResponseTransformer, updateBookingEventResponseTransformer, updateConsentTemplateResponseTransformer, updateConsultationResponseTransformer, updateDentalPatientResponseTransformer, updateDentalTreatmentResponseTransformer, updateDentalVisitResponseTransformer, updateEmailTemplateResponseTransformer, updateInvoiceResponseTransformer, updateLabOrderResponseTransformer, updateMedicalHistoryEntryResponseTransformer, updatePatientResponseTransformer, updatePersonResponseTransformer, updatePractitionerResponseTransformer, updatePractitionerRoleResponseTransformer, updatePrescriptionResponseTransformer, updateToothResponseTransformer, updateTreatmentTemplateResponseTransformer, updateVideoCallParticipantResponseTransformer, uploadFileResponseTransformer, upsertDentalChartResponseTransformer, upsertVisitNotesResponseTransformer, voidDentalInvoiceResponseTransformer, voidDentalPaymentResponseTransformer, voidInvoiceResponseTransformer } from './transformers.gen';
+import type { AbortMultipartUploadData, AbortMultipartUploadErrors, AbortMultipartUploadResponses, AcceptTreatmentPlanData, AcceptTreatmentPlanErrors, AcceptTreatmentPlanResponses, AddFollowUpNoteData, AddFollowUpNoteErrors, AddFollowUpNoteResponses, ApplyDentalDiscountData, ApplyDentalDiscountErrors, ApplyDentalDiscountResponses, ApplyTemplateData, ApplyTemplateErrors, ApplyTemplateResponses, ArchiveDentalPatientData, ArchiveDentalPatientErrors, ArchiveDentalPatientResponses, BulkArchiveDentalPatientsData, BulkArchiveDentalPatientsErrors, BulkArchiveDentalPatientsResponses, CancelAppointmentData, CancelAppointmentErrors, CancelAppointmentResponses, CancelBookingData, CancelBookingErrors, CancelBookingResponses, CancelEmailQueueItemData, CancelEmailQueueItemErrors, CancelEmailQueueItemResponses, CaptureInvoicePaymentData, CaptureInvoicePaymentErrors, CaptureInvoicePaymentResponses, CarryOverTreatmentsData, CarryOverTreatmentsErrors, CarryOverTreatmentsResponses, CephMgmtBatchUpsertCephLandmarksData, CephMgmtBatchUpsertCephLandmarksResponses, CephMgmtCreateCephReportData, CephMgmtCreateCephReportResponses, CephMgmtDeleteCephLandmarkData, CephMgmtDeleteCephLandmarkResponses, CephMgmtGetCephAnalysisData, CephMgmtGetCephAnalysisResponses, CephMgmtGetCephReportData, CephMgmtGetCephReportResponses, CephMgmtListCephLandmarksData, CephMgmtListCephLandmarksResponses, CephMgmtRecomputeCephAnalysisData, CephMgmtRecomputeCephAnalysisResponses, CephMgmtUpdateCephLandmarkData, CephMgmtUpdateCephLandmarkResponses, CheckInAppointmentData, CheckInAppointmentErrors, CheckInAppointmentResponses, CompleteFileUploadData, CompleteFileUploadErrors, CompleteFileUploadResponses, CompleteMultipartUploadData, CompleteMultipartUploadErrors, CompleteMultipartUploadResponses, ConfirmBookingData, ConfirmBookingErrors, ConfirmBookingResponses, CreateAmendmentData, CreateAmendmentErrors, CreateAmendmentResponses, CreateAppointmentData, CreateAppointmentErrors, CreateAppointmentResponses, CreateAttachmentData, CreateAttachmentErrors, CreateAttachmentResponses, CreateBookingData, CreateBookingErrors, CreateBookingEventData, CreateBookingEventErrors, CreateBookingEventResponses, CreateBookingResponses, CreateChatRoomData, CreateChatRoomErrors, CreateChatRoomResponses, CreateConsentFormData, CreateConsentFormErrors, CreateConsentFormResponses, CreateConsentTemplateData, CreateConsentTemplateErrors, CreateConsentTemplateResponses, CreateConsultationData, CreateConsultationErrors, CreateConsultationResponses, CreateDentalInvoiceData, CreateDentalInvoiceErrors, CreateDentalInvoiceResponses, CreateDentalPatientData, CreateDentalPatientErrors, CreateDentalPatientResponses, CreateDentalPaymentPlanData, CreateDentalPaymentPlanErrors, CreateDentalPaymentPlanResponses, CreateDentalTreatmentData, CreateDentalTreatmentErrors, CreateDentalTreatmentResponses, CreateDentalVisitData, CreateDentalVisitErrors, CreateDentalVisitResponses, CreateEmailTemplateData, CreateEmailTemplateErrors, CreateEmailTemplateResponses, CreateInvoiceData, CreateInvoiceErrors, CreateInvoiceResponses, CreateLabOrderData, CreateLabOrderErrors, CreateLabOrderResponses, CreateMedicalHistoryEntryData, CreateMedicalHistoryEntryErrors, CreateMedicalHistoryEntryResponses, CreateMemberData, CreateMemberErrors, CreateMemberResponses, CreateMerchantAccountData, CreateMerchantAccountErrors, CreateMerchantAccountResponses, CreatePatientData, CreatePatientErrors, CreatePatientResponses, CreatePersonData, CreatePersonErrors, CreatePersonResponses, CreatePractitionerData, CreatePractitionerErrors, CreatePractitionerResponses, CreatePractitionerRoleData, CreatePractitionerRoleErrors, CreatePractitionerRoleResponses, CreatePrescriptionData, CreatePrescriptionErrors, CreatePrescriptionResponses, CreateReviewData, CreateReviewErrors, CreateReviewResponses, CreateScheduleExceptionData, CreateScheduleExceptionErrors, CreateScheduleExceptionResponses, CreateTreatmentTemplateData, CreateTreatmentTemplateErrors, CreateTreatmentTemplateResponses, CreateVisitNoteAddendumData, CreateVisitNoteAddendumErrors, CreateVisitNoteAddendumResponses, DeactivatePatientData, DeactivatePatientErrors, DeactivatePatientResponses, DeactivatePractitionerData, DeactivatePractitionerErrors, DeactivatePractitionerResponses, DeactivatePractitionerRoleData, DeactivatePractitionerRoleErrors, DeactivatePractitionerRoleResponses, DeleteAttachmentData, DeleteAttachmentErrors, DeleteAttachmentResponses, DeleteBookingEventData, DeleteBookingEventErrors, DeleteBookingEventResponses, DeleteConsentTemplateData, DeleteConsentTemplateErrors, DeleteConsentTemplateResponses, DeleteFileData, DeleteFileErrors, DeleteFileResponses, DeleteInvoiceData, DeleteInvoiceErrors, DeleteInvoiceResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, DeleteScheduleExceptionData, DeleteScheduleExceptionErrors, DeleteScheduleExceptionResponses, DeleteTreatmentTemplateData, DeleteTreatmentTemplateErrors, DeleteTreatmentTemplateResponses, DentalBranchManagementCreateData, DentalBranchManagementCreateErrors, DentalBranchManagementCreateResponses, DentalBranchManagementGetData, DentalBranchManagementGetErrors, DentalBranchManagementGetResponses, DentalBranchManagementListData, DentalBranchManagementListErrors, DentalBranchManagementListResponses, DentalMembershipManagementCreateData, DentalMembershipManagementCreateErrors, DentalMembershipManagementCreateResponses, DentalMembershipManagementDeactivateData, DentalMembershipManagementDeactivateErrors, DentalMembershipManagementDeactivateResponses, DentalMembershipManagementListData, DentalMembershipManagementListErrors, DentalMembershipManagementListResponses, DentalMembershipManagementSetPinData, DentalMembershipManagementSetPinErrors, DentalMembershipManagementSetPinResponses, DentalMembershipManagementVerifyPinData, DentalMembershipManagementVerifyPinErrors, DentalMembershipManagementVerifyPinResponses, DentalOrganizationManagementCreateData, DentalOrganizationManagementCreateErrors, DentalOrganizationManagementCreateResponses, DentalOrganizationManagementGetData, DentalOrganizationManagementGetErrors, DentalOrganizationManagementGetResponses, DentalOrganizationManagementUpdateData, DentalOrganizationManagementUpdateErrors, DentalOrganizationManagementUpdateResponses, EndVideoCallData, EndVideoCallErrors, EndVideoCallResponses, ExportDentalPatientsData, ExportDentalPatientsErrors, ExportDentalPatientsResponses, ExportPmdData, ExportPmdErrors, ExportPmdResponses, FinalizeConsultationData, FinalizeConsultationErrors, FinalizeConsultationResponses, FinalizeInvoiceData, FinalizeInvoiceErrors, FinalizeInvoiceResponses, GenerateMultipartPartUrlData, GenerateMultipartPartUrlErrors, GenerateMultipartPartUrlResponses, GeneratePmdData, GeneratePmdErrors, GeneratePmdResponses, GetAppointmentData, GetAppointmentErrors, GetAppointmentResponses, GetBookingData, GetBookingErrors, GetBookingEventData, GetBookingEventErrors, GetBookingEventResponses, GetBookingResponses, GetBranchSettingsData, GetBranchSettingsErrors, GetBranchSettingsResponses, GetChatMessagesData, GetChatMessagesErrors, GetChatMessagesResponses, GetChatRoomData, GetChatRoomErrors, GetChatRoomResponses, GetCollectionsSummaryData, GetCollectionsSummaryErrors, GetCollectionsSummaryResponses, GetConsultationData, GetConsultationErrors, GetConsultationResponses, GetDashboardSummaryData, GetDashboardSummaryErrors, GetDashboardSummaryResponses, GetDentalChartData, GetDentalChartErrors, GetDentalChartResponses, GetDentalInvoiceData, GetDentalInvoiceErrors, GetDentalInvoiceResponses, GetDentalPatientData, GetDentalPatientErrors, GetDentalPatientResponses, GetDentalPatientSafetyFloorData, GetDentalPatientSafetyFloorErrors, GetDentalPatientSafetyFloorResponses, GetDentalPatientStatementData, GetDentalPatientStatementErrors, GetDentalPatientStatementResponses, GetDentalPaymentPlanData, GetDentalPaymentPlanErrors, GetDentalPaymentPlanResponses, GetDentalPaymentReceiptData, GetDentalPaymentReceiptErrors, GetDentalPaymentReceiptResponses, GetDentalVisitData, GetDentalVisitErrors, GetDentalVisitResponses, GetEmailQueueItemData, GetEmailQueueItemErrors, GetEmailQueueItemResponses, GetEmailTemplateData, GetEmailTemplateErrors, GetEmailTemplateResponses, GetFileData, GetFileDownloadData, GetFileDownloadErrors, GetFileDownloadResponses, GetFileErrors, GetFileResponses, GetIceServersData, GetIceServersErrors, GetIceServersResponses, GetImportedPmdData, GetImportedPmdErrors, GetImportedPmdResponses, GetInvoiceData, GetInvoiceErrors, GetInvoiceResponses, GetMerchantAccountData, GetMerchantAccountErrors, GetMerchantAccountResponses, GetMerchantDashboardData, GetMerchantDashboardErrors, GetMerchantDashboardResponses, GetNotificationData, GetNotificationErrors, GetNotificationResponses, GetOrgContextData, GetOrgContextErrors, GetOrgContextResponses, GetPatientBalanceData, GetPatientBalanceErrors, GetPatientBalanceResponses, GetPatientData, GetPatientErrors, GetPatientResponses, GetPersonData, GetPersonErrors, GetPersonResponses, GetPmdForVisitData, GetPmdForVisitErrors, GetPmdForVisitResponses, GetPractitionerData, GetPractitionerErrors, GetPractitionerResponses, GetPractitionerRoleData, GetPractitionerRoleErrors, GetPractitionerRoleResponses, GetReviewData, GetReviewErrors, GetReviewResponses, GetScheduleExceptionData, GetScheduleExceptionErrors, GetScheduleExceptionResponses, GetTimeSlotData, GetTimeSlotErrors, GetTimeSlotResponses, GetToothHistoryData, GetToothHistoryErrors, GetToothHistoryResponses, GetTreatmentPlanData, GetTreatmentPlanErrors, GetTreatmentPlanResponses, GetTreatmentPlanVersionData, GetTreatmentPlanVersionErrors, GetTreatmentPlanVersionResponses, GetVisitNoteHistoryData, GetVisitNoteHistoryErrors, GetVisitNoteHistoryResponses, GetVisitNotesData, GetVisitNotesErrors, GetVisitNotesResponses, GetWorkingHoursData, GetWorkingHoursErrors, GetWorkingHoursResponses, HandleStripeWebhookData, HandleStripeWebhookErrors, HandleStripeWebhookResponses, ImagingFindingsMgmtCreateFindingData, ImagingFindingsMgmtCreateFindingResponses, ImagingFindingsMgmtDeleteFindingData, ImagingFindingsMgmtDeleteFindingResponses, ImagingFindingsMgmtListFindingsData, ImagingFindingsMgmtListFindingsResponses, ImagingFindingsMgmtUpdateFindingData, ImagingFindingsMgmtUpdateFindingResponses, ImagingMgmtCreateImagingStudyData, ImagingMgmtCreateImagingStudyResponses, ImagingMgmtCreateMeasurementData, ImagingMgmtCreateMeasurementResponses, ImagingMgmtDeleteImageData, ImagingMgmtDeleteImageResponses, ImagingMgmtDeleteMeasurementData, ImagingMgmtDeleteMeasurementResponses, ImagingMgmtGetImagingStudyData, ImagingMgmtGetImagingStudyResponses, ImagingMgmtListMeasurementsData, ImagingMgmtListMeasurementsResponses, ImagingMgmtUpdateImageCalibrationData, ImagingMgmtUpdateImageCalibrationResponses, ImagingMgmtUpdateImageModalityData, ImagingMgmtUpdateImageModalityResponses, ImportPatientsData, ImportPatientsErrors, ImportPatientsResponses, ImportPmdData, ImportPmdErrors, ImportPmdResponses, InitializeDentitionData, InitializeDentitionErrors, InitializeDentitionResponses, InitiateMultipartUploadData, InitiateMultipartUploadErrors, InitiateMultipartUploadResponses, IssueDentalInvoiceData, IssueDentalInvoiceErrors, IssueDentalInvoiceResponses, JoinVideoCallData, JoinVideoCallErrors, JoinVideoCallResponses, LeaveVideoCallData, LeaveVideoCallErrors, LeaveVideoCallResponses, ListAmendmentsData, ListAmendmentsErrors, ListAmendmentsResponses, ListAppointmentsData, ListAppointmentsErrors, ListAppointmentsResponses, ListAttachmentsData, ListAttachmentsErrors, ListAttachmentsResponses, ListAuditLogsData, ListAuditLogsErrors, ListAuditLogsResponses, ListBookingEventsData, ListBookingEventsErrors, ListBookingEventsResponses, ListBookingsData, ListBookingsErrors, ListBookingsResponses, ListChatRoomsData, ListChatRoomsErrors, ListChatRoomsResponses, ListConsentFormsData, ListConsentFormsErrors, ListConsentFormsResponses, ListConsentTemplatesData, ListConsentTemplatesErrors, ListConsentTemplatesResponses, ListConsultationsData, ListConsultationsErrors, ListConsultationsResponses, ListDentalInvoicesData, ListDentalInvoicesErrors, ListDentalInvoicesResponses, ListDentalPatientsData, ListDentalPatientsErrors, ListDentalPatientsResponses, ListDentalPaymentsData, ListDentalPaymentsErrors, ListDentalPaymentsResponses, ListDentalTreatmentsData, ListDentalTreatmentsErrors, ListDentalTreatmentsResponses, ListDentalVisitsData, ListDentalVisitsErrors, ListDentalVisitsResponses, ListEmailQueueItemsData, ListEmailQueueItemsErrors, ListEmailQueueItemsResponses, ListEmailTemplatesData, ListEmailTemplatesErrors, ListEmailTemplatesResponses, ListEmrPatientsData, ListEmrPatientsErrors, ListEmrPatientsResponses, ListEventSlotsData, ListEventSlotsErrors, ListEventSlotsResponses, ListFilesData, ListFilesErrors, ListFilesResponses, ListFollowUpNotesData, ListFollowUpNotesErrors, ListFollowUpNotesResponses, ListImportedPmdsData, ListImportedPmdsErrors, ListImportedPmdsResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLabOrdersData, ListLabOrdersErrors, ListLabOrdersResponses, ListMedicalHistoryData, ListMedicalHistoryErrors, ListMedicalHistoryResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListNotificationsData, ListNotificationsErrors, ListNotificationsResponses, ListPatientsData, ListPatientsErrors, ListPatientsResponses, ListPersonsData, ListPersonsErrors, ListPersonsResponses, ListPmdsData, ListPmdsErrors, ListPmdsResponses, ListPractitionerRolesData, ListPractitionerRolesErrors, ListPractitionerRolesResponses, ListPractitionersData, ListPractitionersErrors, ListPractitionersResponses, ListPrescriptionsData, ListPrescriptionsErrors, ListPrescriptionsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListScheduleExceptionsData, ListScheduleExceptionsErrors, ListScheduleExceptionsResponses, ListTreatmentTemplatesData, ListTreatmentTemplatesErrors, ListTreatmentTemplatesResponses, MarkAllNotificationsAsReadData, MarkAllNotificationsAsReadErrors, MarkAllNotificationsAsReadResponses, MarkInvoiceUncollectibleData, MarkInvoiceUncollectibleErrors, MarkInvoiceUncollectibleResponses, MarkNoShowBookingData, MarkNoShowBookingErrors, MarkNoShowBookingResponses, MarkNotificationAsReadData, MarkNotificationAsReadErrors, MarkNotificationAsReadResponses, MergePatientsData, MergePatientsErrors, MergePatientsResponses, OnboardMerchantAccountData, OnboardMerchantAccountErrors, OnboardMerchantAccountResponses, PatientImageMgmtListPatientImagesData, PatientImageMgmtListPatientImagesResponses, PayInvoiceData, PayInvoiceErrors, PayInvoiceResponses, RecordDentalPaymentData, RecordDentalPaymentErrors, RecordDentalPaymentResponses, RecoverPinData, RecoverPinErrors, RecoverPinResponses, RefundInvoicePaymentData, RefundInvoicePaymentErrors, RefundInvoicePaymentResponses, RejectBookingData, RejectBookingErrors, RejectBookingResponses, ResetMemberPinData, ResetMemberPinErrors, ResetMemberPinResponses, RestoreDentalPatientData, RestoreDentalPatientErrors, RestoreDentalPatientResponses, RetryEmailQueueItemData, RetryEmailQueueItemErrors, RetryEmailQueueItemResponses, SendChatMessageData, SendChatMessageErrors, SendChatMessageResponses, SetSecurityQuestionData, SetSecurityQuestionErrors, SetSecurityQuestionResponses, SignConsentFormData, SignConsentFormErrors, SignConsentFormResponses, SignVisitNotesData, SignVisitNotesErrors, SignVisitNotesResponses, TestEmailTemplateData, TestEmailTemplateErrors, TestEmailTemplateResponses, UnmergePatientsData, UnmergePatientsErrors, UnmergePatientsResponses, UpdateAppointmentData, UpdateAppointmentErrors, UpdateAppointmentResponses, UpdateBookingEventData, UpdateBookingEventErrors, UpdateBookingEventResponses, UpdateBranchSettingsData, UpdateBranchSettingsErrors, UpdateBranchSettingsResponses, UpdateConsentTemplateData, UpdateConsentTemplateErrors, UpdateConsentTemplateResponses, UpdateConsultationData, UpdateConsultationErrors, UpdateConsultationResponses, UpdateDentalPatientData, UpdateDentalPatientErrors, UpdateDentalPatientResponses, UpdateDentalTreatmentData, UpdateDentalTreatmentErrors, UpdateDentalTreatmentResponses, UpdateDentalVisitData, UpdateDentalVisitErrors, UpdateDentalVisitResponses, UpdateEmailTemplateData, UpdateEmailTemplateErrors, UpdateEmailTemplateResponses, UpdateInvoiceData, UpdateInvoiceErrors, UpdateInvoiceResponses, UpdateLabOrderData, UpdateLabOrderErrors, UpdateLabOrderResponses, UpdateMedicalHistoryEntryData, UpdateMedicalHistoryEntryErrors, UpdateMedicalHistoryEntryResponses, UpdatePatientData, UpdatePatientErrors, UpdatePatientResponses, UpdatePersonData, UpdatePersonErrors, UpdatePersonResponses, UpdatePractitionerData, UpdatePractitionerErrors, UpdatePractitionerResponses, UpdatePractitionerRoleData, UpdatePractitionerRoleErrors, UpdatePractitionerRoleResponses, UpdatePrescriptionData, UpdatePrescriptionErrors, UpdatePrescriptionResponses, UpdateToothData, UpdateToothErrors, UpdateToothResponses, UpdateTreatmentTemplateData, UpdateTreatmentTemplateErrors, UpdateTreatmentTemplateResponses, UpdateVideoCallParticipantData, UpdateVideoCallParticipantErrors, UpdateVideoCallParticipantResponses, UpdateWorkingHoursData, UpdateWorkingHoursErrors, UpdateWorkingHoursResponses, UploadFileData, UploadFileErrors, UploadFileResponses, UpsertDentalChartData, UpsertDentalChartErrors, UpsertDentalChartResponses, UpsertVisitNotesData, UpsertVisitNotesErrors, UpsertVisitNotesResponses, VoidDentalInvoiceData, VoidDentalInvoiceErrors, VoidDentalInvoiceResponses, VoidDentalPaymentData, VoidDentalPaymentErrors, VoidDentalPaymentResponses, VoidInvoiceData, VoidInvoiceErrors, VoidInvoiceResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -535,6 +535,1432 @@ export const getIceServers = <ThrowOnError extends boolean = false>(options?: Op
 });
 
 /**
+ * Operation requires role: 'user'
+ */
+export const listAppointments = <ThrowOnError extends boolean = false>(options?: Options<ListAppointmentsData, ThrowOnError>) => (options?.client ?? client).get<ListAppointmentsResponses, ListAppointmentsErrors, ThrowOnError>({
+    responseTransformer: listAppointmentsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createAppointment = <ThrowOnError extends boolean = false>(options: Options<CreateAppointmentData, ThrowOnError>) => (options.client ?? client).post<CreateAppointmentResponses, CreateAppointmentErrors, ThrowOnError>({
+    responseTransformer: createAppointmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const cancelAppointment = <ThrowOnError extends boolean = false>(options: Options<CancelAppointmentData, ThrowOnError>) => (options.client ?? client).delete<CancelAppointmentResponses, CancelAppointmentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments/{appointmentId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getAppointment = <ThrowOnError extends boolean = false>(options: Options<GetAppointmentData, ThrowOnError>) => (options.client ?? client).get<GetAppointmentResponses, GetAppointmentErrors, ThrowOnError>({
+    responseTransformer: getAppointmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments/{appointmentId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateAppointment = <ThrowOnError extends boolean = false>(options: Options<UpdateAppointmentData, ThrowOnError>) => (options.client ?? client).patch<UpdateAppointmentResponses, UpdateAppointmentErrors, ThrowOnError>({
+    responseTransformer: updateAppointmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments/{appointmentId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const checkInAppointment = <ThrowOnError extends boolean = false>(options: Options<CheckInAppointmentData, ThrowOnError>) => (options.client ?? client).post<CheckInAppointmentResponses, CheckInAppointmentErrors, ThrowOnError>({
+    responseTransformer: checkInAppointmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/appointments/{appointmentId}/check-in',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getCollectionsSummary = <ThrowOnError extends boolean = false>(options?: Options<GetCollectionsSummaryData, ThrowOnError>) => (options?.client ?? client).get<GetCollectionsSummaryResponses, GetCollectionsSummaryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/collections/summary',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listDentalInvoices = <ThrowOnError extends boolean = false>(options?: Options<ListDentalInvoicesData, ThrowOnError>) => (options?.client ?? client).get<ListDentalInvoicesResponses, ListDentalInvoicesErrors, ThrowOnError>({
+    responseTransformer: listDentalInvoicesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createDentalInvoice = <ThrowOnError extends boolean = false>(options: Options<CreateDentalInvoiceData, ThrowOnError>) => (options.client ?? client).post<CreateDentalInvoiceResponses, CreateDentalInvoiceErrors, ThrowOnError>({
+    responseTransformer: createDentalInvoiceResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDentalInvoice = <ThrowOnError extends boolean = false>(options: Options<GetDentalInvoiceData, ThrowOnError>) => (options.client ?? client).get<GetDentalInvoiceResponses, GetDentalInvoiceErrors, ThrowOnError>({
+    responseTransformer: getDentalInvoiceResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const applyDentalDiscount = <ThrowOnError extends boolean = false>(options: Options<ApplyDentalDiscountData, ThrowOnError>) => (options.client ?? client).post<ApplyDentalDiscountResponses, ApplyDentalDiscountErrors, ThrowOnError>({
+    responseTransformer: applyDentalDiscountResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/discount',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const issueDentalInvoice = <ThrowOnError extends boolean = false>(options: Options<IssueDentalInvoiceData, ThrowOnError>) => (options.client ?? client).post<IssueDentalInvoiceResponses, IssueDentalInvoiceErrors, ThrowOnError>({
+    responseTransformer: issueDentalInvoiceResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/issue',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listDentalPayments = <ThrowOnError extends boolean = false>(options: Options<ListDentalPaymentsData, ThrowOnError>) => (options.client ?? client).get<ListDentalPaymentsResponses, ListDentalPaymentsErrors, ThrowOnError>({
+    responseTransformer: listDentalPaymentsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/payments',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const recordDentalPayment = <ThrowOnError extends boolean = false>(options: Options<RecordDentalPaymentData, ThrowOnError>) => (options.client ?? client).post<RecordDentalPaymentResponses, RecordDentalPaymentErrors, ThrowOnError>({
+    responseTransformer: recordDentalPaymentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/payments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDentalPaymentReceipt = <ThrowOnError extends boolean = false>(options: Options<GetDentalPaymentReceiptData, ThrowOnError>) => (options.client ?? client).get<GetDentalPaymentReceiptResponses, GetDentalPaymentReceiptErrors, ThrowOnError>({
+    responseTransformer: getDentalPaymentReceiptResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/payments/{paymentId}/receipt',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const voidDentalPayment = <ThrowOnError extends boolean = false>(options: Options<VoidDentalPaymentData, ThrowOnError>) => (options.client ?? client).post<VoidDentalPaymentResponses, VoidDentalPaymentErrors, ThrowOnError>({
+    responseTransformer: voidDentalPaymentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/payments/{paymentId}/void',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDentalPaymentPlan = <ThrowOnError extends boolean = false>(options: Options<GetDentalPaymentPlanData, ThrowOnError>) => (options.client ?? client).get<GetDentalPaymentPlanResponses, GetDentalPaymentPlanErrors, ThrowOnError>({
+    responseTransformer: getDentalPaymentPlanResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/plan',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createDentalPaymentPlan = <ThrowOnError extends boolean = false>(options: Options<CreateDentalPaymentPlanData, ThrowOnError>) => (options.client ?? client).post<CreateDentalPaymentPlanResponses, CreateDentalPaymentPlanErrors, ThrowOnError>({
+    responseTransformer: createDentalPaymentPlanResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/plan',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const voidDentalInvoice = <ThrowOnError extends boolean = false>(options: Options<VoidDentalInvoiceData, ThrowOnError>) => (options.client ?? client).post<VoidDentalInvoiceResponses, VoidDentalInvoiceErrors, ThrowOnError>({
+    responseTransformer: voidDentalInvoiceResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/invoices/{invoiceId}/void',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getPatientBalance = <ThrowOnError extends boolean = false>(options: Options<GetPatientBalanceData, ThrowOnError>) => (options.client ?? client).get<GetPatientBalanceResponses, GetPatientBalanceErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/billing/patients/{patientId}/balance',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listConsentTemplates = <ThrowOnError extends boolean = false>(options: Options<ListConsentTemplatesData, ThrowOnError>) => (options.client ?? client).get<ListConsentTemplatesResponses, ListConsentTemplatesErrors, ThrowOnError>({
+    responseTransformer: listConsentTemplatesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/consent-templates',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createConsentTemplate = <ThrowOnError extends boolean = false>(options: Options<CreateConsentTemplateData, ThrowOnError>) => (options.client ?? client).post<CreateConsentTemplateResponses, CreateConsentTemplateErrors, ThrowOnError>({
+    responseTransformer: createConsentTemplateResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/consent-templates',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const deleteConsentTemplate = <ThrowOnError extends boolean = false>(options: Options<DeleteConsentTemplateData, ThrowOnError>) => (options.client ?? client).delete<DeleteConsentTemplateResponses, DeleteConsentTemplateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/consent-templates/{id}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateConsentTemplate = <ThrowOnError extends boolean = false>(options: Options<UpdateConsentTemplateData, ThrowOnError>) => (options.client ?? client).patch<UpdateConsentTemplateResponses, UpdateConsentTemplateErrors, ThrowOnError>({
+    responseTransformer: updateConsentTemplateResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/consent-templates/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getBranchSettings = <ThrowOnError extends boolean = false>(options: Options<GetBranchSettingsData, ThrowOnError>) => (options.client ?? client).get<GetBranchSettingsResponses, GetBranchSettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/settings',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateBranchSettings = <ThrowOnError extends boolean = false>(options: Options<UpdateBranchSettingsData, ThrowOnError>) => (options.client ?? client).put<UpdateBranchSettingsResponses, UpdateBranchSettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getWorkingHours = <ThrowOnError extends boolean = false>(options: Options<GetWorkingHoursData, ThrowOnError>) => (options.client ?? client).get<GetWorkingHoursResponses, GetWorkingHoursErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/working-hours',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateWorkingHours = <ThrowOnError extends boolean = false>(options: Options<UpdateWorkingHoursData, ThrowOnError>) => (options.client ?? client).put<UpdateWorkingHoursResponses, UpdateWorkingHoursErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/branches/{branchId}/working-hours',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listMedicalHistory = <ThrowOnError extends boolean = false>(options: Options<ListMedicalHistoryData, ThrowOnError>) => (options.client ?? client).get<ListMedicalHistoryResponses, ListMedicalHistoryErrors, ThrowOnError>({
+    responseTransformer: listMedicalHistoryResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/clinical/medical-history',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createMedicalHistoryEntry = <ThrowOnError extends boolean = false>(options: Options<CreateMedicalHistoryEntryData, ThrowOnError>) => (options.client ?? client).post<CreateMedicalHistoryEntryResponses, CreateMedicalHistoryEntryErrors, ThrowOnError>({
+    responseTransformer: createMedicalHistoryEntryResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/clinical/medical-history',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateMedicalHistoryEntry = <ThrowOnError extends boolean = false>(options: Options<UpdateMedicalHistoryEntryData, ThrowOnError>) => (options.client ?? client).patch<UpdateMedicalHistoryEntryResponses, UpdateMedicalHistoryEntryErrors, ThrowOnError>({
+    responseTransformer: updateMedicalHistoryEntryResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/clinical/medical-history/{entryId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDashboardSummary = <ThrowOnError extends boolean = false>(options?: Options<GetDashboardSummaryData, ThrowOnError>) => (options?.client ?? client).get<GetDashboardSummaryResponses, GetDashboardSummaryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/dashboard/summary',
+    ...options
+});
+
+export const imagingFindingsMgmtDeleteFinding = <ThrowOnError extends boolean = false>(options: Options<ImagingFindingsMgmtDeleteFindingData, ThrowOnError>) => (options.client ?? client).delete<ImagingFindingsMgmtDeleteFindingResponses, unknown, ThrowOnError>({
+    responseTransformer: imagingFindingsMgmtDeleteFindingResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/findings/{findingId}',
+    ...options
+});
+
+export const imagingFindingsMgmtUpdateFinding = <ThrowOnError extends boolean = false>(options: Options<ImagingFindingsMgmtUpdateFindingData, ThrowOnError>) => (options.client ?? client).patch<ImagingFindingsMgmtUpdateFindingResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/findings/{findingId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const imagingMgmtDeleteImage = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtDeleteImageData, ThrowOnError>) => (options.client ?? client).delete<ImagingMgmtDeleteImageResponses, unknown, ThrowOnError>({
+    responseTransformer: imagingMgmtDeleteImageResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}',
+    ...options
+});
+
+export const imagingMgmtUpdateImageCalibration = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtUpdateImageCalibrationData, ThrowOnError>) => (options.client ?? client).patch<ImagingMgmtUpdateImageCalibrationResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/calibration',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const cephMgmtGetCephAnalysis = <ThrowOnError extends boolean = false>(options: Options<CephMgmtGetCephAnalysisData, ThrowOnError>) => (options.client ?? client).get<CephMgmtGetCephAnalysisResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/analysis',
+    ...options
+});
+
+export const cephMgmtRecomputeCephAnalysis = <ThrowOnError extends boolean = false>(options: Options<CephMgmtRecomputeCephAnalysisData, ThrowOnError>) => (options.client ?? client).post<CephMgmtRecomputeCephAnalysisResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/analysis/recompute',
+    ...options
+});
+
+export const cephMgmtListCephLandmarks = <ThrowOnError extends boolean = false>(options: Options<CephMgmtListCephLandmarksData, ThrowOnError>) => (options.client ?? client).get<CephMgmtListCephLandmarksResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks',
+    ...options
+});
+
+export const cephMgmtBatchUpsertCephLandmarks = <ThrowOnError extends boolean = false>(options: Options<CephMgmtBatchUpsertCephLandmarksData, ThrowOnError>) => (options.client ?? client).post<CephMgmtBatchUpsertCephLandmarksResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const cephMgmtDeleteCephLandmark = <ThrowOnError extends boolean = false>(options: Options<CephMgmtDeleteCephLandmarkData, ThrowOnError>) => (options.client ?? client).delete<CephMgmtDeleteCephLandmarkResponses, unknown, ThrowOnError>({
+    responseTransformer: cephMgmtDeleteCephLandmarkResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}',
+    ...options
+});
+
+export const cephMgmtUpdateCephLandmark = <ThrowOnError extends boolean = false>(options: Options<CephMgmtUpdateCephLandmarkData, ThrowOnError>) => (options.client ?? client).patch<CephMgmtUpdateCephLandmarkResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const cephMgmtGetCephReport = <ThrowOnError extends boolean = false>(options: Options<CephMgmtGetCephReportData, ThrowOnError>) => (options.client ?? client).get<CephMgmtGetCephReportResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/reports',
+    ...options
+});
+
+export const cephMgmtCreateCephReport = <ThrowOnError extends boolean = false>(options: Options<CephMgmtCreateCephReportData, ThrowOnError>) => (options.client ?? client).post<CephMgmtCreateCephReportResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/ceph/reports',
+    ...options
+});
+
+export const imagingFindingsMgmtListFindings = <ThrowOnError extends boolean = false>(options: Options<ImagingFindingsMgmtListFindingsData, ThrowOnError>) => (options.client ?? client).get<ImagingFindingsMgmtListFindingsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/findings',
+    ...options
+});
+
+export const imagingFindingsMgmtCreateFinding = <ThrowOnError extends boolean = false>(options: Options<ImagingFindingsMgmtCreateFindingData, ThrowOnError>) => (options.client ?? client).post<ImagingFindingsMgmtCreateFindingResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/findings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const imagingMgmtListMeasurements = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtListMeasurementsData, ThrowOnError>) => (options.client ?? client).get<ImagingMgmtListMeasurementsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/measurements',
+    ...options
+});
+
+export const imagingMgmtCreateMeasurement = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtCreateMeasurementData, ThrowOnError>) => (options.client ?? client).post<ImagingMgmtCreateMeasurementResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/measurements',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const imagingMgmtUpdateImageModality = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtUpdateImageModalityData, ThrowOnError>) => (options.client ?? client).patch<ImagingMgmtUpdateImageModalityResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/images/{imageId}/modality',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const imagingMgmtDeleteMeasurement = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtDeleteMeasurementData, ThrowOnError>) => (options.client ?? client).delete<ImagingMgmtDeleteMeasurementResponses, unknown, ThrowOnError>({
+    responseTransformer: imagingMgmtDeleteMeasurementResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/measurements/{measurementId}',
+    ...options
+});
+
+export const imagingMgmtCreateImagingStudy = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtCreateImagingStudyData, ThrowOnError>) => (options.client ?? client).post<ImagingMgmtCreateImagingStudyResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/studies',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const imagingMgmtGetImagingStudy = <ThrowOnError extends boolean = false>(options: Options<ImagingMgmtGetImagingStudyData, ThrowOnError>) => (options.client ?? client).get<ImagingMgmtGetImagingStudyResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/imaging/studies/{studyId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getOrgContext = <ThrowOnError extends boolean = false>(options?: Options<GetOrgContextData, ThrowOnError>) => (options?.client ?? client).get<GetOrgContextResponses, GetOrgContextErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/org/context',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listMembers = <ThrowOnError extends boolean = false>(options?: Options<ListMembersData, ThrowOnError>) => (options?.client ?? client).get<ListMembersResponses, ListMembersErrors, ThrowOnError>({
+    responseTransformer: listMembersResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/org/members',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createMember = <ThrowOnError extends boolean = false>(options: Options<CreateMemberData, ThrowOnError>) => (options.client ?? client).post<CreateMemberResponses, CreateMemberErrors, ThrowOnError>({
+    responseTransformer: createMemberResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/org/members',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const recoverPin = <ThrowOnError extends boolean = false>(options: Options<RecoverPinData, ThrowOnError>) => (options.client ?? client).post<RecoverPinResponses, RecoverPinErrors, ThrowOnError>({
+    url: '/dental/org/members/{memberId}/recover-pin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const resetMemberPin = <ThrowOnError extends boolean = false>(options: Options<ResetMemberPinData, ThrowOnError>) => (options.client ?? client).post<ResetMemberPinResponses, ResetMemberPinErrors, ThrowOnError>({
+    responseTransformer: resetMemberPinResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/org/members/{memberId}/reset-pin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const setSecurityQuestion = <ThrowOnError extends boolean = false>(options: Options<SetSecurityQuestionData, ThrowOnError>) => (options.client ?? client).post<SetSecurityQuestionResponses, SetSecurityQuestionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/org/members/{memberId}/security-question',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Create a new dental organization
+ */
+export const dentalOrganizationManagementCreate = <ThrowOnError extends boolean = false>(options: Options<DentalOrganizationManagementCreateData, ThrowOnError>) => (options.client ?? client).post<DentalOrganizationManagementCreateResponses, DentalOrganizationManagementCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get organization by ID
+ */
+export const dentalOrganizationManagementGet = <ThrowOnError extends boolean = false>(options: Options<DentalOrganizationManagementGetData, ThrowOnError>) => (options.client ?? client).get<DentalOrganizationManagementGetResponses, DentalOrganizationManagementGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{id}',
+    ...options
+});
+
+/**
+ * Update organization
+ */
+export const dentalOrganizationManagementUpdate = <ThrowOnError extends boolean = false>(options: Options<DentalOrganizationManagementUpdateData, ThrowOnError>) => (options.client ?? client).patch<DentalOrganizationManagementUpdateResponses, DentalOrganizationManagementUpdateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List branches for an organization
+ */
+export const dentalBranchManagementList = <ThrowOnError extends boolean = false>(options: Options<DentalBranchManagementListData, ThrowOnError>) => (options.client ?? client).get<DentalBranchManagementListResponses, DentalBranchManagementListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches',
+    ...options
+});
+
+/**
+ * Create a branch within an organization
+ */
+export const dentalBranchManagementCreate = <ThrowOnError extends boolean = false>(options: Options<DentalBranchManagementCreateData, ThrowOnError>) => (options.client ?? client).post<DentalBranchManagementCreateResponses, DentalBranchManagementCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a branch by ID
+ */
+export const dentalBranchManagementGet = <ThrowOnError extends boolean = false>(options: Options<DentalBranchManagementGetData, ThrowOnError>) => (options.client ?? client).get<DentalBranchManagementGetResponses, DentalBranchManagementGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}',
+    ...options
+});
+
+/**
+ * List active members for a branch
+ */
+export const dentalMembershipManagementList = <ThrowOnError extends boolean = false>(options: Options<DentalMembershipManagementListData, ThrowOnError>) => (options.client ?? client).get<DentalMembershipManagementListResponses, DentalMembershipManagementListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}/members',
+    ...options
+});
+
+/**
+ * Add a staff member to a branch
+ */
+export const dentalMembershipManagementCreate = <ThrowOnError extends boolean = false>(options: Options<DentalMembershipManagementCreateData, ThrowOnError>) => (options.client ?? client).post<DentalMembershipManagementCreateResponses, DentalMembershipManagementCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}/members',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Deactivate a member
+ */
+export const dentalMembershipManagementDeactivate = <ThrowOnError extends boolean = false>(options: Options<DentalMembershipManagementDeactivateData, ThrowOnError>) => (options.client ?? client).post<DentalMembershipManagementDeactivateResponses, DentalMembershipManagementDeactivateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set or change a staff member's PIN
+ */
+export const dentalMembershipManagementSetPin = <ThrowOnError extends boolean = false>(options: Options<DentalMembershipManagementSetPinData, ThrowOnError>) => (options.client ?? client).post<DentalMembershipManagementSetPinResponses, DentalMembershipManagementSetPinErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/set-pin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Verify a staff member's PIN for local authentication
+ */
+export const dentalMembershipManagementVerifyPin = <ThrowOnError extends boolean = false>(options: Options<DentalMembershipManagementVerifyPinData, ThrowOnError>) => (options.client ?? client).post<DentalMembershipManagementVerifyPinResponses, DentalMembershipManagementVerifyPinErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List dental patients with optional search and filters Requires role: 'user'
+ */
+export const listDentalPatients = <ThrowOnError extends boolean = false>(options?: Options<ListDentalPatientsData, ThrowOnError>) => (options?.client ?? client).get<ListDentalPatientsResponses, ListDentalPatientsErrors, ThrowOnError>({
+    responseTransformer: listDentalPatientsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients',
+    ...options
+});
+
+/**
+ * Create a new dental patient Requires role: 'user'
+ */
+export const createDentalPatient = <ThrowOnError extends boolean = false>(options: Options<CreateDentalPatientData, ThrowOnError>) => (options.client ?? client).post<CreateDentalPatientResponses, CreateDentalPatientErrors, ThrowOnError>({
+    responseTransformer: createDentalPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Bulk archive multiple dental patients Requires role: 'user'
+ */
+export const bulkArchiveDentalPatients = <ThrowOnError extends boolean = false>(options: Options<BulkArchiveDentalPatientsData, ThrowOnError>) => (options.client ?? client).post<BulkArchiveDentalPatientsResponses, BulkArchiveDentalPatientsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/bulk-archive',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Export dental patients as JSON Requires role: 'user'
+ */
+export const exportDentalPatients = <ThrowOnError extends boolean = false>(options?: Options<ExportDentalPatientsData, ThrowOnError>) => (options?.client ?? client).get<ExportDentalPatientsResponses, ExportDentalPatientsErrors, ThrowOnError>({
+    responseTransformer: exportDentalPatientsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/export',
+    ...options
+});
+
+/**
+ * Import patients from a JSON array Requires role: 'user'
+ */
+export const importPatients = <ThrowOnError extends boolean = false>(options: Options<ImportPatientsData, ThrowOnError>) => (options.client ?? client).post<ImportPatientsResponses, ImportPatientsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/import',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a dental patient by ID Requires role: 'user'
+ */
+export const getDentalPatient = <ThrowOnError extends boolean = false>(options: Options<GetDentalPatientData, ThrowOnError>) => (options.client ?? client).get<GetDentalPatientResponses, GetDentalPatientErrors, ThrowOnError>({
+    responseTransformer: getDentalPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}',
+    ...options
+});
+
+/**
+ * Update dental patient fields Requires role: 'user'
+ */
+export const updateDentalPatient = <ThrowOnError extends boolean = false>(options: Options<UpdateDentalPatientData, ThrowOnError>) => (options.client ?? client).patch<UpdateDentalPatientResponses, UpdateDentalPatientErrors, ThrowOnError>({
+    responseTransformer: updateDentalPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Archive a dental patient Requires role: 'user'
+ */
+export const archiveDentalPatient = <ThrowOnError extends boolean = false>(options: Options<ArchiveDentalPatientData, ThrowOnError>) => (options.client ?? client).post<ArchiveDentalPatientResponses, ArchiveDentalPatientErrors, ThrowOnError>({
+    responseTransformer: archiveDentalPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/archive',
+    ...options
+});
+
+/**
+ * List follow-up notes for a patient Requires role: 'user'
+ */
+export const listFollowUpNotes = <ThrowOnError extends boolean = false>(options: Options<ListFollowUpNotesData, ThrowOnError>) => (options.client ?? client).get<ListFollowUpNotesResponses, ListFollowUpNotesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/follow-up-notes',
+    ...options
+});
+
+/**
+ * Add a follow-up note to a patient Requires role: 'user'
+ */
+export const addFollowUpNote = <ThrowOnError extends boolean = false>(options: Options<AddFollowUpNoteData, ThrowOnError>) => (options.client ?? client).post<AddFollowUpNoteResponses, AddFollowUpNoteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/follow-up-notes',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Restore an archived dental patient Requires role: 'user'
+ */
+export const restoreDentalPatient = <ThrowOnError extends boolean = false>(options: Options<RestoreDentalPatientData, ThrowOnError>) => (options.client ?? client).post<RestoreDentalPatientResponses, RestoreDentalPatientErrors, ThrowOnError>({
+    responseTransformer: restoreDentalPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/restore',
+    ...options
+});
+
+/**
+ * Get the safety floor for a patient — allergies, medications, conditions Requires role: 'user'
+ */
+export const getDentalPatientSafetyFloor = <ThrowOnError extends boolean = false>(options: Options<GetDentalPatientSafetyFloorData, ThrowOnError>) => (options.client ?? client).get<GetDentalPatientSafetyFloorResponses, GetDentalPatientSafetyFloorErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/safety-floor',
+    ...options
+});
+
+/**
+ * Get the itemized statement for a patient Requires role: 'user'
+ */
+export const getDentalPatientStatement = <ThrowOnError extends boolean = false>(options: Options<GetDentalPatientStatementData, ThrowOnError>) => (options.client ?? client).get<GetDentalPatientStatementResponses, GetDentalPatientStatementErrors, ThrowOnError>({
+    responseTransformer: getDentalPatientStatementResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{id}/statement',
+    ...options
+});
+
+/**
+ * Initialize dentition chart for a patient Requires role: 'user'
+ */
+export const initializeDentition = <ThrowOnError extends boolean = false>(options: Options<InitializeDentitionData, ThrowOnError>) => (options.client ?? client).post<InitializeDentitionResponses, InitializeDentitionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{patientId}/dentition',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const patientImageMgmtListPatientImages = <ThrowOnError extends boolean = false>(options: Options<PatientImageMgmtListPatientImagesData, ThrowOnError>) => (options.client ?? client).get<PatientImageMgmtListPatientImagesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{patientId}/images',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getTreatmentPlan = <ThrowOnError extends boolean = false>(options: Options<GetTreatmentPlanData, ThrowOnError>) => (options.client ?? client).get<GetTreatmentPlanResponses, GetTreatmentPlanErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{patientId}/treatment-plan',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const acceptTreatmentPlan = <ThrowOnError extends boolean = false>(options: Options<AcceptTreatmentPlanData, ThrowOnError>) => (options.client ?? client).post<AcceptTreatmentPlanResponses, AcceptTreatmentPlanErrors, ThrowOnError>({
+    responseTransformer: acceptTreatmentPlanResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{patientId}/treatment-plan/accept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getTreatmentPlanVersion = <ThrowOnError extends boolean = false>(options: Options<GetTreatmentPlanVersionData, ThrowOnError>) => (options.client ?? client).get<GetTreatmentPlanVersionResponses, GetTreatmentPlanVersionErrors, ThrowOnError>({
+    responseTransformer: getTreatmentPlanVersionResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/patients/{patientId}/treatment-plan/versions/{versionId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const importPmd = <ThrowOnError extends boolean = false>(options: Options<ImportPmdData, ThrowOnError>) => (options.client ?? client).post<ImportPmdResponses, ImportPmdErrors, ThrowOnError>({
+    responseTransformer: importPmdResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/pmd/import',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listImportedPmds = <ThrowOnError extends boolean = false>(options: Options<ListImportedPmdsData, ThrowOnError>) => (options.client ?? client).get<ListImportedPmdsResponses, ListImportedPmdsErrors, ThrowOnError>({
+    responseTransformer: listImportedPmdsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/pmd/imported',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getImportedPmd = <ThrowOnError extends boolean = false>(options: Options<GetImportedPmdData, ThrowOnError>) => (options.client ?? client).get<GetImportedPmdResponses, GetImportedPmdErrors, ThrowOnError>({
+    responseTransformer: getImportedPmdResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/pmd/imported/{id}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listTreatmentTemplates = <ThrowOnError extends boolean = false>(options?: Options<ListTreatmentTemplatesData, ThrowOnError>) => (options?.client ?? client).get<ListTreatmentTemplatesResponses, ListTreatmentTemplatesErrors, ThrowOnError>({
+    responseTransformer: listTreatmentTemplatesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/treatment-templates',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createTreatmentTemplate = <ThrowOnError extends boolean = false>(options: Options<CreateTreatmentTemplateData, ThrowOnError>) => (options.client ?? client).post<CreateTreatmentTemplateResponses, CreateTreatmentTemplateErrors, ThrowOnError>({
+    responseTransformer: createTreatmentTemplateResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/treatment-templates',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const deleteTreatmentTemplate = <ThrowOnError extends boolean = false>(options: Options<DeleteTreatmentTemplateData, ThrowOnError>) => (options.client ?? client).delete<DeleteTreatmentTemplateResponses, DeleteTreatmentTemplateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/treatment-templates/{id}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateTreatmentTemplate = <ThrowOnError extends boolean = false>(options: Options<UpdateTreatmentTemplateData, ThrowOnError>) => (options.client ?? client).patch<UpdateTreatmentTemplateResponses, UpdateTreatmentTemplateErrors, ThrowOnError>({
+    responseTransformer: updateTreatmentTemplateResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/treatment-templates/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listDentalVisits = <ThrowOnError extends boolean = false>(options?: Options<ListDentalVisitsData, ThrowOnError>) => (options?.client ?? client).get<ListDentalVisitsResponses, ListDentalVisitsErrors, ThrowOnError>({
+    responseTransformer: listDentalVisitsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createDentalVisit = <ThrowOnError extends boolean = false>(options: Options<CreateDentalVisitData, ThrowOnError>) => (options.client ?? client).post<CreateDentalVisitResponses, CreateDentalVisitErrors, ThrowOnError>({
+    responseTransformer: createDentalVisitResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getToothHistory = <ThrowOnError extends boolean = false>(options: Options<GetToothHistoryData, ThrowOnError>) => (options.client ?? client).get<GetToothHistoryResponses, GetToothHistoryErrors, ThrowOnError>({
+    responseTransformer: getToothHistoryResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/history/{patientId}/teeth/{toothNumber}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listPmds = <ThrowOnError extends boolean = false>(options: Options<ListPmdsData, ThrowOnError>) => (options.client ?? client).get<ListPmdsResponses, ListPmdsErrors, ThrowOnError>({
+    responseTransformer: listPmdsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/pmd',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDentalVisit = <ThrowOnError extends boolean = false>(options: Options<GetDentalVisitData, ThrowOnError>) => (options.client ?? client).get<GetDentalVisitResponses, GetDentalVisitErrors, ThrowOnError>({
+    responseTransformer: getDentalVisitResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateDentalVisit = <ThrowOnError extends boolean = false>(options: Options<UpdateDentalVisitData, ThrowOnError>) => (options.client ?? client).patch<UpdateDentalVisitResponses, UpdateDentalVisitErrors, ThrowOnError>({
+    responseTransformer: updateDentalVisitResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listAmendments = <ThrowOnError extends boolean = false>(options: Options<ListAmendmentsData, ThrowOnError>) => (options.client ?? client).get<ListAmendmentsResponses, ListAmendmentsErrors, ThrowOnError>({
+    responseTransformer: listAmendmentsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/amendments',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createAmendment = <ThrowOnError extends boolean = false>(options: Options<CreateAmendmentData, ThrowOnError>) => (options.client ?? client).post<CreateAmendmentResponses, CreateAmendmentErrors, ThrowOnError>({
+    responseTransformer: createAmendmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/amendments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const applyTemplate = <ThrowOnError extends boolean = false>(options: Options<ApplyTemplateData, ThrowOnError>) => (options.client ?? client).post<ApplyTemplateResponses, ApplyTemplateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/apply-template/{templateId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listAttachments = <ThrowOnError extends boolean = false>(options: Options<ListAttachmentsData, ThrowOnError>) => (options.client ?? client).get<ListAttachmentsResponses, ListAttachmentsErrors, ThrowOnError>({
+    responseTransformer: listAttachmentsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/attachments',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createAttachment = <ThrowOnError extends boolean = false>(options: Options<CreateAttachmentData, ThrowOnError>) => (options.client ?? client).post<CreateAttachmentResponses, CreateAttachmentErrors, ThrowOnError>({
+    responseTransformer: createAttachmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/attachments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const deleteAttachment = <ThrowOnError extends boolean = false>(options: Options<DeleteAttachmentData, ThrowOnError>) => (options.client ?? client).delete<DeleteAttachmentResponses, DeleteAttachmentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/attachments/{attachmentId}',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const carryOverTreatments = <ThrowOnError extends boolean = false>(options: Options<CarryOverTreatmentsData, ThrowOnError>) => (options.client ?? client).post<CarryOverTreatmentsResponses, CarryOverTreatmentsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/carry-over',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getDentalChart = <ThrowOnError extends boolean = false>(options: Options<GetDentalChartData, ThrowOnError>) => (options.client ?? client).get<GetDentalChartResponses, GetDentalChartErrors, ThrowOnError>({
+    responseTransformer: getDentalChartResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/chart',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const upsertDentalChart = <ThrowOnError extends boolean = false>(options: Options<UpsertDentalChartData, ThrowOnError>) => (options.client ?? client).post<UpsertDentalChartResponses, UpsertDentalChartErrors, ThrowOnError>({
+    responseTransformer: upsertDentalChartResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/chart',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateTooth = <ThrowOnError extends boolean = false>(options: Options<UpdateToothData, ThrowOnError>) => (options.client ?? client).patch<UpdateToothResponses, UpdateToothErrors, ThrowOnError>({
+    responseTransformer: updateToothResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/chart/teeth/{toothNumber}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listConsentForms = <ThrowOnError extends boolean = false>(options: Options<ListConsentFormsData, ThrowOnError>) => (options.client ?? client).get<ListConsentFormsResponses, ListConsentFormsErrors, ThrowOnError>({
+    responseTransformer: listConsentFormsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/consents',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createConsentForm = <ThrowOnError extends boolean = false>(options: Options<CreateConsentFormData, ThrowOnError>) => (options.client ?? client).post<CreateConsentFormResponses, CreateConsentFormErrors, ThrowOnError>({
+    responseTransformer: createConsentFormResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/consents',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const signConsentForm = <ThrowOnError extends boolean = false>(options: Options<SignConsentFormData, ThrowOnError>) => (options.client ?? client).post<SignConsentFormResponses, SignConsentFormErrors, ThrowOnError>({
+    responseTransformer: signConsentFormResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/consents/{consentId}/sign',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listLabOrders = <ThrowOnError extends boolean = false>(options: Options<ListLabOrdersData, ThrowOnError>) => (options.client ?? client).get<ListLabOrdersResponses, ListLabOrdersErrors, ThrowOnError>({
+    responseTransformer: listLabOrdersResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/lab-orders',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createLabOrder = <ThrowOnError extends boolean = false>(options: Options<CreateLabOrderData, ThrowOnError>) => (options.client ?? client).post<CreateLabOrderResponses, CreateLabOrderErrors, ThrowOnError>({
+    responseTransformer: createLabOrderResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/lab-orders',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateLabOrder = <ThrowOnError extends boolean = false>(options: Options<UpdateLabOrderData, ThrowOnError>) => (options.client ?? client).patch<UpdateLabOrderResponses, UpdateLabOrderErrors, ThrowOnError>({
+    responseTransformer: updateLabOrderResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/lab-orders/{orderId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getVisitNotes = <ThrowOnError extends boolean = false>(options: Options<GetVisitNotesData, ThrowOnError>) => (options.client ?? client).get<GetVisitNotesResponses, GetVisitNotesErrors, ThrowOnError>({
+    responseTransformer: getVisitNotesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/notes',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const upsertVisitNotes = <ThrowOnError extends boolean = false>(options: Options<UpsertVisitNotesData, ThrowOnError>) => (options.client ?? client).post<UpsertVisitNotesResponses, UpsertVisitNotesErrors, ThrowOnError>({
+    responseTransformer: upsertVisitNotesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/notes',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createVisitNoteAddendum = <ThrowOnError extends boolean = false>(options: Options<CreateVisitNoteAddendumData, ThrowOnError>) => (options.client ?? client).post<CreateVisitNoteAddendumResponses, CreateVisitNoteAddendumErrors, ThrowOnError>({
+    responseTransformer: createVisitNoteAddendumResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/notes/addendum',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getVisitNoteHistory = <ThrowOnError extends boolean = false>(options: Options<GetVisitNoteHistoryData, ThrowOnError>) => (options.client ?? client).get<GetVisitNoteHistoryResponses, GetVisitNoteHistoryErrors, ThrowOnError>({
+    responseTransformer: getVisitNoteHistoryResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/notes/history',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const signVisitNotes = <ThrowOnError extends boolean = false>(options: Options<SignVisitNotesData, ThrowOnError>) => (options.client ?? client).post<SignVisitNotesResponses, SignVisitNotesErrors, ThrowOnError>({
+    responseTransformer: signVisitNotesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/notes/sign',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const getPmdForVisit = <ThrowOnError extends boolean = false>(options: Options<GetPmdForVisitData, ThrowOnError>) => (options.client ?? client).get<GetPmdForVisitResponses, GetPmdForVisitErrors, ThrowOnError>({
+    responseTransformer: getPmdForVisitResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/pmd',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const generatePmd = <ThrowOnError extends boolean = false>(options: Options<GeneratePmdData, ThrowOnError>) => (options.client ?? client).post<GeneratePmdResponses, GeneratePmdErrors, ThrowOnError>({
+    responseTransformer: generatePmdResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/pmd',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const exportPmd = <ThrowOnError extends boolean = false>(options: Options<ExportPmdData, ThrowOnError>) => (options.client ?? client).get<ExportPmdResponses, ExportPmdErrors, ThrowOnError>({
+    responseTransformer: exportPmdResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/pmd/export',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listPrescriptions = <ThrowOnError extends boolean = false>(options: Options<ListPrescriptionsData, ThrowOnError>) => (options.client ?? client).get<ListPrescriptionsResponses, ListPrescriptionsErrors, ThrowOnError>({
+    responseTransformer: listPrescriptionsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/prescriptions',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createPrescription = <ThrowOnError extends boolean = false>(options: Options<CreatePrescriptionData, ThrowOnError>) => (options.client ?? client).post<CreatePrescriptionResponses, CreatePrescriptionErrors, ThrowOnError>({
+    responseTransformer: createPrescriptionResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/prescriptions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updatePrescription = <ThrowOnError extends boolean = false>(options: Options<UpdatePrescriptionData, ThrowOnError>) => (options.client ?? client).patch<UpdatePrescriptionResponses, UpdatePrescriptionErrors, ThrowOnError>({
+    responseTransformer: updatePrescriptionResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/prescriptions/{prescriptionId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const listDentalTreatments = <ThrowOnError extends boolean = false>(options: Options<ListDentalTreatmentsData, ThrowOnError>) => (options.client ?? client).get<ListDentalTreatmentsResponses, ListDentalTreatmentsErrors, ThrowOnError>({
+    responseTransformer: listDentalTreatmentsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/treatments',
+    ...options
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const createDentalTreatment = <ThrowOnError extends boolean = false>(options: Options<CreateDentalTreatmentData, ThrowOnError>) => (options.client ?? client).post<CreateDentalTreatmentResponses, CreateDentalTreatmentErrors, ThrowOnError>({
+    responseTransformer: createDentalTreatmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/treatments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Operation requires role: 'user'
+ */
+export const updateDentalTreatment = <ThrowOnError extends boolean = false>(options: Options<UpdateDentalTreatmentData, ThrowOnError>) => (options.client ?? client).patch<UpdateDentalTreatmentResponses, UpdateDentalTreatmentErrors, ThrowOnError>({
+    responseTransformer: updateDentalTreatmentResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/dental/visits/{visitId}/treatments/{treatmentId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * List email queue with filtering and pagination Requires role: 'admin'
  */
 export const listEmailQueueItems = <ThrowOnError extends boolean = false>(options?: Options<ListEmailQueueItemsData, ThrowOnError>) => (options?.client ?? client).get<ListEmailQueueItemsResponses, ListEmailQueueItemsErrors, ThrowOnError>({
@@ -642,6 +2068,74 @@ export const testEmailTemplate = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
+ * List consultations. Results are automatically filtered by role: providers see their own consultations, patients see their own consultations, admins see all. Requires role: 'provider', 'admin', 'patient'
+ */
+export const listConsultations = <ThrowOnError extends boolean = false>(options?: Options<ListConsultationsData, ThrowOnError>) => (options?.client ?? client).get<ListConsultationsResponses, ListConsultationsErrors, ThrowOnError>({
+    responseTransformer: listConsultationsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/consultations',
+    ...options
+});
+
+/**
+ * Create consultation note. Requires role: 'provider'
+ */
+export const createConsultation = <ThrowOnError extends boolean = false>(options: Options<CreateConsultationData, ThrowOnError>) => (options.client ?? client).post<CreateConsultationResponses, CreateConsultationErrors, ThrowOnError>({
+    responseTransformer: createConsultationResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/consultations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get consultation note. Requires role: 'admin', 'provider:owner', 'patient:owner'
+ */
+export const getConsultation = <ThrowOnError extends boolean = false>(options: Options<GetConsultationData, ThrowOnError>) => (options.client ?? client).get<GetConsultationResponses, GetConsultationErrors, ThrowOnError>({
+    responseTransformer: getConsultationResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/consultations/{consultation}',
+    ...options
+});
+
+/**
+ * Update consultation note. Requires role: 'provider:owner'
+ */
+export const updateConsultation = <ThrowOnError extends boolean = false>(options: Options<UpdateConsultationData, ThrowOnError>) => (options.client ?? client).patch<UpdateConsultationResponses, UpdateConsultationErrors, ThrowOnError>({
+    responseTransformer: updateConsultationResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/consultations/{consultation}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Finalize consultation note. Requires role: 'provider:owner'
+ */
+export const finalizeConsultation = <ThrowOnError extends boolean = false>(options: Options<FinalizeConsultationData, ThrowOnError>) => (options.client ?? client).post<FinalizeConsultationResponses, FinalizeConsultationErrors, ThrowOnError>({
+    responseTransformer: finalizeConsultationResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/consultations/{consultation}/finalize',
+    ...options
+});
+
+/**
+ * List patients who have consultations with the current authenticated provider. Results are automatically filtered to the current provider. Requires role: 'provider', 'admin'
+ */
+export const listEmrPatients = <ThrowOnError extends boolean = false>(options?: Options<ListEmrPatientsData, ThrowOnError>) => (options?.client ?? client).get<ListEmrPatientsResponses, ListEmrPatientsErrors, ThrowOnError>({
+    responseTransformer: listEmrPatientsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emr/patients',
+    ...options
+});
+
+/**
  * List user notifications with filtering and pagination. Requires role: 'user', 'admin'
  */
 export const listNotifications = <ThrowOnError extends boolean = false>(options?: Options<ListNotificationsData, ThrowOnError>) => (options?.client ?? client).get<ListNotificationsResponses, ListNotificationsErrors, ThrowOnError>({
@@ -678,6 +2172,89 @@ export const markNotificationAsRead = <ThrowOnError extends boolean = false>(opt
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/notifs/{notif}/read',
     ...options
+});
+
+/**
+ * List patients with optional filtering by name, birth date, gender, MRN, or active status. Requires role: 'admin', 'clinician', 'support', 'user'
+ */
+export const listPatients = <ThrowOnError extends boolean = false>(options?: Options<ListPatientsData, ThrowOnError>) => (options?.client ?? client).get<ListPatientsResponses, ListPatientsErrors, ThrowOnError>({
+    responseTransformer: listPatientsResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/patients',
+    ...options
+});
+
+/**
+ * Create a new patient record. Requires role: 'admin', 'clinician', 'registrar', 'user'
+ */
+export const createPatient = <ThrowOnError extends boolean = false>(options: Options<CreatePatientData, ThrowOnError>) => (options.client ?? client).post<CreatePatientResponses, CreatePatientErrors, ThrowOnError>({
+    responseTransformer: createPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/patients',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Merge two patient records. The source patient record is marked as replaced and all references are updated to point to the target patient. Requires role: 'admin'
+ */
+export const mergePatients = <ThrowOnError extends boolean = false>(options: Options<MergePatientsData, ThrowOnError>) => (options.client ?? client).post<MergePatientsResponses, MergePatientsErrors, ThrowOnError>({
+    responseTransformer: mergePatientsResponseTransformer,
+    url: '/patients/merge',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Unmerge previously merged patient records. Reverses a merge operation and restores the source patient record. Requires role: 'admin'
+ */
+export const unmergePatients = <ThrowOnError extends boolean = false>(options: Options<UnmergePatientsData, ThrowOnError>) => (options.client ?? client).post<UnmergePatientsResponses, UnmergePatientsErrors, ThrowOnError>({
+    responseTransformer: unmergePatientsResponseTransformer,
+    url: '/patients/unmerge',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Deactivate a patient record (sets active=false). Records are retained for audit and legal purposes. Requires role: 'admin', 'registrar', 'user'
+ */
+export const deactivatePatient = <ThrowOnError extends boolean = false>(options: Options<DeactivatePatientData, ThrowOnError>) => (options.client ?? client).delete<DeactivatePatientResponses, DeactivatePatientErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/patients/{id}',
+    ...options
+});
+
+/**
+ * Retrieve a single patient record by ID. Requires role: 'admin', 'clinician', 'support', 'user', 'patient:owner'
+ */
+export const getPatient = <ThrowOnError extends boolean = false>(options: Options<GetPatientData, ThrowOnError>) => (options.client ?? client).get<GetPatientResponses, GetPatientErrors, ThrowOnError>({
+    responseTransformer: getPatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/patients/{id}',
+    ...options
+});
+
+/**
+ * Update an existing patient record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'clinician', 'registrar', 'user', 'patient:owner'
+ */
+export const updatePatient = <ThrowOnError extends boolean = false>(options: Options<UpdatePatientData, ThrowOnError>) => (options.client ?? client).patch<UpdatePatientResponses, UpdatePatientErrors, ThrowOnError>({
+    responseTransformer: updatePatientResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/patients/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -721,6 +2298,120 @@ export const updatePerson = <ThrowOnError extends boolean = false>(options: Opti
     responseTransformer: updatePersonResponseTransformer,
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/persons/{person}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List practitioner roles with optional filtering by practitioner, organization, specialty, or location. Requires role: 'admin', 'clinician', 'support'
+ */
+export const listPractitionerRoles = <ThrowOnError extends boolean = false>(options?: Options<ListPractitionerRolesData, ThrowOnError>) => (options?.client ?? client).get<ListPractitionerRolesResponses, ListPractitionerRolesErrors, ThrowOnError>({
+    responseTransformer: listPractitionerRolesResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioner-roles',
+    ...options
+});
+
+/**
+ * Create a new practitioner role assignment linking a practitioner to an organization. Requires role: 'admin', 'credentialing'
+ */
+export const createPractitionerRole = <ThrowOnError extends boolean = false>(options: Options<CreatePractitionerRoleData, ThrowOnError>) => (options.client ?? client).post<CreatePractitionerRoleResponses, CreatePractitionerRoleErrors, ThrowOnError>({
+    responseTransformer: createPractitionerRoleResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioner-roles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Deactivate a practitioner role record (sets active=false). Requires role: 'admin'
+ */
+export const deactivatePractitionerRole = <ThrowOnError extends boolean = false>(options: Options<DeactivatePractitionerRoleData, ThrowOnError>) => (options.client ?? client).delete<DeactivatePractitionerRoleResponses, DeactivatePractitionerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioner-roles/{id}',
+    ...options
+});
+
+/**
+ * Retrieve a single practitioner role record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ */
+export const getPractitionerRole = <ThrowOnError extends boolean = false>(options: Options<GetPractitionerRoleData, ThrowOnError>) => (options.client ?? client).get<GetPractitionerRoleResponses, GetPractitionerRoleErrors, ThrowOnError>({
+    responseTransformer: getPractitionerRoleResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioner-roles/{id}',
+    ...options
+});
+
+/**
+ * Update a practitioner role record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ */
+export const updatePractitionerRole = <ThrowOnError extends boolean = false>(options: Options<UpdatePractitionerRoleData, ThrowOnError>) => (options.client ?? client).patch<UpdatePractitionerRoleResponses, UpdatePractitionerRoleErrors, ThrowOnError>({
+    responseTransformer: updatePractitionerRoleResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioner-roles/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List practitioners with optional filtering by name, specialty, location, or NPI. Requires role: 'admin', 'clinician', 'support'
+ */
+export const listPractitioners = <ThrowOnError extends boolean = false>(options?: Options<ListPractitionersData, ThrowOnError>) => (options?.client ?? client).get<ListPractitionersResponses, ListPractitionersErrors, ThrowOnError>({
+    responseTransformer: listPractitionersResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioners',
+    ...options
+});
+
+/**
+ * Register a new practitioner. Requires role: 'admin', 'credentialing'
+ */
+export const createPractitioner = <ThrowOnError extends boolean = false>(options: Options<CreatePractitionerData, ThrowOnError>) => (options.client ?? client).post<CreatePractitionerResponses, CreatePractitionerErrors, ThrowOnError>({
+    responseTransformer: createPractitionerResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioners',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Deactivate a practitioner record (sets active=false). Records are retained for audit and legal purposes. Requires role: 'admin'
+ */
+export const deactivatePractitioner = <ThrowOnError extends boolean = false>(options: Options<DeactivatePractitionerData, ThrowOnError>) => (options.client ?? client).delete<DeactivatePractitionerResponses, DeactivatePractitionerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioners/{id}',
+    ...options
+});
+
+/**
+ * Retrieve a single practitioner record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ */
+export const getPractitioner = <ThrowOnError extends boolean = false>(options: Options<GetPractitionerData, ThrowOnError>) => (options.client ?? client).get<GetPractitionerResponses, GetPractitionerErrors, ThrowOnError>({
+    responseTransformer: getPractitionerResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioners/{id}',
+    ...options
+});
+
+/**
+ * Update a practitioner record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ */
+export const updatePractitioner = <ThrowOnError extends boolean = false>(options: Options<UpdatePractitionerData, ThrowOnError>) => (options.client ?? client).patch<UpdatePractitionerResponses, UpdatePractitionerErrors, ThrowOnError>({
+    responseTransformer: updatePractitionerResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/providers/practitioners/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -831,5 +2522,50 @@ export const getFileDownload = <ThrowOnError extends boolean = false>(options: O
     responseTransformer: getFileDownloadResponseTransformer,
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/storage/files/{file}/download',
+    ...options
+});
+
+/**
+ * Initiate multipart upload — Step 1 for files > 50MB. Returns fileId and uploadId. Use fileId as {file} path param in subsequent part-url and complete/abort calls. Requires role: 'user'
+ */
+export const initiateMultipartUpload = <ThrowOnError extends boolean = false>(options: Options<InitiateMultipartUploadData, ThrowOnError>) => (options.client ?? client).post<InitiateMultipartUploadResponses, InitiateMultipartUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/storage/multipart/initiate',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Abort multipart upload — cancels in-progress upload and removes all uploaded parts from S3 to avoid storage charges. Requires role: 'user:owner'
+ */
+export const abortMultipartUpload = <ThrowOnError extends boolean = false>(options: Options<AbortMultipartUploadData, ThrowOnError>) => (options.client ?? client).delete<AbortMultipartUploadResponses, AbortMultipartUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/storage/multipart/{file}/abort',
+    ...options
+});
+
+/**
+ * Complete multipart upload — submit all part ETags. S3 assembles the parts; file status moves to available. Requires role: 'user:owner'
+ */
+export const completeMultipartUpload = <ThrowOnError extends boolean = false>(options: Options<CompleteMultipartUploadData, ThrowOnError>) => (options.client ?? client).post<CompleteMultipartUploadResponses, CompleteMultipartUploadErrors, ThrowOnError>({
+    responseTransformer: completeMultipartUploadResponseTransformer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/storage/multipart/{file}/complete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get presigned URL for a single part. Call once per part (1-based partNumber). Client PUTs the chunk to partUrl, then records the ETag from the response header. Requires role: 'user:owner'
+ */
+export const generateMultipartPartUrl = <ThrowOnError extends boolean = false>(options: Options<GenerateMultipartPartUrlData, ThrowOnError>) => (options.client ?? client).get<GenerateMultipartPartUrlResponses, GenerateMultipartPartUrlErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/storage/multipart/{file}/part-url',
     ...options
 });

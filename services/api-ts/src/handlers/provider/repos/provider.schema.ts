@@ -39,6 +39,13 @@ export type NewProvider = typeof providers.$inferInsert;
 
 // Provider type enum - matches TypeSpec
 export type ProviderType =
+  | 'dentist'
+  | 'hygienist'
+  | 'orthodontist'
+  | 'endodontist'
+  | 'periodontist'
+  | 'oral_surgeon'
+  | 'pediatric_dentist'
   | 'pharmacist'
   | 'other';
 

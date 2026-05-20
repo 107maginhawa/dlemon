@@ -7,7 +7,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import type { ToothChartState } from './repos/dental-chart.schema';
 import { VisitRepository } from './repos/visit.repo';
@@ -29,7 +29,7 @@ export async function upsertDentalChart(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new DentalChartRepository(db);
 

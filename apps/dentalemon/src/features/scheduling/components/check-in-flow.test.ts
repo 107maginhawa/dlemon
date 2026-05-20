@@ -39,19 +39,19 @@ describe('CheckInFlow — canCheckIn', () => {
     expect(canCheckIn({ status: 'scheduled' })).toBe(true);
   });
 
-  test('canCheckIn({ status: "checkedIn" }) === false', () => {
-    expect(canCheckIn({ status: 'checkedIn' })).toBe(false);
+  test('canCheckIn({ status: "checked_in" }) === false', () => {
+    expect(canCheckIn({ status: 'checked_in' })).toBe(false);
   });
 });
 
 describe('CheckInFlow — parseCheckInResponse', () => {
-  test('returns visitId and appointment', () => {
+  test('returns visitId and appointment', () => { // [BR-004]
     const response: CheckInResponse = {
-      appointment: { id: 'a-1', status: 'checkedIn' },
+      appointment: { id: 'a-1', status: 'checked_in' },
       visitId: 'v-1',
     };
     const result = parseCheckInResponse(response);
     expect(result.visitId).toBe('v-1');
-    expect(result.appointment).toEqual({ id: 'a-1', status: 'checkedIn' });
+    expect(result.appointment).toEqual({ id: 'a-1', status: 'checked_in' });
   });
 });

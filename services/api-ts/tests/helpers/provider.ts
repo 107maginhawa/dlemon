@@ -63,7 +63,9 @@ const PRACTICE_LOCATIONS = [
 export function generateTestProviderData(overrides: Partial<ProviderCreateRequest> = {}): ProviderCreateRequest {
   const personData = generateTestPersonData();
   const providerTypes: ProviderType[] = [
-    'pharmacist', 'other'
+    'dentist', 'hygienist', 'orthodontist', 'endodontist',
+    'periodontist', 'oral_surgeon', 'pediatric_dentist',
+    'pharmacist', 'other',
   ];
   
   return {

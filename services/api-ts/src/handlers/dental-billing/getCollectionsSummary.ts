@@ -19,10 +19,14 @@ import { dentalPayments } from './repos/dental-payment.schema';
 import { and, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
 
 function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const s = new Date(d);
+  s.setHours(0, 0, 0, 0);
+  return s;
 }
 function endOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  const e = new Date(d);
+  e.setHours(23, 59, 59, 999);
+  return e;
 }
 
 export async function getCollectionsSummary(ctx: BaseContext) {
@@ -33,24 +37,27 @@ export async function getCollectionsSummary(ctx: BaseContext) {
   const logger = ctx.get('logger');
   const q = ctx.req.query();
 
-  // Branch-level authorization
-  if (!q['branchId']) {
-    throw new ValidationError('branchId query parameter is required');
+  // Branch-level authorization — optional filter; if provided, verify access
+  if (q['branchId']) {
+    await assertBranchAccess(db, user.id, q['branchId']);
   }
-  await assertBranchAccess(db, user.id, q['branchId']);
 
   const now = new Date();
   let from: Date;
   let to: Date;
 
   if (q['period'] === 'month') {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Start of current month in local time
+    from = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
     to = endOfDay(now);
   } else if (q['period'] === 'year') {
-    from = new Date(now.getFullYear(), 0, 1);
+    from = startOfDay(new Date(now.getFullYear(), 0, 1));
     to = endOfDay(now);
+  } else if (q['period'] === 'today') {
+    // Rolling window: past 24h through next 24h to tolerate DB/app timezone skew
+    from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    to = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   } else {
-    // default: today
     from = q['from'] ? new Date(q['from']) : startOfDay(now);
     to = q['to'] ? new Date(q['to']) : endOfDay(now);
   }

@@ -8,9 +8,8 @@
  *      POST /dental/billing/invoices
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
+import { createDentalInvoice } from '@monobase/sdk-ts/generated';
 
 export interface WorkspaceInvoice {
   id: string;
@@ -26,47 +25,21 @@ export interface WorkspaceInvoice {
   createdAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Fetch
-// ---------------------------------------------------------------------------
-
-async function fetchPatientInvoices(patientId: string): Promise<WorkspaceInvoice[]> {
-  const url = `${API}/dental/billing/invoices?patientId=${encodeURIComponent(patientId)}`;
-  const res = await fetch(url, { credentials: 'include' });
-  if (!res.ok) throw new Error(`Failed to load invoices (${res.status})`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.invoices ?? data.data ?? []);
-}
-
-// ---------------------------------------------------------------------------
-// Create invoice
-// ---------------------------------------------------------------------------
-
 export interface CreateInvoiceInput {
   patientId: string;
   visitId?: string;
   dueDate?: string;
 }
 
-async function createInvoice(input: CreateInvoiceInput): Promise<WorkspaceInvoice> {
-  const res = await fetch(`${API}/dental/billing/invoices`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw new Error(`Failed to create invoice (${res.status})`);
-  return res.json();
-}
-
-// ---------------------------------------------------------------------------
-// Hooks
-// ---------------------------------------------------------------------------
-
 export function usePatientInvoices(patientId: string | null) {
   return useQuery({
-    queryKey: ['workspace-invoices', patientId],
-    queryFn: () => fetchPatientInvoices(patientId!),
+    ...listDentalInvoicesOptions({ query: { patientId: patientId ?? undefined } }),
+    select: (data) => {
+      if (Array.isArray(data)) return data as unknown as WorkspaceInvoice[];
+      const obj = data as Record<string, unknown>;
+      const items = obj.data ?? obj.invoices ?? [];
+      return (Array.isArray(items) ? items : []) as unknown as WorkspaceInvoice[];
+    },
     enabled: Boolean(patientId),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
@@ -76,12 +49,12 @@ export function usePatientInvoices(patientId: string | null) {
 export function useCreateInvoice(patientId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateInvoiceInput) => createInvoice(input),
+    mutationFn: async (input: CreateInvoiceInput) => {
+      const { data } = await createDentalInvoice({ body: input as Parameters<typeof createDentalInvoice>[0]['body'], throwOnError: true } as any);
+      return data as unknown as WorkspaceInvoice;
+    },
     onSuccess: () => {
-      // Invalidate both the workspace-scoped key and the billing list key so
-      // PAY-02 status banner updates immediately after invoice creation
-      qc.invalidateQueries({ queryKey: ['workspace-invoices', patientId] });
-      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: listDentalInvoicesQueryKey({ query: { patientId: patientId ?? undefined } }) });
     },
   });
 }

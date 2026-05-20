@@ -35,11 +35,11 @@ enum DentalInvoiceStatus {
 enum PaymentMethod {
   cash,
   card,
-  bankTransfer,
+  bank_transfer,
 }
 
 enum PaymentPlanStatus {
-  onTrack,
+  on_track,
   behind,
   completed,
   defaulted,
@@ -177,6 +177,31 @@ model ApplyDentalDiscountRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Response Models (Billing Extras)
+// ---------------------------------------------------------------------------
+
+model PatientBalanceResponse {
+  patientId: UUID;
+  balanceCents: int32;
+  overdueInvoices: int32;
+}
+
+model CollectionsSummaryResponse {
+  totalCollectedCents: int32;
+  period: string;
+  invoiceCount: int32;
+}
+
+model DentalPaymentReceiptResponse {
+  receiptNumber: string;
+  amountCents: int32;
+  method: PaymentMethod;
+  paidAt: utcDateTime;
+  invoiceId: UUID;
+  patientId: UUID;
+}
+
+// ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
 
@@ -202,7 +227,7 @@ namespace DentalBillingModule {
       @query patientId?: UUID,
       @query branchId?: UUID,
       @query status?: DentalInvoiceStatus
-    ): ApiOkResponse<DentalInvoice[]>
+    ): ApiOkResponse<PaginatedResponse<DentalInvoice>>
       | ApiUnauthorizedResponse;
 
     @get
@@ -260,7 +285,7 @@ namespace DentalBillingModule {
     @operationId("listDentalPayments")
     listPayments(
       @path invoiceId: UUID
-    ): ApiOkResponse<DentalPayment[]>
+    ): ApiOkResponse<PaginatedResponse<DentalPayment>>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
@@ -312,6 +337,42 @@ namespace DentalBillingModule {
     getPaymentPlan(
       @path invoiceId: UUID
     ): ApiOkResponse<DentalPaymentPlan>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface BillingExtras {
+    @get
+    @route("/patients/{patientId}/balance")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getPatientBalance")
+    getPatientBalance(
+      @path patientId: UUID
+    ): ApiOkResponse<PatientBalanceResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/collections/summary")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getCollectionsSummary")
+    getCollectionsSummary(
+      @query branchId?: UUID,
+      @query period?: string
+    ): ApiOkResponse<CollectionsSummaryResponse>
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/invoices/{invoiceId}/payments/{paymentId}/receipt")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getDentalPaymentReceipt")
+    getDentalPaymentReceipt(
+      @path invoiceId: UUID,
+      @path paymentId: UUID
+    ): ApiOkResponse<DentalPaymentReceiptResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

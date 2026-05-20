@@ -19,7 +19,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: monobase-test-minio
     command: server /data --console-address ":9001"
     environment:
@@ -40,7 +40,7 @@ services:
       - minio_data:/data
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.21.0
     container_name: monobase-test-mailpit
     ports:
       - "1025:1025"  # SMTP server
@@ -54,7 +54,7 @@ services:
       - test-network
 
   stripe-mock:
-    image: stripe/stripe-mock:latest
+    image: stripe/stripe-mock:v0.193.0
     container_name: monobase-test-stripe-mock
     ports:
       - "12111:12111"  # HTTP

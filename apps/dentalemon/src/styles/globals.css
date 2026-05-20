@@ -48,12 +48,16 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 47 100% 74%;
 
-    /* Dental chart colors */
+    /* Dental chart colors — Apple HIG system colors */
+    --dental-healthy: #dcfce7;
     --dental-caries: #FF3B30;
     --dental-fractured: #FF9500;
     --dental-filled: #5AC8FA;
-    --dental-crown: #FFE97D;
+    --dental-crown: #FFD60A;
     --dental-missing: #C7C7CC;
+    --dental-implant: #007AFF;
+    --dental-extracted: #111111;
+    --dental-watchlist: #fef9c3;
 
     /* Semantic */
     --success: #34C759;
@@ -185,6 +189,27 @@
     transform: none !important;
     opacity: 1 !important;
   }
+}
+
+/* Dental chart carousel — responsive slide sizing for coverflow */
+.dental-swiper {
+  width: 100%;
+  padding: 20px 4vw 48px;
+}
+
+.dental-swiper .swiper-slide {
+  width: 75%;
+  max-width: 920px;
+  height: 560px;
+}
+
+.dental-swiper .swiper-pagination-bullet {
+  background: #C7C7CC;
+  opacity: 1;
+}
+
+.dental-swiper .swiper-pagination-bullet-active {
+  background: #007AFF;
 }
 
 /* Print styles — receipts, prescriptions, consent forms, invoices, treatment plans */

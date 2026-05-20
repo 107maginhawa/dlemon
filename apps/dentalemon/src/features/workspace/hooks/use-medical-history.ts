@@ -7,9 +7,14 @@
  *   PATCH /dental/clinical/medical-history/{entryId}  → update entry (toggle active, add notes)
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
-
-const API = apiBaseUrl;
+import {
+  listMedicalHistoryOptions,
+  listMedicalHistoryQueryKey,
+} from '@monobase/sdk-ts/generated/react-query';
+import {
+  createMedicalHistoryEntry,
+  updateMedicalHistoryEntry,
+} from '@monobase/sdk-ts/generated';
 
 export type MedicalHistoryEntryType =
   | 'condition'
@@ -17,7 +22,7 @@ export type MedicalHistoryEntryType =
   | 'allergy'
   | 'procedure'
   | 'vaccination'
-  | 'familyHistory';
+  | 'family_history';
 
 export interface MedicalHistoryEntry {
   id: string;
@@ -51,48 +56,19 @@ export interface UpdateEntryInput {
 }
 
 export function medicalHistoryKey(patientId: string) {
-  return ['medical-history', patientId] as const;
-}
-
-async function fetchMedicalHistory(patientId: string): Promise<MedicalHistoryEntry[]> {
-  const res = await fetch(
-    `${API}/dental/clinical/medical-history?patientId=${encodeURIComponent(patientId)}&limit=200`,
-    { credentials: 'include' },
-  );
-  if (!res.ok) throw new Error(`Failed to load medical history (${res.status})`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.items ?? []);
-}
-
-async function createEntry(input: CreateEntryInput): Promise<MedicalHistoryEntry> {
-  const res = await fetch(`${API}/dental/clinical/medical-history`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw new Error(`Failed to create entry (${res.status})`);
-  return res.json();
-}
-
-async function updateEntry(entryId: string, patch: UpdateEntryInput): Promise<MedicalHistoryEntry> {
-  const res = await fetch(`${API}/dental/clinical/medical-history/${entryId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(patch),
-  });
-  if (!res.ok) throw new Error(`Failed to update entry (${res.status})`);
-  return res.json();
+  return listMedicalHistoryQueryKey({ query: { patientId } });
 }
 
 export function useMedicalHistory(patientId: string) {
   const query = useQuery({
-    queryKey: medicalHistoryKey(patientId),
-    queryFn: () => fetchMedicalHistory(patientId),
+    ...listMedicalHistoryOptions({ query: { patientId } }),
     enabled: !!patientId,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    select: (data) => {
+      const raw = data as unknown as { data?: MedicalHistoryEntry[] } | MedicalHistoryEntry[];
+      return Array.isArray(raw) ? raw : (raw?.data ?? []);
+    },
   });
 
   return {
@@ -105,22 +81,40 @@ export function useMedicalHistory(patientId: string) {
 export function useMedicalHistoryMutations(patientId: string) {
   const queryClient = useQueryClient();
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: medicalHistoryKey(patientId) });
+    queryClient.invalidateQueries({ queryKey: listMedicalHistoryQueryKey({ query: { patientId } }) });
 
   const addMutation = useMutation({
-    mutationFn: (input: CreateEntryInput) => createEntry(input),
+    mutationFn: async (input: CreateEntryInput): Promise<MedicalHistoryEntry> => {
+      const { data } = await createMedicalHistoryEntry({
+        body: input as Parameters<typeof createMedicalHistoryEntry>[0]['body'],
+        throwOnError: true,
+      });
+      return data as unknown as MedicalHistoryEntry;
+    },
     onSuccess: invalidate,
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ entryId, active }: { entryId: string; active: boolean }) =>
-      updateEntry(entryId, { active }),
+    mutationFn: async ({ entryId, active }: { entryId: string; active: boolean }): Promise<MedicalHistoryEntry> => {
+      const { data } = await updateMedicalHistoryEntry({
+        path: { entryId },
+        body: { active } as Parameters<typeof updateMedicalHistoryEntry>[0]['body'],
+        throwOnError: true,
+      });
+      return data as unknown as MedicalHistoryEntry;
+    },
     onSuccess: invalidate,
   });
 
   const updateNotesMutation = useMutation({
-    mutationFn: ({ entryId, patch }: { entryId: string; patch: UpdateEntryInput }) =>
-      updateEntry(entryId, patch),
+    mutationFn: async ({ entryId, patch }: { entryId: string; patch: UpdateEntryInput }): Promise<MedicalHistoryEntry> => {
+      const { data } = await updateMedicalHistoryEntry({
+        path: { entryId },
+        body: patch as Parameters<typeof updateMedicalHistoryEntry>[0]['body'],
+        throwOnError: true,
+      });
+      return data as unknown as MedicalHistoryEntry;
+    },
     onSuccess: invalidate,
   });
 

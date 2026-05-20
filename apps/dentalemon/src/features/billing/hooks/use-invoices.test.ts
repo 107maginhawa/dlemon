@@ -6,32 +6,13 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { useInvoices } from './use-invoices';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 
-function freshClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
-function makeWrapper(qc: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: qc }, children);
-}
-
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
 
 const mockInvoices = [
   { id: 'inv1', invoiceNumber: 'INV-001', patientId: 'p1', patientName: 'Maria Santos', totalCents: 50000, paidCents: 0, balanceCents: 50000, status: 'issued', createdAt: '2026-05-01T00:00:00Z' },
@@ -50,7 +31,8 @@ describe('useInvoices', () => {
   });
 
   test('returns invoices on success', async () => {
-    global.fetch = mock(() => jsonResponse(mockInvoices));
+    // SDK transformer expects { data: [...] } shape — bare array crashes the transformer
+    global.fetch = mock(() => jsonResponse({ data: mockInvoices }));
     const qc = freshClient();
     const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

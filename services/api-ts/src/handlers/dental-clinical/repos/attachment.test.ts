@@ -3,11 +3,8 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { AttachmentRepository } from './attachment.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
 
 const VISIT_1   = 'e3000000-0000-4000-8000-000000000001';
 const PATIENT_1 = 'e3000000-0000-4000-8000-000000000010';
@@ -24,12 +21,15 @@ const baseAttachment = {
 
 describe('AttachmentRepository', () => {
   let repo: AttachmentRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new AttachmentRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_attachment CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new AttachmentRepository(db);
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates an attachment with required fields', async () => {
@@ -59,10 +59,10 @@ describe('AttachmentRepository', () => {
     });
   });
 
-  describe('deleteById', () => {
-    test('deletes an existing attachment and returns true', async () => {
+  describe('softDelete', () => {
+    test('soft-deletes an existing attachment and returns true', async () => {
       const att = await repo.createOne(baseAttachment);
-      const deleted = await repo.deleteById(att.id);
+      const deleted = await repo.softDelete(att.id);
       expect(deleted).toBe(true);
 
       const found = await repo.findOneById(att.id);
@@ -70,8 +70,16 @@ describe('AttachmentRepository', () => {
     });
 
     test('returns false for unknown id', async () => {
-      const deleted = await repo.deleteById('00000000-0000-4000-8000-000000000000');
+      const deleted = await repo.softDelete('00000000-0000-4000-8000-000000000000');
       expect(deleted).toBe(false);
+    });
+
+    test('soft-deleted attachment excluded from findMany', async () => {
+      const att = await repo.createOne(baseAttachment);
+      await repo.softDelete(att.id);
+
+      const results = await repo.findMany({ visitId: att.visitId });
+      expect(results).toHaveLength(0);
     });
   });
 

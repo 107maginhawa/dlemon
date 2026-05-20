@@ -17,14 +17,72 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
+# 0a. Create a dental organization
+POST {{api}}/dental/organizations
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Clinical Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.id"
+
+
+# 0b. Create a branch
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Test Street",
+  "city": "Manila",
+  "phone": "+639001234568"
+}
+HTTP 201
+[Captures]
+branch_id: jsonpath "$.id"
+
+
+# 0c. Create branch membership for this user (grants branch access)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Clinical Tester",
+  "role": "dentist_owner",
+  "personId": "{{user_id}}"
+}
+HTTP 201
+[Captures]
+dentist_member_id: jsonpath "$.id"
+
+
+# 0d. Create a dental patient
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Clinical Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+patient_id: jsonpath "$.id"
+
+
 # 1. Create a dental visit (needed for FK)
 POST {{api}}/dental/visits
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f1000000-0000-4000-8000-000000000001",
-  "branchId": "f1000000-0000-4000-8000-000000000002",
-  "dentistMemberId": "f1000000-0000-4000-8000-000000000003"
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
 }
 HTTP 201
 [Captures]
@@ -41,8 +99,8 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f1000000-0000-4000-8000-000000000001",
-  "prescriberMemberId": "f1000000-0000-4000-8000-000000000010",
+  "patientId": "{{patient_id}}",
+  "prescriberMemberId": "{{dentist_member_id}}",
   "drugName": "Amoxicillin",
   "dosage": "500mg",
   "frequency": "TID",
@@ -63,7 +121,7 @@ GET {{api}}/dental/visits/{{visit_id}}/prescriptions
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 4. Update prescription
@@ -91,7 +149,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f1000000-0000-4000-8000-000000000001",
+  "patientId": "{{patient_id}}",
   "templateId": "tpl-general-consent",
   "templateName": "General Dental Consent"
 }
@@ -108,7 +166,7 @@ GET {{api}}/dental/visits/{{visit_id}}/consents
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 7. Sign consent form
@@ -144,7 +202,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f1000000-0000-4000-8000-000000000001",
+  "patientId": "{{patient_id}}",
   "imageType": "xray",
   "toothNumbers": [21, 22],
   "fileName": "tooth-21-periapical.jpg",
@@ -166,7 +224,7 @@ GET {{api}}/dental/visits/{{visit_id}}/attachments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 11. Delete attachment
@@ -180,7 +238,7 @@ GET {{api}}/dental/visits/{{visit_id}}/attachments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.total" == 0
+jsonpath "$.pagination.totalCount" == 0
 
 
 # ============================================================
@@ -193,7 +251,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f1000000-0000-4000-8000-000000000001",
+  "patientId": "{{patient_id}}",
   "labName": "Precision Dental Lab",
   "description": "PFM Crown tooth 21",
   "expectedDeliveryDate": "2025-12-01T00:00:00Z"
@@ -211,7 +269,7 @@ GET {{api}}/dental/visits/{{visit_id}}/lab-orders
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 15. Advance to inFabrication
@@ -219,11 +277,11 @@ PATCH {{api}}/dental/visits/{{visit_id}}/lab-orders/{{order_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "status": "inFabrication"
+  "status": "in_fabrication"
 }
 HTTP 200
 [Asserts]
-jsonpath "$.status" == "inFabrication"
+jsonpath "$.status" == "in_fabrication"
 
 
 # 16. Invalid transition: inFabrication → fitted (skip)
@@ -271,7 +329,7 @@ POST {{api}}/dental/clinical/medical-history
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "f1000000-0000-4000-8000-000000000001",
+  "patientId": "{{patient_id}}",
   "entryType": "condition",
   "displayName": "Hypertension",
   "codeSystem": "ICD-10",
@@ -287,11 +345,11 @@ jsonpath "$.code" == "I10"
 
 
 # 20. List medical history for patient
-GET {{api}}/dental/clinical/medical-history?patientId=f1000000-0000-4000-8000-000000000001
+GET {{api}}/dental/clinical/medical-history?patientId={{patient_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 21. Update medical history entry (mark resolved)
@@ -319,7 +377,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "f1000000-0000-4000-8000-000000000001",
+  "patientId": "{{patient_id}}",
   "originalRecordType": "treatment",
   "originalRecordId": "f1000000-0000-4000-8000-000000000099",
   "reason": "Documentation error",
@@ -338,4 +396,4 @@ GET {{api}}/dental/visits/{{visit_id}}/amendments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.items" count >= 1
+jsonpath "$.data" count >= 1

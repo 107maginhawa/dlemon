@@ -13,7 +13,7 @@ describe('Chat room WebSocket config', () => {
   });
 
   test('has description', () => {
-    expect(config.description).toBeTruthy();
+    expect(config.description!.length).toBeGreaterThan(0);
     expect(typeof config.description).toBe('string');
   });
 

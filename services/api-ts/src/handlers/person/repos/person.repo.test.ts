@@ -40,7 +40,7 @@ const mockLogger = { debug: () => {}, info: () => {}, warn: () => {}, error: () 
 describe('PersonRepository', () => {
   test('constructs without error', () => {
     const repo = new PersonRepository(mockDb, mockLogger);
-    expect(repo).toBeDefined();
+    expect(repo).not.toBeNull();
   });
 
   test('PersonFilters supports firstName filter', () => {

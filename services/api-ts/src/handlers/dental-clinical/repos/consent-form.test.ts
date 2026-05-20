@@ -7,11 +7,8 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { ConsentFormRepository } from './consent-form.repo';
-import { createDatabase } from '@/core/database';
-
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+import { openTestTx } from '@/core/test-tx';
 
 const VISIT_1   = 'e2000000-0000-4000-8000-000000000001';
 const PATIENT_1 = 'e2000000-0000-4000-8000-000000000010';
@@ -25,12 +22,15 @@ const baseForm = {
 
 describe('ConsentFormRepository', () => {
   let repo: ConsentFormRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new ConsentFormRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE consent_form CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new ConsentFormRepository(db);
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates an unsigned form by default', async () => {

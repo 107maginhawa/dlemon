@@ -61,10 +61,10 @@ export function groupAppointmentsByStatus(appointments: { status: string }[]): {
   for (const appt of appointments) {
     switch (appt.status) {
       case 'completed':
-      case 'noShow':
+      case 'no_show':
         done.push(appt);
         break;
-      case 'checkedIn':
+      case 'checked_in':
         now.push(appt);
         break;
       case 'scheduled':
@@ -81,7 +81,7 @@ export function getNextAppointment<T extends { status: string; scheduledAt: stri
   appointments: T[],
 ): T | null {
   const upcoming = appointments.filter(
-    (a) => a.status === 'scheduled' || a.status === 'checkedIn',
+    (a) => a.status === 'scheduled' || a.status === 'checked_in',
   );
   if (upcoming.length === 0) return null;
   upcoming.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
@@ -90,6 +90,30 @@ export function getNextAppointment<T extends { status: string; scheduledAt: stri
 
 export function sumOutstanding(invoices: { balanceCents: number }[]): number {
   return invoices.reduce((sum, inv) => sum + inv.balanceCents, 0);
+}
+
+export function formatPaymentPlanSubtitle(count: number, behind: number | null): string {
+  if (behind != null && behind > 0) {
+    return `active plans \u00B7 ${behind} behind`;
+  }
+  return 'active plans';
+}
+
+export function formatLabOrderSubtitle(pending: number, overdue: number | null): string {
+  if (overdue != null && overdue > 0) {
+    return `${pending} pending \u00B7 ${overdue} overdue`;
+  }
+  return `${pending} pending delivery`;
+}
+
+export function countPendingTreatments(appointments: { status: string }[]): number {
+  return appointments.filter((a) => a.status === 'scheduled').length;
+}
+
+export function formatDailyCollections(cents: number | null): string {
+  if (cents == null) return '\u20B1\u2014';
+  const pesos = cents / 100;
+  return `\u20B1${pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatCents(cents: number): string {
@@ -161,7 +185,9 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const overdueInvoices = data?.overdueInvoices ?? [];
   const dailyCollectionsCents = data?.dailyCollectionsCents ?? null;
   const activePaymentPlans = data?.activePaymentPlans ?? null;
+  const paymentPlansBehind = data?.paymentPlansBehind ?? null;
   const pendingLabOrders = data?.pendingLabOrders ?? null;
+  const overdueLabOrders = data?.overdueLabOrders ?? null;
 
   const groups = groupAppointmentsByStatus(todayAppointments);
   const nextAppt = getNextAppointment(todayAppointments);
@@ -250,9 +276,9 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   >
                     {todayAppointments.map((appt) => {
                       let slotClass = 'bg-gray-200';
-                      if (appt.status === 'completed' || appt.status === 'noShow')
+                      if (appt.status === 'completed' || appt.status === 'no_show')
                         slotClass = 'bg-green-500';
-                      if (appt.status === 'checkedIn') slotClass = 'bg-sky-400';
+                      if (appt.status === 'checked_in') slotClass = 'bg-sky-400';
                       return (
                         <div
                           key={appt.id}
@@ -268,11 +294,11 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               )}
             </MetricCard>
 
-            {/* Daily Collections (financial roles only) */}
+            {/* FR0.4: Daily Collections (financial roles only) */}
             {showFinancials ? (
               <MetricCard
                 title="Daily Collections"
-                value={dailyCollectionsCents !== null ? formatCents(dailyCollectionsCents) : '\u20B1\u2014'}
+                value={formatDailyCollections(dailyCollectionsCents)}
                 subtitle={dailyCollectionsCents !== null ? 'collected today' : 'loading...'}
                 action={{ label: 'Details', onClick: () => navigate({ to: '/billing' }) }}
               />
@@ -332,10 +358,10 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
 
           {/* Row 2: Treatments, Plans, Lab */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Pending Treatments (proxy via active visits) */}
+            {/* FR0.3: Pending Treatments (proxy via scheduled appointments) */}
             <MetricCard
               title="Pending Treatments"
-              value={todayAppointments.filter((a) => a.status === 'scheduled').length}
+              value={countPendingTreatments(todayAppointments)}
               subtitle="scheduled appointments pending"
               action={{ label: 'View all', onClick: () => navigate({ to: '/patients' }) }}
             >
@@ -344,14 +370,21 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               </p>
             </MetricCard>
 
-            {/* Payment Plans (financial only) */}
+            {/* FR0.7: Payment Plans (financial only) */}
             {showFinancials ? (
               <MetricCard
                 title="Payment Plans"
                 value={activePaymentPlans !== null ? activePaymentPlans : '\u2014'}
-                subtitle="active plans"
+                subtitle={formatPaymentPlanSubtitle(activePaymentPlans ?? 0, paymentPlansBehind)}
+                accentColor={paymentPlansBehind != null && paymentPlansBehind > 0 ? 'amber' : undefined}
                 action={{ label: 'Manage', onClick: () => navigate({ to: '/billing' }) }}
-              />
+              >
+                {paymentPlansBehind != null && paymentPlansBehind > 0 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-700">
+                    {paymentPlansBehind} behind
+                  </span>
+                )}
+              </MetricCard>
             ) : (
               <MetricCard
                 title="Checked In"
@@ -361,12 +394,19 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               />
             )}
 
-            {/* Lab Orders */}
+            {/* FR0.8: Lab Orders */}
             <MetricCard
               title="Lab Orders"
               value={pendingLabOrders !== null ? pendingLabOrders : '\u2014'}
-              subtitle="pending delivery"
-            />
+              subtitle={formatLabOrderSubtitle(pendingLabOrders ?? 0, overdueLabOrders)}
+              accentColor={overdueLabOrders != null && overdueLabOrders > 0 ? 'red' : undefined}
+            >
+              {overdueLabOrders != null && overdueLabOrders > 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-700">
+                  {overdueLabOrders} overdue
+                </span>
+              )}
+            </MetricCard>
           </div>
 
           {/* Row 3: Tomorrow Preview + Reminders */}
@@ -420,7 +460,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                     {appt.patientName ?? appt.patientId}
                   </span>
                   <span className="text-[11px] text-muted-foreground ml-auto whitespace-nowrap">
-                    {appt.procedureType ?? '\u2014'}
+                    {appt.serviceType ?? '\u2014'}
                   </span>
                 </div>
               ))}

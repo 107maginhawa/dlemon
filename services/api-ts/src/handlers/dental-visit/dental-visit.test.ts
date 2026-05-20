@@ -8,13 +8,25 @@
  * Tests HTTP-level behavior: auth, validation, success on seeded data.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
+import { z } from 'zod';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import {
+  CreateDentalVisitBody,
+  UpdateDentalVisitBody, UpdateDentalVisitParams,
+  UpsertDentalChartBody, UpsertDentalChartParams,
+  UpdateToothBody, UpdateToothParams,
+  UpsertVisitNotesBody, UpsertVisitNotesParams,
+} from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
+import { TreatmentRepository, VisitNotesRepository } from './repos/treatment.repo';
+import { ConsentFormRepository } from '@/handlers/dental-clinical/repos/consent-form.repo';
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { createDentalVisit } from './createDentalVisit';
 import { getDentalVisit } from './getDentalVisit';
 import { listDentalVisits } from './listDentalVisits';
@@ -25,14 +37,66 @@ import { updateTooth } from './updateTooth';
 import { getVisitNotes } from './getVisitNotes';
 import { upsertVisitNotes } from './upsertVisitNotes';
 import { getToothHistory } from './getToothHistory';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
+// Suite-unique BRANCH_ID + membership id (tag a01) breaks the cross-suite
+// collision on dental_membership's (person_id, branch_id) partial unique index.
+// Org/patient/person ids stay at their original deterministic values so
+// onConflictDoNothing is a correct no-op against rows from prior runs.
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
+const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const PERSON_ID = 'e0000000-0000-1000-8000-000000000001';
+const BRANCH_ID = '7b000000-0000-4000-8000-000000000a01';
+const ORG_ID = 'da000000-0000-1000-8000-000000000002';
+const DENTIST_MEMBER_ID = '7c000000-0000-4000-8000-000000000a01';
+const STAFF_MEMBER_ID = '7c000000-0000-4000-8000-000000000a99';
+const PATIENT_2_ID = 'a0000000-0000-1000-8000-000000000002';
+const PERSON_2_ID = 'e0000000-0000-1000-8000-000000000002';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+
+beforeAll(async () => {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({
+    id: ORG_ID, name: 'DentalVisit Clinic', tier: 'solo',
+    ownerPersonId: TEST_USER.id, countryCode: 'PH',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
+    timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: DENTIST_MEMBER_ID, branchId: BRANCH_ID,
+    personId: TEST_USER.id, displayName: 'Test Dentist', role: 'dentist_owner',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: STAFF_MEMBER_ID, branchId: BRANCH_ID,
+    personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  // Second patient for listDentalVisits multi-patient tests
+  await db.insert(persons).values({ id: PERSON_2_ID, firstName: 'Test2', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_2_ID, person: PERSON_2_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+});
+
+const ve = (result: any, c: any) => {
+  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
+};
+
+const ChartBodyOnly = UpsertDentalChartBody.omit({ visitId: true });
+const VisitNotesBodyOnly = UpsertVisitNotesBody.omit({ visitId: true });
+const UpdateToothParamsCoerced = UpdateToothParams.extend({ toothNumber: z.union([z.number().int(), z.string().transform(Number)]) });
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -56,20 +120,20 @@ function buildTestApp(user?: typeof TEST_USER) {
   });
 
   // Visit routes
-  app.post('/dental/visits', createDentalVisit as any);
+  app.post('/dental/visits', zValidator('json', CreateDentalVisitBody, ve), createDentalVisit as any);
   app.get('/dental/visits', listDentalVisits as any);
   app.get('/dental/visits/history/:patientId/teeth/:toothNumber', getToothHistory as any);
   app.get('/dental/visits/:visitId', getDentalVisit as any);
-  app.patch('/dental/visits/:visitId', updateDentalVisit as any);
+  app.patch('/dental/visits/:visitId', zValidator('param', UpdateDentalVisitParams, ve), zValidator('json', UpdateDentalVisitBody, ve), updateDentalVisit as any);
 
   // Chart routes
   app.get('/dental/visits/:visitId/chart', getDentalChart as any);
-  app.post('/dental/visits/:visitId/chart', upsertDentalChart as any);
-  app.patch('/dental/visits/:visitId/chart/teeth/:toothNumber', updateTooth as any);
+  app.post('/dental/visits/:visitId/chart', zValidator('param', UpsertDentalChartParams, ve), zValidator('json', ChartBodyOnly, ve), upsertDentalChart as any);
+  app.patch('/dental/visits/:visitId/chart/teeth/:toothNumber', zValidator('param', UpdateToothParamsCoerced, ve), zValidator('json', UpdateToothBody, ve), updateTooth as any);
 
   // Notes routes
   app.get('/dental/visits/:visitId/notes', getVisitNotes as any);
-  app.post('/dental/visits/:visitId/notes', upsertVisitNotes as any);
+  app.post('/dental/visits/:visitId/notes', zValidator('param', UpsertVisitNotesParams, ve), zValidator('json', VisitNotesBodyOnly, ve), upsertVisitNotes as any);
 
   return app;
 }
@@ -93,14 +157,63 @@ async function seedCompletedVisit() {
   return repo.complete(visit.id);
 }
 
+async function seedSignedConsent(visitId: string) {
+  await db.insert(consentForms).values({
+    visitId,
+    patientId: PATIENT_ID,
+    templateId: 'template-standard',
+    templateName: 'Standard Consent',
+    signed: true,
+    signedAt: new Date(),
+    signatureData: 'test-sig',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  });
+}
+
+async function seedNotes(visitId: string) {
+  const notesRepo = new VisitNotesRepository(db);
+  await notesRepo.upsert({
+    visitId,
+    authorMemberId: DENTIST_MEMBER_ID,
+    subjective: 'Patient reports pain',
+    plan: 'Extract tooth 11',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  });
+}
+
+async function seedPerformedTreatment(visitId: string) {
+  // Seeds a performed treatment to make the visit non-empty (bypasses BR-005 auto-discard).
+  const { dentalTreatments } = await import('./repos/treatment.schema');
+  await db.insert(dentalTreatments).values({
+    id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
+    cdtCode: 'D0120', description: 'Periodic eval',
+    priceCents: 10000, status: 'performed', carriedOver: false,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Teardown
 // ---------------------------------------------------------------------------
 
 afterEach(async () => {
-  await db.execute(
-    sql`TRUNCATE TABLE dental_treatment, dental_chart, visit_notes, dental_visit CASCADE`,
-  );
+  // delete in FK-dependency order; non-cascade refs must precede their targets.
+  // billing tables
+  await db.execute(sql`DELETE FROM dental_payment`);
+  await db.execute(sql`DELETE FROM dental_payment_plan`);
+  await db.execute(sql`DELETE FROM dental_invoice`); // cascades → dental_invoice_line_item
+  // clinical tables
+  await db.execute(sql`DELETE FROM dental_treatment`);
+  await db.execute(sql`DELETE FROM dental_chart`);
+  await db.execute(sql`DELETE FROM visit_notes`);
+  await db.execute(sql`DELETE FROM consent_form`);
+  // other modules with non-cascade FKs to dental_visit
+  await db.execute(sql`DELETE FROM pmd_document`);
+  await db.execute(sql`UPDATE imaging_finding SET visit_id = NULL WHERE visit_id IS NOT NULL`);
+  await db.execute(sql`UPDATE dental_appointment SET visit_id = NULL WHERE visit_id IS NOT NULL`);
+  await db.execute(sql`DELETE FROM dental_visit`); // cascades → lab_order, attachment, amendment, prescription
 });
 
 // ---------------------------------------------------------------------------
@@ -210,33 +323,33 @@ describe('listDentalVisits handler', () => {
 
   test('returns 200 with empty list when no visits', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/visits');
+    const res = await app.request(`/dental/visits?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toEqual([]);
-    expect(body.total).toBe(0);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalCount).toBe(0);
   });
 
   test('returns 200 with seeded visits', async () => {
     await seedVisit();
     await seedVisit({ patientId: 'a0000000-0000-1000-8000-000000000002' });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/visits');
+    const res = await app.request(`/dental/visits?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(2);
-    expect(body.total).toBe(2);
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.totalCount).toBe(2);
   });
 
   test('filters by patientId', async () => {
     await seedVisit({ patientId: PATIENT_ID });
     await seedVisit({ patientId: 'a0000000-0000-1000-8000-000000000002' });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/visits?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/visits?branchId=${BRANCH_ID}&patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items.length).toBe(1);
-    expect(body.items[0].patientId).toBe(PATIENT_ID);
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].patientId).toBe(PATIENT_ID);
   });
 });
 
@@ -287,11 +400,15 @@ describe('updateDentalVisit handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('active');
-    expect(body.activatedAt).toBeTruthy();
+    expect(body.activatedAt).not.toBeNull();
   });
 
   test('returns 200 and completes visit', async () => {
     const visit = await seedVisit();
+    const repo = new VisitRepository(db);
+    await repo.activate(visit!.id); // draft → active first
+    await seedSignedConsent(visit!.id);
+    await seedNotes(visit!.id);
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}`, {
       method: 'PATCH',
@@ -301,11 +418,14 @@ describe('updateDentalVisit handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('completed');
-    expect(body.completedAt).toBeTruthy();
+    expect(body.completedAt).not.toBeNull();
   });
 
   test('returns 200 and locks visit', async () => {
     const visit = await seedVisit();
+    const repo = new VisitRepository(db);
+    await repo.activate(visit!.id); // draft → active
+    await repo.complete(visit!.id); // active → completed
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}`, {
       method: 'PATCH',
@@ -315,7 +435,7 @@ describe('updateDentalVisit handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('locked');
-    expect(body.lockedAt).toBeTruthy();
+    expect(body.lockedAt).not.toBeNull();
   });
 
   test('returns 200 and updates chiefComplaint', async () => {
@@ -504,6 +624,34 @@ describe('updateTooth handler', () => {
     expect(tooth?.state).toBe('caries');
     expect(tooth?.conditionCode).toBe('K02.1');
   });
+
+  test('persists surface data on updateTooth and returns it on chart read [AC-CHART-05]', async () => {
+    const visit = await seedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: visit!.id,
+      patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 14, state: 'healthy' }],
+    });
+    const app = buildTestApp(TEST_USER);
+
+    // Update tooth with surface data
+    const patchRes = await app.request(`/dental/visits/${visit!.id}/chart/teeth/14`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'caries', surfaces: ['mesial', 'occlusal', 'distal'] }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    // Read chart back and verify surfaces persisted
+    const getRes = await app.request(`/dental/visits/${visit!.id}/chart`);
+    expect(getRes.status).toBe(200);
+    const chart = await getRes.json() as any;
+    const tooth = (chart.teeth as any[]).find((t: any) => t.toothNumber === 14);
+    expect(tooth).not.toBeUndefined();
+    expect(tooth.state).toBe('caries');
+    expect(tooth.surfaces).toEqual(['mesial', 'occlusal', 'distal']);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -574,7 +722,7 @@ describe('upsertVisitNotes handler', () => {
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.visitId).toBe(visit!.id);
-    expect(body.authorMemberId).toBe(TEST_USER.id);
+    expect(body.authorMemberId).toBe(DENTIST_MEMBER_ID);
     expect(body.subjective).toBe('Patient complains of sensitivity');
     expect(body.plan).toBe('Composite filling');
   });
@@ -618,8 +766,8 @@ describe('getToothHistory handler', () => {
     const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.items).toEqual([]);
-    expect(body.total).toBe(0);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalCount).toBe(0);
   });
 
   test('returns 200 with tooth history entries from completed visits', async () => {
@@ -635,9 +783,211 @@ describe('getToothHistory handler', () => {
     const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.total).toBe(1);
-    expect(body.items[0].toothNumber).toBe(11);
-    expect(body.items[0].state).toBe('caries');
-    expect(body.items[0].visitId).toBe(completedVisit!.id);
+    expect(body.pagination.totalCount).toBe(1);
+    expect(body.data[0].toothNumber).toBe(11);
+    expect(body.data[0].state).toBe('caries');
+    expect(body.data[0].visitId).toBe(completedVisit!.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — updateDentalVisit (dentist_* only)
+// ---------------------------------------------------------------------------
+
+describe('updateDentalVisit role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — createDentalVisit (FIX-05)
+// ---------------------------------------------------------------------------
+
+describe('createDentalVisit role gate', () => {
+  test('staff_full → 403', async () => {
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request('/dental/visits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/visits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — upsertDentalChart (FIX-05)
+// ---------------------------------------------------------------------------
+
+describe('upsertDentalChart role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/chart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, teeth: [] }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/chart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, teeth: [] }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Completion preconditions (FIX-03)
+// ---------------------------------------------------------------------------
+
+describe('updateDentalVisit — completion preconditions (FIX-03)', () => {
+  test('422 VISIT_HAS_OPEN_TREATMENTS when diagnosed treatments remain', async () => {
+    const visit = await seedVisit();
+    const visitRepo = new VisitRepository(db);
+    await visitRepo.activate(visit!.id);
+    const treatRepo = new TreatmentRepository(db);
+    await treatRepo.createOne({
+      visitId: visit!.id,
+      patientId: PATIENT_ID,
+      cdtCode: 'D0120',
+      description: 'Periodic exam',
+      priceCents: 5000,
+      status: 'diagnosed',
+      createdBy: TEST_USER.id,
+      updatedBy: TEST_USER.id,
+    });
+    await seedSignedConsent(visit!.id);
+    await seedNotes(visit!.id);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_HAS_OPEN_TREATMENTS');
+  });
+
+  test('422 VISIT_CONSENT_REQUIRED when no signed consent form', async () => {
+    const visit = await seedVisit();
+    const visitRepo = new VisitRepository(db);
+    await visitRepo.activate(visit!.id);
+    await seedPerformedTreatment(visit!.id); // BR-005: must have content to reach consent guard
+    await seedNotes(visit!.id);
+    // no consent form seeded
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_CONSENT_REQUIRED');
+  });
+
+  test('422 VISIT_NOTES_REQUIRED when no visit notes', async () => {
+    const visit = await seedVisit();
+    const visitRepo = new VisitRepository(db);
+    await visitRepo.activate(visit!.id);
+    await seedPerformedTreatment(visit!.id); // BR-005: must have content to reach notes guard
+    await seedSignedConsent(visit!.id);
+    // no notes seeded
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_NOTES_REQUIRED');
+  });
+
+  test('200 when all preconditions satisfied', async () => {
+    const visit = await seedVisit();
+    const visitRepo = new VisitRepository(db);
+    await visitRepo.activate(visit!.id);
+    await seedSignedConsent(visit!.id);
+    await seedNotes(visit!.id);
+    // no open treatments
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role gate — upsertVisitNotes (FIX-05)
+// ---------------------------------------------------------------------------
+
+describe('upsertVisitNotes role gate', () => {
+  test('staff_full → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: 'some notes' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner → passes role gate (not 403)', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: 'some notes' }),
+    });
+    expect(res.status).not.toBe(403);
   });
 });

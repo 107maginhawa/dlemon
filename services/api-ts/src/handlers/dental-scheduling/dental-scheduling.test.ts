@@ -18,6 +18,8 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import {
   CreateAppointmentBody,
   ListAppointmentsQuery,
@@ -37,18 +39,27 @@ import { cancelAppointment } from './cancelAppointment';
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
+// Suite-unique BRANCH_ID + membership ids (tag a03) break the cross-suite
+// collision on dental_membership's (person_id, branch_id) partial unique index.
+// Org/patient/person ids stay at their original deterministic values so
+// onConflictDoNothing is a correct no-op against rows from prior runs.
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
+const PERSON_ID = 'e0000000-0000-1000-8000-000000000001';
+const PATIENT_2 = 'a0000000-0000-1000-8000-000000000002';
+const PERSON_ID_2 = 'e0000000-0000-1000-8000-000000000002';
 const ORG_ID = 'f0000000-0000-1000-8000-000000000000';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const BRANCH_ID = '7b000000-0000-4000-8000-000000000a03';
+const MEMBER_ID = '7c000000-0000-4000-8000-000000000a03';
+const DENTIST_2_MEMBER_ID = '7c000000-0000-4000-8000-000000000c03';
+const DENTIST_2_PERSON_ID = 'e0000000-0000-1000-8000-000000000099';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
 
 // Seed org + branch + membership once so assertBranchAccess passes for TEST_USER + BRANCH_ID
 beforeAll(async () => {
   await db.insert(dentalOrganizations).values({
     id: ORG_ID,
-    name: 'Test Clinic',
+    name: 'DentalScheduling Clinic',
     tier: 'solo',
     ownerPersonId: TEST_USER.id,
     countryCode: 'PH',
@@ -66,10 +77,29 @@ beforeAll(async () => {
   }).onConflictDoNothing();
 
   await db.insert(dentalMemberships).values({
+    id: MEMBER_ID,
     branchId: BRANCH_ID,
     personId: TEST_USER.id,
     displayName: 'Test Dentist',
     role: 'dentist_owner',
+    status: 'active',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(persons).values({ id: PERSON_ID_2, firstName: 'Test', lastName: 'Patient2', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(patients).values({ id: PATIENT_2, person: PERSON_ID_2, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+
+  // Second dentist for FR3.7 double-booking test
+  await db.insert(persons).values({ id: DENTIST_2_PERSON_ID, firstName: 'Dentist', lastName: 'Two', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: DENTIST_2_MEMBER_ID,
+    branchId: BRANCH_ID,
+    personId: DENTIST_2_PERSON_ID,
+    displayName: 'Dentist Two',
+    role: 'dentist_associate',
     status: 'active',
     createdBy: TEST_USER.id,
     updatedBy: TEST_USER.id,
@@ -124,7 +154,7 @@ const VALID_APPOINTMENT_BODY = {
   branchId: BRANCH_ID,
   scheduledAt: FUTURE_DATE,
   durationMinutes: 30,
-  procedureType: 'Cleaning',
+  serviceType: 'Cleaning',
 };
 
 async function seedAppointment() {
@@ -135,7 +165,7 @@ async function seedAppointment() {
     branchId: BRANCH_ID,
     scheduledAt: new Date(FUTURE_DATE),
     durationMinutes: 30,
-    procedureType: 'Cleaning',
+    serviceType: 'Cleaning',
   });
   return appt;
 }
@@ -145,7 +175,8 @@ async function seedAppointment() {
 // ---------------------------------------------------------------------------
 
 afterEach(async () => {
-  await db.execute(sql`TRUNCATE TABLE dental_appointment, dental_visit CASCADE`);
+  await db.execute(sql`DELETE FROM dental_appointment`);
+  await db.execute(sql`DELETE FROM dental_visit`);
 });
 
 // ===========================================================================
@@ -218,9 +249,9 @@ describe('createAppointment handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when procedureType is missing', async () => {
+  test('returns 400 when serviceType is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const { procedureType: _omit, ...withoutProcedure } = VALID_APPOINTMENT_BODY;
+    const { serviceType: _omit, ...withoutProcedure } = VALID_APPOINTMENT_BODY;
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -243,7 +274,7 @@ describe('createAppointment handler', () => {
     expect(body.dentistMemberId).toBe(MEMBER_ID);
     expect(body.branchId).toBe(BRANCH_ID);
     expect(body.status).toBe('scheduled');
-    expect(body.procedureType).toBe('Cleaning');
+    expect(body.serviceType).toBe('Cleaning');
   });
 
   test('returns 201 with walkIn flag when walkIn is true', async () => {
@@ -387,26 +418,26 @@ describe('updateAppointment handler', () => {
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'noShow' }),
+      body: JSON.stringify({ status: 'no_show' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.status).toBe('noShow');
-    expect(body.noShowAt).toBeTruthy();
+    expect(body.status).toBe('no_show');
+    expect(body.noShowAt).not.toBeNull();
   });
 
-  test('updates procedureType', async () => {
+  test('updates serviceType', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ procedureType: 'Root Canal' }),
+      body: JSON.stringify({ serviceType: 'Root Canal' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.procedureType).toBe('Root Canal');
+    expect(body.serviceType).toBe('Root Canal');
   });
 });
 
@@ -440,10 +471,10 @@ describe('checkInAppointment handler', () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.appointment).toBeTruthy();
-    expect(body.appointment.status).toBe('checkedIn');
-    expect(body.appointment.checkInTime).toBeTruthy();
-    expect(body.visitId).toBeTruthy();
+    expect(body.appointment).not.toBeNull();
+    expect(body.appointment.status).toBe('checked_in');
+    expect(body.appointment.checkInTime).not.toBeNull();
+    expect(body.visitId).not.toBeNull();
   });
 
   test('returns error when appointment is not in scheduled status', async () => {
@@ -509,7 +540,7 @@ describe('cancelAppointment handler', () => {
     const repo = new DentalAppointmentRepository(db);
     const updated = await repo.findOneById(appt.id);
     expect(updated!.status).toBe('cancelled');
-    expect(updated!.cancelledAt).toBeTruthy();
+    expect(updated!.cancelledAt).not.toBeNull();
   });
 });
 
@@ -552,11 +583,10 @@ describe('FR3.7: double-booking warning', () => {
     await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const DIFFERENT_DENTIST_ID = 'd0000000-0000-1000-8000-000000000099';
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, dentistMemberId: DIFFERENT_DENTIST_ID }),
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, dentistMemberId: DENTIST_2_MEMBER_ID }),
     });
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -587,7 +617,7 @@ describe('EC7: max one active visit per patient', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(FUTURE_DATE),
       durationMinutes: 30,
-      procedureType: 'Follow-Up',
+      serviceType: 'Follow-Up',
     });
 
     // Try to check in the second appointment — should fail (EC7)
@@ -613,14 +643,14 @@ describe('EC7: max one active visit per patient', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(FUTURE_DATE),
       durationMinutes: 30,
-      procedureType: 'Follow-Up',
+      serviceType: 'Follow-Up',
     });
 
     // Second check-in should fail
     const res = await app.request(`/dental/appointments/${appt2.id}/check-in`, { method: 'POST' });
     expect(res.status).toBe(409);
 
-    // Verify appt2 is still 'scheduled', NOT stuck in 'checkedIn' (race condition fix)
+    // Verify appt2 is still 'scheduled', NOT stuck in 'checked_in' (race condition fix)
     const updated = await repo.findOneById(appt2.id);
     expect(updated!.status).toBe('scheduled');
   });
@@ -658,7 +688,7 @@ describe('status transition guards', () => {
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'noShow' }),
+      body: JSON.stringify({ status: 'no_show' }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
@@ -671,7 +701,7 @@ describe('status transition guards', () => {
     const noShowRes = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'noShow' }),
+      body: JSON.stringify({ status: 'no_show' }),
     });
     expect(noShowRes.status).toBe(200);
 
@@ -691,13 +721,13 @@ describe('status transition guards', () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    // Attempt to set to 'checkedIn' directly via notes+status patch
-    // Since 'checkedIn' doesn't match any transition branch in the handler,
+    // Attempt to set to 'checked_in' directly via notes+status patch
+    // Since 'checked_in' doesn't match any transition branch in the handler,
     // it falls through to generic patch which no longer passes status
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: 'test', status: 'checkedIn' }),
+      body: JSON.stringify({ notes: 'test', status: 'checked_in' }),
     });
     // Should succeed (notes update) but status should NOT change to checkedIn
     expect(res.status).toBe(200);
@@ -776,7 +806,7 @@ describe('pagination on listAppointments', () => {
         branchId: BRANCH_ID,
         scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
         durationMinutes: 30,
-        procedureType: 'Cleaning',
+        serviceType: 'Cleaning',
       });
     }
 
@@ -796,7 +826,7 @@ describe('pagination on listAppointments', () => {
         branchId: BRANCH_ID,
         scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
         durationMinutes: 30,
-        procedureType: 'Cleaning',
+        serviceType: 'Cleaning',
       });
     }
 
@@ -826,7 +856,7 @@ describe('pagination on listAppointments', () => {
         branchId: BRANCH_ID,
         scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
         durationMinutes: 30,
-        procedureType: 'Cleaning',
+        serviceType: 'Cleaning',
       });
     }
 
@@ -888,8 +918,6 @@ describe('branch authorization (assertBranchAccess)', () => {
 // ===========================================================================
 
 describe('patientId filter on listAppointments', () => {
-  const PATIENT_2 = 'a0000000-0000-1000-8000-000000000002';
-
   test('filters appointments by patientId', async () => {
     const repo = new DentalAppointmentRepository(db);
     // Seed appointment for PATIENT_ID
@@ -899,7 +927,7 @@ describe('patientId filter on listAppointments', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       durationMinutes: 30,
-      procedureType: 'Cleaning',
+      serviceType: 'Cleaning',
     });
     // Seed appointment for PATIENT_2
     await repo.createOne({
@@ -908,7 +936,7 @@ describe('patientId filter on listAppointments', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
       durationMinutes: 30,
-      procedureType: 'Checkup',
+      serviceType: 'Checkup',
     });
 
     const app = buildTestApp(TEST_USER);
@@ -972,7 +1000,7 @@ describe('reschedule validation on updateAppointment', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(INSIDE_HOURS_UTC),
       durationMinutes: 60,
-      procedureType: 'Cleaning',
+      serviceType: 'Cleaning',
     });
 
     // Seed a second appointment at a non-overlapping time
@@ -982,7 +1010,7 @@ describe('reschedule validation on updateAppointment', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       durationMinutes: 30,
-      procedureType: 'Follow-Up',
+      serviceType: 'Follow-Up',
     });
 
     const app = buildTestApp(TEST_USER);

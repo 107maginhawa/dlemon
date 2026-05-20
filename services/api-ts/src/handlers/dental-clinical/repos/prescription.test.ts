@@ -5,16 +5,14 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { PrescriptionRepository } from './prescription.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const VISIT_1   = 'e1000000-0000-4000-8000-000000000001';
-const VISIT_2   = 'e1000000-0000-4000-8000-000000000002';
-const PATIENT_1 = 'e1000000-0000-4000-8000-000000000010';
-const MEMBER_1  = 'e1000000-0000-4000-8000-000000000020';
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
+const MEMBER_1  = CHAIN_IDS.MEMBERSHIP_1;
 
 const basePrescription = {
   visitId: VISIT_1,
@@ -27,12 +25,16 @@ const basePrescription = {
 
 describe('PrescriptionRepository', () => {
   let repo: PrescriptionRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new PrescriptionRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE prescription CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new PrescriptionRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates a prescription with required fields', async () => {

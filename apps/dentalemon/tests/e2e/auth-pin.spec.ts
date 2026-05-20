@@ -84,6 +84,21 @@ async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: s
     localStorage.setItem('currentOrgId', orgId);
   }, { branchId, orgId });
 
+  // Create owner membership so assertBranchAccess passes in listMembers
+  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId = session?.user?.id;
+    if (personId) {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Clinic Owner', role: 'dentist_owner', personId }),
+      });
+    }
+  }, { api: API, orgId, branchId });
+
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
     const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
       method: 'POST',
@@ -138,6 +153,21 @@ async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branc
     localStorage.setItem('currentOrgId', orgId);
   }, { branchId, orgId });
 
+  // Create owner membership so assertBranchAccess passes in listMembers
+  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId = session?.user?.id;
+    if (personId) {
+      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: 'Clinic Owner', role: 'dentist_owner', personId }),
+      });
+    }
+  }, { api: API, orgId, branchId });
+
   const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
     const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
       method: 'POST',
@@ -155,6 +185,66 @@ async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branc
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ pin: '654321' }),
+    });
+  }, { api: API, orgId, branchId, memberId });
+
+  return { orgId, branchId, memberId };
+}
+
+/**
+ * Seed org, branch, and exactly ONE member (the session user as dentist_owner).
+ * This satisfies assertBranchAccess AND triggers FR9.2 auto-select (single member).
+ */
+async function seedOrgWithSingleMember(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
+  const orgRes = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/organizations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Single Member Clinic', tier: 'solo', countryCode: 'PH' }),
+    });
+    return res.json();
+  }, API);
+  const orgId = orgRes.id;
+
+  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: 'Main Clinic', timezone: 'Asia/Manila' }),
+    });
+    return res.json();
+  }, { api: API, orgId });
+  const branchId = branchRes.id;
+
+  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
+    localStorage.setItem('currentBranchId', branchId);
+    localStorage.setItem('currentOrgId', orgId);
+  }, { branchId, orgId });
+
+  // Create single owner membership with personId (satisfies assertBranchAccess)
+  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
+    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
+    const session = await sessionRes.json() as any;
+    const personId = session?.user?.id;
+    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ displayName: 'Solo Dentist', role: 'dentist_owner', personId }),
+    });
+    return res.json();
+  }, { api: API, orgId, branchId });
+  const memberId = memberRes.id;
+
+  // Set PIN for the single member
+  await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
+    await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ pin: '111111' }),
     });
   }, { api: API, orgId, branchId, memberId });
 
@@ -285,7 +375,7 @@ test.describe('PIN authentication flow', () => {
 
   test('FR9.2: single member auto-navigates to PIN entry', async ({ page }) => {
     await signUpOwner(page);
-    await seedOrgAndStaff(page); // only 1 member in this branch
+    await seedOrgWithSingleMember(page); // exactly 1 member in this branch
 
     // Navigate to pin-select — should auto-redirect to pin-entry for the single member
     await page.goto(`${APP}/auth/pin-select`);

@@ -15,7 +15,7 @@ export interface Appointment {
   branchId?: string;
   scheduledAt: string;
   durationMinutes: number;
-  procedureType: string;
+  serviceType: string;
   status: string;
   notes?: string;
   walkIn?: boolean;
@@ -25,13 +25,13 @@ export function getStatusBadgeProps(status: string): { label: string; className:
   switch (status) {
     case 'scheduled':
       return { label: 'Scheduled', className: 'bg-blue-100 text-blue-700' };
-    case 'checkedIn':
+    case 'checked_in':
       return { label: 'Checked In', className: 'bg-green-100 text-green-700' };
     case 'completed':
       return { label: 'Completed', className: 'bg-green-100 text-green-700' };
     case 'cancelled':
       return { label: 'Cancelled', className: 'bg-gray-100 text-gray-500' };
-    case 'noShow':
+    case 'no_show':
       return { label: 'No Show', className: 'bg-red-100 text-red-700' };
     default:
       return { label: status, className: 'bg-gray-100 text-gray-500' };
@@ -86,7 +86,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
         onClick={() => onClick?.(appointment)}
         role="button"
         tabIndex={0}
-        aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}`}
+        aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}`}
       >
         <div className="text-[11px] font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
         <div className="text-[10px] text-muted-foreground">{time}</div>
@@ -100,11 +100,11 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
       onClick={() => onClick?.(appointment)}
       role="button"
       tabIndex={0}
-      aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.procedureType}, ${badge.label}`}
+      aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}, ${badge.label}`}
     >
       <div className="text-xs font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
       <div className="text-[11px] text-muted-foreground truncate">
-        {appointment.procedureType} · {time}
+        {appointment.serviceType} · {time}
       </div>
       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-1 ${badge.className}`}>
         {badge.label}

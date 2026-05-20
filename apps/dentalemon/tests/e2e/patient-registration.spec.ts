@@ -183,6 +183,27 @@ test.describe('Patient Registration flow', () => {
     await expect(page.getByLabel(/full name/i)).not.toBeVisible({ timeout: 5000 });
   });
 
+  test('AC-REG-02: API rejects patient creation when consentGiven=false (BR-015)', async ({ page }) => {
+    const { branchId } = await signUpAndSeedOrg(page);
+
+    // Bypass UI — call the API directly with consentGiven=false
+    // BR-015 must be enforced server-side, not only by client-side validation
+    const status = await page.evaluate(
+      async ({ api, branchId }: { api: string; branchId: string }) => {
+        const res = await fetch(`${api}/dental/patients`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ displayName: 'No Consent Patient', branchId, consentGiven: false }),
+        });
+        return res.status;
+      },
+      { api: API, branchId },
+    );
+
+    expect(status).toBe(422);
+  });
+
   test('FR2.1: patient list fetches from API (not hardcoded empty)', async ({ page }) => {
     await signUpAndSeedOrg(page);
 

@@ -7,6 +7,11 @@
 
 import { pgTable, uuid, text, timestamp, integer, numeric, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
+import { patients } from '../../patient/repos/patient.schema';
+import { dentalBranches } from '../../dental-org/repos/branch.schema';
+import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 
 export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
   'draft', 'issued', 'partial', 'paid', 'overdue', 'voided',
@@ -14,10 +19,10 @@ export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
 
 export const dentalInvoices = pgTable('dental_invoice', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull(),
-  patientId: uuid('patient_id').notNull(),
-  branchId: uuid('branch_id').notNull(),
-  dentistMemberId: uuid('dentist_member_id').notNull(),
+  visitId: uuid('visit_id').references(() => dentalVisits.id),
+  patientId: uuid('patient_id').notNull().references(() => patients.id),
+  branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
+  dentistMemberId: uuid('dentist_member_id').notNull().references(() => dentalMemberships.id),
   invoiceNumber: text('invoice_number').notNull(),
   status: dentalInvoiceStatusEnum('status').notNull().default('draft'),
   subtotalCents: integer('subtotal_cents').notNull().default(0),
@@ -40,8 +45,8 @@ export const dentalInvoices = pgTable('dental_invoice', {
 
 export const dentalInvoiceLineItems = pgTable('dental_invoice_line_item', {
   ...baseEntityFields,
-  invoiceId: uuid('invoice_id').notNull(),
-  treatmentId: uuid('treatment_id'),
+  invoiceId: uuid('invoice_id').notNull().references(() => dentalInvoices.id, { onDelete: 'cascade' }),
+  treatmentId: uuid('treatment_id').references(() => dentalTreatments.id),
   cdtCode: text('cdt_code'),
   description: text('description').notNull(),
   toothNumber: integer('tooth_number'),

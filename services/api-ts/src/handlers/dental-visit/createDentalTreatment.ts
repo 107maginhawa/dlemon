@@ -7,7 +7,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
@@ -30,7 +30,7 @@ export async function createDentalTreatment(
   // Branch authorization — look up visit to get branchId
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   // FR1.16: Immutability — cannot add treatments to completed/locked visits
   if (visit.status === 'completed' || visit.status === 'locked') {
@@ -65,6 +65,7 @@ export async function createDentalTreatment(
     conditionCode: body.conditionCode,
     priceCents: body.priceCents,
     carriedOver: false,
+    clinicalNotes: body.clinicalNotes,
   });
 
   return ctx.json(treatment, 201);

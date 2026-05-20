@@ -6,6 +6,9 @@
  */
 import { redirect } from '@tanstack/react-router'
 import type { RouterContext } from '@/router'
+import { useOrgContextStore } from '@/stores/org-context.store'
+import { canAccess } from '@/utils/rbac'
+import type { DentalModule, DentalRole } from '@/utils/rbac'
 
 // Re-export types for convenience.
 // `PersonCreateRequest` / `PersonUpdateRequest` are the canonical schema names
@@ -106,6 +109,20 @@ export async function requireNotEmailVerified({ context }: { context: RouterCont
     throw redirect({
       to: '/dashboard',
     })
+  }
+}
+
+/**
+ * Guard that requires the current org member role to have access to a module.
+ * Reads role from org-context Zustand store via getState() (no React context needed).
+ * Redirects to /dashboard if access is denied.
+ */
+export function requireRole(module: DentalModule) {
+  return function roleGuard() {
+    const role = useOrgContextStore.getState().role as DentalRole | null
+    if (!role || !canAccess(role, module)) {
+      throw redirect({ to: '/dashboard' })
+    }
   }
 }
 

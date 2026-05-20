@@ -109,7 +109,7 @@ Create `.env` files in each service/app directory (see individual READMEs for re
 
 ```bash
 # services/api-ts/.env
-DATABASE_URL=postgresql://user:password@localhost:5432/monobase
+DATABASE_URL=postgresql://postgres:password@localhost:5432/monobase
 PORT=7213
 AUTH_SECRET=your-secret-key-here
 ```

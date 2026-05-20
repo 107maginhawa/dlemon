@@ -1,5 +1,5 @@
 import { describe, test, expect, afterEach } from 'bun:test'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ContactInfoForm } from './contact-info-form'
 
@@ -13,8 +13,8 @@ describe('ContactInfoForm', () => {
     render(<ContactInfoForm onSubmit={onSubmit} />)
 
     // Check for form fields
-    expect(screen.getByLabelText(/email/i)).toBeDefined()
-    expect(screen.getByLabelText(/phone/i)).toBeDefined()
+    expect(screen.getByLabelText(/email/i)).not.toBeNull()
+    expect(screen.getByLabelText(/phone/i)).not.toBeNull()
   })
 
   test('renders with default values', () => {
@@ -27,11 +27,12 @@ describe('ContactInfoForm', () => {
     render(<ContactInfoForm defaultValues={defaultValues} onSubmit={onSubmit} />)
 
     const emailInput = screen.getByDisplayValue('john@example.com') as HTMLInputElement
-    expect(emailInput).toBeDefined()
+    expect(emailInput).not.toBeNull()
     expect(emailInput.value).toBe('john@example.com')
   })
 
   test('validates email format', async () => {
+    const user = userEvent.setup()
     const onSubmit = () => {}
     render(<ContactInfoForm onSubmit={onSubmit} showButtons={true} />)
 
@@ -39,13 +40,13 @@ describe('ContactInfoForm', () => {
     const submitButton = screen.getByRole('button', { name: /save/i })
 
     // Enter invalid email
-    await userEvent.type(emailInput, 'invalid-email')
-    fireEvent.click(submitButton)
+    await user.type(emailInput, 'invalid-email')
+    await user.click(submitButton)
 
     // Should show validation error
     await waitFor(() => {
       const errorMessage = screen.queryByText(/invalid email/i)
-      expect(errorMessage).toBeDefined()
+      expect(errorMessage).not.toBeNull()
     })
   })
 
@@ -60,7 +61,7 @@ describe('ContactInfoForm', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: /save/i })).toBeDefined()
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /save/i })).not.toBeNull()
+    expect(screen.getByRole('button', { name: /cancel/i })).not.toBeNull()
   })
 })

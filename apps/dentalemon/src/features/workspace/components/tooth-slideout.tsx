@@ -1,31 +1,28 @@
 /**
  * ToothSlideout — stepper panel for recording tooth condition and treatment
  *
- * Steps: Condition → Surface → Treatment → Review
+ * Steps: Overview → Treatment (CDT) → Review
+ * The overview step handles per-surface condition assignment (focus surface → pick condition).
  * Slides in from the right; shrinks the main workspace area.
  *
  * Wireframe: docs/prd/context/wireframes/ws-tooth-slideout.html
+ * Spec:      docs/superpowers/specs/2026-05-09-workspace-reconciliation-design.md §4.3
  */
 
-import React, { useState, useEffect } from 'react';
-import { FiveSurfaceSelector } from './five-surface-selector.tsx';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { ToothSurface } from './five-surface-selector.helpers';
-import type { ToothState } from './dental-chart.helpers';
+import { getSurfacesForTooth } from './five-surface-selector.helpers';
+import type { ToothState, ChartEntryClassification } from './dental-chart.helpers';
+import { getToothFillColor, getToothInfo } from './dental-chart.helpers';
+import { ToothOverviewStep } from './tooth-overview-step';
+import { CdtCodeBrowser } from './cdt-code-browser';
+import type { CdtCodeSelection } from './cdt-code-browser';
+import { AmendmentForm } from './amendment-form';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
-type Step = 'condition' | 'surface' | 'treatment' | 'review';
+type Step = 'overview' | 'treatment' | 'review';
 
-const TOOTH_STATES = [
-  { value: 'healthy', label: 'Healthy' },
-  { value: 'caries', label: 'Caries' },
-  { value: 'fractured', label: 'Fractured' },
-  { value: 'filled', label: 'Filled' },
-  { value: 'crown', label: 'Crown' },
-  { value: 'missing', label: 'Missing' },
-  { value: 'implant', label: 'Implant' },
-  { value: 'extracted', label: 'Extracted' },
-  { value: 'watchlist', label: 'Watchlist' },
-] as const;
+export type { ChartEntryClassification };
 
 export interface ToothSlideoutData {
   state: ToothState;
@@ -35,61 +32,178 @@ export interface ToothSlideoutData {
   /** Raw price string as entered by the user (e.g. "1500"). No cents conversion. */
   priceInput?: string;
   conditionCode?: string;
+  /**
+   * Clinical notes from CDT browser. Captured in UI but not persisted to backend.
+   * Deferred: dental_treatment schema has no notes column. Requires TypeSpec update +
+   * migration to add text('clinical_notes') to the dentalTreatments table.
+   */
+  clinicalNotes?: string;
+  /** Per-surface condition map for richer save data */
+  surfaceConditionMap?: Record<string, ToothState>;
+  /** Chart entry classification: how this finding should be categorized */
+  entryClassification?: ChartEntryClassification;
 }
 
 export interface ToothSlideoutProps {
   toothNumber: number | null;
+  patientId: string;
   open: boolean;
   onClose: () => void;
   onSave: (data: ToothSlideoutData) => void | Promise<void>;
+  /** Called after save when the user wants to record the next tooth without closing the panel. */
+  onSaveAndNext?: () => void;
   readOnly?: boolean;
+  /** Required when readOnly=true to enable amendment creation */
+  visitId?: string;
+  /** ID of the original treatment record being viewed (for amendment reference) */
+  originalRecordId?: string;
 }
 
-export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: ToothSlideoutProps) {
-  const [step, setStep] = useState<Step>('condition');
-  const [state, setState] = useState<ToothState | ''>('');
+export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId }: ToothSlideoutProps) {
+  const [step, setStep] = useState<Step>('overview');
+  // Per-surface condition state — replaces single state + surfaces[]
+  const [surfaceConditions, setSurfaceConditions] = useState<Record<string, ToothState>>({});
+  const [focusedSurface, setFocusedSurface] = useState<ToothSurface | null>(null);
   const [conditionCode, setConditionCode] = useState('');
-  const [surfaces, setSurfaces] = useState<ToothSurface[]>([]);
   const [cdtCode, setCdtCode] = useState('');
   const [description, setDescription] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  const [clinicalNotes, setClinicalNotes] = useState('');
+  const [entryClassification, setEntryClassification] = useState<ChartEntryClassification | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [showAmendment, setShowAmendment] = useState(false);
 
   // Reset all step state when a different tooth is selected (D11)
   useEffect(() => {
-    setStep('condition');
-    setState('');
+    setStep('overview');
+    setSurfaceConditions({});
+    setFocusedSurface(null);
     setConditionCode('');
-    setSurfaces([]);
     setCdtCode('');
     setDescription('');
     setPriceInput('');
+    setClinicalNotes('');
+    setEntryClassification(undefined);
+    setShowAmendment(false);
   }, [toothNumber, open]);
 
-  if (!open || !toothNumber) return null;
+  // Build review summary: group surfaces by condition (must be before early returns)
+  const conditionGroups = useMemo(() => {
+    const groups: Record<string, ToothSurface[]> = {};
+    for (const [surface, condition] of Object.entries(surfaceConditions)) {
+      if (!groups[condition]) groups[condition] = [];
+      groups[condition]!.push(surface as ToothSurface);
+    }
+    return groups;
+  }, [surfaceConditions]);
 
-  const steps: Step[] = ['condition', 'surface', 'treatment', 'review'];
-  const stepIdx = steps.indexOf(step);
+  if (!open) return null;
 
-  function toggleSurface(surface: ToothSurface) {
-    setSurfaces(prev =>
-      prev.includes(surface) ? prev.filter(s => s !== surface) : [...prev, surface]
+  // Save & Next mode — tooth saved, waiting for next selection
+  if (!toothNumber) {
+    return (
+      <aside
+        data-testid="tooth-slideout"
+        className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl z-30"
+        aria-label="Select next tooth"
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-bold text-lg">Tooth saved</h2>
+          <button type="button" onClick={onClose} aria-label="Close slideout" className="rounded p-1 hover:bg-secondary">✕</button>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
+          <span className="text-4xl">🦷</span>
+          <p className="text-sm font-medium">Tap a tooth on the chart to record the next finding</p>
+        </div>
+      </aside>
     );
   }
 
+  // Derive primary state and surfaces from the surfaceConditions map (backward compatible)
+  const assignedSurfaces = Object.keys(surfaceConditions) as ToothSurface[];
+  // Primary state = most frequent condition, or first assigned
+  const primaryState: ToothState | '' = (() => {
+    if (assignedSurfaces.length === 0) return '';
+    const counts: Record<string, number> = {};
+    for (const s of assignedSurfaces) {
+      const cond = surfaceConditions[s]!;
+      counts[cond] = (counts[cond] ?? 0) + 1;
+    }
+    let maxCount = 0;
+    let maxState = '';
+    for (const [state, count] of Object.entries(counts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        maxState = state;
+      }
+    }
+    return maxState as ToothState;
+  })();
+
+  const steps: Step[] = ['overview', 'treatment', 'review'];
+  const stepIdx = steps.indexOf(step);
+
+  function handleFocusSurface(surface: ToothSurface) {
+    setFocusedSurface(surface);
+  }
+
+  function handleAssignCondition(condition: ToothState) {
+    if (!focusedSurface) return;
+    setSurfaceConditions(prev => {
+      // Toggle: if same condition, clear it; otherwise set it
+      if (prev[focusedSurface] === condition) {
+        const next = { ...prev };
+        delete next[focusedSurface];
+        return next;
+      }
+      return { ...prev, [focusedSurface]: condition };
+    });
+
+    // Auto-advance focus to next unassigned surface
+    if (toothNumber) {
+      const allSurfaces = getSurfacesForTooth(toothNumber);
+      const currentIdx = allSurfaces.indexOf(focusedSurface);
+      // Look for next unassigned surface after current
+      for (let i = 1; i <= allSurfaces.length; i++) {
+        const nextSurface = allSurfaces[(currentIdx + i) % allSurfaces.length]!;
+        if (!surfaceConditions[nextSurface] && nextSurface !== focusedSurface) {
+          setFocusedSurface(nextSurface);
+          return;
+        }
+      }
+      // All assigned — stay on current
+    }
+  }
+
+  function handleCdtSelect(selection: CdtCodeSelection) {
+    setCdtCode(selection.code);
+    setDescription(selection.description);
+    setPriceInput(String(selection.priceCents / 100));
+    setClinicalNotes(selection.clinicalNotes);
+    // Auto-advance to review after selection
+    setStep('review');
+  }
+
+  function buildSaveData(): ToothSlideoutData {
+    return {
+      state: primaryState as ToothState,
+      surfaces: assignedSurfaces,
+      cdtCode: cdtCode || undefined,
+      description: description || undefined,
+      priceInput: priceInput || undefined,
+      conditionCode: conditionCode || undefined,
+      clinicalNotes: clinicalNotes || undefined,
+      surfaceConditionMap: Object.keys(surfaceConditions).length > 0 ? { ...surfaceConditions } : undefined,
+      entryClassification,
+    };
+  }
+
   async function handleSave() {
-    if (!state) return; // state is required; condition step must be completed
+    if (!primaryState) return;
     setSaving(true);
     try {
-      await onSave({
-        state,
-        surfaces,
-        cdtCode: cdtCode || undefined,
-        description: description || undefined,
-        priceInput: priceInput || undefined,
-        conditionCode: conditionCode || undefined,
-      });
-      onClose(); // only close on success
+      await onSave(buildSaveData());
+      onClose();
     } catch (err) {
       // Surface error — do NOT close so user can retry without losing data
       console.error('Save failed', err);
@@ -98,129 +212,103 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
     }
   }
 
+  async function handleSaveAndNext() {
+    if (!primaryState) return;
+    setSaving(true);
+    try {
+      await onSave(buildSaveData());
+      // Notify parent to clear tooth selection but keep panel open
+      onSaveAndNext?.();
+    } catch (err) {
+      console.error('Save failed', err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const stepLabels: Record<Step, string> = {
+    overview: 'Overview',
+    treatment: 'Treatment',
+    review: 'Review',
+  };
+
   return (
     <aside
       data-testid="tooth-slideout"
-      className="w-80 xl:w-96 flex flex-col border-l bg-background/95 backdrop-blur shrink-0 overflow-y-auto"
+      className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-y-auto z-30 lg:translate-x-0 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50"
+      style={{ transform: 'translateX(0)' }}
       aria-label={`Tooth ${toothNumber} details`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="font-semibold text-base">Tooth {toothNumber}</h2>
+      <div className="flex items-start justify-between p-4 border-b">
+        <div>
+          <h2 className="font-bold text-lg leading-tight">Tooth #{toothNumber}</h2>
+          <p className="text-sm text-muted-foreground">{getToothInfo(toothNumber).name}</p>
+        </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close slideout"
-          className="rounded p-1 hover:bg-secondary"
+          className="rounded p-1 hover:bg-secondary mt-0.5"
         >
           ✕
         </button>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex border-b">
-        {steps.map((s, i) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStep(s)}
-            className={[
-              'flex-1 py-2 text-xs font-medium capitalize border-b-2 transition-colors',
-              step === s
-                ? 'border-primary text-primary'
-                : i < stepIdx
-                  ? 'border-transparent text-muted-foreground/50'
-                  : 'border-transparent text-muted-foreground',
-            ].join(' ')}
-          >
-            {i + 1}. {s}
-          </button>
-        ))}
+      {/* Step indicator — numbered circles with connecting lines */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        {steps.map((s, i) => {
+          const isActive = step === s;
+          const isCompleted = i < stepIdx;
+          return (
+            <React.Fragment key={s}>
+              {i > 0 && (
+                <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors ${isCompleted ? 'bg-green-400' : 'bg-border'}`} />
+              )}
+              <button
+                type="button"
+                onClick={() => !readOnly && (isCompleted || isActive) && setStep(s)}
+                disabled={readOnly || (!isCompleted && !isActive)}
+                className="flex flex-col items-center gap-1 shrink-0"
+              >
+                <span
+                  className={[
+                    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
+                    isActive
+                      ? 'bg-[#FFE97D] text-foreground'
+                      : isCompleted
+                        ? 'bg-green-400 text-white'
+                        : 'bg-muted text-muted-foreground',
+                  ].join(' ')}
+                >
+                  {isCompleted ? '✓' : i + 1}
+                </span>
+                <span className={`text-[10px] font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {stepLabels[s]}
+                </span>
+              </button>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* Step content */}
-      <div className="flex-1 p-4 flex flex-col gap-4">
-        {step === 'condition' && (
-          <>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Tooth State</label>
-              <div className="grid grid-cols-3 gap-2">
-                {TOOTH_STATES.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setState(value)}
-                    className={[
-                      'rounded-lg border py-2 text-xs font-medium transition-colors',
-                      state === value
-                        ? 'bg-primary/20 border-primary text-primary'
-                        : 'border-border hover:bg-secondary',
-                    ].join(' ')}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="icd-code">ICD-10 Code (optional)</label>
-              <input
-                id="icd-code"
-                type="text"
-                value={conditionCode}
-                onChange={e => setConditionCode(e.target.value)}
-                placeholder="e.g. K02.0"
-                className="rounded-lg border border-border px-3 py-2 text-sm"
-              />
-            </div>
-          </>
-        )}
-
-        {step === 'surface' && (
-          <FiveSurfaceSelector
+      <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
+        {step === 'overview' && (
+          <ToothOverviewStep
             toothNumber={toothNumber}
-            selectedSurfaces={surfaces}
-            onToggle={toggleSurface}
+            patientId={patientId}
+            surfaceConditions={surfaceConditions}
+            focusedSurface={focusedSurface}
+            onFocusSurface={handleFocusSurface}
+            onAssignCondition={handleAssignCondition}
+            entryClassification={entryClassification}
+            onSelectEntryClassification={setEntryClassification}
           />
         )}
 
         {step === 'treatment' && (
-          <>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="cdt-code">CDT Code (optional)</label>
-              <input
-                id="cdt-code"
-                type="text"
-                value={cdtCode}
-                onChange={e => setCdtCode(e.target.value)}
-                placeholder="e.g. D2391"
-                className="rounded-lg border border-border px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="treatment-desc">Description</label>
-              <input
-                id="treatment-desc"
-                type="text"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="e.g. Resin composite, one surface"
-                className="rounded-lg border border-border px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="treatment-price">Price (₱)</label>
-              <input
-                id="treatment-price"
-                type="number"
-                value={priceInput}
-                onChange={e => setPriceInput(e.target.value)}
-                placeholder="0"
-                min="0"
-                className="rounded-lg border border-border px-3 py-2 text-sm"
-              />
-            </div>
-          </>
+          <CdtCodeBrowser onSelect={handleCdtSelect} initialCode={cdtCode || undefined} />
         )}
 
         {step === 'review' && (
@@ -230,14 +318,38 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
                 <span className="text-muted-foreground">Tooth</span>
                 <span className="font-medium">{toothNumber}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">State</span>
-                <span className="font-medium capitalize">{state || '—'}</span>
-              </div>
-              {surfaces.length > 0 && (
+
+              {/* Per-surface condition summary */}
+              {Object.keys(conditionGroups).length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-muted-foreground">Conditions</span>
+                  {Object.entries(conditionGroups).map(([condition, surfs]) => {
+                    const dotColor = getToothFillColor(condition as ToothState);
+                    return (
+                      <div key={condition} className="flex items-center gap-2 pl-2">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: dotColor }}
+                        />
+                        <span className="font-medium capitalize">{condition}</span>
+                        <span className="text-muted-foreground text-xs capitalize">
+                          ({surfs.join(', ')})
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Surfaces</span>
-                  <span className="font-medium capitalize">{surfaces.join(', ')}</span>
+                  <span className="text-muted-foreground">State</span>
+                  <span className="font-medium">—</span>
+                </div>
+              )}
+
+              {conditionCode && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ICD-10</span>
+                  <span className="font-medium">{conditionCode}</span>
                 </div>
               )}
               {cdtCode && (
@@ -246,27 +358,66 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
                   <span className="font-medium">{cdtCode}</span>
                 </div>
               )}
+              {description && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">Treatment</span>
+                  <span className="font-medium text-right">{description}</span>
+                </div>
+              )}
               {priceInput && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price</span>
                   <span className="font-medium">{CURRENCY_SYMBOL}{parseFloat(priceInput).toLocaleString(APP_LOCALE)}</span>
                 </div>
               )}
+              {clinicalNotes && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-muted-foreground">Notes</span>
+                  <p className="text-foreground text-xs bg-secondary rounded p-2">{clinicalNotes}</p>
+                </div>
+              )}
             </div>
+
+            {!primaryState && (
+              <p className="text-xs text-destructive">Assign at least one surface condition before saving.</p>
+            )}
           </div>
         )}
       </div>
 
+      {/* Amendment form — shown inline when user clicks "Add Amendment" in readOnly mode */}
+      {readOnly && showAmendment && visitId && (
+        <AmendmentForm
+          visitId={visitId}
+          patientId={patientId}
+          originalRecordType="tooth_treatment"
+          originalRecordId={originalRecordId ?? ''}
+          onClose={() => setShowAmendment(false)}
+          onSaved={() => setShowAmendment(false)}
+        />
+      )}
+
       {/* Footer navigation */}
       <div className="flex items-center justify-between p-4 border-t gap-2">
         {readOnly ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
-          >
-            Close
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+            >
+              Close
+            </button>
+            {visitId && !showAmendment && (
+              <button
+                type="button"
+                onClick={() => setShowAmendment(true)}
+                className="px-4 py-2 rounded-lg bg-secondary text-sm font-medium hover:bg-secondary/80 transition-colors"
+              >
+                Add Amendment
+              </button>
+            )}
+          </>
         ) : stepIdx > 0 ? (
           <button
             type="button"
@@ -285,24 +436,38 @@ export function ToothSlideout({ toothNumber, open, onClose, onSave, readOnly }: 
           </button>
         )}
 
-        {!readOnly && (stepIdx < steps.length - 1 ? (
+        {/* Treatment step has its own Continue button inside CdtCodeBrowser */}
+        {!readOnly && step !== 'treatment' && (stepIdx < steps.length - 1 ? (
           <button
             type="button"
             onClick={() => setStep(steps[stepIdx + 1]!)}
-            disabled={step === 'condition' && !state}
+            disabled={step === 'overview' && !primaryState}
             className="px-4 py-2 rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             Next
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !state}
-            className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          <div className="flex gap-2">
+            {onSaveAndNext && (
+              <button
+                type="button"
+                onClick={handleSaveAndNext}
+                disabled={saving || !primaryState}
+                className="px-3 py-2 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+                title="Save and record next tooth"
+              >
+                {saving ? '…' : 'Save & Next'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || (!primaryState && !entryClassification)}
+              className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         ))}
       </div>
     </aside>

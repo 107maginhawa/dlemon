@@ -73,7 +73,7 @@ async function createAppointment(page: Page, patientId: string) {
         dentistMemberId: '00000000-0000-4000-8000-000000000002',
         scheduledAt,
         durationMinutes: 30,
-        procedureType: 'Initial Check-up',
+        serviceType: 'Initial Check-up',
       }),
     });
     return { status: res.status, body: await res.json() };
@@ -105,7 +105,7 @@ test.describe('Patient Check-In', () => {
     }, { api: API, appointmentId });
 
     expect(checkInRes.status).toBe(200);
-    expect(checkInRes.body.appointment.status).toBe('checkedIn');
+    expect(checkInRes.body.appointment.status).toBe('checked_in');
     expect(checkInRes.body.visitId).toBeTruthy();
 
     // Verify appointment now has status checkedIn
@@ -116,7 +116,7 @@ test.describe('Patient Check-In', () => {
       return res.json();
     }, { api: API, appointmentId });
 
-    expect(getApptRes.status).toBe('checkedIn');
+    expect(getApptRes.status).toBe('checked_in');
 
     // Verify dental visit exists and is draft
     const visitRes = await page.evaluate(async ({ api, visitId }) => {

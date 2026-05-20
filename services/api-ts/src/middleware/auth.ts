@@ -103,10 +103,11 @@ export function authMiddleware(options?: AuthMiddlewareOptions) {
     const isExpandContext = ctx.req.header('X-Expand-Context');
     const storedToken = ctx.get('internalServiceToken');
 
-    if (internalServiceToken && isExpandContext && internalServiceToken === storedToken) {
-      // Trusted internal expand request - skip user auth
+    const expandEnabled = ctx.get('internalServiceExpandEnabled') ?? false;
+    if (expandEnabled && internalServiceToken && isExpandContext && internalServiceToken === storedToken) {
+      // Trusted internal M2M expand request — only active when INTERNAL_SERVICE_EXPAND_ENABLED=true.
       const logger = ctx.get('logger');
-      logger.debug({
+      logger.info({
         expandContext: true,
         originalAuth: ctx.req.header('Authorization') ? 'present' : 'none'
       }, 'Internal expand request - bypassing user auth');

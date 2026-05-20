@@ -1,21 +1,32 @@
 /**
  * DentalChartRepository tests
  *
- * Tests upsert (create-or-replace), per-tooth update, and snapshot storage.
+ * Tests upsert (create-or-replace), per-tooth update, snapshot storage,
+ * and entry-classification (P1.3).
  *
- * Written RED — no implementation exists yet.
+ * Prerequisites: seedAuditWorkspace() seeds the required person/patient/visit
+ * rows so FK constraints are satisfied. Each test wraps in openTestTx()
+ * (BEGIN/ROLLBACK) for isolation.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { describe, test, expect, beforeAll, beforeEach, afterEach } from 'bun:test';
 import { DentalChartRepository } from './dental-chart.repo';
+import { openTestTx } from '@/core/test-tx';
 import { createDatabase } from '@/core/database';
+import { seedAuditWorkspace, AUDIT_IDS } from '@/tests/fixtures/audit-workspace-fixtures';
 
+// Prerequisite: seed FK targets into the real DB (committed; visible to all test TXs).
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
 
-const VISIT_1  = 'e0000000-0000-1000-8000-000000000001';
-const VISIT_2  = 'e0000000-0000-1000-8000-000000000002';
-const PATIENT_1 = 'b0000000-0000-1000-8000-000000000001';
+beforeAll(async () => {
+  await seedAuditWorkspace(db);
+});
+
+// VISIT_NO_CHART = visitCompleted (no chart seeded) — safe to upsert into within test TX
+const VISIT_NO_CHART = AUDIT_IDS.visitCompleted;
+// VISIT_HAS_CHART  = visitActive (chart seeded via seedAuditWorkspace) — upsert will update it
+const VISIT_HAS_CHART = AUDIT_IDS.visitActive;
+const PATIENT = AUDIT_IDS.patient;
 
 const SAMPLE_TEETH = [
   { toothNumber: 11, state: 'healthy' },
@@ -25,14 +36,15 @@ const SAMPLE_TEETH = [
 
 describe('DentalChartRepository', () => {
   let repo: DentalChartRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
-    repo = new DentalChartRepository(db);
+  beforeEach(async () => {
+    const { db: txDb, rollback } = await openTestTx();
+    repo = new DentalChartRepository(txDb);
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_chart CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // UPSERT (create or replace)
@@ -41,23 +53,23 @@ describe('DentalChartRepository', () => {
   describe('upsert', () => {
     test('creates a new chart when none exists', async () => {
       const chart = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: SAMPLE_TEETH,
       });
 
       expect(chart.id).toBeTruthy();
-      expect(chart.visitId).toBe(VISIT_1);
-      expect(chart.patientId).toBe(PATIENT_1);
+      expect(chart.visitId).toBe(VISIT_NO_CHART);
+      expect(chart.patientId).toBe(PATIENT);
       expect(chart.teeth).toHaveLength(3);
     });
 
     test('replaces existing chart on second upsert for same visitId', async () => {
-      await repo.upsert({ visitId: VISIT_1, patientId: PATIENT_1, teeth: SAMPLE_TEETH });
+      await repo.upsert({ visitId: VISIT_NO_CHART, patientId: PATIENT, teeth: SAMPLE_TEETH });
 
       const updated = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: [{ toothNumber: 11, state: 'crown' }],
       });
 
@@ -67,8 +79,8 @@ describe('DentalChartRepository', () => {
 
     test('stores ICD-10 conditionCode per tooth', async () => {
       const chart = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: [{ toothNumber: 21, state: 'caries', conditionCode: 'K02.0' }],
       });
 
@@ -78,8 +90,8 @@ describe('DentalChartRepository', () => {
 
     test('stores per-tooth surfaces array', async () => {
       const chart = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: [{ toothNumber: 36, state: 'filled', surfaces: ['mesial', 'occlusal'] }],
       });
 
@@ -94,11 +106,11 @@ describe('DentalChartRepository', () => {
 
   describe('findByVisit', () => {
     test('returns chart for a visit', async () => {
-      await repo.upsert({ visitId: VISIT_1, patientId: PATIENT_1, teeth: SAMPLE_TEETH });
+      await repo.upsert({ visitId: VISIT_NO_CHART, patientId: PATIENT, teeth: SAMPLE_TEETH });
 
-      const chart = await repo.findByVisit(VISIT_1);
+      const chart = await repo.findByVisit(VISIT_NO_CHART);
       expect(chart).not.toBeNull();
-      expect(chart!.visitId).toBe(VISIT_1);
+      expect(chart!.visitId).toBe(VISIT_NO_CHART);
     });
 
     test('returns null when no chart exists for visit', async () => {
@@ -114,8 +126,8 @@ describe('DentalChartRepository', () => {
   describe('updateTooth', () => {
     test('updates a single tooth state without affecting others', async () => {
       const chart = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: SAMPLE_TEETH,
       });
 
@@ -137,8 +149,8 @@ describe('DentalChartRepository', () => {
 
     test('adds a new tooth record if toothNumber not previously in chart', async () => {
       const chart = await repo.upsert({
-        visitId: VISIT_1,
-        patientId: PATIENT_1,
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
         teeth: [{ toothNumber: 11, state: 'healthy' }],
       });
 
@@ -158,6 +170,90 @@ describe('DentalChartRepository', () => {
         state: 'healthy',
       });
       expect(result).toBeNull();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // ENTRY CLASSIFICATION (P1.3)
+  // --------------------------------------------------------------------------
+
+  describe('entryClassification', () => {
+    test('stores entryClassification on upsert', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 21, state: 'caries', entryClassification: 'existing' }],
+      });
+
+      const tooth = chart.teeth.find(t => t.toothNumber === 21);
+      expect(tooth!.entryClassification).toBe('existing');
+    });
+
+    test('independent findByVisit returns entryClassification', async () => {
+      await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [
+          { toothNumber: 11, state: 'healthy', entryClassification: 'condition' },
+          { toothNumber: 36, state: 'filled', entryClassification: 'treatment_plan' },
+        ],
+      });
+
+      const chart = await repo.findByVisit(VISIT_NO_CHART);
+      expect(chart).not.toBeNull();
+      const t11 = chart!.teeth.find(t => t.toothNumber === 11);
+      const t36 = chart!.teeth.find(t => t.toothNumber === 36);
+      expect(t11!.entryClassification).toBe('condition');
+      expect(t36!.entryClassification).toBe('treatment_plan');
+    });
+
+    test('updateTooth sets entryClassification on an existing tooth', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 21, state: 'caries' }],
+      });
+
+      const updated = await repo.updateTooth(chart.id, {
+        toothNumber: 21,
+        entryClassification: 'existing_other',
+      });
+
+      const tooth = updated!.teeth.find(t => t.toothNumber === 21);
+      expect(tooth!.entryClassification).toBe('existing_other');
+    });
+
+    test('updateTooth preserves entryClassification when not provided', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 21, state: 'caries', entryClassification: 'existing' }],
+      });
+
+      const updated = await repo.updateTooth(chart.id, {
+        toothNumber: 21,
+        state: 'filled',
+      });
+
+      const tooth = updated!.teeth.find(t => t.toothNumber === 21);
+      expect(tooth!.entryClassification).toBe('existing');
+    });
+
+    test('updateTooth sets entryClassification on a new tooth entry', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [],
+      });
+
+      const updated = await repo.updateTooth(chart.id, {
+        toothNumber: 48,
+        state: 'missing',
+        entryClassification: 'existing',
+      });
+
+      const tooth = updated!.teeth.find(t => t.toothNumber === 48);
+      expect(tooth!.entryClassification).toBe('existing');
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import type { DentalMembershipManagement_listParams } from '@/generated/openapi/validators';
@@ -21,8 +22,12 @@ export async function DentalMembershipManagement_list(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new MembershipRepository(db, logger);
-  const items = await repo.listByBranch(branchId, { includeInactive: false });
+  const { limit, offset } = parsePagination(ctx.req.query());
 
-  return ctx.json({ items, total: items.length });
+  const repo = new MembershipRepository(db, logger);
+  const allItems = await repo.listByBranch(branchId, { includeInactive: false });
+  const total = allItems.length;
+  const page = allItems.slice(offset, offset + limit);
+
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, total, limit, offset) });
 }

@@ -9,36 +9,12 @@
  */
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { toPatientCard, usePatients, type RawPatient } from './use-patients';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function makeWrapper(qc: QueryClient) {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(QueryClientProvider, { client: qc }, children);
-  };
-}
-
-function freshClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-}
-
-function jsonResponse(data: unknown, status = 200) {
-  return Promise.resolve(
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-}
-
-/** API list response shape for patients */
+/** API list response shape for patients — matches actual paginated API: { data: [...], pagination: {...} } */
 function patientListResponse(patients: RawPatient[]) {
-  return { patients, total: patients.length, limit: 50, offset: 0 };
+  return { data: patients, pagination: { offset: 0, limit: 50, count: patients.length, totalCount: patients.length, totalPages: 1 } };
 }
 
 // ─── toPatientCard (pure transform) ────────────────────────────────────────

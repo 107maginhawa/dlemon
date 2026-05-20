@@ -6,12 +6,13 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { PatientRepository } from './patient.repo';
-import { createDatabase } from '@/core/database';
 import { persons } from '../../person/repos/person.schema';
+import { openTestTx } from '@/core/test-tx';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+// Set in beforeEach to the current transaction db — accessible by createTestPerson
+let db: NodePgDatabase;
 
 const BRANCH_A = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_B = 'a0000000-0000-1000-8000-000000000002';
@@ -31,15 +32,16 @@ async function createTestPerson(idx: number) {
 
 describe('PatientRepository — dental extensions', () => {
   let repo: PatientRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new PatientRepository(db);
+    teardown = rollback;
   });
 
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE patient CASCADE`);
-    await db.execute(sql`TRUNCATE TABLE person CASCADE`);
-  });
+  afterEach(() => teardown());
 
   // --------------------------------------------------------------------------
   // Dental fields persistence

@@ -6,7 +6,8 @@
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { PatientFolderCard } from './patient-folder-card';
 
@@ -26,21 +27,21 @@ describe('PatientFolderCard', () => {
   test('renders patient last name (uppercase) and first name separately', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
     // New manila folder layout: "SANTOS" on one line, "Maria" on another
-    expect(screen.getByText('SANTOS')).toBeTruthy();
-    expect(screen.getByText('Maria')).toBeTruthy();
+    expect(screen.getByText('SANTOS')).not.toBeNull();
+    expect(screen.getByText('Maria')).not.toBeNull();
   });
 
   test('renders avatar initials from display name', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
     const avatar = screen.getByTestId('patient-avatar');
-    expect(avatar.textContent?.trim()).toBeTruthy();
+    expect(avatar.textContent?.trim()).not.toBeNull();
     // "Maria Santos" → "MS"
     expect(avatar.textContent?.trim()).toBe('MS');
   });
 
   test('renders visit count', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
-    expect(screen.getByText(/5/)).toBeTruthy();
+    expect(screen.getByText(/5/)).not.toBeNull();
   });
 
   test('shows follow-up indicator when needsFollowUp is true', () => {
@@ -48,7 +49,7 @@ describe('PatientFolderCard', () => {
       patient: { ...basePatient, needsFollowUp: true },
       onClick: () => {},
     }));
-    expect(screen.getByTestId('follow-up-indicator')).toBeTruthy();
+    expect(screen.getByTestId('follow-up-indicator')).not.toBeNull();
   });
 
   test('does not show follow-up indicator when needsFollowUp is false', () => {
@@ -61,16 +62,17 @@ describe('PatientFolderCard', () => {
       patient: { ...basePatient, hasBalance: true },
       onClick: () => {},
     }));
-    expect(screen.getByTestId('balance-badge')).toBeTruthy();
+    expect(screen.getByTestId('balance-badge')).not.toBeNull();
   });
 
-  test('calls onClick when card is clicked', () => {
+  test('calls onClick when card is clicked', async () => {
+    const user = userEvent.setup();
     let clicked = false;
     render(React.createElement(PatientFolderCard, {
       patient: basePatient,
       onClick: () => { clicked = true; },
     }));
-    fireEvent.click(screen.getByTestId('patient-folder-card'));
+    await user.click(screen.getByTestId('patient-folder-card'));
     expect(clicked).toBe(true);
   });
 
@@ -82,7 +84,7 @@ describe('PatientFolderCard', () => {
 
   test('renders the manila folder tab strip', () => {
     render(React.createElement(PatientFolderCard, { patient: basePatient, onClick: () => {} }));
-    expect(screen.getByTestId('folder-tab')).toBeTruthy();
+    expect(screen.getByTestId('folder-tab')).not.toBeNull();
   });
 
   test('folder tab has lemon gold color class', () => {

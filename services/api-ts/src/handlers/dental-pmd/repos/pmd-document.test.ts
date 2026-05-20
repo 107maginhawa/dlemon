@@ -9,18 +9,16 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
 import { PMDDocumentRepository } from './pmd-document.repo';
 import { ImportedPMDRepository } from './imported-pmd.repo';
-import { createDatabase } from '@/core/database';
+import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
-
-const VISIT_1   = 'f8000000-0000-4000-8000-000000000001';
-const VISIT_2   = 'f8000000-0000-4000-8000-000000000002';
-const PATIENT_1 = 'f8000000-0000-4000-8000-000000000010';
-const MEMBER_1  = 'f8000000-0000-4000-8000-000000000020';
-const BRANCH_1  = 'f8000000-0000-4000-8000-000000000030';
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
+const MEMBER_1  = CHAIN_IDS.MEMBERSHIP_1;
+const BRANCH_1  = CHAIN_IDS.BRANCH_1;
 
 const basePMD = {
   visitId: VISIT_1,
@@ -33,12 +31,16 @@ const basePMD = {
 
 describe('PMDDocumentRepository', () => {
   let repo: PMDDocumentRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new PMDDocumentRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE pmd_document, imported_pmd CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new PMDDocumentRepository(db);
+    await seedClinicalChain(db, { patients: 3, visits: 2 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   describe('create', () => {
     test('creates a PMD in generated status', async () => {
@@ -122,7 +124,7 @@ describe('PMDDocumentRepository', () => {
   describe('findMany', () => {
     test('filters by patientId', async () => {
       await repo.createOne(basePMD);
-      await repo.createOne({ ...basePMD, patientId: 'f8000000-0000-4000-8000-000000000011', visitId: VISIT_2 });
+      await repo.createOne({ ...basePMD, patientId: CHAIN_IDS.PATIENT_3, visitId: VISIT_2 });
       const results = await repo.findMany({ patientId: PATIENT_1 });
       expect(results).toHaveLength(1);
     });
@@ -138,12 +140,16 @@ describe('PMDDocumentRepository', () => {
 
 describe('ImportedPMDRepository', () => {
   let repo: ImportedPMDRepository;
+  let teardown: () => Promise<void>;
 
-  beforeEach(() => { repo = new ImportedPMDRepository(db); });
-
-  afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE imported_pmd CASCADE`);
+  beforeEach(async () => {
+    const { db, rollback } = await openTestTx();
+    repo = new ImportedPMDRepository(db);
+    await seedClinicalChain(db, { patients: 3, visits: 0, memberships: 0, branches: 1 });
+    teardown = rollback;
   });
+
+  afterEach(() => teardown());
 
   const baseImport = {
     patientId: PATIENT_1,
@@ -182,7 +188,7 @@ describe('ImportedPMDRepository', () => {
   describe('findMany', () => {
     test('filters by patientId', async () => {
       await repo.createOne(baseImport);
-      await repo.createOne({ ...baseImport, patientId: 'f8000000-0000-4000-8000-000000000012' });
+      await repo.createOne({ ...baseImport, patientId: CHAIN_IDS.PATIENT_3 });
       const results = await repo.findMany({ patientId: PATIENT_1 });
       expect(results).toHaveLength(1);
     });

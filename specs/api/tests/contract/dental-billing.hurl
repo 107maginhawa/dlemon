@@ -18,14 +18,71 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
+# 0a. Create a dental organization
+POST {{api}}/dental/organizations
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Billing Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.id"
+
+
+# 0b. Create a branch
+POST {{api}}/dental/organizations/{{org_id}}/branches
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Test Street",
+  "city": "Manila",
+  "phone": "+639001234567"
+}
+HTTP 201
+[Captures]
+branch_id: jsonpath "$.id"
+
+
+# 0c. Create a dental patient
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Billing Test Patient {{suffix}}",
+  "consentGiven": true
+}
+HTTP 201
+[Captures]
+patient_id: jsonpath "$.id"
+
+
+# 0d. Create branch membership for this user (grants branch access)
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Billing Tester",
+  "role": "dentist_owner",
+  "personId": "{{user_id}}"
+}
+HTTP 201
+[Captures]
+dentist_member_id: jsonpath "$.id"
+
+
 # 1. Create a dental visit (draft)
 POST {{api}}/dental/visits
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "{{user_id}}",
-  "branchId": "f4000000-0000-4000-8000-000000000002",
-  "dentistMemberId": "f4000000-0000-4000-8000-000000000003",
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
   "chiefComplaint": "Billing test visit"
 }
 HTTP 201
@@ -53,7 +110,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "{{user_id}}",
+  "patientId": "{{patient_id}}",
   "cdtCode": "D2391",
   "description": "Resin composite, one surface",
   "toothNumber": 26,
@@ -71,7 +128,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "{{user_id}}",
+  "patientId": "{{patient_id}}",
   "cdtCode": "D0150",
   "description": "Comprehensive oral evaluation",
   "priceCents": 8500
@@ -81,7 +138,31 @@ HTTP 201
 treatment_id_2: jsonpath "$.id"
 
 
-# 5. Mark treatment 1 as performed
+# 5a. Plan treatment 1 (diagnosed → planned)
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id_1}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "planned"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "planned"
+
+
+# 5b. Plan treatment 2 (diagnosed → planned)
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id_2}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "planned"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "planned"
+
+
+# 5. Mark treatment 1 as performed (planned → performed)
 PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id_1}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -93,7 +174,7 @@ HTTP 200
 jsonpath "$.status" == "performed"
 
 
-# 6. Mark treatment 2 as performed
+# 6. Mark treatment 2 as performed (planned → performed)
 PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id_2}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -111,9 +192,9 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "visitId": "{{visit_id}}",
-  "patientId": "{{user_id}}",
-  "branchId": "f4000000-0000-4000-8000-000000000002",
-  "dentistMemberId": "f4000000-0000-4000-8000-000000000003"
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
 }
 HTTP 201
 [Captures]
@@ -153,8 +234,8 @@ Content-Type: application/json
 {
   "amountCents": 5000,
   "method": "cash",
-  "receiptNumber": "A-0001",
-  "recordedByMemberId": "f4000000-0000-4000-8000-000000000003"
+  "receiptNumber": "A-{{suffix}}",
+  "recordedByMemberId": "{{dentist_member_id}}"
 }
 HTTP 201
 [Captures]
@@ -170,7 +251,7 @@ GET {{api}}/dental/billing/invoices/{{invoice_id}}/payments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$" count >= 1
+jsonpath "$.data" count >= 1
 
 
 # 12. Void payment
@@ -191,14 +272,14 @@ POST {{api}}/dental/billing/invoices/{{invoice_id}}/plan
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientId": "{{user_id}}",
+  "patientId": "{{patient_id}}",
   "numberOfInstallments": 3,
   "frequency": "monthly",
   "startDate": "2026-07-01T00:00:00.000Z"
 }
 HTTP 201
 [Asserts]
-jsonpath "$.status" == "onTrack"
+jsonpath "$.status" == "on_track"
 jsonpath "$.numberOfInstallments" == 3
 jsonpath "$.frequency" == "monthly"
 
@@ -208,7 +289,7 @@ GET {{api}}/dental/billing/invoices/{{invoice_id}}/plan
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.status" == "onTrack"
+jsonpath "$.status" == "on_track"
 jsonpath "$.installments" count == 3
 
 
@@ -225,3 +306,18 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{invoice_id}}"
 jsonpath "$.lineItems" count == 2
+
+
+# NEW: G2-S4 — payment plan installment structure verification
+# Re-fetch the payment plan and assert each installment has required fields.
+GET {{api}}/dental/billing/invoices/{{invoice_id}}/plan
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "on_track"
+jsonpath "$.installments" count == 3
+jsonpath "$.installments[0].amountCents" isInteger
+jsonpath "$.installments[0].dueDate" isString
+jsonpath "$.installments[0].status" isString
+jsonpath "$.installments[1].amountCents" isInteger
+jsonpath "$.installments[2].amountCents" isInteger

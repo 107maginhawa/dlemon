@@ -30,6 +30,7 @@ export function createDependencyInjection(app: App, config: Config) {
     ctx.set('billing', billing);
     ctx.set('config', config);
     ctx.set('internalServiceToken', internalServiceToken);
+    ctx.set('internalServiceExpandEnabled', config.server.internalServiceExpandEnabled);
 
     await next();
   };
