@@ -699,13 +699,15 @@ describe('updateMedicalHistoryEntry handler', () => {
 // ---------------------------------------------------------------------------
 
 describe('createPrescription role gate', () => {
+  const roleGateBody = { patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID' };
+
   test('staff_full → 403', async () => {
     const visit = await seedVisit();
     const app = buildTestApp(STAFF_USER);
     const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+      body: JSON.stringify(roleGateBody),
     });
     expect(res.status).toBe(403);
   });
@@ -716,7 +718,7 @@ describe('createPrescription role gate', () => {
     const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+      body: JSON.stringify(roleGateBody),
     });
     expect(res.status).toBe(403);
   });
@@ -727,7 +729,7 @@ describe('createPrescription role gate', () => {
     const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+      body: JSON.stringify(roleGateBody),
     });
     expect(res.status).not.toBe(403);
   });
