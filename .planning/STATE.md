@@ -1,19 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: "v1.4"
-milestone_name: milestone
-status: in_progress
-stopped_at: CI-GREEN confirmed (2026-05-21) — run 26176212195 green, PR #2 merged
-last_updated: "2026-05-21T00:44:00.000Z"
+milestone: "v1.5-g1"
+milestone_name: G1 Foundation Stabilization
+status: complete
+stopped_at: G1 all 5 slices done — PR ready (2026-05-21)
+last_updated: "2026-05-21T00:00:00.000Z"
 progress:
-  total_phases: 12
-  completed_phases: 10
-  total_plans: 28
-  completed_plans: 27
-  percent: 83
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 ## Current Position
+
+### G1 Foundation Stabilization — COMPLETE (2026-05-21)
+
+All 5 G1 slices done on feat/v1.5-g1-foundation:
+
+- G1-S1: staff_scheduling 403 tests — dental-treatment, dental-billing, clinical-prescription ✅ (8baca44 + 005885a)
+- G1-S2: BR-005 auto-discard tests confirmed green — 5/5 pass ✅
+- G1-S3: CephLandmark FSM 422 tests confirmed green — 52/52 pass ✅
+- G1-S4: PaymentPlan FSM 422 tests confirmed green — 11/11 pass ✅
+- G1-S5: imaging-test bundle guard via routeFileIgnorePattern ✅ (8baca44)
+- Cross-module E2E: role-gates-scheduling.spec.ts — staff_scheduling 403 end-to-end ✅ (005885a)
+
+Total new tests: 4 unit + 1 E2E. All 121 G1-S1 tests pass (33 + 58 + 30).
 
 ### Clinical Workflow Completion — PHASE 1 COMPLETE (2026-05-19)
 
@@ -168,8 +181,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-20T16:36:39.983Z
-Stopped at: context exhaustion at 75% (2026-05-20)
+Last session: 2026-05-20T22:14:38.241Z
+Stopped at: context exhaustion at 76% (2026-05-20)
 Resume file: None
 Resume branch: feat/v1.4-clinical-imaging
 
