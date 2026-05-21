@@ -387,32 +387,84 @@ export class ConsultationNoteRepository extends DatabaseRepository<
     amendedConsultations: number;
     recentConsultationDate?: Date;
   }> {
-    this.logger?.debug({ entityId, entityType, dateRange }, 'Getting consultation statistics');
-    
-    const filters: ConsultationNoteFilters = {};
-    filters[entityType] = entityId;
-    
-    if (dateRange) {
-      filters.dateRange = dateRange;
-    }
-    
-    const allNotes = await this.findMany(filters);
-    
-    const stats = {
-      totalConsultations: allNotes.length,
-      draftConsultations: allNotes.filter(note => note.status === 'draft').length,
-      finalizedConsultations: allNotes.filter(note => note.status === 'finalized').length,
-      amendedConsultations: allNotes.filter(note => note.status === 'amended').length,
-      recentConsultationDate: allNotes[0]?.createdAt
+    const results = await this.getBatchConsultationStats([entityId], entityType, dateRange);
+    return results[entityId] ?? {
+      totalConsultations: 0,
+      draftConsultations: 0,
+      finalizedConsultations: 0,
+      amendedConsultations: 0,
+      recentConsultationDate: undefined
     };
-    
-    this.logger?.debug({ 
-      entityId, 
-      entityType, 
-      stats 
-    }, 'Consultation statistics calculated');
-    
-    return stats;
+  }
+
+  /**
+   * Batch version of getConsultationStats — single aggregate query for N patients.
+   * Replaces the N+1 pattern in listEMRPatients.
+   */
+  async getBatchConsultationStats(
+    entityIds: string[],
+    entityType: 'patient' | 'provider',
+    dateRange?: { start: string; end: string }
+  ): Promise<Record<string, {
+    totalConsultations: number;
+    draftConsultations: number;
+    finalizedConsultations: number;
+    amendedConsultations: number;
+    recentConsultationDate?: Date;
+  }>> {
+    if (entityIds.length === 0) return {};
+
+    this.logger?.debug({ entityIds, entityType, dateRange }, 'Batch consultation stats');
+
+    const col = entityType === 'patient' ? consultationNotes.patient : consultationNotes.provider;
+
+    const conditions: SQL<unknown>[] = [inArray(col, entityIds)];
+    if (dateRange) {
+      conditions.push(
+        and(
+          sql`${consultationNotes.createdAt} >= ${dateRange.start}::timestamp`,
+          sql`${consultationNotes.createdAt} <= ${dateRange.end}::timestamp`
+        ) as SQL<unknown>
+      );
+    }
+
+    const rows = await this.db
+      .select({
+        entityId: col,
+        status: consultationNotes.status,
+        count: sql<number>`cast(count(*) as int)`,
+        recentDate: sql<Date>`max(${consultationNotes.createdAt})`
+      })
+      .from(consultationNotes)
+      .where(and(...conditions))
+      .groupBy(col, consultationNotes.status);
+
+    // Aggregate per entity
+    const result: Record<string, {
+      totalConsultations: number;
+      draftConsultations: number;
+      finalizedConsultations: number;
+      amendedConsultations: number;
+      recentConsultationDate?: Date;
+    }> = {};
+
+    for (const id of entityIds) {
+      result[id] = { totalConsultations: 0, draftConsultations: 0, finalizedConsultations: 0, amendedConsultations: 0 };
+    }
+
+    for (const row of rows) {
+      const id = row.entityId as string;
+      if (!result[id]) continue;
+      result[id].totalConsultations += row.count;
+      if (row.status === 'draft') result[id].draftConsultations = row.count;
+      if (row.status === 'finalized') result[id].finalizedConsultations = row.count;
+      if (row.status === 'amended') result[id].amendedConsultations = row.count;
+      if (!result[id].recentConsultationDate || row.recentDate > result[id].recentConsultationDate!) {
+        result[id].recentConsultationDate = row.recentDate;
+      }
+    }
+
+    return result;
   }
 
   /**
