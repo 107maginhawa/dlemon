@@ -40,7 +40,7 @@ import healthOpenapi from '@/core/health.openapi.json';
 // Middleware
 import { createRequestId, createRequestLogger } from '@/middleware/request';
 import { createDependencyInjection } from '@/middleware/dependency';
-import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard } from '@/middleware/security';
+import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard, createPhiCacheHeaders } from '@/middleware/security';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-org/getAuditEvents';
@@ -121,6 +121,9 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['admin'] }),
     getAuditEvents
   );
+
+  // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)
+  app.use('*', createPhiCacheHeaders());
 
   // CSRF guard — must come before generated routes; Bearer/internal-expand/no-browser-signal exempt
   app.use('*', createCsrfGuard(config, logger));
