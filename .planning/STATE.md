@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
 status: in-progress
-stopped_at: G3 complete — G6-core next (2026-05-21)
-last_updated: "2026-05-21T09:30:00.000Z"
+stopped_at: context exhaustion at 76% (2026-05-21)
+last_updated: "2026-05-21T05:56:40.533Z"
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 10
   total_plans: 28
-  completed_plans: 28
-  percent: 85
+  completed_plans: 27
+  percent: 77
 ---
 
 ## Current Position
@@ -26,13 +26,16 @@ All 6 G3 slices done on feat/v1.5-g1-foundation:
 - G3-S5: EMR N+1 fixed (getBatchConsultationStats) + pool exhaustion fixed (max 5→2) ✅ (21585cc)
 - G3-S6: BROWNFIELD_STATUS F-012..F-016 → ✅, STATE.md updated ✅
 
-**Next:** G6-core (5 parallel + 1 sequential)
-- G6-S1: Error envelope doc + conformance test
-- G6-S2: Property tests for 10 FSMs (add fast-check dep first)
-- G6-S3: ASVS L2 checklist + THREAT_MODEL.md
-- G6-S4 (sequential): dental_audit DB table + Pino shim + admin endpoint
-- G6-S7: TypeSpec @example annotations + OpenAPI drift CI
-- G6-S10: Migration safety lint + CI script
+### G6-core — COMPLETE (2026-05-21)
+
+All 6 G6 slices done on feat/v1.5-g1-foundation:
+
+- G6-S1: Error envelope doc + conformance test ✅ (74c01e6 + 012e4ec — docs/api/ERROR_ENVELOPE.md + 28-test conformance suite)
+- G6-S2: Property tests for 10 FSMs ✅ (all 10 FSMs have fast-check property tests, pre-existing)
+- G6-S3: ASVS L2 checklist + THREAT_MODEL.md ✅ (docs/audits/ASVS_L2.md + THREAT_MODEL.md, pre-existing)
+- G6-S4: dental_audit DB table + Pino shim + admin endpoint ✅ (migration 0037 + audit-logger.ts + audit.repo.ts + getAuditEvents.ts, pre-existing)
+- G6-S7: TypeSpec @example annotations + OpenAPI drift CI ✅ (1e6218c — 4 examples each on dental-clinical.tsp + dental-org.tsp; drift CI pre-existing)
+- G6-S10: Migration safety lint + CI script ✅ (scripts/lint-migrations.ts + quality.yml wired, pre-existing)
 
 ### G1 Foundation Stabilization — COMPLETE (2026-05-21)
 
@@ -200,8 +203,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-21T01:06:52.659Z
-Stopped at: context exhaustion at 77% (2026-05-21)
+Last session: 2026-05-21T05:56:40.529Z
+Stopped at: context exhaustion at 76% (2026-05-21)
 Resume file: None
 Resume branch: feat/v1.4-clinical-imaging
 
