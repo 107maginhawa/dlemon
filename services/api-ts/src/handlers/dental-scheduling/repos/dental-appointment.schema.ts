@@ -1,7 +1,7 @@
 /**
  * Drizzle schema for dental appointments
  *
- * Appointment lifecycle: scheduled -> checkedIn -> completed | cancelled | noShow
+ * Appointment lifecycle: scheduled -> checked_in -> completed | cancelled | no_show
  * No-show is reversible (can revert to completed).
  */
 
@@ -52,11 +52,11 @@ export type AppointmentStatus = typeof VALID_APPOINTMENT_STATUSES[number];
 
 /**
  * Valid state-machine transitions for appointments.
- * scheduled → checkedIn | cancelled | noShow
- * checkedIn → completed | cancelled | noShow
- * completed → [] (terminal)
- * cancelled   → [] (terminal)
- * no_show     → completed (reversible)
+ * scheduled  → checked_in | cancelled | no_show
+ * checked_in → completed | cancelled | no_show
+ * completed  → [] (terminal)
+ * cancelled  → [] (terminal)
+ * no_show    → completed (reversible)
  */
 export const APPOINTMENT_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   scheduled: ['checked_in', 'cancelled', 'no_show'],

@@ -71,8 +71,11 @@ export const invoices = pgTable('invoice', {
   status: invoiceStatusEnum('status').notNull().default('draft'),
 
   // Amount fields in cents (TypeSpec: CurrencyAmount)
+  /** Integer cents. DC-003/DC-010: rename to subtotalCents for consistency with dental-billing (requires migration + caller updates). */
   subtotal: integer('subtotal').notNull(),
+  /** Integer cents. DC-003/DC-010: rename to taxCents for consistency with dental-billing (requires migration + caller updates). */
   tax: integer('tax'),
+  /** Integer cents. DC-003/DC-010: rename to totalCents for consistency with dental-billing (requires migration + caller updates). */
   total: integer('total').notNull(),
 
   // Currency code (3-letter ISO 4217)
