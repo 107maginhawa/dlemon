@@ -14,6 +14,7 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, desc } from 'drizzle-orm';
 import { dentalVisits } from '../dental-visit/repos/visit.schema';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { GetDentalPatientParams } from '@/generated/openapi/validators';
 
 export async function getDentalPatient(
@@ -62,6 +63,14 @@ export async function getDentalPatient(
   const lastName = person?.lastName ?? '';
 
   logger?.info({ action: 'getDentalPatient', patientId }, 'Dental patient profile retrieved');
+
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.view',
+    resourceType: 'dental_patient',
+    resourceId: patientId,
+  });
 
   return ctx.json({
     id: patient.id,

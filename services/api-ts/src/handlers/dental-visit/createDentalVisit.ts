@@ -11,6 +11,7 @@ import { UnauthorizedError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from './repos/visit.repo';
 import { VisitNotesRepository } from './repos/treatment.repo';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CreateDentalVisitBody } from '@/generated/openapi/validators';
 
@@ -34,10 +35,20 @@ export async function createDentalVisit(
     chiefComplaint: body.chiefComplaint,
   });
 
-  ctx.get('logger')?.info(
+  const logger = ctx.get('logger');
+  logger?.info(
     { requestId: ctx.get('requestId'), action: 'dental_visit_create', visitId: visit.id, patientId: visit.patientId, branchId: visit.branchId, by: user.id },
     'Dental visit created',
   );
+
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: body.branchId,
+    action: 'visit.create',
+    resourceType: 'dental_visit',
+    resourceId: visit.id,
+    metadata: { patientId: visit.patientId, branchId: visit.branchId },
+  });
 
   // Auto-create empty notes row so GET /notes on any new visit returns 200
   const notesRepo = new VisitNotesRepository(db);
