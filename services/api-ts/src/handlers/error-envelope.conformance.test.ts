@@ -90,7 +90,8 @@ function buildApp() {
   });
   app.get('/throw/zod', () => {
     const schema = z.object({ email: z.string().email(), age: z.number().min(0) });
-    schema.parse({ email: 'not-an-email', age: -1 });
+    schema.parse({ email: 'not-an-email', age: -1 }); // throws ZodError; line below never reached
+    return new Response(null, { status: 200 });
   });
   app.get('/throw/unhandled', () => { throw new Error('Unexpected boom'); });
   app.get('/throw/app-error-generic', () => {
@@ -108,19 +109,19 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 /** Assert every required base envelope field is present and well-typed. */
 function assertBaseEnvelope(body: Record<string, unknown>, expectedStatus: number) {
-  expect(typeof body.message).toBe('string');
-  expect(body.message).toBeTruthy();
+  expect(typeof body['message']).toBe('string');
+  expect(body['message']).toBeTruthy();
 
-  expect(typeof body.code).toBe('string');
-  expect(body.code).toBeTruthy();
+  expect(typeof body['code']).toBe('string');
+  expect(body['code']).toBeTruthy();
 
-  expect(typeof body.requestId).toBe('string');
-  expect(UUID_RE.test(body.requestId as string)).toBe(true);
+  expect(typeof body['requestId']).toBe('string');
+  expect(UUID_RE.test(body['requestId'] as string)).toBe(true);
 
-  expect(typeof body.timestamp).toBe('string');
-  expect(ISO_RE.test(body.timestamp as string)).toBe(true);
+  expect(typeof body['timestamp']).toBe('string');
+  expect(ISO_RE.test(body['timestamp'] as string)).toBe(true);
 
-  expect(body.statusCode).toBe(expectedStatus);
+  expect(body['statusCode']).toBe(expectedStatus);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(401);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 401);
-    expect(body.code).toBe('UNAUTHORIZED');
+    expect(body['code']).toBe('UNAUTHORIZED');
   });
 
   test('ForbiddenError (403) has all base fields', async () => {
@@ -145,7 +146,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(403);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 403);
-    expect(body.code).toBe('FORBIDDEN');
+    expect(body['code']).toBe('FORBIDDEN');
   });
 
   test('ValidationError (400) has all base fields', async () => {
@@ -153,7 +154,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(400);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 400);
-    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body['code']).toBe('VALIDATION_ERROR');
   });
 
   test('ConflictError (409) has all base fields', async () => {
@@ -161,7 +162,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(409);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 409);
-    expect(body.code).toBe('CONFLICT');
+    expect(body['code']).toBe('CONFLICT');
   });
 
   test('generic AppError uses caller-supplied code and status', async () => {
@@ -169,7 +170,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(418);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 418);
-    expect(body.code).toBe('MY_CUSTOM_CODE');
+    expect(body['code']).toBe('MY_CUSTOM_CODE');
   });
 
   test('unhandled Error produces 500 INTERNAL_SERVER_ERROR', async () => {
@@ -177,7 +178,7 @@ describe('error envelope — base fields', () => {
     expect(res.status).toBe(500);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 500);
-    expect(body.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(body['code']).toBe('INTERNAL_SERVER_ERROR');
   });
 });
 
@@ -187,16 +188,16 @@ describe('error envelope — NotFoundError (404)', () => {
     expect(res.status).toBe(404);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 404);
-    expect(body.code).toBe('NOT_FOUND');
+    expect(body['code']).toBe('NOT_FOUND');
   });
 
   test('extension fields: resourceType, resource, suggestions', async () => {
     const res = await app.request('/throw/not-found');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.resourceType).toBe('Patient');
-    expect(body.resource).toBe('abc123');
-    expect(Array.isArray(body.suggestions)).toBe(true);
-    expect((body.suggestions as string[])[0]).toBe('Try patient bcd234');
+    expect(body['resourceType']).toBe('Patient');
+    expect(body['resource']).toBe('abc123');
+    expect(Array.isArray(body['suggestions'])).toBe(true);
+    expect((body['suggestions'] as string[])[0]).toBe('Try patient bcd234');
   });
 });
 
@@ -206,13 +207,13 @@ describe('error envelope — BusinessLogicError (422)', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 422);
-    expect(body.code).toBe('SLOT_CONFLICT');
+    expect(body['code']).toBe('SLOT_CONFLICT');
   });
 
   test('message is preserved', async () => {
     const res = await app.request('/throw/business-logic');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.message).toBe('Slot already booked');
+    expect(body['message']).toBe('Slot already booked');
   });
 });
 
@@ -222,27 +223,27 @@ describe('error envelope — ZodError produces VALIDATION_ERROR with fieldErrors
     expect(res.status).toBe(400);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 400);
-    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body['code']).toBe('VALIDATION_ERROR');
   });
 
   test('fieldErrors array is present with field + code + message', async () => {
     const res = await app.request('/throw/zod');
     const body = await res.json() as Record<string, unknown>;
-    expect(Array.isArray(body.fieldErrors)).toBe(true);
-    const fieldErrors = body.fieldErrors as Array<Record<string, unknown>>;
+    expect(Array.isArray(body['fieldErrors'])).toBe(true);
+    const fieldErrors = body['fieldErrors'] as Array<Record<string, unknown>>;
     expect(fieldErrors.length).toBeGreaterThan(0);
     for (const fe of fieldErrors) {
-      expect(typeof fe.field).toBe('string');
-      expect(typeof fe.code).toBe('string');
-      expect(typeof fe.message).toBe('string');
+      expect(typeof fe['field']).toBe('string');
+      expect(typeof fe['code']).toBe('string');
+      expect(typeof fe['message']).toBe('string');
     }
   });
 
   test('email field error is present', async () => {
     const res = await app.request('/throw/zod');
     const body = await res.json() as Record<string, unknown>;
-    const fieldErrors = body.fieldErrors as Array<Record<string, unknown>>;
-    const emailErr = fieldErrors.find(fe => fe.field === 'email');
+    const fieldErrors = body['fieldErrors'] as Array<Record<string, unknown>>;
+    const emailErr = fieldErrors.find(fe => fe['field'] === 'email');
     expect(emailErr).toBeDefined();
   });
 });
@@ -253,16 +254,16 @@ describe('error envelope — AuthenticationError (401)', () => {
     expect(res.status).toBe(401);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 401);
-    expect(body.code).toBe('AUTHENTICATION_ERROR');
+    expect(body['code']).toBe('AUTHENTICATION_ERROR');
   });
 
   test('extension: scheme and supportedSchemes', async () => {
     const res = await app.request('/throw/authentication');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.scheme).toBe('Bearer');
-    expect(Array.isArray(body.supportedSchemes)).toBe(true);
-    expect(body.supportedSchemes).toContain('Bearer');
-    expect(body.supportedSchemes).toContain('ApiKey');
+    expect(body['scheme']).toBe('Bearer');
+    expect(Array.isArray(body['supportedSchemes'])).toBe(true);
+    expect(body['supportedSchemes']).toContain('Bearer');
+    expect(body['supportedSchemes']).toContain('ApiKey');
   });
 });
 
@@ -272,16 +273,16 @@ describe('error envelope — AuthorizationError (403)', () => {
     expect(res.status).toBe(403);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 403);
-    expect(body.code).toBe('AUTHORIZATION_ERROR');
+    expect(body['code']).toBe('AUTHORIZATION_ERROR');
   });
 
   test('extension: requiredPermission, userPermissions, resource', async () => {
     const res = await app.request('/throw/authorization');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.requiredPermission).toBe('patient:write');
-    expect(Array.isArray(body.userPermissions)).toBe(true);
-    expect((body.userPermissions as string[])[0]).toBe('patient:read');
-    expect(body.resource).toBe('/patients/x');
+    expect(body['requiredPermission']).toBe('patient:write');
+    expect(Array.isArray(body['userPermissions'])).toBe(true);
+    expect((body['userPermissions'] as string[])[0]).toBe('patient:read');
+    expect(body['resource']).toBe('/patients/x');
   });
 });
 
@@ -291,7 +292,7 @@ describe('error envelope — RateLimitError (429)', () => {
     expect(res.status).toBe(429);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 429);
-    expect(body.code).toBe('RATE_LIMIT');
+    expect(body['code']).toBe('RATE_LIMIT');
   });
 
   test('Retry-After header is set', async () => {
@@ -302,11 +303,11 @@ describe('error envelope — RateLimitError (429)', () => {
   test('extension: limitType, limit, usage, resetTime, windowSize', async () => {
     const res = await app.request('/throw/rate-limit');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.limitType).toBe('requests');
-    expect(typeof body.limit).toBe('number');
-    expect(typeof body.usage).toBe('number');
-    expect(typeof body.resetTime).toBe('number');
-    expect(typeof body.windowSize).toBe('number');
+    expect(body['limitType']).toBe('requests');
+    expect(typeof body['limit']).toBe('number');
+    expect(typeof body['usage']).toBe('number');
+    expect(typeof body['resetTime']).toBe('number');
+    expect(typeof body['windowSize']).toBe('number');
   });
 });
 
@@ -316,15 +317,15 @@ describe('error envelope — TimeoutError (408)', () => {
     expect(res.status).toBe(408);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 408);
-    expect(body.code).toBe('TIMEOUT_ERROR');
+    expect(body['code']).toBe('TIMEOUT_ERROR');
   });
 
   test('extension: timeoutMs, operation, retryable', async () => {
     const res = await app.request('/throw/timeout');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.timeoutMs).toBe(5000);
-    expect(body.operation).toBe('fetchRecord');
-    expect(body.retryable).toBe(true);
+    expect(body['timeoutMs']).toBe(5000);
+    expect(body['operation']).toBe('fetchRecord');
+    expect(body['retryable']).toBe(true);
   });
 });
 
@@ -334,17 +335,17 @@ describe('error envelope — ExternalServiceError (503)', () => {
     expect(res.status).toBe(503);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 503);
-    expect(body.code).toBe('EXTERNAL_SERVICE_ERROR');
+    expect(body['code']).toBe('EXTERNAL_SERVICE_ERROR');
   });
 
   test('extension: service, operation, externalCode, retryable, retryAfter', async () => {
     const res = await app.request('/throw/external-service');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.service).toBe('stripe');
-    expect(body.operation).toBe('createCharge');
-    expect(body.externalCode).toBe('stripe_err');
-    expect(body.retryable).toBe(true);
-    expect(body.retryAfter).toBe(60);
+    expect(body['service']).toBe('stripe');
+    expect(body['operation']).toBe('createCharge');
+    expect(body['externalCode']).toBe('stripe_err');
+    expect(body['retryable']).toBe(true);
+    expect(body['retryAfter']).toBe(60);
   });
 
   test('Retry-After header set when retryAfter provided', async () => {
@@ -359,16 +360,16 @@ describe('error envelope — HipaaComplianceError (400)', () => {
     expect(res.status).toBe(400);
     const body = await res.json() as Record<string, unknown>;
     assertBaseEnvelope(body, 400);
-    expect(body.code).toBe('HIPAA_COMPLIANCE_ERROR');
+    expect(body['code']).toBe('HIPAA_COMPLIANCE_ERROR');
   });
 
   test('extension: hipaaRule, violationType, auditLog, remediationRequired', async () => {
     const res = await app.request('/throw/hipaa');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.hipaaRule).toBe('164.312(a)(1)');
-    expect(body.violationType).toBe('access-control');
-    expect(body.auditLog).toBe('evt-1');
-    expect(Array.isArray(body.remediationRequired)).toBe(true);
+    expect(body['hipaaRule']).toBe('164.312(a)(1)');
+    expect(body['violationType']).toBe('access-control');
+    expect(body['auditLog']).toBe('evt-1');
+    expect(Array.isArray(body['remediationRequired'])).toBe(true);
   });
 });
 
@@ -377,7 +378,7 @@ describe('error envelope — dev-only fields', () => {
     // Tests run with NODE_ENV != 'production' so path/method must be present
     const res = await app.request('/throw/not-found');
     const body = await res.json() as Record<string, unknown>;
-    expect(body.path).toBe('/throw/not-found');
-    expect(body.method).toBe('GET');
+    expect(body['path']).toBe('/throw/not-found');
+    expect(body['method']).toBe('GET');
   });
 });
