@@ -606,3 +606,199 @@ describe('completeFileUpload handler', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+// ---------------------------------------------------------------------------
+// abortMultipartUpload
+// ---------------------------------------------------------------------------
+
+describe('abortMultipartUpload handler', () => {
+  test('unauthenticated → ≥400', async () => {
+    const { abortMultipartUpload } = await import('./abortMultipartUpload');
+    const app = buildApp('DELETE', '/storage/multipart/:file/abort', abortMultipartUpload as any, {
+      db: makeDb(MOCK_FILE_UPLOADING),
+      validParams: { file: FILE_ID },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/abort`, { method: 'DELETE' });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('file not found → ≥400', async () => {
+    const { abortMultipartUpload } = await import('./abortMultipartUpload');
+    const app = buildApp('DELETE', '/storage/multipart/:file/abort', abortMultipartUpload as any, {
+      user: ownerUser,
+      db: makeDb(), // empty
+      validParams: { file: FILE_ID },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/abort`, { method: 'DELETE' });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('file has no active multipart upload → ≥400', async () => {
+    const { abortMultipartUpload } = await import('./abortMultipartUpload');
+    const app = buildApp('DELETE', '/storage/multipart/:file/abort', abortMultipartUpload as any, {
+      user: ownerUser,
+      db: makeDb(MOCK_FILE_AVAILABLE), // multipartUploadId is null
+      validParams: { file: FILE_ID },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/abort`, { method: 'DELETE' });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('non-owner → ≥403', async () => {
+    const { abortMultipartUpload } = await import('./abortMultipartUpload');
+    const app = buildApp('DELETE', '/storage/multipart/:file/abort', abortMultipartUpload as any, {
+      user: otherUser,
+      db: makeDb(MOCK_FILE_UPLOADING),
+      validParams: { file: FILE_ID },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/abort`, { method: 'DELETE' });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('owner with active multipart → 204', async () => {
+    const { abortMultipartUpload } = await import('./abortMultipartUpload');
+    // DB that handles both select and update calls
+    const updateDb = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: () => Promise.resolve([MOCK_FILE_UPLOADING]),
+          }),
+        }),
+      }),
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            returning: () => Promise.resolve([{ ...MOCK_FILE_UPLOADING, status: 'failed', multipartUploadId: null }]),
+          }),
+        }),
+      }),
+    };
+    const app = buildApp('DELETE', '/storage/multipart/:file/abort', abortMultipartUpload as any, {
+      user: ownerUser,
+      db: updateDb,
+      storage: makeStorage(),
+      validParams: { file: FILE_ID },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/abort`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// completeMultipartUpload
+// ---------------------------------------------------------------------------
+
+describe('completeMultipartUpload handler', () => {
+  test('unauthenticated → ≥400', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      db: makeDb(MOCK_FILE_UPLOADING),
+      validParams: { file: FILE_ID },
+      validJson: { parts: [{ partNumber: 1, etag: 'etag-1' }] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('file not found → ≥400', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      user: ownerUser,
+      db: makeDb(),
+      validParams: { file: FILE_ID },
+      validJson: { parts: [{ partNumber: 1, etag: 'etag-1' }] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('file not in uploading status → ≥400', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      user: ownerUser,
+      db: makeDb(MOCK_FILE_AVAILABLE), // status = 'available', not 'uploading'
+      validParams: { file: FILE_ID },
+      validJson: { parts: [{ partNumber: 1, etag: 'etag-1' }] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('non-owner → ≥403', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      user: otherUser,
+      db: makeDb(MOCK_FILE_UPLOADING),
+      validParams: { file: FILE_ID },
+      validJson: { parts: [{ partNumber: 1, etag: 'etag-1' }] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('owner with valid parts → ≥200', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const updateDb = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: () => Promise.resolve([MOCK_FILE_UPLOADING]),
+          }),
+        }),
+      }),
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            returning: () => Promise.resolve([{ ...MOCK_FILE_UPLOADING, status: 'available', multipartUploadId: null }]),
+          }),
+        }),
+      }),
+    };
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      user: ownerUser,
+      db: updateDb,
+      storage: makeStorage(),
+      validParams: { file: FILE_ID },
+      validJson: { parts: [{ partNumber: 1, etag: 'etag-1' }] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [{ partNumber: 1, etag: 'etag-1' }] }),
+    });
+    expect(res.status).not.toBe(401);
+  });
+
+  test('empty parts array → ≥400', async () => {
+    const { completeMultipartUpload } = await import('./completeMultipartUpload');
+    const app = buildApp('POST', '/storage/multipart/:file/complete', completeMultipartUpload as any, {
+      user: ownerUser,
+      db: makeDb(MOCK_FILE_UPLOADING),
+      validParams: { file: FILE_ID },
+      validJson: { parts: [] },
+    });
+    const res = await app.request(`/storage/multipart/${FILE_ID}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts: [] }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});

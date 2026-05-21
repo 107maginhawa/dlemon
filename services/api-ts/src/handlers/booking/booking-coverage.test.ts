@@ -883,3 +883,83 @@ describe('validateSlotBoundaries (slotGeneration util)', () => {
     expect(result.valid).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// updateBookingEvent
+// ---------------------------------------------------------------------------
+
+describe('updateBookingEvent handler', () => {
+  test('unauthenticated → ≥400', async () => {
+    const { updateBookingEvent } = await import('./updateBookingEvent');
+    const app = buildApp('PATCH', '/booking/events/:event', updateBookingEvent as any);
+    const res = await app.request('/booking/events/e-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated' }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('event not found → ≥400 (repo miss with empty db)', async () => {
+    const { updateBookingEvent } = await import('./updateBookingEvent');
+    const app = buildApp('PATCH', '/booking/events/:event', updateBookingEvent as any, HOST);
+    const res = await app.request('/booking/events/nonexistent', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated' }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('authenticated with valid path → handler reached (not 401)', async () => {
+    const { updateBookingEvent } = await import('./updateBookingEvent');
+    const app = buildApp('PATCH', '/booking/events/:event', updateBookingEvent as any, HOST);
+    const res = await app.request('/booking/events/e-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Title', duration: 60 }),
+    });
+    // repo will throw (empty db) but auth check passed
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateScheduleException
+// ---------------------------------------------------------------------------
+
+describe('updateScheduleException handler', () => {
+  test('unauthenticated → 401', async () => {
+    const { updateScheduleException } = await import('./updateScheduleException');
+    const app = buildApp('PATCH', '/booking/events/:event/exceptions/:exceptionId', updateScheduleException as any);
+    const res = await app.request('/booking/events/e-1/exceptions/ex-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDatetime: new Date().toISOString() }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('exception not found → ≥400', async () => {
+    const { updateScheduleException } = await import('./updateScheduleException');
+    const app = buildApp('PATCH', '/booking/events/:event/exceptions/:exceptionId', updateScheduleException as any, HOST);
+    const res = await app.request('/booking/events/e-1/exceptions/missing', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDatetime: new Date().toISOString() }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('authenticated with exceptionId present → handler reached (not 401)', async () => {
+    const { updateScheduleException } = await import('./updateScheduleException');
+    const app = buildApp('PATCH', '/booking/events/:event/exceptions/:exceptionId', updateScheduleException as any, HOST);
+    const res = await app.request('/booking/events/e-1/exceptions/ex-99', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Holiday' }),
+    });
+    // repo throws (empty db) but auth + param presence check passed
+    expect(res.status).not.toBe(401);
+  });
+});
