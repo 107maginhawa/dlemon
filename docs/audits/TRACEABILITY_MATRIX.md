@@ -1,7 +1,7 @@
 # Dentalemon — Requirements Traceability Matrix
 
-**Generated:** 2026-05-12  
-**Branch:** `feat/v1.4-clinical-imaging`  
+**Generated:** 2026-05-21  
+**Branch:** `feat/v1.5-g1-foundation`  
 **Source documents:** `BUSINESS_RULES.md`, `ACCEPTANCE_CRITERIA.md`, `docs/context/personas.md`, `docs/modules/dental-imaging/MODULE_SPEC.md`  
 **Regeneration:** `bun run audit:trace` (see `scripts/audit-traceability.ts`)
 
@@ -27,7 +27,7 @@
 |-------|-------|-----------|-----------|------------|
 | Business Rules (BR-001–BR-022) | 22 | 17 (77%) | 3 | 2 (9%) |
 | Imaging BRs (BR-023–BR-035) | 13 | 4 (31%) | 7 | 1 |
-| Acceptance Criteria (AC-*) | 40 | 17 (43%) | 5 | 18 (45%) |
+| Acceptance Criteria (AC-*) | 55 | 27 (49%) | 7 | 21 (38%) |
 | Persona Journeys (steps) | 21 | 7 (33%) | 5 | 9 (43%) |
 | Dental API Routes (E2E layer) | 113 | ~22 (19%) | ~15 | ~76 (67%) |
 
@@ -160,6 +160,8 @@ Backend unit + contract tests provide broad coverage of the happy path. The gaps
 | AC-SCHED-02 | Edit existing appointment → calendar updated | ❌ | ❌ | ❌ |
 | AC-SCHED-03 | Check in → status=checked_in, visit created, navigate to workspace | `check-in-flow.test.ts` | ✅ `patient-checkin.spec.ts` | ✅ |
 | AC-SCHED-04 | Cancel appointment → status=cancelled, slot freed | ❌ | ❌ | ❌ |
+| AC-SCHED-05 | Date filter → only appointments on that date returned | `ac-scheduling.test.ts` [AC-SCHED-05] | ❌ | ✅ |
+| AC-SETTINGS-01 | Configure working hours → persisted; out-of-hours appts blocked | `dental-scheduling-module4.test.ts` (GET/PUT working hours) | ❌ | ✅ |
 
 ### Clinical Workspace — Visit (AC-VISIT)
 
@@ -194,6 +196,8 @@ Backend unit + contract tests provide broad coverage of the happy path. The gaps
 | AC-MED-01 | Medical history entry saved; appears in safety floor if active | `medical-history-form.test.ts` | ❌ | ⚠️ |
 | AC-MED-02 | Safety floor shows color-coded badges (max 6) | `tooth-slideout.test.ts` (safety floor) | ❌ | ⚠️ |
 | AC-MED-03 | Consent e-signature → saved as signed, immutable, re-open read-only | `consent-sheet.test.ts` [BR-014] | ❌ **Gap: no E2E for signing flow** | ❌ |
+| AC-MED-04 | Consent form cannot be re-signed → 400 with "already signed" | `ac-clinical.test.ts` [AC-MED-04] | ❌ | ✅ |
+| AC-MED-05 | Lab order lifecycle: ordered→in_fabrication→delivered→fitted | `ac-clinical.test.ts` [AC-MED-05] | ❌ | ✅ |
 
 ### Prescriptions (AC-RX)
 
@@ -201,6 +205,11 @@ Backend unit + contract tests provide broad coverage of the happy path. The gaps
 |----|-------------------|-----------|----------|--------|
 | AC-RX-01 | Write prescription → saved, listed in Rx sheet | `rx-sheet.test.ts` [BR-017] | ⚠️ `prescribe-medication.spec.ts` (workspace loads, not full submit) | ⚠️ |
 | AC-RX-02 | Non-dentist → Rx form disabled/hidden | `rx-sheet.test.ts` (role check) | ❌ | ⚠️ |
+| AC-PRES-01 | Prescription missing prescriberMemberId → 400 | `ac-clinical.test.ts` [AC-PRES-01] | ❌ | ✅ |
+| AC-PRES-02 | Prescriptions listable by visitId | `ac-clinical.test.ts` [AC-PRES-02] | ❌ | ✅ |
+| AC-PRES-03 | Updating prescription changes dosage | `ac-clinical.test.ts` [AC-PRES-03] | ❌ | ✅ |
+| AC-PRES-04 | Prescription missing drugName → 400 | `ac-clinical.test.ts` [AC-PRES-04] | ❌ | ✅ |
+| AC-PRES-05 | Prescription missing medication name → 400 with error key | `ac-clinical.test.ts` [AC-PRES-05] | ❌ | ✅ |
 
 ### Lab Orders (AC-LAB)
 
@@ -232,6 +241,8 @@ Backend unit + contract tests provide broad coverage of the happy path. The gaps
 | AC-PAY-01 | Record full payment → status=paid | `workspace-payment-modal.test.ts` [BR-012] | ⚠️ `clinical-billing-handoff.spec.ts` | ⚠️ |
 | AC-PAY-02 | Partial payment → status=partial, payment plan created | `workspace-payment-modal.test.ts` [BR-012] | ✅ `payment-plan.spec.ts` | ✅ |
 | AC-PAY-03 | Payment plan blocks invoice void | `workspace-payment-modal.test.ts` [BR-011] | ❌ | ❌ |
+| AC-PAY-04 | Payment plan with 3 installments → all 3 persisted | `ac-billing.test.ts` [AC-PAY-04] | ❌ | ✅ |
+| AC-PAY-05 | Active payment plan blocks invoice void → 400 ACTIVE_PAYMENT_PLAN | `ac-billing.test.ts` [AC-PAY-05] | ❌ | ✅ |
 
 ### PMD (AC-PMD)
 
@@ -240,6 +251,20 @@ Backend unit + contract tests provide broad coverage of the happy path. The gaps
 | AC-PMD-01 | Generate PMD → checksum created, immutable | `use-pmd.test.ts` | ✅ `pmd-generation.spec.ts` | ✅ |
 | AC-PMD-02 | Share PMD → native share sheet, includes all visit data | `use-share-pmd.test.ts` | ✅ `pmd-generation.spec.ts` (share button) | ✅ |
 | AC-PMD-03 | Import external PMD → stored, linked, appears in history | `pmd-import.test.ts` | ❌ | ❌ |
+
+### Notifications (AC-NOTIF)
+
+| AC | Criteria (summary) | Unit Test | E2E Test | Status |
+|----|-------------------|-----------|----------|--------|
+| AC-NOTIF-01 | Appointment creation fires booking.created in-app notification | `createAppointment.notif.test.ts` [AC-NOTIF-01] | ❌ | ✅ |
+| AC-NOTIF-02 | Invoice finalization fires billing notification | `finalizeInvoice.notif.test.ts` [AC-NOTIF-02] | ❌ | ✅ |
+
+### Imaging (AC-IMG)
+
+| AC | Criteria (summary) | Unit Test | E2E Test | Status |
+|----|-------------------|-----------|----------|--------|
+| AC-IMG-01 | Create imaging study → 201 with uploadUrl, linked to patient and branch | `imaging.test.ts` (`createImagingStudy 201`) | ❌ | ✅ |
+| AC-IMG-02 | List patient images enforces branch membership → 403 without, 200 with | `imaging.test.ts` (`listPatientImages branch auth`) | ❌ | ✅ |
 
 ### Patient Profile (AC-PROF)
 

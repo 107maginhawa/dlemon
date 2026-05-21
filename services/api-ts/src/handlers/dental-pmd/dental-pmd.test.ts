@@ -144,7 +144,7 @@ afterEach(async () => {
 // generatePMD
 // ---------------------------------------------------------------------------
 
-describe('generatePMD handler', () => {
+describe('generatePMD handler [AC-PMD-01]', () => {
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/visits/${NONEXISTENT_ID}/pmd`, {
@@ -233,7 +233,7 @@ describe('generatePMD handler', () => {
 // getPMDForVisit
 // ---------------------------------------------------------------------------
 
-describe('getPMDForVisit handler', () => {
+describe('getPMDForVisit handler [AC-PMD-02]', () => {
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/visits/${NONEXISTENT_ID}/pmd`);
