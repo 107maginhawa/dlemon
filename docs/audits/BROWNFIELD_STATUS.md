@@ -83,7 +83,7 @@ Legend: 🟢 healthy | 🟡 has open P1/P2 | 🔴 P0 open
 | F-009 | Dental endpoints absent from Hurl contract tests | cross-module | P2 | stabilize-existing | G2 | ✅ RESOLVED (132/132 endpoints, commit b8558d5) |
 | F-010 | br-registry.json empty (35 BRs not populated) | cross-module | P3 | stabilize-existing | G2 | ✅ RESOLVED (62 entries in registry) |
 | F-011 | booking (11%) + storage (20%) coverage below ratchet | booking, storage | P2 | stabilize-existing | G2 | ✅ RESOLVED (booking 70.9%, storage 72.2%, emr/imaging/patient all ≥70%) |
-| F-012 | "Encounter" vs "Visit" — FHIR/dental terminology conflict in docs/comments | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
+| F-012 | "Encounter" vs "Visit" — FHIR/dental terminology conflict in docs/comments | cross-module | P2 | refactor-existing | G3 | ✅ RESOLVED (G3-S1: all doc/comment occurrences replaced with "Visit") |
 | F-013 | No DOMAIN_MODEL.md — FHIR entity catalog not mapped to dental DB | cross-module | P2 | stabilize-existing | G3 | ⬜ OPEN |
 | F-014 | DC-003, DC-006, DC-010, DC-014 — naming inconsistencies in schema/code | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
 | F-015 | DC-001, DC-007, DC-008 — ~25 bare UUID FK columns undocumented | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |

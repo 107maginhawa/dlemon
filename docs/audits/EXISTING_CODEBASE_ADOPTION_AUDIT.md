@@ -156,7 +156,7 @@ person ────────────────────────�
 
 | Term | Source | Definition (inferred) | Conflicts / Notes |
 |------|--------|----------------------|-------------------|
-| DentalVisit | `visit.schema.ts`, handlers | A dental clinical encounter — draft→active→completed→locked | Also called "Encounter" in `BUSINESS_RULES.md` (FHIR). **Conflict: code uses "Visit", spec uses "Encounter"** |
+| DentalVisit | `visit.schema.ts`, handlers | A dental clinical visit — draft→active→completed→locked | Canonical term is "Visit" (matches code, DB, and API paths). "Encounter" was the old FHIR alias — resolved in G3-S1. |
 | DentalTreatment | `treatment.schema.ts` | A CDT-coded procedure line on a visit | Called "Procedure" in FHIR entity catalog |
 | DentalChart | `dental-chart.schema.ts` | A per-visit snapshot of all 32 tooth states | No conflict |
 | DentalMembership | `membership.schema.ts` | A staff member's affiliation to a branch | Also called "Member" in API paths and UI |
@@ -174,7 +174,7 @@ person ────────────────────────�
 | OrgTier | `organization.schema.ts` | solo \| clinic \| group \| enterprise | No conflict |
 | ImagingTier | `organization.schema.ts` | free \| basic \| addon — imaging feature tier | NULL coerced to 'free' |
 
-**Key conflict: "Visit" vs "Encounter"** — `BUSINESS_RULES.md` uses FHIR term "Encounter" for what the codebase calls `DentalVisit`. Canonical term recommendation: **Visit** (matches code, DB, and API paths).
+**Resolved (G3-S1): "Visit" is canonical** — the codebase uses `DentalVisit` throughout (DB table `dental_visit`, all handlers, API paths). The old FHIR alias "Encounter" has been replaced with "Visit" in all docs and comments.
 
 ### DDD Analysis [INFERRED]
 
@@ -445,7 +445,7 @@ No `DOMAIN_MODEL.md` found. `specs/api/docs/standards/entity-catalog.md` covers 
 | Area | Current State | Target Standard | Gap | Risk | Priority |
 |------|--------------|----------------|-----|------|----------|
 | Architecture docs | CLAUDE.md covers content | Dedicated ARCHITECTURE.md | No standalone arch doc | Low | P3 |
-| Domain glossary | FHIR-canonical (not dental-DB) | Canonical dental terms | "Encounter" vs "Visit" conflict | Medium | P2 |
+| Domain glossary | FHIR-canonical (not dental-DB) | Canonical dental terms | "Visit" standardized (was "Encounter") — resolved G3-S1 | Low | P3 |
 | Role permissions | Matrix exists; API enforcement missing | Matrix = API behavior | assertBranchAccess ignores MemberRole | High | **P1** |
 | Module specs | 1/10 dental have MODULE_SPEC | One spec per major module | 9 missing | Medium | P2 |
 | Ceph BRs | 0 ceph BRs in spec | BRs cover all features | Full ceph module unspecced | High | **P1** |
@@ -479,7 +479,7 @@ None.
 
 | ID | Type | Description | Impact |
 |----|------|-------------|--------|
-| IC-04 | Terminology | "Encounter" (spec) vs "DentalVisit" (code) | Cognitive overhead |
+| IC-04 | Terminology | ~~"Encounter" (spec) vs "DentalVisit" (code)~~ — resolved G3-S1, "Visit" is canonical | Closed |
 | IC-05 | Auth pattern | `ctx.get('session')?.userId` vs `ctx.get('user')?.id` inconsistency | Style only |
 | IC-06 | FK pattern | Cross-module bare UUID FKs in dental-imaging | Intentional — needs ADR |
 | IC-07 | Spec | `br-registry.json` empty despite 35 defined BRs | Machine-readable lookup broken |
@@ -562,7 +562,7 @@ None. All prior P0 items resolved as of 2026-05-18.
 
 | ID | Risk | Description |
 |----|------|-------------|
-| P3-001 | "Encounter" vs "Visit" terminology | Spec/code terminology conflict |
+| P3-001 | ~~"Encounter" vs "Visit" terminology~~ | Resolved in G3-S1 — "Visit" is canonical in all docs/comments |
 | P3-002 | BR-005 not implemented | Auto-discard empty visits — abandoned drafts persist |
 | P3-003 | BR-013 skipped test | Invoice reconciliation edge case unverified |
 | P3-004 | Metrics absent | No response-time or error-rate instrumentation |
@@ -657,7 +657,7 @@ None outstanding.
 
 | Dimension | Score (0–10) | Notes |
 |-----------|-------------|-------|
-| Terminology consistency | 7 | "Encounter" vs "Visit" conflict; otherwise consistent |
+| Terminology consistency | 9 | "Visit" canonical — "Encounter" alias resolved in G3-S1 |
 | Permission coverage | 6 | Better-Auth enforced; dental RBAC missing role differentiation |
 | Business rule clarity | 7 | 35 BRs formally documented; ceph BRs missing |
 | API consistency | 8 | assertBranchAccess + Drizzle + PaginatedResponse consistent |
