@@ -1,10 +1,10 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-20 (--update pass) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-21 (G1+G2+G2.5 execution) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
 
 # Dentalemon — Brownfield Adoption Dashboard
 
-**Updated:** 2026-05-20 (`--update` pass) | **Cycle:** 1/3 | **Branch:** feat/v1.4-clinical-imaging
+**Updated:** 2026-05-21 (post-G1 + G2 + G2.5 execution) | **Cycle:** 1/3 | **Branch:** feat/v1.5-g1-foundation
 **Source audits:** `EXISTING_CODEBASE_ADOPTION_AUDIT.md`, `COMPLIANCE_REPORT.md`, `CONFIDENCE_REPORT.md`, `TRACEABILITY_MATRIX_AUTO.md`
-**execution_state:** `planned` (written to `.planning/config.json → brownfield.execution_state`)
+**execution_state:** `executed` — G1 ✅ G2 ✅ G2.5 ✅ (G3+G6-core pending)
 
 ---
 
@@ -12,18 +12,21 @@
 
 | Metric | Value |
 |--------|-------|
-| Codebase health (audit) | 7.2 / 10 |
-| Compliance health | 7.4 / 10 |
+| Codebase health (audit) | ~8.5 / 10 (projected; re-run `/oli-audit-codebase` to confirm) |
+| Compliance health | ~8.5 / 10 (projected; re-run `/oli-audit-compliance --all`) |
 | Confidence (L1–L4) | **9 / 10** ✅ (confirmed — all 10 modules at 9, all 4 layers at 9) |
 | P0 remaining | **0** ✅ |
-| P1 remaining | **7** |
-| P2 remaining | **8** (F-009 resolved ✅) |
-| P3 remaining | **4** |
-| Modules with MODULE_SPEC | 1 / 10 dental |
-| BR trace coverage | 100% any (35/35), 29% fully covered (10/35 unit + E2E) |
+| P1 remaining | **0** ✅ (all G1+G2 P1s resolved) |
+| P2 remaining | **4** (F-012..F-016 — G3 scope) |
+| P3 remaining | **1** (F-021) |
+| Modules with MODULE_SPEC | **9 / 10 dental** ✅ (dental-emr added 2026-05-21) |
+| BR trace coverage | 100% any (47 BRs + 15 CIMG), registry has 62 entries |
+| AC coverage | **55 / 55 = 100%** ✅ (was 40 canonical, 15 promoted 2026-05-21) |
+| Hurl contract coverage | **132 / 132 = 100%** ✅ (53 scenarios added 2026-05-21) |
+| Handler test coverage | All 10 dental handlers ≥70% ✅ |
 | Feature delivery | v1.4 G4 🔄 PENDING CI GREEN (G4-P1 ✅ G4-P2 ✅ feature-done, F-016 CI gate) |
 
-**Graduation verdict:** ❌ NOT GRADUATED — target is 9.0 (dentist-facing clinical product). Current 7.2 audit / 7.4 compliance / 9.0 confidence does not meet the ≥9.0 bar on audit + compliance. Waves G1+G2+G3+G6 required.
+**Graduation verdict:** 🔄 IN PROGRESS — G1+G2+G2.5 complete. G3 (domain refactor) + G6-core (error envelope, FSM property tests, ASVS L2, dental_audit table, OpenAPI drift) required to reach ≥9.0. Projected final: audit 9.7 / compliance 9.9 / confidence 10.0.
 
 ---
 
@@ -49,15 +52,16 @@ Projected scores after completion: audit 9.0 / compliance 9.3 / confidence 9.5.
 
 | Module | Purpose | P0 | P1 | P2 | P3 | MODULE_SPEC | Health |
 |--------|---------|----|----|----|----|-------------|--------|
-| dental-org | Orgs, branches, memberships, PINs | 0 | 1 (RBAC) | 0 | 0 | ❌ | 🟡 |
-| dental-patient | Patient management | 0 | 0 | 1 | 0 | ❌ | 🟢 |
-| dental-visit | Visits, treatments, charting | 0 | 1 (BR-005) | 1 | 0 | ❌ | 🟡 |
-| dental-scheduling | Appointment management | 0 | 1 (double-booking) | 1 | 0 | ❌ | 🟡 |
-| dental-billing | Invoices, payments, plans | 0 | 0 | 1 (PaymentPlan FSM) | 1 | ❌ | 🟡 |
-| dental-clinical | Prescriptions, labs, consent | 0 | 0 | 1 | 0 | ❌ | 🟢 |
-| dental-imaging | X-rays, findings, ceph | 0 | 1 (ceph BRs) | 1 (CephLandmark FSM) | 1 (debug routes) | ✅ | 🟡 |
-| dental-pmd | Patient medical documents | 0 | 0 | 0 | 0 | ❌ | 🟢 |
-| shared | assertBranchAccess, guards | 0 | 1 (MemberRole check) | 0 | 0 | — | 🟡 |
+| dental-org | Orgs, branches, memberships, PINs | 0 | 0 ✅ | 0 | 0 | ✅ | 🟢 |
+| dental-patient | Patient management | 0 | 0 | 1 | 0 | ✅ | 🟢 |
+| dental-visit | Visits, treatments, charting | 0 | 0 ✅ | 1 | 0 | ✅ | 🟡 |
+| dental-scheduling | Appointment management | 0 | 0 ✅ | 1 | 0 | ✅ | 🟡 |
+| dental-billing | Invoices, payments, plans | 0 | 0 | 0 ✅ | 0 ✅ | ✅ | 🟢 |
+| dental-clinical | Prescriptions, labs, consent | 0 | 0 | 1 | 0 | ✅ | 🟢 |
+| dental-imaging | X-rays, findings, ceph | 0 | 0 ✅ | 0 ✅ | 0 ✅ | ✅ | 🟢 |
+| dental-pmd | Patient medical documents | 0 | 0 | 0 | 0 | ✅ | 🟢 |
+| dental-emr | EMR consultation notes | 0 | 0 | 0 | 0 | ✅ | 🟢 |
+| shared | assertBranchAccess, guards | 0 | 0 ✅ | 0 | 0 | — | 🟢 |
 | packages/ceph-math | Isomorphic ceph engine | 0 | 0 | 0 | 0 | — | 🟢 |
 
 Legend: 🟢 healthy | 🟡 has open P1/P2 | 🔴 P0 open
@@ -68,17 +72,17 @@ Legend: 🟢 healthy | 🟡 has open P1/P2 | 🔴 P0 open
 
 | ID | Finding | Module | Priority | Classification | Wave | Status |
 |----|---------|--------|----------|----------------|------|--------|
-| F-001 | `assertBranchAccess` ignores `MemberRole` — role matrix not enforced at API | shared + dental-org | P1 | stabilize-existing | G1 | ⬜ OPEN |
-| F-002 | BR-005 auto-discard empty visit — NOT IMPLEMENTED | dental-visit | P1 | stabilize-existing | G1 | ⬜ OPEN |
-| F-003 | CephLandmark state machine unguarded | dental-imaging | P2 | stabilize-existing | G1 | ⬜ OPEN |
-| F-004 | PaymentPlan state machine unguarded | dental-billing | P2 | stabilize-existing | G1 | ⬜ OPEN |
-| F-005 | Debug routes in production build (`imaging-test.tsx`, `imaging-comparison-test.tsx`) | dental-imaging | P3 | stabilize-existing | G1 | ⬜ OPEN |
-| F-006 | 20 ACs untested (~50% coverage at audit time) | cross-module | P1 | stabilize-existing | G2 | ⬜ OPEN (confidence 9/10 suggests improvement since audit) |
-| F-007 | Zero ceph BRs in spec (BR-036+ not written) | dental-imaging | P1 | stabilize-existing | G2 | ⬜ OPEN |
-| F-008 | 9/10 dental MODULE_SPECs missing | cross-module | P1 | stabilize-existing | G2 | ⬜ OPEN |
-| F-009 | Dental endpoints absent from Hurl contract tests | cross-module | P2 | stabilize-existing | G2 | ✅ RESOLVED (G2-S4 complete — commit 3701e88, 168 endpoints, 12 NEW scenarios) |
-| F-010 | br-registry.json empty (35 BRs not populated) | cross-module | P3 | stabilize-existing | G2 | ⬜ OPEN |
-| F-011 | booking (11%) + storage (20%) coverage below ratchet | booking, storage | P2 | stabilize-existing | G2 | ⬜ OPEN |
+| F-001 | `assertBranchAccess` ignores `MemberRole` — role matrix not enforced at API | shared + dental-org | P1 | stabilize-existing | G1 | ✅ RESOLVED (G1-S1 commit 005885a) |
+| F-002 | BR-005 auto-discard empty visit — NOT IMPLEMENTED | dental-visit | P1 | stabilize-existing | G1 | ✅ RESOLVED (G1-S2) |
+| F-003 | CephLandmark state machine unguarded | dental-imaging | P2 | stabilize-existing | G1 | ✅ RESOLVED (G1-S3) |
+| F-004 | PaymentPlan state machine unguarded | dental-billing | P2 | stabilize-existing | G1 | ✅ RESOLVED (G1-S4) |
+| F-005 | Debug routes in production build (`imaging-test.tsx`, `imaging-comparison-test.tsx`) | dental-imaging | P3 | stabilize-existing | G1 | ✅ RESOLVED (G1-S5 commit 8baca44) |
+| F-006 | 20 ACs untested (~50% coverage at audit time) | cross-module | P1 | stabilize-existing | G2 | ✅ RESOLVED (G2-S1 + G2.5-S2 — 55 ACs, 100% coverage) |
+| F-007 | Zero ceph BRs in spec (BR-036+ not written) | dental-imaging | P1 | stabilize-existing | G2 | ✅ RESOLVED (BR-036–BR-047 in 5f246e3) |
+| F-008 | 9/10 dental MODULE_SPECs missing | cross-module | P1 | stabilize-existing | G2 | ✅ RESOLVED (9 specs complete + dental-emr added) |
+| F-009 | Dental endpoints absent from Hurl contract tests | cross-module | P2 | stabilize-existing | G2 | ✅ RESOLVED (132/132 endpoints, commit b8558d5) |
+| F-010 | br-registry.json empty (35 BRs not populated) | cross-module | P3 | stabilize-existing | G2 | ✅ RESOLVED (62 entries in registry) |
+| F-011 | booking (11%) + storage (20%) coverage below ratchet | booking, storage | P2 | stabilize-existing | G2 | ✅ RESOLVED (booking 70.9%, storage 72.2%, emr/imaging/patient all ≥70%) |
 | F-012 | "Encounter" vs "Visit" — FHIR/dental terminology conflict in docs/comments | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
 | F-013 | No DOMAIN_MODEL.md — FHIR entity catalog not mapped to dental DB | cross-module | P2 | stabilize-existing | G3 | ⬜ OPEN |
 | F-014 | DC-003, DC-006, DC-010, DC-014 — naming inconsistencies in schema/code | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
@@ -96,12 +100,13 @@ Legend: 🟢 healthy | 🟡 has open P1/P2 | 🔴 P0 open
 
 | Wave | Name | Status | Slices Done | Total Slices | P-level | Score target |
 |------|------|--------|-------------|--------------|---------|-------------|
-| G1 | Foundation Stabilization | ⬜ NOT STARTED | 0 | 5 | P1–P3 | 7.5 / 7.7 |
-| G2 | Spec & Coverage Completeness | 🔄 IN PROGRESS | 1 (G2-S4 ✅) | 6 | P1–P2 | 7.9 / 8.1 |
-| G3 | Domain Model Refactoring | ⬜ NOT STARTED | 0 | 5 | P2 | 8.2 / 8.3 |
+| G1 | Foundation Stabilization | ✅ COMPLETE (2026-05-21) | 5 | 5 | P1–P3 | 7.5 / 7.7 |
+| G2 | Spec & Coverage Completeness | ✅ COMPLETE (2026-05-21) | 6 | 6 | P1–P2 | 7.9 / 8.1 |
+| G2.5 | G2 Push to Max | ✅ COMPLETE (2026-05-21) | 7 | 7 | P1–P2 | ~8.5 / 8.5 |
+| G3 | Domain Model Refactoring | ⬜ NOT STARTED | 0 | 5 | P2 | 8.7 / 8.9 |
 | G4 | Feature Delivery | 🔄 PENDING CI (F-016) | 2 | 2 | new-feature | — |
 | G5 | Future Features | ⬜ PLANNED | 0 | 2 | new-feature | — |
-| G6 | Excellence (reach 9.0) | ⬜ PLANNED | 0 | 10 | P2–P3 | **9.0 / 9.3** |
+| G6-core | Excellence (graduation push) | ⬜ NOT STARTED | 0 | 6 | P2–P3 | **9.7 / 9.9** |
 
 **G4 detail:** G4-P1 (Structured Imaging Findings) ✅ COMPLETE 2026-05-16. G4-P2 (Ceph Workspace) F0–F6 committed, 32/32 E2E green — blocked only on CI gate F-016 (postgres-services.yml first green run).
 
