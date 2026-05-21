@@ -68,7 +68,7 @@ export function createApp(config: Config): App {
   const jobs = createJobScheduler(database, logger);
   const ws = createWebSocketService(logger);
 
-  const notifs = createNotificationService(database, logger, config.notifs, ws);
+  const notifs = createNotificationService(database, logger, config.notifs, ws, email);
   const audit = createAuditService(database, logger);
   const billing = createBillingService(config.billing, database, logger);
 

@@ -4,6 +4,8 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import {
   NotFoundError,
+  UnauthorizedError,
+  ForbiddenError,
   ValidationError
 } from '@/core/errors';
 import { parsePagination, buildPaginationMeta, parseFilters } from '@/utils/query';
@@ -21,9 +23,15 @@ export async function listAuditLogs(
   ctx: ValidatedContext<never, ListAuditLogsQuery, never>
 ): Promise<Response> {
   // Get authenticated user and check authorization
-  const user = ctx.get('user') as User;
-  
-  
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
+  const userRole: string = user.role ?? '';
+  const roles = userRole.split(',').map((r: string) => r.trim());
+  if (!roles.includes('admin') && !roles.includes('compliance')) {
+    throw new ForbiddenError('admin or compliance role required to access audit logs');
+  }
+
   // Get query parameters
   const query = ctx.req.valid('query') as AuditLogQueryParams;
   

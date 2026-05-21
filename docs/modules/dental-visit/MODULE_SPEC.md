@@ -235,6 +235,9 @@ diagnosed → planned → performed → verified
 | PATCH | `/dental/visits/:visitId/chart/tooth` | updateTooth | BR-003 |
 | GET | `/dental/visits/:visitId/notes` | getVisitNotes | — |
 | POST | `/dental/visits/:visitId/notes` | upsertVisitNotes | BR-003 |
+| POST | `/dental/visits/:visitId/notes/sign` | signVisitNotes | BR-003; clinician role required |
+| POST | `/dental/visits/:visitId/notes/addendum` | createVisitNoteAddendum | BR-003; reason mandatory; signed note required |
+| GET | `/dental/visits/:visitId/notes/history` | getVisitNoteHistory | Returns all version snapshots ordered by version |
 | GET | `/dental/patients/:patientId/treatment-plan` | getTreatmentPlan | — |
 | POST | `/dental/visits/:visitId/carry-over` | carryOverTreatments | BR-008 |
 | GET | `/dental/patients/:patientId/tooth-history` | getToothHistory | — |
@@ -280,3 +283,4 @@ diagnosed → planned → performed → verified
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-05-19 | 1.0 | Initial spec — visit + treatment state machines, all 5 tables, BR-001–BR-008, permission matrix, 21 endpoints |
+| 2026-05-21 | 1.1 | Add 3 missing visit note endpoints: signVisitNotes, createVisitNoteAddendum, getVisitNoteHistory |

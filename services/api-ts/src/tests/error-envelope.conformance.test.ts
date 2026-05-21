@@ -29,15 +29,8 @@ import { archiveDentalPatient } from '@/handlers/dental-patient/archiveDentalPat
 
 // ─── Minimal config (mirrors production logging.level default) ───────────────
 
-const testConfig: Pick<Config, 'logging' | 'security'> & Partial<Config> = {
-  logging: { level: 'info' },
-  security: {
-    cors: { origins: ['http://localhost:3002'], credentials: true },
-    csrf: { enabled: false, cookieName: '_csrf', headerName: 'X-CSRF-Token', tokenLength: 32 },
-    headers: { hsts: false, contentTypeOptions: true, frameOptions: 'DENY', xssProtection: true, csp: false, cspDirectives: '' },
-    rateLimit: { enabled: false, windowMs: 60000, max: 100 },
-    audit: { logSensitiveFields: false },
-  },
+const testConfig: Pick<Config, 'logging'> & Partial<Config> = {
+  logging: { level: 'info', pretty: false },
 } as unknown as Config;
 
 const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
@@ -50,10 +43,10 @@ const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 function assertEnvelope(body: unknown) {
   expect(body).toBeDefined();
   const b = body as Record<string, unknown>;
-  expect(typeof b.code).toBe('string');
-  expect(typeof b.message).toBe('string');
-  expect(b.code.length).toBeGreaterThan(0);
-  expect(b.message.length).toBeGreaterThan(0);
+  expect(typeof b['code']).toBe('string');
+  expect(typeof b['message']).toBe('string');
+  expect((b['code'] as string).length).toBeGreaterThan(0);
+  expect((b['message'] as string).length).toBeGreaterThan(0);
 }
 
 // ─── App builder (uses production error handler) ─────────────────────────────
@@ -101,7 +94,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(401);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('UNAUTHORIZED');
+      expect((body as Record<string, unknown>)['code']).toBe('UNAUTHORIZED');
     });
 
     test('POST /dental/patients without auth returns { code, message }', async () => {
@@ -114,7 +107,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(401);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('UNAUTHORIZED');
+      expect((body as Record<string, unknown>)['code']).toBe('UNAUTHORIZED');
     });
   });
 
@@ -129,7 +122,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('VALIDATION_ERROR');
+      expect((body as Record<string, unknown>)['code']).toBe('VALIDATION_ERROR');
     });
 
     test('POST /dental/patients with blank displayName returns { code, message }', async () => {
@@ -142,7 +135,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('VALIDATION_ERROR');
+      expect((body as Record<string, unknown>)['code']).toBe('VALIDATION_ERROR');
     });
   });
 
@@ -158,7 +151,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('VALIDATION_ERROR');
+      expect((body as Record<string, unknown>)['code']).toBe('VALIDATION_ERROR');
     });
   });
 
@@ -171,7 +164,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(404);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('NOT_FOUND');
+      expect((body as Record<string, unknown>)['code']).toBe('NOT_FOUND');
     });
 
     test('POST /dental/patients/:id/archive with nonexistent ID returns { code, message }', async () => {
@@ -182,7 +175,7 @@ describe('Error Envelope Conformance', () => {
       expect(res.status).toBe(404);
       const body = await res.json();
       assertEnvelope(body);
-      expect(body.code).toBe('NOT_FOUND');
+      expect((body as Record<string, unknown>)['code']).toBe('NOT_FOUND');
     });
   });
 
@@ -193,10 +186,10 @@ describe('Error Envelope Conformance', () => {
         method: 'GET',
       });
       const body = await res.json() as Record<string, unknown>;
-      expect(typeof body.requestId).toBe('string');
-      expect(typeof body.timestamp).toBe('string');
+      expect(typeof body['requestId']).toBe('string');
+      expect(typeof body['timestamp']).toBe('string');
       // Verify timestamp is ISO-8601
-      expect(() => new Date(body.timestamp as string)).not.toThrow();
+      expect(() => new Date(body['timestamp'] as string)).not.toThrow();
     });
 
     test('statusCode field mirrors HTTP status', async () => {
@@ -205,7 +198,7 @@ describe('Error Envelope Conformance', () => {
         method: 'GET',
       });
       const body = await res.json() as Record<string, unknown>;
-      expect(body.statusCode).toBe(res.status);
+      expect(body['statusCode']).toBe(res.status);
     });
   });
 });

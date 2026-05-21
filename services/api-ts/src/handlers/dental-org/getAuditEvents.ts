@@ -16,7 +16,7 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   // Admin role only
-  const userRole: string = (user as any).role ?? '';
+  const userRole: string = user.role ?? '';
   const roles = userRole.split(',').map((r: string) => r.trim());
   if (!roles.includes('admin')) {
     throw new ForbiddenError('Admin role required to access audit log');

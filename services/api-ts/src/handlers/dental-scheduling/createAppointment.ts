@@ -36,12 +36,14 @@ export async function createAppointment(ctx: HandlerContext) {
   const dentistMemberId = body.dentistMemberId;
   const branchId = body.branchId;
 
-  // FR3.10: Validate against configured working hours (blocking)
-  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
-  if (branch?.workingHours) {
-    const hours = parseWorkingHours(branch.workingHours);
-    if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours, branch.timezone ?? 'UTC')) {
-      throw new BusinessLogicError('Appointment is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
+  // FR3.10: Validate against configured working hours (blocking); walk-ins bypass this check (BR-SCH-002)
+  if (!body.walkIn) {
+    const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
+    if (branch?.workingHours) {
+      const hours = parseWorkingHours(branch.workingHours);
+      if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours, branch.timezone ?? 'UTC')) {
+        throw new BusinessLogicError('Appointment is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
+      }
     }
   }
 

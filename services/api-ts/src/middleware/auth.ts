@@ -134,7 +134,7 @@ export function authMiddleware(options?: AuthMiddlewareOptions) {
     if (session) {
       // Add user and session to context
       // Convert Better-Auth types to our internal types
-      const userRole = (session.user as any).role || 'user';
+      const userRole = (session.user as User).role || 'user';
 
       const user: User = {
         ...session.user,
