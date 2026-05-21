@@ -9,7 +9,7 @@
  *   - listAmendments    GET  /dental/visits/:visitId/amendments
  */
 
-import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
+import { describe, test, expect, afterEach, beforeEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
@@ -30,15 +30,21 @@ const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/mo
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const MEMBER_ID = 'ee000000-0000-1000-8000-000000000001';
 const ORG_ID = 'd0000000-0000-1000-8000-000000000004';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
 
-// Seed org, branch, and membership once so assertBranchAccess passes for TEST_USER
-beforeAll(async () => {
+const PERSON_ID = 'f1000000-0000-1000-8000-000000000001';
+
+// Re-seed org, branch, membership, person, and patient before each test
+// (using beforeEach so parallel test files can't clobber this data mid-suite)
+beforeEach(async () => {
   const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
   const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
   const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+
   await db.insert(dentalOrganizations).values({
     id: ORG_ID, name: 'Test Clinic', tier: 'solo', ownerPersonId: TEST_USER.id,
     countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
@@ -47,10 +53,20 @@ beforeAll(async () => {
     id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
     timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
+  // Membership used by assertBranchAccess and seedVisit (MEMBER_ID = this id)
   await db.insert(dentalMemberships).values({
-    id: 'ee000000-0000-1000-8000-000000000001', branchId: BRANCH_ID, personId: TEST_USER.id,
+    id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Test User', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  // Person + patient needed for visit FK and attachment FK
+  await db.insert(persons).values({
+    id: PERSON_ID, firstName: 'Test', lastName: 'Patient',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(patients).values({
+    id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 });
 
@@ -109,9 +125,15 @@ async function seedVisit() {
 }
 
 afterEach(async () => {
+  // Clean visit-scoped records first (FK order), then infrastructure
   await db.execute(
     sql`TRUNCATE TABLE amendment, consent_form, dental_attachment, lab_order, medical_history_entry, prescription, dental_treatment, dental_visit CASCADE`,
   );
+  await db.execute(
+    sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`,
+  );
+  await db.execute(sql`DELETE FROM patient WHERE id = ${PATIENT_ID}`);
+  await db.execute(sql`DELETE FROM person WHERE id = ${PERSON_ID}`);
 });
 
 // ---------------------------------------------------------------------------
