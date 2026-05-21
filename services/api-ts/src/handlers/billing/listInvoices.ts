@@ -31,7 +31,7 @@ export async function listInvoices(
   const user = session.user;
 
   // Extract and parse query parameters
-  const query = ctx.req.valid('query') as any;
+  const query = ctx.req.valid('query');
 
   logger.debug({
     userId: user.id,

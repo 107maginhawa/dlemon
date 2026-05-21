@@ -112,23 +112,8 @@ export type AuditOutcome = 'success' | 'failure' | 'partial' | 'denied';
 export type AuditRetentionStatus = 'active' | 'archived' | 'pending-purge';
 export type UserType = 'client' | 'host' | 'admin' | 'system';
 
-// Request interfaces matching TypeSpec definitions
-export interface CreateAuditLogRequest {
-  eventType: AuditEventType;
-  category: AuditCategory;
-  action: AuditAction;
-  outcome: AuditOutcome;
-  user?: string;
-  userType?: UserType;
-  resourceType: string;
-  resource: string;
-  description: string;
-  details?: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
-  session?: string;
-  request?: string;
-}
+// Re-export CreateAuditLogRequest from core types for backward compatibility
+export type { CreateAuditLogRequest } from '@/core/audit.types';
 
 // Response interface for API endpoints
 export interface AuditLogResponse extends Omit<AuditLogEntry, 'details'> {

@@ -37,7 +37,7 @@ export async function finalizeInvoice(
   const user = session.user;
 
   // Extract validated parameters
-  const params = ctx.req.valid('param') as any;
+  const params = ctx.req.valid('param');
   const invoiceId = params.invoice;
 
   logger.info({ invoiceId, userId: user.id }, 'Finalizing invoice');

@@ -10,6 +10,7 @@ import type { RefundInvoicePaymentBody, RefundInvoicePaymentParams } from '@/gen
 import type { Session } from '@/types/auth';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
 
 /**
  * refundInvoicePayment
@@ -82,7 +83,7 @@ export async function refundInvoicePayment(
   }
 
   // Extract Stripe IDs and refund info from metadata
-  const invoiceMetadata = invoice.metadata as any;
+  const invoiceMetadata = invoice.metadata as InvoiceMetadata | undefined;
   const stripePaymentIntentId = invoiceMetadata?.stripePaymentIntentId;
   const stripeChargeId = invoiceMetadata?.stripeChargeId;
   const refundAmount = invoiceMetadata?.refundAmount;
@@ -90,6 +91,13 @@ export async function refundInvoicePayment(
 
   if ((refundAmount && parseFloat(refundAmount) > 0) || refundStatus) {
     throw new ConflictError('Invoice has already been refunded');
+  }
+
+  if (!stripePaymentIntentId) {
+    throw new BusinessLogicError(
+      'No payment intent found for this invoice',
+      'PAYMENT_INTENT_MISSING'
+    );
   }
 
   if (!stripeChargeId) {
@@ -117,8 +125,8 @@ export async function refundInvoicePayment(
     });
   }
   
-  const metadata = merchantAccount.metadata as any;
-  const stripeAccountId = metadata?.stripeAccountId as string;
+  const metadata = merchantAccount.metadata as MerchantMetadata;
+  const stripeAccountId = metadata?.stripeAccountId ?? '';
   if (!stripeAccountId) {
     throw new BusinessLogicError(
       'Provider Stripe account not found',
@@ -145,7 +153,7 @@ export async function refundInvoicePayment(
     const isFullRefund = refundAmountCents === maxRefundAmountCents;
 
     // Update invoice with refund details in metadata
-    const updatedMetadata: Record<string, any> = {
+    const updatedMetadata: InvoiceMetadata = {
       ...(invoiceMetadata || {}),
       stripeRefundId: refundResult.refundId,
       refundAmount: refundAmountDecimal,

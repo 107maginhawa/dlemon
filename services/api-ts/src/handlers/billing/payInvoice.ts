@@ -11,6 +11,7 @@ import type { Session } from '@/types/auth';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
 import type { Config } from '@/core/config';
+import type { MerchantMetadata } from './billing.types';
 // Customer and merchant are both persons in monobase
 
 /**
@@ -104,7 +105,7 @@ export async function payInvoice(
     });
   }
   
-  const merchantMetadata = merchantAccount.metadata as any;
+  const merchantMetadata = merchantAccount.metadata as MerchantMetadata;
   if (!merchantMetadata?.stripeAccountId || !merchantMetadata?.onboardingComplete) {
     throw new BusinessLogicError(
       'Provider has not completed billing setup',

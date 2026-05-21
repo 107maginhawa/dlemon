@@ -13,7 +13,7 @@ import { PersonRepository } from '@/handlers/person/repos/person.repo';
 import type {
   Notification,
   CreateNotificationRequest
-} from '@/handlers/notifs/repos/notification.schema';
+} from '@/core/notifs.types';
 
 /**
  * OneSignal configuration

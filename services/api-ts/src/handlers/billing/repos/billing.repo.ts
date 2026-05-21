@@ -162,6 +162,33 @@ export class InvoiceRepository extends DatabaseRepository<Invoice, NewInvoice, I
   }
 
   /**
+   * Find invoice by Stripe payment intent ID (stored in metadata JSONB)
+   */
+  async findByStripePaymentIntentId(paymentIntentId: string): Promise<Invoice | null> {
+    this.logger?.debug({ paymentIntentId }, 'Finding invoice by Stripe payment intent ID');
+
+    const result = await this.db
+      .select()
+      .from(invoices)
+      .where(sql`${invoices.metadata}->>'stripePaymentIntentId' = ${paymentIntentId}`)
+      .limit(1);
+
+    return result.length > 0 && result[0] ? result[0] : null;
+  }
+
+  /**
+   * Find all invoices by Stripe transfer ID (stored in metadata JSONB)
+   */
+  async findAllByStripeTransferId(transferId: string): Promise<Invoice[]> {
+    this.logger?.debug({ transferId }, 'Finding invoices by Stripe transfer ID');
+
+    return await this.db
+      .select()
+      .from(invoices)
+      .where(sql`${invoices.metadata}->>'stripeTransferId' = ${transferId}`);
+  }
+
+  /**
    * Create invoice with line items in a transaction
    */
   async createWithLineItems(
@@ -304,7 +331,7 @@ export class MerchantAccountRepository extends DatabaseRepository<MerchantAccoun
    */
   async updateMetadata(
     id: string,
-    metadata: Record<string, unknown>,
+    metadata: import('../billing.types').MerchantMetadata,
     userId?: string
   ): Promise<MerchantAccount> {
     this.logger?.debug({

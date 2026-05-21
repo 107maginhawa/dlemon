@@ -7,10 +7,10 @@
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import { AuditRepository } from '@/handlers/audit/repos/audit.repo';
-import type { 
+import type {
   AuditLogEntry,
-  CreateAuditLogRequest 
-} from '@/handlers/audit/repos/audit.schema';
+  CreateAuditLogRequest
+} from '@/core/audit.types';
 
 /**
  * Minimal audit service interface

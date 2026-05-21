@@ -99,19 +99,8 @@ export interface NotificationResponse {
   updatedAt: Date;
 }
 
-// Request type for creating notifications (used by other modules)
-export interface CreateNotificationRequest {
-  recipient: string;
-  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
-  channel: 'email' | 'push' | 'in-app';
-  title: string;
-  message: string;
-  scheduledAt?: Date;
-  relatedEntityType?: string;
-  relatedEntity?: string;
-  consentValidated?: boolean;
-  targetApp?: string; // Optional: Filter push notifications by app tag (e.g., 'web', 'mobile')
-}
+// Re-export CreateNotificationRequest from core types for backward compatibility
+export type { CreateNotificationRequest } from '@/core/notifs.types';
 
 // Filter interface for querying notifications
 export interface NotificationFilters {
