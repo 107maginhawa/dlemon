@@ -73,6 +73,18 @@ enum ChartEntryClassification {
 // Models
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "v1a2b3c4-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T11:30:00Z"),
+  version: 2,
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  status: DentalVisitStatus.active,
+  activatedAt: utcDateTime.fromISO("2026-03-15T09:05:00Z"),
+  chiefComplaint: "Tooth sensitivity on lower left molar",
+}, #{ title: "Active dental visit" })
 model DentalVisit {
   id: UUID;
   createdAt: utcDateTime;
@@ -135,6 +147,21 @@ model UpdateToothRequest {
   entryClassification?: ChartEntryClassification;
 }
 
+@example(#{
+  id: "t1a2b3c4-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T09:10:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  visitId: "v1a2b3c4-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  toothNumber: 36,
+  surfaces: #[ToothSurfaceCode.occlusal, ToothSurfaceCode.mesial],
+  cdtCode: "D2392",
+  description: "Resin-based composite — three surfaces, posterior",
+  conditionCode: "K02.1",
+  status: DentalTreatmentStatus.planned,
+  priceCents: 18000,
+  carriedOver: false,
+}, #{ title: "Planned composite restoration" })
 model DentalTreatment {
   id: UUID;
   createdAt: utcDateTime;

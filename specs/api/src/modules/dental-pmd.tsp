@@ -34,6 +34,21 @@ enum PMDDocumentStatus {
 // Models — PMD Document
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "pmd-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T12:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
+  version: 1,
+  visitId: "v1a2b3c4-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  authorMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  status: PMDDocumentStatus.signed,
+  content: "{\"treatments\":[{\"cdtCode\":\"D2392\",\"toothNumber\":36,\"status\":\"performed\"}],\"allergies\":[],\"diagnoses\":[{\"code\":\"K02.1\",\"display\":\"Dental caries\"}]}",
+  signature: "MEYCIQDsX3...",
+  signedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
+  checksum: "sha256:a1b2c3d4e5f6...",
+}, #{ title: "Signed PMD for completed visit" })
 model PMDDocument {
   id: UUID;
   createdAt: utcDateTime;

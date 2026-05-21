@@ -62,6 +62,26 @@ enum PlanFrequency {
 // Models
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "inv-1a2b3c4d-0000-4000-8000-000000000001",
+  visitId: "v1a2b3c4-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  invoiceNumber: "INV-2026-0042",
+  status: DentalInvoiceStatus.issued,
+  subtotalCents: 36000,
+  discountCents: 0,
+  taxCents: 0,
+  taxRate: 0.0,
+  totalCents: 36000,
+  paidCents: 0,
+  balanceCents: 36000,
+  dueDate: utcDateTime.fromISO("2026-04-15T00:00:00Z"),
+  issuedAt: utcDateTime.fromISO("2026-03-15T11:30:00Z"),
+  createdAt: utcDateTime.fromISO("2026-03-15T11:30:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T11:30:00Z"),
+}, #{ title: "Issued invoice for composite restoration" })
 model DentalInvoice {
   id: UUID;
   visitId: UUID;
@@ -98,6 +118,19 @@ model DentalInvoiceLineItem {
   isDone: boolean;
 }
 
+@example(#{
+  id: "pay-1a2b3c4d-0000-4000-8000-000000000001",
+  invoiceId: "inv-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  amountCents: 36000,
+  method: PaymentMethod.card,
+  receiptNumber: "RCP-2026-0099",
+  recordedByMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  notes: "Visa card ending 4242",
+  isVoid: false,
+  createdAt: utcDateTime.fromISO("2026-03-20T09:45:00Z"),
+}, #{ title: "Card payment clearing invoice" })
 model DentalPayment {
   id: UUID;
   invoiceId: UUID;

@@ -1,0 +1,45 @@
+name: OpenAPI Drift Detection
+
+# Fails if specs/api/dist/ is out of sync with TypeSpec sources.
+# Forces contributors to commit regenerated artifacts after touching .tsp files.
+
+on:
+  pull_request:
+    paths:
+      - 'specs/api/src/**'
+      - 'specs/api/package.json'
+      - 'specs/api/tspconfig.yaml'
+
+jobs:
+  detect-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install specs/api dependencies
+        working-directory: specs/api
+        run: bun install --frozen-lockfile
+
+      - name: Regenerate OpenAPI + TypeScript types
+        working-directory: specs/api
+        run: bun run build
+
+      - name: Check for OpenAPI drift
+        run: |
+          if ! git diff --exit-code specs/api/dist/; then
+            echo ""
+            echo "OpenAPI spec is out of sync with TypeSpec sources."
+            echo "Run the following, then commit the updated dist/ files:"
+            echo ""
+            echo "  cd specs/api && bun run build"
+            echo ""
+            git diff --stat specs/api/dist/
+            exit 1
+          fi
+          echo "OpenAPI spec is up to date."

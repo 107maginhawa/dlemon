@@ -36,6 +36,21 @@ enum AppointmentStatus {
 // Models
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "apt-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-01T08:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-01T08:00:00Z"),
+  version: 1,
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  scheduledAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  durationMinutes: 60,
+  serviceType: "comprehensive-exam",
+  walkIn: false,
+  status: AppointmentStatus.scheduled,
+  notes: "First visit — bring previous X-rays if available",
+}, #{ title: "Scheduled comprehensive exam" })
 model DentalAppointment {
   id: UUID;
   createdAt: utcDateTime;
@@ -58,6 +73,16 @@ model DentalAppointment {
   no_showAt?: utcDateTime;
 }
 
+@example(#{
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  scheduledAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  durationMinutes: 60,
+  serviceType: "comprehensive-exam",
+  walkIn: false,
+  notes: "First visit — bring previous X-rays if available",
+}, #{ title: "Book a comprehensive exam" })
 model CreateAppointmentRequest {
   patientId: UUID;
   dentistMemberId: UUID;

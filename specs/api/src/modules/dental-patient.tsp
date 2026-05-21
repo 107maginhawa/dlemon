@@ -47,6 +47,26 @@ namespace DentalPatientModule {
   }
 
   @doc("Dental patient record")
+  @example(#{
+    id: "d1a2b3c4-0000-4000-8000-000000000001",
+    createdAt: utcDateTime.fromISO("2026-01-10T08:00:00Z"),
+    updatedAt: utcDateTime.fromISO("2026-03-15T14:22:00Z"),
+    status: DentalPatientStatus.active,
+    needsFollowUp: false,
+    hasActivePaymentPlan: false,
+    preferredBranchId: "b1a2b3c4-0000-4000-8000-000000000001",
+    dentalHistorySummary: "Previous orthodontic treatment completed 2020. No known allergies.",
+    recallDate: "2026-06-10",
+    recallNote: "6-month check-up and cleaning",
+    displayName: "Maria Santos",
+    person: #{
+      id: "p1a2b3c4-0000-4000-8000-000000000001",
+      firstName: "Maria",
+      lastName: "Santos",
+      dateOfBirth: "1990-04-22",
+      gender: "female",
+    },
+  }, #{ title: "Active dental patient" })
   model DentalPatient {
     id: UUID;
     createdAt: utcDateTime;
@@ -77,6 +97,13 @@ namespace DentalPatientModule {
   }
 
   @doc("Create dental patient request")
+  @example(#{
+    displayName: "Maria Santos",
+    dateOfBirth: "1990-04-22",
+    gender: "female",
+    consentGiven: true,
+    branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+  }, #{ title: "New patient registration" })
   model CreateDentalPatientRequest {
     @minLength(1)
     displayName: string;
@@ -140,6 +167,14 @@ namespace DentalPatientModule {
   }
 
   @doc("Patient safety floor — minimum safety data required before any procedure")
+  @example(#{
+    patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+    hasAlerts: true,
+    allergies: #[#{ id: "ae1a2b3c-0000-4000-8000-000000000001", displayName: "Penicillin", code: "372687004", codeSystem: "SNOMED-CT", notes: "Anaphylaxis risk" }],
+    medications: #[#{ id: "me1a2b3c-0000-4000-8000-000000000001", displayName: "Metformin 500mg", code: "372567009", codeSystem: "SNOMED-CT", notes: "Diabetes management" }],
+    conditions: #[#{ id: "ce1a2b3c-0000-4000-8000-000000000001", displayName: "Type 2 Diabetes", code: "44054006", codeSystem: "SNOMED-CT", onsetDate: "2018-03-01" }],
+    retrievedAt: "2026-03-15T14:22:00Z",
+  }, #{ title: "Patient with allergy and chronic condition" })
   model DentalPatientSafetyFloor {
     patientId: UUID;
     hasAlerts: boolean;
