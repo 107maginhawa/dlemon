@@ -54,6 +54,7 @@ export const visitNotes = pgTable('visit_notes', {
   // Signing/locking fields (mirrors consent-form precedent)
   signed: boolean('signed').notNull().default(false),
   signedAt: timestamp('signed_at'),
+  // loose-coupling: references person.id (cross-module — cloud user who signed; no DB FK to decouple visit from core person)
   signedBy: uuid('signed_by'),
   lockedAt: timestamp('locked_at'),
 }, (table) => ({

@@ -55,9 +55,13 @@ export const imagingAnnotationTypeEnum = pgEnum('imaging_annotation_type', [
 
 export const imagingStudies = pgTable('imaging_study', {
   ...baseEntityFields,
+  // loose-coupling: references patients.id (cross-module — no DB-level FK to avoid coupling dental-imaging to patient module)
   patientId: uuid('patient_id').notNull(),
+  // loose-coupling: references dental_visit.id (cross-module — nullable; imaging can exist without a visit)
   visitId: uuid('visit_id'),
+  // loose-coupling: references dental_branch.id (cross-module — no DB-level FK to avoid coupling dental-imaging to dental-org)
   branchId: uuid('branch_id').notNull(),
+  // loose-coupling: references dental_membership.id (cross-module — who acquired the study)
   acquiredBy: uuid('acquired_by').notNull(),
   modality: modalityEnum('modality').notNull().default('other'),
   status: imagingStatusEnum('status').notNull().default('active'),
@@ -68,6 +72,7 @@ export const imagingStudyImages = pgTable('imaging_study_image', {
   studyId: uuid('study_id')
     .notNull()
     .references(() => imagingStudies.id),
+  // loose-coupling: references storage file.id (cross-module — no DB-level FK to avoid coupling dental-imaging to storage module)
   fileId: uuid('file_id').notNull(),
   pixelSpacingMm: real('pixel_spacing_mm'),
   sequenceNumber: integer('sequence_number').notNull().default(0),

@@ -114,6 +114,7 @@ export const consultationNotes = pgTable('consultation_note', {
   finalizedAt: timestamp('finalized_at'),
 
   // Track who finalized the consultation per TypeSpec
+  // loose-coupling: references person.id (cross-module — no DB-level FK to avoid coupling emr to core person)
   finalizedBy: uuid('finalized_by'),
 }, (table) => ({
   // Performance indexes for common query patterns

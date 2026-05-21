@@ -253,6 +253,13 @@
       "when": 1779258273203,
       "tag": "0035_fixed_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1779326380695,
+      "tag": "0036_fixed_raider",
+      "breakpoints": true
     }
   ]
 }

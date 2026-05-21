@@ -7,10 +7,11 @@
 
 import { pgTable, uuid, text, boolean, index } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalBranches } from './branch.schema';
 
 export const dentalConsentTemplates = pgTable('dental_consent_template', {
   ...baseEntityFields,
-  branchId: uuid('branch_id').notNull(),
+  branchId: uuid('branch_id').notNull().references(() => dentalBranches.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   body: text('body').notNull(),
   requiresWitnessSignature: boolean('requires_witness_signature').notNull().default(false),

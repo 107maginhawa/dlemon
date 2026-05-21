@@ -7,6 +7,7 @@
 
 import { pgTable, uuid, text, jsonb, boolean, index } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
+import { dentalBranches } from '../../dental-org/repos/branch.schema';
 
 export interface TemplateTreatmentItem {
   cdtCode: string;
@@ -18,7 +19,7 @@ export interface TemplateTreatmentItem {
 
 export const dentalTreatmentTemplates = pgTable('dental_treatment_template', {
   ...baseEntityFields,
-  branchId: uuid('branch_id').notNull(),
+  branchId: uuid('branch_id').notNull().references(() => dentalBranches.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
   items: jsonb('items').notNull().$type<TemplateTreatmentItem[]>(),

@@ -12,6 +12,7 @@ export const dentalOrganizations = pgTable('dental_organization', {
   ...baseEntityFields,
   name: text('name').notNull(),
   tier: orgTierEnum('tier').notNull(),
+  // loose-coupling: references person.id (cross-module — no DB-level FK to avoid coupling dental-org to core person)
   ownerPersonId: uuid('owner_person_id').notNull(),
   countryCode: text('country_code').notNull(),
   active: boolean('active').notNull().default(true),

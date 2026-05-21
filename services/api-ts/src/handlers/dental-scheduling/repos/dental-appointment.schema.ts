@@ -28,6 +28,7 @@ export const dentalAppointments = pgTable('dental_appointment', {
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(30),
   serviceType: text('service_type').notNull(),
+  // not a FK — no operatory table exists yet; reserved for future room/chair management feature
   operatoryId: uuid('operatory_id'),
   walkIn: boolean('walk_in').notNull().default(false),
   status: appointmentStatusEnum('status').notNull().default('scheduled'),
