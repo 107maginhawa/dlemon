@@ -19,7 +19,7 @@ export interface RevenueReportProps {
   branchId: string;
 }
 
-function formatCents(cents: number): string {
+export function formatCents(cents: number): string {
   return `${CURRENCY_SYMBOL}${(cents / 100).toLocaleString(APP_LOCALE, { minimumFractionDigits: 2 })}`;
 }
 
