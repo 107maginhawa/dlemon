@@ -13,7 +13,7 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { z } from 'zod';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingFindingRepository, type UpdateFindingPayload } from './repos/imaging_finding.repo';
 import { FINDING_TRANSITIONS, type ImagingFindingStatus } from './repos/imaging_finding.schema';
@@ -54,7 +54,7 @@ export async function updateFinding(ctx: BaseContext): Promise<Response> {
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
   try {
-    await assertBranchAccess(db, user.id, study.branchId);
+    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
   } catch {
     throw new NotFoundError('Finding not found');
   }

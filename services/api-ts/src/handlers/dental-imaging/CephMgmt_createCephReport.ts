@@ -14,7 +14,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { resolveImagingTier } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
@@ -46,7 +46,7 @@ export async function CephMgmt_createCephReport(
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
   try {
-    await assertBranchAccess(db, user.id, study.branchId);
+    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
   } catch {
     throw new NotFoundError('Image not found');
   }

@@ -9,7 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ConsentFormRepository } from './repos/consent-form.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateConsentFormBody, CreateConsentFormParams } from '@/generated/openapi/validators';
 
@@ -28,7 +28,7 @@ export async function createConsentForm(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new ConsentFormRepository(db);
 

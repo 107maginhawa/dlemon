@@ -12,7 +12,7 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { z } from 'zod';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingFindingRepository } from './repos/imaging_finding.repo';
 
@@ -50,7 +50,7 @@ export async function createFinding(ctx: BaseContext): Promise<Response> {
 
   // Branch-level authorization (T-11-01)
   try {
-    await assertBranchAccess(db, user.id, study.branchId);
+    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
   } catch {
     throw new NotFoundError('Image not found');
   }

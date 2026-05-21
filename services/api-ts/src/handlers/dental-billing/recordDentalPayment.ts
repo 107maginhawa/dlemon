@@ -10,7 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function recordDentalPayment(
   ctx: ValidatedContext<any, never, any>
@@ -29,7 +29,7 @@ export async function recordDentalPayment(
   if (!invoice) throw new NotFoundError('Invoice');
 
   // Branch-level authorization
-  await assertBranchAccess(db, session.userId, invoice.branchId);
+  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   if (body.amountCents <= 0) {
     throw new BusinessLogicError('Payment amount must be positive', 'INVALID_AMOUNT');

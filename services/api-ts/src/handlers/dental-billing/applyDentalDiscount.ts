@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { applyDiscountRate } from './utils/rounding';
 
 export async function applyDentalDiscount(
@@ -27,7 +27,7 @@ export async function applyDentalDiscount(
   if (!invoice) throw new NotFoundError('Invoice');
 
   // Branch-level authorization
-  await assertBranchAccess(db, session.userId, invoice.branchId);
+  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner']);
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Cannot apply discount to a voided invoice', 'VOIDED_INVOICE');

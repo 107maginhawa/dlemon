@@ -16,7 +16,7 @@ import type { User } from '@/types/auth';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { resolveImagingTier } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
@@ -132,7 +132,7 @@ export async function createMeasurement(ctx: BaseContext): Promise<Response> {
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
   // Branch-level authorization (T-08-01)
-  await assertBranchAccess(db, user.id, study.branchId);
+  await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
   const isMeasurementType = MEASUREMENT_TYPES.has(rawBody.type as any);
   const isAnnotationType = ANNOTATION_TYPES.has(rawBody.type as any);

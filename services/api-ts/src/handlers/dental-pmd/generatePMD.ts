@@ -14,7 +14,7 @@ import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { User } from '@/types/auth';
 import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
@@ -39,7 +39,7 @@ export async function generatePMD(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   // Resolve membership ID from personId + branchId
   const [membership] = await db

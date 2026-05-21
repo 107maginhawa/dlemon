@@ -9,7 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ConsentFormRepository } from './repos/consent-form.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { SignConsentFormBody, SignConsentFormParams } from '@/generated/openapi/validators';
 
@@ -32,7 +32,7 @@ export async function signConsentForm(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(existing.visitId);
   if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   if (existing.signed) {
     throw new ValidationError('Consent form is already signed and cannot be modified');

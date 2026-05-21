@@ -17,7 +17,7 @@ import { UnauthorizedError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 interface PatientRow {
   firstName: string;
@@ -123,7 +123,7 @@ export async function importPatients(ctx: Context): Promise<Response> {
   // Branch-level authorization: verify access to all unique branchIds
   const uniqueBranchIds = [...new Set(validRows.map(r => r.branchId))];
   for (const branchId of uniqueBranchIds) {
-    await assertBranchAccess(db, user.id, branchId);
+    await assertBranchRole(db, user.id, branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
   }
 
   // All-or-nothing transaction

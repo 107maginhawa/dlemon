@@ -15,10 +15,8 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
-
-const ROLES_ALLOWED_TO_DELETE = ['dentist', 'associate'];
 
 export async function deleteImage(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -36,17 +34,12 @@ export async function deleteImage(ctx: BaseContext): Promise<Response> {
   const study = await repo.findStudyById(image.studyId);
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
-  // Branch-level authorization
-  await assertBranchAccess(db, user.id, study.branchId);
+  // Branch-level authorization + role gate (CLINICAL_WRITE)
+  await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
-  // Derive role from branch membership (no middleware sets memberRole)
+  // BR-027: associates may only delete images they acquired
   const role = await repo.getMemberRole(user.id, study.branchId);
-  if (!role || !ROLES_ALLOWED_TO_DELETE.includes(role)) {
-    throw new ForbiddenError('Only dentists and associates may delete imaging files');
-  }
-
-  // BR-027: associates may only delete their own images
-  if (role === 'associate' && study.acquiredBy !== user.id) {
+  if (role === 'dentist_associate' && study.acquiredBy !== user.id) {
     throw new ForbiddenError('Associates may only delete images they acquired');
   }
 

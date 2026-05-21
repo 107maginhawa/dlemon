@@ -11,7 +11,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 
 export async function updateDentalPatient(
@@ -33,7 +33,7 @@ export async function updateDentalPatient(
 
   // Branch-level authorization
   if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'staff_full']);
   }
 
   const updates: Record<string, any> = {};
