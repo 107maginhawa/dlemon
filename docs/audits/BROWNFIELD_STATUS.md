@@ -1,10 +1,10 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-21 (G1+G2+G2.5 execution) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-21 (G3 execution) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
 
 # Dentalemon — Brownfield Adoption Dashboard
 
-**Updated:** 2026-05-21 (post-G1 + G2 + G2.5 execution) | **Cycle:** 1/3 | **Branch:** feat/v1.5-g1-foundation
+**Updated:** 2026-05-21 (post-G1 + G2 + G2.5 + G3 execution) | **Cycle:** 1/3 | **Branch:** feat/v1.5-g1-foundation
 **Source audits:** `EXISTING_CODEBASE_ADOPTION_AUDIT.md`, `COMPLIANCE_REPORT.md`, `CONFIDENCE_REPORT.md`, `TRACEABILITY_MATRIX_AUTO.md`
-**execution_state:** `executed` — G1 ✅ G2 ✅ G2.5 ✅ (G3+G6-core pending)
+**execution_state:** `executed` — G1 ✅ G2 ✅ G2.5 ✅ G3 ✅ (G6-core pending)
 
 ---
 
@@ -17,7 +17,7 @@
 | Confidence (L1–L4) | **9 / 10** ✅ (confirmed — all 10 modules at 9, all 4 layers at 9) |
 | P0 remaining | **0** ✅ |
 | P1 remaining | **0** ✅ (all G1+G2 P1s resolved) |
-| P2 remaining | **4** (F-012..F-016 — G3 scope) |
+| P2 remaining | **0** ✅ (F-012..F-016 all resolved — G3 complete) |
 | P3 remaining | **1** (F-021) |
 | Modules with MODULE_SPEC | **9 / 10 dental** ✅ (dental-emr added 2026-05-21) |
 | BR trace coverage | 100% any (47 BRs + 15 CIMG), registry has 62 entries |
@@ -26,7 +26,7 @@
 | Handler test coverage | All 10 dental handlers ≥70% ✅ |
 | Feature delivery | v1.4 G4 🔄 PENDING CI GREEN (G4-P1 ✅ G4-P2 ✅ feature-done, F-016 CI gate) |
 
-**Graduation verdict:** 🔄 IN PROGRESS — G1+G2+G2.5 complete. G3 (domain refactor) + G6-core (error envelope, FSM property tests, ASVS L2, dental_audit table, OpenAPI drift) required to reach ≥9.0. Projected final: audit 9.7 / compliance 9.9 / confidence 10.0.
+**Graduation verdict:** 🔄 IN PROGRESS — G1+G2+G2.5+G3 complete. G6-core (error envelope, FSM property tests, ASVS L2, dental_audit table, OpenAPI drift) required to reach ≥9.0. Projected final: audit 9.7 / compliance 9.9 / confidence 10.0.
 
 ---
 
@@ -84,10 +84,10 @@ Legend: 🟢 healthy | 🟡 has open P1/P2 | 🔴 P0 open
 | F-010 | br-registry.json empty (35 BRs not populated) | cross-module | P3 | stabilize-existing | G2 | ✅ RESOLVED (62 entries in registry) |
 | F-011 | booking (11%) + storage (20%) coverage below ratchet | booking, storage | P2 | stabilize-existing | G2 | ✅ RESOLVED (booking 70.9%, storage 72.2%, emr/imaging/patient all ≥70%) |
 | F-012 | "Encounter" vs "Visit" — FHIR/dental terminology conflict in docs/comments | cross-module | P2 | refactor-existing | G3 | ✅ RESOLVED (G3-S1: all doc/comment occurrences replaced with "Visit") |
-| F-013 | No DOMAIN_MODEL.md — FHIR entity catalog not mapped to dental DB | cross-module | P2 | stabilize-existing | G3 | ⬜ OPEN |
-| F-014 | DC-003, DC-006, DC-010, DC-014 — naming inconsistencies in schema/code | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
-| F-015 | DC-001, DC-007, DC-008 — ~25 bare UUID FK columns undocumented | cross-module | P2 | refactor-existing | G3 | ⬜ OPEN |
-| F-016 | N+1 in EMR + pool exhaustion in parallel tests | emr | P2 | stabilize-existing | G3 | ⬜ OPEN (CI gate F-016 wired 2026-05-20, pending green) |
+| F-013 | No DOMAIN_MODEL.md — FHIR entity catalog not mapped to dental DB | cross-module | P2 | stabilize-existing | G3 | ✅ RESOLVED (G3-S2: docs/architecture/DOMAIN_MODEL.md — 19 entities, mermaid ER, FHIR R4 mapping) |
+| F-014 | DC-003, DC-006, DC-010, DC-014 — naming inconsistencies in schema/code | cross-module | P2 | refactor-existing | G3 | ✅ RESOLVED (G3-S3: JSDoc comments on billing amounts; DC-006/014 already snake_case in code) |
+| F-015 | DC-001, DC-007, DC-008 — ~25 bare UUID FK columns undocumented | cross-module | P2 | refactor-existing | G3 | ✅ RESOLVED (G3-S4: 14 columns addressed — 2 real FKs added, 10 loose-coupling comments, 2 not-FK) |
+| F-016 | N+1 in EMR + pool exhaustion in parallel tests | emr | P2 | stabilize-existing | G3 | ✅ RESOLVED (G3-S5: getBatchConsultationStats() batch query; pool max 5→2 + timeouts) |
 | F-017 | v1.4 Phase 1: Structured Imaging Findings (CIMG-01–06) | dental-imaging | — | new-feature | G4 | ✅ COMPLETE (2026-05-16) |
 | F-018 | v1.4 Phase 2: Cephalometric Workspace | dental-imaging | — | new-feature | G4 | 🔄 PENDING CI GREEN (F0–F6 done, 32/32 E2E pass) |
 | F-019 | v1.5 Periodontal Charting | (new module) | — | new-feature | G5 | ⬜ PLANNED |

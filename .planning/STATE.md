@@ -1,19 +1,38 @@
 ---
 gsd_state_version: 1.0
 milestone: "v1.5-g1"
-milestone_name: G1 Foundation Stabilization
-status: complete
-stopped_at: G1 all 5 slices done — PR ready (2026-05-21)
-last_updated: "2026-05-21T00:00:00.000Z"
+milestone_name: milestone
+status: in-progress
+stopped_at: G3 complete — G6-core next (2026-05-21)
+last_updated: "2026-05-21T09:30:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 13
+  completed_phases: 11
+  total_plans: 28
+  completed_plans: 28
+  percent: 85
 ---
 
 ## Current Position
+
+### G3 Domain Refactor — COMPLETE (2026-05-21)
+
+All 6 G3 slices done on feat/v1.5-g1-foundation:
+
+- G3-S1: Terminology "Encounter"→"Visit" in docs/comments ✅ (7bd46f9)
+- G3-S2: docs/architecture/DOMAIN_MODEL.md written — 19 entities, ER diagram, FHIR R4 ✅ (5ee8509)
+- G3-S3: DC-003/006/010/014 naming inconsistencies documented ✅ (b61c76f)
+- G3-S4: ~25 bare UUID FKs — 2 real FKs added, 10 loose-coupling comments, 2 not-FK ✅ (5def6c0)
+- G3-S5: EMR N+1 fixed (getBatchConsultationStats) + pool exhaustion fixed (max 5→2) ✅ (21585cc)
+- G3-S6: BROWNFIELD_STATUS F-012..F-016 → ✅, STATE.md updated ✅
+
+**Next:** G6-core (5 parallel + 1 sequential)
+- G6-S1: Error envelope doc + conformance test
+- G6-S2: Property tests for 10 FSMs (add fast-check dep first)
+- G6-S3: ASVS L2 checklist + THREAT_MODEL.md
+- G6-S4 (sequential): dental_audit DB table + Pino shim + admin endpoint
+- G6-S7: TypeSpec @example annotations + OpenAPI drift CI
+- G6-S10: Migration safety lint + CI script
 
 ### G1 Foundation Stabilization — COMPLETE (2026-05-21)
 
@@ -181,8 +200,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-20T22:14:38.241Z
-Stopped at: context exhaustion at 76% (2026-05-20)
+Last session: 2026-05-21T01:06:52.659Z
+Stopped at: context exhaustion at 77% (2026-05-21)
 Resume file: None
 Resume branch: feat/v1.4-clinical-imaging
 
