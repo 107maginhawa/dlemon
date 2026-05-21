@@ -67,6 +67,7 @@
     "drizzle-kit": "^0.31.0",
     "esbuild": "^0.25.0",
     "eslint": "^9.0.0",
+    "fast-check": "^4.8.0",
     "msw": "^2.14.2",
     "nanoid": "^5.1.6",
     "typescript": "^5.7.0",
