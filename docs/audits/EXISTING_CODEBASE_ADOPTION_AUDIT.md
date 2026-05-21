@@ -856,3 +856,77 @@ Within the dental domain layer: membership roles use snake_case (`dentist_owner`
 ### 22.7 Health Score Update
 
 This audit does not change the overall health score (remains 9/10 per `CONFIDENCE_REPORT.md`). The domain model clarity dimension is revised: from "unscored" to **7/10** — the dual-system architecture is intentional and documented, but the naming inconsistencies (DC-003, DC-006, DC-010, DC-014) and structural gaps (DC-001, DC-007) prevent a higher score. Resolving the "Fix Next" items would advance this dimension to 9/10.
+
+---
+
+## 23. G6-Core Delta Audit
+
+**Audit Date:** 2026-05-21 | **Prior Score:** 7.2/10 (2026-05-19) | **Method:** targeted delta (code verification of G1–G3 + G6-core slices)
+**Branch:** `feat/v1.5-g1-foundation` @ 86386c0 | **Waves verified:** G1 ✅ G2 ✅ G2.5 ✅ G3 ✅ G6-core ✅
+
+### 23.1 Slice Verification
+
+| Slice | Status | Key Evidence |
+|-------|--------|-------------|
+| G6-S1: Error envelope | ✅ CONFIRMED | `core/errors.ts` + `ERROR_ENVELOPE.md` + 47-block conformance test suite |
+| G6-S2: FSM property tests | ✅ CONFIRMED | 10 files, each using `fc.assert(fc.property(...))` — one per dental FSM |
+| G6-S3: ASVS L2 + STRIDE | ✅ CONFIRMED | `ASVS_L2.md` (258 lines) + `THREAT_MODEL.md` (252 lines) |
+| G6-S4: dental_audit + Pino shim | ✅ CONFIRMED | `db/audit.schema.ts` + migration 0037 + `core/audit-logger.ts` + `GET /audit/logs` |
+| G6-S7: TypeSpec @examples + drift CI | ✅ CONFIRMED | 13+ @example annotations across 7 modules + `.github/workflows/openapi-drift.yml` |
+| G6-S10: Migration safety lint + CI | ✅ CONFIRMED | `scripts/lint-migrations.ts` + `quality.yml` `migration-safety` job |
+| G1-S1: assertBranchAccess RBAC | ⚠️ PARTIAL | Membership enforcement fixed; role-differentiated gating is per-handler (`getMemberRole()` copies), not in shared utility |
+| G3: DOMAIN_MODEL.md | ✅ CONFIRMED | 246 lines, 28-table mapping, FHIR R4 alignment |
+| G2: 9/9 MODULE_SPECs | ✅ CONFIRMED | Found under `docs/modules/` (not `docs/product/modules/`) |
+
+### 23.2 Surprises and Risks Found
+
+1. **assertBranchAccess still role-blind (P1 — latent privilege escalation).**
+   `handlers/shared/assert-branch-access.ts` checks only active membership, not role. Role guards exist in individual handlers (`branchSettings.ts`, `consentTemplates.ts`) via local `getMemberRole()` helpers. Any handler that forgets to call `getMemberRole()` is open to lateral access within a branch. Recommendation: add `requiredRole?: MemberRole[]` param to `assertBranchAccess` and enforce in the shared utility.
+
+2. **Dual audit schema (minor drift risk).**
+   `src/db/audit.schema.ts` (used by `audit-logger.ts`) and `src/handlers/audit/repos/audit.schema.ts` both reference `dental_audit`. These are distinct files — if one is updated without the other, type drift will accumulate silently.
+
+3. **No MODULE_SPEC for `handlers/audit/`.** The audit module added in G6-S4 has no MODULE_SPEC. Low risk (it's simple), but breaks the 9/9 symmetry.
+
+### 23.3 Updated Health Score
+
+| Dimension | 2026-05-19 | 2026-05-21 | Delta | Notes |
+|-----------|-----------|-----------|-------|-------|
+| Terminology consistency | 9 | 9 | — | G3 stable |
+| Permission coverage | 6 | **7** | +1 | Membership enforced; role gating still per-handler |
+| Business rule clarity | 7 | **9** | +2 | 62 BRs, 10 FSM property test suites, 100% AC coverage |
+| API consistency | 8 | **9** | +1 | TypeSpec @examples in 7 modules + OpenAPI drift CI |
+| State machine safety | 8 | **9** | +1 | All 10 FSMs property-tested; G1 guarded remaining 2 |
+| Error handling uniformity | 8 | **9** | +1 | Conformance-tested error envelope; `ERROR_ENVELOPE.md` |
+| Backend test coverage | 7 | **9** | +2 | 100% ACs + Hurl 132/132 + 10 FSM property suites |
+| Frontend test coverage | 6 | **8** | +2 | 55/55 ACs done; per-screen coverage still partial |
+| PRD/spec coverage | 7 | **9** | +2 | 9/9 MODULE_SPECs + 100% ACs + 100% Hurl contracts |
+| UI prototype readiness | 8 | **9** | +1 | G1-S5 confirmed removed debug routes from prod |
+| Architecture alignment | 8 | **9** | +1 | Migration safety CI + ASVS L2 + ERROR_ENVELOPE.md |
+| Domain model clarity | 6 | **8** | +2 | DOMAIN_MODEL.md: 246 lines, 28 entities, FHIR alignment |
+| Security posture (OWASP) | 8 | **9** | +1 | ASVS L2 (258 lines) + STRIDE (252 lines) + audit trail |
+| Observability coverage | 7 | **9** | +2 | dental_audit DB + Pino shim + admin endpoint confirmed |
+| Performance health | 7 | **8** | +1 | EMR N+1 fixed; pool max 5→2; response-time metrics absent |
+
+**Overall health: 8.7/10** _(up from 7.2/10 on 2026-05-19; sum 130/15)_
+
+### 23.4 Graduation Gap Analysis
+
+| Threshold | Required | Actual | Status |
+|-----------|----------|--------|--------|
+| Audit health ≥ 9.0 | 9.0 | **8.7** | ❌ 0.3 short |
+| P0 open | 0 | 0 | ✅ |
+| P1 open | — | 1 (assertBranchAccess role-blind) | ⚠️ |
+
+**Verdict: NOT YET GRADUATED.** 0.3 points below threshold. One P1 drives the permission coverage gap.
+
+### 23.5 Path to 9.0 (delta = 0.3 pts = 4.5 raw points across 15 dimensions)
+
+Highest-ROI fixes:
+
+1. **Extend `assertBranchAccess` with `requiredRole?` param** — lifts permission coverage 7→9 (+2 pts). Single file change, closes latent P1.
+2. **Add screen-level tests for Calendar, Billing, Reports** — lifts frontend test coverage 8→9 (+1 pt).
+3. **Add `handlers/audit/MODULE_SPEC.md`** — minor, supports spec coverage completeness.
+4. **Add response-time instrumentation** (`/metrics` or Prometheus) — lifts performance health 8→9 (+1 pt).
+
+Fixing items 1+2 alone (permission + frontend) brings score to 130+3 = 133/15 = 8.87. All four brings 135/15 = 9.0 exactly.
