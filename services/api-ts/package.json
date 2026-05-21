@@ -19,6 +19,7 @@
     "db:studio": "drizzle-kit studio",
     "test": "bun test src/**/*.test.ts",
     "test:unit": "bun test src/**/*.test.ts",
+    "test:coverage": "bun test --coverage src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src"
   },
