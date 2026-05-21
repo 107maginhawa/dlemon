@@ -21,7 +21,8 @@
     "test:unit": "bun test src/**/*.test.ts",
     "test:coverage": "bun test --coverage src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "lint:migrations": "bun scripts/lint-migrations.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.879.0",

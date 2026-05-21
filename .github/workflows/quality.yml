@@ -80,6 +80,19 @@ jobs:
       - name: Security audit (new advisories block merge — accepted list in docs/audits/SECURITY_ADVISORIES.md)
         run: bash scripts/check-audit.sh
 
+  migration-safety:
+    name: Migration Safety Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+      - name: Lint migration safety
+        run: cd services/api-ts && bun run lint:migrations
+
   traceability:
     name: BR Traceability Gate
     runs-on: ubuntu-latest
