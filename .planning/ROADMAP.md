@@ -14,12 +14,12 @@
 
 | Wave | Name | Parallel? | P-level | Status |
 |------|------|-----------|---------|--------|
-| G1 | Foundation Stabilization | Sequential (safety) | P1–P3 | ⬜ NOT STARTED |
-| G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ⬜ NOT STARTED |
-| G3 | Domain Model Refactoring | Parallel safe | P2 | ⬜ NOT STARTED |
+| G1 | Foundation Stabilization | Sequential (safety) | P1–P3 | ✅ COMPLETE (2026-05-21) |
+| G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ✅ COMPLETE (2026-05-21) |
+| G3 | Domain Model Refactoring | Parallel safe | P2 | ✅ COMPLETE (2026-05-21) |
 | G4 | Feature Delivery | Sequential (dependency) | new-feature | 🔄 PENDING CI (F-016) |
-| G5 | Future Features | Parallel safe | new-feature | ⬜ PLANNED |
-| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ⬜ PLANNED |
+| G5 | Future Features | Parallel safe | new-feature | 🔄 IN PROGRESS (S1 done 2026-05-24) |
+| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | 🔄 IN PROGRESS (S1-4,7,10 done; S5/S6/S8/S9 remaining) |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -36,7 +36,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G1: Foundation Stabilization
 
 **Mode:** tdd
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21)
 **Parallel:** NO — sequential for safety (security + state machine integrity)
 **Depends on:** nothing (run first)
 **Findings:** F-001, F-002, F-003, F-004, F-005
@@ -79,7 +79,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G2: Spec & Coverage Completeness
 
 **Mode:** tdd
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21, incl. G2.5 push to max)
 **Parallel:** YES — slices are independent, parallelizable across modules
 **Depends on:** G1
 **Findings:** F-006, F-007, F-008, F-009, F-010, F-011
@@ -119,7 +119,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G3: Domain Model Refactoring
 
 **Mode:** tdd (code changes) / docs (documentation)
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21; G3-S6/S7/S8/S9 follow-ups done 2026-05-24, commit e31fba1)
 **Parallel:** YES — slices are independent
 **Depends on:** G2
 **Findings:** F-012, F-013, F-014, F-015, F-016
@@ -206,7 +206,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G6: Excellence — Reach 9.0 Target
 
 **Mode:** tdd / docs (mixed)
-**Status:** ⬜ PLANNED
+**Status:** 🔄 IN PROGRESS — S1/S2/S3/S4/S7/S10 done (2026-05-21); S5/S6/S8/S9 remaining
 **Parallel:** YES — slices are independent
 **Depends on:** G3 complete
 **Target:** Audit ≥9.0, Compliance ≥9.0, Confidence ≥9.0

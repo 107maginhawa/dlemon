@@ -3,17 +3,28 @@ gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
 status: in-progress
-stopped_at: context exhaustion at 76% (2026-05-24)
-last_updated: "2026-05-24T08:54:57.308Z"
+stopped_at: Wave 0 CI unblock + roadmap sweep (2026-05-24)
+last_updated: "2026-05-24T14:00:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 28
-  completed_plans: 27
-  percent: 77
+  completed_plans: 28
+  percent: 85
 ---
 
 ## Current Position
+
+### v1.5 Spec Pipeline + G3 Follow-ups + G5-S1 — COMPLETE (2026-05-24)
+
+All items landed on feat/v1.5-g1-foundation:
+
+- 856a7dc — oli-magic spec pipeline (UI blueprints × 70 files + spec consistency PASS)
+- e31fba1 — G3-S6/S7/S8/S9 (glossary imagingTier, audit route consolidation, visit Reopen removed, §4 workflow details)
+- 018c25c — G5-S1 dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype)
+- 8b74926 — Wave 0: tighten FSM transition types + null-assert AC-G2-S1 [typecheck CI unblock]
+
+Next: Wave 3a (G6-S5 metrics, G6-S6 perf ratchet) + Wave 3b (G6-S8 iPad E2E, G6-S9 frontend coverage).
 
 ### G3 Domain Refactor — COMPLETE (2026-05-21)
 
