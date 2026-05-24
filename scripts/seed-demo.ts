@@ -616,13 +616,18 @@ async function seed() {
         duration: '5 days', instructions: 'Take with food. Avoid if stomach upset.',
       }, cookie)
       if (rxR.ok) log(`  ✓ Rx: Ibuprofen 400mg`)
-      // Unsigned consent
+      // Signed consent (revenue chain requires signed consent before performed)
       if (generalConsentTplId !== 'general') {
-        await post(`/dental/visits/${v4id}/consents`, {
+        const consentR = await post(`/dental/visits/${v4id}/consents`, {
           visitId: v4id, patientId: p1.id,
           templateId: generalConsentTplId, templateName: 'General Treatment Consent',
         }, cookie)
-        log(`  ✓ Unsigned consent created`)
+        if (consentR.ok) {
+          await post(`/dental/visits/${v4id}/consents/${consentR.data.id}/sign`, { signatureData: 'data:image/png;base64,iVBORw0KGgo=' }, cookie)
+          log(`  ✓ Signed consent (Maria Santos v4 — revenue chain enabled)`)
+        } else {
+          log(`  ⚠ Consent create (${consentR.status})`)
+        }
       }
       await addNotes(v4id, { subjective: 'Follow-up sensitivity #24. Sensitive toothpaste not helping.', objective: 'Cervical erosion progressing. Cold test positive, 3s.' }, cookie)
       activeCount++
