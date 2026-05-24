@@ -45,7 +45,9 @@ jobs:
           bun-version: 1.2.21
       - run: bun install --frozen-lockfile
       - name: Run unit tests with coverage
-        run: cd apps/dentalemon && bun test src/
+        # bunfig.toml sets coverageThreshold (line=75, function=75, branch=60).
+        # --coverage flag ensures the gate runs even when bunfig auto-detection varies.
+        run: cd apps/dentalemon && bun test --coverage src/
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
