@@ -2,18 +2,35 @@
 gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
-status: in-progress
-stopped_at: context exhaustion at 78% (2026-05-24)
-last_updated: "2026-05-24T15:25:29.092Z"
+status: complete
+stopped_at: "v1.5 milestone close — Sprint 0+1 + ARCHITECTURE.md verified (2026-05-25)"
+last_updated: "2026-05-25T00:00:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 13
   total_plans: 28
-  completed_plans: 27
-  percent: 77
+  completed_plans: 28
+  percent: 100
 ---
 
 ## Current Position
+
+### Sprint 0+1 — Revenue Chain + S1 Schema — COMPLETE (2026-05-25)
+
+All 8 commits landed on feat/v1.5-g1-foundation:
+
+- a45b869 — fix(seed): sign Maria Santos v4 consent — enables revenue chain
+- 97518ea — fix(workspace): inline consent-required error on Mark Done 422
+- a126c9b — feat(journey): J04 revenue chain PASS — two-step Mark-Done works
+- c8a377c — fix(tooth-slideout): remove stale deferred comment — clinical_notes wired
+- 1f26821 — test(billing): double-billing prevention — billedInvoiceId + 422 on re-invoice
+- 28e64b2 — test(treatment): performedAt set when status transitions to performed
+- bff976a — feat(schema): S1 schema additions — migration 0039 (performedAt, billedInvoiceId, appointmentId)
+- 30e31e3 — test(sprint-0+1): follow-on — BR-006 consent fix + billing gate + FSM HTTP (9 tests)
+
+Also: docs/architecture/ARCHITECTURE.md verified present — G5-S2 / Wave 4.1 closed (no
+work needed; extraction landed 2026-05-24). Known residual: BR-002 (active→completed 500)
+is pre-existing, not caused by Sprint 0+1 changes.
 
 ### v1.5 Spec Pipeline + G3 Follow-ups + G5-S1 — COMPLETE (2026-05-24)
 
@@ -214,10 +231,10 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-24T15:25:29.089Z
-Stopped at: context exhaustion at 78% (2026-05-24)
+Last session: 2026-05-25T00:00:00.000Z
+Stopped at: v1.5 milestone close — Sprint 0+1 + ARCHITECTURE.md verified (2026-05-25)
 Resume file: None
-Resume branch: feat/v1.4-clinical-imaging
+Resume branch: feat/v1.5-g1-foundation (PR open → main)
 
 ### Journey Harness Audit Cycle — COMPLETE (2026-05-19)
 
