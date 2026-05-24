@@ -129,6 +129,31 @@ jobs:
           path: apps/dentalemon/test-results/
           retention-days: 7
 
+  perf-ratchet:
+    name: Performance Ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # DISABLED until a staging environment is wired. The ratchet needs a
+    # running, seeded API to hit. To enable:
+    #   1. Change `if: false` -> `if: github.event_name == 'pull_request'`.
+    #   2. Set repo secrets PERF_API_URL and PERF_API_TOKEN.
+    #   3. Provide PERF_PATIENT_ID / PERF_VISIT_ID / PERF_CHART_ID via env
+    #      or seed deterministic IDs in the staging env.
+    # Until then the job exists as scaffolding so the script and baseline
+    # stay version-controlled and reviewable.
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+      - name: Run perf ratchet
+        run: cd services/api-ts && bun run tests/perf/run.ts
+        env:
+          API_URL: ${{ secrets.PERF_API_URL }}
+          API_TOKEN: ${{ secrets.PERF_API_TOKEN }}
+
   journey-verification:
     name: Journey Harness
     runs-on: ubuntu-latest
