@@ -37,6 +37,15 @@ export async function createDentalInvoice(
     throw new ValidationError('No billable treatments found for this visit');
   }
 
+  // S1-T7: Double-billing prevention — reject if any treatment already billed
+  const alreadyBilled = billable.filter(t => t.billedInvoiceId);
+  if (alreadyBilled.length > 0) {
+    throw new BusinessLogicError(
+      `${alreadyBilled.length} treatment(s) already billed on a previous invoice`,
+      'TREATMENT_ALREADY_BILLED',
+    );
+  }
+
   // Calculate subtotal from treatments
   const subtotalCents = billable.reduce((sum, t) => sum + t.priceCents, 0);
 
@@ -80,6 +89,9 @@ export async function createDentalInvoice(
   }));
 
   const createdLineItems = await invoiceRepo.createLineItems(lineItems);
+
+  // Mark treatments as billed to prevent double-billing (S1-T7)
+  await treatmentRepo.setBilledInvoiceId(billable.map(t => t.id), invoice.id);
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

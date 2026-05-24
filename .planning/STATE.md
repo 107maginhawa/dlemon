@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
 status: in-progress
-stopped_at: Wave 0 CI unblock + roadmap sweep (2026-05-24)
-last_updated: "2026-05-24T14:00:00.000Z"
+stopped_at: context exhaustion at 78% (2026-05-24)
+last_updated: "2026-05-24T15:25:29.092Z"
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 10
   total_plans: 28
-  completed_plans: 28
-  percent: 85
+  completed_plans: 27
+  percent: 77
 ---
 
 ## Current Position
@@ -214,8 +214,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-24T08:54:57.305Z
-Stopped at: context exhaustion at 76% (2026-05-24)
+Last session: 2026-05-24T15:25:29.089Z
+Stopped at: context exhaustion at 78% (2026-05-24)
 Resume file: None
 Resume branch: feat/v1.4-clinical-imaging
 

@@ -83,8 +83,9 @@ export async function updateDentalTreatment(
   }
 
   // EC4: priceCents is locked at creation — updates are ignored
-  const patch: Partial<Pick<DentalTreatment, 'status' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'clinicalNotes'>> = {};
+  const patch: Partial<Pick<DentalTreatment, 'status' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'clinicalNotes' | 'performedAt'>> = {};
   if (body.status) patch.status = body.status as DentalTreatment['status'];
+  if (body.status === 'performed') patch.performedAt = new Date();
   if (body.toothNumber !== undefined) patch.toothNumber = body.toothNumber;
   if (body.surfaces) patch.surfaces = body.surfaces;
   if (body.cdtCode) patch.cdtCode = body.cdtCode;

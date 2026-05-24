@@ -30,6 +30,7 @@ export const dentalVisits = pgTable('dental_visit', {
   completedAt: timestamp('completed_at'),
   lockedAt: timestamp('locked_at'),
   chiefComplaint: text('chief_complaint'),
+  appointmentId: uuid('appointment_id'),
 }, (table) => ({
   patientIdx: index('dental_visit_patient_id_idx').on(table.patientId),
   branchIdx: index('dental_visit_branch_id_idx').on(table.branchId),

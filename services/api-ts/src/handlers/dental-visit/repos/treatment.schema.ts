@@ -37,6 +37,8 @@ export const dentalTreatments = pgTable('dental_treatment', {
   sourceVisitId: uuid('source_visit_id').references(() => dentalVisits.id),
   autoDismissed: boolean('auto_dismissed').default(false),
   clinicalNotes: text('clinical_notes'),
+  performedAt: timestamp('performed_at'),
+  billedInvoiceId: uuid('billed_invoice_id'),
 }, (table) => ({
   visitIdx: index('dental_treatment_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_treatment_patient_id_idx').on(table.patientId),
