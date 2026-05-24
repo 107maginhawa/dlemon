@@ -377,8 +377,9 @@ describe('AC-VISIT-02: completed visit cannot transition back to active', () => 
 
   test('PATCH completed visit to active returns 422 INVALID_STATUS_TRANSITION [AC-VISIT-02]', async () => {
     const visit = await seedCompletedVisit();
+    expect(visit).not.toBeNull();
     const app = buildApp(USER);
-    const res = await app.request(`/dental/visits/${visit.id}`, {
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'active' }),

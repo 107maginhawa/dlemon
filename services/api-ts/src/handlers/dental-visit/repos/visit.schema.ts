@@ -45,7 +45,7 @@ export type NewDentalVisit = typeof dentalVisits.$inferInsert;
 export const VALID_VISIT_STATUSES = ['draft', 'active', 'completed', 'locked', 'discarded'] as const;
 export type DentalVisitStatus = typeof VALID_VISIT_STATUSES[number];
 
-export const VISIT_TRANSITIONS: Record<string, string[]> = {
+export const VISIT_TRANSITIONS: Record<DentalVisitStatus, DentalVisitStatus[]> = {
   draft: ['active'],
   // 'discarded' is a server-only auto-discard (BR-005); clients request 'completed'
   // and the server redirects to 'discarded' when the visit is empty.
