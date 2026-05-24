@@ -14,7 +14,7 @@
 - **loading** — skeleton chart (gray tooth grid) + skeleton carousel + skeleton SOAP
 - **draft** — fully editable, auto-save indicator in header ("Saved 2s ago")
 - **active** — same as draft, "Active visit" status pill
-- **completed** — read-only, all inputs disabled, "Reopen" only via permissions; addendum-only on SOAP
+- **completed** — read-only, all inputs disabled; addendum-only on SOAP (no Reopen action — state machine is forward-only)
 - **locked** — full-width amber banner top: "This visit is locked and cannot be modified." All inputs disabled.
 - **error** — toast on save failure with retry
 - **offline** — banner: "Working offline. Changes will sync when connection returns."

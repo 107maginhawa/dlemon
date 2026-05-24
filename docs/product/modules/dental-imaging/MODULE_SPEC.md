@@ -43,6 +43,45 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ---
 
+## 4. Workflow Details
+
+### WF-019 — Upload Radiographic Study
+1. Dentist opens patient imaging workspace → "New Study" button.
+2. Study metadata dialog: study type (periapical/bitewing/panoramic/cbct), tooth/teeth (optional), date, notes.
+3. `imagingTier` derived from study type: `basic` (periapical/bitewing), `panoramic` (OPG), `cbct` (3D).
+4. File upload (DICOM or JPEG/PNG): drag-drop or file picker. One study may contain multiple images.
+5. Study created in `pending_review` state → dentist reviews → transitions to `reviewed`.
+
+### WF-020 — Annotate Radiograph
+1. Dentist opens study image in the imaging viewer → selects annotation tool (arrow, freehand, measurement).
+2. Annotation drawn on canvas overlay. Label text optional.
+3. Save: annotation record persisted with coordinates (relative %, not pixel — viewport-independent).
+4. Annotations are user-specific. Any dentist with branch access may view but only the creator may edit.
+5. Annotations visible in PDF export alongside the radiograph.
+
+### WF-040 — Record Imaging Finding
+1. Dentist in imaging viewer → "Add Finding" panel.
+2. Finding form: finding type (caries, bone loss, fracture, etc.), severity, affected tooth/surface, notes.
+3. Finding linked to the imaging study and optionally to a treatment record in dental-clinical.
+4. Finding appears in the patient's clinical summary and the study's finding list.
+5. Findings are immutable after visit lock; amendments via WF-038 pattern.
+
+### WF-030 — Run Ceph Analysis (v1.4, `imagingTier = cbct` required)
+1. Dentist uploads a lateral cephalometric radiograph (panoramic or CBCT series).
+2. Server validates `imagingTier` for the branch (BR-016c) → 403 if insufficient.
+3. Auto-landmark detection runs (server-side isomorphic math engine). Results returned within 5s (P95).
+4. Dentist reviews auto-placed landmarks in the ceph viewer; can drag to correct (WF-031).
+5. On confirmation: ceph analysis record saved with landmark coordinates, derived angles (ANB, SNA, SNB, etc.), and skeletal classification.
+
+### WF-031 — Place / Adjust Ceph Landmarks (v1.4)
+1. Follows WF-030 auto-detection or can be triggered manually on a CBCT-tier study.
+2. Ceph viewer displays the radiograph with landmark overlay (circles with IDs).
+3. Dentist drags each landmark to corrected position. Angles recalculate live.
+4. "Lock Analysis" commits the final landmark set — further edits require a new analysis record.
+5. Locked analysis results included in PMD export and printable ceph report.
+
+---
+
 ## 5. Business Rules
 
 | Rule ID | Rule | Expected Behavior |

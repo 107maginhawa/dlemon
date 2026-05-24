@@ -85,12 +85,7 @@
 
 ---
 
-## Screen: Audit Log (`/reports/audit-log`)
+## Screen: Audit Log
 
-**Roles:** `dentist_owner` only
-**ARIA:** `<main>`, `<form aria-label="Audit filters">`, `<table aria-label="Audit events">`
-
-**Layout:** Filter bar (top) + paginated table
-**Filters:** Date range (DatetimeFilter), actor (combobox), event type (select)
-**Columns:** Timestamp, Actor, Action, Entity Type, Entity ID, Details
-**States:** Loading (skeleton rows), Empty (filtered), Results, Error
+**Route:** `/audit/log` — canonical definition in `dental-audit/ui-prototype/screens.md`.
+Accessible from the dental-org Reports sidebar as a nav link. No duplicate screen spec here.

@@ -27,6 +27,7 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 | **Focal Card** | The center/active card in the Timeline Carousel — fully interactive; left/right cards are preview-only. | [PRD] |
 | **Folder** | One visit's records within a patient's cabinet. Each folder = one visit snapshot. | [PRD] |
 | **ICD-10** | International Classification of Diseases, 10th revision — standard diagnostic codes (e.g., K02.1 = dental caries). Used in clinical records and PMD exports. | [PRD] |
+| **imagingTier** | Classification level for a dental imaging study: `basic` (periapical / bitewing), `panoramic` (OPG), `cbct` (3D cone-beam). Determines storage quotas, viewer capabilities, and AI-analysis eligibility. Stored on `dental_imaging_study.tier`. | [CODE] |
 | **Lab Order** | Request to an external dental laboratory. Contains tooth/surface, lab name, instructions, due date. States: `pending → sent → completed | cancelled`. | [CODE] |
 | **Medical History Entry** | Append-only record of patient's systemic health conditions, allergies, or medications. Cannot be deleted — amended only. | [CODE] |
 | **PMD** | Portable Medical Document — open signed document format for portable health records. One completed visit = one PMD file. Digitally signed with facility certificate. | [PRD] |

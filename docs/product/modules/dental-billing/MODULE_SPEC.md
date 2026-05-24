@@ -44,6 +44,45 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ---
 
+## 4. Workflow Details
+
+### WF-013 — Create Invoice from Visit
+1. Dentist or Staff Full opens completed visit → "Billing" tab → "Generate Invoice".
+2. Server fetches all `performed` or `verified` treatments for the visit (BR-009: ≥1 required).
+3. Line items pre-populated from fee schedule; dentist/staff may adjust unit price and quantity.
+4. Invoice created in `draft` state. Actor reviews totals (subtotal, tax=0, total).
+5. Click "Issue Invoice" → state transitions `draft → issued`. Patient notified via email (notifs module).
+
+### WF-014 — Record Payment
+1. Staff Full opens issued invoice → "Record Payment" action.
+2. Payment dialog: amount, method (cash/card/bank/other), reference number (optional), date.
+3. Payment recorded. If `amount_paid >= total_cents`: invoice → `paid`.
+4. If partial (payment plan active): invoice → `partial`. Subsequent payments reduce balance.
+5. Audit event: `billing.payment.recorded` with actor, amount, method.
+
+### WF-015 — Create Payment Plan
+1. Staff Full opens draft/issued invoice → "Add Payment Plan".
+2. Dialog: installment count, frequency (weekly/monthly), start date.
+3. Plan record created; installments calculated and displayed.
+4. BR-011: while plan is active, invoice cannot be voided.
+5. System (pg-boss cron) marks invoice `overdue` when past-due installment found (WF-054).
+
+### WF-041 — Void Invoice
+1. `dentist_owner` opens invoice in `draft` or `issued` state → "Void Invoice".
+2. Confirmation dialog (destructive action): requires reason text.
+3. BR-011 enforced: if active payment plan exists → 409 ACTIVE_PAYMENT_PLAN, void blocked.
+4. On confirm: invoice → `voided`. All line items de-linked. Audit event emitted.
+5. Voided invoices are read-only; balance resets to 0 in UI but record is preserved.
+
+### WF-052 — Issue Invoice (Draft → Issued)
+1. Triggered by "Issue Invoice" button (WF-013 step 5) or standalone from invoice detail.
+2. Roles: `dentist_owner`, `dentist_associate`, `staff_full`.
+3. Server validates BR-009 (billable treatments present) before transition.
+4. Email sent to patient with invoice PDF link via `email` module.
+5. Invoice becomes visible in patient billing history.
+
+---
+
 ## 5. Business Rules
 
 | Rule ID | Rule | Expected Behavior |

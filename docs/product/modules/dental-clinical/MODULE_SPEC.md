@@ -49,6 +49,45 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ---
 
+## 4. Workflow Details
+
+### WF-016 — Write Prescription
+1. Dentist opens visit workspace → "Prescriptions" tab.
+2. Clicks "+ New Prescription". Dialog opens (RxNorm search, dose, frequency, duration, notes).
+3. On submit: `prescriberMemberId` set server-side from session; BR-017 enforced (dentist role only → 403 otherwise).
+4. Prescription appears in list (`pending`). Dentist prints/shares PDF.
+5. State transitions: `pending → dispensed | cancelled`. Visit lock blocks further edits.
+
+### WF-017 — Create Lab Order
+1. Dentist selects tooth/surface from chart → "Send to Lab" action.
+2. Lab order dialog: lab name, instructions, due date, shade (optional).
+3. On submit: record created (`pending`). pg-boss sends lab notification email.
+4. State machine: `pending → sent → completed | cancelled`.
+5. Completed lab orders link back to the treatment record on the chart.
+
+### WF-018 — Obtain Consent Signature
+1. Dentist selects treatment → "Request Consent" → picks consent template.
+2. Patient receives link (email/on-screen). Signature captured (draw or click-to-sign).
+3. Signed consent stored immutably; `signed_at` timestamp recorded.
+4. BR-014: treatment cannot move to `performed` without a signed consent form.
+5. Revocation (WF-035): patient revokes → state `revoked`; dentist alerted; treatment blocked.
+
+### WF-038 — Clinical Amendment
+1. Dentist opens locked/completed visit → "Add Amendment" on a specific clinical entry.
+2. Amendment dialog: reason (required), corrected content.
+3. Original entry remains visible and immutable; amendment appended alongside it.
+4. Supervisor approval flow (BR-019) is **not implemented** — amendment saved immediately.
+5. Audit event emitted: `clinical.amendment.created` with both original and amendment IDs.
+
+### WF-039 — File Attachment Upload
+1. Dentist or Staff Full opens visit → "Attachments" panel → drag-drop or file picker.
+2. Smart Attachment tagging: image type (periapical, bitewing, panoramic, photo, other) + optional tooth numbers.
+3. File stored in S3/MinIO via `storage` module. Metadata record linked to `dental_visit_id`.
+4. Max file size: 50 MB per file. Accepted types: JPEG, PNG, TIFF, DICOM, PDF.
+5. Attachment list updates optimistically; S3 upload confirmed before persisting DB record.
+
+---
+
 ## 5. Business Rules
 
 | Rule ID | Rule | Expected Behavior |
