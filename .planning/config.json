@@ -23,7 +23,7 @@
     "ui_phase": true,
     "ui_safety_gate": true,
     "ai_integration_phase": true,
-    "tdd_mode": false,
+    "tdd_mode": true,
     "text_mode": false,
     "research_before_questions": false,
     "discuss_mode": "discuss",
@@ -46,7 +46,9 @@
   },
   "project_code": null,
   "phase_naming": "sequential",
-  "agent_skills": {},
+  "agent_skills": {
+    "gsd-executor": ["skills/oli-execution-gate"]
+  },
   "claude_md_path": "./CLAUDE.md",
   "resolve_model_ids": "omit",
   "graduation": {
@@ -58,8 +60,8 @@
     "rationale": "Dentist-facing clinical product: ≥9 required — treatment decisions, PHI, prescriptions, billing all carry clinical/legal risk"
   },
   "brownfield": {
-    "execution_state": "planned",
-    "execution_state_updated": "2026-05-20",
-    "execution_state_rationale": "ROADMAP exists; G1/G2/G3/G5/G6 waves not started; G4 feature-complete pending CI green (F-016)"
+    "execution_state": "graduated",
+    "execution_state_updated": "2026-05-24",
+    "execution_state_rationale": "GRADUATED 9.0/10 (2026-05-21). v1.5 spec pipeline complete (2026-05-24): 70 UI blueprints + spec-consistency PASS. G5 (periodontal) is next execution wave."
   }
 }

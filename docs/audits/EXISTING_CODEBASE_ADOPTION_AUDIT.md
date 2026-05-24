@@ -1,1035 +1,707 @@
+<!--
+oli: oli-audit-codebase v1.0 | generated: 2026-05-24 | cycle: fresh (--auto)
+source: services/api-ts/src + apps/dentalemon/src | depth: deep
+prev: archived as EXISTING_CODEBASE_ADOPTION_AUDIT.pre-2026-05-24.md (not yet renamed)
+-->
+
 # Existing Codebase Adoption Audit
 
+**Project**: Monobase Healthcare — Dentalemon Dental Practice Management SaaS
+**Audit Date**: 2026-05-24
+**Auditor**: oli-audit-codebase (fresh, --auto)
+**Codebase Health Score**: **7.4 / 10**
+
 ---
-**Audit Date:** 2026-05-19
-**Prior Audit:** 2026-05-14 (health 5.4/10)
-**Source Directory:** `services/api-ts/src/handlers/` + `apps/dentalemon/`
-**Stack:** TypeScript + Hono + Drizzle ORM + Bun + React 19 + TanStack Router + Better-Auth
-**Depth:** Deep
-**Branch:** `feat/v1.4-clinical-imaging`
-**Reviewed by:** oli-audit-codebase (re-baseline run)
+
+## Table of Contents
+
+1. Executive Summary
+2. Module Discovery
+3. Domain Terms
+4. Permission Matrix
+5. Business Rules
+6. API Surface
+7. State Machines
+8. UI / Screens Audit
+9. Test Coverage
+10. Security Audit (OWASP Top 10)
+11. Observability Audit
+12. Performance Audit
+13. Inconsistencies
+14. Stubs & TODO Inventory
+15. Type Cast Density
+16. Cross-Module Import Violations
+17. Cross-Module Raw SQL
+18. Repo Guardrails
+19. Spec Coverage
+20. Standards Gap Matrix
+21. Stabilization & Adoption Plan
+
 ---
 
 ## 1. Executive Summary
 
-**Overall health: 7.2/10** _(up from 5.4/10 on 2026-05-14)_
+Dentalemon is a **well-structured dental practice management platform** built on Monobase (Bun + Hono + Drizzle + PostgreSQL). The architecture is spec-first (TypeSpec → OpenAPI → generated routes), domain-isolated, and healthcare-aware (PHI caching headers, ASVS L2, branch-scoped access guards).
 
-| Risk | Count |
-|------|-------|
-| P0 — Fix immediately | 0 |
-| P1 — Fix before new work | 3 |
-| P2 — Fix when touching module | 8 |
-| P3 — Improve later | 5 |
+**Strengths:**
+- TypeSpec-first API (231 endpoints, 165 paths) with generated validators
+- Clear state machines with enforced transitions (visit, treatment, invoice, appointment)
+- 22 documented business rules, 17 tested in integration tests
+- CSRF guard, HSTS, CSP, PHI cache-control headers
+- 135 backend tests + 51 Playwright E2E tests
+- Structured Pino logging with X-Request-ID propagation
 
-**Top 3 risks:**
-1. **Ceph module (11 handlers, 3 DB tables) has zero spec coverage** — CIMG-NNN test IDs exist in the test suite but no corresponding BRs appear in `BUSINESS_RULES.md` or `MODULE_SPEC.md`. A refactor cannot be audited for compliance.
-2. **Dental RBAC is branch-only, not role-differentiated** — `assertBranchAccess` grants all 4 member roles (`dentist_owner`, `dentist_associate`, `staff_full`, `staff_scheduling`) equal API access. A scheduling-only staff member can create treatments or void invoices.
-3. **AC coverage at 50% (20/40 ACs tested)** — the acceptance criteria layer is the only spec layer covering full user-facing flows. Half are untested, making regression detection fragile.
+**Gaps requiring attention:**
+- 183 `as any` casts in production handlers (P2)
+- BR-019 (supervisor approval) and BR-020 (patient merge) not implemented (P1)
+- Booking jobs have runtime `throw new Error('not implemented')` (P1)
+- `dental-clinical` tightly coupled to `dental-visit` repos (P1)
+- MODULE_SPECs at wrong path (`docs/modules/` not `docs/product/modules/`)
+- `tdd_mode: false` and `agent_skills: {}` in config — graduation at risk
 
-**What improved since 2026-05-14:**
-- All 4 prior P0 items resolved (DB FK constraint, route-registration tests, listEMRPatients bug, FINDING_TRANSITIONS guard)
-- 216 routes verified via structural test (`route-registration.test.ts`)
-- Email (95.7% coverage) and Comms (84.2%) modules recovered from CRITICAL
-- v1.4 Ceph feature complete: 11 handlers, 3 tables, `packages/ceph-math`, 32 E2E tests green
-- Compliance framework established: `BUSINESS_RULES.md`, `ACCEPTANCE_CRITERIA.md`, MODULE_SPEC (imaging)
-- Coverage ratchet added (`bunfig.coverage.toml`: line=62, function=61, branch=40)
-
-**Recommended approach:** No P0 blockers. Address P1 items (ceph spec, dental RBAC, AC coverage) before the next feature milestone. Use `/oli-audit-compliance` after ceph BRs are written.
+**Graduation threshold**: ≥9.0 (clinical dental product — PHI, treatment decisions, prescriptions, billing all carry legal/clinical risk)
 
 ---
 
-## 2. Project Overview
+## 2. Module Discovery
+
+### 2a. Dental Domain Modules (primary scope)
+
+| Module | Path | Test Files | Description |
+|--------|------|-----------|-------------|
+| dental-billing | `handlers/dental-billing/` | 11 | Invoices, payment plans, line items, payments |
+| dental-clinical | `handlers/dental-clinical/` | 12 | Prescriptions, lab orders, consent forms, medical history, attachments, amendments |
+| dental-imaging | `handlers/dental-imaging/` | 5 | Imaging studies, images, annotations, ceph analysis |
+| dental-org | `handlers/dental-org/` | 18 | Organizations, branches, memberships |
+| dental-patient | `handlers/dental-patient/` | 6 | Dental patient records |
+| dental-pmd | `handlers/dental-pmd/` | 3 | Portable Medical Documents |
+| dental-scheduling | `handlers/dental-scheduling/` | 7 | Appointments, working hours |
+| dental-visit | `handlers/dental-visit/` | 16 | Visits, treatments, notes, charts, templates |
+
+### 2b. Base Platform Modules (inherited from monobase)
+
+| Module | Path | Description |
+|--------|------|-------------|
+| audit | `handlers/audit/` | Compliance event logging (Pino) |
+| billing | `handlers/billing/` | Stripe Connect invoices (base) |
+| booking | `handlers/booking/` | Generic time-based scheduling |
+| comms | `handlers/comms/` | Real-time chat + WebRTC |
+| email | `handlers/email/` | Transactional email (SMTP/Postmark) |
+| emr | `handlers/emr/` | Electronic medical records |
+| notifs | `handlers/notifs/` | Multi-channel notifications (OneSignal) |
+| patient | `handlers/patient/` | Base patient records (PII) |
+| person | `handlers/person/` | Central PII safeguard |
+| provider | `handlers/provider/` | Provider profiles |
+| reviews | `handlers/reviews/` | NPS review system |
+| shared | `handlers/shared/` | `assertBranchAccess`, `assertBranchRole` guards |
+| storage | `handlers/storage/` | S3/MinIO file storage |
+
+### 2c. Frontend Apps
+
+| App | Path | Framework | Description |
+|-----|------|-----------|-------------|
+| dentalemon | `apps/dentalemon/` | Vite + React + TanStack Router | Main dental workspace UI |
+| account | `apps/account/` | Vite + React + TanStack Router | Auth, profile, settings (base) |
+| sample-workspace | `apps/sample-workspace/` | Vite | Design reference (non-production) |
+
+---
+
+## 3. Domain Terms
+
+### Core Entities
+
+| Term | Type | Status Field | Notes |
+|------|------|-------------|-------|
+| DentalOrganization | Aggregate Root | active/inactive | Top-level tenant |
+| DentalBranch | Entity | — | Clinic location; access scope unit |
+| DentalMembership | Entity | `member_status` enum | Staff record linking person → branch |
+| Patient | Entity | — | Cross-module; linked via `patient_id` UUID |
+| Person | Value Object | — | PII container; person_id on patient |
+| DentalVisit | Aggregate Root | `draft/active/completed/locked/discarded` | Clinical encounter |
+| DentalTreatment | Entity | `diagnosed/planned/performed/verified/dismissed` | Procedure within visit |
+| VisitNotes | Entity | `signed: boolean` | SOAP notes, append-only versions |
+| VisitNoteVersion | Value Object | — | Immutable snapshot |
+| ConsentForm | Entity | `pending/signed/revoked` | [VERIFY] |
+| LabOrder | Entity | `pending/sent/completed/cancelled` | [VERIFY] |
+| Prescription | Entity | FSM [VERIFY] | Requires `prescriberMemberId` |
+| MedicalHistoryEntry | Entity | — | Append-only |
+| Amendment | Entity | — | Audit correction record |
+| ImagingStudy | Aggregate Root | `active/archived` | Radiology session |
+| ImagingStudyImage | Entity | `active/archived` | Individual file |
+| ImagingAnnotation | Entity | — | Per-image annotation |
+| DentalInvoice | Aggregate Root | `draft/issued/partial/paid/overdue/voided` | Billing record |
+| DentalInvoiceLineItem | Entity | — | Derived from treatments |
+| DentalPaymentPlan | Entity | — | Installment plan |
+| DentalAppointment | Entity | FSM [VERIFY] | Scheduled visit |
+| PMDDocument | Aggregate Root | — | Portable export |
+| TreatmentTemplate | Entity | — | Reusable treatment bundle |
+
+### Key Status Enums
+
+| Enum | Values |
+|------|--------|
+| `dental_visit_status` | `draft, active, completed, locked, discarded` |
+| `dental_treatment_status` | `diagnosed, planned, performed, verified, dismissed` |
+| `dental_invoice_status` | `draft, issued, partial, paid, overdue, voided` |
+| `imaging_modality` | `periapical, bitewing, panoramic, cephalometric, cbct, intraoral, other` |
+| `imaging_status` | `active, archived` |
+| `member_role` (inferred) | `dentist_owner, dentist_associate, staff_full, staff_scheduling` |
+
+---
+
+## 4. Permission Matrix
+
+### System Roles (Better-Auth)
+
+| Role | Permissions |
+|------|-------------|
+| `admin` | `admin:*`, `patient:*`, `provider:*`, `communication:*`, `file:*`, `audit:read`, `system:manage`, `user:impersonate` |
+| `provider` | `provider:read/update`, `patient:read/search`, `communication:send/read`, `file:upload/read/download` |
+| `patient` | `patient:read/update/consent:manage`, `communication:send/read`, `file:upload/read` |
+| `user` | Any authenticated user (lowest tier) |
+| `support` | [INFERRED] Support role |
+
+### Dental Branch Roles (Membership)
+
+| Role | Description | Enforced By |
+|------|-------------|-------------|
+| `dentist_owner` | Full clinical + admin rights | `assertBranchRole` |
+| `dentist_associate` | Clinical rights, no admin | `assertBranchRole` |
+| `staff_full` | Admin without clinical | `assertBranchRole` |
+| `staff_scheduling` | Scheduling-only | `assertBranchRole` |
+
+### Access Guards
+
+| Guard | File | Usage |
+|-------|------|-------|
+| `assertBranchAccess` | `shared/assert-branch-access.ts` | Verify membership exists for branch (BR-016) |
+| `assertBranchRole` | `shared/assert-branch-role.ts` | Verify specific role for clinical action |
+| `authMiddleware` | `middleware/auth.ts` | Session-based role check, no DB queries |
+
+**Gap**: `authMiddleware` uses string role splitting (`role.split(',')`) — no structured role hierarchy enforcement. Role escalation risk if comma-separated role string is ever written from user input.
+
+---
+
+## 5. Business Rules
+
+### Full Catalog (from `docs/prd/BUSINESS_RULES.md` + `business-rules.test.ts`)
+
+| ID | Rule | Type | Status | Test Coverage |
+|----|------|------|--------|---------------|
+| BR-001 | Only one active visit per patient at a time (DB partial unique index) | Constraint | implemented | STRONG |
+| BR-002 | Visit can only be activated if patient has no other active visit | State guard | implemented | STRONG |
+| BR-003 | Completed visit cannot be re-opened | State guard | implemented | STRONG |
+| BR-004 | Treatments can only be added to active visits | Validation | implemented | STRONG |
+| BR-005 | Auto-discard empty visits on completion | Business logic | deferred | NONE |
+| BR-006 | Treatment transitions are forward-only: diagnosed→planned→performed→verified; dismissed reachable from any non-terminal | State guard | partial | WEAK (FSM property test exists) |
+| BR-007 | Completed treatment is immutable (CDT code, tooth, surface, price) | State guard | implemented | STRONG |
+| BR-008 | Carried-over treatments are visual indicator only, not auto-charged | Business logic | implemented (UI) | NONE (backend) |
+| BR-009 | Invoice requires at least one treatment line item | Validation | implemented | STRONG |
+| BR-010 | Tax always 0 (stub, pending per-country rules) | Calculation stub | partial | NONE |
+| BR-011 | Active payment plan blocks invoice void/uncollectible | Lifecycle guard | implemented | STRONG |
+| BR-012 | Invoice state lifecycle: draft→issued→partial→paid/overdue/voided | State machine | implemented | STRONG |
+| BR-013 | markUncollectible not applicable to dental invoices (status enum closed) | Deferred | deferred | NONE |
+| BR-014 | Consent forms must be signed before treatment proceeds [VERIFY] | Compliance | [VERIFY] | [VERIFY] |
+| BR-015 | Lab orders linked to visits, status managed by staff | Workflow | implemented | WEAK |
+| BR-016 | Branch membership required for all clinical data access | Authorization | implemented | STRONG |
+| BR-017 | Prescription creation requires prescriberMemberId (dentist role) | Authorization | implemented | STRONG |
+| BR-018 | Invoice voiding from paid state permitted (admin correction) | State override | implemented | STRONG |
+| BR-019 | Treatment amendments require supervisor approval | Authorization | **NOT IMPLEMENTED** | NONE |
+| BR-020 | Patient record merge | Workflow | **NOT IMPLEMENTED** | NONE |
+| BR-021 | PMD generation requires completed visit | Precondition | implemented | STRONG |
+| BR-022 | PMD import creates patient/visit/treatment records | Import workflow | implemented | STRONG |
+
+**Rule classification**: 17 explicit | 3 inferred/UI-only | 2 deferred | 2 not implemented
+
+---
+
+## 6. API Surface
+
+### Summary
+
+| Metric | Value |
+|--------|-------|
+| Total endpoints | 231 |
+| Total paths | 165 |
+| Generation method | TypeSpec → OpenAPI → Hono routes |
+| Generated file | `services/api-ts/src/generated/openapi/routes.ts` |
+| Manual overrides | 3 (int32 path param workaround + tooth history + admin audit) |
+
+### Dental Module Endpoints (sampled)
+
+| Module | Sample Endpoints |
+|--------|-----------------|
+| dental-visit | `POST /dental/visits`, `GET /dental/visits/:id`, `PATCH /dental/visits/:id`, `GET /dental/visits/history/:patientId/teeth/:toothNumber` |
+| dental-treatment | `POST /dental/visits/:id/treatments`, `PATCH /dental/visits/:id/treatments/:tid`, `GET /dental/visits/:id/treatments` |
+| dental-billing | `POST /dental/billing/invoices`, `POST /dental/billing/invoices/:id/issue`, `POST /dental/billing/invoices/:id/void`, `POST /dental/billing/invoices/:id/plan`, `POST /dental/billing/invoices/:id/payments` |
+| dental-clinical | `POST /dental/visits/:id/consents`, `POST /dental/visits/:id/consents/:cid/sign`, `POST /dental/visits/:id/lab-orders`, `POST /dental/visits/:id/prescriptions` |
+| dental-scheduling | `POST /dental/appointments`, `GET /dental/appointments/:id`, `PATCH /dental/appointments/:id`, `POST /dental/appointments/:id/cancel`, `POST /dental/appointments/:id/check-in` |
+| dental-imaging | `POST /dental/imaging/studies`, `GET /dental/imaging/studies/:id`, `POST /dental/imaging/studies/:id/images` |
+
+**Known issue**: 3 manual route registrations in `app.ts` override generated routes for int32 path params — TypeSpec generates `z.number().int()` but Hono path params are always strings. Structural impedance mismatch.
+
+---
+
+## 7. State Machines
+
+### Visit FSM
+
+```
+draft ──→ active ──→ completed ──→ locked
+               │
+               └──→ discarded  (BR-005: server-side auto-discard, deferred)
+```
+
+- Enforced via `VISIT_TRANSITIONS` constant in `visit.schema.ts`
+- DB constraint: partial unique index prevents two active visits per patient (BR-001)
+- `lockedAt` timestamp tracked
+
+### Treatment FSM
+
+```
+diagnosed ──→ planned ──→ performed ──→ verified
+    │             │            │
+    └─────────────┴────────────┴──→ dismissed
+```
+
+- Enforced via `TREATMENT_TRANSITIONS` constant in `treatment.schema.ts`
+- BR-006: forward-only, no reversals
+- BR-007: `performed`/`verified` = immutable
+- FSM property test: `treatment.fsm.property.test.ts` (fast-check)
+- **Gap**: BR-006 status is `partial` — transition enforcement in handlers needs verification
+
+### Invoice FSM
+
+```
+draft ──→ issued ──→ partial ──→ paid
+                 └──→ overdue
+                 └──→ voided  ←── (also from paid, BR-018)
+```
+
+- No `uncollectible` status (dental-specific, BR-013)
+- Active payment plan blocks void (BR-011)
+
+### Appointment FSM
+
+- `appointment.fsm.property.test.ts` exists (fast-check)
+- States: [VERIFY from dental-appointment.schema.ts]
+
+### Prescription FSM
+
+- `prescription.fsm.property.test.ts` exists (fast-check)
+- States: [VERIFY from prescription.schema.ts]
+
+---
+
+## 8. UI / Screens Audit
+
+### App: dentalemon (apps/dentalemon/)
+
+**Tech stack**: Vite + React + TanStack Router + Tailwind CSS + Shadcn/Radix UI
+
+**Shared components** (`src/components/`):
+- Primitives: alert, badge, button, calendar, card, checkbox, combobox, command, dialog, dropdown-menu, form, input, label, loading, pagination, popover, progress, scroll-area, select, separator, sheet, skeleton, slider, switch, table, tabs, textarea, toast, tooltip
+- Custom: alert-dialog, avatar, datetime-filter, empty-state, image-cropper-dialog, phone-input, app-sidebar, logo
+
+**Component tests**:
+- `datetime-filter.test.tsx` ✅
+- `empty-state.test.ts` ✅
+- `image-cropper-dialog.test.tsx` ✅
+- `phone-input.test.tsx` ✅
+
+**Mock data contamination**: `sample-workspace` app exists separately — production app uses SDK hooks (ADR-002: no mock-api.ts). Clean.
+
+**Wireframes**: 28 HTML wireframes in `docs/context/wireframes/` (covers all PRD modules)
+
+**Gaps**:
+- UI blueprint specs (`docs/product/modules/*/ui-prototype/`) — MISSING (Step 7 not yet run)
+- No accessibility test suite detected
+- No `aria-label` audit performed
+
+---
+
+## 9. Test Coverage
+
+### Summary
+
+| Test Type | Count | Notes |
+|-----------|-------|-------|
+| Backend unit/integration | 135 | Bun test, real DB |
+| Playwright E2E | 51 | `apps/dentalemon` |
+| Contract (Hurl) | 22 scenarios | `specs/api/tests/contract/` |
+| FSM property tests | 4 | fast-check: visit, treatment, appointment, prescription |
+| Component tests | 4 | Frontend components |
+| AC (Acceptance Criteria) | ~5 | `ac-g2s1.test.ts`, `ac-clinical.test.ts`, `ac-scheduling.test.ts` |
+
+### Per Dental Module
+
+| Module | Test Files | Quality | Gaps |
+|--------|-----------|---------|------|
+| dental-org | 18 | STRONG | — |
+| dental-visit | 16 | STRONG | BR-008 backend coverage missing |
+| dental-clinical | 12 | STRONG | BR-014 consent-before-treatment unclear |
+| dental-billing | 11 | STRONG | BR-010 tax stub untested |
+| dental-scheduling | 7 | MODERATE | — |
+| dental-patient | 6 | MODERATE | — |
+| dental-imaging | 5 | WEAK | Annotation tests missing |
+| dental-pmd | 3 | WEAK | Only happy path covered |
+
+### Business Rule Coverage Map
+
+| Rule | Test File | Assertion Quality |
+|------|-----------|------------------|
+| BR-001 | `business-rules.test.ts` | STRONG |
+| BR-002 | `business-rules.test.ts` | STRONG |
+| BR-003 | `business-rules.test.ts` | STRONG |
+| BR-004 | `business-rules.test.ts` | STRONG |
+| BR-005 | — | NONE (deferred) |
+| BR-006 | `treatment.fsm.property.test.ts` | WEAK (property, not integration) |
+| BR-007 | `business-rules.test.ts` | STRONG |
+| BR-008 | — | NONE (UI-only) |
+| BR-009 | `business-rules.test.ts` | STRONG |
+| BR-010 | — | NONE (stub) |
+| BR-011 | `business-rules.test.ts` | STRONG |
+| BR-012 | `business-rules.test.ts` | STRONG |
+| BR-013 | — | NONE (deferred) |
+| BR-014 | `clinical-consent-lab.test.ts` | [VERIFY] |
+| BR-015 | `business-rules.test.ts` | WEAK |
+| BR-016 | multiple | STRONG |
+| BR-017 | `business-rules.test.ts` | STRONG |
+| BR-018 | `business-rules.test.ts` | STRONG |
+| BR-019 | — | NONE (not implemented) |
+| BR-020 | — | NONE (not implemented) |
+| BR-021 | `business-rules.test.ts` | STRONG |
+| BR-022 | `business-rules.test.ts` | STRONG |
+
+---
+
+## 10. Security Audit (OWASP Top 10)
+
+| OWASP | Risk | Finding | Severity |
+|-------|------|---------|----------|
+| A01 Broken Access Control | Dental data | `assertBranchAccess` + `assertBranchRole` enforced per handler | LOW |
+| A01 Broken Access Control | Role splitting | `user.role.split(',')` — comma-injection if role field written from user input | MEDIUM |
+| A02 Crypto Failures | PHI at rest | No column-level encryption detected (relies on PG-level) | MEDIUM |
+| A02 Crypto Failures | PHI in transit | HSTS production + PHI Cache-Control: no-store | LOW |
+| A03 Injection | SQL injection | Drizzle ORM throughout; no raw string interpolation | LOW |
+| A04 Insecure Design | Email verify | `requireEmailVerification: false` hardcoded (not NODE_ENV-gated) | MEDIUM |
+| A05 Misconfiguration | CSP | Production-only CSP; dev runs without CSP | LOW (dev) |
+| A06 Vulnerable Components | Dependencies | `bun audit` not in CI scripts | MEDIUM |
+| A07 Auth Failures | Session expiry | ADR-007: session expiry UX undefined | MEDIUM |
+| A08 Data Integrity | Treatment immutability | BR-007 enforced; `performed`/`verified` mutations blocked | LOW |
+| A09 Logging Failures | PHI in logs | User email + userId logged at `info` level in auth handlers | **HIGH** |
+| A10 SSRF | Outbound requests | No detected user-controlled outbound fetch | LOW |
+| CSRF | State mutations | Content-type-agnostic CSRF guard + Origin validation | LOW |
+| XSS | Frontend | React escapes by default; no `dangerouslySetInnerHTML` detected | LOW |
+
+**Top security findings:**
+- 🔴 **A09 — PHI in logs**: User email and IDs logged at `info` level. Needs structured PHI redaction at Pino level.
+- 🟡 **A04 — Email verification disabled**: `requireEmailVerification: false` not gated by NODE_ENV.
+- 🟡 **A02 — No at-rest encryption**: PHI stored in plain PostgreSQL columns. Database-level TDE or column encryption needed for HIPAA alignment.
+- 🟡 **A01 — Role comma-splitting**: Stored as comma-separated string; injection risk if any code path accepts role writes from user input.
+
+---
+
+## 11. Observability Audit
+
+| Dimension | Finding | Score |
+|-----------|---------|-------|
+| Structured logging | Pino with `logger.info/warn/error` — 164 calls in handlers | ✅ |
+| Request correlation | X-Request-ID generated at middleware, propagated to logger | ✅ |
+| Audit trail | Dedicated `audit` module with Pino structured logging | ✅ |
+| Health checks | `registerHealthRoutes` registered | ✅ |
+| Error tracking | `AppError` class with `statusCode` + `code` fields | ✅ |
+| Metrics/APM | No Prometheus/OpenTelemetry detected | ❌ |
+| Distributed tracing | No W3C traceparent header | ❌ |
+| PHI in logs | Email/userId logged at info level | ⚠️ |
+
+**Observability score: 6/10** — Good foundation (Pino + requestId + audit), missing APM/metrics, PHI leakage risk.
+
+---
+
+## 12. Performance Audit
+
+| Pattern | Finding | Risk |
+|---------|---------|------|
+| N+1 queries | `acceptTreatmentPlan.ts:102` — array iteration with DB call inside | MEDIUM |
+| Missing indexes | All FK columns indexed; partial unique index for active-visit | LOW |
+| Unbounded queries | `listDentalVisits`, `listDentalTreatments` — pagination [VERIFY] | MEDIUM |
+| Sync blocking | None detected in critical paths | LOW |
+| Connection pooling | `pg` + `postgres` clients — verify pool config | LOW |
+| Background jobs | pg-boss for async jobs (email, notifs, audit, booking) | ✅ |
+
+---
+
+## 13. Inconsistencies
+
+| ID | Finding | Severity |
+|----|---------|----------|
+| IC-001 | Invoice status `issued` in schema vs `sent` in BR-012 spec doc — naming mismatch | MEDIUM |
+| IC-002 | `discarded` in visit enum but BR-005 (auto-discard) is deferred — dead code path | LOW |
+| IC-003 | `booking/jobs/index.ts` throws `not implemented` on two paths reachable from production scheduling | HIGH |
+| IC-004 | `requireEmailVerification: false` hardcoded — comment says "for testing" but applies to all envs | HIGH |
+| IC-005 | `sample-workspace` app exists alongside `dentalemon` — may contain stale patterns | MEDIUM |
+| IC-006 | `emr` module handlers but `dental-emr` MODULE_SPEC — base vs dental EMR overlap unclear | LOW |
+
+---
+
+## 14. Stubs & TODO Inventory
+
+### Runtime Stubs (P1)
+
+| File | Stub | Risk |
+|------|------|------|
+| `booking/jobs/index.ts:61` | `throw new Error('triggerSlotGeneration with ownerId not implemented')` | P1 |
+| `booking/jobs/index.ts:64` | `throw new Error('Full job trigger not implemented')` | P1 |
+
+### Unimplemented Business Rules (P1)
+
+| Rule | Status |
+|------|--------|
+| BR-019 — supervisor approval for amendments | NOT IMPLEMENTED |
+| BR-020 — patient record merge | NOT IMPLEMENTED |
+
+### Deferred Features (P2–P3)
+
+| Item | Priority |
+|------|---------|
+| BR-005 auto-discard empty visits | P3 |
+| BR-013 markUncollectible | P3 |
+| BR-010 tax calculation | P3 |
+| ADR-006 optimistic locking enforcement | P2 |
+| ADR-007 session expiry UX | P2 |
+
+---
+
+## 15. Type Cast Density
 
 | Metric | Count |
 |--------|-------|
-| Backend handler modules | 21 |
-| Frontend apps | 3 (`apps/dentalemon`, `apps/account`, `apps/sample-workspace`) |
-| Database tables | ~52 |
-| Schema files | ~37 |
-| API endpoints | ~140+ |
-| Business rules (spec) | 35 (BR-001–BR-035; 0 ceph BRs) |
-| Acceptance criteria | 40 |
-| Enums (pgEnum) | 45+ |
-| State machines | 10 |
-| Backend test files | 97 |
-| Frontend test files | 126 |
-| Playwright E2E specs | 31 |
-| Hurl contract tests | 35 |
+| Total `as any` / `as unknown` / `@ts-ignore` (all files) | **1,659** |
+| Production handlers (non-test) `as any` | **183** |
+
+**Root cause**: TypeSpec-generated validators incompatible with Hono's context typing — forces `as any` at handler boundaries (e.g. `c.req.valid('json') as any`).
+
+**Classification**:
+- ~80% external boundary casts (Hono context, generated types) — fixable with typed helpers
+- ~20% internal logic casts — genuine type safety gap
+
+**Recommendation**: Create typed Hono context helpers. Target: <20 production `as any` casts.
 
 ---
 
-## 3. Project Structure
+## 16. Cross-Module Import Violations
 
-**Stack:** Bun + TypeScript + Hono (HTTP framework) + Drizzle ORM + PostgreSQL + React 19 + TanStack Router + Better-Auth + Pino logging
+| Importer | Imported | Symbol | Coupling Type |
+|----------|----------|--------|---------------|
+| dental-clinical | dental-visit | `VisitRepository` | HIGH — repo access across module |
+| dental-clinical | patient | `PatientRepository` | MEDIUM — read-only |
+| dental-billing | dental-visit | schema tables | HIGH — schema access |
+| dental-billing | patient | `patients` schema | MEDIUM |
+| dental-billing | dental-org | `dentalBranches`, `dentalMemberships` schema | MEDIUM |
+| dental-visit | dental-org | schema tables | MEDIUM |
+| dental-visit | patient | `patients` schema | MEDIUM |
+| all dental-* | shared | `assertBranchAccess`, `assertBranchRole` | OK — shared utilities |
 
-| Directory | Purpose | Module? |
-|-----------|---------|---------|
-| `services/api-ts/src/handlers/audit/` | HIPAA compliance logging | Yes |
-| `services/api-ts/src/handlers/billing/` | Stripe invoicing (base platform) | Yes |
-| `services/api-ts/src/handlers/booking/` | Generic scheduling (base platform) | Yes |
-| `services/api-ts/src/handlers/comms/` | Chat + WebRTC video | Yes |
-| `services/api-ts/src/handlers/dental-billing/` | Dental invoices, payments, plans | Yes — core domain |
-| `services/api-ts/src/handlers/dental-clinical/` | Prescriptions, labs, consent, amendments | Yes — core domain |
-| `services/api-ts/src/handlers/dental-imaging/` | X-rays, ceph analysis, findings | Yes — active dev |
-| `services/api-ts/src/handlers/dental-org/` | Orgs, branches, memberships, PINs | Yes — core domain |
-| `services/api-ts/src/handlers/dental-patient/` | Dental patient management | Yes — core domain |
-| `services/api-ts/src/handlers/dental-pmd/` | Patient medical documents | Yes — core domain |
-| `services/api-ts/src/handlers/dental-scheduling/` | Appointment management | Yes — core domain |
-| `services/api-ts/src/handlers/dental-visit/` | Visits, treatments, charting | Yes — core domain |
-| `services/api-ts/src/handlers/email/` | Email templates + queue | Yes |
-| `services/api-ts/src/handlers/emr/` | Consultation notes (non-dental) | Yes |
-| `services/api-ts/src/handlers/notifs/` | Notifications | Yes |
-| `services/api-ts/src/handlers/patient/` | Platform patient records | Yes |
-| `services/api-ts/src/handlers/person/` | Central PII safeguard | Yes |
-| `services/api-ts/src/handlers/provider/` | FHIR R4 practitioners | Yes |
-| `services/api-ts/src/handlers/reviews/` | NPS review system | Yes |
-| `services/api-ts/src/handlers/shared/` | Cross-cutting utilities (assertBranchAccess) | No — infrastructure |
-| `services/api-ts/src/handlers/storage/` | File upload/download (S3/MinIO) | Yes |
-| `services/api-ts/src/core/` | Auth, config, DB, errors, jobs | No — infrastructure |
-| `services/api-ts/src/middleware/` | Auth, security, validation, expand | No — infrastructure |
-| `apps/dentalemon/` | Dental practice app (React 19 + TanStack Router) | Frontend |
-| `apps/account/` | User portal (Better-Auth reference app) | Frontend |
-| `apps/sample-workspace/` | Chart prototype (Vite standalone) | Frontend — prototype |
-| `specs/api/` | TypeSpec definitions + OpenAPI | Spec layer |
-| `packages/sdk-ts/` | Generated TypeScript SDK | Shared package |
-| `packages/ceph-math/` | Isomorphic cephalometric math engine | Shared package — NEW |
+**Bi-directional**: None detected. ✅
+
+**dental-imaging**: Uses explicit loose-coupling pattern — UUID references, no DB-level FKs, documented in schema comments. Model pattern.
+
+**P1 issue**: `dental-clinical → dental-visit` repo access (not just schema). Clinical module reaches directly into visit module's repository layer instead of going through a public service interface.
 
 ---
 
-## 4. Module Map
+## 17. Cross-Module Raw SQL
 
-### Module Overview
+| File | Usage | Risk |
+|------|-------|------|
+| `visit.schema.ts` | `sql\`status = 'active'\`` | LOW — partial index filter, own table |
+| `business-rules.test.ts` | `sql` import for test DB seeding | LOW — tests only |
 
-| Module | Purpose | Primary Entities | Priority |
-|--------|---------|-----------------|----------|
-| person | Central PII safeguard | Person | Core — platform |
-| patient | Platform patient records | Patient | Core — platform |
-| provider | FHIR R4 practitioners | Practitioner, PractitionerRole | Core — platform |
-| dental-org | Clinic org structure | Organization, Branch, Membership, ConsentTemplate | Core — dental |
-| dental-patient | Dental patient management | DentalPatient | Core — dental |
-| dental-visit | Clinical visits + charting | Visit, Treatment, Chart, VisitNotes, TreatmentTemplate | Core — dental |
-| dental-scheduling | Appointment management | Appointment | Core — dental |
-| dental-billing | Dental-specific billing | Invoice, Payment, PaymentPlan, Installment | Core — dental |
-| dental-clinical | Clinical records | Prescription, LabOrder, ConsentForm, Amendment, Attachment, MedicalHistory | Core — dental |
-| dental-imaging | Imaging studies + ceph | ImagingStudy, Image, Annotation, Finding, CephLandmark, CephAnalysis, CephReport | Active dev |
-| dental-pmd | Patient medical documents | PMDDocument, ImportedPMD | Core — dental |
-| emr | Consultation notes | ConsultationNote | Non-dental vertical |
-| audit | HIPAA audit trail | AuditLog | Cross-cutting |
-| booking | Generic scheduling | Booking, Slot | Base platform |
-| billing | Stripe invoicing | Invoice (Stripe) | Base platform |
-| comms | Chat + video | ChatRoom, Message | Base platform |
-| storage | File storage | FileUpload | Infrastructure |
-| email | Email queue | EmailTemplate, EmailQueue | Infrastructure |
-| notifs | Push notifications | Notification | Infrastructure |
-| reviews | NPS reviews | Review | Base platform |
+**Finding**: Raw SQL is minimal and own-module scoped. No cross-module raw SQL detected. **CLEAN.**
 
-### Module Dependencies (dental domain)
+---
 
-```
-dental-org ───────────────────────── (foundation)
-  └─► dental-patient (branch context)
-  └─► dental-visit (branch + membership refs)
-  └─► dental-scheduling (branch + membership refs)
-  └─► dental-billing (branch + membership refs)
-  └─► dental-clinical (branch + membership refs)
-  └─► dental-imaging (branch ref — bare UUID, deliberate)
-  └─► dental-pmd (branch ref)
+## 18. Repo Guardrails
 
-dental-visit ─────────────────────── (clinical core)
-  └─► dental-billing (treatment → invoice line items)
-  └─► dental-imaging (visit_id — bare UUID, deliberate)
-  └─► dental-scheduling (visit_id on appointment)
+| Artifact | Exists | Accurate | Notes |
+|----------|--------|---------|-------|
+| `CLAUDE.md` | ✅ | ✅ | Comprehensive — TypeSpec workflow, module structure, patterns, testing protocol |
+| `CONTRIBUTING.md` | ✅ | ✅ | Development workflow, code generation, database workflow |
+| `README.md` | ✅ | ✅ | Installation, commands, tech stack |
+| `ARCHITECTURE.md` (root) | ❌ | — | Missing; partial coverage in `docs/architecture/` |
+| `docs/development/VERTICAL_TDD.md` | ✅ | ✅ | Mandatory TDD protocol documented |
+| `docs/prd/BUSINESS_RULES.md` | ✅ | ✅ | 22 rules with coverage map |
+| `docs/prd/v3-dentalemon.md` | ✅ | [VERIFY] | Main PRD |
+| `docs/architecture/DOMAIN_MODEL.md` | ✅ | [VERIFY] | May be stale |
+| `.planning/config.json` | ✅ | ⚠️ | `tdd_mode: false`, `agent_skills: {}` — must fix before graduation |
 
-patient ──────────────────────────── (platform)
-  └─► dental-patient (FK reference)
-  └─► dental-visit, dental-billing, dental-clinical, dental-imaging, dental-scheduling
-
-person ───────────────────────────── (platform root)
-  └─► patient, dental-org.membership.personId
+**Critical config gaps:**
+```json
+{
+  "workflow": {
+    "tdd_mode": false        // ← MUST be true for graduation
+  },
+  "agent_skills": {}         // ← MUST include oli-execution-gate
+}
 ```
 
-**Cross-module coupling pattern:** Dental modules use bare UUID FKs without `.references()` for cross-module links (intentional loose coupling; documented via comment in `imagingFindings.treatmentId`). Intra-module FKs use `.references()` with cascade. Established pattern — not a bug.
+---
+
+## 19. Spec Coverage
+
+| Spec Type | Expected Path | Actual Path | Status |
+|-----------|--------------|-------------|--------|
+| MODULE_SPEC (10 modules) | `docs/product/modules/*/MODULE_SPEC.md` | `docs/modules/*/MODULE_SPEC.md` | ⚠️ WRONG PATH |
+| PRD_AUDIT_REPORT | `docs/product/PRD_AUDIT_REPORT.md` | — | ❌ MISSING |
+| DOMAIN_GLOSSARY | `docs/product/DOMAIN_GLOSSARY.md` | — | ❌ MISSING |
+| ROLE_PERMISSION_MATRIX | `docs/product/ROLE_PERMISSION_MATRIX.md` | `docs/architecture/ROLE_MATRIX.md` | ⚠️ WRONG PATH |
+| MODULE_MAP | `docs/product/MODULE_MAP.md` | — | ❌ MISSING |
+| WORKFLOW_MAP | `docs/product/WORKFLOW_MAP.md` | — | ❌ MISSING |
+| DOMAIN_MODEL | `docs/product/DOMAIN_MODEL.md` | `docs/architecture/DOMAIN_MODEL.md` | ⚠️ WRONG PATH |
+| API_CONTRACTS | `docs/product/modules/*/API_CONTRACTS.md` | — | ❌ MISSING |
+| UI Blueprints | `docs/product/modules/*/ui-prototype/` | — | ❌ MISSING |
+| CONSISTENCY_REPORT | `docs/product/CONSISTENCY_REPORT.md` | — | ❌ MISSING |
+
+**Assessment**: Rich institutional knowledge exists (MODULE_SPECs, ADRs, BUSINESS_RULES.md, PRD) but not organized into the `docs/product/` structure the oli pipeline expects. Steps 2–8 will normalize this.
 
 ---
 
-## 5. Domain Glossary Summary
+## 20. Standards Gap Matrix
 
-| Term | Source | Definition (inferred) | Conflicts / Notes |
-|------|--------|----------------------|-------------------|
-| DentalVisit | `visit.schema.ts`, handlers | A dental clinical visit — draft→active→completed→locked | Canonical term is "Visit" (matches code, DB, and API paths). "Encounter" was the old FHIR alias — resolved in G3-S1. |
-| DentalTreatment | `treatment.schema.ts` | A CDT-coded procedure line on a visit | Called "Procedure" in FHIR entity catalog |
-| DentalChart | `dental-chart.schema.ts` | A per-visit snapshot of all 32 tooth states | No conflict |
-| DentalMembership | `membership.schema.ts` | A staff member's affiliation to a branch | Also called "Member" in API paths and UI |
-| Organization | `organization.schema.ts` | A dental practice entity (tier: solo/clinic/group/enterprise) | "Org" in code, "Organization" in API paths |
-| Branch | `branch.schema.ts` | A physical clinic location under an Organization | No conflict |
-| ImagingStudy | `imaging.schema.ts` | A set of radiographic images acquired in one session | No conflict |
-| ImagingFinding | `imaging-finding.schema.ts` | A structured radiographic finding (e.g., caries, bone loss) | No conflict |
-| CephLandmark | `imaging_ceph.schema.ts` | An anatomical landmark point in image-space pixels | No conflict |
-| CephAnalysis | `imaging_ceph.schema.ts` | Computed cephalometric measurements from landmarks | No conflict |
-| CephReport | `imaging_ceph.schema.ts` | Immutable versioned snapshot of a ceph analysis | No conflict |
-| ConsentForm | dental-clinical repos | A signed consent form for a procedure | Different from ConsentTemplate (branch-level reusable template) |
-| PMDDocument | dental-pmd repos | A patient medical document (generated or imported) | Abbreviation unexplained in code |
-| DentalAppointment | `dental-appointment.schema.ts` | A scheduled appointment slot | Called "Appointment" in API paths |
-| MemberRole | `membership.schema.ts` | dentist_owner \| dentist_associate \| staff_full \| staff_scheduling | No conflict |
-| OrgTier | `organization.schema.ts` | solo \| clinic \| group \| enterprise | No conflict |
-| ImagingTier | `organization.schema.ts` | free \| basic \| addon — imaging feature tier | NULL coerced to 'free' |
+| ID | Gap | Priority | Module |
+|----|-----|----------|--------|
+| G-001 | Booking jobs have runtime `throw new Error('not implemented')` | **P1** | booking |
+| G-002 | BR-019: supervisor approval for treatment amendments not implemented | **P1** | dental-clinical |
+| G-003 | `dental-clinical` imports `VisitRepository` from `dental-visit` — cross-module repo coupling | **P1** | dental-clinical, dental-visit |
+| G-004 | `requireEmailVerification: false` hardcoded (not NODE_ENV-gated) | **P1** | auth |
+| G-005 | PHI potentially logged — email/userId at `info` level in auth handlers | **P1** | auth, all handlers |
+| G-006 | 183 `as any` production casts | **P2** | all handlers |
+| G-007 | MODULE_SPECs at wrong path (`docs/modules/` not `docs/product/modules/`) | **P2** | docs |
+| G-008 | `tdd_mode: false` in `.planning/config.json` | **P2** | .planning |
+| G-009 | `agent_skills: {}` — oli-execution-gate not configured | **P2** | .planning |
+| G-010 | ADR-006: optimistic locking version column not enforced | **P2** | dental-visit, dental-clinical |
+| G-011 | No `ARCHITECTURE.md` at root | **P2** | docs |
+| G-012 | No at-rest encryption for PHI columns | **P2** | database |
+| G-013 | No Prometheus/OpenTelemetry metrics | **P2** | core |
+| G-014 | `bun audit` not in CI scripts | **P2** | CI |
+| G-015 | BR-020: patient record merge not implemented | **P2** | dental-patient |
+| G-016 | Unbounded list queries need pagination verification | **P2** | dental-visit, dental-billing |
+| G-017 | N+1 query in `acceptTreatmentPlan.ts:102` | **P2** | dental-visit |
+| G-018 | ADR-007: session expiry UX undefined | **P3** | frontend |
+| G-019 | BR-005 auto-discard deferred | **P3** | dental-visit |
+| G-020 | Tax stub (BR-010) | **P3** | dental-billing |
+| G-021 | dental-pmd test coverage weak (3 files) | **P3** | dental-pmd |
+| G-022 | dental-imaging annotation tests missing | **P3** | dental-imaging |
 
-**Resolved (G3-S1): "Visit" is canonical** — the codebase uses `DentalVisit` throughout (DB table `dental_visit`, all handlers, API paths). The old FHIR alias "Encounter" has been replaced with "Visit" in all docs and comments.
+### Priority Summary
 
-### DDD Analysis [INFERRED]
-
-| Entity | Classification | Aggregate Root? | Domain Events | Cross-Module Pattern |
-|--------|---------------|----------------|---------------|---------------------|
-| DentalOrganization | Entity | Yes | OrgCreated | Referenced by all dental via Branch |
-| DentalBranch | Entity | Yes (scoping root) | BranchCreated | FK in all dental tables |
-| DentalMembership | Entity | No | MemberCreated, MemberDeactivated | Via assertBranchAccess |
-| DentalVisit | Entity | Yes | VisitActivated, VisitCompleted, VisitLocked | Direct import (dental-billing, dental-imaging) |
-| DentalTreatment | Entity | No | TreatmentPerformed | Owned by Visit aggregate |
-| DentalChart | Entity | No | — | Owned by Visit aggregate |
-| DentalInvoice | Entity | Yes | InvoiceIssued, InvoicePaid, InvoiceVoided | References Visit, Treatment |
-| DentalAppointment | Entity | Yes | AppointmentCheckedIn, AppointmentCancelled | References Visit (nullable) |
-| ImagingStudy | Entity | Yes | — | Bare UUID FK to patient/branch/visit |
-| ImagingFinding | Entity | No | — | Owned by ImagingStudy aggregate |
-| CephReport | Value Object (append-only) | No | CephReportCreated | Owned by ImagingStudy |
-| Patient | Entity | Yes (platform) | PatientCreated | Referenced by all dental modules |
-| Person | Entity | Yes (platform root) | — | personId = user.id |
-
-**Bounded context candidates:** `dental-org`, `dental-visit`, `dental-billing`, `dental-imaging`
-
-**Anti-corruption layers missing:** Cross-module bare UUID FKs are intentional loose coupling but no formal ACL pattern. No ADR documents this decision.
+| Priority | Count | Graduation Impact |
+|----------|-------|------------------|
+| P0 | 0 | — |
+| P1 | 5 | Must fix |
+| P2 | 12 | Must fix for ≥9.0 |
+| P3 | 5 | Improve score |
 
 ---
 
-## 6. Permission Summary
+## 21. Stabilization & Adoption Plan
 
-### Roles Found
+### Immediate (P1 — before any new code)
 
-| Role | Source | Description |
-|------|--------|-------------|
-| `admin` | Better-Auth session | Platform administrator |
-| `support` | Better-Auth session | Read-only support access |
-| `user` | Better-Auth session | Default authenticated user |
-| `client` | Better-Auth session | Booking client (base platform) |
-| `host` | Better-Auth session | Booking host (base platform) |
-| `dentist_owner` | `dental_membership` table | Clinic owner / lead dentist |
-| `dentist_associate` | `dental_membership` table | Associate dentist |
-| `staff_full` | `dental_membership` table | Full-access staff |
-| `staff_scheduling` | `dental_membership` table | Scheduling-only staff |
+1. **G-001**: Gate booking jobs `not implemented` paths or remove dead code
+2. **G-004**: Gate `requireEmailVerification` with `NODE_ENV !== 'production'`
+3. **G-005**: Audit all `logger.info` calls; add Pino redaction config for PHI fields
+4. **G-003**: Extract `VisitRepository` cross-module access into shared service interface
+5. **G-002**: Design + implement BR-019 supervisor approval gate
 
-### Permission Matrix
+### Adoption Phases
 
-| Action | Auth Check | Roles Enforced? |
-|--------|------------|-----------------|
-| All dental `/dental/*` | `assertBranchAccess(db, userId, branchId)` | **NO** — any active branch member, any role |
-| Base platform endpoints | `authMiddleware({ roles: [...] })` | YES — Better-Auth roles enforced |
-| `GET /health` | None | N/A — intentional |
+**Phase 1 — Guardrails** (1 week)
+- Root `ARCHITECTURE.md`
+- Fix G-004, G-005 (security)
+- Add `bun audit` to CI
+- Update `.planning/config.json`: `tdd_mode: true` + `agent_skills`
 
-### Critical Gap: Dental Role Enforcement
+**Phase 2 — Document** (1 week)
+- `/oli-prd-audit` → PRD_AUDIT_REPORT + DOMAIN_GLOSSARY + MODULE_MAP
+- `/oli-workflow-map` → WORKFLOW_MAP
+- `/oli-module-specs --all` → normalized MODULE_SPECs at `docs/product/modules/`
+- `/oli-api-contracts --all` → API_CONTRACTS per module
 
-`assertBranchAccess` only verifies active membership — not `membership.role`. This means `staff_scheduling` can call:
-- `POST /dental/visits/{id}/treatments` (create treatments)
-- `POST /dental/billing/invoices/{id}/void` (void invoices)
-- `POST /dental/prescriptions` (create prescriptions)
+**Phase 3 — Stabilize** (2 weeks)
+- Fix G-001, G-002, G-003, G-010, G-017
+- Pagination audit (G-016)
+- Add metrics endpoint (G-013)
 
-**P1** — likely unintended. Role matrix exists in docs but is not enforced at API level.
+**Phase 4 — Adopt TDD**
+- All new code follows Vertical TDD (TypeSpec → backend tests → impl → contract → frontend)
+- Improve dental-pmd + dental-imaging coverage
+- Eliminate `as any` casts via typed Hono helpers (G-006)
 
----
+**Phase 5 — Migrate**
+- Column-level encryption for PHI fields (G-012)
+- Session expiry UX (G-018)
+- BR-005 auto-discard (G-019)
+- Tax calculation rules (G-020)
 
-## 7. Business Rules Summary
+### First 3 Recommended Vertical Slices
 
-Business rules formally tracked in `docs/prd/BUSINESS_RULES.md` (BR-001–BR-035). `specs/api/docs/standards/br-registry.json` exists but is empty.
+1. **PHI Logging Audit + Fix** (G-005)
+   - Highest clinical/legal risk; PHI in logs = HIPAA incident
+   - Scope: audit `logger.info` calls → add Pino redaction config → add test
 
-### Extracted Rules
+2. **BR-019: Supervisor Amendment Approval** (G-002)
+   - Clinical compliance gap; amendment without oversight = liability
+   - Scope: TypeSpec update → backend guard → contract test → frontend approval UI
 
-**dental-visit:**
-| Rule ID | Rule | Type | Confidence |
-|---------|------|------|------------|
-| EC7 | One active visit per patient at a time | Explicit | HIGH |
-| FR1.16 | Cannot add treatment to completed/locked visit | Explicit | HIGH |
-| EC2 | Cannot treat an extracted tooth | Explicit | HIGH |
-| BR-005 | Auto-discard empty visit on session end | Explicit | HIGH — **NOT IMPLEMENTED** |
-| TREAT-1 | Treatment transitions forward-only: diagnosed→planned→performed→verified→dismissed | Explicit | HIGH |
-| TREAT-2 | Any non-terminal treatment can be dismissed | Explicit | HIGH |
-
-**dental-billing:**
-| Rule ID | Rule | Type | Confidence |
-|---------|------|------|------------|
-| INV-1 | Only draft invoices can be issued | Explicit | HIGH |
-| INV-2 | Invoice line items require performed/verified treatments | Explicit | HIGH |
-| BR-013 | Invoice reconciliation edge case | Explicit | HIGH — **PLACEHOLDER (skip in test)** |
-
-**dental-scheduling:**
-| Rule ID | Rule | Confidence |
-|---------|------|------------|
-| APPT-1 | scheduled → checked_in \| cancelled \| no_show | HIGH |
-| APPT-2 | checked_in → completed \| cancelled \| no_show | HIGH |
-| APPT-3 | completed and cancelled are terminal | HIGH |
-
-**dental-imaging:**
-| Rule ID | Rule | Confidence |
-|---------|------|------------|
-| BR-023–035 | 13 imaging BRs (file types, study limits, annotations) | HIGH |
-| FIND-1 | Finding transitions guarded; resolved=terminal | HIGH |
-| BR-034 | Allowed MIME: jpeg, png, tiff, bmp | HIGH |
-| CIMG-* | Ceph rules | **NO SPEC** |
-
-**dental-org:**
-| Rule ID | Rule | Confidence |
-|---------|------|------------|
-| ORG-1 | One membership per person per branch | HIGH |
-| ORG-2 | PIN-only staff have NULL personId | HIGH |
-| ORG-3 | PIN lockout after failed attempts | MEDIUM |
-| ORG-4 | imagingTier NULL treated as 'free' | HIGH |
+3. **Typed Hono Context Wrapper** (G-006)
+   - Eliminates 183 `as any` casts at source; improves type safety across all dental handlers
+   - Scope: typed `ctx.req.valid()` wrapper → adopt across dental-* handlers
 
 ---
 
-## 8. API Surface Summary
-
-~140+ endpoints across 21 modules. No per-module `API_CONTRACTS.md` for dental domain.
-
-### Dental Domain Handler Inventory
-
-| Module | Handlers | Notable Endpoints |
-|--------|----------|------------------|
-| dental-visit | 20 | createDentalVisit, createDentalTreatment, updateDentalTreatment, getDentalChart, getTreatmentPlan, carryOverTreatments, applyTemplate |
-| dental-billing | 15 | createDentalInvoice, issueDentalInvoice, voidDentalInvoice, recordDentalPayment, createDentalPaymentPlan, getCollectionsSummary |
-| dental-org | 25 | createOrganization, createMember, deactivateMember, verifyPin, setPin, getOrgContext, getDashboardSummary, memberTierLimits |
-| dental-scheduling | 7 | createAppointment, checkInAppointment, cancelAppointment, listAppointments |
-| dental-imaging | 20 | + 9 ceph handlers (CephMgmt_*) |
-| dental-clinical | 15 | createPrescription, createLabOrder, createConsentForm, signConsentForm, medicalHistory |
-| dental-patient | 5 | createDentalPatient, getDentalPatient |
-| dental-pmd | 5 | generatePMD, importPMD, getImportedPMD |
-
-### API Pattern Consistency
-
-✅ `assertBranchAccess` on all mutating dental endpoints
-✅ `PaginatedResponse<T>` envelope on all list endpoints
-✅ Drizzle ORM — no raw SQL string concatenation
-✅ `NotFoundError`, `BusinessLogicError`, `UnauthorizedError`, `ForbiddenError` error types
-⚠️ Some handlers use `ctx.get('session')`, others `ctx.get('user')` — both work but style inconsistent
-⚠️ No Hurl contract tests for dental endpoints
-
-### 8b. API Contract Drift
-
-No `API_CONTRACTS.md` found for dental modules. Operating in pure extraction mode. Base platform has TypeSpec/OpenAPI — drift not assessed here.
-
----
-
-## 9. State Machines Summary
-
-| Entity | States | Terminal | Guard Enforced? |
-|--------|--------|----------|-----------------|
-| DentalVisit | draft → active → completed → locked | locked | ✅ |
-| DentalTreatment | diagnosed → planned → performed → verified → dismissed | dismissed | ✅ |
-| DentalInvoice | draft → issued → partial → paid \| overdue \| voided | paid, voided | ✅ |
-| DentalAppointment | scheduled → checked_in → completed \| cancelled \| no_show | completed, cancelled | ✅ |
-| ImagingFinding | suspected → confirmed \| monitoring → resolved | resolved | ✅ |
-| ConsentForm | draft → signed | signed | ✅ |
-| LabOrder | pending → in_fabrication → sent → received | received | ✅ |
-| CephLandmark | placed → revised \| excluded | — | ⚠️ No TRANSITIONS map |
-| DentalPaymentPlan | on_track → behind \| completed \| defaulted | completed, defaulted | ⚠️ No handler guard |
-| Installment | pending → paid \| overdue \| waived | paid, waived | ⚠️ No handler guard |
-
-8/10 state machines guarded. CephLandmark and PaymentPlan/Installment unguarded (P2).
-
-### 9b. Domain Model Drift
-
-No `DOMAIN_MODEL.md` found. `specs/api/docs/standards/entity-catalog.md` covers FHIR-canonical entities only — does not map to dental-specific DB entities. Gap noted in Section 13.
-
----
-
-## 10. UI / Screens Summary
-
-| Screen | Module | Route | Tests? |
-|--------|--------|-------|--------|
-| Dashboard | dental-org | `/_dashboard/dashboard` | ⚠️ Partial |
-| Patient List | dental-patient | `/_dashboard/patients` | ⚠️ Partial |
-| Patient Profile | dental-patient | `/_dashboard/patients/$patientId` | ⚠️ Partial |
-| Clinical Workspace | dental-visit | `/_workspace/$patientId` | ✅ unit + E2E |
-| Calendar | dental-scheduling | `/_dashboard/calendar` | ❌ |
-| Billing List | dental-billing | `/_dashboard/billing` | ❌ |
-| Reports | dental-org | `/_dashboard/reports` | ❌ |
-| Settings | dental-org | `/_dashboard/settings` | ❌ |
-| Staff Management | dental-org | `/_dashboard/staff` | ❌ |
-| Onboarding | dental-org | `/onboarding` | ⚠️ Partial |
-| PIN Entry | auth | `/auth/pin-entry.$memberId` | ✅ |
-| PIN Select | auth | `/auth/pin-select` | ✅ |
-| Imaging Workspace | dental-imaging | (within workspace) | ✅ 32 E2E |
-| Ceph Report Print | dental-imaging | `/imaging-ceph-report.$imageId` | ✅ E2E |
-| imaging-test / imaging-comparison-test | dental-imaging | (dev-only routes) | — |
-
-**Note:** `imaging-test.tsx` and `imaging-comparison-test.tsx` are dev/debug routes, not production screens. Should be guarded or removed before production.
-
-28 HTML wireframes in `docs/prd/context/wireframes/` — design reference, not prototype contamination. `apps/sample-workspace` correctly isolated as standalone prototype.
-
----
-
-## 11. Test Coverage Summary
-
-### Coverage by Category
-
-| Category | Total Items | Tested | Coverage | Assertion Quality |
-|----------|------------|--------|----------|-------------------|
-| Business rules (BR-001–022) | 22 | 19 | 86% | 17 strong, 2 weak, 3 none |
-| Business rules (BR-023–035) | 13 | 11 | 85% | 10 strong, 1 weak, 2 none |
-| Business rules (ceph CIMG-*) | ~8 est. | 0 | 0% | No spec to anchor |
-| Acceptance criteria | 40 | 20 | 50% | 18 strong, 2 weak, 20 none |
-| Route registration | 216 | 216 | 100% | STRONG |
-| State machines | 10 | 8 | 80% | Strong |
-| Email handlers | ~9 | 9 | 95.7% avg | Strong |
-| Comms handlers | — | — | 84.2% avg | Strong |
-| Booking handlers | — | — | ~11% | Weak |
-| Storage handlers | — | — | ~20% | Weak |
-
-### Business Rule Test Coverage Detail (key items)
-
-| BR ID | Rule | Test File | Quality |
-|-------|------|-----------|---------|
-| EC7 | One active visit per patient | `dental-visit-module4.test.ts` | STRONG |
-| FR1.16 | No treatment on locked visit | `dental-visit.test.ts` | STRONG |
-| EC2 | No treatment on extracted tooth | `business-rules.test.ts` | STRONG |
-| INV-1 | Only draft invoices can be issued | `dental-billing-module3.test.ts` | STRONG |
-| INV-2 | Treatments must be performed | `dental-billing.test.ts` | STRONG |
-| BR-005 | Auto-discard empty visit | `business-rules.test.ts` | **NONE — `describe.skip`** |
-| BR-013 | Invoice reconciliation | `business-rules.test.ts` | **NONE — `describe.skip`** |
-| CIMG-* | Ceph analysis rules | `ceph.test.ts` test IDs | WEAK — no spec anchor |
-
----
-
-## 12. Repository Guardrails Review
-
-| File | Exists? | Accurate? | Recommended Action |
-|------|---------|-----------|-------------------|
-| `CLAUDE.md` | ✅ | ✅ | No action |
-| `CONTRIBUTING.md` | ✅ | ✅ (62KB) | No action |
-| `AGENTS.md` | ✅ | ✅ | No action |
-| `README.md` | ✅ | ✅ | No action |
-| `DESIGN.md` | ✅ | ✅ | No action |
-| `.planning/STATE.md` | ✅ | ✅ Current | No action |
-| `docs/development/VERTICAL_TDD.md` | ✅ | ✅ | No action |
-
-| Folder | Exists? | Gaps | Recommended Action |
-|--------|---------|------|-------------------|
-| `docs/audits/` | ✅ | — | No action |
-| `docs/prd/` | ✅ | Missing ceph BRs | Add CIMG-* to BUSINESS_RULES.md |
-| `docs/modules/` | ✅ | 9/10 dental MODULE_SPECs missing | Create incrementally |
-| `docs/decisions/` | ✅ (4 ADRs) | No ADR for cross-module bare FK pattern | Add ADR-005 |
-| `specs/api/docs/standards/` | ✅ | FHIR entities don't map to dental DB | Maintain distinction |
-
----
-
-## 13. PRD / Spec Coverage Review
-
-| Artifact | Exists? | Matches Code? | Quality | Recommended Action |
-|----------|---------|--------------|---------|-------------------|
-| Master PRD (`docs/prd/v3-dentalemon.md`) | ✅ | ✅ | Good | No action |
-| `BUSINESS_RULES.md` (BR-001–035) | ✅ | ✅ | Strong | **Add ceph BRs (CIMG-*)** |
-| `ACCEPTANCE_CRITERIA.md` (40 ACs) | ✅ | ✅ | 50% tested | Add missing AC tests |
-| `docs/product/ROLE_PERMISSION_MATRIX.md` | ✅ | ⚠️ Partial | Doesn't reflect assertBranchAccess gap | Update |
-| `docs/modules/dental-imaging/MODULE_SPEC.md` | ✅ | ✅ | High quality | No action |
-| MODULE_SPEC for dental-visit | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-billing | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-clinical | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-scheduling | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-patient | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-pmd | ❌ | N/A | Missing | Create from code |
-| MODULE_SPEC for dental-org | ❌ | N/A | Missing | Create from code |
-| Vertical Slice Plan | ❌ | N/A | `.planning/ROADMAP.md` exists but not in `docs/execution/` | Convert format |
-| Hurl contract tests | ✅ (35 files) | ✅ (base platform) | Dental domain not covered | Add dental Hurl tests |
-| `specs/api/docs/standards/br-registry.json` | ✅ (empty) | ❌ | Not populated | Populate or remove |
-
----
-
-## 14. Standards Gap Matrix
-
-| Area | Current State | Target Standard | Gap | Risk | Priority |
-|------|--------------|----------------|-----|------|----------|
-| Architecture docs | CLAUDE.md covers content | Dedicated ARCHITECTURE.md | No standalone arch doc | Low | P3 |
-| Domain glossary | FHIR-canonical (not dental-DB) | Canonical dental terms | "Visit" standardized (was "Encounter") — resolved G3-S1 | Low | P3 |
-| Role permissions | Matrix exists; API enforcement missing | Matrix = API behavior | assertBranchAccess ignores MemberRole | High | **P1** |
-| Module specs | 1/10 dental have MODULE_SPEC | One spec per major module | 9 missing | Medium | P2 |
-| Ceph BRs | 0 ceph BRs in spec | BRs cover all features | Full ceph module unspecced | High | **P1** |
-| AC test coverage | 50% (20/40) | 70%+ | 20 ACs untested | High | **P1** |
-| Validation | OpenAPI-generated Zod validators | Server-side input validation | ✅ No gap | — | — |
-| Error handling | Core error types consistent | Consistent format | Minor session/user pattern inconsistency | Low | P3 |
-| Audit trail | Pino logs only | Queryable dental audit table | No `dental_audit` DB table | Medium | P2 |
-| Coverage ratchet | line=62, function=61, branch=40 | 70%+ line on critical paths | Booking 11%, storage 20% below scope | Medium | P2 |
-| Contract tests | 35 Hurl (base platform) | Critical paths contract-tested | Dental endpoints not in Hurl | Medium | P2 |
-| BR registry | JSON exists but empty | Machine-readable BRs | 35 BRs not populated | Low | P3 |
-| Health check | `GET /health` + test | Health endpoint | ✅ No gap | — | — |
-| Structured logging | Pino JSON ✅ | JSON structured logging | ✅ No gap | — | — |
-
----
-
-## 15. Inconsistency Report
-
-### Critical (Security/Data Integrity)
-
-None.
-
-### Major (Functional Gaps)
-
-| ID | Type | Description | Files | Impact |
-|----|------|-------------|-------|--------|
-| IC-01 | Permission | `assertBranchAccess` grants all branch members equal API access; `MemberRole` not checked | `handlers/shared/assert-branch-access.ts` | `staff_scheduling` can create treatments, void invoices |
-| IC-02 | Spec gap | Ceph module (11 handlers, 3 tables, ceph-math package) has no formal BRs | `BUSINESS_RULES.md` | Compliance audit impossible for ceph |
-| IC-03 | Business rule | BR-005 (auto-discard empty visits) not implemented; `describe.skip` | `business-rules.test.ts` | Abandoned draft visits persist |
-
-### Minor (Consistency)
-
-| ID | Type | Description | Impact |
-|----|------|-------------|--------|
-| IC-04 | Terminology | ~~"Encounter" (spec) vs "DentalVisit" (code)~~ — resolved G3-S1, "Visit" is canonical | Closed |
-| IC-05 | Auth pattern | `ctx.get('session')?.userId` vs `ctx.get('user')?.id` inconsistency | Style only |
-| IC-06 | FK pattern | Cross-module bare UUID FKs in dental-imaging | Intentional — needs ADR |
-| IC-07 | Spec | `br-registry.json` empty despite 35 defined BRs | Machine-readable lookup broken |
-| IC-08 | Test | BR-013 `describe.skip` — code may work, edge case unverified | Risk: silent regression |
-| IC-09 | Performance | `listEMRPatients`: `Promise.all` per patient for stats = N+1 at API layer | Degrades at scale |
-| IC-10 | DB | No partial unique index for double-booking on `dental_appointment` | Two appointments can overlap |
-| IC-11 | UI | `imaging-test.tsx` and `imaging-comparison-test.tsx` are debug routes in production build | Should be guarded/removed |
-
----
-
-## 15b. Security Audit (OWASP Top 10)
-
-| OWASP Category | Status | Severity | Notes |
-|---|---|---|---|
-| A01 Broken Access Control | ⚠️ Partial | P1 | assertBranchAccess works; no role differentiation within dental domain |
-| A02 Cryptographic Failures | ✅ | — | PIN stored as hash; no plaintext passwords/secrets in code |
-| A03 Injection | ✅ | — | Drizzle ORM parameterized queries throughout; no raw SQL string concat |
-| A04 Insecure Design | ⚠️ Low | P2 | No double-booking constraint at DB level |
-| A05 Security Misconfiguration | ✅ | — | CSP + HSTS + X-Frame-Options via Hono `secureHeaders()`; dynamic CORS origin validation |
-| A06 Vulnerable Components | N/A | — | Not assessed |
-| A07 Auth Failures | ✅ | — | Better-Auth sessions; PIN lockout fields present (`pinLockedUntil`, `pinFailedAttempts`) |
-| A08 Data Integrity | ✅ | — | No `dangerouslySetInnerHTML` without sanitization found |
-| A09 Logging/Monitoring | ✅ | — | Pino structured JSON; HIPAA audit module; `X-Request-ID` tracing |
-| A10 SSRF | ✅ | — | No user-controlled URL in server-side fetch found |
-
----
-
-## 15c. Observability Audit
-
-| Area | Status | Severity | Notes |
-|---|---|---|---|
-| Structured logging | ✅ Present | — | Pino JSON logger (`core/logger.ts`); request-level context injected |
-| Correlation IDs | ✅ Present | — | `X-Request-ID` in CORS allowHeaders; `request.ts` middleware |
-| Health checks | ✅ Present | — | `GET /health` + `core/health.test.ts` |
-| Metrics instrumentation | ❌ Absent | P2 | No response time tracking, no error rate metrics |
-| Dental audit trail | ⚠️ Partial | P2 | Pino logs dental actions but no `dental_audit` DB table — HIPAA dental activity not queryable |
-
----
-
-## 15d. Performance Anti-Patterns
-
-| Pattern | Instances | Severity | File:Line |
-|---|---|---|---|
-| N+1 query | 1 confirmed | P2 | `emr/listEMRPatients.ts` — `Promise.all` per patient for stats |
-| Unbounded query | 0 | — | All list endpoints paginated |
-| Missing index on FK | 5–7 | P2 | `imagingStudies.{patientId,visitId,branchId,acquiredBy}` — bare UUID FKs, no explicit index |
-| Sync blocking | 0 known | — | No `readFileSync` in hot paths |
-| PostgreSQL pool exhaustion | 1 (infra) | P2 | Full parallel `bun test` (113 files) → "too many clients already"; not a code defect |
-
----
-
-## 16. Risk Assessment
-
-### P0 Risks (Fix Immediately)
-
-None. All prior P0 items resolved as of 2026-05-18.
-
-### P1 Risks (Fix Before Major New Work)
-
-| ID | Risk | Description |
-|----|------|-------------|
-| P1-001 | Ceph spec gap | 11 handlers + `packages/ceph-math` have no BRs in spec. Unauditable. |
-| P1-002 | Dental RBAC missing | All 4 member roles have equal API access. `staff_scheduling` can void invoices. |
-| P1-003 | AC coverage 50% | 20/40 ACs untested. Core flows (scheduling, payment, consent) have no regression coverage. |
-
-### P2 Risks (Fix When Touching Module)
-
-| ID | Risk | Description |
-|----|------|-------------|
-| P2-001 | 9/10 MODULE_SPECs missing | Cannot run compliance audit on dental-visit, billing, clinical, scheduling, patient, pmd, org |
-| P2-002 | booking 11% / storage 20% coverage | Two modules below ratchet scope |
-| P2-003 | Dental audit trail | No queryable dental audit table |
-| P2-004 | No double-booking constraint | No DB unique index on dentist+slot |
-| P2-005 | CephLandmark state machine unguarded | No TRANSITIONS map at API level |
-| P2-006 | PaymentPlan/Installment status unguarded | Status updated but no handler guard |
-| P2-007 | `br-registry.json` empty | 35 BRs defined but JSON registry not populated |
-| P2-008 | PostgreSQL connection pool | Full parallel test run exhausts pool |
-
-### P3 Risks (Improve Later)
-
-| ID | Risk | Description |
-|----|------|-------------|
-| P3-001 | ~~"Encounter" vs "Visit" terminology~~ | Resolved in G3-S1 — "Visit" is canonical in all docs/comments |
-| P3-002 | BR-005 not implemented | Auto-discard empty visits — abandoned drafts persist |
-| P3-003 | BR-013 skipped test | Invoice reconciliation edge case unverified |
-| P3-004 | Metrics absent | No response-time or error-rate instrumentation |
-| P3-005 | Debug routes in production | `imaging-test.tsx`, `imaging-comparison-test.tsx` routes accessible in prod build |
-
----
-
-## 17. Stabilization Plan
-
-### Fix Immediately
-
-None outstanding.
-
-### Fix Before Major New Work
-
-1. **Write ceph BRs** — add CIMG-001 through ~CIMG-012 to `docs/prd/BUSINESS_RULES.md`. Source: existing `ceph.test.ts` test cases and `packages/ceph-math` constants. ~2 hrs.
-
-2. **Add dental role enforcement** — create `assertBranchRole(db, userId, branchId, allowedRoles[])` utility. Apply to 5 highest-risk endpoints: `createDentalTreatment`, `issueDentalInvoice`, `voidDentalInvoice`, `updateDentalVisit` (complete), `createPrescription`. ~4–6 hrs.
-
-3. **Close 20 untested ACs** — prioritize: AC-SCHED-01 (calendar update), AC-PAY-01 (payment recording), AC-MED-03 (consent signing), AC-PRES-01 (prescriptions). 1–2 Playwright tests each. ~4–8 hrs.
-
-### Fix When Touching Module
-
-- **dental-visit**: Create MODULE_SPEC; add BR-013 un-skip test
-- **dental-billing**: Create MODULE_SPEC; un-skip BR-013; add Hurl tests
-- **dental-org**: Create MODULE_SPEC; add dental audit trail; fix double-booking constraint
-- **dental-clinical**: Create MODULE_SPEC; guard CephLandmark transitions
-- **dental-scheduling**: Create MODULE_SPEC; DB unique index on dentist+slot
-- **booking**: Increase coverage from 11%
-- **storage**: Increase coverage from 20%
-- **Populate `br-registry.json`**: Script-generate from BUSINESS_RULES.md
-- **Remove debug routes**: Guard `imaging-test.tsx` with env check
-
----
-
-## 18. Standards Adoption Plan
-
-### Phase 1: Add Guardrails — DONE (90%)
-
-✅ CLAUDE.md, CONTRIBUTING.md, AGENTS.md, DESIGN.md, VERTICAL_TDD.md all accurate
-⬜ No dedicated ARCHITECTURE.md (low priority)
-
-### Phase 2: Document Current Reality — IN PROGRESS (35%)
-
-✅ Master PRD, BUSINESS_RULES.md (35 BRs), ACCEPTANCE_CRITERIA.md (40 ACs)
-✅ ROLE_PERMISSION_MATRIX.md (needs update re: assertBranchAccess gap)
-✅ dental-imaging MODULE_SPEC.md
-✅ 28 HTML wireframes
-✅ 4 ADRs
-⬜ MODULE_SPEC for 9 dental modules
-⬜ Ceph BRs
-⬜ ARCHITECTURE.md
-⬜ Formal Vertical Slice Plan in `docs/execution/`
-
-### Phase 3: Stabilize Risky Areas — IN PROGRESS (75%)
-
-✅ All 4 prior P0 items resolved
-✅ Route registration tests (216 routes)
-✅ Coverage ratchet established
-⬜ Dental RBAC role differentiation (P1-002)
-⬜ 20 untested ACs (P1-003)
-⬜ Double-booking constraint
-⬜ Booking/storage coverage
-
-### Phase 4: Adopt Vertical Slice TDD Going Forward — IN PROGRESS (65%)
-
-✅ VERTICAL_TDD.md mandatory workflow
-✅ v1.4 Ceph built with full TDD (S0→F6, 32 E2E green)
-✅ Track B confidence sprint with systematic approach
-⬜ `docs/execution/VERTICAL_SLICE_PLAN.md` not formalized
-⬜ Slice specs not consistently written before implementation
-
-### Phase 5: Migrate Existing Code Gradually — IN PROGRESS (20%)
-
-✅ dental-imaging: fully documented + tested + MODULE_SPEC
-✅ dental-visit, dental-billing: good tests, no MODULE_SPEC
-⬜ dental-scheduling, dental-pmd, dental-org, dental-patient, dental-clinical: partial tests, no MODULE_SPEC
-
----
-
-## 19. Recommended First 3 Vertical Slices to Standardize
-
-| Rank | Slice | Module | Why | Risk | Expected Work |
-|------|-------|--------|-----|------|---------------|
-| 1 | Write ceph BRs (CIMG-001–012) + run compliance | dental-imaging (ceph) | Closes largest spec gap. Fully implemented code, spec is documentation-only. Immediately unlocks compliance audit for v1.4. | Low — no code changes | 2–3 hrs |
-| 2 | Add dental role enforcement to 5 core operations | dental-org / shared | Closes P1-002. Creates `assertBranchRole` pattern all modules can adopt. Addresses scheduling-staff-voids-invoice risk. | Medium — API behavior change + test updates | 4–6 hrs |
-| 3 | dental-visit MODULE_SPEC + 4 missing ACs (visit, scheduling) | dental-visit | Highest-traffic module, best-tested, easiest MODULE_SPEC to draft from existing code. Sets the template for remaining 8 modules. | Low | 4–6 hrs |
-
----
-
-## 20. Health Score
-
-| Dimension | Score (0–10) | Notes |
-|-----------|-------------|-------|
-| Terminology consistency | 9 | "Visit" canonical — "Encounter" alias resolved in G3-S1 |
-| Permission coverage | 6 | Better-Auth enforced; dental RBAC missing role differentiation |
-| Business rule clarity | 7 | 35 BRs formally documented; ceph BRs missing |
-| API consistency | 8 | assertBranchAccess + Drizzle + PaginatedResponse consistent |
-| State machine safety | 8 | 8/10 guarded; CephLandmark + PaymentPlan unguarded |
-| Error handling uniformity | 8 | Core error types consistent; minor session/user style gap |
-| Backend test coverage | 7 | Route-reg 100%; email 96%; comms 84%; booking 11%; storage 20% |
-| Frontend test coverage | 6 | 126 test files; AC layer 50%; Calendar/Billing/Reports screens untested |
-| PRD/spec coverage | 7 | Master PRD + BRs + ACs + 1 MODULE_SPEC; 9 module specs missing |
-| UI prototype readiness | 8 | 28 wireframes; prototype isolated; debug routes in prod |
-| Architecture alignment | 8 | Bun + Hono + Drizzle + Better-Auth matching stated standards |
-| Domain model clarity | 6 | FHIR entity catalog exists but doesn't map to dental DB; DDD informal |
-| Security posture (OWASP) | 8 | Drizzle prevents injection; secureHeaders; PIN hashed; CORS dynamic |
-| Observability coverage | 7 | Pino + health check; no metrics; dental audit not queryable |
-| Performance health | 7 | Pagination everywhere; N+1 in EMR; pool exhaustion in parallel tests |
-
-**Overall health: 7.2/10** _(up from 5.4/10 on 2026-05-14)_
-
----
-
-## 21. Final Recommendations
-
-### Do Now
-
-- **Write ceph BRs** (`BUSINESS_RULES.md`: CIMG-001 through ~CIMG-012) — 2 hrs, zero code risk, immediately unlocks compliance audit for v1.4
-- **Create `assertBranchRole` utility** and gate the 5 highest-risk dental endpoints — closes P1-002 before it becomes a product liability
-- **Un-skip BR-013** — if the underlying code is correct, the test passes; if it fails, that's a defect you want to find now
-
-### Do Next
-
-- Write MODULE_SPEC for `dental-visit` (highest-traffic, best-tested; sets template for remaining 8)
-- Add 4 highest-value AC tests: AC-SCHED-01 (calendar update), AC-PAY-01 (payment recording), AC-MED-03 (consent signing), AC-PRES-01 (prescriptions)
-- Populate `br-registry.json` (auto-generate script from BUSINESS_RULES.md)
-- Fix PostgreSQL pool exhaustion for parallel tests (pgbouncer or test-file grouping)
-- Guard or remove `imaging-test.tsx` and `imaging-comparison-test.tsx` from production build
-
-### Do Later
-
-- Create MODULE_SPECs for remaining 8 dental modules (dental-visit spec as template)
-- Increase booking (11%) and storage (20%) coverage
-- Add response-time and error-rate metrics instrumentation
-- Formalize cross-module bare FK pattern as ADR-005 in `docs/decisions/`
-- Add dental audit trail DB table for HIPAA-queryable dental activity
-
-### Avoid
-
-- Don't rewrite `assertBranchAccess` wholesale — extend with optional role parameter to preserve backward compat
-- Don't batch all 9 MODULE_SPECs at once — write dental-visit first, validate format, then parallelize
-- Don't implement BR-005 (auto-discard) without an ADR — requires session heartbeat + scheduled job
-- Don't treat `specs/api/docs/standards/entity-catalog.md` as dental DB truth — it's FHIR-canonical; maintain the distinction
-
----
-
-## 22. Domain Consistency Audit
-
-**Audit date:** 2026-05-19 · **Codex-verified** · **14 findings**
-
-### 22.1 Methodology & Scope
-
-The dentalemon codebase layers dental-specific modules on top of the generic monobase platform, creating a "dual system" pattern: generic modules (`person`, `patient`, `booking`, `billing`, `provider`) coexist with dental-specific counterparts (`dental-patient`, `dental-scheduling`, `dental-billing`, `dental-org`, `dental-visit`, `dental-clinical`, `dental-imaging`). This audit catalogs every naming and terminology inconsistency across that boundary, classifies each as by-design vs. fixable, and provides a prioritized remediation roadmap.
-
-### 22.2 Finding Catalog
-
-| ID | Finding | Severity | Classification |
-|----|---------|----------|----------------|
-| DC-001 | Triple Identity: Person / Patient / DentalPatient | P1 | Partial by-design |
-| DC-002 | Dual Scheduling: Booking vs DentalAppointment | P2 | By-design |
-| DC-003 | Dual Billing: Invoice vs DentalInvoice | P1 | Partial by-design |
-| DC-004 | Triple Provider: Provider / Practitioner / Membership | P1 | Bug (missing FK) |
-| DC-005 | Treatment vs Procedure naming | P2 | Bug (fixed: renamed to `serviceType`) |
-| DC-006 | Status enum casing inconsistency | P2 | Bug |
-| DC-007 | Cross-module coupling in dental-patient | P2 | Bug |
-| DC-008 | Inline Zod schemas outside generated validators | P3 | Bug |
-| DC-009 | Domain glossary missing dental-specific terms | P3 | Bug |
-| DC-010 | Amount field naming: bare vs `*Cents` suffix | P2 | Bug |
-| DC-011 | Participant naming: client/host vs patientId/dentistMemberId | Info | By-design |
-| DC-012 | Impoverished providerType enum (no dentist/hygienist) | P2 | Bug (fixed: enum expanded) |
-| DC-013 | Missing FK `.references()` on dental UUID columns | P2 | Bug (fixed: FKs added in migrations 0023–0024) |
-| DC-014 | Intra-dental casing: roles snake_case, statuses camelCase | P2 | Bug |
-
-### 22.3 Detailed Analysis
-
-**DC-001 — Triple Identity** (`services/api-ts/src/handlers/patient/repos/patient.schema.ts:27-30`)
-Dental-specific columns (`preferredBranchId`, `dentalHistorySummary`, `hasActivePaymentPlan`, `recallDate`, `recallNote`, `followUpNotes`) are embedded directly in the generic `patient` table. Two distinct API surfaces — `POST /patients` (generic) and `POST /dental/patients` (dental-specific) — both write to the same underlying table. This creates coupling where dental concerns pollute the generic patient record and any future non-dental vertical would inherit dental columns.
-*Recommendation:* Fix Later — extract dental columns into `dental_patient_extension` as a separate table. Trigger: before adding a second vertical domain.
-
-**DC-002 — Dual Scheduling** (`services/api-ts/src/handlers/booking/` vs `dental-scheduling/`)
-Two fully separate scheduling systems with incompatible status enums and no FK relationship. The generic `booking` system uses `client/host` participant language; the dental system uses `patientId/dentistMemberId`. This is **by-design**: generic booking handles external/patient-facing scheduling; dental appointments are clinical-workflow-specific.
-*Recommendation:* Accept — document the boundary explicitly in ADR-006.
-
-**DC-003 — Dual Billing** (`services/api-ts/src/handlers/billing/repos/billing.schema.ts` vs `dental-billing/repos/dental-invoice.schema.ts`)
-The generic billing module uses bare amount names (`subtotal`, `total`); the dental billing module uses `*Cents` suffix (`subtotalCents`, `totalCents`, `balanceCents`). Both store integer cents. The dual-system split is partially by-design (generic = Stripe payments, dental = clinical invoicing), but the naming divergence is not.
-*Recommendation:* Fix Next — standardize `*Cents` suffix across both billing schemas.
-
-**DC-004 — Triple Provider** (`provider/repos/provider.schema.ts`, `practitioner.schema.ts`, `dental-org/repos/membership.schema.ts`)
-The FHIR-aligned provider/practitioner chain is entirely bypassed by dental membership. `dental_membership.personId` is nullable (PIN-only staff have no `personId`), so a hard FK to `practitioner` is not always possible. No FK relationship exists between the three representations.
-*Recommendation:* Fix Later — add optional `practitionerId` FK to `dental_membership` for memberships that DO have `personId`. Caveat: ~30% of memberships may be PIN-only.
-
-**DC-005 — Treatment vs Procedure** (`dental-scheduling/repos/dental-appointment.schema.ts`)
-`procedureType` column on dental appointments conflicted with the `DentalTreatment` entity name. **Already fixed** — renamed to `serviceType` in a prior schema-hardening commit (`bdc5494`).
-*Status: CLOSED.*
-
-**DC-006 — Status enum casing** (`dental-scheduling/repos/dental-appointment.schema.ts`)
-Appointment statuses mix camelCase (`checkedIn`, `noShow`) with other dental enums that use snake_case. The `noShow` status also diverges from the booking module's `no_show_client` spelling for the same concept.
-*Recommendation:* Fix Next — standardize dental appointment statuses to snake_case (`checked_in`, `no_show`) and update all references.
-
-**DC-007 — Cross-module coupling** (`dental-patient/`)
-The `dental-patient` handler imports directly from `dental-visit`, `dental-billing`, `dental-clinical`, and `dental-imaging` modules. This creates bidirectional dependency risk and makes it harder to test modules in isolation.
-*Recommendation:* Fix Later — introduce module interface boundaries; route cross-module reads through repository contracts.
-
-**DC-008 — Inline Zod schemas** (14+ handler files)
-Handler files define request/response Zod schemas inline rather than relying solely on the generated `validators.ts`. This is partially intentional for handler-specific extensions but creates drift risk as TypeSpec evolves.
-*Recommendation:* Fix Later — migrate inline schemas to TypeSpec + generated validators. Trigger: next TypeSpec revision cycle.
-
-**DC-009 — Domain glossary gap** (`specs/api/docs/standards/domain-glossary.md`)
-The glossary contains FHIR-generic terms only. Dental-specific entities used throughout the codebase (`DentalPatient`, `DentalVisit`, `DentalTreatment`, `DentalMembership`, `DentalAppointment`, `DentalInvoice`, `CephLandmark`, `ImagingStudy`) are absent.
-*Recommendation:* Fix Now (docs-only) — see §22.5 Canonical Term Recommendations; dental terms added below.
-
-**DC-010 — Amount field naming** (billing vs dental-billing schemas)
-Generic billing: `subtotal`, `total` (integer cents, misleading bare names). Dental billing: `subtotalCents`, `totalCents`, `balanceCents` (explicit). Both intend the same semantic — integer cent amounts.
-*Recommendation:* Fix Next — rename generic billing fields to `*Cents` pattern in a migration.
-
-**DC-011 — Participant naming** (by-design)
-Generic booking uses `clientId`/`hostId`; dental uses `patientId`/`dentistMemberId`. This is by-design domain language, not a bug.
-*Status: Accept.*
-
-**DC-012 — Impoverished providerType enum** (`provider/repos/provider.schema.ts`)
-The `providerType` enum previously contained only `pharmacist | other`, making it impossible for the generic provider system to represent dental providers. **Already fixed** — `dentist`, `hygienist`, `pediatric_dentist` added in schema-hardening commit (`bdc5494`).
-*Status: CLOSED.*
-
-**DC-013 — Missing FK constraints** (dental schemas)
-Dental tables had UUID foreign-key columns (`patientId`, `branchId`, `dentistMemberId`) as plain uuid columns with no `.references()`. **Already fixed** — FK constraints and cascades added in migrations 0023–0024.
-*Status: CLOSED.*
-
-**DC-014 — Intra-dental casing inconsistency** (`dental-org/repos/membership.schema.ts`, `dental-scheduling/repos/dental-appointment.schema.ts`)
-Within the dental domain layer: membership roles use snake_case (`dentist_owner`, `staff_full`) while appointment statuses use camelCase (`checkedIn`, `noShow`). Same domain, different conventions.
-*Recommendation:* Fix Next — standardize to snake_case (aligns with PostgreSQL conventions and the majority of dental enums).
-
-### 22.4 By-Design vs Bug Classification
-
-| Classification | Count | IDs |
-|---------------|-------|-----|
-| By-design (accept) | 3 | DC-002, DC-011, DC-001 (partial) |
-| Already fixed | 3 | DC-005, DC-012, DC-013 |
-| Fix Now (docs) | 1 | DC-009 |
-| Fix Next (schema/code) | 5 | DC-003, DC-006, DC-010, DC-014, DC-004 (partial) |
-| Fix Later (structural) | 4 | DC-001 (full), DC-004 (FK), DC-007, DC-008 |
-| 0 actual bugs (code correctness) | — | All issues are naming/convention; code works correctly |
-
-### 22.5 Canonical Term Recommendations
-
-| Concept | Current (inconsistent) | Canonical Recommendation |
-|---------|----------------------|--------------------------|
-| Dental practitioner member | `DentalMembership` / `Member` | `DentalMember` (keep; document boundary from FHIR Practitioner) |
-| Appointment service type | `procedureType` → `serviceType` | `serviceType` (already applied) |
-| Monetary amounts | `subtotal` / `subtotalCents` | `*Cents` suffix everywhere |
-| Appointment status | `checkedIn` / `checked_in` | `snake_case` throughout dental layer |
-| No-show status | `noShow` / `no_show_client` | `no_show` (dental) — keep both distinct |
-| Provider specialty | `pharmacist \| other` | `dentist \| hygienist \| pediatric_dentist \| pharmacist \| other` (applied) |
-
-**Dental glossary additions** (to `specs/api/docs/standards/domain-glossary.md`):
-
-| Term | Definition |
-|------|-----------|
-| DentalPatient | A patient record with dental-specific metadata (preferred branch, dental history summary, recall date). Shares the `patient` table with the generic Patient entity. |
-| DentalVisit | A clinical encounter in the dental workspace; has a state machine (`draft → active → completed → locked`). Distinct from the generic Booking. |
-| DentalTreatment | A procedure planned or performed during a DentalVisit (e.g., extraction, filling). Has its own state machine (`diagnosed → planned → performed → verified`). |
-| DentalMember | A staff member linked to a dental branch via `dental_membership`. May or may not have a `personId` (PIN-only staff are anonymous). |
-| DentalAppointment | A scheduled clinical encounter. Uses clinical participant language (`patientId`, `dentistMemberId`). Distinct from generic Booking. |
-| DentalInvoice | A clinical bill derived from performed DentalTreatments. Uses `*Cents` integer amounts. Distinct from generic Invoice (Stripe). |
-| ImagingStudy | A DICOM-based dental imaging session (e.g., X-ray, panoramic, CBCT). Linked to a DentalVisit and a dental branch. |
-| CephLandmark | A cephalometric anatomical landmark point on a lateral skull radiograph (e.g., Sella, Nasion, Porion). Input to the isomorphic ceph-math engine. |
-| CephAnalysis | A set of cephalometric measurements derived from CephLandmarks, used for orthodontic/orthognathic assessment. |
-
-### 22.6 Reconciliation Roadmap
-
-**Fix Now (documentation, zero code risk):**
-- ✅ Write this audit section — done
-- Add dental terms to `specs/api/docs/standards/domain-glossary.md` — see §22.5
-
-**Fix Next (next sprint, schema changes):**
-- Rename bare amount fields to `*Cents` in generic billing schema + migration (DC-003/DC-010)
-- Standardize dental appointment status enum to snake_case (DC-006/DC-014)
-- Add `dentist | hygienist` to `providerType` enum — DONE (DC-012)
-- Add optional `practitionerId` FK to `dental_membership` for non-PIN-only memberships (DC-004)
-
-**Fix Later (structural, trigger: second vertical domain):**
-- Extract dental columns from `patient` table into `dental_patient_extension` (DC-001)
-- Introduce module interface boundaries in `dental-patient` (DC-007)
-- Migrate 14+ inline Zod schemas to TypeSpec-generated validators (DC-008)
-
-**Accept (by-design, document only):**
-- Dual scheduling systems — generic booking (external) vs dental appointments (clinical)
-- Dual billing systems — generic Stripe invoicing vs dental clinical billing
-- `client/host` vs `patientId/dentistMemberId` participant naming
-
-### 22.7 Health Score Update
-
-This audit does not change the overall health score (remains 9/10 per `CONFIDENCE_REPORT.md`). The domain model clarity dimension is revised: from "unscored" to **7/10** — the dual-system architecture is intentional and documented, but the naming inconsistencies (DC-003, DC-006, DC-010, DC-014) and structural gaps (DC-001, DC-007) prevent a higher score. Resolving the "Fix Next" items would advance this dimension to 9/10.
-
----
-
-## 23. G6-Core Delta Audit
-
-**Audit Date:** 2026-05-21 | **Prior Score:** 7.2/10 (2026-05-19) | **Method:** targeted delta (code verification of G1–G3 + G6-core slices)
-**Branch:** `feat/v1.5-g1-foundation` @ 86386c0 | **Waves verified:** G1 ✅ G2 ✅ G2.5 ✅ G3 ✅ G6-core ✅
-
-### 23.1 Slice Verification
-
-| Slice | Status | Key Evidence |
-|-------|--------|-------------|
-| G6-S1: Error envelope | ✅ CONFIRMED | `core/errors.ts` + `ERROR_ENVELOPE.md` + 47-block conformance test suite |
-| G6-S2: FSM property tests | ✅ CONFIRMED | 10 files, each using `fc.assert(fc.property(...))` — one per dental FSM |
-| G6-S3: ASVS L2 + STRIDE | ✅ CONFIRMED | `ASVS_L2.md` (258 lines) + `THREAT_MODEL.md` (252 lines) |
-| G6-S4: dental_audit + Pino shim | ✅ CONFIRMED | `db/audit.schema.ts` + migration 0037 + `core/audit-logger.ts` + `GET /audit/logs` |
-| G6-S7: TypeSpec @examples + drift CI | ✅ CONFIRMED | 13+ @example annotations across 7 modules + `.github/workflows/openapi-drift.yml` |
-| G6-S10: Migration safety lint + CI | ✅ CONFIRMED | `scripts/lint-migrations.ts` + `quality.yml` `migration-safety` job |
-| G1-S1: assertBranchAccess RBAC | ⚠️ PARTIAL | Membership enforcement fixed; role-differentiated gating is per-handler (`getMemberRole()` copies), not in shared utility |
-| G3: DOMAIN_MODEL.md | ✅ CONFIRMED | 246 lines, 28-table mapping, FHIR R4 alignment |
-| G2: 9/9 MODULE_SPECs | ✅ CONFIRMED | Found under `docs/modules/` (not `docs/product/modules/`) |
-
-### 23.2 Surprises and Risks Found
-
-1. **assertBranchAccess still role-blind (P1 — latent privilege escalation).**
-   `handlers/shared/assert-branch-access.ts` checks only active membership, not role. Role guards exist in individual handlers (`branchSettings.ts`, `consentTemplates.ts`) via local `getMemberRole()` helpers. Any handler that forgets to call `getMemberRole()` is open to lateral access within a branch. Recommendation: add `requiredRole?: MemberRole[]` param to `assertBranchAccess` and enforce in the shared utility.
-
-2. **Dual audit schema (minor drift risk).**
-   `src/db/audit.schema.ts` (used by `audit-logger.ts`) and `src/handlers/audit/repos/audit.schema.ts` both reference `dental_audit`. These are distinct files — if one is updated without the other, type drift will accumulate silently.
-
-3. **No MODULE_SPEC for `handlers/audit/`.** The audit module added in G6-S4 has no MODULE_SPEC. Low risk (it's simple), but breaks the 9/9 symmetry.
-
-### 23.3 Updated Health Score
-
-| Dimension | 2026-05-19 | 2026-05-21 | Delta | Notes |
-|-----------|-----------|-----------|-------|-------|
-| Terminology consistency | 9 | 9 | — | G3 stable |
-| Permission coverage | 6 | **7** | +1 | Membership enforced; role gating still per-handler |
-| Business rule clarity | 7 | **9** | +2 | 62 BRs, 10 FSM property test suites, 100% AC coverage |
-| API consistency | 8 | **9** | +1 | TypeSpec @examples in 7 modules + OpenAPI drift CI |
-| State machine safety | 8 | **9** | +1 | All 10 FSMs property-tested; G1 guarded remaining 2 |
-| Error handling uniformity | 8 | **9** | +1 | Conformance-tested error envelope; `ERROR_ENVELOPE.md` |
-| Backend test coverage | 7 | **9** | +2 | 100% ACs + Hurl 132/132 + 10 FSM property suites |
-| Frontend test coverage | 6 | **8** | +2 | 55/55 ACs done; per-screen coverage still partial |
-| PRD/spec coverage | 7 | **9** | +2 | 9/9 MODULE_SPECs + 100% ACs + 100% Hurl contracts |
-| UI prototype readiness | 8 | **9** | +1 | G1-S5 confirmed removed debug routes from prod |
-| Architecture alignment | 8 | **9** | +1 | Migration safety CI + ASVS L2 + ERROR_ENVELOPE.md |
-| Domain model clarity | 6 | **8** | +2 | DOMAIN_MODEL.md: 246 lines, 28 entities, FHIR alignment |
-| Security posture (OWASP) | 8 | **9** | +1 | ASVS L2 (258 lines) + STRIDE (252 lines) + audit trail |
-| Observability coverage | 7 | **9** | +2 | dental_audit DB + Pino shim + admin endpoint confirmed |
-| Performance health | 7 | **8** | +1 | EMR N+1 fixed; pool max 5→2; response-time metrics absent |
-
-**Overall health: 8.7/10** _(up from 7.2/10 on 2026-05-19; sum 130/15)_
-
-### 23.4 Graduation Gap Analysis
-
-| Threshold | Required | Actual | Status |
-|-----------|----------|--------|--------|
-| Audit health ≥ 9.0 | 9.0 | **8.7** | ❌ 0.3 short |
-| P0 open | 0 | 0 | ✅ |
-| P1 open | — | 1 (assertBranchAccess role-blind) | ⚠️ |
-
-**Verdict: NOT YET GRADUATED.** 0.3 points below threshold. One P1 drives the permission coverage gap.
-
-### 23.5 Path to 9.0 (delta = 0.3 pts = 4.5 raw points across 15 dimensions)
-
-Highest-ROI fixes:
-
-1. **Extend `assertBranchAccess` with `requiredRole?` param** — lifts permission coverage 7→9 (+2 pts). Single file change, closes latent P1.
-2. **Add screen-level tests for Calendar, Billing, Reports** — lifts frontend test coverage 8→9 (+1 pt).
-3. **Add `handlers/audit/MODULE_SPEC.md`** — minor, supports spec coverage completeness.
-4. **Add response-time instrumentation** (`/metrics` or Prometheus) — lifts performance health 8→9 (+1 pt).
-
-Fixing items 1+2 alone (permission + frontend) brings score to 130+3 = 133/15 = 8.87. All four brings 135/15 = 9.0 exactly.
-
----
-
-## 24. Graduation Delta Audit
-
-**Audit Date:** 2026-05-21 | **Prior Score:** 8.7/10 (Section 23) | **Method:** targeted delta (graduation gap verification)
-**Branch:** `feat/v1.5-g1-foundation` @ 808c06b | **Commits verified:** 8ba949f (rbac), 97c6464 (3 gaps), 808c06b (BROWNFIELD)
-
-### 24.1 Graduation Gap Verification
-
-| Gap | Commit | Status | Evidence |
-|-----|--------|--------|---------|
-| 1. calendar-week.test.ts (screen tests) | 97c6464 | ✅ CONFIRMED | 17 new tests in `calendar-week.test.ts`; helpers exported |
-| 2. X-Response-Time header in request middleware | 97c6464 | ✅ CONFIRMED | `middleware/request.ts`: `ctx.header('X-Response-Time', \`${duration}ms\`)` on every response |
-| 3. `docs/modules/dental-audit/MODULE_SPEC.md` | 97c6464 | ✅ CONFIRMED | File exists; `audit_log_entry` table with 20 columns, 6 enums, retention lifecycle |
-
-### 24.2 Additional Change: Systematic RBAC Upgrade
-
-**Commit 8ba949f** (`feat(rbac): systematic role matrix — 37 write handlers upgraded to assertBranchRole`)
-
-- `handlers/shared/assert-branch-role.ts` created — proper shared utility with `allowedRoles: MemberRole[]` param
-- 37 write-path handlers upgraded: dental-billing, dental-clinical, dental-imaging, dental-patient, dental-scheduling, dental-visit, dental-org
-- Pattern: `await assertBranchRole(db, userId, branchId, ['dentist_owner', 'dentist_associate'])` on clinical writes
-- `dentist_owner`-only gates: void payment, delete/finalize certain records
-- Dual-schema drift risk (Section 23.2.2): `src/db/audit.schema.ts` vs `src/handlers/audit/repos/audit.schema.ts` — both reference `dental_audit`; confirmed same table, not diverged
-
-**MODULE_SPEC count: 10/10** — dental-audit added as 10th spec, resolving Section 23 surprise #3.
-
-### 24.3 New Findings (Extended Dimensions)
-
-Four additional dimensions evaluated for the first time in this audit run:
+## Codebase Health Score: 7.4 / 10
 
 | Dimension | Score | Notes |
 |-----------|-------|-------|
-| Stub density | 9 | 8 TODO comments in non-test production files; no P1 runtime stubs |
-| Type cast density | 7 | 232 `as any` in production files (P2); dental-imaging highest; many are Drizzle query boundary casts — needs audit to separate safe from unsafe |
-| Cross-module coupling | 8 | dental-clinical → dental-visit (VisitRepository, 12 imports); dental-billing → dental-visit/patient/org; all one-directional, domain-appropriate; `core/` imports from handler repos (architectural smell); no bi-directional P1 |
-| Raw SQL leakage | 9 | All `sql\`` fragments within own module (emr ILIKE, booking jsonb default, visit schema check); one test-fixture raw DELETE (P3, test-only); no cross-module raw SQL |
+| Module structure clarity | 8 | Clear dental-* separation; loose-coupling pattern in imaging |
+| Type safety | 5 | 183 production `as any` casts |
+| State machine clarity | 9 | Well-defined enums + transition constants + FSM property tests |
+| Business rules documentation | 8 | 22 rules, coverage map, 17/22 tested |
+| Domain model clarity | 8 | Clear entities, cross-module FK comments |
+| Security posture | 7 | CORS/CSP/CSRF/PHI headers; PHI logging + email-verify gaps |
+| Observability coverage | 6 | Pino + requestId; no APM/metrics |
+| Performance health | 7 | Low N+1 overall; 1 confirmed, unbounded queries TBD |
+| Stub density | 6 | 2 runtime stubs + 2 unimplemented clinical BRs |
+| Cross-module coupling | 6 | dental-clinical → dental-visit repo coupling (P1) |
+| Test coverage breadth | 7 | 135 backend + 51 E2E; pmd/imaging weak |
+| API contract coverage | 9 | TypeSpec-first, 231 endpoints generated |
+| Auth/AuthZ model | 8 | Better-Auth + branch guards; role-string comma-splitting risk |
+| Error handling | 8 | AppError class, structured responses |
+| Data model integrity | 8 | FK constraints, partial unique indexes, enums |
+| Frontend component quality | 7 | Shadcn UI; 4 component tests; no a11y audit |
+| Raw SQL leakage | 9 | Drizzle throughout; SQL only in own-module index filters |
+| Repo guardrails | 8 | CLAUDE.md + CONTRIBUTING.md; missing root ARCHITECTURE.md |
+| Spec coverage | 5 | Specs exist but at wrong paths; API_CONTRACTS + UI blueprints missing |
+| **AVERAGE** | **7.4** | **Graduation target: ≥9.0** |
 
-### 24.4 TypeScript Error Status
+---
 
-| File | Count | Severity | Action |
-|------|-------|----------|--------|
-| `src/handlers/ac-g2s1.test.ts(381)` | 1 | Test file | Intentional (documented); do not fix |
-| `src/handlers/dental-visit/visit.fsm.property.test.ts(49)` | 1 | Test file | P3 — overload mismatch in fc.property |
-| `src/tests/error-envelope.conformance.test.ts` | 19 | Test file | P2 — Config type narrowing + index signature access pattern |
+## What's Next
 
-**Production code: 0 TypeScript errors** ✅
-
-### 24.5 Updated Health Score
-
-| Dimension | 2026-05-21 (§23) | 2026-05-21 (§24) | Delta | Notes |
-|-----------|-----------------|-----------------|-------|-------|
-| Terminology consistency | 9 | 9 | — | Stable |
-| Permission coverage | 7 | **9** | +2 | `assertBranchRole` shared utility; 37 write handlers gated by role (not just branch) |
-| Business rule clarity | 9 | 9 | — | 62 BRs, 100% trace; stable |
-| API consistency | 9 | 9 | — | Stable |
-| State machine safety | 9 | 9 | — | Stable |
-| Error handling uniformity | 9 | 9 | — | Stable (21 TS errors are test-only) |
-| Backend test coverage | 9 | 9 | — | Stable |
-| Frontend test coverage | 8 | **9** | +1 | calendar-week.test.ts — 17 new screen tests |
-| PRD/spec coverage | 9 | **10** | +1 | 10/10 MODULE_SPEC ✅ (dental-audit added); 55/55 AC; 132/132 Hurl |
-| UI prototype readiness | 9 | 9 | — | Stable |
-| Architecture alignment | 9 | 9 | — | Stable |
-| Domain model clarity | 8 | 8 | — | DOMAIN_MODEL.md stable |
-| Security posture (OWASP) | 9 | 9 | — | ASVS 2 hard fails documented (Cache-Control, KMS); not blocking graduation |
-| Observability coverage | 9 | 9 | — | dental_audit + Pino + X-Response-Time header ✅ |
-| Performance health | 8 | **9** | +1 | X-Response-Time header = response-time instrumentation (closes §23.5 item 4) |
-
-**Overall health: 9.0/10** _(up from 8.7/10 in §23; sum 135/15)_ ✅
-
-### 24.6 Graduation Verdict
-
-| Threshold | Required | Actual | Status |
-|-----------|----------|--------|--------|
-| Audit health ≥ 9.0 | 9.0 | **9.0** | ✅ PASS |
-| P0 open | 0 | 0 | ✅ PASS |
-| P1 open (informational) | — | 0 | ✅ (assertBranchRole closes last P1) |
-| P3 remaining | — | 1 (F-021) | ℹ️ non-blocking |
-
-**GRADUATED ✅** — all thresholds met. Tag `v1.5.0-graduated`.
-
-### 24.7 Extended Health Score (19 Dimensions)
-
-Adding the 4 new dimensions from §24.3:
-
-**Extended sum:** 135 (original 15) + 9 + 7 + 8 + 9 (new 4) = 168 / 19 = **8.8/10**
-
-The extended score is informational only — the graduation threshold was defined against the original 15-dimension framework. The 7/10 on type cast density is the primary flag for post-graduation cleanup.
-
-### 24.8 Post-Graduation P2 Backlog
-
-| ID | Finding | Dimension | Priority |
-|----|---------|-----------|----------|
-| F-022 | 232 `as any` casts in production files — needs audit to distinguish safe (Drizzle boundary) from unsafe (logic bypasses) | Type cast density | P2 |
-| F-023 | 19 TypeScript errors in `error-envelope.conformance.test.ts` — Config type narrowing + index signature pattern | Error handling | P2 |
-| F-024 | `core/email.ts`, `core/notifs.ts`, `core/audit.ts` import directly from handler repos — `core/` should not depend on `handlers/` | Cross-module coupling | P2 |
-| F-025 | Cache-Control: no-store missing on PHI response routes (ASVS V8 hard fail) | Security | P2 |
-| F-026 | Secrets in env vars, not KMS (ASVS V6 hard fail — infrastructure concern) | Security | P2 |
-
-Post-graduation CVE P0s (from G6-S3 ASVS scan, separate PR):
-- Upgrade `better-auth` ≥ 1.4.2 (3 HIGH/CRITICAL CVEs)
-- Upgrade `drizzle-orm` ≥ 0.45.2
+```
+/oli-prd-audit docs/prd/v3-dentalemon.md    → Step 2: MODULE_MAP + DOMAIN_GLOSSARY
+/oli-workflow-map                            → Step 3: WORKFLOW_MAP
+/oli-domain-model --depth lean              → Step 4: entity normalization (10 modules)
+/oli-module-specs --all                     → Step 5: normalized MODULE_SPECs
+/oli-api-contracts --all                    → Step 6: API_CONTRACTS per module
+/oli-ui-blueprint --blueprint --all         → Step 7: UI blueprints
+/oli-spec-consistency                       → Step 8: GATE
+/oli-magic                                  → Step 9: classify + plan waves
+/gsd-execute-phase                          → Step 10: execute with TDD
+/oli-audit-compliance --all                 → Step 11: re-check
+/oli-confidence-stack                       → Step 12: test confidence
+/oli-trace                                  → Step 13: traceability
+/oli-magic --update                         → Step 14: graduation check
+```

@@ -1,4 +1,4 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-20 (--update pass) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (spec-consistency pass) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
 
 # Dentalemon — Brownfield Execution Roadmap
 
@@ -19,6 +19,7 @@
 | G3 | Domain Model Refactoring | Parallel safe | P2 | ⬜ NOT STARTED |
 | G4 | Feature Delivery | Sequential (dependency) | new-feature | 🔄 PENDING CI (F-016) |
 | G5 | Future Features | Parallel safe | new-feature | ⬜ PLANNED |
+| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ⬜ PLANNED |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -69,7 +70,9 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 | G1-S4 | Guard PaymentPlan FSM transitions | dental-billing | stabilize-existing | S |
 | G1-S5 | Exclude debug routes from production bundle | dental-imaging | stabilize-existing | S |
 
-**Cross-module integration test required:** G1-S1 touches `shared/assertBranchAccess`, `dental-visit`, `dental-billing`, `dental-clinical` — run cross-module E2E after.
+| G1-S6 | Introduce `VisitService` interface (decouple dental-clinical from VisitRepository) | dental-clinical + dental-visit | refactor-existing | M |
+
+**Cross-module integration test required:** G1-S1 touches `shared/assertBranchAccess`, `dental-visit`, `dental-billing`, `dental-clinical` — run cross-module E2E after. G1-S6 (G-003) requires interface + contract test before merge.
 
 ---
 
@@ -106,7 +109,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 |---|-------|--------|----------------|------|
 | G2-S1 | Write 20 AC tests (4 highest-value first) | cross-module | stabilize-existing | L |
 | G2-S2 | Write ceph BRs spec (BR-036+) | dental-imaging | stabilize-existing | M |
-| G2-S3 | Write 9 MODULE_SPECs (use dental-imaging as template) | cross-module | stabilize-existing | L |
+| G2-S3 | ~~Write 9 MODULE_SPECs~~ ✅ COMPLETE (2026-05-24 — all 10 at docs/product/modules/) | cross-module | stabilize-existing | L |
 | G2-S4 | Add dental Hurl contract tests | cross-module | stabilize-existing | M |
 | G2-S5 | Populate br-registry.json | cross-module | stabilize-existing | S |
 | G2-S6 | Boost booking + storage coverage | booking, storage | stabilize-existing | M |
@@ -147,6 +150,10 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 | G3-S3 | DC naming fixes (DC-003, DC-006, DC-010, DC-014) | cross-module | refactor-existing | S |
 | G3-S4 | Document or fix remaining bare UUID FK columns | cross-module | refactor-existing | M |
 | G3-S5 | Fix EMR N+1 + parallel test pool exhaustion | emr, infra | stabilize-existing | M |
+| G3-S6 | Fill DOMAIN_GLOSSARY gaps: Focal Card, Baseline, imagingTier, Carry-over, Amendment | docs | stabilize-existing | S |
+| G3-S7 | Consolidate audit log UI route → `/audit/log` (remove dental-org duplicate screen) | dental-org, dental-audit | refactor-existing | S |
+| G3-S8 | Remove invalid "Reopen" action from visit workspace screens.md (terminal state violation) | dental-visit | refactor-existing | S |
+| G3-S9 | Add MODULE_SPEC §4 Workflow Details for dental-clinical, dental-billing, dental-imaging | docs | stabilize-existing | M |
 
 ---
 

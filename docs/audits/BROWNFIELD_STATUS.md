@@ -1,8 +1,8 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-21 (GRADUATED — audit confirmed 9.0/10) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (v1.5 spec pipeline complete) | generated: 2026-05-20 | run: fresh-from-scratch + --update -->
 
 # Dentalemon — Brownfield Adoption Dashboard
 
-**Updated:** 2026-05-21 (GRADUATED ✅ — audit confirmed 9.0/10, commit 808c06b) | **Cycle:** 1/3 | **Branch:** feat/v1.5-g1-foundation
+**Updated:** 2026-05-24 (v1.5 spec pipeline — UI blueprints + spec-consistency gate) | **Graduated:** 2026-05-21 ✅ 9.0/10 (commit 808c06b) | **Cycle:** 1/3 | **Branch:** feat/v1.5-g1-foundation
 **Source audits:** `EXISTING_CODEBASE_ADOPTION_AUDIT.md` §24, `COMPLIANCE_REPORT.md`, `CONFIDENCE_REPORT.md`, `TRACEABILITY_MATRIX_AUTO.md`
 **execution_state:** `graduated` — G1 ✅ G2 ✅ G2.5 ✅ G3 ✅ G6-core ✅ graduation-gaps ✅ audit-confirmed ✅
 
@@ -141,6 +141,7 @@ No new UI-NNN findings this update cycle. Re-run Step 2e after G1 execution to d
 | 2026-05-21 | G6-core delta audit | 8.7 / 10 | ~9.9 (projected) | **9 / 10** ✅ | — | 0 | 2 (F-021 + assertBranchAccess P1) |
 | 2026-05-21 | RBAC role matrix fix | **8.8 / 10** | ~9.9 (projected) | **9 / 10** ✅ | — | 0 | 1 (F-021) |
 | 2026-05-21 | graduation gaps closed | **~9.0** (projected) | — | **9 / 10** ✅ | — | 0 | 1 (F-021 P3) |
+| 2026-05-24 | v1.5 spec pipeline | **9.0** ✅ (unchanged) | — | **9 / 10** ✅ | 100% | 0 | 0 |
 
 **Note:** 3 graduation gaps closed in commit 97c6464 — screen tests (+0.07), X-Response-Time header (+0.07), dental-audit MODULE_SPEC (spec gap). Re-run `/oli-audit-codebase` to confirm ≥9.0.
 
@@ -162,30 +163,43 @@ Populated after G0 Phase B'' execution (2026-05-20). Review before deleting — 
 
 ---
 
+## v1.5 Spec Pipeline (2026-05-24)
+
+Full oli-magic spec pipeline run on `feat/v1.5-g1-foundation`:
+
+| Step | Artifact | Status |
+|------|----------|--------|
+| S1 Audit | EXISTING_CODEBASE_ADOPTION_AUDIT.md | ✅ |
+| S2 PRD audit | PRD_AUDIT_REPORT.md + DOMAIN_GLOSSARY.md + MODULE_MAP.md | ✅ |
+| S3 Workflow map | WORKFLOW_MAP.md | ✅ |
+| S4 Domain model | DOMAIN_MODEL.md | ✅ |
+| S5 Module specs | 10/10 MODULE_SPEC.md | ✅ |
+| S6 API contracts | 10/10 API_CONTRACTS.md + ERROR_TAXONOMY + EVENT_CONTRACTS | ✅ |
+| S7 UI blueprints | 70 files (7 × 10 modules) | ✅ 2026-05-24 |
+| S8 Spec consistency | CONSISTENCY_REPORT.md — **PASS** (6 HIGHs resolved) | ✅ 2026-05-24 |
+| S9 Classify + ROADMAP | ROADMAP.md updated (G2-S3 ✅, G1-S6/G3-S6-S9 added) | ✅ 2026-05-24 |
+
+**Spec-consistency fixes applied to artifacts:**
+- dental-scheduling/API_CONTRACTS: `dentist_associate` added to check-in auth
+- dental-billing/API_CONTRACTS: `dentist_associate` added to invoice create + issue auth; `sent`→`issued` state string
+- dental-pmd/MODULE_SPEC §6: `dentist`→`dentist_owner, dentist_associate`
+- dental-org/API_CONTRACTS: audit-events proxy clarified
+
+---
+
 ## What's Next
 
-**Priority order (recommended):**
+**Project status: GRADUATED 9.0 ✅ (2026-05-21)**
 
-**All 4 graduation fixes complete (2026-05-21). Re-audit to confirm ≥9.0:**
+**v1.5 next actions (priority order):**
 
-1. ~~Close the P1: extend `assertBranchAccess` with `requiredRole?` param~~ ✅ DONE (commit 8ba949f — 37 handlers upgraded to `assertBranchRole`)
+1. ~~Close the P1: extend `assertBranchAccess` with `requiredRole?` param~~ ✅ DONE (commit 8ba949f)
+2. ~~Screen-level tests, MODULE_SPEC, X-Response-Time~~ ✅ DONE (commit 97c6464)
+3. **Merge G4-P2 (ceph workspace)** — pending CI green on `feat/v1.4-clinical-imaging`
+4. **Execute G5-S1 (v1.5 Periodontal Charting)** — new module, vertical TDD, depends on dental-visit + dental-clinical
+5. **G3-S6–S9** (spec-consistency MEDIUM fixes) — glossary gaps, audit route consolidation, screens cleanup
+6. **CVE fixes** (from G6-S3 ASVS L2): upgrade `better-auth` ≥1.4.2 + `drizzle-orm` ≥0.45.2
 
-2. ~~Add screen-level tests for Calendar, Billing, Reports~~ ✅ DONE (commit 97c6464 — `calendar-week.test.ts` 17 tests; helpers exported from revenue/treatment-report)
+**To refresh this dashboard:** `/oli-magic --update` after G5 execution
 
-3. ~~Add `handlers/audit/MODULE_SPEC.md`~~ ✅ DONE (commit 97c6464 — `docs/modules/dental-audit/MODULE_SPEC.md`)
-
-4. ~~Add response-time instrumentation~~ ✅ DONE (commit 97c6464 — `X-Response-Time` header in `createRequestLogger`)
-
-5. **Re-run `/oli-audit-codebase`** — should confirm ≥9.0 ← **NEXT ACTION**
-
-6. **Tag v1.5.0-graduated** once audit confirms ≥9.0.
-
-7. **Post-graduation CVE fixes** (from G6-S3 ASVS L2 scan):
-   - Upgrade `better-auth` to ≥1.4.2
-   - Upgrade `drizzle-orm` to ≥0.45.2
-
-8. **Close F-016 CI gate** — wait for `postgres-services.yml` first green run on `feat/v1.4-clinical-imaging`.
-
-**To refresh this dashboard:** `/oli-magic --update` (after re-audit confirms ≥9.0)
-
-**Current execution_state:** `gaps-closed` → `audited` (re-run needed) → `graduated` after tag
+**Current execution_state:** `graduated` → v1.5 active
