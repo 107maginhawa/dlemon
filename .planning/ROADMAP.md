@@ -17,7 +17,7 @@
 | G1 | Foundation Stabilization | Sequential (safety) | P1–P3 | ✅ COMPLETE (2026-05-21) |
 | G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ✅ COMPLETE (2026-05-21) |
 | G3 | Domain Model Refactoring | Parallel safe | P2 | ✅ COMPLETE (2026-05-21) |
-| G4 | Feature Delivery | Sequential (dependency) | new-feature | 🔄 PENDING CI (F-016) |
+| G4 | Feature Delivery | Sequential (dependency) | new-feature | ✅ COMPLETE (merged 2026-05-18, commit 5f246e3) |
 | G5 | Future Features | Parallel safe | new-feature | 🔄 IN PROGRESS (S1 done 2026-05-24) |
 | G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | 🔄 IN PROGRESS (S1-4,7,10 done; S5/S6/S8/S9 remaining) |
 
@@ -160,8 +160,8 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G4: Feature Delivery
 
 **Mode:** tdd — vertical slices per `docs/development/VERTICAL_TDD.md`
-**Status:** 🔄 PENDING CI GREEN — F-016 (feature work complete, CI postgres-services.yml gate pending)
-**Branch:** `feat/v1.4-clinical-imaging`
+**Status:** ✅ COMPLETE — merged to main 2026-05-18 (PR #2, commit 5f246e3)
+**Branch:** `feat/v1.4-clinical-imaging` (merged)
 **Parallel:** NO — sequential within G4 (Phase 1 → Phase 2)
 **Depends on:** v1.3 Imaging Workspace ✅ complete
 **Note:** G4 is independent of G1–G3; run concurrently with stabilization waves if bandwidth allows.
