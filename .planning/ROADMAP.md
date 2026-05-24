@@ -1,4 +1,4 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (spec-consistency pass) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (G5+G6 complete) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
 
 # Dentalemon — Brownfield Execution Roadmap
 
@@ -18,8 +18,8 @@
 | G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ✅ COMPLETE (2026-05-21) |
 | G3 | Domain Model Refactoring | Parallel safe | P2 | ✅ COMPLETE (2026-05-21) |
 | G4 | Feature Delivery | Sequential (dependency) | new-feature | ✅ COMPLETE (merged 2026-05-18, commit 5f246e3) |
-| G5 | Future Features | Parallel safe | new-feature | 🔄 IN PROGRESS (S1 done 2026-05-24) |
-| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | 🔄 IN PROGRESS (S1-4,7,10 done; S5/S6/S8/S9 remaining) |
+| G5 | Future Features | Parallel safe | new-feature | ✅ COMPLETE (2026-05-24) |
+| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ✅ COMPLETE (2026-05-24) |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -192,21 +192,21 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G5: Future Features
 
 **Mode:** tdd — vertical slices
-**Status:** ⬜ PLANNED
+**Status:** ✅ COMPLETE (2026-05-24)
 **Parallel:** YES — slices are independent
 **Depends on:** G4 complete
 
 | # | Slice | Classification | Notes |
 |---|-------|----------------|-------|
-| G5-S1 | v1.5 Periodontal Charting | new-feature | ✅ COMPLETE — dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype) |
-| G5-S2 | Standalone ARCHITECTURE.md | stabilize-existing | Low priority; CLAUDE.md covers content today |
+| G5-S1 | v1.5 Periodontal Charting | new-feature | ✅ COMPLETE (commit 018c25c) — dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype) |
+| G5-S2 | Standalone ARCHITECTURE.md | stabilize-existing | ✅ COMPLETE (2026-05-24) — docs/architecture/ARCHITECTURE.md + CLAUDE.md pointer |
 
 ---
 
 ## Wave G6: Excellence — Reach 9.0 Target
 
 **Mode:** tdd / docs (mixed)
-**Status:** 🔄 IN PROGRESS — S1/S2/S3/S4/S7/S10 done (2026-05-21); S5/S6/S8/S9 remaining
+**Status:** ✅ COMPLETE (2026-05-24) — all 10 slices done
 **Parallel:** YES — slices are independent
 **Depends on:** G3 complete
 **Target:** Audit ≥9.0, Compliance ≥9.0, Confidence ≥9.0
