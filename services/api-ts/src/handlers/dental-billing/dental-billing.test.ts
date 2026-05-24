@@ -353,6 +353,60 @@ describe('createDentalInvoice handler', () => {
     expect(body.status).toBe('draft');
     expect(body.invoiceNumber).toMatch(/^INV-/);
   });
+
+  test('sets billedInvoiceId on treatments after invoice is created', async () => {
+    const { visit, treatment } = await seedVisitAndTreatment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit.id,
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        dentistMemberId: MEMBER_ID,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+
+    const treatmentRepo = new TreatmentRepository(db);
+    const updatedTreatment = await treatmentRepo.findOneById(treatment.id);
+    expect(updatedTreatment).not.toBeNull();
+    expect(updatedTreatment!.billedInvoiceId).toBe(body.id);
+  });
+
+  test('returns 422 with TREATMENT_ALREADY_BILLED when re-invoicing a visit', async () => {
+    const { visit } = await seedVisitAndTreatment();
+    const app = buildTestApp(TEST_USER);
+
+    const requestBody = JSON.stringify({
+      visitId: visit.id,
+      patientId: PATIENT_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID,
+    });
+
+    // First invoice — should succeed
+    const res1 = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+    });
+    expect(res1.status).toBe(201);
+
+    // Second invoice for the same visit — treatments already billed
+    const res2 = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+    });
+    expect(res2.status).toBe(422);
+    const body2 = await res2.json() as any;
+    expect(body2.code).toBe('TREATMENT_ALREADY_BILLED');
+  });
 });
 
 // ===========================================================================
