@@ -41,6 +41,8 @@ import healthOpenapi from '@/core/health.openapi.json';
 import { createRequestId, createRequestLogger } from '@/middleware/request';
 import { createDependencyInjection } from '@/middleware/dependency';
 import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard, createPhiCacheHeaders } from '@/middleware/security';
+import { metricsMiddleware } from '@/middleware/metrics-middleware';
+import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-org/getAuditEvents';
@@ -79,6 +81,9 @@ export function createApp(config: Config): App {
 
   // Request ID generation - Needed for all logging
   app.use('*', createRequestId(config));
+
+  // Latency histogram - record duration of every request (skips /metrics itself)
+  app.use('*', metricsMiddleware);
 
   // Dependency injection - Inject logger, database, storage, auth, jobs early
   app.use('*', createDependencyInjection(app as App, config));
@@ -127,6 +132,10 @@ export function createApp(config: Config): App {
 
   // CSRF guard — must come before generated routes; Bearer/internal-expand/no-browser-signal exempt
   app.use('*', createCsrfGuard(config, logger));
+
+  // Prometheus scrape endpoint - register BEFORE generated routes so it takes priority.
+  // Auth via static bearer token (METRICS_TOKEN env var).
+  app.get('/metrics', metricsHandler);
 
   // Register API routes
   registerOpenAPIRoutes(app as any);
