@@ -198,7 +198,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 
 | # | Slice | Classification | Notes |
 |---|-------|----------------|-------|
-| G5-S1 | v1.5 Periodontal Charting | new-feature | New module; depends on dental-visit + dental-clinical |
+| G5-S1 | v1.5 Periodontal Charting | new-feature | ✅ COMPLETE — dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype) |
 | G5-S2 | Standalone ARCHITECTURE.md | stabilize-existing | Low priority; CLAUDE.md covers content today |
 
 ---

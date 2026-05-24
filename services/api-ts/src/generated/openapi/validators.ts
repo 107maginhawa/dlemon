@@ -543,6 +543,17 @@ export const CollectionsSummaryResponseSchema = z.object({
   invoiceCount: z.number().int()
 });
 
+export const PerioChartStatusSchema = z.enum(["draft", "completed", "locked"]);
+
+export const CompletePerioChartResponseSchema = z.object({
+  id: UUIDSchema,
+  status: PerioChartStatusSchema,
+  completedAt: z.string().datetime().transform((str) => new Date(str)),
+  summaryBopPercent: z.number(),
+  summaryMeanDepth: z.number(),
+  summaryDeepPocketCount: z.number().int()
+});
+
 export const ConflictErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -937,6 +948,12 @@ export const CreatePatientRequestSchema = z.object({
   insuranceCoverage: z.array(HealthcareCoreReferenceSchema).optional(),
   preferredBranchId: z.string().uuid().optional(),
   dentalHistorySummary: z.string().optional()
+});
+
+export const CreatePerioChartRequestSchema = z.object({
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  notes: z.string().optional()
 });
 
 export const HealthcareCoreIdentifierSchema = z.object({
@@ -16592,6 +16609,49 @@ export const PaymentResponseSchema = z.object({
 
 export const PaymentStatusSchema = z.enum(["pending", "requires_capture", "processing", "succeeded", "failed", "canceled"]);
 
+export const PerioToothReadingSchema = z.object({
+  id: UUIDSchema,
+  chartId: UUIDSchema,
+  toothNumber: z.number().int(),
+  depthBM: z.number().int().optional(),
+  depthBC: z.number().int().optional(),
+  depthBD: z.number().int().optional(),
+  depthLM: z.number().int().optional(),
+  depthLC: z.number().int().optional(),
+  depthLD: z.number().int().optional(),
+  bopBM: z.boolean().optional(),
+  bopBC: z.boolean().optional(),
+  bopBD: z.boolean().optional(),
+  bopLM: z.boolean().optional(),
+  bopLC: z.boolean().optional(),
+  bopLD: z.boolean().optional(),
+  recession: z.number().int().optional(),
+  mobility: z.number().int(),
+  furcation: z.number().int(),
+  plaque: z.boolean(),
+  suppuration: z.boolean(),
+  notes: z.string().optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const PerioChartSchema = z.object({
+  id: UUIDSchema,
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  branchId: UUIDSchema,
+  examinerMemberId: UUIDSchema,
+  status: PerioChartStatusSchema,
+  notes: z.string().optional(),
+  completedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  summaryBopPercent: z.number().optional(),
+  summaryMeanDepth: z.number().optional(),
+  summaryDeepPocketCount: z.number().int().optional(),
+  readings: z.array(PerioToothReadingSchema),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const PersonCreateRequestSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50).optional(),
@@ -17190,6 +17250,27 @@ export const UpdateTreatmentTemplateRequestSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   treatments: z.string().optional()
+});
+
+export const UpsertToothReadingRequestSchema = z.object({
+  depthBM: z.number().int().optional(),
+  depthBC: z.number().int().optional(),
+  depthBD: z.number().int().optional(),
+  depthLM: z.number().int().optional(),
+  depthLC: z.number().int().optional(),
+  depthLD: z.number().int().optional(),
+  bopBM: z.boolean().optional(),
+  bopBC: z.boolean().optional(),
+  bopBD: z.boolean().optional(),
+  bopLM: z.boolean().optional(),
+  bopLC: z.boolean().optional(),
+  bopLD: z.boolean().optional(),
+  recession: z.number().int().optional(),
+  mobility: z.number().int().optional(),
+  furcation: z.number().int().optional(),
+  plaque: z.boolean().optional(),
+  suppuration: z.boolean().optional(),
+  notes: z.string().optional()
 });
 
 export const UpsertVisitNotesRequestSchema = z.object({
@@ -18652,6 +18733,36 @@ export const ListPatientVisitsResponse = z.object({
 })
 });
 
+export const CreatePerioChartBody = CreatePerioChartRequestSchema;
+export type CreatePerioChartBody = z.infer<typeof CreatePerioChartBody>;
+
+export const CreatePerioChartResponse = PerioChartSchema;
+
+export const GetPerioChartParams = z.object({
+  chartId: UUIDSchema,
+});
+export type GetPerioChartParams = z.infer<typeof GetPerioChartParams>;
+
+export const GetPerioChartResponse = PerioChartSchema;
+
+export const CompletePerioChartParams = z.object({
+  chartId: UUIDSchema,
+});
+export type CompletePerioChartParams = z.infer<typeof CompletePerioChartParams>;
+
+export const CompletePerioChartResponse = CompletePerioChartResponseSchema;
+
+export const UpsertToothReadingParams = z.object({
+  chartId: UUIDSchema,
+  toothNumber: z.coerce.number().int(),
+});
+export type UpsertToothReadingParams = z.infer<typeof UpsertToothReadingParams>;
+
+export const UpsertToothReadingBody = UpsertToothReadingRequestSchema;
+export type UpsertToothReadingBody = z.infer<typeof UpsertToothReadingBody>;
+
+export const UpsertToothReadingResponse = PerioToothReadingSchema;
+
 export const ImportPMDBody = ImportPMDRequestSchema;
 export type ImportPMDBody = z.infer<typeof ImportPMDBody>;
 
@@ -19030,6 +19141,13 @@ export const SignVisitNotesBody = SignVisitNotesRequestSchema;
 export type SignVisitNotesBody = z.infer<typeof SignVisitNotesBody>;
 
 export const SignVisitNotesResponse = VisitNotesSchema;
+
+export const GetVisitPerioChartParams = z.object({
+  visitId: UUIDSchema,
+});
+export type GetVisitPerioChartParams = z.infer<typeof GetVisitPerioChartParams>;
+
+export const GetVisitPerioChartResponse = PerioChartSchema;
 
 export const GeneratePMDParams = z.object({
   visitId: UUIDSchema,

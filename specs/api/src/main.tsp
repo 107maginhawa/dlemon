@@ -31,6 +31,7 @@ import "./modules/dental-pmd.tsp";
 import "./modules/dental-scheduling.tsp";
 import "./modules/dental-billing.tsp";
 import "./modules/dental-imaging.tsp";
+import "./modules/dental-perio.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -300,6 +301,9 @@ using TypeSpec.OpenAPI;
 @tagMetadata("Dental:Imaging", #{
   description: "Dental imaging workspace. Manages imaging studies (periapical, bitewing, panoramic, cephalometric, intraoral/extraoral photos), presigned upload URLs, and patient image listing with union adapter bridging new imaging studies and legacy dental attachments."
 })
+@tagMetadata("Dental:Perio", #{
+  description: "Periodontal charting. Per-visit full perio chart with 6-site probing depths (FDI notation), bleeding on probing, recession, mobility, and furcation. One chart per visit; immutable after visit locked. Summary statistics (BOP%, mean depth, deep-pocket count) computed on completion."
+})
 namespace MonobaseAPI {
 
   // ========================================================================
@@ -428,6 +432,14 @@ namespace MonobaseAPI {
 
   @tag("Dental:Imaging")
   interface CephMgmt extends DentalImagingModule.CephManagement {}
+
+  @tag("Dental:Perio")
+  @route("/dental/perio-charts")
+  interface PerioChartMgmt extends DentalPerioModule.PerioChartManagement {}
+
+  @tag("Dental:Perio")
+  @route("/dental/visits")
+  interface VisitPerioMgmt extends DentalPerioModule.VisitPerioChart {}
 
   @tag("Dental:Billing")
   @route("/dental/billing")
