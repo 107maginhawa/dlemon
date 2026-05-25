@@ -79,12 +79,12 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 **Rules**: BR-021 (requires completed visit), BR-022 (import creates records)
 
 ### M9: dental-emr
-**Responsibility**: SOAP-style telemedicine/walk-in consultation notes (EMR separate from dental visit workflow).
-**Handler**: `services/api-ts/src/handlers/emr/`
-**Key tables**: [VERIFY — emr.repo.ts]
-**PRD Section**: [INFERRED — not prominently in v3 PRD; may be Phase 2]
-**Dependencies**: `dental-org`, `patient`
-**Note**: Separate from `dental-visit` note system. Overlap risk with dental-visit SOAP notes.
+**Responsibility**: External EMR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR). Stores imported records read-only for clinical reference.
+**Handler**: No handler directory — future phase (Phase 3+). Do not implement until scheduled.
+**Key tables**: `emr_record` (planned)
+**PRD Section**: Phase 3+ (not in current roadmap)
+**Dependencies**: `dental-org`, `dental-patient`
+**Note**: NOT an alias for dental-visit. The active EMR for native visit/chart/treatment records is `dental-visit`. This module handles external practice data portability only.
 
 ### M10: dental-audit (dental-org module)
 **Responsibility**: Dental-specific audit trail and compliance event log.

@@ -85,7 +85,7 @@ async function parseBRs(): Promise<BRRecord[]> {
   const records: BRRecord[] = [];
 
   // Also read imaging module spec for BR-023+
-  const imagingPath = join(ROOT, "docs/modules/dental-imaging/MODULE_SPEC.md");
+  const imagingPath = join(ROOT, "docs/product/modules/dental-imaging/MODULE_SPEC.md");
   const imagingText = await readText(imagingPath);
   const combined = text + "\n" + imagingText;
 

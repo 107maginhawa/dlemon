@@ -30,6 +30,21 @@ export const PERSON_CARLOS_ID = 'd0000000-0000-1000-8000-000000000003'; // Carlo
 export const PERSON_LIZA_ID   = 'd0000000-0000-1000-8000-000000000004'; // Liza Manalang
 export const PERSON_BEN_ID    = 'd0000000-0000-1000-8000-000000000005'; // Ben Aquino
 export const PERSON_SOFIA_ID  = 'd0000000-0000-1000-8000-000000000006'; // Sofia Dela Cruz (minor)
+// Extended patients (scenarios 7-20)
+export const PERSON_PEPE_ID   = 'd0000000-0000-1000-8000-000000000007'; // Pepe Cruz (allergy: penicillin)
+export const PERSON_MIA_ID    = 'd0000000-0000-1000-8000-000000000008'; // Mia Santos (ortho case)
+export const PERSON_RICO_ID   = 'd0000000-0000-1000-8000-000000000009'; // Rico dela Torre (new patient)
+export const PERSON_ABBY_ID   = 'd0000000-0000-1000-8000-00000000000a'; // Abby Tan (recall overdue)
+export const PERSON_MARCO_ID  = 'd0000000-0000-1000-8000-00000000000b'; // Marco Lopez (geriatric 70+)
+export const PERSON_CELIA_ID  = 'd0000000-0000-1000-8000-00000000000c'; // Celia Ramos (insurance)
+export const PERSON_NENA_ID   = 'd0000000-0000-1000-8000-00000000000d'; // Nena Garcia (special medical notes)
+export const PERSON_LUKE_ID   = 'd0000000-0000-1000-8000-00000000000e'; // Luke Rivera (pediatric, 8y)
+export const PERSON_ED_ID     = 'd0000000-0000-1000-8000-00000000000f'; // Ed Torres (ongoing Rx)
+export const PERSON_TINA_ID   = 'd0000000-0000-1000-8000-000000000010'; // Tina Bautista (extensive history)
+export const PERSON_PHIL_ID   = 'd0000000-0000-1000-8000-000000000011'; // Phil Fernan (offline-created sync)
+export const PERSON_CINDY_ID  = 'd0000000-0000-1000-8000-000000000012'; // Cindy Ocampo (complex medical hx)
+export const PERSON_JEROME_ID = 'd0000000-0000-1000-8000-000000000013'; // Jerome Medrano (inactive)
+export const PERSON_GINA_ID   = 'd0000000-0000-1000-8000-000000000014'; // Gina Villanueva (payment plan)
 
 // ── Patient record IDs (d1) ─────────────────────────────────────────
 export const PATIENT_JUAN_ID   = 'd1000000-0000-1000-8000-000000000001';
@@ -38,9 +53,25 @@ export const PATIENT_CARLOS_ID = 'd1000000-0000-1000-8000-000000000003';
 export const PATIENT_LIZA_ID   = 'd1000000-0000-1000-8000-000000000004';
 export const PATIENT_BEN_ID    = 'd1000000-0000-1000-8000-000000000005';
 export const PATIENT_SOFIA_ID  = 'd1000000-0000-1000-8000-000000000006';
+// Extended patients (scenarios 7-20)
+export const PATIENT_PEPE_ID   = 'd1000000-0000-1000-8000-000000000007';
+export const PATIENT_MIA_ID    = 'd1000000-0000-1000-8000-000000000008';
+export const PATIENT_RICO_ID   = 'd1000000-0000-1000-8000-000000000009';
+export const PATIENT_ABBY_ID   = 'd1000000-0000-1000-8000-00000000000a';
+export const PATIENT_MARCO_ID  = 'd1000000-0000-1000-8000-00000000000b';
+export const PATIENT_CELIA_ID  = 'd1000000-0000-1000-8000-00000000000c';
+export const PATIENT_NENA_ID   = 'd1000000-0000-1000-8000-00000000000d';
+export const PATIENT_LUKE_ID   = 'd1000000-0000-1000-8000-00000000000e';
+export const PATIENT_ED_ID     = 'd1000000-0000-1000-8000-00000000000f';
+export const PATIENT_TINA_ID   = 'd1000000-0000-1000-8000-000000000010';
+export const PATIENT_PHIL_ID   = 'd1000000-0000-1000-8000-000000000011';
+export const PATIENT_CINDY_ID  = 'd1000000-0000-1000-8000-000000000012';
+export const PATIENT_JEROME_ID = 'd1000000-0000-1000-8000-000000000013';
+export const PATIENT_GINA_ID   = 'd1000000-0000-1000-8000-000000000014';
 
 // ── Patient contact IDs (d2) ────────────────────────────────────────
 export const CONTACT_SOFIA_GUARDIAN_ID = 'd2000000-0000-1000-8000-000000000001'; // Jose Dela Cruz (guardian)
+export const CONTACT_LUKE_GUARDIAN_ID  = 'd2000000-0000-1000-8000-000000000002'; // Alma Rivera (guardian of Luke)
 
 // Convenience map: person -> patient
 export const PERSON_TO_PATIENT: Record<string, string> = {
@@ -50,6 +81,20 @@ export const PERSON_TO_PATIENT: Record<string, string> = {
   [PERSON_LIZA_ID]:   PATIENT_LIZA_ID,
   [PERSON_BEN_ID]:    PATIENT_BEN_ID,
   [PERSON_SOFIA_ID]:  PATIENT_SOFIA_ID,
+  [PERSON_PEPE_ID]:   PATIENT_PEPE_ID,
+  [PERSON_MIA_ID]:    PATIENT_MIA_ID,
+  [PERSON_RICO_ID]:   PATIENT_RICO_ID,
+  [PERSON_ABBY_ID]:   PATIENT_ABBY_ID,
+  [PERSON_MARCO_ID]:  PATIENT_MARCO_ID,
+  [PERSON_CELIA_ID]:  PATIENT_CELIA_ID,
+  [PERSON_NENA_ID]:   PATIENT_NENA_ID,
+  [PERSON_LUKE_ID]:   PATIENT_LUKE_ID,
+  [PERSON_ED_ID]:     PATIENT_ED_ID,
+  [PERSON_TINA_ID]:   PATIENT_TINA_ID,
+  [PERSON_PHIL_ID]:   PATIENT_PHIL_ID,
+  [PERSON_CINDY_ID]:  PATIENT_CINDY_ID,
+  [PERSON_JEROME_ID]: PATIENT_JEROME_ID,
+  [PERSON_GINA_ID]:   PATIENT_GINA_ID,
 };
 
 // ── Visits (e0) ─────────────────────────────────────────────────────
