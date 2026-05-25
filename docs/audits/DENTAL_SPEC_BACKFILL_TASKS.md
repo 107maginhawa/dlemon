@@ -194,6 +194,59 @@ dental-perio has a MODULE_SPEC and API_CONTRACTS but its test coverage is weak. 
 
 ---
 
+---
+
+## SBT-009 — Create dental-ceph MODULE_SPEC
+
+**Gap ref:** GAP-DENTAL-019  
+**Priority:** P2  
+**Artifact type:** New module spec  
+
+**Description:**  
+After TASK-DENTAL-P2-008 (move CephMgmt handlers to dental-ceph/), create a full MODULE_SPEC for the new dental-ceph module.
+
+**Task:**  
+1. Create `docs/product/modules/dental-ceph/MODULE_SPEC.md`
+2. Move WF-030 (Run Ceph Analysis) and WF-031 (Place/Adjust Ceph Landmarks) from dental-imaging MODULE_SPEC into dental-ceph MODULE_SPEC
+3. Set: module ID = dental-ceph, domain = Clinical Imaging (advanced), depends on = dental-imaging, dental-org
+4. Document: CBCT tier requirement (imagingTier = cbct), landmark FSM, ceph analysis FSM
+5. Update dental-imaging MODULE_SPEC §3 Workflows: remove WF-030 and WF-031; add "see dental-ceph for cephalometric analysis"
+
+---
+
+## SBT-010 — Scope dental-emr as external EMR integration (future phase)
+
+**Gap ref:** GAP-DENTAL-020  
+**Priority:** P2  
+**Artifact type:** Module spec update  
+
+**Description:**  
+dental-emr MODULE_SPEC has INFERRED-only workflows. It must be updated to declare its concrete purpose (external EMR bridge) and implementation status (future phase).
+
+**Task:**  
+1. Update `docs/product/modules/dental-emr/MODULE_SPEC.md` §1 Overview: purpose = "External EMR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft). Not an alias for dental-visit."
+2. Add header field `implementation_status: future_phase` (Phase 3+)
+3. Replace INFERRED workflows with concrete stub workflows: import-patient-record, import-treatment-history
+4. Update `docs/product/MODULE_MAP.md` entry for dental-emr with note pointing to dental-visit as the active EMR
+
+---
+
+## SBT-011 — Add dental-pmd §7.1 Data Scope and §7.2 Import Contract
+
+**Gap ref:** GAP-DENTAL-023  
+**Priority:** P2  
+**Artifact type:** Module spec update  
+
+**Description:**  
+generatePMD aggregates data from 5+ modules. The spec must document what data is included, from which modules, and what the import-side FK isolation contract is.
+
+**Task:**  
+1. Read `handlers/dental-pmd/generatePMD.ts` to extract actual data scope
+2. Add §7.1 Data Scope Table to `docs/product/modules/dental-pmd/MODULE_SPEC.md`: columns = Source Module | Fields Included | Rationale
+3. Add §7.2 Import Contract: define that importedPMD rows use UUID refs only; no FK joins to local dental tables; no PATCH/PUT/DELETE on imported rows; read-only after import
+
+---
+
 ## Summary
 
 | SBT ID | Artifact | Priority | Type | Effort |
@@ -206,3 +259,6 @@ dental-perio has a MODULE_SPEC and API_CONTRACTS but its test coverage is weak. 
 | SBT-006 | dental-emr concrete MODULE_SPEC | P2 | Update | Small |
 | SBT-007 | PRD_AUDIT_REPORT.md | P3 | Create | Small |
 | SBT-008 | dental-perio spec-to-test alignment | P3 | Update | Small |
+| SBT-009 | dental-ceph MODULE_SPEC (new module) | P2 | Create | Small |
+| SBT-010 | dental-emr scoped as future phase | P2 | Update | Small |
+| SBT-011 | dental-pmd §7.1 data scope + §7.2 import contract | P2 | Update | Small |

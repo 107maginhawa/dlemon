@@ -257,6 +257,133 @@ Constraints:
 
 ---
 
+## PROMPT-008 — Split dental-imaging: Move CephMgmt Handlers to dental-ceph
+
+```
+Context: Dentalemon dental management system (services/api-ts, Bun + Hono + Drizzle ORM).
+
+Background: `services/api-ts/src/handlers/dental-imaging/` contains two distinct clinical sub-domains:
+1. Basic imaging: ImagingMgmt_*.ts, ImagingFindingsMgmt_*.ts, PatientImageMgmt_*.ts (bitewings, panoramics, measurements, findings)
+2. Cephalometric analysis: CephMgmt_*.ts (landmark placement, analysis computation, reports — CBCT-gated)
+
+These already have separate naming conventions and FSM test files. They belong in separate handler directories.
+
+Task: Move all CephMgmt_*.ts files and their tests to a new `handlers/dental-ceph/` directory.
+
+Files to MOVE (do not change logic):
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_batchUpsertCephLandmarks.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_createCephReport.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_deleteCephLandmark.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephAnalysis.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephReport.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_listCephLandmarks.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_recomputeCephAnalysis.ts
+- services/api-ts/src/handlers/dental-imaging/CephMgmt_updateCephLandmark.ts
+- services/api-ts/src/handlers/dental-imaging/ceph.test.ts
+- services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts
+
+Steps:
+1. `mkdir services/api-ts/src/handlers/dental-ceph`
+2. Move each file above: update relative import paths within each file
+3. If ceph handlers import from dental-imaging repos, keep the repo in dental-imaging and import cross-module, OR move ceph-specific schema/repo to dental-ceph/repos/
+4. Update `services/api-ts/src/app.ts`: change all `from '@/handlers/dental-imaging/CephMgmt_*'` imports to `from '@/handlers/dental-ceph/CephMgmt_*'`
+5. Run `bun test` — all 100% green (no logic changes, only file moves)
+6. Create stub `docs/product/modules/dental-ceph/MODULE_SPEC.md` with: module ID dental-ceph, depends on dental-imaging, WF-030 and WF-031 moved from dental-imaging spec
+
+Constraints:
+- Zero logic changes — this is a pure refactor
+- All existing ceph E2E specs (imaging-ceph.spec.ts, etc.) must still pass
+- dental-imaging module retains ImagingMgmt_*, ImagingFindingsMgmt_*, PatientImageMgmt_* handlers
+```
+
+---
+
+## PROMPT-009 — Eliminate G-003: VisitService Interface for dental-clinical
+
+```
+Context: Dentalemon dental management system (services/api-ts).
+
+Background: `dental-clinical` handlers directly import from `dental-visit` repos, violating bounded context isolation. dental-clinical MODULE_SPEC §1 explicitly flags this as "KNOWN COUPLING RISK (G-003)."
+
+Task: Introduce a VisitService interface so dental-clinical depends on an abstraction, not dental-visit internals.
+
+Step 1 — Create the interface in dental-visit:
+File: `services/api-ts/src/handlers/dental-visit/visit.service.ts`
+
+```ts
+export interface IVisitService {
+  getVisitStatus(visitId: string): Promise<'draft' | 'active' | 'completed' | 'locked'>;
+  assertVisitNotCompleted(visitId: string): Promise<void>; // throws 422 if completed/locked
+}
+
+export class VisitService implements IVisitService {
+  constructor(private repo: VisitRepository) {}
+
+  async getVisitStatus(visitId: string) {
+    const visit = await this.repo.findById(visitId);
+    if (!visit) throw new NotFoundError('visit', visitId);
+    return visit.status;
+  }
+
+  async assertVisitNotCompleted(visitId: string) {
+    const status = await this.getVisitStatus(visitId);
+    if (status === 'completed' || status === 'locked') {
+      throw new UnprocessableError('VISIT_IMMUTABLE', 'Visit is completed or locked');
+    }
+  }
+}
+
+export const visitService = new VisitService(visitRepository);
+```
+
+Step 2 — Find all dental-clinical files importing from dental-visit repos:
+`grep -r "dental-visit/repos" services/api-ts/src/handlers/dental-clinical/`
+
+Step 3 — Replace those imports with the IVisitService interface.
+
+Step 4 — Run `bun test handlers/dental-clinical` — all pass.
+
+Step 5 — Verify: `grep -r "dental-visit/repos" services/api-ts/src/handlers/dental-clinical/` returns empty.
+
+Constraints:
+- Do not change any response shapes or business logic
+- VisitService.assertVisitNotCompleted must throw the same error code as the current inline check
+- Existing dental-clinical tests must pass without modification
+```
+
+---
+
+## PROMPT-010 — Create dental-audit Handler Directory
+
+```
+Context: Dentalemon dental management system (services/api-ts).
+
+Background: `docs/product/modules/dental-audit/MODULE_SPEC.md` exists but `services/api-ts/src/handlers/dental-audit/` does not. The `getAuditEvents.ts` handler is currently in `handlers/dental-org/`. It should live in dental-audit per the module spec.
+
+Task: Create dental-audit handler directory and move getAuditEvents into it.
+
+Steps:
+1. `mkdir services/api-ts/src/handlers/dental-audit`
+
+2. Move `services/api-ts/src/handlers/dental-org/getAuditEvents.ts` to `services/api-ts/src/handlers/dental-audit/getAuditEvents.ts`
+   - No logic changes — only the file location changes
+
+3. Update `services/api-ts/src/app.ts`:
+   - Change: `import { getAuditEvents } from '@/handlers/dental-org/getAuditEvents'`
+   - To:     `import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents'`
+
+4. Run `bun test` — green
+
+5. Verify the audit endpoint still works:
+   - `curl -H "Authorization: Bearer $TOKEN" http://localhost:7213/dental/admin/audit` → 200
+
+Constraints:
+- Zero logic changes
+- dental-org module must not export getAuditEvents after this change
+```
+
+---
+
 ## PROMPT-007 — Wire Pediatric Dentition
 
 ```

@@ -395,12 +395,216 @@ Fix the TypeSpec definition to correctly type the path params (as string/UUID), 
 
 ---
 
+---
+
+## GAP-DENTAL-019
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-019 |
+| **Title** | dental-imaging module is too broad — ceph analysis is a distinct subdomain |
+| **Severity** | P2 — Architecture |
+| **Area** | dental-imaging / module boundary |
+| **Type** | Module boundary (SPLIT) |
+| **Status** | OPEN |
+
+**Evidence:**
+- `services/api-ts/src/handlers/dental-imaging/` contains two clearly separated naming groups: `CephMgmt_*.ts` (10 files: batch upsert landmarks, create/get/list ceph reports, delete landmark, get ceph analysis, recompute) and `ImagingMgmt_*.ts` + `ImagingFindingsMgmt_*.ts` (basic imaging).
+- dental-imaging MODULE_SPEC §5: ceph analysis is gated by `imagingTier = cbct` — different clinical workflow, different training requirement, different regulatory context.
+- FSM tests are split: `ceph-landmark.fsm.property.test.ts` vs `imaging-finding.fsm.property.test.ts`.
+
+**Impact:**
+Developers adding basic imaging features wade through ceph landmark/analysis code. Ceph-specific bugs (landmark math, analysis recompute) are tested in the same test file as bitewing uploads. The module is already architecturally diverging in its naming.
+
+**Recommended Fix:**
+Create `handlers/dental-ceph/` and move all `CephMgmt_*.ts` handlers + `ceph.test.ts` + `ceph-landmark.fsm.property.test.ts` there. Update router registration in app.ts. Create `docs/product/modules/dental-ceph/MODULE_SPEC.md` (split from dental-imaging §4 WF-030/WF-031).
+
+---
+
+## GAP-DENTAL-020
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-020 |
+| **Title** | dental-emr spec is a zombie — no implementation, purpose ambiguous, conflicts with dental-visit |
+| **Severity** | P2 — Architecture Clarity |
+| **Area** | dental-emr / module boundary |
+| **Type** | Module boundary (RENAME + FUTURE_PHASE) |
+| **Status** | OPEN |
+
+**Evidence:**
+- `services/api-ts/src/handlers/dental-emr/` does NOT exist.
+- `docs/product/modules/dental-emr/MODULE_SPEC.md` exists with INFERRED-only workflows, no concrete endpoints.
+- `dental-visit` IS the dental EMR in practice — it manages visit lifecycle, charting, treatments, SOAP notes.
+- Base `handlers/emr/` also exists as a separate non-dental handler directory, deepening the confusion.
+- GAP-DENTAL-010 (prior run) already flagged boundary ambiguity.
+
+**Impact:**
+Three things called "EMR": `dental-emr` spec (zombie), `dental-visit` (actual implementation), `emr` (base module). Developers cannot determine which is authoritative.
+
+**Recommended Fix:**
+1. Rename `docs/product/modules/dental-emr/` to `dental-emr-integration`.
+2. Update MODULE_SPEC: scope = "external EMR data import from third-party systems (e.g. Open Dental, Dentrix)"; `implementation_status: future_phase`.
+3. Add comment in MODULE_MAP.md: "dental-visit is the active dental EMR; dental-emr-integration is deferred external EMR bridge."
+
+---
+
+## GAP-DENTAL-021
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-021 |
+| **Title** | dental-clinical directly imports VisitRepository from dental-visit (G-003 bounded-context violation) |
+| **Severity** | P2 — Architecture |
+| **Area** | dental-clinical / dental-visit |
+| **Type** | Module coupling |
+| **Status** | OPEN |
+
+**Evidence:**
+- `docs/product/modules/dental-clinical/MODULE_SPEC.md §1`: explicit flag: "KNOWN COUPLING RISK (G-003): Imports `VisitRepository` directly from dental-visit — must be refactored to service interface in Wave G1."
+- This means dental-clinical tests depend on dental-visit's internal database schema and repo signature.
+
+**Impact:**
+Changes to dental-visit's VisitRepository (field renames, query signature changes) silently break dental-clinical. The coupling makes the two modules co-deployable only — bounded contexts are not isolated.
+
+**Recommended Fix:**
+1. Define a `VisitService` interface in `dental-visit/` exposing only what dental-clinical needs (e.g., `getVisitStatus(visitId): VisitStatus`, `assertVisitOpen(visitId): void`).
+2. dental-clinical imports the interface, not the repo class.
+3. Verify: `grep -r "from.*dental-visit/repos"` in dental-clinical returns empty.
+
+---
+
+## GAP-DENTAL-022
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-022 |
+| **Title** | dental-audit MODULE_SPEC has no handler directory — getAuditEvents lives in dental-org |
+| **Severity** | P2 — Architecture Confusion |
+| **Area** | dental-audit / dental-org |
+| **Type** | Module boundary (MERGE) |
+| **Status** | OPEN |
+
+**Evidence:**
+- `services/api-ts/src/handlers/dental-audit/` does NOT exist in the handler directory listing.
+- `app.ts` imports `getAuditEvents` from `@/handlers/dental-org/getAuditEvents`.
+- `docs/product/modules/dental-audit/MODULE_SPEC.md` exists describing audit log read surface.
+- Base `handlers/audit/` has `listAuditLogs.ts` covering the platform-level audit stream.
+
+**Impact:**
+dental-audit has a spec and no code. dental-org owns audit query logic that should belong elsewhere. The audit endpoint (`GET /dental/admin/audit`) is routed via dental-org, making dental-org responsible for cross-cutting concerns it shouldn't own.
+
+**Recommended Fix:**
+Create `handlers/dental-audit/` with `getAuditEvents.ts` moved from dental-org. Update router import in app.ts. dental-audit MODULE_SPEC becomes the implementation spec for this handler.
+
+---
+
+## GAP-DENTAL-023
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-023 |
+| **Title** | dental-pmd data scope undocumented — generatePMD aggregation contract is unknown |
+| **Severity** | P2 — Spec Clarity |
+| **Area** | dental-pmd |
+| **Type** | Missing spec (EXPAND) |
+| **Status** | OPEN |
+
+**Evidence:**
+- `docs/product/modules/dental-pmd/MODULE_SPEC.md §7 Data Requirements` is thin — lists PMD document fields but not what generatePMD aggregates from other modules.
+- `handlers/dental-pmd/generatePMD.ts` exists but its source data scope cannot be determined from the spec alone.
+- MODULE_SPEC §20 AI Instructions: "PMD generation must be atomic — either full snapshot or fail" — correct pattern, but no list of what fields are snapshotted.
+- Import side (`importPMD`, `listImportedPMDs`) is a separate concern (external portability ingestion) with no documented FK isolation contract beyond "no DB FKs."
+
+**Impact:**
+New developers cannot safely modify the PMD generation logic without understanding which module fields are included. Two concerns (generate vs import) are combined without explicit interface documentation.
+
+**Recommended Fix:**
+Add §7.1 Data Scope table to MODULE_SPEC listing each field generatePMD reads, its source module, and its inclusion rationale. Add §7.2 Import Contract: define that importedPMD rows are foreign-origin read-only records with UUID references only, never joined to local tables.
+
+---
+
+## GAP-DENTAL-024
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-024 |
+| **Title** | `docs/modules/` is a stale duplicate of `docs/product/modules/` missing dental-perio |
+| **Severity** | P2 — Developer Confusion |
+| **Area** | docs / module specs |
+| **Type** | Documentation duplication (SIMPLIFY) |
+| **Status** | OPEN |
+
+**Evidence:**
+- `find docs/modules -name MODULE_SPEC.md` returns 10 files (dental-audit, dental-billing, dental-clinical, dental-emr, dental-imaging, dental-org, dental-patient, dental-pmd, dental-scheduling, dental-visit).
+- `find docs/product/modules -name MODULE_SPEC.md` returns 11 files (all of the above + dental-perio).
+- `docs/modules/` is missing dental-perio — the most recently added module spec.
+- Both directories contain MODULE_SPEC.md files; it is unclear which is canonical.
+
+**Impact:**
+Developers may read the `docs/modules/` copy and miss dental-perio. If MODULE_SPEC updates are made in both directories independently, the two drift silently.
+
+**Recommended Fix:**
+Remove `docs/modules/` entirely (git rm -r). All module specs live at `docs/product/modules/`. Update any cross-references in ARCHITECTURE.md or CLAUDE.md that point to `docs/modules/`.
+
+---
+
+## GAP-DENTAL-025
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-025 |
+| **Title** | dental-visit treatment templates are visit-module code but org-level config domain (V2 split) |
+| **Severity** | P3 — Architecture (V2) |
+| **Area** | dental-visit / dental-org |
+| **Type** | Module boundary (MOVE_RESPONSIBILITY, V2) |
+| **Status** | OPEN — DEFERRED V2 |
+
+**Evidence:**
+- `handlers/dental-visit/` contains: `createTreatmentTemplate.ts`, `listTreatmentTemplates.ts`, `updateTreatmentTemplate.ts`, `deleteTreatmentTemplate.ts`, `treatmentTemplates.ts`.
+- Templates are branch-scoped, reusable across multiple visits, and are configuration entities — not visit-specific records.
+- The `applyTemplate.ts` handler in dental-visit correctly uses templates, but the template CRUD is co-located with visit CRUD.
+
+**Impact (V2):**
+When a clinic wants to share templates across branches or export template sets, the logic will need to move. Keeping templates in dental-visit prevents org-level template governance.
+
+**Recommended Fix (V2):**
+Move template CRUD handlers to dental-org (or a dedicated dental-config module). dental-visit's applyTemplate reads from org-scoped templates via dental-org service. Not a V1 blocker — do not refactor until template cross-branch sharing is a product requirement.
+
+---
+
+## GAP-DENTAL-026
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-026 |
+| **Title** | Base modules (emr, patient, provider) lack documented extension contracts with dental layer |
+| **Severity** | P3 — Developer Guidance (V2) |
+| **Area** | base modules / dental modules |
+| **Type** | Documentation gap (BACKLOG_REVIEW) |
+| **Status** | OPEN — DEFERRED V2 |
+
+**Evidence:**
+- `handlers/emr/`, `handlers/patient/`, `handlers/provider/` exist alongside dental-specific counterparts.
+- No document defines: does dental-patient extend base patient? Does dental-membership replace base provider? Is base emr used in the dental context?
+- ARCHITECTURE.md not deep-audited in this pass.
+
+**Impact (V2):**
+New team members may build on the wrong base. The dental layer may silently duplicate base module logic.
+
+**Recommended Fix (V2):**
+Create `docs/product/BASE_MODULE_CONTRACTS.md` with a table: base module → dental extension module → extension pattern (extends/replaces/uses/ignores).
+
+---
+
 ## Gap Status Summary
 
 | Severity | Count | Open | Fixed | Deferred |
 |---|:---:|:---:|:---:|:---:|
 | P0 | 0 | 0 | — | — |
-| P1 | 4 | 4 | 0 | 0 |
-| P2 | 8 | 8 | 0 | 0 |
-| P3 | 6 | 6 | 0 | 0 |
-| **Total** | **18** | **18** | **0** | **0** |
+| P1 | 4 | 0 | 4 | 0 |
+| P2 | 16 | 14 | 2 | 0 |
+| P3 | 8 | 6 | 0 | 2 |
+| **Total** | **28** | **20** | **6** | **2** |
+
+_P1: all 4 resolved 2026-05-25. P2: GAP-008 resolved 2026-05-25. GAP-019 through GAP-026 added in Pass 08._

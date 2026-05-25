@@ -270,3 +270,160 @@ G1 has only `G1-RESEARCH.md`. Without CONTEXT.md and PLAN.md, it is not possible
 **Gap:** GAP-DENTAL-018  
 **Title:** Add HMAC tamper-evidence to chart snapshots (future phase)  
 **Description:** Deferred per design doc. When dental_chart_version is implemented (P1-002), consider adding a server-side HMAC of the `teeth` JSON keyed to the visit and user ID, stored alongside the version row.
+
+---
+
+## Pass 08 Tasks — Module Improvement and Boundary (added 2026-05-25)
+
+### TASK-DENTAL-P2-008
+**Gap:** GAP-DENTAL-019  
+**Title:** Split dental-imaging → dental-imaging (basic) + dental-ceph (cephalometric)  
+**Module:** dental-imaging → dental-imaging + dental-ceph  
+**Files:**
+- `services/api-ts/src/handlers/dental-imaging/CephMgmt_*.ts` (10 files — move)
+- `services/api-ts/src/handlers/dental-ceph/` (new directory)
+- `services/api-ts/src/handlers/dental-imaging/ceph.test.ts` (move)
+- `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts` (move)
+- `services/api-ts/src/app.ts` (update router registration)
+- `docs/product/modules/dental-imaging/MODULE_SPEC.md` (remove WF-030, WF-031)
+- `docs/product/modules/dental-ceph/MODULE_SPEC.md` (new — from WF-030, WF-031)
+
+**Description:**  
+The 10 `CephMgmt_*.ts` handlers (landmark placement, ceph analysis, reports) are a distinct clinical subdomain from basic imaging. They already use a separate naming convention and have separate FSM property tests. Moving them creates a clean dental-ceph bounded context.
+
+**Steps:**
+1. Create `handlers/dental-ceph/` directory
+2. Move all `CephMgmt_*.ts` files (do not change handler logic)
+3. Move `ceph.test.ts` and `ceph-landmark.fsm.property.test.ts`
+4. Update all import paths in moved files
+5. Update `app.ts` router registration: import ceph handlers from new path
+6. Run `bun test` — all tests pass with zero logic changes
+7. Create `docs/product/modules/dental-ceph/MODULE_SPEC.md` (WF-030 + WF-031 from dental-imaging spec)
+8. Remove WF-030 and WF-031 sections from dental-imaging MODULE_SPEC
+
+**Verification:** `bun test` green; `services/api-ts/src/handlers/dental-ceph/` has 12 files; dental-imaging module has no CephMgmt references.
+
+---
+
+### TASK-DENTAL-P2-009
+**Gap:** GAP-DENTAL-020  
+**Title:** Rename dental-emr to dental-emr-integration and mark as FUTURE_PHASE  
+**Module:** dental-emr  
+**Files:**
+- `docs/product/modules/dental-emr/MODULE_SPEC.md` (update)
+- `docs/product/MODULE_MAP.md` (update entry)
+- `docs/modules/dental-emr/MODULE_SPEC.md` (update or remove after GAP-024 task)
+
+**Description:**  
+The dental-emr spec has INFERRED-only workflows and zero implementation. dental-visit IS the active dental EMR. The spec needs to be scoped as the future external EMR integration bridge (Open Dental, Dentrix data import) to eliminate naming ambiguity.
+
+**Steps:**
+1. In `dental-emr/MODULE_SPEC.md`: update §1 purpose to "External EMR data import/bridge from third-party dental practice management systems (e.g. Open Dental, Dentrix, Eaglesoft). Not an alias for dental-visit."; add `implementation_status: future_phase` to module header; add concrete workflows: import-patient-from-external-emr, import-treatment-history-from-external-emr
+2. In `MODULE_MAP.md`: add note "dental-visit = active dental EMR; dental-emr-integration = future external EMR bridge (Phase 3+)"
+3. Do NOT rename the directory yet — wait for V2 planning to avoid breaking existing references
+
+**Verification:** MODULE_SPEC §1 updated; MODULE_MAP.md entry updated; `docs/product/modules/dental-emr/MODULE_SPEC.md` header shows `implementation_status: future_phase`.
+
+---
+
+### TASK-DENTAL-P2-010
+**Gap:** GAP-DENTAL-021  
+**Title:** Eliminate G-003: replace direct VisitRepository import in dental-clinical with service interface  
+**Module:** dental-clinical / dental-visit  
+**Files:**
+- `services/api-ts/src/handlers/dental-visit/visit.service.ts` (new — extract interface)
+- `services/api-ts/src/handlers/dental-clinical/*.ts` (update imports)
+
+**Description:**  
+dental-clinical directly imports `VisitRepository` from dental-visit, violating bounded context isolation. A thin `VisitService` interface must be interposed.
+
+**Steps:**
+1. In dental-visit: create `visit.service.ts` exporting interface `IVisitService` with methods needed by dental-clinical (at minimum: `getVisitStatus(visitId: string): Promise<VisitStatus>`, `assertVisitNotCompleted(visitId: string): Promise<void>`)
+2. Implement `VisitService` class in dental-visit wrapping the repo
+3. In dental-clinical: replace all `from '../../dental-visit/repos/...'` imports with `from '../../dental-visit/visit.service'`
+4. Run `bun test handlers/dental-clinical` — all pass
+5. Verify: `grep -r "dental-visit/repos" services/api-ts/src/handlers/dental-clinical/` returns empty
+
+**Verification:** No direct repo imports in dental-clinical; all existing dental-clinical tests pass.
+
+---
+
+### TASK-DENTAL-P2-011
+**Gap:** GAP-DENTAL-022  
+**Title:** Create dental-audit handler directory; move getAuditEvents from dental-org  
+**Module:** dental-audit / dental-org  
+**Files:**
+- `services/api-ts/src/handlers/dental-audit/getAuditEvents.ts` (move from dental-org)
+- `services/api-ts/src/handlers/dental-org/getAuditEvents.ts` (delete)
+- `services/api-ts/src/app.ts` (update import path)
+
+**Description:**  
+`getAuditEvents.ts` is in dental-org handlers but belongs in dental-audit per MODULE_SPEC. Moving it gives dental-audit a concrete implementation footprint and removes a cross-cutting responsibility from dental-org.
+
+**Steps:**
+1. Create `handlers/dental-audit/` directory
+2. Move `getAuditEvents.ts` from dental-org to dental-audit (no logic changes)
+3. Update `app.ts`: change `from '@/handlers/dental-org/getAuditEvents'` to `from '@/handlers/dental-audit/getAuditEvents'`
+4. Delete old file from dental-org
+5. Run `bun test` — green
+
+**Verification:** `services/api-ts/src/handlers/dental-audit/getAuditEvents.ts` exists; `handlers/dental-org/getAuditEvents.ts` absent; audit endpoint still responds 200.
+
+---
+
+### TASK-DENTAL-P2-012
+**Gap:** GAP-DENTAL-023  
+**Title:** Document dental-pmd data scope — add §7.1 and §7.2 to MODULE_SPEC  
+**Module:** dental-pmd  
+**Files:**
+- `docs/product/modules/dental-pmd/MODULE_SPEC.md` (update)
+
+**Description:**  
+`generatePMD` aggregates data from multiple modules but the spec does not document which fields it pulls, from which modules, and in what format. This is a spec gap that blocks safe evolution of the PMD generation logic.
+
+**Steps:**
+1. Read `handlers/dental-pmd/generatePMD.ts` to determine actual data scope
+2. In MODULE_SPEC §7, add:
+   - **§7.1 Data Scope Table**: one row per source module (dental-patient, dental-visit, dental-clinical, dental-billing, dental-perio, dental-imaging) with fields included and rationale
+   - **§7.2 Import Contract**: state that `imported_pmd` rows are read-only foreign-origin records; UUID references only; no JOIN to local dental tables; no PATCH/PUT/DELETE routes
+3. Add version field to PMD document schema noting the PMD format version
+
+**Verification:** MODULE_SPEC §7.1 and §7.2 present; §7.1 matches fields actually read in generatePMD.ts.
+
+---
+
+### TASK-DENTAL-P2-013
+**Gap:** GAP-DENTAL-024  
+**Title:** Remove stale `docs/modules/` directory — canonical specs are in `docs/product/modules/`  
+**Module:** docs  
+**Files:**
+- `docs/modules/` (delete entire directory)
+- `docs/architecture/ARCHITECTURE.md` (check for references to update)
+- `CLAUDE.md` (check for references to update)
+
+**Description:**  
+`docs/modules/` is a stale duplicate of `docs/product/modules/` that is missing dental-perio. Removing it eliminates version confusion.
+
+**Steps:**
+1. `git rm -r docs/modules/`
+2. Search for any references to `docs/modules/` in docs, CLAUDE.md, ARCHITECTURE.md: `grep -r "docs/modules" . --include="*.md"`
+3. Update any found references to point to `docs/product/modules/`
+4. Commit with message: "docs: remove stale docs/modules/ — canonical at docs/product/modules/"
+
+**Verification:** `ls docs/modules` fails; `find docs/product/modules -name MODULE_SPEC.md | wc -l` returns 11.
+
+---
+
+## P3 Tasks — Module Improvement (V2, added Pass 08)
+
+### TASK-DENTAL-P3-007
+**Gap:** GAP-DENTAL-025  
+**Title:** Move treatment templates from dental-visit to dental-org (V2)  
+**Module:** dental-visit → dental-org  
+**Description:** Treatment templates (createTreatmentTemplate, listTreatmentTemplates, updateTreatmentTemplate, deleteTreatmentTemplate, treatmentTemplates.ts) are branch-scoped configuration entities, not visit-specific records. Moving them to dental-org enables org-level template governance and cross-branch sharing. Not a V1 task — defer until template cross-branch sharing is a product requirement.
+
+### TASK-DENTAL-P3-008
+**Gap:** GAP-DENTAL-026  
+**Title:** Document base module extension contracts (V2)  
+**Module:** base modules documentation  
+**Description:** Create `docs/product/BASE_MODULE_CONTRACTS.md` with a table documenting the relationship between each base module (emr, patient, provider, billing, booking) and its dental-specific counterpart. Clarify: extends / replaces / uses / ignores. Prevents new developers from building on wrong foundation.

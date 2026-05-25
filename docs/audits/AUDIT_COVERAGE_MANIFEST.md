@@ -139,6 +139,7 @@
 | 05 TDD Confidence | COMPLETE | Backend per-module | dental-perio frontend | E2E run state unknown |
 | 06 UI/UX Carousel | COMPLETE | timeline-carousel, workspace, carousel gaps G1-G12 | billing UX, perio UX | accessibility deep-dive |
 | 07 Remediation Tasks | COMPLETE | All gaps assigned tasks | — | — |
+| 08 Module Improvement & Boundary Audit | COMPLETE | All 11 dental modules + 6 base modules + docs boundary | dental-clinical depth (5 sub-types not individually audited) | Non-dental base module internals |
 
 ---
 
@@ -151,3 +152,5 @@
 - Tests audited: 12 of ~90 test files sampled
 - Workflows audited: 13/14 (93%)
 - TDD proofs audited: 0 exist (process debt)
+- Module boundary analysis: 11/11 dental modules + 6 base modules evaluated (Pass 08, 2026-05-25)
+- New gaps registered (Pass 08): GAP-DENTAL-019 through GAP-DENTAL-026

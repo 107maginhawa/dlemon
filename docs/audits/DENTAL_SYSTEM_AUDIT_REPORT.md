@@ -406,3 +406,67 @@ Prior run: Run 001 (2026-05-25)
 Reuse Gap IDs: GAP-DENTAL-001 through GAP-DENTAL-018
 Focus: verify P1 gaps closed, update status in DENTAL_GAP_REGISTRY.md
 ```
+
+---
+
+## Module Improvement and Boundary Audit
+
+**Run:** 003 — 2026-05-25  
+**Prompt:** `docs/audits/03-dental-product-workflow-audit.md` (Module Architecture section)  
+**Guardrail:** `docs/audits/01-audit-enforcement-guardrails.md`  
+**Methodology:** Each module evaluated against 11 production-usefulness criteria. Every finding is backed by file-level evidence. No recommendation is issued for elegance alone.
+
+---
+
+### Module Improvement Matrix
+
+| Module | Current Role | Issue | Recommendation | Reason | Risk | Priority | V1/V2 |
+|---|---|---|---|---|---|---|---|
+| dental-org | Multi-tenancy root: orgs, branches, memberships, PIN auth, fee schedules, consent templates | `getAuditEvents` handler is co-located here but belongs to an audit context | KEEP + MOVE_RESPONSIBILITY | Remove audit routing from dental-org into dental-audit; fee schedule is correctly org-scoped | Low | P2 | V1 |
+| dental-patient | Patient registration, profile, medical history, safety floor aggregation | `docs/modules/dental-patient` (stale) vs `docs/product/modules/dental-patient` is a duplicate source | KEEP + SIMPLIFY | Module boundaries are correct; stale docs/ copy confuses devs | Low | P2 | V1 |
+| dental-scheduling | Dental appointment lifecycle (book → checked-in → no-show/cancelled) | No recurring appointment or waitlist support; these are P2 production gaps for real clinics | KEEP + BACKLOG_REVIEW | Core FSM correct; recurrence/waitlist is V2 scope | Low | P3 | V2 |
+| dental-visit | Core clinical workspace: visit lifecycle, treatments, dental chart, SOAP notes, dentition, carry-over, treatment templates | Too broad — treatment templates are org-level config, not visit-scoped; SOAP note versioning is correct but note signing + templates in same module adds width | KEEP (V1), SPLIT treatment templates to dental-org (V2) | Visit workspace paradigm is the right mental model for V1; template portability across branches is org-domain logic | Medium | P3 | V2 |
+| dental-perio | Per-visit periodontal charting (6-site probing, BOP, recession, mobility, furcation) | No handler-level tests until P2-001 (now resolved); historical comparison view and print layout not implemented | KEEP + EXPAND | Well-bounded context; correct separation from dental-visit; production usefulness requires comparison view for clinical value | Medium | P2 | V1 |
+| dental-clinical | Visit-scoped clinical documents: prescriptions, lab orders, consent forms, medical history, attachments, amendments | Mixes 5+ distinct document types; directly imports VisitRepository from dental-visit (G-003 coupling); acceptable for V1 but architectural risk | KEEP (V1), MOVE_RESPONSIBILITY for VisitRepository coupling | All document types share visit scope + immutability rule; splitting now is premature; coupling is known risk | Medium | P2 | V1 |
+| dental-billing | Dental invoicing, payment plans, payments, discounts, collections, receipts | No insurance/payer support; statement generation missing; these are real clinic gaps | KEEP + BACKLOG_REVIEW | Core billing FSM and payment plan FSM are strong; insurance is V2 | Low | P3 | V2 |
+| dental-imaging | Radiographic studies, images, measurements, findings, calibration + cephalometric analysis, landmarks, ceph reports | Mixes two distinct clinical sub-domains: basic imaging (bitewings, panoramics) and cephalometric analysis (CBCT, landmarks, analysis reports). CephMgmt_* handlers already use a separate naming convention from ImagingMgmt_* | SPLIT → `dental-imaging` (basic) + `dental-ceph` (cephalometric) | Ceph requires CBCT imaging tier, distinct clinical training, different workflow (landmark placement, analysis recompute), and separate FSM. Already architecturally diverging. Combining them in one module obscures each context | High | P2 | V1 |
+| dental-pmd | Patient medical document: generate snapshot, export PDF/JSON, import from external, list imported | Data scope of `generatePMD` is undocumented — unclear what fields it aggregates across modules; import side (read-only historical record) is a different concern than generate/export | KEEP + EXPAND spec | Good bounded context for portability; dual concerns (generate vs import) need explicit documentation; no DB FKs constraint is correct | Low | P2 | V1 |
+| dental-emr | Spec-only: "integrated EMR module" with INFERRED workflows; zero backend implementation | Zombie spec — no handler directory, no schema, INFERRED-only. `dental-visit` IS the dental EMR in practice. Spec causes naming confusion (GAP-DENTAL-010). | RENAME to `dental-emr-integration` and mark `FUTURE_PHASE` | If dental-emr means external EMR import, that is a distinct integration module (not a rename of dental-visit). The current spec conflates the two. Renaming + scoping removes ambiguity | High | P2 | V1 (spec only) |
+| dental-audit | Audit log read surface for dental context | `getAuditEvents` is in `dental-org` handlers, not `dental-audit`. Module spec exists, no dedicated handler directory. Spec and implementation are in different modules | MERGE — move `getAuditEvents` into dental-audit handler scope, or consolidate under base `audit` module | dental-audit and base `audit` overlap without clear differentiation. Base `audit` already has `listAuditLogs`. dental-audit should be the dental-specific query surface | Medium | P2 | V1 |
+| base `billing` | Stripe Connect merchant accounts, generic invoice FSM | Correctly separated from dental-billing (Stripe abstraction vs dental treatment billing) | KEEP | No changes needed | None | — | — |
+| base `booking` | Generic time-slot scheduling (slots, events, booking lifecycle) | Correctly separated from dental-scheduling (appointment paradigm vs slot paradigm) | KEEP | No changes needed | None | — | — |
+| base `emr` | Non-dental EMR handler directory exists | No audit performed on this module. In a dental-vertical codebase this creates naming confusion with dental-emr spec | BACKLOG_REVIEW | Determine if base emr is used by dental layer; if not, document or remove to reduce naming confusion | Low | P3 | V2 |
+| base `patient` | Non-dental patient handler | Exists alongside dental-patient without documented boundary | BACKLOG_REVIEW | Confirm dental-patient extends (not duplicates) base patient; document the extension contract | Low | P3 | V2 |
+| base `provider` | Non-dental provider/clinician base | Exists but unclear whether dental layer uses it or has its own staff concept via dental-membership | BACKLOG_REVIEW | Audit after base module boundary clarification | Low | P3 | V2 |
+| `shared` | assertBranchAccess, assertBranchRole utilities | These are dental-org domain logic, not true cross-cutting utilities | MOVE_RESPONSIBILITY | assertBranchAccess/assertBranchRole should export from dental-org service, not from shared/ — currently correct in practice but naming suggests wrong location | Low | P3 | V2 |
+| `docs/modules/` | Duplicate of `docs/product/modules/` | Missing dental-perio (present only in docs/product/modules/); stale copy creates version confusion | SIMPLIFY — remove `docs/modules/` | docs/product/modules/ is the canonical location per MODULE_MAP; docs/modules/ is a stale shadow | Low | P2 | V1 |
+
+---
+
+### Boundary Findings
+
+| Area | Current Boundary Problem | Recommended Boundary | Impact | Task |
+|---|---|---|---|---|
+| dental-imaging vs dental-ceph | CephMgmt_* and ImagingMgmt_* share a single handler directory despite different clinical domains, tier requirements, and FSMs | dental-imaging: studies, images, measurements, findings; dental-ceph: landmarks, analysis, ceph reports, recompute | Reduces cognitive load when adding new imaging features; prevents ceph-specific tests from bloating imaging coverage | GAP-DENTAL-019, TASK-DENTAL-P2-008 |
+| dental-emr vs dental-visit | dental-emr spec describes "integrated EMR" but dental-visit IS the EMR implementation. No handler directory for dental-emr. Spec creates false expectation | dental-visit = the active dental EMR; dental-emr-integration = future external EMR import module | Eliminates GAP-DENTAL-010 and developer confusion; closes zombie spec | GAP-DENTAL-020, TASK-DENTAL-P2-009 |
+| dental-clinical → dental-visit coupling | dental-clinical imports VisitRepository from dental-visit directly (G-003 flag in MODULE_SPEC) | dental-clinical uses a VisitService interface; dental-visit owns the implementation | Bounded context separation; allows dental-visit and dental-clinical to evolve independently | GAP-DENTAL-021, TASK-DENTAL-P2-010 |
+| dental-audit vs base audit vs dental-org | getAuditEvents is in dental-org handlers; dental-audit has a MODULE_SPEC but no handler directory; base audit has listAuditLogs | dental-audit handler directory with getAuditEvents and listDentalAuditLogs; base audit for platform-level event stream | Removes handler/spec mismatch; gives dental-audit a concrete implementation footprint | GAP-DENTAL-022, TASK-DENTAL-P2-011 |
+| dental-pmd generate vs import | generatePMD (snapshot aggregation across modules) and importPMD (external portability ingestion) are both in dental-pmd with no documented data scope boundary | generatePMD: explicit data scope doc listing all sourced fields; importedPMD: read-only foreign record with no FK coupling | Prevents scope creep in PMD generation; import side stays decoupled | GAP-DENTAL-023, TASK-DENTAL-P2-012 |
+| docs/modules/ vs docs/product/modules/ | Two directories serving the same purpose; docs/modules/ is stale and missing dental-perio | docs/product/modules/ is canonical; docs/modules/ is removed | Removes developer confusion over which spec is current | GAP-DENTAL-024, TASK-DENTAL-P2-013 |
+| dental-visit treatment templates | createTreatmentTemplate, listTreatmentTemplates, updateTreatmentTemplate, deleteTreatmentTemplate are in dental-visit but templates are org/branch-level reusable config | Templates belong in dental-org or a dental-config module; dental-visit consumes templates but doesn't own them | Correct ownership of shared config data; enables sharing templates across multiple dentists in a branch | GAP-DENTAL-025 (V2) |
+| base emr/patient/provider vs dental equivalents | Three base modules (emr, patient, provider) exist alongside dental-specific modules without documented extension contracts | Document: dental-patient extends base patient; dental-membership replaces base provider concept; base emr use in dental context | Prevents future developers from building on wrong foundation | GAP-DENTAL-026 (V2 BACKLOG) |
+
+---
+
+### Module Improvement Tasks
+
+| Task ID | Module | Recommendation | Required Change | Tests Needed | Verification |
+|---|---|---|---|---|---|
+| TASK-DENTAL-P2-008 | dental-imaging | SPLIT → dental-imaging + dental-ceph | Create `handlers/dental-ceph/` directory; move CephMgmt_*.ts files; update router registration; update MODULE_SPEC | No new logic — move tests alongside code; verify ceph.test.ts still passes | `bun test` green; dental-ceph handlers registered in app.ts |
+| TASK-DENTAL-P2-009 | dental-emr | RENAME to dental-emr-integration + mark FUTURE_PHASE | Rename `docs/product/modules/dental-emr/` to `dental-emr-integration`; update MODULE_SPEC with concrete scope (external EMR import, not an alias for dental-visit); update MODULE_MAP.md | No backend tests (no implementation) | MODULE_MAP.md updated; MODULE_SPEC has `implementation_status: future_phase` |
+| TASK-DENTAL-P2-010 | dental-clinical | MOVE_RESPONSIBILITY — eliminate G-003 coupling | Introduce VisitService interface; dental-clinical uses interface not VisitRepository directly | Existing dental-clinical tests must pass without direct dental-visit import | `bun test dental-clinical` green; no import from `handlers/dental-visit/repos` |
+| TASK-DENTAL-P2-011 | dental-audit | MERGE — create handler directory | Create `handlers/dental-audit/` with getAuditEvents moved from dental-org; add listDentalAuditLogs handler pointing to dental-specific audit events | Test: GET /dental/admin/audit returns 200 with branch-scoped events | Handler moved; dental-org no longer imports getAuditEvents |
+| TASK-DENTAL-P2-012 | dental-pmd | EXPAND spec — document data scope | Add §7.1 Data Scope table to MODULE_SPEC listing exact fields generatePMD aggregates from each module; add §7.2 Import Contract | Existing dental-pmd tests still pass | MODULE_SPEC §7.1 + §7.2 present; generatePMD output matches documented scope |
+| TASK-DENTAL-P2-013 | docs | SIMPLIFY — remove stale docs/modules/ | Delete `docs/modules/` directory or replace with redirect README pointing to `docs/product/modules/` | — | `find docs/modules` returns empty or redirect only |
+| TASK-DENTAL-P3-007 | dental-visit | SPLIT (V2) treatment templates | Move createTreatmentTemplate/listTreatmentTemplates/updateTreatmentTemplate/deleteTreatmentTemplate to dental-org; dental-visit applyTemplate reads from org-scoped store | Existing template tests still pass; add test for cross-branch template access | dental-visit handler dir has no template files; dental-org exposes template endpoints |
+| TASK-DENTAL-P3-008 | base modules | BACKLOG_REVIEW — document extension contracts | Create `docs/product/BASE_MODULE_CONTRACTS.md` documenting: dental-patient extends patient; dental-membership replaces provider concept; base emr use in dental context | — | Document exists and is linked from each MODULE_SPEC |
