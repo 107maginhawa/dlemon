@@ -45,8 +45,14 @@ import { metricsMiddleware } from '@/middleware/metrics-middleware';
 import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/getToothHistory';
-import { getAuditEvents } from '@/handlers/dental-org/getAuditEvents';
+import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
+import { createPatientContact } from '@/handlers/dental-patient/createPatientContact';
+import { listPatientContacts } from '@/handlers/dental-patient/listPatientContacts';
+import { updatePatientContact } from '@/handlers/dental-patient/updatePatientContact';
+import { deletePatientContact } from '@/handlers/dental-patient/deletePatientContact';
+import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/contact-validators';
+import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
 
@@ -130,6 +136,29 @@ export function createApp(config: Config): App {
   (app as any).get('/dental/admin/audit',
     authMiddleware({ roles: ['admin'] }),
     getAuditEvents
+  );
+  // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
+  (app as any).post('/dental/patients/:patientId/contacts',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PatientContactParams),
+    zValidator('json', CreatePatientContactBody),
+    createPatientContact
+  );
+  (app as any).get('/dental/patients/:patientId/contacts',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PatientContactParams),
+    listPatientContacts
+  );
+  (app as any).patch('/dental/patients/:patientId/contacts/:contactId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PatientContactContactParams),
+    zValidator('json', UpdatePatientContactBody),
+    updatePatientContact
+  );
+  (app as any).delete('/dental/patients/:patientId/contacts/:contactId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PatientContactContactParams),
+    deletePatientContact
   );
 
   // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)

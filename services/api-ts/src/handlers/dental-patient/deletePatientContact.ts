@@ -1,0 +1,41 @@
+/**
+ * deletePatientContact — DELETE /dental/patients/:patientId/contacts/:contactId
+ *
+ * AC-004: Soft-deletes a contact. Returns 204 on success, 404 if not found.
+ */
+
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { PatientContactRepository } from './repos/patient-contact.repo';
+import { logAuditEvent } from '@/core/audit-logger';
+import type { DatabaseInstance } from '@/core/database';
+
+export async function deletePatientContact(ctx: any): Promise<Response> {
+  const user = ctx.get('user');
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const { patientId, contactId } = ctx.req.valid('param');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const patientRepo = new PatientRepository(db, logger);
+  const patient = await patientRepo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  const contactRepo = new PatientContactRepository(db, logger);
+  const deleted = await contactRepo.softDelete(contactId);
+  if (!deleted) throw new NotFoundError('Contact not found');
+
+  logger?.info({ action: 'deletePatientContact', patientId, contactId }, 'Patient contact soft-deleted');
+
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.contact.delete',
+    resourceType: 'dental_patient_contact',
+    resourceId: contactId,
+  });
+
+  return new Response(null, { status: 204 });
+}

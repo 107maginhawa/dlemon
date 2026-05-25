@@ -288,6 +288,13 @@
       "when": 1779712380254,
       "tag": "0040_wooden_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779722215068,
+      "tag": "0041_fixed_ogun",
+      "breakpoints": true
     }
   ]
 }
