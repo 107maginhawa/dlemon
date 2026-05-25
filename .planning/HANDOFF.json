@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-25T12:48:51.128Z",
+  "phase": "G1",
+  "phase_name": "G1-foundation-stabilization",
+  "phase_dir": ".planning/phases/G1-foundation-stabilization",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "branch": "feat/v1.5-g1-foundation",
+  "completed_tasks": [
+    {
+      "id": "P1-004",
+      "name": "Journey harness exit gate hardened",
+      "status": "done",
+      "commit": "82ec9e6"
+    },
+    {
+      "id": "P1-001",
+      "name": "BR-011 consent gate in createDentalInvoice",
+      "status": "done",
+      "commit": "59d8abc"
+    },
+    {
+      "id": "P1-002",
+      "name": "dental_chart_version append-only audit table",
+      "status": "done",
+      "commit": "1e61bd5",
+      "notes": "Schema + saveVersion() repo method + upsertDentalChart wired + migration 0040. TDD_PROOF at docs/execution/slices/p1-002-chart-version-audit/"
+    },
+    {
+      "id": "P1-003",
+      "name": "Treatment save error feedback (onError toasts)",
+      "status": "done",
+      "commit": "ef82e2c",
+      "notes": "useSaveChart (VISIT_LOCKED-aware), useSaveTreatment, useUpdateTreatment all get onError toast.error. TDD_PROOF at docs/execution/slices/p1-003-error-toast/"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": "P2-001",
+      "name": "dental-perio handler coverage tests",
+      "status": "not_started",
+      "notes": "New file: services/api-ts/src/handlers/dental-perio/dental-perio-coverage.test.ts. Cover: createPerioChart, upsertToothReading, completePerioChart, getVisitPerioChart + RBAC 403. Real DB, pp UUID prefix. Pattern: local Hono app via buildTestApp() as in dental-visit-module3.test.ts:83. Seed: org/branch/membership/patient/visit with pp-prefixed IDs."
+    },
+    {
+      "id": "AUDIT-REBASELINE",
+      "name": "Mark GAP-DENTAL-001..004 RESOLVED + update audit reports",
+      "status": "blocked_on_p1s",
+      "notes": "Do after all P1s done. Mark resolved in docs/audits/DENTAL_GAP_REGISTRY.md, update docs/audits/DENTAL_SYSTEM_AUDIT_REPORT.md"
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "saveVersion in repo called from handler (not inside repo.upsert)",
+      "rationale": "Keeps upsert atomic, version is side-effect of HTTP handler not repo internals"
+    },
+    {
+      "decision": "VISIT_LOCKED detection via JSON.stringify(err) scan",
+      "rationale": "SDK error shape is opaque; stringify is the most reliable cross-SDK approach"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Write dental-perio-coverage.test.ts following module3 pattern. Use pp-prefixed IDs. Build local Hono app. Test 4 handlers + RBAC 403.",
+  "context_notes": "All P1s complete. P2-001 is the only non-started item. Audit rebaseline is gated on P1 completion (now satisfied). Session ended due to context exhaustion at ~79%."
+}
