@@ -6,11 +6,13 @@
  * and creates line items from CDT codes and prices.
  */
 
+import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
@@ -25,6 +27,16 @@ export async function createDentalInvoice(
 
   // Branch-level authorization
   await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+
+  // BR-011: signed consent form required before invoicing
+  const [signedConsent] = await db
+    .select({ id: consentForms.id })
+    .from(consentForms)
+    .where(and(eq(consentForms.visitId, body.visitId), eq(consentForms.signed, true)))
+    .limit(1);
+  if (!signedConsent) {
+    throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');
+  }
 
   const invoiceRepo = new DentalInvoiceRepository(db);
   const treatmentRepo = new TreatmentRepository(db);

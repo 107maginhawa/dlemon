@@ -21,6 +21,7 @@ import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.rep
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { createDentalInvoice } from './createDentalInvoice';
 import { getDentalInvoice } from './getDentalInvoice';
 import { listDentalInvoices } from './listDentalInvoices';
@@ -272,9 +273,20 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_payment`);
   await db.execute(sql`DELETE FROM dental_invoice_line_item`);
   await db.execute(sql`DELETE FROM dental_invoice`);
+  await db.execute(sql`DELETE FROM consent_form`);
   await db.execute(sql`DELETE FROM dental_treatment`);
   await db.execute(sql`DELETE FROM dental_visit`);
 });
+
+async function seedSignedConsent(visitId: string) {
+  const [cf] = await db.insert(consentForms).values({
+    id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
+    templateId: 'general-consent-v1', templateName: 'General Treatment Consent',
+    signed: true, signedAt: new Date(), signatureData: 'data:image/png;base64,test',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).returning();
+  return cf!;
+}
 
 // ===========================================================================
 // createDentalInvoice
@@ -313,6 +325,7 @@ describe('createDentalInvoice handler', () => {
       branchId: BRANCH_ID,
       dentistMemberId: MEMBER_ID,
     });
+    await seedSignedConsent(visit.id);
 
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
@@ -332,6 +345,7 @@ describe('createDentalInvoice handler', () => {
 
   test('returns 201 with invoice when visit has performed treatments', async () => {
     const { visit } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request('/dental/billing/invoices', {
@@ -356,6 +370,7 @@ describe('createDentalInvoice handler', () => {
 
   test('sets billedInvoiceId on treatments after invoice is created', async () => {
     const { visit, treatment } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request('/dental/billing/invoices', {
@@ -380,6 +395,7 @@ describe('createDentalInvoice handler', () => {
 
   test('returns 422 with TREATMENT_ALREADY_BILLED when re-invoicing a visit', async () => {
     const { visit } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
     const app = buildTestApp(TEST_USER);
 
     const requestBody = JSON.stringify({

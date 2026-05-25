@@ -29,6 +29,7 @@ import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.sc
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { createDentalInvoice } from './createDentalInvoice';
 import { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
@@ -93,6 +94,7 @@ afterEach(async () => {
       dental_treatment,
       dental_chart,
       visit_notes,
+      consent_form,
       dental_visit,
       patient,
       person,
@@ -158,6 +160,16 @@ function invoiceBody(visitId: string) {
   };
 }
 
+async function seedSignedConsent(visitId: string) {
+  const [cf] = await db.insert(consentForms).values({
+    id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
+    templateId: 'general-consent-v1', templateName: 'General Treatment Consent',
+    signed: true, signedAt: new Date(), signatureData: 'data:image/png;base64,test',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).returning();
+  return cf!;
+}
+
 // ---------------------------------------------------------------------------
 // BR-009: invoice blocked when no performed/verified treatments
 // ---------------------------------------------------------------------------
@@ -166,6 +178,7 @@ describe('BR-009 billing gate — planned treatment not billable (HTTP enforceme
   test('POST invoice with only planned treatment → 400 (no billable treatments) [BR-009]', async () => {
     const visit = await seedActiveVisit();
     await seedTreatment(visit.id, 'planned');
+    await seedSignedConsent(visit.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',
@@ -180,6 +193,7 @@ describe('BR-009 billing gate — planned treatment not billable (HTTP enforceme
   test('POST invoice with performed treatment → 201 [BR-009]', async () => {
     const visit = await seedActiveVisit();
     await seedTreatment(visit.id, 'performed');
+    await seedSignedConsent(visit.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',
@@ -196,6 +210,7 @@ describe('BR-009 billing gate — planned treatment not billable (HTTP enforceme
     const visit = await seedActiveVisit();
     await seedTreatment(visit.id, 'planned');
     await seedTreatment(visit.id, 'performed');
+    await seedSignedConsent(visit.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',
@@ -206,5 +221,63 @@ describe('BR-009 billing gate — planned treatment not billable (HTTP enforceme
     const body = await res.json() as any;
     // Only the performed treatment is billed
     expect(body.lineItems.length).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BR-011: invoice blocked when patient has no signed consent
+// ---------------------------------------------------------------------------
+
+describe('BR-011 consent gate — invoice requires signed consent form', () => {
+  test('AC-001: createDentalInvoice blocked when no signed consent form exists [BR-011]', async () => {
+    const visit = await seedActiveVisit();
+    await seedTreatment(visit.id, 'performed');
+    // NO consent form seeded
+    const app = makeApp(TEST_USER);
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoiceBody(visit.id)),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CONSENT_REQUIRED');
+  });
+
+  test('AC-002: createDentalInvoice succeeds when signed consent form exists [BR-011]', async () => {
+    const visit = await seedActiveVisit();
+    await seedTreatment(visit.id, 'performed');
+    await seedSignedConsent(visit.id);
+    const app = makeApp(TEST_USER);
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoiceBody(visit.id)),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.lineItems)).toBe(true);
+    expect(body.lineItems.length).toBe(1);
+  });
+
+  test('AC-001: unsigned consent form does not satisfy the gate [BR-011]', async () => {
+    const visit = await seedActiveVisit();
+    await seedTreatment(visit.id, 'performed');
+    // Insert an unsigned consent form
+    await db.insert(consentForms).values({
+      id: crypto.randomUUID(), visitId: visit.id, patientId: PATIENT_ID,
+      templateId: 'general-consent-v1', templateName: 'General Treatment Consent',
+      signed: false,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+    const app = makeApp(TEST_USER);
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoiceBody(visit.id)),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CONSENT_REQUIRED');
   });
 });
