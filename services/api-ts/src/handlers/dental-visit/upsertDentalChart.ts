@@ -39,5 +39,7 @@ export async function upsertDentalChart(
     teeth: body.teeth as ToothChartState[],
   });
 
+  await repo.saveVersion(chart.id, body.teeth as ToothChartState[], user.id);
+
   return ctx.json(chart, 201);
 }

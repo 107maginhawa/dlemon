@@ -7,9 +7,12 @@
 
 import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import { createSnapshotVersion } from '@/core/database.schema';
 import {
   dentalCharts,
+  dentalChartVersions,
   type DentalChart,
+  type DentalChartVersion,
   type NewDentalChart,
   type ToothChartState,
   type ChartEntryClassification,
@@ -97,6 +100,17 @@ export class DentalChartRepository {
       .where(eq(dentalCharts.id, chartId))
       .returning();
     return updated ?? null;
+  }
+
+  async saveVersion(chartId: string, teeth: ToothChartState[], savedBy?: string): Promise<DentalChartVersion> {
+    return createSnapshotVersion(
+      this.db as any,
+      dentalChartVersions,
+      dentalChartVersions.chartId,
+      dentalChartVersions.version,
+      chartId,
+      { chartId, snapshot: { teeth } as Record<string, unknown>, createdBy: savedBy ?? null },
+    ) as Promise<DentalChartVersion>;
   }
 
   private async findById(id: string): Promise<DentalChart | null> {
