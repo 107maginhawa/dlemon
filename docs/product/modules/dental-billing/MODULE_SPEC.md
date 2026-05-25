@@ -35,7 +35,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | WF-013 | Dentist, Staff Full | Create invoice from visit | P0 |
 | WF-014 | Staff Full | Record payment | P0 |
 | WF-051 [INFERRED] | Staff Full, Dentist | View invoice | P0 |
-| WF-052 [INFERRED] | Staff/Dentist | Issue invoice (draft→sent) | P0 |
+| WF-052 [INFERRED] | Staff/Dentist | Issue invoice (draft→issued) | P0 |
 | WF-015 | Staff Full | Create payment plan | P1 |
 | WF-041 | dentist_owner | Void invoice (BR-011) | P1 |
 | WF-042 | All dental | Fee schedule lookup | P1 |

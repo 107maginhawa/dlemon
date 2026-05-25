@@ -1,4 +1,4 @@
-<!-- oli-version: 1.1 | generated: 2026-05-24 | skill: oli-module-specs --all -->
+<!-- oli-version: 1.1 | generated: 2026-05-24 | skill: oli-module-specs --all | updated: 2026-05-25 SBT-011 -->
 
 # Module Specification: dental-pmd
 
@@ -45,6 +45,34 @@ Generate PMD: dentist_owner, dentist_associate | Import PMD: dentist_owner, dent
 ## 7. Data Requirements
 **`pmd_document`:** id, visit_id, patient_id, branch_id, generated_at, checksum (SHA-256), storage_file_id, format_version
 **`imported_pmd`:** id, patient_id, branch_id, imported_at, storage_file_id, source_description, checksum
+
+---
+
+## 7.1 Data Scope
+
+The PMD snapshot aggregates data from 3 source modules at generation time. Fields are serialized into an immutable JSON content blob; the snapshot is never updated after creation.
+
+| Source Module | Fields Included | Rationale |
+|---|---|---|
+| dental-visit | visit.id, visit.status, visit.activatedAt/createdAt, visit.branchId | Core visit identity and date; required for compliance record |
+| dental-visit (treatments) | treatment.id, cdtCode, description, toothNumber, surfaces, conditionCode, status, priceCents | Complete treatment record; CDT codes required for insurance portability |
+| dental-clinical (prescriptions) | prescription.id, rxNormCode, drugName, dosage, frequency | Medication record at time of visit; required for continuity of care |
+| dental-org (membership) | membership.id (author) | Non-repudiation: identifies the clinician who generated the PMD |
+| request body | patientId | Patient identifier binding; required for portability |
+
+**Excluded (by design):** dental_chart tooth state (large JSONB, not standard PMD format), lab orders (not yet in snapshot scope), imaging studies (separate export flow).
+
+---
+
+## 7.2 Import Contract
+
+When an ImportedPMD row is created via POST /dental/pmd/import, the following invariants must hold:
+
+1. **UUID refs only** — imported PMD rows store `patient_id`, `branch_id`, `imported_by_member_id` as plain UUIDs. No DB foreign key constraints to `dental_patient`, `dental_branch`, or `dental_membership` tables.
+2. **No FK joins** — the import pipeline must not JOIN imported_pmd rows against any live dental table in read paths.
+3. **Read-only after import** — no UPDATE or DELETE operations on imported_pmd rows after creation. Router must reject PATCH/PUT/DELETE at the route level (405 Method Not Allowed, not a 403).
+4. **Checksum required** — import must provide a checksum field; server verifies it against the uploaded content before creating the row. Missing or mismatched checksum → 422 CHECKSUM_MISMATCH.
+5. **source_description required** — the originating system must be identified (e.g., "Open Dental v21.1", "Dentrix G7"). Enables audit trail for data provenance.
 
 ---
 
