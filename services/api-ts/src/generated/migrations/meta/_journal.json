@@ -309,6 +309,13 @@
       "when": 1779724140222,
       "tag": "0043_lush_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779724253992,
+      "tag": "0044_rich_the_executioner",
+      "breakpoints": true
     }
   ]
 }
