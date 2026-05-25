@@ -256,4 +256,43 @@ describe('DentalChartRepository', () => {
       expect(tooth!.entryClassification).toBe('existing');
     });
   });
+
+  // --------------------------------------------------------------------------
+  // SAVE VERSION (P1-002 — append-only audit trail)
+  // --------------------------------------------------------------------------
+
+  describe('saveVersion', () => {
+    test('AC-001: creates version row with version=1 and teeth snapshot', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: SAMPLE_TEETH,
+      });
+
+      const v = await repo.saveVersion(chart.id, SAMPLE_TEETH, AUDIT_IDS.member);
+
+      expect(v.chartId).toBe(chart.id);
+      expect(v.version).toBe(1);
+      expect((v.snapshot as { teeth: unknown[] }).teeth).toHaveLength(SAMPLE_TEETH.length);
+    });
+
+    test('AC-002: two upserts produce sequential version numbers 1 then 2', async () => {
+      const chart = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: SAMPLE_TEETH,
+      });
+      await repo.saveVersion(chart.id, SAMPLE_TEETH, AUDIT_IDS.member);
+
+      const updated = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 11, state: 'crown' }],
+      });
+      const v2 = await repo.saveVersion(updated.id, [{ toothNumber: 11, state: 'crown' }], AUDIT_IDS.member);
+
+      expect(v2.version).toBe(2);
+      expect((v2.snapshot as { teeth: unknown[] }).teeth).toHaveLength(1);
+    });
+  });
 });
