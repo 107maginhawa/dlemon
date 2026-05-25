@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
 status: complete
-stopped_at: "v1.5 milestone close — Sprint 0+1 + ARCHITECTURE.md verified (2026-05-25)"
-last_updated: "2026-05-25T00:00:00.000Z"
+stopped_at: context exhaustion at 76% (2026-05-25)
+last_updated: "2026-05-25T12:47:38.275Z"
 progress:
   total_phases: 13
-  completed_phases: 13
+  completed_phases: 10
   total_plans: 28
-  completed_plans: 28
-  percent: 100
+  completed_plans: 27
+  percent: 77
 ---
 
 ## Current Position
@@ -231,8 +231,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-25T00:00:00.000Z
-Stopped at: v1.5 milestone close — Sprint 0+1 + ARCHITECTURE.md verified (2026-05-25)
+Last session: 2026-05-25T12:47:38.272Z
+Stopped at: context exhaustion at 76% (2026-05-25)
 Resume file: None
 Resume branch: feat/v1.5-g1-foundation (PR open → main)
 

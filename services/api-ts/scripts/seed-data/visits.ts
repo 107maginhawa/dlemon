@@ -2,6 +2,7 @@
  * Seed: Visits, dental charts, treatments, and visit notes
  */
 import type { DatabaseInstance } from './types';
+import { eq } from 'drizzle-orm';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { dentalCharts, type ToothChartState } from '@/handlers/dental-visit/repos/dental-chart.schema';
 import { dentalTreatments } from '@/handlers/dental-visit/repos/treatment.schema';
@@ -95,14 +96,15 @@ export async function seedVisits(db: DatabaseInstance): Promise<void> {
       createdBy: DR_REYES_MEMBERSHIP_ID,
       updatedBy: DR_REYES_MEMBERSHIP_ID,
     },
-    // Visit 04: Rosa V2 — root canal in progress (active)
+    // Visit 04: Rosa V2 — root canal completed
     {
       id: VISIT_04,
       patientId: PATIENT_ROSA_ID,
       branchId: BRANCH_ID,
       dentistMemberId: DR_REYES_MEMBERSHIP_ID,
-      status: 'active',
+      status: 'completed',
       activatedAt: new Date('2026-03-31T01:00:00Z'),
+      completedAt: new Date('2026-04-30T03:00:00Z'),
       chiefComplaint: 'Tooth #14 pain — root canal treatment',
       createdBy: DR_REYES_MEMBERSHIP_ID,
       updatedBy: DR_REYES_MEMBERSHIP_ID,
@@ -314,6 +316,12 @@ export async function seedVisits(db: DatabaseInstance): Promise<void> {
       updatedBy: DR_REYES_MEMBERSHIP_ID,
     },
   ]).onConflictDoNothing();
+
+  // Ensure VISIT_04 is completed so VISIT_20 (Rosa's active recall) can satisfy
+  // the dental_visit_active_patient_unique constraint on re-runs with stale data.
+  await db.update(dentalVisits)
+    .set({ status: 'completed', completedAt: new Date('2026-04-30T03:00:00Z'), updatedAt: new Date() })
+    .where(eq(dentalVisits.id, VISIT_04));
 
   // ── 2. Dental Charts ──────────────────────────────────────────────
   await db.insert(dentalCharts).values([

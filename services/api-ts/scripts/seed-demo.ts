@@ -211,8 +211,8 @@ async function seed() {
   console.log('6. Seeding clinical data...');
   await seedTreatmentTemplates(db);
   await seedMedicalHistory(db);
-  await seedAppointments(db);
   await seedVisits(db);
+  await seedAppointments(db);
   await seedBilling(db);
   await seedClinical(db);
 

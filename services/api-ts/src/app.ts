@@ -46,6 +46,7 @@ import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-org/getAuditEvents';
+import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
 
@@ -118,6 +119,10 @@ export function createApp(config: Config): App {
       }
     );
   }
+  (app as any).get('/dental/branches',
+    authMiddleware({ roles: ['user'] }),
+    getBranchesByUser
+  );
   (app as any).get('/dental/visits/history/:patientId/teeth/:toothNumber',
     authMiddleware({ roles: ['user'] }),
     getToothHistory
