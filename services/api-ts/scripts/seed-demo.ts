@@ -16,6 +16,7 @@ import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { dentalPatientContacts } from '@/handlers/dental-patient/repos/patient-contact.schema';
 import { eq } from 'drizzle-orm';
 
 // Seed data modules
@@ -23,7 +24,9 @@ import {
   ORG_ID, BRANCH_ID, OWNER_PERSON_ID,
   DR_REYES_MEMBERSHIP_ID, ANA_SANTOS_MEMBERSHIP_ID,
   PERSON_JUAN_ID, PERSON_ROSA_ID, PERSON_CARLOS_ID, PERSON_LIZA_ID, PERSON_BEN_ID,
+  PERSON_SOFIA_ID,
   PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID,
+  PATIENT_SOFIA_ID, CONTACT_SOFIA_GUARDIAN_ID,
 } from './seed-data/ids';
 import { seedTreatmentTemplates } from './seed-data/treatment-templates';
 import { seedMedicalHistory } from './seed-data/medical-history';
@@ -182,6 +185,7 @@ async function seed() {
     { personId: PERSON_CARLOS_ID, patientId: PATIENT_CARLOS_ID, firstName: 'Carlos', lastName: 'Santos', dateOfBirth: '1978-11-08', gender: 'male' as const },
     { personId: PERSON_LIZA_ID, patientId: PATIENT_LIZA_ID, firstName: 'Liza', lastName: 'Manalang', dateOfBirth: '2001-04-30', gender: 'female' as const },
     { personId: PERSON_BEN_ID, patientId: PATIENT_BEN_ID, firstName: 'Ben', lastName: 'Aquino', dateOfBirth: '1965-09-12', gender: 'male' as const },
+    { personId: PERSON_SOFIA_ID, patientId: PATIENT_SOFIA_ID, firstName: 'Sofia', lastName: 'Dela Cruz', dateOfBirth: '2018-06-10', gender: 'female' as const },
   ];
 
   for (const p of demoPatients) {
@@ -204,6 +208,22 @@ async function seed() {
 
     console.log(`   ✅ Patient: ${p.firstName} ${p.lastName}`);
   }
+
+  // ------------------------------------------------------------------
+  // 6b. Guardian contact for Sofia (minor patient — PAT-BR-002)
+  // ------------------------------------------------------------------
+  console.log('5b. Creating guardian contact for Sofia...');
+  await db.insert(dentalPatientContacts).values({
+    id: CONTACT_SOFIA_GUARDIAN_ID,
+    patientId: PATIENT_SOFIA_ID,
+    name: 'Jose Dela Cruz',
+    relationship: 'parent',
+    phone: '+639171234567',
+    isGuardian: true,
+    isEmergencyContact: true,
+    notes: 'Primary guardian — father',
+  }).onConflictDoNothing();
+  console.log('   ✅ Guardian: Jose Dela Cruz (parent of Sofia)');
 
   // ------------------------------------------------------------------
   // 7. Clinical seed data (modular)

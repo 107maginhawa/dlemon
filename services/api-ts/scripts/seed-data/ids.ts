@@ -6,7 +6,7 @@
  *
  *   a0 = org, b0 = branch, c0 = owner person
  *   c1 = memberships
- *   d0 = patient persons, d1 = patient records
+ *   d0 = patient persons, d1 = patient records, d2 = patient contacts
  *   e0 = visits, e1 = charts, e2 = appointments
  *   f0 = invoices, f1 = payments, f2 = payment plans
  *   f3 = treatments, f4 = templates, f5 = visit notes
@@ -29,6 +29,7 @@ export const PERSON_ROSA_ID   = 'd0000000-0000-1000-8000-000000000002'; // Rosa 
 export const PERSON_CARLOS_ID = 'd0000000-0000-1000-8000-000000000003'; // Carlos Santos
 export const PERSON_LIZA_ID   = 'd0000000-0000-1000-8000-000000000004'; // Liza Manalang
 export const PERSON_BEN_ID    = 'd0000000-0000-1000-8000-000000000005'; // Ben Aquino
+export const PERSON_SOFIA_ID  = 'd0000000-0000-1000-8000-000000000006'; // Sofia Dela Cruz (minor)
 
 // ── Patient record IDs (d1) ─────────────────────────────────────────
 export const PATIENT_JUAN_ID   = 'd1000000-0000-1000-8000-000000000001';
@@ -36,6 +37,10 @@ export const PATIENT_ROSA_ID   = 'd1000000-0000-1000-8000-000000000002';
 export const PATIENT_CARLOS_ID = 'd1000000-0000-1000-8000-000000000003';
 export const PATIENT_LIZA_ID   = 'd1000000-0000-1000-8000-000000000004';
 export const PATIENT_BEN_ID    = 'd1000000-0000-1000-8000-000000000005';
+export const PATIENT_SOFIA_ID  = 'd1000000-0000-1000-8000-000000000006';
+
+// ── Patient contact IDs (d2) ────────────────────────────────────────
+export const CONTACT_SOFIA_GUARDIAN_ID = 'd2000000-0000-1000-8000-000000000001'; // Jose Dela Cruz (guardian)
 
 // Convenience map: person -> patient
 export const PERSON_TO_PATIENT: Record<string, string> = {
@@ -44,6 +49,7 @@ export const PERSON_TO_PATIENT: Record<string, string> = {
   [PERSON_CARLOS_ID]: PATIENT_CARLOS_ID,
   [PERSON_LIZA_ID]:   PATIENT_LIZA_ID,
   [PERSON_BEN_ID]:    PATIENT_BEN_ID,
+  [PERSON_SOFIA_ID]:  PATIENT_SOFIA_ID,
 };
 
 // ── Visits (e0) ─────────────────────────────────────────────────────
