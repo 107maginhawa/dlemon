@@ -178,7 +178,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 
 ### G4-P2: Cephalometric Workspace (v1.4 Phase 2)
 
-**Status:** 🔄 PENDING CI GREEN — F-016 (F0–F6 committed, 32/32 E2E pass, CI gate pending)
+**Status:** ✅ COMPLETE — CI GREEN (run 26176212195), merged to main 2026-05-18 (PR #2, commit 5f246e3)
 **Depends on:** G4-P1 ✅ complete
 **Requirements:** CEPH-01 through CEPH-N (per approved design decisions D-A..D-P)
 **Success Criteria:**
