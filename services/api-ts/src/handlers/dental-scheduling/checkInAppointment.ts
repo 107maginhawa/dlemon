@@ -15,8 +15,8 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
 import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
@@ -29,7 +29,6 @@ export async function checkInAppointment(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
 
   const appointmentRepo = new DentalAppointmentRepository(db);
-  const visitRepo = new VisitRepository(db);
 
   // 1. Load appointment
   const appointment = await appointmentRepo.findOneById(appointmentId);
@@ -43,7 +42,7 @@ export async function checkInAppointment(ctx: HandlerContext) {
 
   // EC7: Check for existing in-progress visit BEFORE mutating appointment status
   // (prevents appointment getting stuck in checkedIn with no visit on conflict)
-  const inProgressVisit = await visitRepo.findInProgressByPatient(appointment.patientId);
+  const inProgressVisit = await findInProgressVisitByPatient(db, appointment.patientId);
   if (inProgressVisit) {
     throw new ConflictError('Visit already active for this patient. Complete or cancel the existing visit first.');
   }
@@ -51,12 +50,11 @@ export async function checkInAppointment(ctx: HandlerContext) {
   // 2-4: Atomically: check in + create visit + link visit
   const result = await db.transaction(async (tx) => {
     const txAppointmentRepo = new DentalAppointmentRepository(tx);
-    const txVisitRepo = new VisitRepository(tx);
 
     const checkedIn = await txAppointmentRepo.checkIn(appointmentId, user.id);
     if (!checkedIn) throw new ValidationError('Failed to check in appointment');
 
-    const visit = await txVisitRepo.createOne({
+    const visit = await createVisit(tx, {
       patientId: appointment.patientId,
       branchId: appointment.branchId,
       dentistMemberId: appointment.dentistMemberId,

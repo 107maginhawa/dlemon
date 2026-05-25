@@ -62,7 +62,7 @@ function buildApp(
     }
     return c.json({ error: 'Internal server error' }, 500);
   });
-  app.use('*', async (c, next) => {
+  app.use('*', async (c: any, next) => {
     c.set('database', db);
     c.set('logger', logger);
     c.set('auth', makeAuth());
@@ -124,7 +124,7 @@ describe('cancelBooking handler', () => {
       validJson: {},  // no reason field
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/cancel`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(400);
     expect(body.code).toBe('VALIDATION_ERROR');
   });
@@ -137,7 +137,7 @@ describe('cancelBooking handler', () => {
       validJson: { reason: 'x'.repeat(501) },
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/cancel`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(400);
     expect(body.code).toBe('VALIDATION_ERROR');
   });
@@ -150,7 +150,7 @@ describe('cancelBooking handler', () => {
       validJson: { reason: 'Good reason' },
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/cancel`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -180,7 +180,7 @@ describe('rejectBooking handler', () => {
       validJson: { reason: 'No slot' },
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/reject`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -194,7 +194,7 @@ describe('rejectBooking handler', () => {
       validJson: { reason: 'r'.repeat(501) },
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/reject`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -224,7 +224,7 @@ describe('markNoShowBooking handler', () => {
       validJson: {},
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}/no-show`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -260,7 +260,7 @@ describe('listBookings handler', () => {
       validQuery: { host: 'other-user-id' },
     });
     const res = await app.request('/booking/bookings?host=other-user-id');
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(403);
     expect(body.code).toBe('FORBIDDEN');
   });
@@ -272,7 +272,7 @@ describe('listBookings handler', () => {
       validQuery: { client: 'other-user-id' },
     });
     const res = await app.request('/booking/bookings?client=other-user-id');
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(403);
     expect(body.code).toBe('FORBIDDEN');
   });
@@ -298,7 +298,7 @@ describe('getBooking handler', () => {
       validQuery: {},
     });
     const res = await app.request(`/booking/bookings/${NONEXISTENT_ID}`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -317,7 +317,7 @@ describe('getBookingEvent handler', () => {
       validQuery: {},
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -330,7 +330,7 @@ describe('getBookingEvent handler', () => {
       validQuery: {},
     });
     const res = await app.request('/booking/events/me');
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(401);
     expect(body.code).toBe('UNAUTHORIZED');
   });
@@ -370,7 +370,7 @@ describe('listEventSlots handler', () => {
       validQuery: {},
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}/slots`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -389,7 +389,7 @@ describe('getTimeSlot handler', () => {
       validQuery: {},
     });
     const res = await app.request(`/booking/slots/${NONEXISTENT_ID}`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -440,7 +440,7 @@ describe('deleteBookingEvent handler', () => {
     // BaseContext: req.param() works without patching. Event UUID not in DB → 404
     const app = buildApp('DELETE', '/booking/events/:event', deleteBookingEvent as any);
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}`, { method: 'DELETE' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -449,7 +449,7 @@ describe('deleteBookingEvent handler', () => {
     const { deleteBookingEvent } = await import('./deleteBookingEvent');
     const app = buildApp('DELETE', '/booking/events/:event', deleteBookingEvent as any, { user: HOST });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}`, { method: 'DELETE' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -474,7 +474,7 @@ describe('getScheduleException handler', () => {
       validParam: { event: NONEXISTENT_ID, exception: NONEXISTENT_ID },
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}/exceptions/${NONEXISTENT_ID}`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -504,7 +504,7 @@ describe('createScheduleException handler', () => {
       validJson: { startDatetime: new Date().toISOString(), endDatetime: new Date().toISOString() },
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}/exceptions`, { method: 'POST' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -529,7 +529,7 @@ describe('deleteScheduleException handler', () => {
       validParam: { event: NONEXISTENT_ID, exception: NONEXISTENT_ID },
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}/exceptions/${NONEXISTENT_ID}`, { method: 'DELETE' });
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });
@@ -555,7 +555,7 @@ describe('listScheduleExceptions handler', () => {
       validQuery: {},
     });
     const res = await app.request(`/booking/events/${NONEXISTENT_ID}/exceptions`);
-    const body = await res.json();
+    const body = await res.json() as { code: string };
     expect(res.status).toBe(404);
     expect(body.code).toBe('NOT_FOUND');
   });

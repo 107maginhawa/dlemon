@@ -10,8 +10,8 @@ import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -36,9 +36,7 @@ export async function generatePMD(
   const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(visitId);
-  if (!visit) throw new NotFoundError('Visit');
+  const visit = await getVisitOrThrow(db, visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   // Resolve membership ID from personId + branchId

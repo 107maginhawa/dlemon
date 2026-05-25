@@ -31,13 +31,13 @@ export async function updateRecall(ctx: any): Promise<Response> {
 
   const updates: Record<string, unknown> = {};
 
-  if (body.type !== undefined) updates.type = body.type;
-  if (body.dueDate !== undefined) updates.dueDate = body.dueDate;
-  if (body.notes !== undefined) updates.notes = body.notes;
+  if (body['type'] !== undefined) updates['type'] = body['type'];
+  if (body['dueDate'] !== undefined) updates['dueDate'] = body['dueDate'];
+  if (body['notes'] !== undefined) updates['notes'] = body['notes'];
 
-  if (body.status !== undefined) {
+  if (body['status'] !== undefined) {
     const from = existing.status as RecallStatus;
-    const to = body.status as RecallStatus;
+    const to = body['status'] as RecallStatus;
     const allowed = RECALL_FSM[from];
 
     if (!allowed.includes(to)) {
@@ -47,9 +47,9 @@ export async function updateRecall(ctx: any): Promise<Response> {
       );
     }
 
-    updates.status = to;
-    if (to === 'sent') updates.sentAt = new Date();
-    if (to === 'completed') updates.completedAt = new Date();
+    updates['status'] = to;
+    if (to === 'sent') updates['sentAt'] = new Date();
+    if (to === 'completed') updates['completedAt'] = new Date();
   }
 
   const recall = await recallRepo.update(recallId, patientId, updates as any);

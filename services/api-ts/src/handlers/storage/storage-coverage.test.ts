@@ -570,7 +570,7 @@ describe('abortMultipartUpload handler', () => {
     const [row] = await db.select().from(storedFiles).where(
       (await import('drizzle-orm')).eq(storedFiles.id, FILE_ID)
     );
-    expect(row.status).toBe('failed');
+    expect(row!.status).toBe('failed');
   });
 });
 

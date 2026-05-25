@@ -9,6 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from './repos/dental-chart.repo';
+import { DentalChartBaselineRepository } from './repos/dental-chart-baseline.repo';
 import type { ToothChartState } from './repos/dental-chart.schema';
 import { VisitRepository } from './repos/visit.repo';
 import type { User } from '@/types/auth';
@@ -40,6 +41,10 @@ export async function upsertDentalChart(
   });
 
   await repo.saveVersion(chart.id, body.teeth as ToothChartState[], user.id);
+
+  // Update cumulative patient-level baseline (merge, last-write-wins per tooth)
+  const baselineRepo = new DentalChartBaselineRepository(db);
+  await baselineRepo.mergeVisitChart(body.patientId, visitId, body.teeth as ToothChartState[], user.id);
 
   return ctx.json(chart, 201);
 }

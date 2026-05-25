@@ -52,6 +52,20 @@ import { listPatientContacts } from '@/handlers/dental-patient/listPatientContac
 import { updatePatientContact } from '@/handlers/dental-patient/updatePatientContact';
 import { deletePatientContact } from '@/handlers/dental-patient/deletePatientContact';
 import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/contact-validators';
+import { createRecall } from '@/handlers/dental-patient/createRecall';
+import { listPatientRecalls } from '@/handlers/dental-patient/listPatientRecalls';
+import { updateRecall } from '@/handlers/dental-patient/updateRecall';
+import { RecallParams, RecallRecallParams, CreateRecallBody, UpdateRecallBody } from '@/handlers/dental-patient/recall-validators';
+import { createTreatmentPlan } from '@/handlers/dental-patient/createTreatmentPlan';
+import { listPatientTreatmentPlans } from '@/handlers/dental-patient/listPatientTreatmentPlans';
+import { getTreatmentPlan } from '@/handlers/dental-patient/getTreatmentPlan';
+import { updateTreatmentPlan } from '@/handlers/dental-patient/updateTreatmentPlan';
+import { acceptTreatmentPlan } from '@/handlers/dental-patient/acceptTreatmentPlan';
+import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody } from '@/handlers/dental-patient/treatment-plan-validators';
+import { createSyncLog } from '@/handlers/dental-patient/createSyncLog';
+import { listSyncLogs } from '@/handlers/dental-patient/listSyncLogs';
+import { updateSyncLog } from '@/handlers/dental-patient/updateSyncLog';
+import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/sync-log-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -159,6 +173,72 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['user'] }),
     zValidator('param', PatientContactContactParams),
     deletePatientContact
+  );
+
+  // Recall endpoints (P0-B)
+  (app as any).post('/dental/patients/:patientId/recalls',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', RecallParams),
+    zValidator('json', CreateRecallBody),
+    createRecall
+  );
+  (app as any).get('/dental/patients/:patientId/recalls',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', RecallParams),
+    listPatientRecalls
+  );
+  (app as any).patch('/dental/patients/:patientId/recalls/:recallId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', RecallRecallParams),
+    zValidator('json', UpdateRecallBody),
+    updateRecall
+  );
+
+  // TreatmentPlan endpoints (P0-C)
+  (app as any).post('/dental/patients/:patientId/treatment-plans',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanParams),
+    zValidator('json', CreateTreatmentPlanBody),
+    createTreatmentPlan
+  );
+  (app as any).get('/dental/patients/:patientId/treatment-plans',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanParams),
+    listPatientTreatmentPlans
+  );
+  (app as any).get('/dental/patients/:patientId/treatment-plans/:planId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanPlanParams),
+    getTreatmentPlan
+  );
+  (app as any).patch('/dental/patients/:patientId/treatment-plans/:planId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanPlanParams),
+    zValidator('json', UpdateTreatmentPlanBody),
+    updateTreatmentPlan
+  );
+  (app as any).post('/dental/patients/:patientId/treatment-plans/:planId/accept',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanPlanParams),
+    acceptTreatmentPlan
+  );
+
+  // SyncLog endpoints (P0-D)
+  (app as any).post('/dental/sync-logs',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('json', CreateSyncLogBody),
+    createSyncLog
+  );
+  (app as any).get('/dental/sync-logs',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('query', SyncLogParams),
+    listSyncLogs
+  );
+  (app as any).patch('/dental/sync-logs/:logId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', SyncLogIdParams),
+    zValidator('json', UpdateSyncLogBody),
+    updateSyncLog
   );
 
   // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)

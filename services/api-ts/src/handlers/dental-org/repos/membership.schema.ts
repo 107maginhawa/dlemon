@@ -12,6 +12,9 @@ export const memberRoleEnum = pgEnum('member_role', [
   'dentist_associate',
   'staff_full',
   'staff_scheduling',
+  'dental_assistant',
+  'front_desk',
+  'billing_staff',
 ]);
 
 export const memberStatusEnum = pgEnum('member_status', ['active', 'inactive']);
@@ -50,6 +53,9 @@ export const VALID_MEMBER_ROLES = [
   'dentist_associate',
   'staff_full',
   'staff_scheduling',
+  'dental_assistant',
+  'front_desk',
+  'billing_staff',
 ] as const;
 export type MemberRole = typeof VALID_MEMBER_ROLES[number];
 

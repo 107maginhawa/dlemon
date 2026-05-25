@@ -11,7 +11,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { findVisits } from '@/handlers/dental-visit/visit.service';
 import { DentalChartRepository } from '@/handlers/dental-visit/repos/dental-chart.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
@@ -33,10 +33,9 @@ export async function listPatientConditions(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
   if (branchId) await assertBranchAccess(db, user.id, branchId);
 
-  const visitRepo = new VisitRepository(db);
   const filters: { patientId: string; branchId?: string } = { patientId: patientId! };
   if (branchId) filters.branchId = branchId;
-  const visits = await visitRepo.findMany(filters);
+  const visits = await findVisits(db, filters);
 
   const chartRepo = new DentalChartRepository(db);
   const treatmentRepo = new TreatmentRepository(db);

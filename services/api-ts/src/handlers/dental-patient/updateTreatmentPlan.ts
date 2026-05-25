@@ -30,12 +30,12 @@ export async function updateTreatmentPlan(ctx: any): Promise<Response> {
 
   const updates: Record<string, unknown> = {};
 
-  if (body.totalEstimateCents !== undefined) updates.totalEstimateCents = body.totalEstimateCents;
-  if (body.notes !== undefined) updates.notes = body.notes;
+  if (body['totalEstimateCents'] !== undefined) updates['totalEstimateCents'] = body['totalEstimateCents'];
+  if (body['notes'] !== undefined) updates['notes'] = body['notes'];
 
-  if (body.status !== undefined) {
+  if (body['status'] !== undefined) {
     const from = existing.status as TreatmentPlanStatus;
-    const to = body.status as TreatmentPlanStatus;
+    const to = body['status'] as TreatmentPlanStatus;
     const allowed = TREATMENT_PLAN_FSM[from];
 
     if (!allowed.includes(to)) {
@@ -45,9 +45,9 @@ export async function updateTreatmentPlan(ctx: any): Promise<Response> {
       );
     }
 
-    updates.status = to;
-    if (to === 'presented') updates.presentedAt = new Date();
-    if (to === 'approved') updates.approvedAt = new Date();
+    updates['status'] = to;
+    if (to === 'presented') updates['presentedAt'] = new Date();
+    if (to === 'approved') updates['approvedAt'] = new Date();
   }
 
   const plan = await repo.update(planId, patientId, updates as any);

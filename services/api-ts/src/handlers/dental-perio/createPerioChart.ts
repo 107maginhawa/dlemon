@@ -17,7 +17,7 @@ import {
 } from '@/core/errors';
 import { eq } from 'drizzle-orm';
 import { PerioChartRepository } from './repos/perio-chart.repo';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
@@ -32,9 +32,7 @@ export async function createPerioChart(
   const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
 
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(body.visitId);
-  if (!visit) throw new NotFoundError('Visit');
+  const visit = await getVisitOrThrow(db, body.visitId);
 
   // BR-P02: visit must be writable.
   if (visit.status === 'locked' || visit.status === 'completed' || visit.status === 'discarded') {

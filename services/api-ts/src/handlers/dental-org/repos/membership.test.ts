@@ -377,4 +377,58 @@ describe('MembershipRepository', () => {
       expect(repo.isLockedOut(updated!)).toBe(false);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // ROLE GRANULARITY — T9: dental_assistant, front_desk, billing_staff
+  // --------------------------------------------------------------------------
+
+  describe('role granularity — extended roles', () => {
+    test('VALID_MEMBER_ROLES includes dental_assistant', async () => {
+      const { VALID_MEMBER_ROLES } = await import('./membership.schema');
+      expect(VALID_MEMBER_ROLES).toContain('dental_assistant');
+    });
+
+    test('VALID_MEMBER_ROLES includes front_desk', async () => {
+      const { VALID_MEMBER_ROLES } = await import('./membership.schema');
+      expect(VALID_MEMBER_ROLES).toContain('front_desk');
+    });
+
+    test('VALID_MEMBER_ROLES includes billing_staff', async () => {
+      const { VALID_MEMBER_ROLES } = await import('./membership.schema');
+      expect(VALID_MEMBER_ROLES).toContain('billing_staff');
+    });
+
+    test('creates a member with dental_assistant role', async () => {
+      const member = await repo.createOne({
+        branchId: BRANCH_ID,
+        displayName: 'Maria Dental Assistant',
+        role: 'dental_assistant',
+        status: 'active',
+        pinFailedAttempts: 0,
+      });
+      expect(member.role).toBe('dental_assistant');
+    });
+
+    test('creates a member with front_desk role', async () => {
+      const member = await repo.createOne({
+        branchId: BRANCH_ID,
+        displayName: 'Ana Front Desk',
+        role: 'front_desk',
+        status: 'active',
+        pinFailedAttempts: 0,
+      });
+      expect(member.role).toBe('front_desk');
+    });
+
+    test('creates a member with billing_staff role', async () => {
+      const member = await repo.createOne({
+        branchId: BRANCH_ID,
+        displayName: 'Bea Billing',
+        role: 'billing_staff',
+        status: 'active',
+        pinFailedAttempts: 0,
+      });
+      expect(member.role).toBe('billing_staff');
+    });
+  });
 });

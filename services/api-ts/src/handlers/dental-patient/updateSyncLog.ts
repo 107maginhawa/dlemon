@@ -25,12 +25,12 @@ export async function updateSyncLog(ctx: any): Promise<Response> {
 
   const updates: Record<string, unknown> = {};
 
-  if (body.serverId !== undefined) updates.serverId = body.serverId;
-  if (body.error !== undefined) updates.error = body.error;
+  if (body['serverId'] !== undefined) updates['serverId'] = body['serverId'];
+  if (body['error'] !== undefined) updates['error'] = body['error'];
 
-  if (body.syncStatus !== undefined) {
+  if (body['syncStatus'] !== undefined) {
     const from = existing.syncStatus as SyncStatus;
-    const to = body.syncStatus as SyncStatus;
+    const to = body['syncStatus'] as SyncStatus;
     const allowed = SYNC_FSM[from];
 
     if (!allowed.includes(to)) {
@@ -40,14 +40,14 @@ export async function updateSyncLog(ctx: any): Promise<Response> {
       );
     }
 
-    updates.syncStatus = to;
-    if (to === 'synced') updates.lastSyncAt = new Date();
+    updates['syncStatus'] = to;
+    if (to === 'synced') updates['lastSyncAt'] = new Date();
   }
 
   const log = await repo.update(logId, updates as any);
   if (!log) throw new NotFoundError('Sync log not found');
 
-  logger?.info({ action: 'updateSyncLog', logId, syncStatus: updates.syncStatus }, 'Sync log updated');
+  logger?.info({ action: 'updateSyncLog', logId, syncStatus: updates['syncStatus'] }, 'Sync log updated');
 
   return ctx.json(log, 200);
 }
