@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createDentalTreatment, type ToothSurfaceCode } from '@monobase/sdk-ts/generated';
 import { listDentalTreatmentsQueryKey } from '@monobase/sdk-ts/generated/react-query';
+import { toast } from 'sonner';
 
 interface SaveTreatmentInput {
   visitId: string;
@@ -50,6 +51,9 @@ export function useSaveTreatment() {
       queryClient.invalidateQueries({
         queryKey: ['dental-treatment-plan', input.patientId],
       });
+    },
+    onError: () => {
+      toast.error('Failed to save treatment. Please try again.');
     },
   });
 }
