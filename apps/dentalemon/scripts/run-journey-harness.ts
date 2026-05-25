@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { computeExitCode } from './journey-harness-exit-code'
 /**
  * Journey Harness Runner — Phase 3.
  *
@@ -256,8 +257,8 @@ async function main() {
     )
   }
 
-  // ERROR verdicts are a runner failure (spec crashed pre-verdict).
-  process.exit(summary.error > 0 ? 1 : 0)
+  // Exit 1 if any spec crashed (ERROR) OR any PASS-expected journey regressed to BROKEN/ERROR.
+  process.exit(computeExitCode(journeys, summary.error))
 }
 
 main().catch((e) => {
