@@ -462,11 +462,11 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 
 | ID | Item | Module / File | Effort |
 |---|---|---|---|
-| P0-001 | Add `Recall` entity + handlers (create, list, update, complete) | New: `dental-recall/` | M |
-| P0-002 | Add sync metadata fields (`localId`, `syncStatus`, `lastSyncAt`) to Visit, Chart, Treatment, Invoice entities | Schema migrations | M |
-| P0-003 | Add `SyncLog` / `SyncState` table | New schema + migration | S |
-| P0-004 | Add `PatientContact` / Guardian entity + handlers | `dental-patient/` | S |
-| P0-005 | Add plan-level `TreatmentPlan` entity with status FSM (`draft→presented→approved→partially_completed→completed→cancelled`) | `dental-visit/` or `dental-patient/` | M |
+| P0-001 | ✅ CLOSED (534ea5e) Add `Recall` entity + handlers (create, list, update, complete) | New: `dental-recall/` | M |
+| P0-002 | ✅ CLOSED (0f17781) Add sync metadata fields (`localId`, `syncStatus`, `lastSyncAt`) to Visit, Chart, Treatment, Invoice entities | Schema migrations | M |
+| P0-003 | ✅ CLOSED (0f17781) Add `SyncLog` / `SyncState` table | New schema + migration | S |
+| P0-004 | ✅ CLOSED (d70767d) Add `PatientContact` / Guardian entity + handlers | `dental-patient/` | S |
+| P0-005 | ✅ CLOSED (dd1153f) Add plan-level `TreatmentPlan` entity with status FSM (`draft→presented→approved→partially_completed→completed→cancelled`) | `dental-visit/` or `dental-patient/` | M |
 
 ### P1 — Important V1 Gap; Fix Before Production
 
