@@ -13,12 +13,16 @@
  *   - Grand Total row (data-testid="grand-total-row") showing sum of all prices
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, test, expect, afterEach, mock } from 'bun:test';
+import { render, screen, cleanup, renderHook, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { freshClientWithMutations, makeWrapper as makeWrapperBase } from '@/test-utils';
+import { freshClientWithMutations, makeWrapper as makeWrapperBase, jsonResponse } from '@/test-utils';
 import { TreatmentTable } from './treatment-table';
+import { useUpdateTreatment } from '../hooks/use-update-treatment';
+
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
 
 function makeWrapper() {
   return makeWrapperBase(freshClientWithMutations());
@@ -210,5 +214,26 @@ describe('TreatmentTable — Phase 3', () => {
 
     // BR-008: carried-over item must appear in the rendered table
     expect(screen.getByText(/Crown \(PFM\)/i)).not.toBeNull();
+  });
+});
+
+// ── P1-003: useUpdateTreatment onError toast ──────────────────────────────────
+
+describe('useUpdateTreatment onError (P1-003)', () => {
+  const origFetch = global.fetch;
+  afterEach(() => { global.fetch = origFetch; });
+
+  test('AC-003: calls toast.error when treatment update fails', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({ message: 'Server error' }, 500)) as unknown as typeof fetch;
+
+    const { result } = renderHook(
+      () => useUpdateTreatment('v-1'),
+      { wrapper: makeWrapper() },
+    );
+
+    result.current.mutate({ path: { visitId: 'v-1', treatmentId: 't-1' }, body: { status: 'dismissed' } } as any);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

@@ -9,6 +9,9 @@ import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { useSaveTreatment } from './use-save-treatment';
 import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
@@ -199,5 +202,15 @@ describe('useSaveTreatment — error', () => {
     act(() => { result.current.mutate(TREATMENT_INPUT); });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(invalidatedKeys.length).toBe(0);
+  });
+
+  test('AC-006: calls toast.error when treatment save fails', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({ message: 'Server error' }, 500)) as unknown as typeof fetch;
+    const qc = freshClient();
+    const { result } = renderHook(() => useSaveTreatment(), { wrapper: makeWrapper(qc) });
+    act(() => { result.current.mutate(TREATMENT_INPUT); });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });
