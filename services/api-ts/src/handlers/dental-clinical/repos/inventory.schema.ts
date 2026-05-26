@@ -22,6 +22,9 @@ export type InventoryCategory = typeof INVENTORY_CATEGORIES[number];
 export const ADJUSTMENT_TYPES = ['restock', 'usage', 'disposal', 'correction'] as const;
 export type AdjustmentType = typeof ADJUSTMENT_TYPES[number];
 
+export const INVENTORY_STATUSES = ['active', 'depleted', 'discontinued'] as const;
+export type InventoryStatus = typeof INVENTORY_STATUSES[number];
+
 export const dentalInventoryItems = pgTable('dental_inventory_item', {
   ...baseEntityFields,
   branchId: uuid('branch_id')
@@ -30,6 +33,7 @@ export const dentalInventoryItems = pgTable('dental_inventory_item', {
   name: text('name').notNull(),
   category: text('category').notNull().$type<InventoryCategory>(),
   unit: text('unit').notNull(),
+  status: text('status').notNull().default('active').$type<InventoryStatus>(),
   quantityOnHand: integer('quantity_on_hand').notNull().default(0),
   reorderLevel: integer('reorder_level').notNull().default(10),
   notes: text('notes'),

@@ -24,6 +24,7 @@ export async function updateInventoryItem(ctx: any): Promise<Response> {
   if (body['name'] !== undefined) updates['name'] = body['name'];
   if (body['category'] !== undefined) updates['category'] = body['category'];
   if (body['unit'] !== undefined) updates['unit'] = body['unit'];
+  if (body['status'] !== undefined) updates['status'] = body['status'];
   if (body['quantityOnHand'] !== undefined) updates['quantityOnHand'] = body['quantityOnHand'];
   if (body['reorderLevel'] !== undefined) updates['reorderLevel'] = body['reorderLevel'];
   if (body['notes'] !== undefined) updates['notes'] = body['notes'];

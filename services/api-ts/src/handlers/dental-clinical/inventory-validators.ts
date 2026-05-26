@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { INVENTORY_CATEGORIES, ADJUSTMENT_TYPES } from './repos/inventory.schema';
+import { INVENTORY_CATEGORIES, ADJUSTMENT_TYPES, INVENTORY_STATUSES } from './repos/inventory.schema';
 
 export const InventoryBranchParams = z.object({
   branchId: z.string().uuid(),
@@ -23,6 +23,7 @@ export const UpdateInventoryItemBody = z.object({
   name: z.string().min(1).optional(),
   category: z.enum(INVENTORY_CATEGORIES).optional(),
   unit: z.string().min(1).optional(),
+  status: z.enum(INVENTORY_STATUSES).optional(),
   quantityOnHand: z.number().int().nonnegative().optional(),
   reorderLevel: z.number().int().nonnegative().optional(),
   notes: z.string().optional(),
