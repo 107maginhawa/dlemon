@@ -7,7 +7,7 @@
 
 import { pgTable, uuid, text, integer, timestamp, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { baseEntityFields } from '@/core/database.schema';
+import { baseEntityFields, syncableEntityFields } from '@/core/database.schema';
 import { patients } from '../../patient/repos/patient.schema';
 import { dentalBranches } from '../../dental-org/repos/branch.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
@@ -22,6 +22,7 @@ export const dentalVisitStatusEnum = pgEnum('dental_visit_status', [
 
 export const dentalVisits = pgTable('dental_visit', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
   dentistMemberId: uuid('dentist_member_id').notNull().references(() => dentalMemberships.id),

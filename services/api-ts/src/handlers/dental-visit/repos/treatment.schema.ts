@@ -5,7 +5,7 @@
  */
 
 import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, pgEnum, timestamp } from 'drizzle-orm/pg-core';
-import { baseEntityFields, versionedSnapshotFields } from '@/core/database.schema';
+import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
@@ -21,6 +21,7 @@ export const dentalTreatmentStatusEnum = pgEnum('dental_treatment_status', [
 
 export const dentalTreatments = pgTable('dental_treatment', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   toothNumber: integer('tooth_number'),

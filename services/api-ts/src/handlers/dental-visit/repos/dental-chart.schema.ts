@@ -5,7 +5,7 @@
  */
 
 import { pgTable, uuid, jsonb, integer, text, index, pgEnum, unique } from 'drizzle-orm/pg-core';
-import { baseEntityFields, versionedSnapshotFields } from '@/core/database.schema';
+import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
@@ -52,6 +52,7 @@ export interface ToothChartState {
 
 export const dentalCharts = pgTable('dental_chart', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   teeth: jsonb('teeth').notNull().$type<ToothChartState[]>(),
