@@ -19,6 +19,8 @@ export const dentalAudit = pgTable('dental_audit', {
   resourceId: uuid('resource_id'),
   // loose-coupling: org tenant — no DB-level FK
   tenantId: uuid('tenant_id').notNull(),
+  // multi-branch scoping — nullable for org-level events
+  branchId: uuid('branch_id'),
   timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   // extra context: IP, user agent, changed fields, etc.
   metadata: jsonb('metadata'),
@@ -29,6 +31,7 @@ export const dentalAudit = pgTable('dental_audit', {
   personTimestampIdx: index('dental_audit_person_timestamp_idx').on(table.personId, table.timestamp),
   tenantTimestampIdx: index('dental_audit_tenant_timestamp_idx').on(table.tenantId, table.timestamp),
   resourceIdx: index('dental_audit_resource_idx').on(table.resourceType, table.resourceId),
+  branchTimestampIdx: index('dental_audit_branch_timestamp_idx').on(table.branchId, table.timestamp),
 }));
 
 export type DentalAuditEntry = typeof dentalAudit.$inferSelect;

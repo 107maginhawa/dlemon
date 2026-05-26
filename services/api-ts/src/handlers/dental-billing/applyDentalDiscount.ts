@@ -11,6 +11,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { applyDiscountRate } from './utils/rounding';
+import { logAuditEvent } from '@/core/audit-logger';
+import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 
 export async function applyDentalDiscount(
   ctx: ValidatedContext<any, never, any>
@@ -45,5 +47,15 @@ export async function applyDentalDiscount(
   const taxRate = Number(invoice.taxRate);
 
   const updated = await repo.applyDiscount(invoiceId, discountCents, taxRate, body.reason.trim(), session.userId);
+  const branchForAudit = await new BranchRepository(db).findOneById(invoice.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: session.userId,
+    tenantId: branchForAudit?.organizationId ?? invoice.branchId,
+    branchId: invoice.branchId,
+    action: 'discount.applied',
+    resourceType: 'dental_invoice',
+    resourceId: invoiceId,
+    metadata: { percentageRate: body.percentageRate, reason: body.reason.trim() },
+  });
   return ctx.json(updated);
 }

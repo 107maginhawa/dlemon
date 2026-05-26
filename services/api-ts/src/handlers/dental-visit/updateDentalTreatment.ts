@@ -15,6 +15,8 @@ import { TREATMENT_TRANSITIONS } from './repos/treatment.schema';
 import { ConsentFormRepository } from '@/handlers/dental-clinical/repos/consent-form.repo';
 import type { User } from '@/types/auth';
 import type { UpdateDentalTreatmentBody, UpdateDentalTreatmentParams } from '@/generated/openapi/validators';
+import { logAuditEvent } from '@/core/audit-logger';
+import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 
 export async function updateDentalTreatment(
   ctx: ValidatedContext<UpdateDentalTreatmentBody, never, UpdateDentalTreatmentParams>
@@ -94,5 +96,19 @@ export async function updateDentalTreatment(
   if (body.clinicalNotes !== undefined) patch.clinicalNotes = body.clinicalNotes;
 
   const updated = await repo.update(treatmentId, patch);
+
+  if (body.status === 'performed' && visit) {
+    const branchForAudit = await new BranchRepository(db).findOneById(visit.branchId);
+    await logAuditEvent(db, ctx.get('logger'), {
+      personId: user.id,
+      tenantId: branchForAudit?.organizationId ?? visit.branchId,
+      branchId: visit.branchId,
+      action: 'treatment.performed',
+      resourceType: 'dental_treatment',
+      resourceId: treatmentId,
+      metadata: { visitId: treatment.visitId },
+    });
+  }
+
   return ctx.json(updated);
 }

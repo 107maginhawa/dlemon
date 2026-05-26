@@ -1,6 +1,6 @@
 {
-  "id": "f421c9d1-69be-4716-90a3-d44fc17f1de2",
-  "prevId": "e0a4155a-a7f5-407e-b9ca-a4f7eb6c103b",
+  "id": "2f06adef-21dc-42f6-a35d-08bd21ac636d",
+  "prevId": "f421c9d1-69be-4716-90a3-d44fc17f1de2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -44,6 +44,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "timestamp": {
           "name": "timestamp",
@@ -125,6 +131,27 @@
             },
             {
               "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "dental_audit_branch_timestamp_idx": {
+          "name": "dental_audit_branch_timestamp_idx",
+          "columns": [
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "timestamp",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

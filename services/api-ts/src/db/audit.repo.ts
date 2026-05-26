@@ -9,6 +9,7 @@ import { dentalAudit, type NewDentalAuditEntry, type DentalAuditEntry } from './
 export interface AuditFilters {
   personId?: string;
   tenantId?: string;
+  branchId?: string;
   resourceType?: string;
   resourceId?: string;
   action?: string;
@@ -31,6 +32,7 @@ export class DentalAuditRepository {
     const conditions = [];
     if (filters.personId) conditions.push(eq(dentalAudit.personId, filters.personId));
     if (filters.tenantId) conditions.push(eq(dentalAudit.tenantId, filters.tenantId));
+    if (filters.branchId) conditions.push(eq(dentalAudit.branchId, filters.branchId));
     if (filters.resourceType) conditions.push(eq(dentalAudit.resourceType, filters.resourceType));
     if (filters.resourceId) conditions.push(eq(dentalAudit.resourceId, filters.resourceId));
     if (filters.action) conditions.push(eq(dentalAudit.action, filters.action));

@@ -299,6 +299,8 @@ export const AUDIT_01 = 'fc000000-0000-1000-8000-000000000001'; // treatment cre
 export const AUDIT_02 = 'fc000000-0000-1000-8000-000000000002'; // invoice issued
 export const AUDIT_03 = 'fc000000-0000-1000-8000-000000000003'; // discount applied
 export const AUDIT_04 = 'fc000000-0000-1000-8000-000000000004'; // visit notes signed
+export const AUDIT_05 = 'fc000000-0000-1000-8000-000000000005'; // visit completed
+export const AUDIT_06 = 'fc000000-0000-1000-8000-000000000006'; // treatment performed
 
 // ── Attachments (fd) ────────────────────────────────────────────────
 export const ATTACHMENT_01 = 'fd000000-0000-1000-8000-000000000001'; // Juan — X-ray

@@ -11,6 +11,7 @@ import { DentalAuditRepository } from '@/db/audit.repo';
 export interface AuditEvent {
   personId: string;
   tenantId: string;
+  branchId?: string;
   action: string;
   resourceType: string;
   resourceId?: string;
@@ -32,6 +33,7 @@ export async function logAuditEvent(
     await repo.log({
       personId: event.personId,
       tenantId: event.tenantId,
+      branchId: event.branchId,
       action: event.action,
       resourceType: event.resourceType,
       resourceId: event.resourceId,

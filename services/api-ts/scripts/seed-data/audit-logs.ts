@@ -9,15 +9,19 @@ import type { DatabaseInstance } from './types';
 import { dentalAudit } from '@/db/audit.schema';
 import {
   ORG_ID,
+  BRANCH_ID,
   PERSON_JUAN_ID,
   PERSON_ROSA_ID,
   TREATMENT_01,
   INVOICE_01,
   VISIT_NOTE_01,
+  VISIT_01,
   AUDIT_01,
   AUDIT_02,
   AUDIT_03,
   AUDIT_04,
+  AUDIT_05,
+  AUDIT_06,
 } from './ids';
 
 // Dr. Reyes person ID (owner/admin person)
@@ -35,6 +39,7 @@ export async function seedAuditLogs(db: DatabaseInstance): Promise<void> {
       resourceType: 'dental_treatment',
       resourceId: TREATMENT_01,
       tenantId: ORG_ID,
+      branchId: BRANCH_ID,
       timestamp: new Date('2024-11-15T09:12:00Z'),
       metadata: {
         patientId: PERSON_JUAN_ID,
@@ -49,6 +54,7 @@ export async function seedAuditLogs(db: DatabaseInstance): Promise<void> {
       resourceType: 'dental_invoice',
       resourceId: INVOICE_01,
       tenantId: ORG_ID,
+      branchId: BRANCH_ID,
       timestamp: new Date('2024-11-15T10:45:00Z'),
       metadata: {
         patientId: PERSON_JUAN_ID,
@@ -64,6 +70,7 @@ export async function seedAuditLogs(db: DatabaseInstance): Promise<void> {
       resourceType: 'dental_invoice',
       resourceId: null,
       tenantId: ORG_ID,
+      branchId: BRANCH_ID,
       timestamp: new Date('2024-11-18T11:20:00Z'),
       metadata: {
         patientId: PERSON_ROSA_ID,
@@ -79,13 +86,38 @@ export async function seedAuditLogs(db: DatabaseInstance): Promise<void> {
       resourceType: 'dental_visit_note',
       resourceId: VISIT_NOTE_01,
       tenantId: ORG_ID,
+      branchId: BRANCH_ID,
       timestamp: new Date('2024-11-18T14:05:00Z'),
       metadata: {
         patientId: PERSON_ROSA_ID,
         signedAt: '2024-11-18T14:05:00Z',
       },
     },
+    // 5. Visit completed by Dr. Reyes (visit.complete handler wiring — IDEAL-GAP-P1-001)
+    {
+      id: AUDIT_05,
+      personId: DR_REYES_PERSON_ID,
+      action: 'visit.complete',
+      resourceType: 'dental_visit',
+      resourceId: VISIT_01,
+      tenantId: ORG_ID,
+      branchId: BRANCH_ID,
+      timestamp: new Date('2024-11-15T11:00:00Z'),
+      metadata: { patientId: PERSON_JUAN_ID },
+    },
+    // 6. Treatment marked performed by Dr. Reyes (treatment.performed handler wiring — IDEAL-GAP-P1-001)
+    {
+      id: AUDIT_06,
+      personId: DR_REYES_PERSON_ID,
+      action: 'treatment.performed',
+      resourceType: 'dental_treatment',
+      resourceId: TREATMENT_01,
+      tenantId: ORG_ID,
+      branchId: BRANCH_ID,
+      timestamp: new Date('2024-11-15T10:55:00Z'),
+      metadata: { patientId: PERSON_JUAN_ID, visitId: VISIT_01 },
+    },
   ]).onConflictDoNothing();
 
-  console.log('   4 audit log entries (treatment, invoice, discount, notes signed)');
+  console.log('   6 audit log entries (treatment, invoice, discount, notes signed, visit.complete, treatment.performed)');
 }
