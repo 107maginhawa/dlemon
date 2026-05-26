@@ -1,69 +1,55 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-25T12:48:51.128Z",
-  "phase": "G1",
-  "phase_name": "G1-foundation-stabilization",
-  "phase_dir": ".planning/phases/G1-foundation-stabilization",
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-05-26T01:03:18Z",
+  "phase": "audit-full-remediation",
+  "phase_name": "Audit Full Remediation — Phase A + Phase B",
+  "phase_dir": "feat/audit-full-remediation",
+  "plan": 2,
+  "task": 12,
+  "total_tasks": 19,
   "status": "paused",
-  "branch": "feat/v1.5-g1-foundation",
   "completed_tasks": [
-    {
-      "id": "P1-004",
-      "name": "Journey harness exit gate hardened",
-      "status": "done",
-      "commit": "82ec9e6"
-    },
-    {
-      "id": "P1-001",
-      "name": "BR-011 consent gate in createDentalInvoice",
-      "status": "done",
-      "commit": "59d8abc"
-    },
-    {
-      "id": "P1-002",
-      "name": "dental_chart_version append-only audit table",
-      "status": "done",
-      "commit": "1e61bd5",
-      "notes": "Schema + saveVersion() repo method + upsertDentalChart wired + migration 0040. TDD_PROOF at docs/execution/slices/p1-002-chart-version-audit/"
-    },
-    {
-      "id": "P1-003",
-      "name": "Treatment save error feedback (onError toasts)",
-      "status": "done",
-      "commit": "ef82e2c",
-      "notes": "useSaveChart (VISIT_LOCKED-aware), useSaveTreatment, useUpdateTreatment all get onError toast.error. TDD_PROOF at docs/execution/slices/p1-003-error-toast/"
-    }
+    {"id": 1, "name": "A1 P1-002 Operatory table + appointment FK", "status": "done", "commit": "87d634b"},
+    {"id": 2, "name": "A2 P1-008 ProcedureCode table + CDT seed", "status": "done", "commit": "39cea67"},
+    {"id": 3, "name": "A3 P1-004 Seed expansion allergy/unpaid/offline", "status": "done", "commit": "6f036e5"},
+    {"id": 4, "name": "A4 P1-001 hygienist + read_only roles", "status": "done", "commit": "20170c5"},
+    {"id": 5, "name": "A5 P1-003 QueueItem entity + queue board handlers", "status": "done", "commit": "2264deb"},
+    {"id": 6, "name": "A6 P1-005 E2E offline sync metadata journey J15", "status": "done", "commit": "97fe41e"},
+    {"id": 7, "name": "A7 P1-006 E2E medical alert visibility journey J16", "status": "done", "commit": "0cf1687"},
+    {"id": 8, "name": "B2 P1-007 InsuranceProfile + ClaimDraft + claim-readiness", "status": "done", "commit": "f77f6dc"},
+    {"id": 9, "name": "P2-001 DentalAlert entity (10 alert types)", "status": "done", "commit": "1efab9d"},
+    {"id": 10, "name": "P2-002 OcclusionScreening entity", "status": "done", "commit": "ab93fb3"},
+    {"id": 11, "name": "P2-005 + P2-006 Seed audit logs + attachments", "status": "done", "commit": "1b21d59"},
+    {"id": 12, "name": "P2-008 PostOp instruction templates", "status": "done", "commit": "ab93fb3"}
   ],
   "remaining_tasks": [
-    {
-      "id": "P2-001",
-      "name": "dental-perio handler coverage tests",
-      "status": "not_started",
-      "notes": "New file: services/api-ts/src/handlers/dental-perio/dental-perio-coverage.test.ts. Cover: createPerioChart, upsertToothReading, completePerioChart, getVisitPerioChart + RBAC 403. Real DB, pp UUID prefix. Pattern: local Hono app via buildTestApp() as in dental-visit-module3.test.ts:83. Seed: org/branch/membership/patient/visit with pp-prefixed IDs."
-    },
-    {
-      "id": "AUDIT-REBASELINE",
-      "name": "Mark GAP-DENTAL-001..004 RESOLVED + update audit reports",
-      "status": "blocked_on_p1s",
-      "notes": "Do after all P1s done. Mark resolved in docs/audits/DENTAL_GAP_REGISTRY.md, update docs/audits/DENTAL_SYSTEM_AUDIT_REPORT.md"
-    }
+    {"id": 13, "name": "P2-003 Task entity + handlers (dental-patient/)", "status": "not_started"},
+    {"id": 14, "name": "P2-004 Inventory entity + stock adjustment handlers", "status": "not_started"},
+    {"id": 15, "name": "P2-007 Empty states E2E across workspace tabs", "status": "not_started"},
+    {"id": 16, "name": "B3 FE Recall UI — list/create/edit in apps/dentalemon", "status": "not_started"},
+    {"id": 17, "name": "B4 FE TreatmentPlan FSM UI — status badges + transition controls", "status": "not_started"},
+    {"id": 18, "name": "B5/P2-009 FE Sync badges — pending/syncing/synced/failed indicators", "status": "not_started"},
+    {"id": 19, "name": "P2-010 Queue board UI", "status": "not_started"}
   ],
   "blockers": [],
-  "human_actions_pending": [],
-  "decisions": [
+  "human_actions_pending": [
     {
-      "decision": "saveVersion in repo called from handler (not inside repo.upsert)",
-      "rationale": "Keeps upsert atomic, version is side-effect of HTTP handler not repo internals"
-    },
-    {
-      "decision": "VISIT_LOCKED detection via JSON.stringify(err) scan",
-      "rationale": "SDK error shape is opaque; stringify is the most reliable cross-SDK approach"
+      "action": "Stage migration snapshot files before next session",
+      "context": "0051_snapshot.json, 0052_snapshot.json, 0053_snapshot.json untracked in services/api-ts/src/generated/migrations/meta/",
+      "blocking": false
     }
   ],
-  "uncommitted_files": [],
-  "next_action": "Write dental-perio-coverage.test.ts following module3 pattern. Use pp-prefixed IDs. Build local Hono app. Test 4 handlers + RBAC 403.",
-  "context_notes": "All P1s complete. P2-001 is the only non-started item. Audit rebaseline is gated on P1 completion (now satisfied). Session ended due to context exhaustion at ~79%."
+  "decisions": [
+    {"decision": "New modules placed inside dental-patient/ or dental-clinical/ not standalone dirs", "rationale": "Matches recall/sync/contact pattern already in codebase", "phase": "B"},
+    {"decision": "Schema agents run sequentially to avoid migration journal conflicts", "rationale": "Concurrent db:generate overwrites _journal.json", "phase": "B"},
+    {"decision": "Frontend B3/B4/B5 deferred to next session", "rationale": "Context exhausted after backend wave 1", "phase": "B"}
+  ],
+  "uncommitted_files": [
+    "services/api-ts/src/generated/migrations/meta/0051_snapshot.json",
+    "services/api-ts/src/generated/migrations/meta/0052_snapshot.json",
+    "services/api-ts/src/generated/migrations/meta/0053_snapshot.json",
+    ".planning/STATE.md"
+  ],
+  "next_action": "Commit migration snapshots + STATE.md, then spawn P2-003 Task entity (follow dental-patient/recall pattern), then P2-004 Inventory, then frontend B3/B4/B5.",
+  "context_notes": "Phase A P1 complete. Phase B wave 1 backend done. All new routes use (app as any) + standalone Zod validators. Frontend needs: read apps/dentalemon/src/features/billing/hooks pattern first. APIs exist: /dental/patients/:id/recalls, /dental/patients/:id/treatment-plans, /dental/sync-logs."
 }

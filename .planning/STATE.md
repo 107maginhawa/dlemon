@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: "v1.5-g1"
 milestone_name: milestone
 status: complete
-stopped_at: context exhaustion at 77% (2026-05-25)
-last_updated: "2026-05-25T15:21:15.361Z"
+stopped_at: context exhaustion at 75% (2026-05-26)
+last_updated: "2026-05-26T01:01:30.382Z"
 progress:
   total_phases: 13
   completed_phases: 10
@@ -231,8 +231,8 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-25T15:21:15.358Z
-Stopped at: context exhaustion at 77% (2026-05-25)
+Last session: 2026-05-26T01:01:30.377Z
+Stopped at: context exhaustion at 75% (2026-05-26)
 Resume file: None
 Resume branch: feat/v1.5-g1-foundation (PR open → main)
 
