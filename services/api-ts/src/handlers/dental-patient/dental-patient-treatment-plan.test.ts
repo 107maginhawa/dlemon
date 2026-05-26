@@ -350,6 +350,31 @@ describe('TreatmentPlan FSM (AC-003..AC-008)', () => {
     const res = await transition(app, plan.id, 'approved');
     expect(res.status).toBe(422);
   });
+
+  // GAP-003 RED: IDEAL standard §3.6 — the state is called "partially_completed", not "in_progress"
+  test('GAP-003 AC-005r: approved → partially_completed succeeds (IDEAL §3.6)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app);
+
+    await transition(app, plan.id, 'presented');
+    await transition(app, plan.id, 'approved');
+    const res = await transition(app, plan.id, 'partially_completed');
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('partially_completed');
+  });
+
+  test('GAP-003 AC-005r: in_progress is no longer a valid status (removed)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app);
+
+    await transition(app, plan.id, 'presented');
+    await transition(app, plan.id, 'approved');
+    const res = await transition(app, plan.id, 'in_progress');
+
+    expect(res.status).toBe(422);
+  });
 });
 
 // =============================================================================
