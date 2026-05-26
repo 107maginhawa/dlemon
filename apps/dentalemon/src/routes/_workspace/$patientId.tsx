@@ -31,6 +31,7 @@ import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-b
 import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
+import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
@@ -81,6 +82,7 @@ function WorkspacePage() {
   const branchId = useOrgContextStore(s => s.branchId);
 
   // ── Data hooks ────────────────────────────────────────────────────────────
+  const { data: patientProfile } = usePatientProfile({ patientId });
   const { visits, isLoading: visitsLoading } = useVisits({ patientId, branchId });
   const { teeth, selectedTooth, selectTooth, clearSelection } =
     useDentalChart({ visitId: currentVisitId });
@@ -303,6 +305,7 @@ function WorkspacePage() {
             onNewVisit={handleNewVisit}
             onSelectTooth={selectTooth}
             panelOpen={false}
+            patientDateOfBirth={patientProfile?.dateOfBirth}
           />
         </div>
 

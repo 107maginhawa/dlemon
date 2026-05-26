@@ -17,7 +17,8 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import { useUpdateVisit } from '@/features/workspace/hooks/use-update-visit';
-import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
+import { getDentitionType } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothData, DentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
 
 export interface VisitCard {
@@ -39,6 +40,8 @@ export interface TimelineCarouselProps {
   onSelectTooth?: (toothNumber: number) => void;
   /** When true, narrows the carousel to make room for the slideout panel */
   panelOpen?: boolean;
+  /** Patient date of birth (ISO date string) — used to select dentition type */
+  patientDateOfBirth?: string | null;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -48,12 +51,14 @@ function VisitChartCard({
   onSelectTooth,
   onLockVisit,
   lockPending,
+  dentitionType,
 }: {
   visit: VisitCard;
   isActive: boolean;
   onSelectTooth?: (toothNumber: number) => void;
   onLockVisit?: (visitId: string) => void;
   lockPending?: boolean;
+  dentitionType: DentitionType;
 }) {
   const { data } = useQuery({
     ...getDentalChartOptions({ path: { visitId: visit.id } }),
@@ -77,6 +82,7 @@ function VisitChartCard({
           onSelectTooth={isActive ? onSelectTooth : undefined}
           toothSize={isActive ? 'md' : 'xs'}
           showLegend={false}
+          dentitionType={dentitionType}
         />
       </div>
       <div className="flex items-center justify-between mt-1">
@@ -133,8 +139,10 @@ export function TimelineCarousel({
   onNewVisit,
   onSelectTooth,
   panelOpen = false,
+  patientDateOfBirth = null,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
+  const dentitionType = getDentitionType(patientDateOfBirth);
   // Sort oldest → newest so initialSlide = last index = most recent
   const sorted = [...visits].sort(
     (a, b) =>
@@ -185,6 +193,7 @@ export function TimelineCarousel({
                   lockMutation.mutate({ path: { visitId }, body: { status: 'locked' } })
                 }
                 lockPending={lockMutation.isPending}
+                dentitionType={dentitionType}
               />
             </SwiperSlide>
           );

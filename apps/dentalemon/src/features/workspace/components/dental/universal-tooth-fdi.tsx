@@ -9,7 +9,7 @@
 import React from 'react';
 import { UniversalTooth } from './universal-tooth';
 import type { UniversalToothProps } from './universal-tooth';
-import { fdiToUniversal } from '../dental-chart.helpers';
+import { fdiToUniversal, fdiPrimaryToUniversal } from '../dental-chart.helpers';
 
 export interface UniversalToothFdiProps extends Omit<UniversalToothProps, 'toothNumber' | 'size'> {
   fdiToothNumber: number;
@@ -17,6 +17,7 @@ export interface UniversalToothFdiProps extends Omit<UniversalToothProps, 'tooth
 }
 
 export function UniversalToothFdi({ fdiToothNumber, ...props }: UniversalToothFdiProps) {
-  const universalNumber = fdiToUniversal(fdiToothNumber);
+  const isPrimary = fdiToothNumber >= 51 && fdiToothNumber <= 85;
+  const universalNumber = isPrimary ? fdiPrimaryToUniversal(fdiToothNumber) : fdiToUniversal(fdiToothNumber);
   return <UniversalTooth toothNumber={universalNumber} label={fdiToothNumber} {...props} />;
 }

@@ -8,6 +8,21 @@
 import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
 
 export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';
+export type DentitionType = 'permanent' | 'primary';
+
+/**
+ * Returns 'primary' if the patient is younger than 12 years old based on their
+ * date of birth, otherwise 'permanent'. Returns 'permanent' when DOB is null.
+ */
+export function getDentitionType(dateOfBirth: string | null): DentitionType {
+  if (!dateOfBirth) return 'permanent';
+  const today = new Date();
+  const dob = new Date(dateOfBirth);
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+  return age < 12 ? 'primary' : 'permanent';
+}
 
 export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
 
@@ -126,6 +141,26 @@ export function fdiToUniversal(fdiNumber: number): number {
  */
 export function universalToFdi(universalNumber: number): number {
   return UNIVERSAL_TO_FDI[universalNumber] ?? NaN;
+}
+
+/**
+ * Primary (deciduous) FDI → Universal (1–20) mapping.
+ * Upper right: 55→1 … 51→5 | Upper left: 61→6 … 65→10
+ * Lower left: 71→11 … 75→15 | Lower right: 85→16 … 81→20
+ */
+const PRIMARY_FDI_TO_UNIVERSAL: Record<number, number> = {
+  55: 1, 54: 2, 53: 3, 52: 4, 51: 5,
+  61: 6, 62: 7, 63: 8, 64: 9, 65: 10,
+  71: 11, 72: 12, 73: 13, 74: 14, 75: 15,
+  85: 16, 84: 17, 83: 18, 82: 19, 81: 20,
+};
+
+/**
+ * Convert a primary (deciduous) FDI tooth number (51–85) to Universal 1–20.
+ * Returns NaN for non-primary FDI input.
+ */
+export function fdiPrimaryToUniversal(fdiNumber: number): number {
+  return PRIMARY_FDI_TO_UNIVERSAL[fdiNumber] ?? NaN;
 }
 
 // ─── Color class map ────────────────────────────────────────────────────────

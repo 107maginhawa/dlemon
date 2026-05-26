@@ -8,8 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo } from './dental-chart.helpers';
-import type { ToothData, ToothState } from './dental-chart.helpers';
+import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo } from './dental-chart.helpers';
+import type { ToothData, ToothState, DentitionType } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
 
 export interface DentalChartProps {
@@ -20,9 +20,11 @@ export interface DentalChartProps {
   toothSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   /** Show the color legend below the chart. Default: true */
   showLegend?: boolean;
+  /** Permanent (32-tooth adult) or primary (20-tooth pediatric). Default: 'permanent' */
+  dentitionType?: DentitionType;
 }
 
-export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true }: DentalChartProps) {
+export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true, dentitionType = 'permanent' }: DentalChartProps) {
   const toothMap = buildToothMap(teeth);
   const [filterStates, setFilterStates] = useState<Set<ToothState>>(new Set());
 
@@ -35,11 +37,20 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
     });
   }
 
-  // Split into 4 quadrants for rendering
-  const upperRight = TOOTH_NUMBERS.filter(n => n >= 11 && n <= 18).reverse(); // 18 → 11
-  const upperLeft  = TOOTH_NUMBERS.filter(n => n >= 21 && n <= 28); // 21 → 28
-  const lowerLeft  = TOOTH_NUMBERS.filter(n => n >= 31 && n <= 38); // 31 → 38
-  const lowerRight = TOOTH_NUMBERS.filter(n => n >= 41 && n <= 48).reverse(); // 48 → 41
+  // Split into 4 quadrants for rendering — permanent (8 per quadrant) or primary (5 per quadrant)
+  const isPrimary = dentitionType === 'primary';
+  const upperRight = isPrimary
+    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 51 && n <= 55).reverse() // 55 → 51
+    : TOOTH_NUMBERS.filter(n => n >= 11 && n <= 18).reverse();           // 18 → 11
+  const upperLeft = isPrimary
+    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 61 && n <= 65)            // 61 → 65
+    : TOOTH_NUMBERS.filter(n => n >= 21 && n <= 28);                     // 21 → 28
+  const lowerLeft = isPrimary
+    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 71 && n <= 75)            // 71 → 75
+    : TOOTH_NUMBERS.filter(n => n >= 31 && n <= 38);                     // 31 → 38
+  const lowerRight = isPrimary
+    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 81 && n <= 85).reverse()  // 85 → 81
+    : TOOTH_NUMBERS.filter(n => n >= 41 && n <= 48).reverse();           // 48 → 41
 
   function renderTooth(toothNumber: number, isLastInQuadrant = false) {
     const state = toothMap.get(toothNumber) ?? 'healthy' as ToothState;
