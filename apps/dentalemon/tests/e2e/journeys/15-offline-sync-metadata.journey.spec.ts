@@ -1,13 +1,12 @@
 /**
- * J15 — Offline sync metadata: create, list, transition via API; UI indicator (BROKEN expected).
+ * J15 — Offline sync metadata: sync-log lifecycle + per-entity localId.
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J15
- * Rubric: J15; LF-BR-001, LF-BR-002, LF-BR-003. Persona: dentist.
- * Expected verdict: BROKEN.
- * P2 ref: P2-009 (sync status indicator deferred).
+ * Rubric: J15; LF-BR-001, LF-BR-002, LF-BR-003, LF-BR-004. Persona: dentist.
+ * Expected verdict: PASS.
  *
  * The API sync log lifecycle is fully verified (create → list → syncing → synced).
- * The DOM step confirms no UI sync indicator exists (expected BROKEN).
+ * Per-entity localId is stored and returned on POST /dental/visits (GAP-001/GAP-002 closed).
  */
 import {
   test,

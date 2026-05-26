@@ -258,6 +258,58 @@ describe('DentalChartRepository', () => {
   });
 
   // --------------------------------------------------------------------------
+  // CHART-BR-002 — Baseline immutability
+  //
+  // Rule: once a tooth is stored with entryClassification 'existing' or
+  // 'existing_other', a subsequent upsert carrying non-baseline classification
+  // ('treatment_plan' | 'condition' | undefined) MUST NOT overwrite it.
+  // --------------------------------------------------------------------------
+
+  describe('CHART-BR-002 — baseline immutability', () => {
+    test('BR-002-A: upsert with treatment_plan cannot overwrite an existing-classified baseline tooth', async () => {
+      await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 11, state: 'healthy', entryClassification: 'existing' }],
+      });
+
+      const result = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 11, state: 'filled', entryClassification: 'treatment_plan' }],
+      });
+
+      const tooth = result.teeth.find(t => t.toothNumber === 11);
+      expect(tooth!.entryClassification).toBe('existing');
+      expect(tooth!.state).toBe('healthy');
+    });
+
+    test('BR-002-B: treatment_plan upsert is additive — existing-classified teeth survive when absent from incoming', async () => {
+      await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [
+          { toothNumber: 11, state: 'healthy', entryClassification: 'existing' },
+          { toothNumber: 21, state: 'caries', entryClassification: 'existing_other' },
+        ],
+      });
+
+      const result = await repo.upsert({
+        visitId: VISIT_NO_CHART,
+        patientId: PATIENT,
+        teeth: [{ toothNumber: 36, state: 'crown', entryClassification: 'treatment_plan' }],
+      });
+
+      expect(result.teeth.length).toBeGreaterThanOrEqual(3);
+      const t11 = result.teeth.find(t => t.toothNumber === 11);
+      const t21 = result.teeth.find(t => t.toothNumber === 21);
+      expect(t11!.state).toBe('healthy');
+      expect(t11!.entryClassification).toBe('existing');
+      expect(t21!.entryClassification).toBe('existing_other');
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // SAVE VERSION (P1-002 — append-only audit trail)
   // --------------------------------------------------------------------------
 

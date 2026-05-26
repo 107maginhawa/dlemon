@@ -118,6 +118,7 @@ export const VISIT_17 = 'e0000000-0000-1000-8000-000000000017'; // Liza V3
 export const VISIT_18 = 'e0000000-0000-1000-8000-000000000018'; // Ben V4
 export const VISIT_19 = 'e0000000-0000-1000-8000-000000000019'; // Juan V4
 export const VISIT_20 = 'e0000000-0000-1000-8000-000000000020'; // Rosa V5 (active)
+export const VISIT_21 = 'e0000000-0000-1000-8000-000000000021'; // Phil V1 (offline-created, pending sync)
 
 // ── Dental Charts (e1) ──────────────────────────────────────────────
 export const CHART_01 = 'e1000000-0000-1000-8000-000000000001';

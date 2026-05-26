@@ -9,10 +9,10 @@ import { dentalTreatments } from '@/handlers/dental-visit/repos/treatment.schema
 import { visitNotes } from '@/handlers/dental-visit/repos/treatment.schema';
 import {
   BRANCH_ID, DR_REYES_MEMBERSHIP_ID,
-  PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID,
+  PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID, PATIENT_PHIL_ID,
   VISIT_01, VISIT_02, VISIT_03, VISIT_04, VISIT_05, VISIT_06, VISIT_07,
   VISIT_08, VISIT_09, VISIT_10, VISIT_11, VISIT_12, VISIT_13, VISIT_14,
-  VISIT_15, VISIT_16, VISIT_17, VISIT_18, VISIT_19, VISIT_20,
+  VISIT_15, VISIT_16, VISIT_17, VISIT_18, VISIT_19, VISIT_20, VISIT_21,
   CHART_01, CHART_02, CHART_03, CHART_04, CHART_05, CHART_06, CHART_07,
   CHART_08, CHART_09, CHART_10, CHART_11, CHART_12, CHART_13, CHART_14,
   CHART_15, CHART_16, CHART_17, CHART_18, CHART_19, CHART_20,
@@ -312,6 +312,20 @@ export async function seedVisits(db: DatabaseInstance): Promise<void> {
       status: 'active',
       activatedAt: new Date('2026-05-12T03:00:00Z'),
       chiefComplaint: 'Six-month recall + whitening consultation',
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
+    // Visit 21: Phil V1 — offline-created (syncStatus: 'pending', demonstrates LF-BR-001/002)
+    {
+      id: VISIT_21,
+      patientId: PATIENT_PHIL_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: DR_REYES_MEMBERSHIP_ID,
+      status: 'active',
+      activatedAt: new Date('2026-05-15T09:00:00Z'),
+      chiefComplaint: 'New patient exam — created while offline',
+      localId: 'demo-offline-001',
+      syncStatus: 'pending',
       createdBy: DR_REYES_MEMBERSHIP_ID,
       updatedBy: DR_REYES_MEMBERSHIP_ID,
     },

@@ -15,8 +15,8 @@ This document is the authoritative compliance gap registry for the Dentalemon de
 
 | Category | Count | Status |
 |----------|------:|-------|
-| P1 — V1 Required, blocking | 2 | Must fix |
-| P1 — V1 Required, verify-only | 1 | Run J15 to confirm pass |
+| P1 — V1 Required, blocking | 2 | CLOSED (Wave 2) |
+| P1 — V1 Required, verify-only | 1 | CLOSED (Wave 2) |
 | P2 — V1 Recommended | 12 | Important, not blocking |
 | P3 — V2/Deferred | 6 | Informational |
 | Confirmed Closed (vs prior review) | 6 | No action needed |
@@ -80,7 +80,7 @@ This document is the authoritative compliance gap registry for the Dentalemon de
 ### IDEAL-GAP-P1-002 · Chart Layer Immutability Test Missing
 **Standard refs:** §3.5, §5.4 CHART-BR-001, CHART-BR-002
 **Priority:** P1 — V1 Required
-**Status:** OPEN
+**Status:** CLOSED — 2026-05-26
 
 **Evidence:**
 - `dental-chart.schema.ts:53-61` stores teeth as a single `jsonb` array keyed by `visitId`
@@ -109,7 +109,7 @@ Option B (structural): Split dental_chart into dental_chart_proposed +
 ### IDEAL-GAP-P1-003 · J15 Offline E2E Journey — Verify Passes
 **Standard refs:** §4.6, §9.2 E2E-009, §3.13 LF-BR-001–004
 **Priority:** P1 — Verify (may already pass)
-**Status:** UNCERTAIN — requires test run
+**Status:** CLOSED — 2026-05-26
 
 **Evidence:**
 - `apps/dentalemon/tests/e2e/journeys/15-offline-sync-metadata.journey.spec.ts:27` now says `expectedVerdict: 'PASS'`
@@ -405,11 +405,11 @@ The `/oli-execution-gate` skill gates each phase on:
 | Criterion | Status | Gap |
 |-----------|--------|-----|
 | Core clinic workflows function end-to-end | ✅ PASS | — |
-| All business rules have at least one test | PARTIAL | CHART-BR-002 missing |
+| All business rules have at least one test | ✅ PASS | CHART-BR-002 covered (Wave 2) |
 | Roles and permissions enforced | ✅ PASS | Roles exist, enforcement tested |
 | Audit trail for clinical/billing actions | ❌ FAIL | No queryable audit table |
 | Offline-readiness structural support | ✅ PASS | syncableEntityFields on all entities |
-| Offline E2E journey passes | UNCERTAIN | J15 updated to PASS — needs verification |
-| Seed data supports full demo workflow | PARTIAL | No audit rows, no offline record sample |
+| Offline E2E journey passes | ✅ PASS | J15 comment fixed; offline seed added (Wave 2) |
+| Seed data supports full demo workflow | PARTIAL | No audit rows (P1-001); offline record added (Wave 2) |
 | iPad-first layout | ✅ PASS | Touch targets, carousel, responsive |
-| No P0/P1 unresolved after remediation | PARTIAL | 2 P1 items remain (audit table, chart test) |
+| No P0/P1 unresolved after remediation | PARTIAL | 1 P1 item remains (P1-001: audit table) |

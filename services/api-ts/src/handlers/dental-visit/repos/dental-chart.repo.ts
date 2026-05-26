@@ -41,9 +41,32 @@ export class DentalChartRepository {
     const existing = await this.findByVisit(input.visitId);
 
     if (existing) {
+      // CHART-BR-002: teeth with 'existing'/'existing_other' classification are
+      // immutable — non-baseline incoming entries cannot overwrite them.
+      const BASELINE = new Set<string>(['existing', 'existing_other']);
+      const existingTeeth = existing.teeth as ToothChartState[];
+
+      const baselineMap = new Map<number, ToothChartState>();
+      for (const tooth of existingTeeth) {
+        if (tooth.entryClassification && BASELINE.has(tooth.entryClassification)) {
+          baselineMap.set(tooth.toothNumber, tooth);
+        }
+      }
+
+      const nonBaselineMap = new Map<number, ToothChartState>();
+      for (const incoming of input.teeth) {
+        if (incoming.entryClassification && BASELINE.has(incoming.entryClassification)) {
+          baselineMap.set(incoming.toothNumber, incoming);
+        } else if (!baselineMap.has(incoming.toothNumber)) {
+          nonBaselineMap.set(incoming.toothNumber, incoming);
+        }
+        // else: non-baseline attempting to overwrite baseline tooth → skip
+      }
+
+      const mergedTeeth = [...baselineMap.values(), ...nonBaselineMap.values()];
       const [updated] = await this.db
         .update(dentalCharts)
-        .set({ teeth: input.teeth, updatedAt: new Date() })
+        .set({ teeth: mergedTeeth, updatedAt: new Date() })
         .where(eq(dentalCharts.id, existing.id))
         .returning();
       return updated!;
