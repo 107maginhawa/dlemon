@@ -11,7 +11,7 @@
  *   f0 = invoices, f1 = payments, f2 = payment plans
  *   f3 = treatments, f4 = templates, f5 = visit notes
  *   f6 = prescriptions, f7 = lab orders, f8 = medical history
- *   f9 = invoice line items, fa = plan installments
+ *   f9 = invoice line items, fa = plan installments, fb = sync logs
  */
 
 // ── Existing IDs (re-exported) ──────────────────────────────────────
@@ -262,6 +262,8 @@ export const MH_03 = 'f8000000-0000-1000-8000-000000000003';
 export const MH_04 = 'f8000000-0000-1000-8000-000000000004';
 export const MH_05 = 'f8000000-0000-1000-8000-000000000005';
 export const MH_06 = 'f8000000-0000-1000-8000-000000000006';
+export const MH_07 = 'f8000000-0000-1000-8000-000000000007'; // Pepe — penicillin allergy
+export const MH_08 = 'f8000000-0000-1000-8000-000000000008'; // Pepe — NSAID allergy
 
 // ── Invoice Line Items (f9) ─────────────────────────────────────────
 export const LINE_ITEM_01 = 'f9000000-0000-1000-8000-000000000001';
@@ -272,9 +274,22 @@ export const LINE_ITEM_05 = 'f9000000-0000-1000-8000-000000000005';
 export const LINE_ITEM_06 = 'f9000000-0000-1000-8000-000000000006';
 export const LINE_ITEM_07 = 'f9000000-0000-1000-8000-000000000007';
 export const LINE_ITEM_08 = 'f9000000-0000-1000-8000-000000000008';
+export const LINE_ITEM_09 = 'f9000000-0000-1000-8000-000000000009'; // Gina overdue
+
+// ── Invoices (f0) — extended ────────────────────────────────────────
+export const INVOICE_09 = 'f0000000-0000-1000-8000-000000000009'; // Gina overdue
+
+// ── Payment Plans (f2) — extended ───────────────────────────────────
+export const PLAN_02 = 'f2000000-0000-1000-8000-000000000002'; // Gina payment plan
 
 // ── Payment Plan Installments (fa) ──────────────────────────────────
 export const INSTALLMENT_01 = 'fa000000-0000-1000-8000-000000000001';
 export const INSTALLMENT_02 = 'fa000000-0000-1000-8000-000000000002';
 export const INSTALLMENT_03 = 'fa000000-0000-1000-8000-000000000003';
 export const INSTALLMENT_04 = 'fa000000-0000-1000-8000-000000000004';
+export const INSTALLMENT_05 = 'fa000000-0000-1000-8000-000000000005'; // Gina plan installment 1
+export const INSTALLMENT_06 = 'fa000000-0000-1000-8000-000000000006'; // Gina plan installment 2
+
+// ── Sync Logs (fb) ──────────────────────────────────────────────────
+export const SYNC_01 = 'fb000000-0000-1000-8000-000000000001'; // Phil — patient pending sync
+export const SYNC_02 = 'fb000000-0000-1000-8000-000000000002'; // Phil — visit failed sync

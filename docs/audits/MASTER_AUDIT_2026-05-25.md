@@ -475,7 +475,7 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 | P1-001 | Expand roles to include `hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only` | `membership.schema.ts` + all role-gated handlers | L |
 | P1-002 | Add `Operatory` / Chair table + link to appointment | New schema + migration | S | ✅ 87d634b |
 | P1-003 | Add `QueueItem` entity and queue board handlers | New: `dental-queue/` | M |
-| P1-004 | Expand seed to 20–30 patients with child, allergy, unpaid-balance, and offline scenarios | `seed-data/` | M |
+| P1-004 | Expand seed to 20–30 patients with child, allergy, unpaid-balance, and offline scenarios | `seed-data/` | M | ✅ |
 | P1-005 | Add E2E test for offline record creation with sync metadata visible (E2E-009) | `tests/e2e/` | S |
 | P1-006 | Validate and test medical alert visibility during clinical encounter (ENC-BR-004, PAT-BR-003) | E2E spec | S |
 | P1-007 | Add `InsuranceProfile` entity + basic claim readiness check | New: `dental-claims/` | M |

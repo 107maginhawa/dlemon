@@ -42,6 +42,7 @@ import { seedVisits } from './seed-data/visits';
 import { seedBilling } from './seed-data/billing';
 import { seedClinical } from './seed-data/clinical';
 import { seedProcedureCodes } from './seed-data/procedure-codes';
+import { seedSyncLogs } from './seed-data/sync-logs';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 
@@ -274,6 +275,7 @@ async function seed() {
   await seedAppointments(db);
   await seedBilling(db);
   await seedClinical(db);
+  await seedSyncLogs(db);
 
   // ------------------------------------------------------------------
   // Done

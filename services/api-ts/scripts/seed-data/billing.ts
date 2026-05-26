@@ -8,15 +8,18 @@ import { dentalPaymentPlans, dentalPaymentPlanInstallments } from '@/handlers/de
 import {
   BRANCH_ID, DR_REYES_MEMBERSHIP_ID, ANA_SANTOS_MEMBERSHIP_ID,
   PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID,
+  PATIENT_GINA_ID,
   VISIT_01, VISIT_02, VISIT_03, VISIT_04, VISIT_05, VISIT_06, VISIT_07, VISIT_09,
   TREATMENT_01, TREATMENT_02, TREATMENT_03, TREATMENT_04, TREATMENT_05,
   TREATMENT_06, TREATMENT_07, TREATMENT_09,
   INVOICE_01, INVOICE_02, INVOICE_03, INVOICE_04, INVOICE_05, INVOICE_06, INVOICE_07, INVOICE_08,
+  INVOICE_09,
   PAYMENT_01, PAYMENT_02, PAYMENT_03, PAYMENT_04, PAYMENT_05, PAYMENT_06, PAYMENT_07,
-  PLAN_01,
+  PLAN_01, PLAN_02,
   LINE_ITEM_01, LINE_ITEM_02, LINE_ITEM_03, LINE_ITEM_04,
-  LINE_ITEM_05, LINE_ITEM_06, LINE_ITEM_07, LINE_ITEM_08,
+  LINE_ITEM_05, LINE_ITEM_06, LINE_ITEM_07, LINE_ITEM_08, LINE_ITEM_09,
   INSTALLMENT_01, INSTALLMENT_02, INSTALLMENT_03, INSTALLMENT_04,
+  INSTALLMENT_05, INSTALLMENT_06,
 } from './ids';
 
 export async function seedBilling(db: DatabaseInstance): Promise<void> {
@@ -183,6 +186,26 @@ export async function seedBilling(db: DatabaseInstance): Promise<void> {
       createdBy: DR_REYES_MEMBERSHIP_ID,
       updatedBy: DR_REYES_MEMBERSHIP_ID,
     },
+    // INV-2026-0009: Gina overdue — full denture PHP35k (P1-004: unpaid-balance scenario)
+    {
+      id: INVOICE_09,
+      patientId: PATIENT_GINA_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: DR_REYES_MEMBERSHIP_ID,
+      invoiceNumber: 'INV-2026-0009',
+      status: 'overdue',
+      subtotalCents: 3500000,
+      discountCents: 0,
+      taxCents: 0,
+      totalCents: 3500000,
+      paidCents: 1750000,
+      balanceCents: 1750000,
+      issuedAt: new Date('2026-03-01T08:00:00Z'),
+      dueDate: new Date('2026-04-30T16:00:00Z'),
+      notes: 'Patient missed April installment. Balance PHP17,500 overdue.',
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
   ]).onConflictDoNothing();
 
   // ── 2. Invoice Line Items ─────────────────────────────────────────
@@ -195,6 +218,7 @@ export async function seedBilling(db: DatabaseInstance): Promise<void> {
     { id: LINE_ITEM_06, invoiceId: INVOICE_06, treatmentId: TREATMENT_06, cdtCode: 'D2750', description: 'PFM Crown, #19', toothNumber: 19, unitPriceCents: 2000000, quantity: 1, amountCents: 2000000, isDone: true, createdBy: DR_REYES_MEMBERSHIP_ID, updatedBy: DR_REYES_MEMBERSHIP_ID },
     { id: LINE_ITEM_07, invoiceId: INVOICE_07, treatmentId: TREATMENT_07, cdtCode: 'D1110', description: 'Oral Prophylaxis', unitPriceCents: 150000, quantity: 1, amountCents: 150000, isDone: true, createdBy: DR_REYES_MEMBERSHIP_ID, updatedBy: DR_REYES_MEMBERSHIP_ID },
     { id: LINE_ITEM_08, invoiceId: INVOICE_08, treatmentId: TREATMENT_09, cdtCode: 'D7210', description: 'Surgical extraction, #18', toothNumber: 18, unitPriceCents: 500000, quantity: 1, amountCents: 500000, isDone: true, createdBy: DR_REYES_MEMBERSHIP_ID, updatedBy: DR_REYES_MEMBERSHIP_ID },
+    { id: LINE_ITEM_09, invoiceId: INVOICE_09, cdtCode: 'D5110', description: 'Complete denture — maxillary', unitPriceCents: 3500000, quantity: 1, amountCents: 3500000, isDone: true, createdBy: DR_REYES_MEMBERSHIP_ID, updatedBy: DR_REYES_MEMBERSHIP_ID },
   ]).onConflictDoNothing();
 
   // ── 3. Payments ───────────────────────────────────────────────────
@@ -356,5 +380,45 @@ export async function seedBilling(db: DatabaseInstance): Promise<void> {
     },
   ]).onConflictDoNothing();
 
-  console.log('   ✅ 8 invoices, 8 line items, 7 payments, 1 payment plan (4 installments)');
+  // ── 5. Payment Plan for Gina INV-0009 (PHP35k denture, overdue) ────
+  await db.insert(dentalPaymentPlans).values({
+    id: PLAN_02,
+    invoiceId: INVOICE_09,
+    patientId: PATIENT_GINA_ID,
+    totalCents: 3500000,
+    numberOfInstallments: 2,
+    frequency: 'monthly',
+    startDate: new Date('2026-03-01T00:00:00+08:00'),
+    amountPerInstallmentCents: 1750000,
+    status: 'behind',
+    createdBy: DR_REYES_MEMBERSHIP_ID,
+    updatedBy: DR_REYES_MEMBERSHIP_ID,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalPaymentPlanInstallments).values([
+    {
+      id: INSTALLMENT_05,
+      planId: PLAN_02,
+      installmentNumber: 1,
+      dueDate: new Date('2026-03-01T00:00:00+08:00'),
+      amountCents: 1750000,
+      paidCents: 1750000,
+      status: 'paid',
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
+    {
+      id: INSTALLMENT_06,
+      planId: PLAN_02,
+      installmentNumber: 2,
+      dueDate: new Date('2026-04-01T00:00:00+08:00'),
+      amountCents: 1750000,
+      paidCents: 0,
+      status: 'overdue',
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
+  ]).onConflictDoNothing();
+
+  console.log('   ✅ 9 invoices, 9 line items, 7 payments, 2 payment plans (6 installments)');
 }
