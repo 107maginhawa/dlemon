@@ -41,6 +41,7 @@ import { seedAppointments } from './seed-data/appointments';
 import { seedVisits } from './seed-data/visits';
 import { seedBilling } from './seed-data/billing';
 import { seedClinical } from './seed-data/clinical';
+import { seedProcedureCodes } from './seed-data/procedure-codes';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 
@@ -264,7 +265,9 @@ async function seed() {
   // ------------------------------------------------------------------
   // 7. Clinical seed data (modular)
   // ------------------------------------------------------------------
-  console.log('6. Seeding clinical data...');
+  console.log('6. Seeding procedure codes (P1-008)...');
+  await seedProcedureCodes(db);
+  console.log('7. Seeding clinical data...');
   await seedTreatmentTemplates(db);
   await seedMedicalHistory(db);
   await seedVisits(db);
