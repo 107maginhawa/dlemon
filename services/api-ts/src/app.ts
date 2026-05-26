@@ -70,6 +70,23 @@ import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
 import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
 import { updateQueueItemStatus } from '@/handlers/dental-scheduling/updateQueueItemStatus';
 import { QueueItemAppointmentParams, QueueItemIdParams, QueueBoardParams, CreateQueueItemBody, UpdateQueueItemStatusBody } from '@/handlers/dental-scheduling/queue-item-validators';
+import { createInsuranceProfile } from '@/handlers/dental-patient/createInsuranceProfile';
+import { listPatientInsuranceProfiles } from '@/handlers/dental-patient/listPatientInsuranceProfiles';
+import { updateInsuranceProfile } from '@/handlers/dental-patient/updateInsuranceProfile';
+import { createClaimDraft } from '@/handlers/dental-patient/createClaimDraft';
+import { listPatientClaims } from '@/handlers/dental-patient/listPatientClaims';
+import { getClaimReadiness } from '@/handlers/dental-patient/getClaimReadiness';
+import { updateClaimStatus } from '@/handlers/dental-patient/updateClaimStatus';
+import {
+  InsuranceProfileParams,
+  InsuranceProfileIdParams,
+  ClaimDraftParams,
+  ClaimDraftIdParams,
+  CreateInsuranceProfileBody,
+  UpdateInsuranceProfileBody,
+  CreateClaimDraftBody,
+  UpdateClaimDraftStatusBody,
+} from '@/handlers/dental-patient/insurance-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -262,6 +279,47 @@ export function createApp(config: Config): App {
     zValidator('param', QueueItemIdParams),
     zValidator('json', UpdateQueueItemStatusBody),
     updateQueueItemStatus,
+  );
+
+  // Insurance profiles + Claim drafts (B2 P1-007)
+  (app as any).post('/dental/patients/:patientId/insurance-profiles',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InsuranceProfileParams),
+    zValidator('json', CreateInsuranceProfileBody),
+    createInsuranceProfile
+  );
+  (app as any).get('/dental/patients/:patientId/insurance-profiles',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InsuranceProfileParams),
+    listPatientInsuranceProfiles
+  );
+  (app as any).patch('/dental/patients/:patientId/insurance-profiles/:profileId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InsuranceProfileIdParams),
+    zValidator('json', UpdateInsuranceProfileBody),
+    updateInsuranceProfile
+  );
+  (app as any).post('/dental/patients/:patientId/claims',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ClaimDraftParams),
+    zValidator('json', CreateClaimDraftBody),
+    createClaimDraft
+  );
+  (app as any).get('/dental/patients/:patientId/claims',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ClaimDraftParams),
+    listPatientClaims
+  );
+  (app as any).get('/dental/patients/:patientId/claims/:claimId/readiness',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ClaimDraftIdParams),
+    getClaimReadiness
+  );
+  (app as any).patch('/dental/patients/:patientId/claims/:claimId/status',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ClaimDraftIdParams),
+    zValidator('json', UpdateClaimDraftStatusBody),
+    updateClaimStatus
   );
 
   // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)
