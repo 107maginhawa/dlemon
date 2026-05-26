@@ -9,11 +9,12 @@ import { openTestTx } from '@/core/test-tx';
 import { DentalAuditRepository } from './audit.repo';
 import type { NewDentalAuditEntry } from './audit.schema';
 
-const PERSON_A = '00000000-0000-0000-0000-000000000001';
-const PERSON_B = '00000000-0000-0000-0000-000000000002';
-const TENANT_X = '00000000-0000-0000-0000-000000000010';
-const TENANT_Y = '00000000-0000-0000-0000-000000000011';
-const RESOURCE_ID = '00000000-0000-0000-0000-000000000099';
+// "d9aa" namespace — won't collide with seed data or other test suites
+const PERSON_A = 'd9aa0001-0000-0000-0000-000000000001';
+const PERSON_B = 'd9aa0001-0000-0000-0000-000000000002';
+const TENANT_X = 'd9aa0001-0000-0000-0000-000000000010';
+const TENANT_Y = 'd9aa0001-0000-0000-0000-000000000011';
+const RESOURCE_ID = 'd9aa0001-0000-0000-0000-000000000099';
 
 function makeEntry(overrides: Partial<NewDentalAuditEntry> = {}): NewDentalAuditEntry {
   return {
@@ -72,7 +73,8 @@ describe('DentalAuditRepository', () => {
     await repo.log(makeEntry({ resourceType: 'dental_visit' }));
     await repo.log(makeEntry({ resourceType: 'dental_patient', action: 'patient.view', resourceId: undefined }));
 
-    const { entries } = await repo.query({ resourceType: 'dental_patient' }, { limit: 10, offset: 0 });
+    // Scope by tenantId too — avoids matching committed seed rows with the same resourceType
+    const { entries } = await repo.query({ resourceType: 'dental_patient', tenantId: TENANT_X }, { limit: 10, offset: 0 });
     expect(entries.length).toBe(1);
     expect(entries[0]?.resourceType).toBe('dental_patient');
   });

@@ -8,7 +8,7 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError } from '@/core/errors';
-import { DentalAuditRepository } from '@/db/audit.repo';
+import { AuditLogRepository } from './repos/audit-log.repo';
 import type { User } from '@/types/auth';
 
 export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
@@ -24,26 +24,29 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
 
-  const personId = ctx.req.query('personId');
-  const tenantId = ctx.req.query('tenantId');
-  const resourceType = ctx.req.query('resourceType');
-  const resourceId = ctx.req.query('resourceId');
-  const action = ctx.req.query('action');
-  const from = ctx.req.query('from');
-  const to = ctx.req.query('to');
-  const limit = Math.min(Number(ctx.req.query('limit') ?? 50), 200);
+  // Support both spec-correct names (actorId/targetType/targetId) and legacy aliases
+  const actorId     = ctx.req.query('actorId')     ?? ctx.req.query('personId')      ?? undefined;
+  const tenantId    = ctx.req.query('tenantId')     ?? undefined;
+  const branchId    = ctx.req.query('branchId')     ?? undefined;
+  const targetType  = ctx.req.query('targetType')   ?? ctx.req.query('resourceType') ?? undefined;
+  const targetId    = ctx.req.query('targetId')     ?? ctx.req.query('resourceId')   ?? undefined;
+  const action      = ctx.req.query('action')       ?? undefined;
+  const from        = ctx.req.query('from');
+  const to          = ctx.req.query('to');
+  const limit  = Math.min(Number(ctx.req.query('limit')  ?? 50), 200);
   const offset = Number(ctx.req.query('offset') ?? 0);
 
-  const repo = new DentalAuditRepository(db);
-  const { entries, total } = await repo.query(
+  const repo = new AuditLogRepository(db);
+  const { entries, total } = await repo.list(
     {
-      personId: personId ?? undefined,
-      tenantId: tenantId ?? undefined,
-      resourceType: resourceType ?? undefined,
-      resourceId: resourceId ?? undefined,
-      action: action ?? undefined,
+      actorId,
+      tenantId,
+      branchId,
+      targetType,
+      targetId,
+      action,
       from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      to:   to   ? new Date(to)   : undefined,
     },
     { limit, offset },
   );

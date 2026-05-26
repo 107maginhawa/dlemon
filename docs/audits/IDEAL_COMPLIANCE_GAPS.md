@@ -48,7 +48,7 @@ This document is the authoritative compliance gap registry for the Dentalemon de
 ### IDEAL-GAP-P1-001 · Queryable Audit Log Table Missing
 **Standard refs:** §3.13, §5.11 AUD-BR-001–004, §6.8 AuditLog, §7.2 "View audit logs", §10.1 seed
 **Priority:** P1 — V1 Required
-**Status:** OPEN
+**Status:** ✅ CLOSED (Wave 5 — 2026-05-26)
 
 **Evidence:**
 - `services/api-ts/src/handlers/dental-audit/` contains only `getAuditEvents.ts` — no `repos/*.schema.ts`
@@ -164,7 +164,7 @@ createAttachment.ts            → import { getVisitOrThrow }
 
 ### IDEAL-GAP-P2-003 · dental-audit Has No Handler Directory Structure
 **Standard refs:** §3.13, module organization
-**Status:** OPEN (DENTAL-022)
+**Status:** ✅ CLOSED (Wave 5 — 2026-05-26)
 
 `dental-audit/` contains only `getAuditEvents.ts` — no `repos/`, no `index.ts`, no test file. Pairs with P1-001 (creating the schema will fix this structurally).
 
@@ -174,7 +174,7 @@ createAttachment.ts            → import { getVisitOrThrow }
 
 ### IDEAL-GAP-P2-004 · Seed Has No Audit Log Rows
 **Standard refs:** §10.1 "Audit logs — V1 Required"
-**Status:** OPEN (IDEAL GAP-012)
+**Status:** ✅ CLOSED (Wave 5 — 2026-05-26)
 
 `scripts/seed-demo.ts` has zero inserts into any audit table. `GET /dental/audit-events` returns empty list against demo seed.
 
@@ -184,7 +184,7 @@ createAttachment.ts            → import { getVisitOrThrow }
 
 ### IDEAL-GAP-P2-005 · No Offline/Sync Records in Seed
 **Standard refs:** §10.1 "Local/sync records — unsynced local record sample — V1 Required"
-**Status:** OPEN
+**Status:** ✅ CLOSED (Wave 5 — 2026-05-26)
 
 Seed has no row demonstrating `syncStatus = 'pending'` or a visit created with `localId`. Cannot demo offline-readiness from seed data.
 

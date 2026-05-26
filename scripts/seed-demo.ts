@@ -1371,6 +1371,14 @@ async function seed() {
     await seedSyncLog(cookie, branch.id, P[0].id)
   }
 
+  // IDEAL Wave 5 — explicit audit log seed rows (P1-001 + P2-003/P2-004)
+  section('12. Audit log seed rows (IDEAL Wave 5)')
+  await seedAuditLogRows()
+
+  // P2-005 — one visit with syncStatus='pending' for offline-first demo
+  section('13. Offline visit demo row (P2-005)')
+  await patchVisitForOfflineDemo()
+
   // ── Done ──────────────────────────────────────────────────────────────────
   console.log('\n╔══════════════════════════════════════════════════════╗')
   console.log('║           Comprehensive Seed Complete!               ║')
@@ -1405,6 +1413,60 @@ async function seedSyncLog(cookie: string, branchId: string, entityId: string) {
   }, cookie)
   if (r.ok) log('✓ Sync log: demo pending row (localId=demo-offline-visit-001)')
   else log(`⚠ Sync log (${r.status})`)
+}
+
+// IDEAL Wave 5 — P1-001: insert 5+ explicit audit log rows (covers role.changed which has no handler)
+async function seedAuditLogRows() {
+  const { Pool } = await import('pg')
+  const pool = new Pool({ connectionString: 'postgres://postgres:password@localhost:5432/monobase' })
+  try {
+    // Grab first completed visit + its branch/org for realistic IDs
+    const { rows } = await pool.query(`
+      SELECT v.id, v.branch_id, v.created_by as actor_id, b.organization_id as tenant_id
+      FROM dental_visit v
+      JOIN dental_branch b ON b.id = v.branch_id
+      WHERE v.status = 'completed'
+      ORDER BY v.created_at
+      LIMIT 1
+    `)
+    if (!rows.length) { log('⚠ Audit seed: no completed visit found'); return }
+    const { id: visitId, branch_id: branchId, actor_id: actorId, tenant_id: tenantId } = rows[0]
+    const events = [
+      { action: 'visit.complete',      target_type: 'dental_visit',      target_id: visitId },
+      { action: 'treatment.performed', target_type: 'dental_treatment',   target_id: visitId },
+      { action: 'discount.applied',    target_type: 'dental_invoice',     target_id: visitId },
+      { action: 'invoice.voided',      target_type: 'dental_invoice',     target_id: visitId },
+      { action: 'role.changed',        target_type: 'dental_membership',  target_id: null    },
+    ]
+    for (const ev of events) {
+      await pool.query(
+        `INSERT INTO dental_audit_log
+           (id, tenant_id, branch_id, actor_id, action, target_type, target_id, created_by, updated_by)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $3, $3)`,
+        [tenantId, branchId, actorId, ev.action, ev.target_type, ev.target_id],
+      )
+    }
+    log(`✓ Audit log: 5 demo rows (visit.complete, treatment.performed, discount.applied, invoice.voided, role.changed)`)
+  } finally {
+    await pool.end()
+  }
+}
+
+// IDEAL Wave 5 — P2-005: one visit with syncStatus='pending' + localId for offline-first demo
+async function patchVisitForOfflineDemo() {
+  const { Pool } = await import('pg')
+  const pool = new Pool({ connectionString: 'postgres://postgres:password@localhost:5432/monobase' })
+  try {
+    const { rowCount } = await pool.query(`
+      UPDATE dental_visit
+      SET local_id = 'demo-offline-001', sync_status = 'pending'
+      WHERE id = (SELECT id FROM dental_visit ORDER BY created_at LIMIT 1)
+    `)
+    if (rowCount) log('✓ P2-005: visit patched — syncStatus=pending, localId=demo-offline-001')
+    else log('⚠ P2-005: no visit found to patch')
+  } finally {
+    await pool.end()
+  }
 }
 
 seed().catch(err => {
