@@ -17,7 +17,7 @@ This document is the authoritative compliance gap registry for the Dentalemon de
 |----------|------:|-------|
 | P1 — V1 Required, blocking | 2 | CLOSED (Wave 2) |
 | P1 — V1 Required, verify-only | 1 | CLOSED (Wave 2) |
-| P2 — V1 Recommended | 12 | Important, not blocking |
+| P2 — V1 Recommended | 12 | 4 CLOSED (Wave 3); 8 open |
 | P3 — V2/Deferred | 6 | Informational |
 | Confirmed Closed (vs prior review) | 6 | No action needed |
 
@@ -152,13 +152,13 @@ createAttachment.ts            → import { getVisitOrThrow }
 
 ### IDEAL-GAP-P2-002 · Pediatric Charting Unwired (Always Sends Permanent)
 **Standard refs:** §3.5, §3.2 Patient (age-based dentition)
-**Status:** OPEN (DENTAL-009)
+**Status:** ✅ CLOSED (Wave 3 — 2026-05-26)
 
-- `universal-tooth-fdi.tsx` supports pediatric (FDI 1-20 / primary dentition)
-- `initializeDentition` has `dentitionType` param but frontend always passes `permanent`
-- Pediatric patients get 32-tooth adult layout regardless of age
-
-**Fix:** Wire age-based dentition detection — if patient DOB < ~12 years, send `dentitionType: 'primary'` and switch UI to 20-tooth layout.
+- `getDentitionType(dob)` added to `dental-chart.helpers.ts` — returns `'primary'` for age < 12
+- `fdiPrimaryToUniversal` mapping added for FDI 51–85 → Universal 1–20
+- `DentalChart` accepts `dentitionType` prop; uses `PEDIATRIC_TOOTH_NUMBERS` (20 teeth) when primary
+- `TimelineCarousel` computes dentition from `patientDateOfBirth` prop and passes it to each card
+- Workspace route fetches patient profile (DOB) via `usePatientProfile` and passes to carousel
 
 ---
 
@@ -194,11 +194,9 @@ Seed has no row demonstrating `syncStatus = 'pending'` or a visit created with `
 
 ### IDEAL-GAP-P2-006 · InventoryItem Missing Lifecycle Status Field
 **Standard refs:** §3.11, §6.8 InventoryItem
-**Status:** OPEN (IDEAL GAP-004)
+**Status:** ✅ CLOSED (already implemented before Wave 3 — verified 2026-05-26)
 
-`dental-clinical/repos/inventory.schema.ts` has no `status` field. IDEAL §6.8 prescribes `status: active | depleted | discontinued`.
-
-**Fix:** Add `status text default 'active'` with enum `['active', 'depleted', 'discontinued']` + migration.
+`inventory.schema.ts` already has `status text default 'active'` with `INVENTORY_STATUSES = ['active','depleted','discontinued']`. Migration `0059_little_mordo.sql` adds the column. Validators (`UpdateInventoryItemBody`) and handler (`updateInventoryItem`) both support PATCH status. GAP-004 tests (AC-001/002/003) already in `dental-clinical-inventory.test.ts`.
 
 ---
 
@@ -236,24 +234,19 @@ IDEAL §3.9 recommends: insurance profile (payer/policy), claim readiness review
 
 ### IDEAL-GAP-P2-009 · dental-emr Zombie Spec Not Clarified
 **Standard refs:** §3.4 Clinical Encounter (dental-visit IS the EMR)
-**Status:** OPEN (DENTAL-007/020)
+**Status:** ✅ CLOSED (Wave 3 — 2026-05-26)
 
-`docs/product/modules/dental-emr/MODULE_SPEC.md` exists with INFERRED-only workflows. No backend handler exists. Causes confusion: three things named "EMR" (dental-emr spec, dental-visit implementation, emr base handler).
-
-**Fix:**
-1. Rename `docs/product/modules/dental-emr/` → `docs/product/modules/dental-emr-integration/`
-2. Update MODULE_SPEC: purpose = "external EMR data import (Open Dental, Dentrix bridge) — future phase"
-3. Add comment in MODULE_MAP.md: "dental-visit is the active dental EMR"
+- Directory renamed: `docs/product/modules/dental-emr/` → `docs/product/modules/dental-emr-integration/`
+- MODULE_SPEC already had correct purpose ("External EMR data import bridge — future phase"); no content change needed
+- MODULE_MAP.md M9 updated to `dental-emr-integration`, added bold note: "**`dental-visit` is the active dental EMR**"
 
 ---
 
 ### IDEAL-GAP-P2-010 · docs/modules/ Stale Duplicate Directory
 **Standard refs:** N/A — developer confusion risk
-**Status:** OPEN (DENTAL-024)
+**Status:** ✅ CLOSED (already resolved before Wave 3 — verified 2026-05-26)
 
-`docs/modules/` has 10 MODULE_SPEC files; `docs/product/modules/` has 11 (canonical, includes dental-perio). The older directory will drift.
-
-**Fix:** `git rm -r docs/modules/` and update any cross-references in ARCHITECTURE.md/CLAUDE.md.
+`docs/modules/` does not exist in the codebase. Directory was removed in a prior cleanup. No action needed.
 
 ---
 

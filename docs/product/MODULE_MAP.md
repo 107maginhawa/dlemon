@@ -78,13 +78,14 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 **Dependencies**: `dental-visit`, `dental-clinical`, `dental-org`
 **Rules**: BR-021 (requires completed visit), BR-022 (import creates records)
 
-### M9: dental-emr
+### M9: dental-emr-integration
 **Responsibility**: External EMR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR). Stores imported records read-only for clinical reference.
 **Handler**: No handler directory — future phase (Phase 3+). Do not implement until scheduled.
+**Spec**: `docs/product/modules/dental-emr-integration/`
 **Key tables**: `emr_record` (planned)
 **PRD Section**: Phase 3+ (not in current roadmap)
 **Dependencies**: `dental-org`, `dental-patient`
-**Note**: NOT an alias for dental-visit. The active EMR for native visit/chart/treatment records is `dental-visit`. This module handles external practice data portability only.
+**Note**: NOT an alias for dental-visit. **`dental-visit` is the active dental EMR** for native visit, chart, and treatment records. This module handles external practice data portability only.
 
 ### M10: dental-audit (dental-org module)
 **Responsibility**: Dental-specific audit trail and compliance event log.
@@ -126,7 +127,7 @@ dental-org (M1) ─────────────────────�
         │                   └──→ dental-pmd (M8)
         │                   └──→ dental-imaging (M7) [loose coupling]
         ├──→ dental-scheduling (M4)
-        └──→ dental-emr (M9)
+        └──→ dental-emr-integration (M9) [future phase]
 storage ──────────────────────────────────────→ dental-imaging, dental-clinical
 shared (assertBranchAccess/Role) ─────────────→ ALL clinical handlers
 ```
