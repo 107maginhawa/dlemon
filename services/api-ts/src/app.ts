@@ -102,6 +102,12 @@ import { createPostopTemplate } from '@/handlers/dental-clinical/createPostopTem
 import { listPostopTemplates } from '@/handlers/dental-clinical/listPostopTemplates';
 import { updatePostopTemplate } from '@/handlers/dental-clinical/updatePostopTemplate';
 import { PostopBranchParams, PostopTemplateIdParams, CreatePostopTemplateBody, UpdatePostopTemplateBody } from '@/handlers/dental-clinical/postop-validators';
+import { createInventoryItem } from '@/handlers/dental-clinical/createInventoryItem';
+import { listInventoryItems } from '@/handlers/dental-clinical/listInventoryItems';
+import { updateInventoryItem } from '@/handlers/dental-clinical/updateInventoryItem';
+import { createInventoryAdjustment } from '@/handlers/dental-clinical/createInventoryAdjustment';
+import { listInventoryAdjustments } from '@/handlers/dental-clinical/listInventoryAdjustments';
+import { InventoryBranchParams, InventoryItemParams, CreateInventoryItemBody, UpdateInventoryItemBody, CreateAdjustmentBody } from '@/handlers/dental-clinical/inventory-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -298,6 +304,36 @@ export function createApp(config: Config): App {
     zValidator('param', PostopTemplateIdParams),
     zValidator('json', UpdatePostopTemplateBody),
     updatePostopTemplate
+  );
+
+  // Inventory endpoints (P2-004)
+  (app as any).post('/dental/branches/:branchId/inventory',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InventoryBranchParams),
+    zValidator('json', CreateInventoryItemBody),
+    createInventoryItem
+  );
+  (app as any).get('/dental/branches/:branchId/inventory',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InventoryBranchParams),
+    listInventoryItems
+  );
+  (app as any).patch('/dental/branches/:branchId/inventory/:itemId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InventoryItemParams),
+    zValidator('json', UpdateInventoryItemBody),
+    updateInventoryItem
+  );
+  (app as any).post('/dental/branches/:branchId/inventory/:itemId/adjustments',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InventoryItemParams),
+    zValidator('json', CreateAdjustmentBody),
+    createInventoryAdjustment
+  );
+  (app as any).get('/dental/branches/:branchId/inventory/:itemId/adjustments',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', InventoryItemParams),
+    listInventoryAdjustments
   );
 
   // TreatmentPlan endpoints (P0-C)
