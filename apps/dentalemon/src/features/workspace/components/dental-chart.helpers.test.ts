@@ -222,6 +222,83 @@ describe('getToothInfo', () => {
   });
 });
 
+// ─── getDentitionType (AC-DENT-01, P2-002) ────────────────────────────────
+
+import { getDentitionType } from './dental-chart.helpers';
+
+describe('getDentitionType (P2-002)', () => {
+  function dobYearsAgo(years: number): string {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - years);
+    return d.toISOString().slice(0, 10);
+  }
+
+  test('returns "primary" for a 6-year-old (age < 12)', () => {
+    expect(getDentitionType(dobYearsAgo(6))).toBe('primary');
+  });
+
+  test('returns "primary" for an 11-year-old (age < 12)', () => {
+    expect(getDentitionType(dobYearsAgo(11))).toBe('primary');
+  });
+
+  test('returns "permanent" for a 12-year-old (age === 12)', () => {
+    expect(getDentitionType(dobYearsAgo(12))).toBe('permanent');
+  });
+
+  test('returns "permanent" for a 13-year-old (age > 12)', () => {
+    expect(getDentitionType(dobYearsAgo(13))).toBe('permanent');
+  });
+
+  test('returns "permanent" for null DOB (defaults to adult)', () => {
+    expect(getDentitionType(null)).toBe('permanent');
+  });
+
+  test('returns "permanent" for adult (35 years)', () => {
+    expect(getDentitionType(dobYearsAgo(35))).toBe('permanent');
+  });
+});
+
+// ─── fdiPrimaryToUniversal (P2-002) ───────────────────────────────────────
+
+import { fdiPrimaryToUniversal, PEDIATRIC_TOOTH_NUMBERS } from './dental-chart.helpers';
+
+describe('fdiPrimaryToUniversal (P2-002)', () => {
+  test('maps all 20 primary FDI numbers to unique Universal positions 1–20', () => {
+    const universalNums = PEDIATRIC_TOOTH_NUMBERS.map(fdiPrimaryToUniversal);
+    const unique = new Set(universalNums);
+    expect(universalNums.every(n => n >= 1 && n <= 20)).toBe(true);
+    expect(unique.size).toBe(20);
+  });
+
+  test('FDI 51 (upper-right central) maps to Universal 5', () => {
+    expect(fdiPrimaryToUniversal(51)).toBe(5);
+  });
+
+  test('FDI 55 (upper-right molar) maps to Universal 1', () => {
+    expect(fdiPrimaryToUniversal(55)).toBe(1);
+  });
+
+  test('FDI 61 (upper-left central) maps to Universal 6', () => {
+    expect(fdiPrimaryToUniversal(61)).toBe(6);
+  });
+
+  test('FDI 65 (upper-left molar) maps to Universal 10', () => {
+    expect(fdiPrimaryToUniversal(65)).toBe(10);
+  });
+
+  test('FDI 71 (lower-left central) maps to Universal 11', () => {
+    expect(fdiPrimaryToUniversal(71)).toBe(11);
+  });
+
+  test('FDI 81 (lower-right central) maps to Universal 20', () => {
+    expect(fdiPrimaryToUniversal(81)).toBe(20);
+  });
+
+  test('returns NaN for a permanent FDI number', () => {
+    expect(fdiPrimaryToUniversal(11)).toBeNaN();
+  });
+});
+
 // ─── getToothFillColor ─────────────────────────────────────────────────────
 
 describe('getToothFillColor', () => {
