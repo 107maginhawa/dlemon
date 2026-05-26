@@ -43,7 +43,7 @@ export async function completePerioChart(
     throw new BusinessLogicError(`Perio chart is already ${chart.status}`, 'PERIO_CHART_ALREADY_COMPLETE');
   }
 
-  await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate']);
+  await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const readingRepo = new PerioReadingRepository(db);
   const readings = await readingRepo.findMany({ chartId });

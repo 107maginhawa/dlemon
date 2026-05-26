@@ -50,8 +50,8 @@ export async function upsertToothReading(
     throw new BusinessLogicError(`Cannot modify ${chart.status} perio chart`, 'PERIO_CHART_LOCKED');
   }
 
-  // BR-P05: dentist role required.
-  await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate']);
+  // BR-P05: dentist or hygienist role required.
+  await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new PerioReadingRepository(db);
   const reading = await repo.upsert({

@@ -10,11 +10,13 @@ import { dentalBranches } from './branch.schema';
 export const memberRoleEnum = pgEnum('member_role', [
   'dentist_owner',
   'dentist_associate',
+  'hygienist',
   'staff_full',
   'staff_scheduling',
   'dental_assistant',
   'front_desk',
   'billing_staff',
+  'read_only',
 ]);
 
 export const memberStatusEnum = pgEnum('member_status', ['active', 'inactive']);
@@ -51,11 +53,13 @@ export type NewDentalMembership = typeof dentalMemberships.$inferInsert;
 export const VALID_MEMBER_ROLES = [
   'dentist_owner',
   'dentist_associate',
+  'hygienist',
   'staff_full',
   'staff_scheduling',
   'dental_assistant',
   'front_desk',
   'billing_staff',
+  'read_only',
 ] as const;
 export type MemberRole = typeof VALID_MEMBER_ROLES[number];
 

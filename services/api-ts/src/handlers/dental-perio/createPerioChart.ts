@@ -39,8 +39,8 @@ export async function createPerioChart(
     throw new BusinessLogicError(`Cannot create perio chart on ${visit.status} visit`, 'PERIO_VISIT_LOCKED');
   }
 
-  // BR-P05: dentist role required on branch.
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // BR-P05: dentist or hygienist role required on branch.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   // Resolve examiner membership for this user on this branch.
   const [membership] = await db

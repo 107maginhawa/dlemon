@@ -24,7 +24,7 @@ export async function createDentalVisit(
   const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
+  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new VisitRepository(db);
 

@@ -26,7 +26,7 @@ export async function createAttachment(
 
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new AttachmentRepository(db);
 

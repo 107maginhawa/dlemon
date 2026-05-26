@@ -30,6 +30,7 @@ export async function getVisitPerioChart(
   await assertBranchRole(db, user.id, visit.branchId, [
     'dentist_owner',
     'dentist_associate',
+    'hygienist',
     'staff_full',
     'staff_scheduling',
   ]);

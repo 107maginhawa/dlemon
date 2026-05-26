@@ -33,7 +33,7 @@ export async function updateMedicalHistoryEntry(
   const patient = await patientRepo.findOneById(existing.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
 
   const updated = await repo.update(entryId, {
     displayName: body.displayName,

@@ -33,7 +33,7 @@ export async function updateDentalPatient(
 
   // Branch-level authorization
   if (patient.preferredBranchId) {
-    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'staff_full']);
+    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
   }
 
   const updates: Record<string, any> = {};

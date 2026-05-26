@@ -28,7 +28,7 @@ export async function createMedicalHistoryEntry(
   const patient = await patientRepo.findOneById(body.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
 
   const repo = new MedicalHistoryRepository(db);
 

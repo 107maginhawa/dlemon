@@ -30,7 +30,7 @@ export async function upsertDentalChart(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new DentalChartRepository(db);
 
