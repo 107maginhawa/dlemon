@@ -108,7 +108,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ---
 
 ## 7. Data Requirements (key fields)
-**`dental_invoice`:** id, patient_id, visit_id, branch_id, status (enum), total_cents, tax_cents(=0), due_date, voided_at, issued_at
+**`dental_invoice`:** id, patient_id, visit_id, branch_id, status (enum), total_cents, tax_cents(=0), discount_cents, discount_reason, notes, due_date, voided_at, issued_at; **computed response fields:** subtotal_cents (sum of line items before discount), paid_cents (sum of recorded payments), outstanding_cents (total_cents − paid_cents)
 **`dental_invoice_line_item`:** id, invoice_id, treatment_id, cdt_code, description, quantity, unit_price_cents
 **`dental_payment`:** id, invoice_id, amount_cents, method (cash/card/bank_transfer), receipt_number, voided_at
 **`dental_payment_plan`:** id, invoice_id, frequency, installment_count, status
@@ -128,6 +128,7 @@ draft → issued → paid / partial / overdue / void
 partial → paid (plan complete)
 issued → void (BR-011: no active plan, owner only)
 ```
+> **Deferred/Future:** A "Reopen" action (unvoiding an invoice) appears in screens.md but is **not implemented** in the current state machine. Voided invoices are terminal. Reopen is deferred to a future wave.
 
 ---
 

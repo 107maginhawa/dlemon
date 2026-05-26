@@ -91,7 +91,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 
 ## 7. Data Requirements (key fields; full schema in code)
 
-**`dental_visit`:** id, patient_id, branch_id, dentist_member_id, status (enum), chief_complaint, check_in_time, completed_at, locked_at, version
+**`dental_visit`:** id, patient_id, branch_id, dentist_member_id, status (enum), chief_complaint, check_in_time, completed_at, locked_at, version, notes_count (computed — count of visit_notes rows)
 
 **`dental_treatment`:** id, visit_id, tooth_fdi, surface, cdt_code, icd10_code, status (enum: diagnosed/planned/performed/verified/dismissed), price_cents, notes, created_by
 

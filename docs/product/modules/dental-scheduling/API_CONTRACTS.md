@@ -7,7 +7,7 @@
 
 > All responses wrap in `{ data, meta }`.
 > Key rules: FR3.7 (double-booking prevention), BR-004 (check-in triggers visit creation).
-> Appointment FSM: `booked` → `checked_in` | `cancelled`
+> Appointment FSM: `scheduled` → `checked_in` | `cancelled`
 
 ---
 
@@ -42,7 +42,7 @@ Book an appointment.
 | `provider_id` | string (uuid) | NO | |
 | `start_at` | string (date-time) | NO | |
 | `end_at` | string (date-time) | NO | |
-| `status` | string | NO | `booked` |
+| `status` | string | NO | `scheduled` |
 | `visit_type` | string | NO | |
 | `created_at` | string (date-time) | NO | |
 
@@ -65,7 +65,7 @@ List/query appointments (calendar view).
 | `patient_id` | uuid | NO | Filter by patient |
 | `date_from` | date | YES | Calendar window start |
 | `date_to` | date | YES | Calendar window end (max 31 days from date_from) |
-| `status` | string | NO | `booked`, `checked_in`, `cancelled` |
+| `status` | string | NO | `scheduled`, `checked_in`, `cancelled` |
 | `page` | integer | NO | Default: 1 |
 | `per_page` | integer | NO | Default: 50, max: 200 |
 

@@ -62,7 +62,7 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 |------|-----------|--------|
 | **CDT Code** | See Clinical Terms above. Also used as invoice line item identifier. | [PRD] |
 | **Fee Schedule** | Pre-configured list of procedures with default prices per branch. Editable per-procedure. | [PRD] |
-| **Invoice** | Financial record for services rendered. States: `draft → issued → partial → paid | overdue | voided`. | [CODE] |
+| **Invoice** | Financial record for services rendered. States: `draft → issued → partial → paid | overdue | void`. | [CODE] |
 | **Line Item** | One procedure charge on an invoice, derived from a treatment record. | [CODE] |
 | **Payment Plan** | Installment agreement for an invoice. Presence blocks invoice voiding (BR-011). | [CODE] |
 | **VAT / GST** | Tax applied per locale. Currently stubbed at 0% (BR-010, ADR-008). Phase 2. | [PRD] |

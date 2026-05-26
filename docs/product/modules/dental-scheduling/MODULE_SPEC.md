@@ -93,6 +93,8 @@ scheduled ──► no_show
 ```
 No DB unique constraint on dentist+time (see FR3.7 — intentional).
 
+**QueueItem state naming deviation (IDEAL-GAP-P2-011):** The IDEAL §3.3 standard names queue states as `waiting → with_provider → ready_for_checkout → checked_out`. The implementation uses `with_provider` and `ready_for_checkout` as the enum values (matching the standard for those two), but the overall QueueItem lifecycle in this codebase follows the appointment/visit flow rather than a separate queue entity. This is a deliberate structural deviation — no standalone `dental_queue_item` table exists; queue state is derived from appointment + visit status.
+
 ---
 
 ## 9. UI/UX Requirements

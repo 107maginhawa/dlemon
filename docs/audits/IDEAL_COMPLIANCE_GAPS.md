@@ -17,7 +17,7 @@ This document is the authoritative compliance gap registry for the Dentalemon de
 |----------|------:|-------|
 | P1 — V1 Required, blocking | 2 | CLOSED (Wave 2) |
 | P1 — V1 Required, verify-only | 1 | CLOSED (Wave 2) |
-| P2 — V1 Recommended | 12 | 4 CLOSED (Wave 3); 8 open |
+| P2 — V1 Recommended | 12 | 6 CLOSED (Wave 3+4); 6 open |
 | P3 — V2/Deferred | 6 | Informational |
 | Confirmed Closed (vs prior review) | 6 | No action needed |
 
@@ -202,23 +202,17 @@ Seed has no row demonstrating `syncStatus = 'pending'` or a visit created with `
 
 ### IDEAL-GAP-P2-007 · Spec-Consistency MEDIUM Findings (12 items)
 **Standard refs:** Various (C1–C8 checks)
-**Status:** OPEN (CONSISTENCY_REPORT.md MEDIUM severity)
+**Status:** ✅ CLOSED (Wave 4 — 2026-05-26)
 
-12 MEDIUM findings in CONSISTENCY_REPORT.md. Key items:
-- F-001: `Focal Card` term missing from DOMAIN_GLOSSARY
-- F-002: `Baseline` (chart snapshot) missing from DOMAIN_GLOSSARY
-- F-003: `voided` vs `void` invoice terminal state inconsistency
-- F-004: `booked` vs `scheduled` appointment initial state in API_CONTRACTS header comment
-- F-005: `imagingTier` missing from DOMAIN_GLOSSARY
-- F-006: `Carry-over` missing from DOMAIN_GLOSSARY
-- F-007: `notes_count` field in MODULE_SPEC not in API_CONTRACTS
-- F-008: Computed response fields (`subtotal_cents`, `paid_cents`, `outstanding_cents`) not documented in MODULE_SPEC §7
-- F-009: `notes` field in API_CONTRACTS POST /invoices missing from MODULE_SPEC §7
-- F-023: "Reopen" action in screens.md not in state machine
-- F-024: discount fields in screens.md not in MODULE_SPEC §7 or API_CONTRACTS
-- F-025: AppointmentRescheduled event gap
-
-**Fix:** DOMAIN_GLOSSARY additions (4 terms), API_CONTRACTS/MODULE_SPEC reconciliation (8 items). Low effort per item, can batch.
+All 12 MEDIUM findings addressed:
+- F-001–F-006: DOMAIN_GLOSSARY already had Focal Card, Baseline, imagingTier, Carry-over (Wave 3 additions); `voided` → `void` fixed.
+- F-004: `booked` → `scheduled` fixed in API_CONTRACTS header, response status field, and query param enum.
+- F-007: `notes_count` added to dental-visit MODULE_SPEC §7.
+- F-008: `subtotal_cents`, `paid_cents`, `outstanding_cents` added as computed response fields in dental-billing MODULE_SPEC §7.
+- F-009: `notes` field added to dental-billing MODULE_SPEC §7.
+- F-023: "Reopen" noted as deferred/future in dental-billing MODULE_SPEC §8.
+- F-024: `discount_cents`, `discount_reason` added to dental-billing MODULE_SPEC §7.
+- F-025: AppointmentRescheduled event gap — informational, no spec doc change required (event not yet emitted; tracked in P3).
 
 ---
 
@@ -252,11 +246,9 @@ IDEAL §3.9 recommends: insurance profile (payer/policy), claim readiness review
 
 ### IDEAL-GAP-P2-011 · QueueItem State Naming Drift
 **Standard refs:** §3.3 Appointment & Queue, §6.3 QueueItem
-**Status:** OPEN (IDEAL GAP-005, refined to P3/P2 borderline)
+**Status:** ✅ CLOSED (Wave 4 — 2026-05-26)
 
-Implementation uses `ready_for_checkout`; IDEAL standard prescribes `with_provider`. Minor semantic drift.
-
-**Fix:** Either rename the enum value and migrate, or note the deliberate deviation in MODULE_SPEC §8.
+Deviation documented in dental-scheduling MODULE_SPEC §8: no standalone `dental_queue_item` table; queue state is derived from appointment + visit status. IDEAL §3.3 standard names (`with_provider`, `ready_for_checkout`) noted alongside implementation approach. Renaming deferred to P3-006.
 
 ---
 
