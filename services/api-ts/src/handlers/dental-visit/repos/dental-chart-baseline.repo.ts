@@ -56,7 +56,16 @@ export class DentalChartBaselineRepository {
   private mergeTeeth(baseline: ToothChartState[], incoming: ToothChartState[]): ToothChartState[] {
     const map = new Map<number, ToothChartState>();
     for (const tooth of baseline) map.set(tooth.toothNumber, tooth);
-    for (const tooth of incoming) map.set(tooth.toothNumber, tooth);
+    for (const tooth of incoming) {
+      const cur = map.get(tooth.toothNumber);
+      const curIsExisting = cur?.entryClassification === 'existing' || cur?.entryClassification === 'existing_other';
+      const incomingIsExisting = tooth.entryClassification === 'existing' || tooth.entryClassification === 'existing_other';
+      // CHART-BR-002: protect existing/existing_other baseline entries from
+      // treatment_plan/condition overwrites. Only another existing-tier entry can replace them.
+      if (!curIsExisting || incomingIsExisting) {
+        map.set(tooth.toothNumber, tooth);
+      }
+    }
     return Array.from(map.values()).sort((a, b) => a.toothNumber - b.toothNumber);
   }
 }
