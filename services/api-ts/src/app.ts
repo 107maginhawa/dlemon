@@ -87,6 +87,10 @@ import {
   CreateClaimDraftBody,
   UpdateClaimDraftStatusBody,
 } from '@/handlers/dental-patient/insurance-validators';
+import { createDentalAlert } from '@/handlers/dental-patient/createDentalAlert';
+import { listDentalAlerts } from '@/handlers/dental-patient/listDentalAlerts';
+import { updateDentalAlert } from '@/handlers/dental-patient/updateDentalAlert';
+import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/dental-alert-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -213,6 +217,25 @@ export function createApp(config: Config): App {
     zValidator('param', RecallRecallParams),
     zValidator('json', UpdateRecallBody),
     updateRecall
+  );
+
+  // DentalAlert endpoints (P2-001)
+  (app as any).post('/dental/patients/:patientId/dental-alerts',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', DentalAlertParams),
+    zValidator('json', CreateDentalAlertBody),
+    createDentalAlert
+  );
+  (app as any).get('/dental/patients/:patientId/dental-alerts',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', DentalAlertParams),
+    listDentalAlerts
+  );
+  (app as any).patch('/dental/patients/:patientId/dental-alerts/:alertId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', DentalAlertIdParams),
+    zValidator('json', UpdateDentalAlertBody),
+    updateDentalAlert
   );
 
   // TreatmentPlan endpoints (P0-C)
