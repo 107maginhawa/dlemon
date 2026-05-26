@@ -11,6 +11,7 @@ import { patients } from '../../patient/repos/patient.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 import { dentalBranches } from '../../dental-org/repos/branch.schema';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { dentalOperatories } from './operatory.schema';
 
 export const appointmentStatusEnum = pgEnum('appointment_status', [
   'scheduled',
@@ -28,8 +29,7 @@ export const dentalAppointments = pgTable('dental_appointment', {
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(30),
   serviceType: text('service_type').notNull(),
-  // not a FK — no operatory table exists yet; reserved for future room/chair management feature
-  operatoryId: uuid('operatory_id'),
+  operatoryId: uuid('operatory_id').references(() => dentalOperatories.id, { onDelete: 'set null' }),
   walkIn: boolean('walk_in').notNull().default(false),
   status: appointmentStatusEnum('status').notNull().default('scheduled'),
   checkInTime: timestamp('check_in_time', { withTimezone: true }),
