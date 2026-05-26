@@ -91,6 +91,13 @@ import { createDentalAlert } from '@/handlers/dental-patient/createDentalAlert';
 import { listDentalAlerts } from '@/handlers/dental-patient/listDentalAlerts';
 import { updateDentalAlert } from '@/handlers/dental-patient/updateDentalAlert';
 import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/dental-alert-validators';
+import { createOcclusionScreening } from '@/handlers/dental-clinical/createOcclusionScreening';
+import { listOcclusionScreenings } from '@/handlers/dental-clinical/listOcclusionScreenings';
+import { OcclusionParams, OcclusionIdParams, CreateOcclusionBody, UpdateOcclusionBody } from '@/handlers/dental-clinical/occlusion-validators';
+import { createPostopTemplate } from '@/handlers/dental-clinical/createPostopTemplate';
+import { listPostopTemplates } from '@/handlers/dental-clinical/listPostopTemplates';
+import { updatePostopTemplate } from '@/handlers/dental-clinical/updatePostopTemplate';
+import { PostopBranchParams, PostopTemplateIdParams, CreatePostopTemplateBody, UpdatePostopTemplateBody } from '@/handlers/dental-clinical/postop-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -236,6 +243,38 @@ export function createApp(config: Config): App {
     zValidator('param', DentalAlertIdParams),
     zValidator('json', UpdateDentalAlertBody),
     updateDentalAlert
+  );
+
+  // OcclusionScreening endpoints (P2-002)
+  (app as any).post('/dental/patients/:patientId/occlusion-screenings',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', OcclusionParams),
+    zValidator('json', CreateOcclusionBody),
+    createOcclusionScreening
+  );
+  (app as any).get('/dental/patients/:patientId/occlusion-screenings',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', OcclusionParams),
+    listOcclusionScreenings
+  );
+
+  // PostOp Template endpoints (P2-008)
+  (app as any).post('/dental/branches/:branchId/postop-templates',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PostopBranchParams),
+    zValidator('json', CreatePostopTemplateBody),
+    createPostopTemplate
+  );
+  (app as any).get('/dental/branches/:branchId/postop-templates',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PostopBranchParams),
+    listPostopTemplates
+  );
+  (app as any).patch('/dental/branches/:branchId/postop-templates/:templateId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', PostopTemplateIdParams),
+    zValidator('json', UpdatePostopTemplateBody),
+    updatePostopTemplate
   );
 
   // TreatmentPlan endpoints (P0-C)
