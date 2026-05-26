@@ -479,7 +479,7 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 | P1-005 | Add E2E test for offline record creation with sync metadata visible (E2E-009) | `tests/e2e/` | S |
 | P1-006 | Validate and test medical alert visibility during clinical encounter (ENC-BR-004, PAT-BR-003) | E2E spec | S |
 | P1-007 | Add `InsuranceProfile` entity + basic claim readiness check | New: `dental-claims/` | M |
-| P1-008 | Add `ProcedureCode` lookup table with CDT codes + default fees | New schema + seed | S |
+| P1-008 | Add `ProcedureCode` lookup table with CDT codes + default fees | New schema + seed | S | ✅ 39cea67 |
 
 ### P2 — V1 Recommended Improvement
 
