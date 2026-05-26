@@ -6,7 +6,7 @@ export const TREATMENT_PLAN_STATUSES = [
   'draft',
   'presented',
   'approved',
-  'in_progress',
+  'partially_completed',
   'completed',
   'cancelled',
 ] as const;
@@ -15,8 +15,8 @@ export type TreatmentPlanStatus = typeof TREATMENT_PLAN_STATUSES[number];
 export const TREATMENT_PLAN_FSM: Record<TreatmentPlanStatus, TreatmentPlanStatus[]> = {
   draft: ['presented', 'cancelled'],
   presented: ['approved', 'cancelled'],
-  approved: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
+  approved: ['partially_completed', 'cancelled'],
+  partially_completed: ['completed', 'cancelled'],
   completed: [],
   cancelled: [],
 };

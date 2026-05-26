@@ -2,7 +2,7 @@
  * useTreatmentPlans — plan-level treatment plan documents with FSM status
  *
  * NOTE: Different from use-treatment-plan.ts (visit-level treatments).
- * This manages the plan document itself: draft → presented → approved → in_progress → completed | cancelled
+ * This manages the plan document itself: draft → presented → approved → partially_completed → completed | cancelled
  *
  * API: GET  /dental/patients/:patientId/treatment-plans
  *      POST /dental/patients/:patientId/treatment-plans
@@ -15,7 +15,7 @@ export type TreatmentPlanStatus =
   | 'draft'
   | 'presented'
   | 'approved'
-  | 'in_progress'
+  | 'partially_completed'
   | 'completed'
   | 'cancelled';
 

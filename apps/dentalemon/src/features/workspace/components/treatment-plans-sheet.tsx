@@ -2,7 +2,7 @@
  * TreatmentPlansSheet — bottom sheet for plan-level treatment plan documents
  *
  * B4: List plans with FSM status badges and transition buttons.
- * FSM: draft → presented → approved → in_progress → completed | cancelled
+ * FSM: draft → presented → approved → partially_completed → completed | cancelled
  */
 import React from 'react';
 import { X, ClipboardList } from 'lucide-react';
@@ -29,8 +29,8 @@ interface TreatmentPlansSheetProps {
 const FSM: Record<TreatmentPlanStatus, TreatmentPlanStatus[]> = {
   draft: ['presented', 'cancelled'],
   presented: ['approved', 'cancelled'],
-  approved: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
+  approved: ['partially_completed', 'cancelled'],
+  partially_completed: ['completed', 'cancelled'],
   completed: [],
   cancelled: [],
 };
@@ -39,7 +39,7 @@ const TRANSITION_LABELS: Record<TreatmentPlanStatus, string> = {
   draft: 'Draft',
   presented: 'Present',
   approved: 'Approve',
-  in_progress: 'Start',
+  partially_completed: 'Start',
   completed: 'Complete',
   cancelled: 'Cancel',
 };
@@ -48,7 +48,7 @@ const STATUS_DISPLAY: Record<TreatmentPlanStatus, string> = {
   draft: 'Draft',
   presented: 'Presented',
   approved: 'Approved',
-  in_progress: 'In Progress',
+  partially_completed: 'In Progress',
   completed: 'Completed',
   cancelled: 'Cancelled',
 };
@@ -57,7 +57,7 @@ const STATUS_BADGE_CLASS: Record<TreatmentPlanStatus, string> = {
   draft: 'bg-gray-100 text-gray-600',
   presented: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
-  in_progress: 'bg-blue-100 text-blue-800',
+  partially_completed: 'bg-blue-100 text-blue-800',
   completed: 'bg-green-50 text-green-500',
   cancelled: 'bg-red-50 text-red-400',
 };
