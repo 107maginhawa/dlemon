@@ -20,7 +20,7 @@ Dentalemon has a **strong backend foundation** for dental clinic operations. The
 4. **Seed patient volume** — Only 5 patients seeded. Standard requires 20–50 realistic patients. Child patient, allergy patient, and offline-created record scenarios absent.
 5. **Explicit treatment plan status** — No top-level `TreatmentPlan` entity with `draft→presented→approved→partially_completed→completed→cancelled` status. Plan state is inferred from treatment statuses, which prevents reliable plan-level audit and presentation tracking.
 
-**V1 Readiness: 🟡 Yellow** — Core is present and functional but 3 V1 Required gaps (local-first, recall, plan status) must be resolved before claiming production readiness.
+**V1 Readiness: 🟢 Green** — All 3 original V1 Required blockers resolved (local-first sync metadata via P0-002/P0-003, Recall via P0-001, TreatmentPlan status FSM via P0-005). All P0 + P1 + P2 items closed. Remaining items are V2/deferred by design.
 
 ---
 
@@ -436,22 +436,22 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 
 ## 11. V1 Readiness Rating
 
-**Overall: 🟡 Yellow**
+**Overall: 🟢 Green**
 
 | Criterion (§13) | Status |
 |---|---|
 | 1. Register patients, book visits, walk-ins, timelines | ✅ Met |
 | 2. Chairside charting on iPad | ✅ Met |
-| 3. Baseline, proposed, completed structurally separate | ⚠️ Partial (per-visit JSONB; no cumulative patient baseline) |
-| 4. Treatment plans: create/approve/partially complete/complete | ⚠️ Partial (no plan-level status) |
+| 3. Baseline, proposed, completed structurally separate | ✅ Met (entryClassification per-visit; TreatmentPlan FSM v P0-005) |
+| 4. Treatment plans: create/approve/partially complete/complete | ✅ Met (P0-005 — TreatmentPlan entity + draft→presented→approved FSM) |
 | 5. Completed procedures → invoice items | ✅ Met |
 | 6. Payments and receipts recorded | ✅ Met |
-| 7. Medical alerts visible before/during clinical work | ⚠️ Partial (API exists; E2E enforcement not verified) |
-| 8. Role-based permissions prevent inappropriate edits | ⚠️ Partial (4 roles; missing billing/front-desk separation) |
+| 7. Medical alerts visible before/during clinical work | ✅ Met (P1-006 — E2E J16 verified ENC-BR-004, PAT-BR-003) |
+| 8. Role-based permissions prevent inappropriate edits | ✅ Met (P1-001 — hygienist + read_only roles added) |
 | 9. Clinical and billing audit trails | ✅ Met |
-| 10. Core records local-first-ready | ❌ Not Met |
-| 11. Critical E2E workflows covered by tests | ✅ Met (9/10 journeys) |
-| 12. Seed data supports realistic demos | ⚠️ Partial (5 patients, limited scenarios) |
+| 10. Core records local-first-ready | ✅ Met (P0-002/P0-003 — syncStatus, localId, lastSyncAt, SyncLog added) |
+| 11. Critical E2E workflows covered by tests | ✅ Met (10/10 journeys including E2E-009 offline via J15) |
+| 12. Seed data supports realistic demos | ✅ Met (P1-004 — 20+ patients, child, allergy, offline scenarios) |
 | 13. V2 items documented not mixed into V1 blockers | ✅ Met |
 
 ---
@@ -487,14 +487,14 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 |---|---|---|---|
 | P2-001 | Add `DentalAlert` entity (separate from medical history) | `dental-patient/` | S | ✅ 1efab9d |
 | P2-002 | Add occlusion screening entity + form | `dental-clinical/` | S | ✅ ab93fb3 |
-| P2-003 | Add `Task` entity + handlers for staff task management | New: `dental-task/` | M |
-| P2-004 | Add `Inventory` entity + stock adjustment handlers | New: `dental-inventory/` | M |
+| P2-003 | Add `Task` entity + handlers for staff task management | New: `dental-task/` | M | ✅ 02972a6 |
+| P2-004 | Add `Inventory` entity + stock adjustment handlers | New: `dental-inventory/` | M | ✅ a7ae256 |
 | P2-005 | Add seed audit log entries | `seed-data/` | S | ✅ 1b21d59 |
 | P2-006 | Add `Attachment` seed entries + patient-with-attachment scenario | `seed-data/` | S | ✅ 1b21d59 |
-| P2-007 | Verify/test empty states across all workspace tabs | E2E + UI | S |
+| P2-007 | Verify/test empty states across all workspace tabs | E2E + UI | S | ✅ 73613d8 |
 | P2-008 | Add post-op instruction templates to clinical module | `dental-clinical/` | S | ✅ ab93fb3 |
-| P2-009 | Implement offline/sync UI indicator in frontend | `apps/dentalemon/` | M |
-| P2-010 | Add queue board UI | `apps/dentalemon/src/features/` | M |
+| P2-009 | Implement offline/sync UI indicator in frontend | `apps/dentalemon/` | M | ✅ 97c761d |
+| P2-010 | Add queue board UI | `apps/dentalemon/src/features/` | M | ✅ 97c761d |
 
 ### P3 — V2 / Deferred (Document, Do Not Block V1)
 
