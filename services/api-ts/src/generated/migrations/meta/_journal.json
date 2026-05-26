@@ -358,6 +358,27 @@
       "when": 1779755484195,
       "tag": "0050_eager_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1779756580945,
+      "tag": "0051_blushing_riptide",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1779756937377,
+      "tag": "0052_living_paper_doll",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1779757239494,
+      "tag": "0053_groovy_silverclaw",
+      "breakpoints": true
     }
   ]
 }
