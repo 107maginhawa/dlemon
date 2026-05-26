@@ -478,21 +478,21 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 | P1-004 | Expand seed to 20–30 patients with child, allergy, unpaid-balance, and offline scenarios | `seed-data/` | M | ✅ 6f036e5 |
 | P1-005 | Add E2E test for offline record creation with sync metadata visible (E2E-009) | `tests/e2e/` | S | ✅ 97fe41e |
 | P1-006 | Validate and test medical alert visibility during clinical encounter (ENC-BR-004, PAT-BR-003) | E2E spec | S | ✅ 0cf1687 |
-| P1-007 | Add `InsuranceProfile` entity + basic claim readiness check | New: `dental-claims/` | M |
+| P1-007 | Add `InsuranceProfile` entity + basic claim readiness check | New: `dental-claims/` | M | ✅ f77f6dc |
 | P1-008 | Add `ProcedureCode` lookup table with CDT codes + default fees | New schema + seed | S | ✅ 39cea67 |
 
 ### P2 — V1 Recommended Improvement
 
 | ID | Item | Module / File | Effort |
 |---|---|---|---|
-| P2-001 | Add `DentalAlert` entity (separate from medical history) | `dental-patient/` | S |
-| P2-002 | Add occlusion screening entity + form | `dental-clinical/` | S |
+| P2-001 | Add `DentalAlert` entity (separate from medical history) | `dental-patient/` | S | ✅ 1efab9d |
+| P2-002 | Add occlusion screening entity + form | `dental-clinical/` | S | ✅ ab93fb3 |
 | P2-003 | Add `Task` entity + handlers for staff task management | New: `dental-task/` | M |
 | P2-004 | Add `Inventory` entity + stock adjustment handlers | New: `dental-inventory/` | M |
-| P2-005 | Add seed audit log entries | `seed-data/` | S |
-| P2-006 | Add `Attachment` seed entries + patient-with-attachment scenario | `seed-data/` | S |
+| P2-005 | Add seed audit log entries | `seed-data/` | S | ✅ 1b21d59 |
+| P2-006 | Add `Attachment` seed entries + patient-with-attachment scenario | `seed-data/` | S | ✅ 1b21d59 |
 | P2-007 | Verify/test empty states across all workspace tabs | E2E + UI | S |
-| P2-008 | Add post-op instruction templates to clinical module | `dental-clinical/` | S |
+| P2-008 | Add post-op instruction templates to clinical module | `dental-clinical/` | S | ✅ ab93fb3 |
 | P2-009 | Implement offline/sync UI indicator in frontend | `apps/dentalemon/` | M |
 | P2-010 | Add queue board UI | `apps/dentalemon/src/features/` | M |
 
