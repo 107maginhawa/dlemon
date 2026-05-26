@@ -24,7 +24,7 @@ interface QueueBoardProps {
 // FSM config
 // ---------------------------------------------------------------------------
 
-const COLUMNS: { status: QueueItemStatus; label: string }[] = [
+export const COLUMNS: { status: QueueItemStatus; label: string }[] = [
   { status: 'waiting', label: 'Waiting' },
   { status: 'called', label: 'Called' },
   { status: 'in_progress', label: 'In Progress' },
@@ -39,7 +39,7 @@ const COLUMN_HEADER_CLASS: Record<string, string> = {
 };
 
 // Primary action per status (forward transition)
-const PRIMARY_ACTION: Partial<Record<QueueItemStatus, { label: string; next: QueueItemStatus }>> = {
+export const PRIMARY_ACTION: Partial<Record<QueueItemStatus, { label: string; next: QueueItemStatus }>> = {
   waiting: { label: 'Call', next: 'called' },
   called: { label: 'Start', next: 'in_progress' },
   in_progress: { label: 'Done', next: 'completed' },
@@ -49,7 +49,7 @@ const PRIMARY_ACTION: Partial<Record<QueueItemStatus, { label: string; next: Que
 // Subcomponents
 // ---------------------------------------------------------------------------
 
-function timeWaiting(createdAt: string): string {
+export function timeWaiting(createdAt: string): string {
   const diffMs = Date.now() - new Date(createdAt).getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1) return 'Just now';
