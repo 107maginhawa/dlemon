@@ -4,14 +4,15 @@
  * Path: PATCH /dental/org/members/:memberId
  */
 
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
-import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schema';
+import { VALID_MEMBER_ROLES, dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 
 const updateMemberSchema = z.object({
   displayName: z.string().min(1).optional(),
@@ -38,6 +39,22 @@ export async function updateMember(ctx: Context): Promise<Response> {
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
   await assertBranchAccess(db, user.id, member.branchId);
+
+  // G7-S3: Role changes require dentist_owner — assertBranchAccess alone allows self-promotion
+  if (body.role !== undefined) {
+    const [callerMembership] = await db
+      .select({ role: dentalMemberships.role })
+      .from(dentalMemberships)
+      .where(and(
+        eq(dentalMemberships.personId, user.id),
+        eq(dentalMemberships.branchId, member.branchId),
+        eq(dentalMemberships.status, 'active'),
+      ))
+      .limit(1);
+    if (callerMembership?.role !== 'dentist_owner') {
+      throw new ForbiddenError('Only dentist_owner can change member roles');
+    }
+  }
 
   // Build update payload from allowed fields
   const updateData: Record<string, unknown> = {};
