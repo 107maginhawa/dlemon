@@ -489,3 +489,63 @@ describe('Validation (inv01-AC-008)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// =============================================================================
+// GAP-004: InventoryItem status field (IDEAL §3.11, §6.8)
+// =============================================================================
+
+describe('GAP-004: InventoryItem status lifecycle (IDEAL §3.11)', () => {
+  test('GAP-004 AC-001: POST item defaults to status=active', async () => {
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'GapItem', category: 'consumable', unit: 'box' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.status).toBe('active');
+  });
+
+  test('GAP-004 AC-002: PATCH item status to discontinued succeeds', async () => {
+    const app = buildTestApp(TEST_USER);
+
+    const createRes = await app.request(`/dental/branches/${BRANCH_ID}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'GapItem2', category: 'consumable', unit: 'box' }),
+    });
+    const created = await createRes.json() as any;
+
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/inventory/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'discontinued' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('discontinued');
+  });
+
+  test('GAP-004 AC-003: PATCH item with invalid status returns 400', async () => {
+    const app = buildTestApp(TEST_USER);
+
+    const createRes = await app.request(`/dental/branches/${BRANCH_ID}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'GapItem3', category: 'consumable', unit: 'box' }),
+    });
+    const created = await createRes.json() as any;
+
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/inventory/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'banana' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+});
