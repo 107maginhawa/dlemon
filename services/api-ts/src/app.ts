@@ -66,6 +66,10 @@ import { createSyncLog } from '@/handlers/dental-patient/createSyncLog';
 import { listSyncLogs } from '@/handlers/dental-patient/listSyncLogs';
 import { updateSyncLog } from '@/handlers/dental-patient/updateSyncLog';
 import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/sync-log-validators';
+import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
+import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
+import { updateQueueItemStatus } from '@/handlers/dental-scheduling/updateQueueItemStatus';
+import { QueueItemAppointmentParams, QueueItemIdParams, QueueBoardParams, CreateQueueItemBody, UpdateQueueItemStatusBody } from '@/handlers/dental-scheduling/queue-item-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -239,6 +243,25 @@ export function createApp(config: Config): App {
     zValidator('param', SyncLogIdParams),
     zValidator('json', UpdateSyncLogBody),
     updateSyncLog
+  );
+
+  // Queue board endpoints (A5 P1-003)
+  (app as any).post('/dental/appointments/:appointmentId/queue-item',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', QueueItemAppointmentParams),
+    zValidator('json', CreateQueueItemBody),
+    createQueueItem,
+  );
+  (app as any).get('/dental/branches/:branchId/queue-board',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', QueueBoardParams),
+    listQueueBoard,
+  );
+  (app as any).patch('/dental/queue-items/:itemId/status',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', QueueItemIdParams),
+    zValidator('json', UpdateQueueItemStatusBody),
+    updateQueueItemStatus,
   );
 
   // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)

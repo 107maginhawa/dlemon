@@ -351,6 +351,13 @@
       "when": 1779754702416,
       "tag": "0049_typical_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1779755484195,
+      "tag": "0050_eager_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
