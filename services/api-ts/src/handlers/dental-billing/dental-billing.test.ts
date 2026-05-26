@@ -1255,3 +1255,36 @@ describe('voidDentalInvoice role gate', () => {
     expect(res.status).not.toBe(403);
   });
 });
+
+// ── GAP-009: Discount reason + discountedBy persistence (AC-001..AC-003) ──────
+
+describe('GAP-009: discount reason and actor persistence', () => {
+  // AC-001 + AC-002: reason and discountedBy stored in DB and returned
+  test('AC-001/AC-002: discountReason and discountedBy returned after applying discount', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.discountReason).toBe('Senior citizen discount');
+    expect(body.discountedBy).toBe(TEST_USER.id);
+  });
+
+  // AC-003: empty reason → error
+  test('AC-003: empty reason string → 422 DISCOUNT_REASON_REQUIRED', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: '   ', percentageRate: 10 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.code).toBe('DISCOUNT_REASON_REQUIRED');
+  });
+});

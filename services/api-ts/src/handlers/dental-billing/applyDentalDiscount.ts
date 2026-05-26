@@ -37,9 +37,13 @@ export async function applyDentalDiscount(
     throw new BusinessLogicError('Cannot apply discount to a fully paid invoice', 'ALREADY_PAID');
   }
 
+  if (!body.reason?.trim()) {
+    throw new BusinessLogicError('Discount reason is required', 'DISCOUNT_REASON_REQUIRED');
+  }
+
   const discountCents = applyDiscountRate(invoice.subtotalCents, body.percentageRate);
   const taxRate = Number(invoice.taxRate);
 
-  const updated = await repo.applyDiscount(invoiceId, discountCents, taxRate);
+  const updated = await repo.applyDiscount(invoiceId, discountCents, taxRate, body.reason.trim(), session.userId);
   return ctx.json(updated);
 }

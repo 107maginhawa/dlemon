@@ -33,6 +33,8 @@ export const dentalInvoices = pgTable('dental_invoice', {
   totalCents: integer('total_cents').notNull().default(0),
   paidCents: integer('paid_cents').notNull().default(0),
   balanceCents: integer('balance_cents').notNull().default(0),
+  discountReason: text('discount_reason'),
+  discountedBy: uuid('discounted_by'),
   dueDate: timestamp('due_date', { withTimezone: true }),
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   paidAt: timestamp('paid_at', { withTimezone: true }),
