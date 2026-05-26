@@ -472,7 +472,7 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 
 | ID | Item | Module / File | Effort |
 |---|---|---|---|
-| P1-001 | Expand roles to include `hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only` | `membership.schema.ts` + all role-gated handlers | L |
+| P1-001 | Expand roles to include `hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only` | `membership.schema.ts` + all role-gated handlers | L | ✅ 20170c5 |
 | P1-002 | Add `Operatory` / Chair table + link to appointment | New schema + migration | S | ✅ 87d634b |
 | P1-003 | Add `QueueItem` entity and queue board handlers | New: `dental-queue/` | M |
 | P1-004 | Expand seed to 20–30 patients with child, allergy, unpaid-balance, and offline scenarios | `seed-data/` | M | ✅ 6f036e5 |
