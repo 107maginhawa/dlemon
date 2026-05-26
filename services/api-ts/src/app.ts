@@ -91,6 +91,10 @@ import { createDentalAlert } from '@/handlers/dental-patient/createDentalAlert';
 import { listDentalAlerts } from '@/handlers/dental-patient/listDentalAlerts';
 import { updateDentalAlert } from '@/handlers/dental-patient/updateDentalAlert';
 import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/dental-alert-validators';
+import { createTask } from '@/handlers/dental-patient/createTask';
+import { listPatientTasks } from '@/handlers/dental-patient/listPatientTasks';
+import { updateTask } from '@/handlers/dental-patient/updateTask';
+import { TaskParams, TaskTaskParams, CreateTaskBody, UpdateTaskBody } from '@/handlers/dental-patient/task-validators';
 import { createOcclusionScreening } from '@/handlers/dental-clinical/createOcclusionScreening';
 import { listOcclusionScreenings } from '@/handlers/dental-clinical/listOcclusionScreenings';
 import { OcclusionParams, OcclusionIdParams, CreateOcclusionBody, UpdateOcclusionBody } from '@/handlers/dental-clinical/occlusion-validators';
@@ -256,6 +260,25 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['user'] }),
     zValidator('param', OcclusionParams),
     listOcclusionScreenings
+  );
+
+  // Task endpoints (P2-003)
+  (app as any).post('/dental/patients/:patientId/tasks',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TaskParams),
+    zValidator('json', CreateTaskBody),
+    createTask
+  );
+  (app as any).get('/dental/patients/:patientId/tasks',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TaskParams),
+    listPatientTasks
+  );
+  (app as any).patch('/dental/patients/:patientId/tasks/:taskId',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TaskTaskParams),
+    zValidator('json', UpdateTaskBody),
+    updateTask
   );
 
   // PostOp Template endpoints (P2-008)
