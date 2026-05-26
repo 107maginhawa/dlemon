@@ -293,3 +293,13 @@ export const INSTALLMENT_06 = 'fa000000-0000-1000-8000-000000000006'; // Gina pl
 // ── Sync Logs (fb) ──────────────────────────────────────────────────
 export const SYNC_01 = 'fb000000-0000-1000-8000-000000000001'; // Phil — patient pending sync
 export const SYNC_02 = 'fb000000-0000-1000-8000-000000000002'; // Phil — visit failed sync
+
+// ── Audit Logs (fc) ─────────────────────────────────────────────────
+export const AUDIT_01 = 'fc000000-0000-1000-8000-000000000001'; // treatment created
+export const AUDIT_02 = 'fc000000-0000-1000-8000-000000000002'; // invoice issued
+export const AUDIT_03 = 'fc000000-0000-1000-8000-000000000003'; // discount applied
+export const AUDIT_04 = 'fc000000-0000-1000-8000-000000000004'; // visit notes signed
+
+// ── Attachments (fd) ────────────────────────────────────────────────
+export const ATTACHMENT_01 = 'fd000000-0000-1000-8000-000000000001'; // Juan — X-ray
+export const ATTACHMENT_02 = 'fd000000-0000-1000-8000-000000000002'; // Rosa — consent form PDF
