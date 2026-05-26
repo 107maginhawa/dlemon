@@ -22,6 +22,9 @@ export const dentalAudit = pgTable('dental_audit', {
   timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   // extra context: IP, user agent, changed fields, etc.
   metadata: jsonb('metadata'),
+  // AUD-BR-004: before/after state snapshots for change auditing
+  before: jsonb('before'),
+  after: jsonb('after'),
 }, (table) => ({
   personTimestampIdx: index('dental_audit_person_timestamp_idx').on(table.personId, table.timestamp),
   tenantTimestampIdx: index('dental_audit_tenant_timestamp_idx').on(table.tenantId, table.timestamp),

@@ -19,8 +19,9 @@ export interface AuditFilters {
 export class DentalAuditRepository {
   constructor(private db: DatabaseInstance) {}
 
-  async log(entry: NewDentalAuditEntry): Promise<void> {
-    await this.db.insert(dentalAudit).values(entry);
+  async log(entry: NewDentalAuditEntry): Promise<DentalAuditEntry> {
+    const [row] = await this.db.insert(dentalAudit).values(entry).returning();
+    return row!;
   }
 
   async query(
