@@ -13,24 +13,24 @@ import {
   test,
   expect,
   type JourneyMeta,
-  pinAuth,
-  expectJourneyBroken,
   recordJourneyError,
+  readOrgContext,
+  readPatientIdByName,
+  SEED_PATIENTS,
   API,
-  APP,
 } from './_journey-helpers'
 
 const META: JourneyMeta = {
   id: 'J15',
-  name: 'Offline sync metadata — create, list, transition via API; UI indicator (BROKEN expected)',
+  name: 'Offline sync metadata — sync-log lifecycle + per-entity localId (GAP-001/GAP-002)',
   set: 'B',
-  expectedVerdict: 'BROKEN',
-  rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003'],
+  expectedVerdict: 'PASS',
+  rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003', 'LF-BR-004'],
 }
 
 test.setTimeout(60_000)
 
-test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
   try {
     // ── Step 1: Create a sync log entry (simulating an offline-created record) ──
 
@@ -97,21 +97,30 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       )
     }
 
-    // ── Step 4: DOM journey — look for UI sync indicator (expected BROKEN) ────────
+    // ── Step 4: Real offline-create — per-entity localId (GAP-001/GAP-002) ──────
     //
-    // API lifecycle verified above. Now confirm the UI has no sync status indicator.
-    // P2-009 is deferred — BROKEN is the documented and expected outcome.
+    // GAP-001 adds localId/syncStatus to dentalVisits. Verify that a Visit created
+    // with a localId stores and returns it with syncStatus='synced' (server default).
 
-    await pinAuth(page, 'dentist')
-    await page.goto(`${APP}/patients`)
-    await page.waitForLoadState('networkidle')
+    const ctx = await readOrgContext(apiReader)
+    const patientId = await readPatientIdByName(apiReader, SEED_PATIENTS.juan, ctx.branchId)
 
-    // No sync indicator exists in the UI yet (P2-009 deferred).
-    await expectJourneyBroken(
-      page,
-      META,
-      'Sync status indicator not implemented in UI (P2-009 deferred). API sync log lifecycle verified.',
-    )
+    const visitResp = await apiReader.post(`${API}/dental/visits`, {
+      data: {
+        patientId,
+        branchId: ctx.branchId,
+        dentistMemberId: ctx.memberId,
+        localId: 'offline-e2e-visit-001',
+      },
+    })
+    if (!visitResp.ok()) {
+      throw new Error(
+        `POST /dental/visits with localId failed (${visitResp.status()}): ${(await visitResp.text()).slice(0, 300)}`,
+      )
+    }
+    const visitBody = await visitResp.json()
+    expect(visitBody.localId, 'localId must be stored on visit').toBe('offline-e2e-visit-001')
+    expect(visitBody.syncStatus, 'server-created visit syncStatus defaults to synced').toBe('synced')
   } catch (err) {
     recordJourneyError(META, err)
     throw err
