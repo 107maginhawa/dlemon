@@ -22,6 +22,8 @@ Dentalemon has a **strong backend foundation** for dental clinic operations. The
 
 **V1 Readiness: 🟢 Green** — All 3 original V1 Required blockers resolved (local-first sync metadata via P0-002/P0-003, Recall via P0-001, TreatmentPlan status FSM via P0-005). All P0 + P1 + P2 items closed. Remaining items are V2/deferred by design.
 
+> **IDEAL Standard Gap Closure (2026-05-26):** Post-Phase-C audit found 7 P1 structural gaps (GAP-001..GAP-011). All 7 closed on feat/audit-full-remediation: syncableEntityFields on 4 tables [0056], discountReason on invoice [0057], before/after on audit [0058], CHART-BR-002 baseline protection, stale-write 409 conflict detection, J15 E2E PASS, seed expanded to 20+ patients. V1 Readiness confirmed 🟢 Green.
+
 ---
 
 ## 2. Current Implementation Map
@@ -436,7 +438,7 @@ Current implementation uses role enum (`dentist_owner`, `dentist_associate`, `st
 
 ## 11. V1 Readiness Rating
 
-**Overall: 🟢 Green**
+**Overall: 🟢 Green** *(IDEAL Standard gap closure confirmed 2026-05-26 — see §1 note)*
 
 | Criterion (§13) | Status |
 |---|---|
