@@ -17,6 +17,7 @@ import { DentalAppointmentRepository } from './dental-appointment.repo';
 import { openTestTx } from '@/core/test-tx';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
+import { dentalOperatories } from './operatory.schema';
 
 // Set in beforeEach to the current transaction db — used for raw SQL in tests
 let db: NodePgDatabase;
@@ -82,10 +83,9 @@ describe('DentalAppointmentRepository', () => {
       expect(appt.notes).toBe('First visit');
     });
 
-    test('stores optional operatoryId', async () => {
-      const opId = 'a5000000-0000-4000-8000-000000000001';
-      const appt = await repo.createOne({ ...baseAppointment, operatoryId: opId });
-      expect(appt.operatoryId).toBe(opId);
+    test('stores null operatoryId (no chair assigned)', async () => {
+      const appt = await repo.createOne({ ...baseAppointment, operatoryId: null });
+      expect(appt.operatoryId).toBeNull();
     });
   });
 
@@ -281,6 +281,37 @@ describe('DentalAppointmentRepository', () => {
       const result = await repo.markNoShow(appt.id);
       expect(result).not.toBeNull();
       expect(result!.status).toBe('no_show');
+    });
+  });
+
+  // ===== OPERATORY FK (P1-002) =====
+
+  describe('Operatory FK (P1-002: AC-001..AC-003)', () => {
+    test('AC-001: appointment can reference a real operatory', async () => {
+      const [op] = await db.insert(dentalOperatories).values({
+        branchId: BRANCH_1,
+        name: 'Chair 1',
+        createdBy: DENTIST_1,
+        updatedBy: DENTIST_1,
+      }).returning();
+      const appt = await repo.createOne({ ...baseAppointment, operatoryId: op!.id });
+      expect(appt.operatoryId).toBe(op!.id);
+    });
+
+    test('AC-002: appointment with null operatoryId inserts (nullable FK)', async () => {
+      const appt = await repo.createOne({ ...baseAppointment, operatoryId: null });
+      expect(appt.operatoryId).toBeNull();
+    });
+
+    test('AC-003: operatory belongs to branch', async () => {
+      const [op] = await db.insert(dentalOperatories).values({
+        branchId: BRANCH_1,
+        name: 'Chair 2',
+        createdBy: DENTIST_1,
+        updatedBy: DENTIST_1,
+      }).returning();
+      expect(op!.branchId).toBe(BRANCH_1);
+      expect(op!.active).toBe(true);
     });
   });
 

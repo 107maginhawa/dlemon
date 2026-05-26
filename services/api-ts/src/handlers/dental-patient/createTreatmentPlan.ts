@@ -1,0 +1,40 @@
+/**
+ * createTreatmentPlan — POST /dental/patients/:patientId/treatment-plans
+ *
+ * AC-001: Create a plan header entity in 'draft' status.
+ */
+
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { TreatmentPlanRepository } from './repos/treatment-plan.repo';
+import type { DatabaseInstance } from '@/core/database';
+
+export async function createTreatmentPlan(ctx: any): Promise<Response> {
+  const user = ctx.get('user');
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const { patientId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const patientRepo = new PatientRepository(db, logger);
+  const patient = await patientRepo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  const repo = new TreatmentPlanRepository(db, logger);
+  const plan = await repo.create({
+    patientId,
+    providerId: body.providerId,
+    status: 'draft',
+    totalEstimateCents: body.totalEstimateCents ?? 0,
+    notes: body.notes ?? null,
+    createdBy: user.id,
+    updatedBy: user.id,
+  });
+
+  logger?.info({ action: 'createTreatmentPlan', patientId, planId: plan.id }, 'Treatment plan created');
+
+  return ctx.json(plan, 201);
+}

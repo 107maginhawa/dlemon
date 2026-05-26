@@ -32,11 +32,7 @@ export interface ToothSlideoutData {
   /** Raw price string as entered by the user (e.g. "1500"). No cents conversion. */
   priceInput?: string;
   conditionCode?: string;
-  /**
-   * Clinical notes from CDT browser. Captured in UI but not persisted to backend.
-   * Deferred: dental_treatment schema has no notes column. Requires TypeSpec update +
-   * migration to add text('clinical_notes') to the dentalTreatments table.
-   */
+  /** Clinical notes from CDT browser. Persisted to backend via createDentalTreatment. */
   clinicalNotes?: string;
   /** Per-surface condition map for richer save data */
   surfaceConditionMap?: Record<string, ToothState>;

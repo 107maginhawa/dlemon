@@ -33,16 +33,18 @@ export async function cancelAppointment(
     throw new ValidationError(`Cannot cancel appointment with status '${existing.status}'`);
   }
 
-  // Optional body: { cancellationReason?: string }
-  let cancellationReason: string | undefined;
-  const contentType = ctx.req.header('content-type') ?? '';
-  if (contentType.includes('application/json')) {
-    try {
-      const body = await ctx.req.json();
-      cancellationReason = body?.cancellationReason ?? undefined;
-    } catch {
-      // No body or invalid JSON — ignore
+  // BR-SCH-003: cancellation_reason is mandatory; omitting returns 422
+  let cancellationReason: string;
+  try {
+    const body = await ctx.req.json();
+    const reason = body?.cancellationReason;
+    if (typeof reason !== 'string' || reason.trim().length === 0) {
+      throw new ValidationError('cancellationReason is required and must be a non-empty string');
     }
+    cancellationReason = reason;
+  } catch (err) {
+    if (err instanceof ValidationError) throw err;
+    throw new ValidationError('cancellationReason is required and must be a non-empty string');
   }
 
   const result = await repo.cancel(appointmentId, cancellationReason, user.id);

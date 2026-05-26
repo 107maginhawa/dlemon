@@ -349,3 +349,21 @@ HTTP 200
 [Asserts]
 jsonpath "$.visitId" == "{{visit2_id}}"
 jsonpath "$.subjective" == "Patient reports sensitivity resolved"
+
+
+# ============================================================
+# NEW: G2.5-S6 — visit history by tooth
+# ============================================================
+
+# NEW: G2.5-S6 — get tooth history for patient (tooth 36 as example)
+GET {{api}}/dental/visits/history/{{patient_id}}/teeth/36
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+jsonpath "$.pagination" isCollection
+
+
+# NEW: G2.5-S6 — tooth history auth check
+GET {{api}}/dental/visits/history/{{patient_id}}/teeth/36
+HTTP 401

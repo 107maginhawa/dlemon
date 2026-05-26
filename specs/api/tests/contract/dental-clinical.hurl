@@ -397,3 +397,175 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" count >= 1
+
+
+# ============================================================
+# TREATMENT TEMPLATES
+# ============================================================
+
+# 24. Create treatment template
+POST {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Composite Restoration Protocol {{suffix}}",
+  "description": "Standard composite filling workflow",
+  "treatments": "[{\"code\":\"D2391\",\"description\":\"Composite resin, one surface, primary\"}]"
+}
+HTTP 201
+[Captures]
+template_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.name" == "Composite Restoration Protocol {{suffix}}"
+jsonpath "$.treatments" isString
+
+
+# 25. List treatment templates
+GET {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+
+
+# 26. Update treatment template
+PATCH {{api}}/dental/treatment-templates/{{template_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Composite Restoration Protocol Updated {{suffix}}",
+  "description": "Updated composite filling workflow"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{template_id}}"
+jsonpath "$.name" == "Composite Restoration Protocol Updated {{suffix}}"
+
+
+# 27. Delete treatment template
+DELETE {{api}}/dental/treatment-templates/{{template_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# ============================================================
+# VISIT NOTES ADVANCED (sign, addendum, history, template-apply, carry-over)
+# ============================================================
+
+# 28. Upsert visit notes first (required before sign/addendum)
+POST {{api}}/dental/visits/{{visit_id}}/notes
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "subjective": "Patient complains of tooth sensitivity",
+  "objective": "Caries observed on tooth 36",
+  "assessment": "Class II caries",
+  "plan": "Composite restoration scheduled"
+}
+HTTP 201
+
+
+# 29. Sign visit notes
+POST {{api}}/dental/visits/{{visit_id}}/notes/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.signedAt" != null
+
+
+# 30. Add addendum to visit notes
+POST {{api}}/dental/visits/{{visit_id}}/notes/addendum
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "reason": "Additional finding",
+  "content": "Post-procedure: patient tolerated treatment well."
+}
+HTTP 200
+[Asserts]
+jsonpath "$.visitId" == "{{visit_id}}"
+
+
+# 31. Get visit notes history
+GET {{api}}/dental/visits/{{visit_id}}/notes/history
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# 32. Create a second treatment template for apply-template test
+POST {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Root Canal Protocol {{suffix}}",
+  "treatments": "[{\"code\":\"D3330\",\"description\":\"Endodontic therapy, molar tooth\"}]"
+}
+HTTP 201
+[Captures]
+apply_template_id: jsonpath "$.id"
+
+
+# 33. Apply template to visit
+POST {{api}}/dental/visits/{{visit_id}}/apply-template/{{apply_template_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# 34. Create a second visit for carry-over source
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
+}
+HTTP 201
+[Captures]
+carryover_visit_id: jsonpath "$.id"
+
+
+# 35. Activate carry-over target visit
+PATCH {{api}}/dental/visits/{{carryover_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "active"
+}
+HTTP 200
+
+
+# 36. Carry over treatments from visit_id to carryover_visit_id
+POST {{api}}/dental/visits/{{carryover_visit_id}}/carry-over
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "sourceVisitId": "{{visit_id}}"
+}
+HTTP 200
+
+
+# ============================================================
+# DASHBOARD SUMMARY
+# ============================================================
+
+# 37. Get dashboard summary
+GET {{api}}/dental/dashboard/summary
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.todayVisits" isInteger
+jsonpath "$.pendingInvoices" isInteger
+jsonpath "$.totalPatients" isInteger
+jsonpath "$.revenueThisMonthCents" isInteger
+
+
+# 38. Dashboard summary auth check
+GET {{api}}/dental/dashboard/summary
+HTTP 401

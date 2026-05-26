@@ -17,6 +17,7 @@ import {
   updateDentalTreatmentMutation,
   listDentalTreatmentsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
+import { toast } from 'sonner';
 
 export function useUpdateTreatment(visitId: string) {
   const queryClient = useQueryClient();
@@ -27,6 +28,9 @@ export function useUpdateTreatment(visitId: string) {
       queryClient.invalidateQueries({
         queryKey: listDentalTreatmentsQueryKey({ path: { visitId } }),
       });
+    },
+    onError: () => {
+      toast.error('Failed to update treatment. Please try again.');
     },
   });
 }

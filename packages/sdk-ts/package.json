@@ -22,7 +22,7 @@
     "@daveyplate/better-auth-tanstack": "^1.3.6",
     "@hey-api/client-fetch": "^0.13.1",
     "@monobase/api-spec": "workspace:*",
-    "better-auth": "^1.3.7"
+    "better-auth": "^1.4.2"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",

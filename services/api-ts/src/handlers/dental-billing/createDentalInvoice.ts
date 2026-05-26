@@ -6,12 +6,14 @@
  * and creates line items from CDT codes and prices.
  */
 
+import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
 export async function createDentalInvoice(
@@ -24,7 +26,17 @@ export async function createDentalInvoice(
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization
-  await assertBranchAccess(db, session.userId, body.branchId);
+  await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+
+  // BR-011: signed consent form required before invoicing
+  const [signedConsent] = await db
+    .select({ id: consentForms.id })
+    .from(consentForms)
+    .where(and(eq(consentForms.visitId, body.visitId), eq(consentForms.signed, true)))
+    .limit(1);
+  if (!signedConsent) {
+    throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');
+  }
 
   const invoiceRepo = new DentalInvoiceRepository(db);
   const treatmentRepo = new TreatmentRepository(db);
@@ -35,6 +47,15 @@ export async function createDentalInvoice(
 
   if (billable.length === 0) {
     throw new ValidationError('No billable treatments found for this visit');
+  }
+
+  // S1-T7: Double-billing prevention — reject if any treatment already billed
+  const alreadyBilled = billable.filter(t => t.billedInvoiceId);
+  if (alreadyBilled.length > 0) {
+    throw new BusinessLogicError(
+      `${alreadyBilled.length} treatment(s) already billed on a previous invoice`,
+      'TREATMENT_ALREADY_BILLED',
+    );
   }
 
   // Calculate subtotal from treatments
@@ -80,6 +101,9 @@ export async function createDentalInvoice(
   }));
 
   const createdLineItems = await invoiceRepo.createLineItems(lineItems);
+
+  // Mark treatments as billed to prevent double-billing (S1-T7)
+  await treatmentRepo.setBilledInvoiceId(billable.map(t => t.id), invoice.id);
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

@@ -5,8 +5,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
-import { invoices } from './repos/billing.schema';
-import { eq } from 'drizzle-orm';
+import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
 import type Stripe from 'stripe';
 
 /**
@@ -60,7 +59,8 @@ export async function handleStripeWebhook(
     const merchantAccountRepo = new MerchantAccountRepository(database, logger);
     
     // Handle different webhook event types
-    switch (event.type) {
+    // Cast to string so rare event types not yet in Stripe SDK union can be matched
+    switch (event.type as string) {
       // Payment Intent events
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event, invoiceRepo, logger, notificationService);
@@ -106,7 +106,7 @@ export async function handleStripeWebhook(
         await handleTransferCreated(event, invoiceRepo, logger);
         break;
         
-      case 'transfer.failed' as any:
+      case 'transfer.failed':
         await handleTransferFailed(event, invoiceRepo, logger);
         break;
       
@@ -188,19 +188,13 @@ async function handlePaymentIntentSucceeded(
   try {
     await notificationService.createNotification({
       recipient: invoice.customer,
-      type: 'payment_authorized',
+      type: 'billing',
       title: 'Payment Authorized',
       message: 'Your payment has been authorized and is being held until the service is completed.',
-      data: {
-        invoiceId: invoice.id,
-        paymentIntentId: paymentIntent.id,
-        amount: paymentIntent.amount,
-        currency: paymentIntent.currency,
-        status: 'authorized'
-      },
-      channels: ['in-app', 'email'],
-      priority: 'normal'
-    } as any);
+      channel: 'in-app',
+      relatedEntityType: 'invoice',
+      relatedEntity: invoice.id,
+    });
 
     logger.info(
       { invoiceId, paymentIntentId: paymentIntent.id, customerId: invoice.customer },
@@ -250,19 +244,13 @@ async function handlePaymentIntentFailed(
   try {
     await notificationService.createNotification({
       recipient: invoice.customer,
-      type: 'payment_failed',
+      type: 'billing',
       title: 'Payment Failed',
       message: 'Your payment could not be processed. Please update your payment method and try again.',
-      data: {
-        invoiceId: invoice.id,
-        paymentIntentId: paymentIntent.id,
-        failureReason: paymentIntent.last_payment_error?.message || 'Payment processing failed',
-        status: 'failed',
-        failedAt: new Date().toISOString()
-      },
-      channels: ['in-app', 'email', 'sms'],
-      priority: 'high'
-    } as any);
+      channel: 'in-app',
+      relatedEntityType: 'invoice',
+      relatedEntity: invoice.id,
+    });
 
     logger.info(
       { invoiceId, paymentIntentId: paymentIntent.id, customerId: invoice.customer },
@@ -347,16 +335,8 @@ async function handleChargeSucceeded(
     return;
   }
   
-  // Find invoice by payment intent ID in metadata
-  // Note: This requires a custom query since we're searching in JSONB
-  const allInvoices = await (invoiceRepo as any).db
-    .select()
-    .from(invoices);
-
-  const invoice = allInvoices.find((inv: any) => {
-    const metadata = inv.metadata as any;
-    return metadata?.stripePaymentIntentId === paymentIntentId;
-  });
+  // Find invoice by payment intent ID in metadata JSONB
+  const invoice = await invoiceRepo.findByStripePaymentIntentId(paymentIntentId);
 
   if (!invoice) {
     logger.warn({ paymentIntentId, chargeId: charge.id }, 'No invoice found for charge');
@@ -393,38 +373,24 @@ async function handleChargeSucceeded(
     // Notification for patient - payment captured
     await notificationService.createNotification({
       recipient: invoice.customer,
-      type: 'payment_captured',
+      type: 'billing',
       title: 'Payment Processed',
       message: 'Your payment has been successfully processed and captured.',
-      data: {
-        invoiceId: invoice.id,
-        chargeId: charge.id,
-        amount: charge.amount,
-        currency: charge.currency,
-        status: 'captured',
-        capturedAt: new Date().toISOString()
-      },
-      channels: ['in-app', 'email'],
-      priority: 'normal'
-    } as any);
+      channel: 'in-app',
+      relatedEntityType: 'invoice',
+      relatedEntity: invoice.id,
+    });
 
     // Notification for provider - payment received
     await notificationService.createNotification({
       recipient: invoice.merchant,
-      type: 'payment_received',
+      type: 'billing',
       title: 'Payment Received',
       message: 'Payment for your invoice has been processed and will be transferred to your account.',
-      data: {
-        invoiceId: invoice.id,
-        chargeId: charge.id,
-        transferId: transferId,
-        amount: charge.amount,
-        currency: charge.currency,
-        customerId: invoice.customer
-      },
-      channels: ['in-app', 'email'],
-      priority: 'normal'
-    } as any);
+      channel: 'in-app',
+      relatedEntityType: 'invoice',
+      relatedEntity: invoice.id,
+    });
 
     logger.info(
       { invoiceId: invoice.id, chargeId: charge.id, customerId: invoice.customer, merchantId: invoice.merchant },
@@ -455,15 +421,8 @@ async function handleChargeFailed(
     return;
   }
   
-  // Find invoice by payment intent ID in metadata
-  const allInvoices = await (invoiceRepo as any).db
-    .select()
-    .from(invoices);
-
-  const invoice = allInvoices.find((inv: any) => {
-    const metadata = inv.metadata as any;
-    return metadata?.stripePaymentIntentId === paymentIntentId;
-  });
+  // Find invoice by payment intent ID in metadata JSONB
+  const invoice = await invoiceRepo.findByStripePaymentIntentId(paymentIntentId);
 
   if (!invoice) {
     logger.warn({ paymentIntentId, chargeId: charge.id }, 'No invoice found for failed charge');
@@ -483,21 +442,13 @@ async function handleChargeFailed(
   try {
     await notificationService.createNotification({
       recipient: invoice.customer,
-      type: 'charge_failed',
+      type: 'billing',
       title: 'Payment Charge Failed',
       message: 'There was an issue processing your payment charge. Please contact support if this continues.',
-      data: {
-        invoiceId: invoice.id,
-        chargeId: charge.id,
-        paymentIntentId: paymentIntentId,
-        failureCode: charge.failure_code,
-        failureMessage: charge.failure_message,
-        status: 'failed',
-        failedAt: new Date().toISOString()
-      },
-      channels: ['in-app', 'email'],
-      priority: 'high'
-    } as any);
+      channel: 'in-app',
+      relatedEntityType: 'invoice',
+      relatedEntity: invoice.id,
+    });
 
     logger.info(
       { invoiceId: invoice.id, chargeId: charge.id, customerId: invoice.customer },
@@ -527,15 +478,8 @@ async function handleChargeRefunded(
     return;
   }
   
-  // Find invoice by payment intent ID in metadata
-  const allInvoices = await (invoiceRepo as any).db
-    .select()
-    .from(invoices);
-
-  const invoice = allInvoices.find((inv: any) => {
-    const metadata = inv.metadata as any;
-    return metadata?.stripePaymentIntentId === paymentIntentId;
-  });
+  // Find invoice by payment intent ID in metadata JSONB
+  const invoice = await invoiceRepo.findByStripePaymentIntentId(paymentIntentId);
 
   if (!invoice) {
     logger.warn({ paymentIntentId, chargeId: charge.id }, 'No invoice found for refunded charge');
@@ -549,11 +493,11 @@ async function handleChargeRefunded(
     const refundAmountDecimal = (charge.amount_refunded / 100).toFixed(2);
 
     // Store refund details in metadata
-    const updatedMetadata = {
+    const updatedMetadata: InvoiceMetadata = {
       ...(invoice.metadata || {}),
       stripeRefundId: refund.id,
       refundAmount: refundAmountDecimal,
-      refundReason: refund.reason || 'requested_by_customer',
+      refundReason: refund.reason ?? 'requested_by_customer',
       refundedAt: new Date().toISOString(),
       refundStatus: isFullRefund ? 'full_refund' : 'partial_refund',
     };
@@ -606,7 +550,7 @@ async function handleAccountUpdated(
   const onboardingComplete = !account.requirements?.currently_due?.length;
 
   // Update metadata JSONB field
-  const metadata = merchantAccount.metadata as any;
+  const metadata = merchantAccount.metadata as MerchantMetadata;
   await merchantAccountRepo.updateOneById(merchantAccount.id, {
     metadata: {
       ...metadata,
@@ -650,7 +594,7 @@ async function handleAccountDeauthorized(
   }
 
   // Update metadata JSONB field with deauthorization status
-  const metadata = merchantAccount.metadata as any;
+  const metadata = merchantAccount.metadata as MerchantMetadata;
   await merchantAccountRepo.updateOneById(merchantAccount.id, {
     active: false,
     metadata: {
@@ -678,27 +622,20 @@ async function handleTransferCreated(
 ) {
   const transfer = event.data.object as Stripe.Transfer;
   
-  // Find invoice by transfer ID in metadata
-  const allInvoices = await (invoiceRepo as any).db
-    .select()
-    .from(invoices);
+  // Find invoices by transfer ID in metadata JSONB
+  const foundInvoices = await invoiceRepo.findAllByStripeTransferId(transfer.id);
 
-  const foundInvoices = allInvoices.filter((inv: any) => {
-    const metadata = inv.metadata as any;
-    return metadata?.stripeTransferId === transfer.id;
-  });
-  
-  if (!foundInvoices || foundInvoices.length === 0) {
+  if (foundInvoices.length === 0) {
     logger.info({ transferId: transfer.id }, 'Transfer created but no associated invoice found');
     return;
   }
-  
+
   logger.info(
-    { 
+    {
       transferId: transfer.id,
       amount: transfer.amount,
-      invoiceIds: foundInvoices.map((i: any) => i.id)
-    }, 
+      invoiceIds: foundInvoices.map(i => i.id)
+    },
     'Transfer created for invoice payments'
   );
 }
@@ -713,29 +650,22 @@ async function handleTransferFailed(
 ) {
   const transfer = event.data.object as Stripe.Transfer;
   
-  // Find invoice by transfer ID in metadata
-  const allInvoices = await (invoiceRepo as any).db
-    .select()
-    .from(invoices);
+  // Find invoices by transfer ID in metadata JSONB
+  const foundInvoices = await invoiceRepo.findAllByStripeTransferId(transfer.id);
 
-  const foundInvoices = allInvoices.filter((inv: any) => {
-    const metadata = inv.metadata as any;
-    return metadata?.stripeTransferId === transfer.id;
-  });
-
-  if (!foundInvoices || foundInvoices.length === 0) {
+  if (foundInvoices.length === 0) {
     logger.warn({ transferId: transfer.id }, 'Transfer failed but no associated invoice found');
     return;
   }
-  
+
   // Mark invoice as having transfer issues (might need manual review)
   for (const invoice of foundInvoices) {
     logger.error(
-      { 
+      {
         invoiceId: invoice.id,
         transferId: transfer.id,
-        failureMessage: (transfer as any).failure_message 
-      }, 
+        failureMessage: (transfer as { failure_message?: string }).failure_message
+      },
       'Transfer failed for invoice - requires manual review'
     );
   }

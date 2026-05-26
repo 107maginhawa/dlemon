@@ -1,19 +1,82 @@
 ---
 gsd_state_version: 1.0
-milestone: "v1.4"
+milestone: "v1.5-g1"
 milestone_name: milestone
-status: in_progress
-stopped_at: CI-GREEN confirmed (2026-05-21) — run 26176212195 green, PR #2 merged
-last_updated: "2026-05-21T00:44:00.000Z"
+status: complete
+stopped_at: context exhaustion at 75% (2026-05-26)
+last_updated: "2026-05-26T03:29:25.221Z"
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 10
   total_plans: 28
   completed_plans: 27
-  percent: 83
+  percent: 77
 ---
 
 ## Current Position
+
+### Sprint 0+1 — Revenue Chain + S1 Schema — COMPLETE (2026-05-25)
+
+All 8 commits landed on feat/v1.5-g1-foundation:
+
+- a45b869 — fix(seed): sign Maria Santos v4 consent — enables revenue chain
+- 97518ea — fix(workspace): inline consent-required error on Mark Done 422
+- a126c9b — feat(journey): J04 revenue chain PASS — two-step Mark-Done works
+- c8a377c — fix(tooth-slideout): remove stale deferred comment — clinical_notes wired
+- 1f26821 — test(billing): double-billing prevention — billedInvoiceId + 422 on re-invoice
+- 28e64b2 — test(treatment): performedAt set when status transitions to performed
+- bff976a — feat(schema): S1 schema additions — migration 0039 (performedAt, billedInvoiceId, appointmentId)
+- 30e31e3 — test(sprint-0+1): follow-on — BR-006 consent fix + billing gate + FSM HTTP (9 tests)
+
+Also: docs/architecture/ARCHITECTURE.md verified present — G5-S2 / Wave 4.1 closed (no
+work needed; extraction landed 2026-05-24). Known residual: BR-002 (active→completed 500)
+is pre-existing, not caused by Sprint 0+1 changes.
+
+### v1.5 Spec Pipeline + G3 Follow-ups + G5-S1 — COMPLETE (2026-05-24)
+
+All items landed on feat/v1.5-g1-foundation:
+
+- 856a7dc — oli-magic spec pipeline (UI blueprints × 70 files + spec consistency PASS)
+- e31fba1 — G3-S6/S7/S8/S9 (glossary imagingTier, audit route consolidation, visit Reopen removed, §4 workflow details)
+- 018c25c — G5-S1 dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype)
+- 8b74926 — Wave 0: tighten FSM transition types + null-assert AC-G2-S1 [typecheck CI unblock]
+
+Next: Wave 3a (G6-S5 metrics, G6-S6 perf ratchet) + Wave 3b (G6-S8 iPad E2E, G6-S9 frontend coverage).
+
+### G3 Domain Refactor — COMPLETE (2026-05-21)
+
+All 6 G3 slices done on feat/v1.5-g1-foundation:
+
+- G3-S1: Terminology "Encounter"→"Visit" in docs/comments ✅ (7bd46f9)
+- G3-S2: docs/architecture/DOMAIN_MODEL.md written — 19 entities, ER diagram, FHIR R4 ✅ (5ee8509)
+- G3-S3: DC-003/006/010/014 naming inconsistencies documented ✅ (b61c76f)
+- G3-S4: ~25 bare UUID FKs — 2 real FKs added, 10 loose-coupling comments, 2 not-FK ✅ (5def6c0)
+- G3-S5: EMR N+1 fixed (getBatchConsultationStats) + pool exhaustion fixed (max 5→2) ✅ (21585cc)
+- G3-S6: BROWNFIELD_STATUS F-012..F-016 → ✅, STATE.md updated ✅
+
+### G6-core — COMPLETE (2026-05-21)
+
+All 6 G6 slices done on feat/v1.5-g1-foundation:
+
+- G6-S1: Error envelope doc + conformance test ✅ (74c01e6 + 012e4ec — docs/api/ERROR_ENVELOPE.md + 28-test conformance suite)
+- G6-S2: Property tests for 10 FSMs ✅ (all 10 FSMs have fast-check property tests, pre-existing)
+- G6-S3: ASVS L2 checklist + THREAT_MODEL.md ✅ (docs/audits/ASVS_L2.md + THREAT_MODEL.md, pre-existing)
+- G6-S4: dental_audit DB table + Pino shim + admin endpoint ✅ (migration 0037 + audit-logger.ts + audit.repo.ts + getAuditEvents.ts, pre-existing)
+- G6-S7: TypeSpec @example annotations + OpenAPI drift CI ✅ (1e6218c — 4 examples each on dental-clinical.tsp + dental-org.tsp; drift CI pre-existing)
+- G6-S10: Migration safety lint + CI script ✅ (scripts/lint-migrations.ts + quality.yml wired, pre-existing)
+
+### G1 Foundation Stabilization — COMPLETE (2026-05-21)
+
+All 5 G1 slices done on feat/v1.5-g1-foundation:
+
+- G1-S1: staff_scheduling 403 tests — dental-treatment, dental-billing, clinical-prescription ✅ (8baca44 + 005885a)
+- G1-S2: BR-005 auto-discard tests confirmed green — 5/5 pass ✅
+- G1-S3: CephLandmark FSM 422 tests confirmed green — 52/52 pass ✅
+- G1-S4: PaymentPlan FSM 422 tests confirmed green — 11/11 pass ✅
+- G1-S5: imaging-test bundle guard via routeFileIgnorePattern ✅ (8baca44)
+- Cross-module E2E: role-gates-scheduling.spec.ts — staff_scheduling 403 end-to-end ✅ (005885a)
+
+Total new tests: 4 unit + 1 E2E. All 121 G1-S1 tests pass (33 + 58 + 30).
 
 ### Clinical Workflow Completion — PHASE 1 COMPLETE (2026-05-19)
 
@@ -168,10 +231,20 @@ Update to CLOSED once postgres-services.yml passes on this branch.
 
 ## Session Continuity
 
-Last session: 2026-05-20T16:36:39.983Z
-Stopped at: context exhaustion at 75% (2026-05-20)
+Last session: 2026-05-26T03:29:25.217Z
+Stopped at: context exhaustion at 75% (2026-05-26)
 Resume file: None
-Resume branch: feat/v1.4-clinical-imaging
+Resume branch: feat/audit-full-remediation (local only — no remote configured; PR cannot be opened until remote added)
+
+### Phase C Exit Gate — COMPLETE (2026-05-26) — eabea64
+
+All gate checks pass:
+
+- MASTER_AUDIT: 18/18 P1+P2 ✅, V1 Readiness 🟢 Green
+- TDD_PROOF.md: 10/10 P2 slice proofs created
+- REMEDIATION_COMPLETION_REPORT.md: written
+- Regression diff: phase-c-fails.txt EMPTY (0 failures vs 2 pre-existing baseline)
+- git status: clean
 
 ### Journey Harness Audit Cycle — COMPLETE (2026-05-19)
 

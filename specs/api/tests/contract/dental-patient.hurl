@@ -57,6 +57,8 @@ Content-Type: application/json
   "personId": "{{user_id}}"
 }
 HTTP 201
+[Captures]
+dentist_member_id: jsonpath "$.id"
 
 
 # 1. Create a dental patient
@@ -257,3 +259,103 @@ HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 jsonpath "$.pagination.totalCount" >= 0
+
+
+# ============================================================
+# NEW: G2.5-S6 — patient images, treatments, visits, treatment-plan, dentition
+# ============================================================
+
+# NEW: G2.5-S6 — create a visit for patient FK contexts
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
+}
+HTTP 201
+[Captures]
+patient_visit_id: jsonpath "$.id"
+
+
+# NEW: G2.5-S6 — list patient images
+GET {{api}}/dental/patients/{{patient_id}}/images?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# NEW: G2.5-S6 — list patient images auth check
+GET {{api}}/dental/patients/{{patient_id}}/images?branchId={{branch_id}}
+HTTP 401
+
+
+# NEW: G2.5-S6 — list patient treatments
+GET {{api}}/dental/patients/{{patient_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# NEW: G2.5-S6 — list patient treatments auth check
+GET {{api}}/dental/patients/{{patient_id}}/treatments
+HTTP 401
+
+
+# NEW: G2.5-S6 — list patient visits
+GET {{api}}/dental/patients/{{patient_id}}/visits
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# NEW: G2.5-S6 — list patient visits auth check
+GET {{api}}/dental/patients/{{patient_id}}/visits
+HTTP 401
+
+
+# NEW: G2.5-S6 — get treatment plan (may be empty for new patient)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan
+Cookie: better-auth.session_token={{session_token}}
+HTTP [200, 404]
+
+
+# NEW: G2.5-S6 — get treatment plan version 1 (404 acceptable if no plan exists)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan/versions/1
+Cookie: better-auth.session_token={{session_token}}
+HTTP [200, 404]
+
+
+# NEW: G2.5-S6 — accept treatment plan (body is optional — consentFormId not required)
+POST {{api}}/dental/patients/{{patient_id}}/treatment-plan/accept
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP [201, 400, 404]
+
+
+# NEW: G2.5-S6 — initialize dentition chart
+POST {{api}}/dental/patients/{{patient_id}}/dentition
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "dateOfBirth": "1990-05-15",
+  "visitId": "{{patient_visit_id}}"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+
+
+# NEW: G2.5-S6 — dentition auth check
+POST {{api}}/dental/patients/{{patient_id}}/dentition
+Content-Type: application/json
+{
+  "dateOfBirth": "1990-05-15",
+  "visitId": "{{patient_visit_id}}"
+}
+HTTP 401

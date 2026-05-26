@@ -6,10 +6,10 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError } from '@/core/errors';
+import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { ConsentFormRepository } from './repos/consent-form.repo';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateConsentFormBody, CreateConsentFormParams } from '@/generated/openapi/validators';
 
@@ -25,10 +25,8 @@ export async function createConsentForm(
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization via parent visit
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(visitId);
-  if (!visit) throw new NotFoundError('Visit');
-  await assertBranchAccess(db, user.id, visit.branchId);
+  const visit = await getVisitOrThrow(db, visitId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new ConsentFormRepository(db);
 

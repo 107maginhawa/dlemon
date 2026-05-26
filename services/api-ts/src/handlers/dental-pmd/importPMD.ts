@@ -10,7 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { ImportPMDBody } from '@/generated/openapi/validators';
 
@@ -29,7 +29,7 @@ export async function importPMD(
   const patient = await patientRepo.findOneById(body.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   const repo = new ImportedPMDRepository(db);
 

@@ -10,8 +10,13 @@ import { dentalBranches } from './branch.schema';
 export const memberRoleEnum = pgEnum('member_role', [
   'dentist_owner',
   'dentist_associate',
+  'hygienist',
   'staff_full',
   'staff_scheduling',
+  'dental_assistant',
+  'front_desk',
+  'billing_staff',
+  'read_only',
 ]);
 
 export const memberStatusEnum = pgEnum('member_status', ['active', 'inactive']);
@@ -21,7 +26,8 @@ export const dentalMemberships = pgTable('dental_membership', {
   branchId: uuid('branch_id')
     .notNull()
     .references(() => dentalBranches.id, { onDelete: 'cascade' }),
-  personId: uuid('person_id'), // nullable — PIN-only staff don't have cloud accounts
+  // loose-coupling: references person.id (cross-module — no DB-level FK; nullable: PIN-only staff don't have cloud accounts)
+  personId: uuid('person_id'),
   displayName: text('display_name').notNull(),
   role: memberRoleEnum('role').notNull(),
   pinHash: text('pin_hash'),
@@ -47,8 +53,13 @@ export type NewDentalMembership = typeof dentalMemberships.$inferInsert;
 export const VALID_MEMBER_ROLES = [
   'dentist_owner',
   'dentist_associate',
+  'hygienist',
   'staff_full',
   'staff_scheduling',
+  'dental_assistant',
+  'front_desk',
+  'billing_staff',
+  'read_only',
 ] as const;
 export type MemberRole = typeof VALID_MEMBER_ROLES[number];
 

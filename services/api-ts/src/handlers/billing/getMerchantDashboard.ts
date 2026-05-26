@@ -37,7 +37,7 @@ export async function getMerchantDashboard(
   }
 
   // Extract validated parameters
-  const params = ctx.req.valid('param') as any;
+  const params = ctx.req.valid('param');
   let merchantAccountId = params.merchantAccount;
 
   logger.debug({ merchantAccountId, userId: user.id }, 'Generating merchant dashboard link');

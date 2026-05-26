@@ -715,6 +715,7 @@ describe('BR-006: treatment state transitions forward-only', () => {
 
   test('forward: planned → performed succeeds (200)', async () => {
     const visit = await seedActiveVisit();
+    await seedSignedConsent(visit!.id); // handler requires signed consent before performed
     const treatment = await seedTreatment(visit!.id, { status: 'planned' });
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}/treatments/${treatment.id}`, {

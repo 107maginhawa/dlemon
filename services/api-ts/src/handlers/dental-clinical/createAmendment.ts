@@ -7,9 +7,9 @@
 import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError } from '@/core/errors';
+import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { AmendmentRepository } from './repos/amendment.repo';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { User } from '@/types/auth';
 import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
@@ -26,9 +26,7 @@ export async function createAmendment(
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization via parent visit
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(visitId);
-  if (!visit) throw new NotFoundError('Visit');
+  const visit = await getVisitOrThrow(db, visitId);
 
   const [membership] = await db
     .select({ id: dentalMemberships.id })

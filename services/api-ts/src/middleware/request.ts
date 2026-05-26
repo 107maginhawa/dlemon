@@ -40,6 +40,7 @@ export function createRequestLogger(config: Config) {
     await next();
 
     const duration = Date.now() - start;
+    ctx.header('X-Response-Time', `${duration}ms`);
     log?.info(
       {
         status: ctx.res.status,

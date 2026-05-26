@@ -40,6 +40,9 @@ import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatm
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
+import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
+import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -64,6 +67,8 @@ function WorkspacePage() {
   const [treatmentPlanSheetOpen, setTreatmentPlanSheetOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [imagingOpen, setImagingOpen] = useState(false);
+  const [recallsOpen, setRecallsOpen] = useState(false);
+  const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [selectedImageItem, setSelectedImageItem] = useState<PatientImageItem | null>(null);
   const [comparisonItems, setComparisonItems] = useState<[PatientImageItem, PatientImageItem] | null>(null);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
@@ -234,6 +239,29 @@ function WorkspacePage() {
         >
           Imaging
         </button>
+
+        {/* B3: Recalls tab trigger */}
+        <button
+          type="button"
+          data-testid="recalls-tab-btn"
+          onClick={() => setRecallsOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Recalls
+        </button>
+
+        {/* B4: Treatment Plans tab trigger */}
+        <button
+          type="button"
+          data-testid="treatment-plans-tab-btn"
+          onClick={() => setTreatmentPlansOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Plans
+        </button>
+
+        {/* B5: Sync status badge */}
+        <SyncStatusBadge branchId={branchId ?? null} />
 
         {/* PROF-04: View Profile link */}
         <Link
@@ -468,6 +496,20 @@ function WorkspacePage() {
           onClose={() => setAttachmentsOpen(false)}
         />
       )}
+
+      {/* B3: RecallsSheet */}
+      <RecallsSheet
+        patientId={patientId}
+        open={recallsOpen}
+        onClose={() => setRecallsOpen(false)}
+      />
+
+      {/* B4: TreatmentPlansSheet */}
+      <TreatmentPlansSheet
+        patientId={patientId}
+        open={treatmentPlansOpen}
+        onClose={() => setTreatmentPlansOpen(false)}
+      />
 
       {/* VISIT-02: PreCompletionChecklist */}
       {currentVisitId && (

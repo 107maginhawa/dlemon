@@ -1016,6 +1016,35 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listPatientVisits as unknown as Handler
   );
 
+  // createPerioChart
+  app.post('/dental/perio-charts',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreatePerioChartBody, validationErrorHandler),
+    registry.createPerioChart as unknown as Handler
+  );
+
+  // getPerioChart
+  app.get('/dental/perio-charts/:chartId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetPerioChartParams, validationErrorHandler),
+    registry.getPerioChart as unknown as Handler
+  );
+
+  // completePerioChart
+  app.post('/dental/perio-charts/:chartId/complete',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.CompletePerioChartParams, validationErrorHandler),
+    registry.completePerioChart as unknown as Handler
+  );
+
+  // upsertToothReading
+  app.put('/dental/perio-charts/:chartId/readings/:toothNumber',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpsertToothReadingParams, validationErrorHandler),
+    zValidator('json', validators.UpsertToothReadingBody, validationErrorHandler),
+    registry.upsertToothReading as unknown as Handler
+  );
+
   // importPMD
   app.post('/dental/pmd/import',
     authMiddleware({ roles: ["user"] }),
@@ -1265,6 +1294,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.SignVisitNotesParams, validationErrorHandler),
     zValidator('json', validators.SignVisitNotesBody, validationErrorHandler),
     registry.signVisitNotes as unknown as Handler
+  );
+
+  // getVisitPerioChart
+  app.get('/dental/visits/:visitId/perio-chart',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetVisitPerioChartParams, validationErrorHandler),
+    registry.getVisitPerioChart as unknown as Handler
   );
 
   // generatePMD

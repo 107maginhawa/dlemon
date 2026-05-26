@@ -3,7 +3,7 @@
  * Provides base entity fields and interfaces for consistency across all tables
  */
 
-import { uuid, timestamp, integer, jsonb } from 'drizzle-orm/pg-core';
+import { uuid, timestamp, integer, jsonb, text } from 'drizzle-orm/pg-core';
 import { eq, sql, type AnyColumn } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -25,6 +25,20 @@ export const baseEntityFields = {
   // Audit fields - who performed the action
   createdBy: uuid('created_by'),
   updatedBy: uuid('updated_by'),
+};
+
+/**
+ * Optional sync fields for entities that support local-first / offline-first operation.
+ * Add via spread: { ...baseEntityFields, ...syncableEntityFields, ... }
+ *
+ * syncStatus defaults to 'synced' — server-created rows are born synced.
+ * Offline-created rows should set localId + syncStatus='pending' at write time.
+ */
+export const syncableEntityFields = {
+  localId: text('local_id'),
+  syncStatus: text('sync_status').notNull().default('synced'),
+  lastSyncAt: timestamp('last_sync_at'),
+  conflictPayload: jsonb('conflict_payload'),
 };
 
 /**

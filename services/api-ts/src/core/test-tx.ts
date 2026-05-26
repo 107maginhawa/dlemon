@@ -27,11 +27,18 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 const TEST_DB_URL = 'postgres://postgres:password@localhost:5432/monobase';
 
 // Shared pool — one Pool per process, not one per test.
+// max: 2 keeps per-worker connections low. With ~20 parallel bun test workers
+// this stays well under Postgres default max_connections=100.
 let _pool: Pool | null = null;
 
 function getPool(): Pool {
   if (!_pool) {
-    _pool = new Pool({ connectionString: TEST_DB_URL, max: 5 });
+    _pool = new Pool({
+      connectionString: TEST_DB_URL,
+      max: 2,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000
+    });
   }
   return _pool;
 }

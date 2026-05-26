@@ -4,8 +4,8 @@
  * Each visit has one DentalChart with an array of per-tooth states.
  */
 
-import { pgTable, uuid, jsonb, integer, text, index, pgEnum } from 'drizzle-orm/pg-core';
-import { baseEntityFields } from '@/core/database.schema';
+import { pgTable, uuid, jsonb, integer, text, index, pgEnum, unique } from 'drizzle-orm/pg-core';
+import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
@@ -52,6 +52,7 @@ export interface ToothChartState {
 
 export const dentalCharts = pgTable('dental_chart', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   teeth: jsonb('teeth').notNull().$type<ToothChartState[]>(),
@@ -62,3 +63,18 @@ export const dentalCharts = pgTable('dental_chart', {
 
 export type DentalChart = typeof dentalCharts.$inferSelect;
 export type NewDentalChart = typeof dentalCharts.$inferInsert;
+
+export const dentalChartVersions = pgTable(
+  'dental_chart_version',
+  {
+    ...versionedSnapshotFields(),
+    chartId: uuid('chart_id').notNull().references(() => dentalCharts.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    uniqueChartVersion: unique('dental_chart_version_chart_version_uniq').on(table.chartId, table.version),
+    chartIdx: index('dental_chart_version_chart_idx').on(table.chartId),
+  }),
+);
+
+export type DentalChartVersion = typeof dentalChartVersions.$inferSelect;
+export type NewDentalChartVersion = typeof dentalChartVersions.$inferInsert;

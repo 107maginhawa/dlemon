@@ -18,7 +18,7 @@ import {
   type SendEmailRequest,
   type EmailSendResult,
   type TemplatePreviewResult
-} from '@/handlers/email/repos/email.schema';
+} from '@/core/email.types';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import postmark from 'postmark';

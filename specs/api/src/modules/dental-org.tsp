@@ -76,6 +76,17 @@ namespace DentalOrgModule {
   // Models
   // ==========================================================================
 
+  @example(#{
+    id: "or-1a2b3c4d-0000-4000-8000-000000000001",
+    createdAt: utcDateTime.fromISO("2025-01-15T08:00:00Z"),
+    updatedAt: utcDateTime.fromISO("2026-03-01T09:00:00Z"),
+    version: 4,
+    name: "Sunrise Dental Clinic",
+    tier: OrgTier.clinic,
+    ownerPersonId: "p1a2b3c4-0000-4000-8000-000000000001",
+    countryCode: "PH",
+    active: true,
+  }, #{ title: "Sunrise Dental Clinic — clinic tier" })
   @doc("Dental practice organization — top-level tenant boundary")
   model DentalOrganization extends BaseEntity {
     @doc("Practice display name")
@@ -97,6 +108,20 @@ namespace DentalOrgModule {
     active: boolean;
   }
 
+  @example(#{
+    id: "br-1a2b3c4d-0000-4000-8000-000000000001",
+    createdAt: utcDateTime.fromISO("2025-01-15T08:00:00Z"),
+    updatedAt: utcDateTime.fromISO("2026-01-10T07:30:00Z"),
+    version: 2,
+    organizationId: "or-1a2b3c4d-0000-4000-8000-000000000001",
+    name: "Sunrise Dental — Makati Branch",
+    address: "3F Ayala Center, Makati Ave",
+    city: "Makati City",
+    timezone: "Asia/Manila",
+    workingHours: "{\"monday\":{\"open\":\"09:00\",\"close\":\"18:00\",\"isOpen\":true}}",
+    phone: "+63 2 8888 1234",
+    active: true,
+  }, #{ title: "Makati branch — active clinic" })
   @doc("Physical branch / clinic location")
   model DentalBranch extends BaseEntity {
     @doc("Parent organization")
@@ -129,6 +154,19 @@ namespace DentalOrgModule {
     active: boolean;
   }
 
+  @example(#{
+    id: "ms-1a2b3c4d-0000-4000-8000-000000000001",
+    createdAt: utcDateTime.fromISO("2025-02-01T08:00:00Z"),
+    updatedAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+    version: 1,
+    branchId: "br-1a2b3c4d-0000-4000-8000-000000000001",
+    personId: "p1a2b3c4-0000-4000-8000-000000000001",
+    displayName: "Dr. Maria Santos",
+    role: MemberRole.dentistOwner,
+    pinFailedAttempts: 0,
+    status: MemberStatus.active,
+    avatarUrl: "https://cdn.example.com/avatars/ms-1a2b3c4d.jpg",
+  }, #{ title: "Dr. Maria Santos — owner dentist" })
   @doc("Staff membership — one person in one branch with one role")
   model DentalMembership extends BaseEntity {
     @doc("Branch this membership belongs to")
@@ -409,6 +447,16 @@ namespace DentalOrgModule {
     appointmentReminderEnabled?: boolean;
   }
 
+  @example(#{
+    id: "ct-1a2b3c4d-0000-4000-8000-000000000001",
+    createdAt: utcDateTime.fromISO("2025-03-01T08:00:00Z"),
+    updatedAt: utcDateTime.fromISO("2025-03-01T08:00:00Z"),
+    version: 1,
+    branchId: "br-1a2b3c4d-0000-4000-8000-000000000001",
+    title: "General Tooth Extraction Consent",
+    content: "<p>I, the undersigned patient, hereby consent to the extraction of the tooth/teeth indicated by my dentist...</p>",
+    isActive: true,
+  }, #{ title: "Extraction consent template — active" })
   @doc("Consent form template for a branch")
   model DentalConsentTemplate extends BaseEntity {
     @doc("Branch this template belongs to")

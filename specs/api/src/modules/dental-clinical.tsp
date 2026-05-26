@@ -54,6 +54,23 @@ enum MedicalHistoryEntryType {
 // Models — Prescription
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "rx-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  version: 1,
+  visitId: "vi-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  prescriberMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  rxNormCode: "313782",
+  drugName: "Amoxicillin",
+  dosage: "500mg",
+  frequency: "3x daily",
+  duration: "7 days",
+  quantity: "21 capsules",
+  instructions: "Take with food. Complete the full course.",
+  dispenseAsWritten: true,
+}, #{ title: "Amoxicillin prescription post-extraction" })
 model Prescription {
   id: UUID;
   createdAt: utcDateTime;
@@ -100,6 +117,19 @@ model UpdatePrescriptionRequest {
 // Models — Consent Form
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "cf-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T08:45:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T08:52:00Z"),
+  version: 2,
+  visitId: "vi-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  templateId: "tmpl-extraction-general",
+  templateName: "General Tooth Extraction Consent",
+  signedAt: utcDateTime.fromISO("2026-03-15T08:52:00Z"),
+  signatureData: "data:image/png;base64,iVBORw0KGgoAAAANS...",
+  signed: true,
+}, #{ title: "Signed extraction consent form" })
 model ConsentForm {
   id: UUID;
   createdAt: utcDateTime;
@@ -161,6 +191,21 @@ model CreateDentalAttachmentRequest {
 // Models — Lab Order
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "lo-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-10T11:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-18T14:30:00Z"),
+  version: 3,
+  visitId: "vi-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  labName: "Metro Dental Laboratory",
+  description: "PFM crown for tooth #36 — shade A2",
+  status: LabOrderStatus.delivered,
+  orderedAt: utcDateTime.fromISO("2026-03-10T11:00:00Z"),
+  expectedDeliveryDate: utcDateTime.fromISO("2026-03-18T09:00:00Z"),
+  deliveredAt: utcDateTime.fromISO("2026-03-18T14:30:00Z"),
+  isDefective: false,
+}, #{ title: "PFM crown lab order — delivered" })
 model LabOrder {
   id: UUID;
   createdAt: utcDateTime;
@@ -200,6 +245,20 @@ model UpdateLabOrderRequest {
 // Models — Medical History
 // ---------------------------------------------------------------------------
 
+@example(#{
+  id: "mh-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2025-06-01T10:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2025-06-01T10:00:00Z"),
+  version: 1,
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  entryType: MedicalHistoryEntryType.condition,
+  codeSystem: "ICD-10",
+  code: "K05.1",
+  displayName: "Chronic periodontitis",
+  notes: "Generalised, moderate severity. Under active management.",
+  onsetDate: "2023-01",
+  active: true,
+}, #{ title: "Chronic periodontitis — active condition" })
 model MedicalHistoryEntry {
   id: UUID;
   createdAt: utcDateTime;

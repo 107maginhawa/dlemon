@@ -7,8 +7,8 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
-import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
@@ -20,9 +20,7 @@ export async function getPMDForVisit(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization via parent visit
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(visitId);
-  if (!visit) throw new NotFoundError('Visit');
+  const visit = await getVisitOrThrow(db, visitId);
   await assertBranchAccess(db, user.id, visit.branchId);
 
   const repo = new PMDDocumentRepository(db);

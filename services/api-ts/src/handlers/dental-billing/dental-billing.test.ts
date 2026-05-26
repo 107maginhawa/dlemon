@@ -21,6 +21,7 @@ import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.rep
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
+import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { createDentalInvoice } from './createDentalInvoice';
 import { getDentalInvoice } from './getDentalInvoice';
 import { listDentalInvoices } from './listDentalInvoices';
@@ -64,6 +65,8 @@ const PERSON_ID = 'e0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = '7b000000-0000-4000-8000-000000000a02';
 const MEMBER_ID = '7c000000-0000-4000-8000-000000000a02';
 const STAFF_MEMBER_ID = '7c000000-0000-4000-8000-000000000a99';
+const SCHEDULING_USER = { id: '00000000-0000-0000-0000-000000000097', email: 'scheduling@clinic.com' };
+const SCHEDULING_MEMBER_ID = '7c000000-0000-4000-8000-000000000a97';
 const NONEXISTENT_ID = 'ffffffff-ffff-1000-8000-ffffffffffff';
 const ORG_ID = 'ed000000-0000-1000-8000-000000000001';
 
@@ -75,6 +78,7 @@ beforeAll(async () => {
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Staff', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: STAFF_MEMBER_ID, branchId: BRANCH_ID, personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: SCHEDULING_MEMBER_ID, branchId: BRANCH_ID, personId: SCHEDULING_USER.id, displayName: 'Scheduling Staff', role: 'staff_scheduling', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
 });
@@ -269,9 +273,20 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_payment`);
   await db.execute(sql`DELETE FROM dental_invoice_line_item`);
   await db.execute(sql`DELETE FROM dental_invoice`);
+  await db.execute(sql`DELETE FROM consent_form`);
   await db.execute(sql`DELETE FROM dental_treatment`);
   await db.execute(sql`DELETE FROM dental_visit`);
 });
+
+async function seedSignedConsent(visitId: string) {
+  const [cf] = await db.insert(consentForms).values({
+    id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
+    templateId: 'general-consent-v1', templateName: 'General Treatment Consent',
+    signed: true, signedAt: new Date(), signatureData: 'data:image/png;base64,test',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).returning();
+  return cf!;
+}
 
 // ===========================================================================
 // createDentalInvoice
@@ -310,6 +325,7 @@ describe('createDentalInvoice handler', () => {
       branchId: BRANCH_ID,
       dentistMemberId: MEMBER_ID,
     });
+    await seedSignedConsent(visit.id);
 
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
@@ -329,6 +345,7 @@ describe('createDentalInvoice handler', () => {
 
   test('returns 201 with invoice when visit has performed treatments', async () => {
     const { visit } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request('/dental/billing/invoices', {
@@ -349,6 +366,62 @@ describe('createDentalInvoice handler', () => {
     expect(body.subtotalCents).toBe(5000);
     expect(body.status).toBe('draft');
     expect(body.invoiceNumber).toMatch(/^INV-/);
+  });
+
+  test('sets billedInvoiceId on treatments after invoice is created', async () => {
+    const { visit, treatment } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit.id,
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        dentistMemberId: MEMBER_ID,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+
+    const treatmentRepo = new TreatmentRepository(db);
+    const updatedTreatment = await treatmentRepo.findOneById(treatment.id);
+    expect(updatedTreatment).not.toBeNull();
+    expect(updatedTreatment!.billedInvoiceId).toBe(body.id);
+  });
+
+  test('returns 422 with TREATMENT_ALREADY_BILLED when re-invoicing a visit', async () => {
+    const { visit } = await seedVisitAndTreatment();
+    await seedSignedConsent(visit.id);
+    const app = buildTestApp(TEST_USER);
+
+    const requestBody = JSON.stringify({
+      visitId: visit.id,
+      patientId: PATIENT_ID,
+      branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID,
+    });
+
+    // First invoice — should succeed
+    const res1 = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+    });
+    expect(res1.status).toBe(201);
+
+    // Second invoice for the same visit — treatments already billed
+    const res2 = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+    });
+    expect(res2.status).toBe(422);
+    const body2 = await res2.json() as any;
+    expect(body2.code).toBe('TREATMENT_ALREADY_BILLED');
   });
 });
 
@@ -1168,10 +1241,50 @@ describe('voidDentalInvoice role gate', () => {
     expect(res.status).toBe(403);
   });
 
+  test('staff_scheduling → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(SCHEDULING_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
   test('dentist_owner → passes role gate (not 403)', async () => {
     const { invoice } = await seedInvoice();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
     expect(res.status).not.toBe(403);
+  });
+});
+
+// ── GAP-009: Discount reason + discountedBy persistence (AC-001..AC-003) ──────
+
+describe('GAP-009: discount reason and actor persistence', () => {
+  // AC-001 + AC-002: reason and discountedBy stored in DB and returned
+  test('AC-001/AC-002: discountReason and discountedBy returned after applying discount', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.discountReason).toBe('Senior citizen discount');
+    expect(body.discountedBy).toBe(TEST_USER.id);
+  });
+
+  // AC-003: empty reason → error
+  test('AC-003: empty reason string → 422 DISCOUNT_REASON_REQUIRED', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: '   ', percentageRate: 10 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.code).toBe('DISCOUNT_REASON_REQUIRED');
   });
 });

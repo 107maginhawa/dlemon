@@ -340,3 +340,163 @@ jsonpath "$.version" == 1
 jsonpath "$.id" == "{{report_id}}"
 jsonpath "$.snapshot.analysis_label" == "{{snapshot_analysis_label}}"
 jsonpath "$.snapshot.branch_name" == "{{snapshot_branch_name}}"
+
+
+# ============================================================
+# IMAGING STUDY — GET BY ID
+# ============================================================
+
+# 18. Get imaging study by ID
+GET {{api}}/dental/imaging/studies/{{study_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{study_id}}"
+jsonpath "$.images" isCollection
+
+
+# 19. Get study auth check
+GET {{api}}/dental/imaging/studies/{{study_id}}
+HTTP 401
+
+
+# ============================================================
+# IMAGING FINDINGS
+# ============================================================
+
+# 20a. Create a visit (required FK for findings)
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
+}
+HTTP 201
+[Captures]
+imaging_visit_id: jsonpath "$.id"
+
+
+# 20. Create imaging finding
+POST {{api}}/dental/imaging/images/{{image_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "caries",
+  "status": "suspected",
+  "toothNumber": 36,
+  "visitId": "{{imaging_visit_id}}",
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "note": "Mesial caries suspected"
+}
+HTTP 200
+[Captures]
+finding_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.type" == "caries"
+jsonpath "$.toothNumber" == 36
+
+
+# 21. List findings for image
+GET {{api}}/dental/imaging/images/{{image_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# 22. Update imaging finding
+PATCH {{api}}/dental/imaging/findings/{{finding_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "confirmed",
+  "note": "Confirmed caries on mesial surface"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{finding_id}}"
+jsonpath "$.status" == "confirmed"
+
+
+# 23. Delete imaging finding
+DELETE {{api}}/dental/imaging/findings/{{finding_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# ============================================================
+# IMAGING MEASUREMENTS
+# ============================================================
+
+# 24. Create measurement
+POST {{api}}/dental/imaging/images/{{image_id}}/measurements
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "distance",
+  "geometry": {"points": [{"x": 100, "y": 200}, {"x": 150, "y": 250}]}
+}
+HTTP 200
+[Captures]
+measurement_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.type" == "distance"
+
+
+# 25. List measurements for image
+GET {{api}}/dental/imaging/images/{{image_id}}/measurements
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+
+# 26. Delete measurement
+DELETE {{api}}/dental/imaging/measurements/{{measurement_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# ============================================================
+# IMAGING IMAGE — MODALITY + DELETE
+# ============================================================
+
+# 27. Get ceph landmarks for image
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" isCollection
+
+
+# 28. Delete a landmark by code
+DELETE {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# 29. Update image modality
+PATCH {{api}}/dental/imaging/images/{{image_id}}/modality
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "modality": "panoramic"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{image_id}}"
+jsonpath "$.modality" == "panoramic"
+
+
+# 30. Delete imaging image
+DELETE {{api}}/dental/imaging/images/{{image_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# 31. Findings auth check
+GET {{api}}/dental/imaging/images/{{image_id}}/findings
+HTTP 401

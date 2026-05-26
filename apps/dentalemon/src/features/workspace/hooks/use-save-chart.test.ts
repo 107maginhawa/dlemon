@@ -6,6 +6,9 @@ import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { useSaveChart } from './use-save-chart';
 import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
@@ -84,5 +87,25 @@ describe('useSaveChart', () => {
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(invalidatedKeys.length).toBe(0);
+  });
+
+  test('AC-004: calls toast.error on generic save failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({ message: 'Server error' }, 500));
+    const { result } = renderHook(() => useSaveChart(), { wrapper: makeWrapper(freshClient()) });
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
+  });
+
+  test('AC-005: toast.error message contains "locked" for VISIT_LOCKED 422', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({ code: 'VISIT_LOCKED', message: 'Visit is locked' }, 422));
+    const { result } = renderHook(() => useSaveChart(), { wrapper: makeWrapper(freshClient()) });
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const newCalls = _toastError.mock.calls.slice(callsBefore);
+    expect(newCalls.length).toBeGreaterThan(0);
+    expect(String(newCalls[0]?.[0])).toMatch(/lock/i);
   });
 });

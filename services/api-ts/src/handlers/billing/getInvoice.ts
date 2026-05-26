@@ -33,8 +33,8 @@ export async function getInvoice(
   const user = session.user;
 
   // Extract validated parameters
-  const params = ctx.req.valid('param') as any;
-  const query = ctx.req.valid('query') as any;
+  const params = ctx.req.valid('param');
+  const query = ctx.req.valid('query');
 
   const invoiceId = params.invoice;
 

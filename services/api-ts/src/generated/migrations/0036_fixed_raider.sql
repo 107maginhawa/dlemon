@@ -1,0 +1,2 @@
+ALTER TABLE "dental_consent_template" ADD CONSTRAINT "dental_consent_template_branch_id_dental_branch_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."dental_branch"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "dental_treatment_template" ADD CONSTRAINT "dental_treatment_template_branch_id_dental_branch_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."dental_branch"("id") ON DELETE cascade ON UPDATE no action;

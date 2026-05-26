@@ -33,7 +33,7 @@ export async function getMerchantAccount(
   const user = ctx.get('user') as User | undefined;
 
   // Extract validated parameters
-  const params = ctx.req.valid('param') as any;
+  const params = ctx.req.valid('param');
 
   let merchantAccountId = params.merchantAccount;
 

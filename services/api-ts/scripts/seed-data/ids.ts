@@ -6,12 +6,12 @@
  *
  *   a0 = org, b0 = branch, c0 = owner person
  *   c1 = memberships
- *   d0 = patient persons, d1 = patient records
+ *   d0 = patient persons, d1 = patient records, d2 = patient contacts
  *   e0 = visits, e1 = charts, e2 = appointments
  *   f0 = invoices, f1 = payments, f2 = payment plans
  *   f3 = treatments, f4 = templates, f5 = visit notes
  *   f6 = prescriptions, f7 = lab orders, f8 = medical history
- *   f9 = invoice line items, fa = plan installments
+ *   f9 = invoice line items, fa = plan installments, fb = sync logs
  */
 
 // ── Existing IDs (re-exported) ──────────────────────────────────────
@@ -29,6 +29,22 @@ export const PERSON_ROSA_ID   = 'd0000000-0000-1000-8000-000000000002'; // Rosa 
 export const PERSON_CARLOS_ID = 'd0000000-0000-1000-8000-000000000003'; // Carlos Santos
 export const PERSON_LIZA_ID   = 'd0000000-0000-1000-8000-000000000004'; // Liza Manalang
 export const PERSON_BEN_ID    = 'd0000000-0000-1000-8000-000000000005'; // Ben Aquino
+export const PERSON_SOFIA_ID  = 'd0000000-0000-1000-8000-000000000006'; // Sofia Dela Cruz (minor)
+// Extended patients (scenarios 7-20)
+export const PERSON_PEPE_ID   = 'd0000000-0000-1000-8000-000000000007'; // Pepe Cruz (allergy: penicillin)
+export const PERSON_MIA_ID    = 'd0000000-0000-1000-8000-000000000008'; // Mia Santos (ortho case)
+export const PERSON_RICO_ID   = 'd0000000-0000-1000-8000-000000000009'; // Rico dela Torre (new patient)
+export const PERSON_ABBY_ID   = 'd0000000-0000-1000-8000-00000000000a'; // Abby Tan (recall overdue)
+export const PERSON_MARCO_ID  = 'd0000000-0000-1000-8000-00000000000b'; // Marco Lopez (geriatric 70+)
+export const PERSON_CELIA_ID  = 'd0000000-0000-1000-8000-00000000000c'; // Celia Ramos (insurance)
+export const PERSON_NENA_ID   = 'd0000000-0000-1000-8000-00000000000d'; // Nena Garcia (special medical notes)
+export const PERSON_LUKE_ID   = 'd0000000-0000-1000-8000-00000000000e'; // Luke Rivera (pediatric, 8y)
+export const PERSON_ED_ID     = 'd0000000-0000-1000-8000-00000000000f'; // Ed Torres (ongoing Rx)
+export const PERSON_TINA_ID   = 'd0000000-0000-1000-8000-000000000010'; // Tina Bautista (extensive history)
+export const PERSON_PHIL_ID   = 'd0000000-0000-1000-8000-000000000011'; // Phil Fernan (offline-created sync)
+export const PERSON_CINDY_ID  = 'd0000000-0000-1000-8000-000000000012'; // Cindy Ocampo (complex medical hx)
+export const PERSON_JEROME_ID = 'd0000000-0000-1000-8000-000000000013'; // Jerome Medrano (inactive)
+export const PERSON_GINA_ID   = 'd0000000-0000-1000-8000-000000000014'; // Gina Villanueva (payment plan)
 
 // ── Patient record IDs (d1) ─────────────────────────────────────────
 export const PATIENT_JUAN_ID   = 'd1000000-0000-1000-8000-000000000001';
@@ -36,6 +52,26 @@ export const PATIENT_ROSA_ID   = 'd1000000-0000-1000-8000-000000000002';
 export const PATIENT_CARLOS_ID = 'd1000000-0000-1000-8000-000000000003';
 export const PATIENT_LIZA_ID   = 'd1000000-0000-1000-8000-000000000004';
 export const PATIENT_BEN_ID    = 'd1000000-0000-1000-8000-000000000005';
+export const PATIENT_SOFIA_ID  = 'd1000000-0000-1000-8000-000000000006';
+// Extended patients (scenarios 7-20)
+export const PATIENT_PEPE_ID   = 'd1000000-0000-1000-8000-000000000007';
+export const PATIENT_MIA_ID    = 'd1000000-0000-1000-8000-000000000008';
+export const PATIENT_RICO_ID   = 'd1000000-0000-1000-8000-000000000009';
+export const PATIENT_ABBY_ID   = 'd1000000-0000-1000-8000-00000000000a';
+export const PATIENT_MARCO_ID  = 'd1000000-0000-1000-8000-00000000000b';
+export const PATIENT_CELIA_ID  = 'd1000000-0000-1000-8000-00000000000c';
+export const PATIENT_NENA_ID   = 'd1000000-0000-1000-8000-00000000000d';
+export const PATIENT_LUKE_ID   = 'd1000000-0000-1000-8000-00000000000e';
+export const PATIENT_ED_ID     = 'd1000000-0000-1000-8000-00000000000f';
+export const PATIENT_TINA_ID   = 'd1000000-0000-1000-8000-000000000010';
+export const PATIENT_PHIL_ID   = 'd1000000-0000-1000-8000-000000000011';
+export const PATIENT_CINDY_ID  = 'd1000000-0000-1000-8000-000000000012';
+export const PATIENT_JEROME_ID = 'd1000000-0000-1000-8000-000000000013';
+export const PATIENT_GINA_ID   = 'd1000000-0000-1000-8000-000000000014';
+
+// ── Patient contact IDs (d2) ────────────────────────────────────────
+export const CONTACT_SOFIA_GUARDIAN_ID = 'd2000000-0000-1000-8000-000000000001'; // Jose Dela Cruz (guardian)
+export const CONTACT_LUKE_GUARDIAN_ID  = 'd2000000-0000-1000-8000-000000000002'; // Alma Rivera (guardian of Luke)
 
 // Convenience map: person -> patient
 export const PERSON_TO_PATIENT: Record<string, string> = {
@@ -44,6 +80,21 @@ export const PERSON_TO_PATIENT: Record<string, string> = {
   [PERSON_CARLOS_ID]: PATIENT_CARLOS_ID,
   [PERSON_LIZA_ID]:   PATIENT_LIZA_ID,
   [PERSON_BEN_ID]:    PATIENT_BEN_ID,
+  [PERSON_SOFIA_ID]:  PATIENT_SOFIA_ID,
+  [PERSON_PEPE_ID]:   PATIENT_PEPE_ID,
+  [PERSON_MIA_ID]:    PATIENT_MIA_ID,
+  [PERSON_RICO_ID]:   PATIENT_RICO_ID,
+  [PERSON_ABBY_ID]:   PATIENT_ABBY_ID,
+  [PERSON_MARCO_ID]:  PATIENT_MARCO_ID,
+  [PERSON_CELIA_ID]:  PATIENT_CELIA_ID,
+  [PERSON_NENA_ID]:   PATIENT_NENA_ID,
+  [PERSON_LUKE_ID]:   PATIENT_LUKE_ID,
+  [PERSON_ED_ID]:     PATIENT_ED_ID,
+  [PERSON_TINA_ID]:   PATIENT_TINA_ID,
+  [PERSON_PHIL_ID]:   PATIENT_PHIL_ID,
+  [PERSON_CINDY_ID]:  PATIENT_CINDY_ID,
+  [PERSON_JEROME_ID]: PATIENT_JEROME_ID,
+  [PERSON_GINA_ID]:   PATIENT_GINA_ID,
 };
 
 // ── Visits (e0) ─────────────────────────────────────────────────────
@@ -211,6 +262,8 @@ export const MH_03 = 'f8000000-0000-1000-8000-000000000003';
 export const MH_04 = 'f8000000-0000-1000-8000-000000000004';
 export const MH_05 = 'f8000000-0000-1000-8000-000000000005';
 export const MH_06 = 'f8000000-0000-1000-8000-000000000006';
+export const MH_07 = 'f8000000-0000-1000-8000-000000000007'; // Pepe — penicillin allergy
+export const MH_08 = 'f8000000-0000-1000-8000-000000000008'; // Pepe — NSAID allergy
 
 // ── Invoice Line Items (f9) ─────────────────────────────────────────
 export const LINE_ITEM_01 = 'f9000000-0000-1000-8000-000000000001';
@@ -221,9 +274,32 @@ export const LINE_ITEM_05 = 'f9000000-0000-1000-8000-000000000005';
 export const LINE_ITEM_06 = 'f9000000-0000-1000-8000-000000000006';
 export const LINE_ITEM_07 = 'f9000000-0000-1000-8000-000000000007';
 export const LINE_ITEM_08 = 'f9000000-0000-1000-8000-000000000008';
+export const LINE_ITEM_09 = 'f9000000-0000-1000-8000-000000000009'; // Gina overdue
+
+// ── Invoices (f0) — extended ────────────────────────────────────────
+export const INVOICE_09 = 'f0000000-0000-1000-8000-000000000009'; // Gina overdue
+
+// ── Payment Plans (f2) — extended ───────────────────────────────────
+export const PLAN_02 = 'f2000000-0000-1000-8000-000000000002'; // Gina payment plan
 
 // ── Payment Plan Installments (fa) ──────────────────────────────────
 export const INSTALLMENT_01 = 'fa000000-0000-1000-8000-000000000001';
 export const INSTALLMENT_02 = 'fa000000-0000-1000-8000-000000000002';
 export const INSTALLMENT_03 = 'fa000000-0000-1000-8000-000000000003';
 export const INSTALLMENT_04 = 'fa000000-0000-1000-8000-000000000004';
+export const INSTALLMENT_05 = 'fa000000-0000-1000-8000-000000000005'; // Gina plan installment 1
+export const INSTALLMENT_06 = 'fa000000-0000-1000-8000-000000000006'; // Gina plan installment 2
+
+// ── Sync Logs (fb) ──────────────────────────────────────────────────
+export const SYNC_01 = 'fb000000-0000-1000-8000-000000000001'; // Phil — patient pending sync
+export const SYNC_02 = 'fb000000-0000-1000-8000-000000000002'; // Phil — visit failed sync
+
+// ── Audit Logs (fc) ─────────────────────────────────────────────────
+export const AUDIT_01 = 'fc000000-0000-1000-8000-000000000001'; // treatment created
+export const AUDIT_02 = 'fc000000-0000-1000-8000-000000000002'; // invoice issued
+export const AUDIT_03 = 'fc000000-0000-1000-8000-000000000003'; // discount applied
+export const AUDIT_04 = 'fc000000-0000-1000-8000-000000000004'; // visit notes signed
+
+// ── Attachments (fd) ────────────────────────────────────────────────
+export const ATTACHMENT_01 = 'fd000000-0000-1000-8000-000000000001'; // Juan — X-ray
+export const ATTACHMENT_02 = 'fd000000-0000-1000-8000-000000000002'; // Rosa — consent form PDF

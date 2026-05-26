@@ -18,20 +18,24 @@ import { ValidationError, NotFoundError, ForbiddenError } from '@/core/errors';
 import * as OneSignal from '@onesignal/node-onesignal';
 import { SYSTEM_USER_ID } from '@/core/constants';
 import { subDays } from 'date-fns';
+import type { EmailService } from '@/core/email';
 
 export class NotificationRepository extends DatabaseRepository<Notification, NewNotification, NotificationFilters> {
   private personRepo: PersonRepository;
   private oneSignalClient?: OneSignal.DefaultApi;
   private oneSignalAppId?: string;
+  private emailService?: EmailService;
 
   constructor(
     db: DatabaseInstance,
     personRepo: PersonRepository,
     logger?: any,
-    oneSignalConfig?: { appId: string; apiKey: string }
+    oneSignalConfig?: { appId: string; apiKey: string },
+    emailService?: EmailService
   ) {
     super(db, notifications, logger);
     this.personRepo = personRepo;
+    this.emailService = emailService;
 
     // Initialize OneSignal if config provided
     if (oneSignalConfig) {
@@ -344,19 +348,19 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     switch (notification.channel) {
       case 'email': {
         // Use email service to queue the email
-        const emailService = (globalThis as any).app?.email;
-        if (emailService) {
+        if (this.emailService) {
           // Map notification type to email template tag
           const templateTag = this.mapNotificationToEmailTemplate(notification.type);
-          
+
           if (templateTag) {
             // Get recipient email from person repository
             const person = await this.personRepo.findOneById(notification.recipient);
-            
-            if (person && (person as any).email) {
-              await emailService.queueEmail({
+            const recipientEmail = person?.contactInfo?.email;
+
+            if (person && recipientEmail) {
+              await this.emailService.queueEmail({
                 templateTags: [templateTag],
-                recipient: (person as any).email,
+                recipient: recipientEmail,
                 variables: {
                   title: notification.title,
                   message: notification.message,

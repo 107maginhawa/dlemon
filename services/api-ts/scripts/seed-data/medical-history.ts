@@ -1,11 +1,11 @@
 /**
- * Seed: Medical history entries for Ben, Rosa, Carlos
+ * Seed: Medical history entries for Ben, Rosa, Carlos, Pepe
  */
 import type { DatabaseInstance } from './types';
 import { medicalHistoryEntries } from '@/handlers/dental-clinical/repos/medical-history.schema';
 import {
-  PATIENT_BEN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID,
-  MH_01, MH_02, MH_03, MH_04, MH_05, MH_06,
+  PATIENT_BEN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_PEPE_ID,
+  MH_01, MH_02, MH_03, MH_04, MH_05, MH_06, MH_07, MH_08,
   DR_REYES_MEMBERSHIP_ID,
 } from './ids';
 
@@ -94,7 +94,33 @@ export async function seedMedicalHistory(db: DatabaseInstance): Promise<void> {
       createdBy: DR_REYES_MEMBERSHIP_ID,
       updatedBy: DR_REYES_MEMBERSHIP_ID,
     },
+    // Pepe Cruz — Penicillin allergy (P1-004: allergy scenario)
+    {
+      id: MH_07,
+      patientId: PATIENT_PEPE_ID,
+      entryType: 'allergy',
+      codeSystem: 'RxNorm',
+      code: '7980',
+      displayName: 'Penicillin allergy',
+      notes: 'Anaphylaxis reported. Carry EpiPen. Use clindamycin or azithromycin as alternative.',
+      active: true,
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
+    // Pepe Cruz — NSAID allergy
+    {
+      id: MH_08,
+      patientId: PATIENT_PEPE_ID,
+      entryType: 'allergy',
+      codeSystem: 'RxNorm',
+      code: '41493',
+      displayName: 'NSAID allergy (ibuprofen)',
+      notes: 'GI bleeding on naproxen. Use paracetamol for post-op analgesia.',
+      active: true,
+      createdBy: DR_REYES_MEMBERSHIP_ID,
+      updatedBy: DR_REYES_MEMBERSHIP_ID,
+    },
   ]).onConflictDoNothing();
 
-  console.log('   ✅ 6 medical history entries');
+  console.log('   ✅ 8 medical history entries (Ben×3, Rosa×2, Carlos×1, Pepe×2)');
 }

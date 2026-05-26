@@ -14,8 +14,8 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import type { StorageProvider } from '@/core/storage';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ALLOWED_IMAGING_MIME_TYPES } from './repos/imaging.schema';
 
@@ -42,20 +42,11 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     );
   }
 
-  // Role gate: only dental clinicians may upload imaging
-  const allowedRoles = ['dentist_owner', 'dentist_associate', 'staff_full'];
-
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new ImagingRepository(db);
 
-  // Branch-level authorization
-  await assertBranchAccess(db, user.id, body.branchId);
-
-  // Derive role from branch membership (no middleware sets memberRole)
-  const role = await repo.getMemberRole(user.id, body.branchId);
-  if (!role || !allowedRoles.includes(role)) {
-    throw new ForbiddenError('Upload requires dentist, associate, or hygienist role');
-  }
+  // Branch-level authorization + role gate (CLINICAL_WRITE)
+  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
 
   const storage = ctx.get('storage') as StorageProvider;
 

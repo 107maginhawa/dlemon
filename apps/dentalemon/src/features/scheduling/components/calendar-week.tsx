@@ -14,7 +14,7 @@ const TOTAL_SLOTS = (DAY_END_HOUR - DAY_START_HOUR) * 2;
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function getWeekDates(weekStart: string): string[] {
+export function getWeekDates(weekStart: string): string[] {
   const start = new Date(weekStart);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
@@ -23,7 +23,7 @@ function getWeekDates(weekStart: string): string[] {
   });
 }
 
-function getTopPx(scheduledAt: string): number {
+export function getTopPx(scheduledAt: string): number {
   const d = new Date(scheduledAt);
   const h = d.getHours();
   const m = d.getMinutes();
@@ -31,11 +31,11 @@ function getTopPx(scheduledAt: string): number {
   return slotsFromStart * SLOT_HEIGHT_PX;
 }
 
-function getHeightPx(durationMinutes: number): number {
+export function getHeightPx(durationMinutes: number): number {
   return Math.max((durationMinutes / 30) * SLOT_HEIGHT_PX - 4, 30);
 }
 
-function formatChipTime(isoString: string): string {
+export function formatChipTime(isoString: string): string {
   const d = new Date(isoString);
   const h = d.getHours();
   const m = d.getMinutes();
@@ -44,7 +44,7 @@ function formatChipTime(isoString: string): string {
   return `${displayH}:${m.toString().padStart(2, '0')} ${period}`;
 }
 
-function truncateId(id: string, maxLen = 8): string {
+export function truncateId(id: string, maxLen = 8): string {
   return id.length <= maxLen ? id : id.slice(0, maxLen) + '...';
 }
 

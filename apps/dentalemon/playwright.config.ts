@@ -47,12 +47,16 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    // Simplified to single project for faster execution
-    // Uncomment for mobile testing
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 7'] },
-    // },
+    {
+      name: 'ipad-portrait',
+      use: { ...devices['iPad (gen 7)'], viewport: { width: 1024, height: 768 } },
+      testMatch: '**/ipad-*.spec.ts',
+    },
+    {
+      name: 'ipad-landscape',
+      use: { ...devices['iPad (gen 7) landscape'], viewport: { width: 1366, height: 1024 } },
+      testMatch: '**/ipad-*.spec.ts',
+    },
   ],
 
   webServer: {

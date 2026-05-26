@@ -1,4 +1,4 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-20 (--update pass) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (G5+G6 complete) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
 
 # Dentalemon — Brownfield Execution Roadmap
 
@@ -14,11 +14,12 @@
 
 | Wave | Name | Parallel? | P-level | Status |
 |------|------|-----------|---------|--------|
-| G1 | Foundation Stabilization | Sequential (safety) | P1–P3 | ⬜ NOT STARTED |
-| G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ⬜ NOT STARTED |
-| G3 | Domain Model Refactoring | Parallel safe | P2 | ⬜ NOT STARTED |
-| G4 | Feature Delivery | Sequential (dependency) | new-feature | 🔄 PENDING CI (F-016) |
-| G5 | Future Features | Parallel safe | new-feature | ⬜ PLANNED |
+| G1 | Foundation Stabilization | Sequential (safety) | P1–P3 | ✅ COMPLETE (2026-05-21) |
+| G2 | Spec & Coverage Completeness | Parallel safe | P1–P2 | ✅ COMPLETE (2026-05-21) |
+| G3 | Domain Model Refactoring | Parallel safe | P2 | ✅ COMPLETE (2026-05-21) |
+| G4 | Feature Delivery | Sequential (dependency) | new-feature | ✅ COMPLETE (merged 2026-05-18, commit 5f246e3) |
+| G5 | Future Features | Parallel safe | new-feature | ✅ COMPLETE (2026-05-24) |
+| G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ✅ COMPLETE (2026-05-24) |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -35,7 +36,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G1: Foundation Stabilization
 
 **Mode:** tdd
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21)
 **Parallel:** NO — sequential for safety (security + state machine integrity)
 **Depends on:** nothing (run first)
 **Findings:** F-001, F-002, F-003, F-004, F-005
@@ -69,14 +70,16 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 | G1-S4 | Guard PaymentPlan FSM transitions | dental-billing | stabilize-existing | S |
 | G1-S5 | Exclude debug routes from production bundle | dental-imaging | stabilize-existing | S |
 
-**Cross-module integration test required:** G1-S1 touches `shared/assertBranchAccess`, `dental-visit`, `dental-billing`, `dental-clinical` — run cross-module E2E after.
+| G1-S6 | Introduce `VisitService` interface (decouple dental-clinical from VisitRepository) | dental-clinical + dental-visit | refactor-existing | M |
+
+**Cross-module integration test required:** G1-S1 touches `shared/assertBranchAccess`, `dental-visit`, `dental-billing`, `dental-clinical` — run cross-module E2E after. G1-S6 (G-003) requires interface + contract test before merge.
 
 ---
 
 ## Wave G2: Spec & Coverage Completeness
 
 **Mode:** tdd
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21, incl. G2.5 push to max)
 **Parallel:** YES — slices are independent, parallelizable across modules
 **Depends on:** G1
 **Findings:** F-006, F-007, F-008, F-009, F-010, F-011
@@ -106,7 +109,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 |---|-------|--------|----------------|------|
 | G2-S1 | Write 20 AC tests (4 highest-value first) | cross-module | stabilize-existing | L |
 | G2-S2 | Write ceph BRs spec (BR-036+) | dental-imaging | stabilize-existing | M |
-| G2-S3 | Write 9 MODULE_SPECs (use dental-imaging as template) | cross-module | stabilize-existing | L |
+| G2-S3 | ~~Write 9 MODULE_SPECs~~ ✅ COMPLETE (2026-05-24 — all 10 at docs/product/modules/) | cross-module | stabilize-existing | L |
 | G2-S4 | Add dental Hurl contract tests | cross-module | stabilize-existing | M |
 | G2-S5 | Populate br-registry.json | cross-module | stabilize-existing | S |
 | G2-S6 | Boost booking + storage coverage | booking, storage | stabilize-existing | M |
@@ -116,7 +119,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G3: Domain Model Refactoring
 
 **Mode:** tdd (code changes) / docs (documentation)
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE (2026-05-21; G3-S6/S7/S8/S9 follow-ups done 2026-05-24, commit e31fba1)
 **Parallel:** YES — slices are independent
 **Depends on:** G2
 **Findings:** F-012, F-013, F-014, F-015, F-016
@@ -147,14 +150,18 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 | G3-S3 | DC naming fixes (DC-003, DC-006, DC-010, DC-014) | cross-module | refactor-existing | S |
 | G3-S4 | Document or fix remaining bare UUID FK columns | cross-module | refactor-existing | M |
 | G3-S5 | Fix EMR N+1 + parallel test pool exhaustion | emr, infra | stabilize-existing | M |
+| G3-S6 | Fill DOMAIN_GLOSSARY gaps: Focal Card, Baseline, imagingTier, Carry-over, Amendment | docs | stabilize-existing | S |
+| G3-S7 | Consolidate audit log UI route → `/audit/log` (remove dental-org duplicate screen) | dental-org, dental-audit | refactor-existing | S |
+| G3-S8 | Remove invalid "Reopen" action from visit workspace screens.md (terminal state violation) | dental-visit | refactor-existing | S |
+| G3-S9 | Add MODULE_SPEC §4 Workflow Details for dental-clinical, dental-billing, dental-imaging | docs | stabilize-existing | M |
 
 ---
 
 ## Wave G4: Feature Delivery
 
 **Mode:** tdd — vertical slices per `docs/development/VERTICAL_TDD.md`
-**Status:** 🔄 PENDING CI GREEN — F-016 (feature work complete, CI postgres-services.yml gate pending)
-**Branch:** `feat/v1.4-clinical-imaging`
+**Status:** ✅ COMPLETE — merged to main 2026-05-18 (PR #2, commit 5f246e3)
+**Branch:** `feat/v1.4-clinical-imaging` (merged)
 **Parallel:** NO — sequential within G4 (Phase 1 → Phase 2)
 **Depends on:** v1.3 Imaging Workspace ✅ complete
 **Note:** G4 is independent of G1–G3; run concurrently with stabilization waves if bandwidth allows.
@@ -171,7 +178,7 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 
 ### G4-P2: Cephalometric Workspace (v1.4 Phase 2)
 
-**Status:** 🔄 PENDING CI GREEN — F-016 (F0–F6 committed, 32/32 E2E pass, CI gate pending)
+**Status:** ✅ COMPLETE — CI GREEN (run 26176212195), merged to main 2026-05-18 (PR #2, commit 5f246e3)
 **Depends on:** G4-P1 ✅ complete
 **Requirements:** CEPH-01 through CEPH-N (per approved design decisions D-A..D-P)
 **Success Criteria:**
@@ -185,21 +192,21 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G5: Future Features
 
 **Mode:** tdd — vertical slices
-**Status:** ⬜ PLANNED
+**Status:** ✅ COMPLETE (2026-05-24)
 **Parallel:** YES — slices are independent
 **Depends on:** G4 complete
 
 | # | Slice | Classification | Notes |
 |---|-------|----------------|-------|
-| G5-S1 | v1.5 Periodontal Charting | new-feature | New module; depends on dental-visit + dental-clinical |
-| G5-S2 | Standalone ARCHITECTURE.md | stabilize-existing | Low priority; CLAUDE.md covers content today |
+| G5-S1 | v1.5 Periodontal Charting | new-feature | ✅ COMPLETE (commit 018c25c) — dental-perio module (TypeSpec + 2 tables + 5 handlers + tests + UI prototype) |
+| G5-S2 | Standalone ARCHITECTURE.md | stabilize-existing | ✅ COMPLETE (2026-05-24) — docs/architecture/ARCHITECTURE.md + CLAUDE.md pointer |
 
 ---
 
 ## Wave G6: Excellence — Reach 9.0 Target
 
 **Mode:** tdd / docs (mixed)
-**Status:** ⬜ PLANNED
+**Status:** ✅ COMPLETE (2026-05-24) — all 10 slices done
 **Parallel:** YES — slices are independent
 **Depends on:** G3 complete
 **Target:** Audit ≥9.0, Compliance ≥9.0, Confidence ≥9.0

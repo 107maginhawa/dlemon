@@ -16,6 +16,7 @@ import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { dentalPatientContacts } from '@/handlers/dental-patient/repos/patient-contact.schema';
 import { eq } from 'drizzle-orm';
 
 // Seed data modules
@@ -23,7 +24,16 @@ import {
   ORG_ID, BRANCH_ID, OWNER_PERSON_ID,
   DR_REYES_MEMBERSHIP_ID, ANA_SANTOS_MEMBERSHIP_ID,
   PERSON_JUAN_ID, PERSON_ROSA_ID, PERSON_CARLOS_ID, PERSON_LIZA_ID, PERSON_BEN_ID,
+  PERSON_SOFIA_ID,
+  PERSON_PEPE_ID, PERSON_MIA_ID, PERSON_RICO_ID, PERSON_ABBY_ID, PERSON_MARCO_ID,
+  PERSON_CELIA_ID, PERSON_NENA_ID, PERSON_LUKE_ID, PERSON_ED_ID, PERSON_TINA_ID,
+  PERSON_PHIL_ID, PERSON_CINDY_ID, PERSON_JEROME_ID, PERSON_GINA_ID,
   PATIENT_JUAN_ID, PATIENT_ROSA_ID, PATIENT_CARLOS_ID, PATIENT_LIZA_ID, PATIENT_BEN_ID,
+  PATIENT_SOFIA_ID, CONTACT_SOFIA_GUARDIAN_ID,
+  PATIENT_PEPE_ID, PATIENT_MIA_ID, PATIENT_RICO_ID, PATIENT_ABBY_ID, PATIENT_MARCO_ID,
+  PATIENT_CELIA_ID, PATIENT_NENA_ID, PATIENT_LUKE_ID, PATIENT_ED_ID, PATIENT_TINA_ID,
+  PATIENT_PHIL_ID, PATIENT_CINDY_ID, PATIENT_JEROME_ID, PATIENT_GINA_ID,
+  CONTACT_LUKE_GUARDIAN_ID,
 } from './seed-data/ids';
 import { seedTreatmentTemplates } from './seed-data/treatment-templates';
 import { seedMedicalHistory } from './seed-data/medical-history';
@@ -31,6 +41,10 @@ import { seedAppointments } from './seed-data/appointments';
 import { seedVisits } from './seed-data/visits';
 import { seedBilling } from './seed-data/billing';
 import { seedClinical } from './seed-data/clinical';
+import { seedProcedureCodes } from './seed-data/procedure-codes';
+import { seedSyncLogs } from './seed-data/sync-logs';
+import { seedAuditLogs } from './seed-data/audit-logs';
+import { seedAttachments } from './seed-data/attachments';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 
@@ -177,11 +191,28 @@ async function seed() {
   console.log('5. Creating demo patients...');
 
   const demoPatients = [
-    { personId: PERSON_JUAN_ID, patientId: PATIENT_JUAN_ID, firstName: 'Juan', lastName: 'dela Cruz', dateOfBirth: '1985-03-15', gender: 'male' as const },
-    { personId: PERSON_ROSA_ID, patientId: PATIENT_ROSA_ID, firstName: 'Rosa', lastName: 'Reyes', dateOfBirth: '1992-07-22', gender: 'female' as const },
-    { personId: PERSON_CARLOS_ID, patientId: PATIENT_CARLOS_ID, firstName: 'Carlos', lastName: 'Santos', dateOfBirth: '1978-11-08', gender: 'male' as const },
-    { personId: PERSON_LIZA_ID, patientId: PATIENT_LIZA_ID, firstName: 'Liza', lastName: 'Manalang', dateOfBirth: '2001-04-30', gender: 'female' as const },
-    { personId: PERSON_BEN_ID, patientId: PATIENT_BEN_ID, firstName: 'Ben', lastName: 'Aquino', dateOfBirth: '1965-09-12', gender: 'male' as const },
+    // Original 6 patients
+    { personId: PERSON_JUAN_ID,   patientId: PATIENT_JUAN_ID,   firstName: 'Juan',   lastName: 'dela Cruz',  dateOfBirth: '1985-03-15', gender: 'male'   as const, status: 'active'   as const },
+    { personId: PERSON_ROSA_ID,   patientId: PATIENT_ROSA_ID,   firstName: 'Rosa',   lastName: 'Reyes',      dateOfBirth: '1992-07-22', gender: 'female' as const, status: 'active'   as const },
+    { personId: PERSON_CARLOS_ID, patientId: PATIENT_CARLOS_ID, firstName: 'Carlos', lastName: 'Santos',     dateOfBirth: '1978-11-08', gender: 'male'   as const, status: 'active'   as const },
+    { personId: PERSON_LIZA_ID,   patientId: PATIENT_LIZA_ID,   firstName: 'Liza',   lastName: 'Manalang',   dateOfBirth: '2001-04-30', gender: 'female' as const, status: 'active'   as const },
+    { personId: PERSON_BEN_ID,    patientId: PATIENT_BEN_ID,    firstName: 'Ben',    lastName: 'Aquino',     dateOfBirth: '1965-09-12', gender: 'male'   as const, status: 'active'   as const },
+    { personId: PERSON_SOFIA_ID,  patientId: PATIENT_SOFIA_ID,  firstName: 'Sofia',  lastName: 'Dela Cruz',  dateOfBirth: '2018-06-10', gender: 'female' as const, status: 'active'   as const },
+    // Extended patients — 14 new scenario-coverage patients
+    { personId: PERSON_PEPE_ID,   patientId: PATIENT_PEPE_ID,   firstName: 'Pepe',   lastName: 'Cruz',       dateOfBirth: '1990-02-14', gender: 'male'   as const, status: 'active'   as const }, // allergy: penicillin
+    { personId: PERSON_MIA_ID,    patientId: PATIENT_MIA_ID,    firstName: 'Mia',    lastName: 'Santos',     dateOfBirth: '1998-08-25', gender: 'female' as const, status: 'active'   as const }, // ortho case
+    { personId: PERSON_RICO_ID,   patientId: PATIENT_RICO_ID,   firstName: 'Rico',   lastName: 'dela Torre', dateOfBirth: '1995-11-30', gender: 'male'   as const, status: 'active'   as const }, // new patient first visit
+    { personId: PERSON_ABBY_ID,   patientId: PATIENT_ABBY_ID,   firstName: 'Abby',   lastName: 'Tan',        dateOfBirth: '1988-05-17', gender: 'female' as const, status: 'active'   as const }, // recall overdue
+    { personId: PERSON_MARCO_ID,  patientId: PATIENT_MARCO_ID,  firstName: 'Marco',  lastName: 'Lopez',      dateOfBirth: '1952-03-02', gender: 'male'   as const, status: 'active'   as const }, // geriatric 70+
+    { personId: PERSON_CELIA_ID,  patientId: PATIENT_CELIA_ID,  firstName: 'Celia',  lastName: 'Ramos',      dateOfBirth: '1975-09-20', gender: 'female' as const, status: 'active'   as const }, // has insurance
+    { personId: PERSON_NENA_ID,   patientId: PATIENT_NENA_ID,   firstName: 'Nena',   lastName: 'Garcia',     dateOfBirth: '1984-01-08', gender: 'female' as const, status: 'active'   as const }, // special medical notes
+    { personId: PERSON_LUKE_ID,   patientId: PATIENT_LUKE_ID,   firstName: 'Luke',   lastName: 'Rivera',     dateOfBirth: '2017-04-12', gender: 'male'   as const, status: 'active'   as const }, // pediatric 8y
+    { personId: PERSON_ED_ID,     patientId: PATIENT_ED_ID,     firstName: 'Ed',     lastName: 'Torres',     dateOfBirth: '1970-07-19', gender: 'male'   as const, status: 'active'   as const }, // ongoing prescriptions
+    { personId: PERSON_TINA_ID,   patientId: PATIENT_TINA_ID,   firstName: 'Tina',   lastName: 'Bautista',   dateOfBirth: '1980-12-03', gender: 'female' as const, status: 'active'   as const }, // extensive treatment history
+    { personId: PERSON_PHIL_ID,   patientId: PATIENT_PHIL_ID,   firstName: 'Phil',   lastName: 'Fernan',     dateOfBirth: '2000-06-15', gender: 'male'   as const, status: 'active'   as const }, // offline-created (sync scenario)
+    { personId: PERSON_CINDY_ID,  patientId: PATIENT_CINDY_ID,  firstName: 'Cindy',  lastName: 'Ocampo',     dateOfBirth: '1968-10-29', gender: 'female' as const, status: 'active'   as const }, // complex medical history
+    { personId: PERSON_JEROME_ID, patientId: PATIENT_JEROME_ID, firstName: 'Jerome', lastName: 'Medrano',    dateOfBirth: '1993-03-11', gender: 'male'   as const, status: 'inactive' as const }, // inactive patient
+    { personId: PERSON_GINA_ID,   patientId: PATIENT_GINA_ID,   firstName: 'Gina',   lastName: 'Villanueva', dateOfBirth: '1977-08-04', gender: 'female' as const, status: 'active'   as const }, // payment plan
   ];
 
   for (const p of demoPatients) {
@@ -199,22 +230,56 @@ async function seed() {
       id: p.patientId,
       person: p.personId,
       preferredBranchId: BRANCH_ID,
-      status: 'active',
+      status: p.status,
     }).onConflictDoNothing();
 
     console.log(`   ✅ Patient: ${p.firstName} ${p.lastName}`);
   }
 
   // ------------------------------------------------------------------
+  // 6b. Guardian contact for Sofia (minor patient — PAT-BR-002)
+  // ------------------------------------------------------------------
+  console.log('5b. Creating guardian contact for Sofia...');
+  await db.insert(dentalPatientContacts).values({
+    id: CONTACT_SOFIA_GUARDIAN_ID,
+    patientId: PATIENT_SOFIA_ID,
+    name: 'Jose Dela Cruz',
+    relationship: 'parent',
+    phone: '+639171234567',
+    isGuardian: true,
+    isEmergencyContact: true,
+    notes: 'Primary guardian — father',
+  }).onConflictDoNothing();
+  console.log('   ✅ Guardian: Jose Dela Cruz (parent of Sofia)');
+
+  // Guardian for Luke Rivera (pediatric patient)
+  await db.insert(dentalPatientContacts).values({
+    id: CONTACT_LUKE_GUARDIAN_ID,
+    patientId: PATIENT_LUKE_ID,
+    name: 'Alma Rivera',
+    relationship: 'parent',
+    phone: '+639289876543',
+    isGuardian: true,
+    isEmergencyContact: true,
+    notes: 'Primary guardian — mother',
+  }).onConflictDoNothing();
+  console.log('   ✅ Guardian: Alma Rivera (parent of Luke)');
+
+  // ------------------------------------------------------------------
   // 7. Clinical seed data (modular)
   // ------------------------------------------------------------------
-  console.log('6. Seeding clinical data...');
+  console.log('6. Seeding procedure codes (P1-008)...');
+  await seedProcedureCodes(db);
+  console.log('7. Seeding clinical data...');
   await seedTreatmentTemplates(db);
   await seedMedicalHistory(db);
-  await seedAppointments(db);
   await seedVisits(db);
+  await seedAppointments(db);
   await seedBilling(db);
   await seedClinical(db);
+  await seedSyncLogs(db);
+  await seedAuditLogs(db);
+  await seedAttachments(db);
 
   // ------------------------------------------------------------------
   // Done

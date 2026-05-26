@@ -25,6 +25,7 @@ export const patients = pgTable('patient', {
   primaryPharmacy: jsonb('primary_pharmacy').$type<PharmacyInfo>(),
 
   // Dental-specific extensions
+  // loose-coupling: references dental_branch.id (cross-module — no DB-level FK to avoid coupling patient to dental-org)
   preferredBranchId: uuid('preferred_branch_id'),
   dentalHistorySummary: text('dental_history_summary'),
   needsFollowUp: boolean('needs_follow_up').default(false),

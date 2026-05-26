@@ -122,29 +122,30 @@ export async function listEMRPatients(ctx: HandlerContext) {
   // Patients are already filtered by the IN query and paginated at the database level
   const paginatedPatients = patients;
 
-  // Enhance patients with consultation statistics
-  const patientsWithStats = await Promise.all(
-    paginatedPatients.map(async (patient) => {
-      const stats = await consultationRepo.getConsultationStats(
-        patient.id,
-        'patient',
-        query.dateStart && query.dateEnd ? {
-          start: query.dateStart,
-          end: query.dateEnd
-        } : undefined
-      );
-
-      return {
-        ...patient,
-        consultationStats: {
-          totalConsultations: stats.totalConsultations,
-          draftConsultations: stats.draftConsultations,
-          finalizedConsultations: stats.finalizedConsultations,
-          recentConsultationDate: stats.recentConsultationDate
-        }
-      };
-    })
+  // Batch-fetch consultation stats for all patients in a single query (avoids N+1)
+  const batchStats = await consultationRepo.getBatchConsultationStats(
+    paginatedPatients.map(p => p.id),
+    'patient',
+    query.dateStart && query.dateEnd ? { start: query.dateStart, end: query.dateEnd } : undefined
   );
+
+  const patientsWithStats = paginatedPatients.map((patient) => {
+    const stats = batchStats[patient.id] ?? {
+      totalConsultations: 0,
+      draftConsultations: 0,
+      finalizedConsultations: 0,
+      recentConsultationDate: undefined
+    };
+    return {
+      ...patient,
+      consultationStats: {
+        totalConsultations: stats.totalConsultations,
+        draftConsultations: stats.draftConsultations,
+        finalizedConsultations: stats.finalizedConsultations,
+        recentConsultationDate: stats.recentConsultationDate
+      }
+    };
+  });
 
   // Apply hasRecentConsultations filter if specified
   let finalPatients = patientsWithStats;

@@ -6,7 +6,7 @@
  */
 
 import { pgTable, uuid, text, timestamp, integer, numeric, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { baseEntityFields } from '@/core/database.schema';
+import { baseEntityFields, syncableEntityFields } from '@/core/database.schema';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
 import { patients } from '../../patient/repos/patient.schema';
@@ -19,6 +19,7 @@ export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
 
 export const dentalInvoices = pgTable('dental_invoice', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   visitId: uuid('visit_id').references(() => dentalVisits.id),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
@@ -32,6 +33,8 @@ export const dentalInvoices = pgTable('dental_invoice', {
   totalCents: integer('total_cents').notNull().default(0),
   paidCents: integer('paid_cents').notNull().default(0),
   balanceCents: integer('balance_cents').notNull().default(0),
+  discountReason: text('discount_reason'),
+  discountedBy: uuid('discounted_by'),
   dueDate: timestamp('due_date', { withTimezone: true }),
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   paidAt: timestamp('paid_at', { withTimezone: true }),

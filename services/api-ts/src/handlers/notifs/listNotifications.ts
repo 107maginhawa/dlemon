@@ -21,7 +21,7 @@ export async function listNotifications(
   const user = ctx.get('user') as User;
 
   // Extract validated query parameters
-  const query = ctx.req.valid('query') as any;
+  const query = ctx.req.valid('query');
 
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;

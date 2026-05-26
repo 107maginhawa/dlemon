@@ -41,8 +41,8 @@ export async function updateDentalVisit(
 
   // Validate status transition using VISIT_TRANSITIONS map
   if (body.status && body.status !== visit.status) {
-    const allowed = VISIT_TRANSITIONS[visit.status] ?? [];
-    if (!allowed.includes(body.status as string)) {
+    const allowed = VISIT_TRANSITIONS[visit.status as DentalVisitStatus] ?? [];
+    if (!allowed.includes(body.status as DentalVisitStatus)) {
       throw new BusinessLogicError(
         `Cannot transition visit from ${visit.status} to ${body.status}`,
         'VISIT_TRANSITION_INVALID'

@@ -253,6 +253,167 @@
       "when": 1779258273203,
       "tag": "0035_fixed_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1779326380695,
+      "tag": "0036_fixed_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1779327698040,
+      "tag": "0037_giant_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1779620530724,
+      "tag": "0038_perio_charts",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1779637452703,
+      "tag": "0039_flawless_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1779712380254,
+      "tag": "0040_wooden_diamondback",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779722215068,
+      "tag": "0041_fixed_ogun",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779723934797,
+      "tag": "0042_sturdy_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779724140222,
+      "tag": "0043_lush_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779724253992,
+      "tag": "0044_rich_the_executioner",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1779727361081,
+      "tag": "0045_furry_sunset_bain",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1779727635954,
+      "tag": "0046_needy_black_tom",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1779753431252,
+      "tag": "0047_fixed_lenny_balinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1779753902428,
+      "tag": "0048_gray_dark_beast",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1779754702416,
+      "tag": "0049_typical_goliath",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1779755484195,
+      "tag": "0050_eager_yellow_claw",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1779756580945,
+      "tag": "0051_blushing_riptide",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1779756937377,
+      "tag": "0052_living_paper_doll",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1779757239494,
+      "tag": "0053_groovy_silverclaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1779760486966,
+      "tag": "0054_bumpy_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1779760840876,
+      "tag": "0055_slippery_carnage",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1779765854304,
+      "tag": "0056_icy_otto_octavius",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1779765977829,
+      "tag": "0057_modern_shiver_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1779766003076,
+      "tag": "0058_faithful_rhodey",
+      "breakpoints": true
     }
   ]
 }

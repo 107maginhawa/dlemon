@@ -194,7 +194,7 @@ export class DentalInvoiceRepository {
   /**
    * Apply a discount to an invoice. Recalculates totalCents and balanceCents.
    */
-  async applyDiscount(invoiceId: string, discountCents: number, taxRate: number): Promise<DentalInvoice | null> {
+  async applyDiscount(invoiceId: string, discountCents: number, taxRate: number, discountReason: string, discountedBy: string): Promise<DentalInvoice | null> {
     const invoice = await this.findOneById(invoiceId);
     if (!invoice) return null;
 
@@ -207,6 +207,8 @@ export class DentalInvoiceRepository {
       .update(dentalInvoices)
       .set({
         discountCents,
+        discountReason,
+        discountedBy,
         taxCents,
         totalCents,
         balanceCents: Math.max(0, balanceCents),

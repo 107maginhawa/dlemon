@@ -38,8 +38,8 @@ export async function updateInvoice(
   const user = session.user;
 
   // Extract validated parameters and body
-  const params = ctx.req.valid('param') as any;
-  const body = ctx.req.valid('json') as any;
+  const params = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
 
   const invoiceId = params.invoice;
 

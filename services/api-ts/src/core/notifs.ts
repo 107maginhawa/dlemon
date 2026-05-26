@@ -7,12 +7,13 @@
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import type { WebSocketService } from '@/core/ws';
+import type { EmailService } from '@/core/email';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
 import { PersonRepository } from '@/handlers/person/repos/person.repo';
 import type {
   Notification,
   CreateNotificationRequest
-} from '@/handlers/notifs/repos/notification.schema';
+} from '@/core/notifs.types';
 
 /**
  * OneSignal configuration
@@ -73,12 +74,13 @@ class NotificationServiceImpl implements NotificationService {
     db: DatabaseInstance,
     logger: Logger,
     notifConfig: NotificationConfig,
-    ws: WebSocketService
+    ws: WebSocketService,
+    emailService?: EmailService
   ) {
     const personRepo = new PersonRepository(db, logger);
     // Extract OneSignal config from notification config
     const oneSignalConfig = notifConfig.onesignal;
-    this.repo = new NotificationRepository(db, personRepo, logger, oneSignalConfig);
+    this.repo = new NotificationRepository(db, personRepo, logger, oneSignalConfig, emailService);
     this.ws = ws;
     this.logger = logger;
 
@@ -126,7 +128,8 @@ export function createNotificationService(
   db: DatabaseInstance,
   logger: Logger,
   notifConfig: NotificationConfig,
-  ws: WebSocketService
+  ws: WebSocketService,
+  emailService?: EmailService
 ): NotificationService {
-  return new NotificationServiceImpl(db, logger, notifConfig, ws);
+  return new NotificationServiceImpl(db, logger, notifConfig, ws, emailService);
 }

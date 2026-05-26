@@ -5,7 +5,7 @@
  */
 
 import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, pgEnum, timestamp } from 'drizzle-orm/pg-core';
-import { baseEntityFields, versionedSnapshotFields } from '@/core/database.schema';
+import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
@@ -21,6 +21,7 @@ export const dentalTreatmentStatusEnum = pgEnum('dental_treatment_status', [
 
 export const dentalTreatments = pgTable('dental_treatment', {
   ...baseEntityFields,
+  ...syncableEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   toothNumber: integer('tooth_number'),
@@ -37,6 +38,8 @@ export const dentalTreatments = pgTable('dental_treatment', {
   sourceVisitId: uuid('source_visit_id').references(() => dentalVisits.id),
   autoDismissed: boolean('auto_dismissed').default(false),
   clinicalNotes: text('clinical_notes'),
+  performedAt: timestamp('performed_at'),
+  billedInvoiceId: uuid('billed_invoice_id'),
 }, (table) => ({
   visitIdx: index('dental_treatment_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_treatment_patient_id_idx').on(table.patientId),
@@ -54,6 +57,7 @@ export const visitNotes = pgTable('visit_notes', {
   // Signing/locking fields (mirrors consent-form precedent)
   signed: boolean('signed').notNull().default(false),
   signedAt: timestamp('signed_at'),
+  // loose-coupling: references person.id (cross-module — cloud user who signed; no DB FK to decouple visit from core person)
   signedBy: uuid('signed_by'),
   lockedAt: timestamp('locked_at'),
 }, (table) => ({

@@ -10,7 +10,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 
 export async function deleteMeasurement(ctx: BaseContext): Promise<Response> {
@@ -33,7 +33,7 @@ export async function deleteMeasurement(ctx: BaseContext): Promise<Response> {
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
   // Branch-level authorization
-  await assertBranchAccess(db, user.id, study.branchId);
+  await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
   await repo.deleteAnnotation(measurementId);
 

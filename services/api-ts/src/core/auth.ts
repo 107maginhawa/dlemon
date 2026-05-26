@@ -6,9 +6,10 @@
 import { randomUUID } from 'crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { emailOTP, openAPI, admin, bearer, twoFactor, magicLink, apiKey, lastLoginMethod } from 'better-auth/plugins';
+import { emailOTP, openAPI, admin, bearer, twoFactor, magicLink, lastLoginMethod } from 'better-auth/plugins';
 import { oneTimeToken } from "better-auth/plugins/one-time-token";
-import { passkey } from 'better-auth/plugins/passkey'
+import { apiKey } from '@better-auth/api-key';
+import { passkey } from '@better-auth/passkey';
 import type { App } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
@@ -212,7 +213,7 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
     user: {
       changeEmail: {
         enabled: true,
-        sendChangeEmailVerification: async ({ user, newEmail, url, token }) => {
+        sendChangeEmailConfirmation: async ({ user, newEmail, url, token }) => {
           try {
             await emailService.queueEmail({
               templateTags: [EmailTemplateTags.AUTH_EMAIL_VERIFY],
@@ -292,7 +293,7 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
         }
       },
     },
-  });
+  }) as unknown as AuthInstance;
 }
 
 

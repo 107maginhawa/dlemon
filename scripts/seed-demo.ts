@@ -453,6 +453,17 @@ async function seed() {
     { displayName: 'Sofia Cruz',      dateOfBirth: '1975-12-20', gender: 'female' }, // P7 amendment+overdue
     { displayName: 'Diego Ramos',     dateOfBirth: '1995-06-15', gender: 'male'   }, // P8 check-in
     { displayName: 'Isabel Flores',   dateOfBirth: '1960-08-25', gender: 'female' }, // P9 PMD import
+    // GAP-007: expand to 20+ patients per IDEAL §10.1
+    { displayName: 'Lorenzo Delos Santos', dateOfBirth: '1998-02-14', gender: 'male'   }, // P10 ortho candidate 2
+    { displayName: 'Claudia Bautista',     dateOfBirth: '1972-09-03', gender: 'female' }, // P11 periodontal
+    { displayName: 'Enrique Villanueva',   dateOfBirth: '1955-04-20', gender: 'male'   }, // P12 full denture
+    { displayName: 'Melissa Castro',       dateOfBirth: '2005-11-18', gender: 'female' }, // P13 pediatric braces
+    { displayName: 'Ramon Aquino',         dateOfBirth: '1982-07-07', gender: 'male'   }, // P14 implant
+    { displayName: 'Patricia Gomez',       dateOfBirth: '1990-01-25', gender: 'female' }, // P15 cosmetic
+    { displayName: 'Ferdinand Navarro',    dateOfBirth: '1968-06-11', gender: 'male'   }, // P16 multi-crown
+    { displayName: 'Carla Pascual',        dateOfBirth: '1945-12-08', gender: 'female' }, // P17 geriatric
+    { displayName: 'Benjamin Uy',          dateOfBirth: '2014-03-22', gender: 'male'   }, // P18 pediatric minor
+    { displayName: 'Angela Reyes',         dateOfBirth: '1979-08-30', gender: 'female' }, // P19 insurance + ceph
   ]
   const patients: any[] = []
   for (const pd of patientDefs) {
@@ -502,6 +513,17 @@ async function seed() {
     log('✓ Recall: Isabel (overdue)')
   }
   if (P[3]) await patch(`/dental/patients/${P[3].id}`, { needsFollowUp: true }, cookie)
+
+  // GAP-007: guardian contact for P3 (Elena Garcia, dob 2010 — minor, PAT-BR-002)
+  if (P[3]) {
+    const r = await post(`/dental/patients/${P[3].id}/contacts`, {
+      name: 'Rosario Garcia', relationship: 'parent',
+      phone: '+63 912 345 6789', email: 'rosario.garcia@email.com',
+      isGuardian: true, isEmergencyContact: true,
+    }, cookie)
+    if (r.ok) log('✓ Guardian: Elena Garcia (P3) → Rosario Garcia')
+    else log(`⚠ Guardian contact (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
+  }
 
   // Follow-up notes
   for (const { p, text } of [
@@ -616,13 +638,18 @@ async function seed() {
         duration: '5 days', instructions: 'Take with food. Avoid if stomach upset.',
       }, cookie)
       if (rxR.ok) log(`  ✓ Rx: Ibuprofen 400mg`)
-      // Unsigned consent
+      // Signed consent (revenue chain requires signed consent before performed)
       if (generalConsentTplId !== 'general') {
-        await post(`/dental/visits/${v4id}/consents`, {
+        const consentR = await post(`/dental/visits/${v4id}/consents`, {
           visitId: v4id, patientId: p1.id,
           templateId: generalConsentTplId, templateName: 'General Treatment Consent',
         }, cookie)
-        log(`  ✓ Unsigned consent created`)
+        if (consentR.ok) {
+          await post(`/dental/visits/${v4id}/consents/${consentR.data.id}/sign`, { signatureData: 'data:image/png;base64,iVBORw0KGgo=' }, cookie)
+          log(`  ✓ Signed consent (Maria Santos v4 — revenue chain enabled)`)
+        } else {
+          log(`  ⚠ Consent create (${consentR.status})`)
+        }
       }
       await addNotes(v4id, { subjective: 'Follow-up sensitivity #24. Sensitive toothpaste not helping.', objective: 'Cervical erosion progressing. Cold test positive, 3s.' }, cookie)
       activeCount++
@@ -1338,6 +1365,12 @@ async function seed() {
   if (r.exitCode === 0) log('✓ Sofia Cruz invoice → overdue')
   else log(`⚠ overdue patch failed: ${new TextDecoder().decode(r.stderr).trim()}`)
 
+  // GAP-007: seed one pending sync-log row
+  section('11. Sync log demo row (GAP-007)')
+  if (P[0]?.id && branch?.id) {
+    await seedSyncLog(cookie, branch.id, P[0].id)
+  }
+
   // ── Done ──────────────────────────────────────────────────────────────────
   console.log('\n╔══════════════════════════════════════════════════════╗')
   console.log('║           Comprehensive Seed Complete!               ║')
@@ -1357,7 +1390,21 @@ async function seed() {
   console.log('║  • Lab orders: Roberto (fitted), Miguel (in_fab)     ║')
   console.log('║  • Rx, consents (signed/unsigned), amendments        ║')
   console.log('║  • Medical history, recall, follow-up, NPS reviews   ║')
+  console.log('║  • Guardian: Elena Garcia (P3) → Rosario Garcia      ║')
+  console.log('║  • Sync log: demo pending row (GAP-007)               ║')
   console.log('╚══════════════════════════════════════════════════════╝\n')
+}
+
+// GAP-007: seed one dental_sync_log row with syncStatus='pending' for demo dashboards
+async function seedSyncLog(cookie: string, branchId: string, entityId: string) {
+  const r = await post('/dental/sync-logs', {
+    localId: 'demo-offline-visit-001',
+    entityType: 'dental_visit',
+    entityId,
+    branchId,
+  }, cookie)
+  if (r.ok) log('✓ Sync log: demo pending row (localId=demo-offline-visit-001)')
+  else log(`⚠ Sync log (${r.status})`)
 }
 
 seed().catch(err => {

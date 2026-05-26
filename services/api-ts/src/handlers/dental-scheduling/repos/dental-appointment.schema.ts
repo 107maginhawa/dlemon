@@ -1,7 +1,7 @@
 /**
  * Drizzle schema for dental appointments
  *
- * Appointment lifecycle: scheduled -> checkedIn -> completed | cancelled | noShow
+ * Appointment lifecycle: scheduled -> checked_in -> completed | cancelled | no_show
  * No-show is reversible (can revert to completed).
  */
 
@@ -11,6 +11,7 @@ import { patients } from '../../patient/repos/patient.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 import { dentalBranches } from '../../dental-org/repos/branch.schema';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { dentalOperatories } from './operatory.schema';
 
 export const appointmentStatusEnum = pgEnum('appointment_status', [
   'scheduled',
@@ -28,7 +29,7 @@ export const dentalAppointments = pgTable('dental_appointment', {
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(30),
   serviceType: text('service_type').notNull(),
-  operatoryId: uuid('operatory_id'),
+  operatoryId: uuid('operatory_id').references(() => dentalOperatories.id, { onDelete: 'set null' }),
   walkIn: boolean('walk_in').notNull().default(false),
   status: appointmentStatusEnum('status').notNull().default('scheduled'),
   checkInTime: timestamp('check_in_time', { withTimezone: true }),
@@ -52,11 +53,11 @@ export type AppointmentStatus = typeof VALID_APPOINTMENT_STATUSES[number];
 
 /**
  * Valid state-machine transitions for appointments.
- * scheduled → checkedIn | cancelled | noShow
- * checkedIn → completed | cancelled | noShow
- * completed → [] (terminal)
- * cancelled   → [] (terminal)
- * no_show     → completed (reversible)
+ * scheduled  → checked_in | cancelled | no_show
+ * checked_in → completed | cancelled | no_show
+ * completed  → [] (terminal)
+ * cancelled  → [] (terminal)
+ * no_show    → completed (reversible)
  */
 export const APPOINTMENT_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   scheduled: ['checked_in', 'cancelled', 'no_show'],

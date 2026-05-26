@@ -235,3 +235,32 @@ jsonpath "$.data" count >= 1
 GET {{api}}/dental/visits/pmd
 Cookie: better-auth.session_token={{session_token}}
 HTTP 400
+
+
+# ============================================================
+# NEW: G2.5-S6 — imported PMD get by ID, visit PMD export
+# ============================================================
+
+# NEW: G2.5-S6 — get imported PMD by ID
+GET {{api}}/dental/pmd/imported/{{imported_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{imported_id}}"
+jsonpath "$.sourceFacility" isString
+
+
+# NEW: G2.5-S6 — imported PMD auth check
+GET {{api}}/dental/pmd/imported/{{imported_id}}
+HTTP 401
+
+
+# NEW: G2.5-S6 — export PMD from visit (download as file)
+GET {{api}}/dental/visits/{{visit_id}}/pmd/export
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# NEW: G2.5-S6 — visit PMD export auth check
+GET {{api}}/dental/visits/{{visit_id}}/pmd/export
+HTTP 401

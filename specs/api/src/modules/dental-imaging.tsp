@@ -29,6 +29,17 @@ namespace DentalImagingModule {
     other,
   }
 
+  @example(#{
+    id: "img-s1a2b3c4-0000-4000-8000-000000000001",
+    patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+    visitId: "v1a2b3c4-0000-4000-8000-000000000001",
+    branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+    acquiredBy: "m1a2b3c4-0000-4000-8000-000000000001",
+    modality: ModalityEnum.periapical,
+    status: "active",
+    createdAt: utcDateTime.fromISO("2026-03-15T10:15:00Z"),
+    updatedAt: utcDateTime.fromISO("2026-03-15T10:15:00Z"),
+  }, #{ title: "Periapical X-ray study" })
   model ImagingStudy {
     id: string;
     patientId: string;
@@ -75,6 +86,17 @@ namespace DentalImagingModule {
     total: int32;
   }
 
+  @example(#{
+    patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+    visitId: "v1a2b3c4-0000-4000-8000-000000000001",
+    branchId: "b1a2b3c4-0000-4000-8000-000000000001",
+    modality: ModalityEnum.periapical,
+    filename: "tooth-36-periapical-2026-03-15.jpg",
+    mimeType: "image/jpeg",
+    size: 2457600,
+    toothNumbers: #[36],
+    sequenceNumber: 1,
+  }, #{ title: "Upload periapical X-ray" })
   model CreateImagingStudyBody {
     patientId: string;
     visitId?: string;

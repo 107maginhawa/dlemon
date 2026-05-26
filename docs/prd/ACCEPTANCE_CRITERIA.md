@@ -75,6 +75,21 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 **Then** the appointment status changes to `cancelled`  
 **And** the slot is freed on the calendar  
 
+### AC-SCHED-05: Date-filtered appointment list
+
+**Given** appointments exist across multiple dates  
+**When** a staff member requests the appointment list with a specific date filter  
+**Then** only appointments scheduled on that date are returned  
+**And** appointments on other dates are excluded from the results
+
+### AC-SETTINGS-01: Configure branch working hours
+
+**Given** a branch admin with dentist_owner membership  
+**When** they submit a working hours config via PUT `/dental/branches/:branchId/working-hours`  
+**Then** the configuration is persisted and returned with correct open/close times per day  
+**And** a subsequent GET returns the saved config  
+**And** appointment creation outside configured hours is rejected with `OUTSIDE_WORKING_HOURS`
+
 ---
 
 ## 3. Clinical Workspace — Visit (AC-VISIT)
@@ -192,6 +207,20 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 **Then** the consent form is saved with status `signed` and is immutable  
 **And** re-opening the form shows it in read-only state with "This consent form has already been signed"  
 
+### AC-MED-04: Consent form cannot be re-signed
+
+**Given** a consent form with status `signed`  
+**When** a staff member or dentist attempts to sign it again  
+**Then** the request is rejected with a 400 error matching `/already signed/i`  
+**And** the consent form record is unchanged
+
+### AC-MED-05: Lab order advances through full lifecycle
+
+**Given** a lab order with status `ordered`  
+**When** it is updated through `in_fabrication` → `delivered` → `fitted`  
+**Then** each status transition returns 200 with the new status  
+**And** the final status is `fitted`
+
 ---
 
 ## 7. Prescriptions (AC-RX)
@@ -208,6 +237,36 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 **Given** a staff member without a dentist membership role  
 **When** they open the Rx sheet  
 **Then** the form is disabled or hidden with a message indicating prescribing is not permitted  
+
+### AC-PRES-01: Prescription requires prescriberMemberId
+
+**Given** an active visit  
+**When** a prescription is submitted without a `prescriberMemberId`  
+**Then** the request is rejected with a 400 validation error
+
+### AC-PRES-02: Prescriptions can be listed by visitId
+
+**Given** one or more prescriptions created for a visit  
+**When** a GET request is made to `/dental/visits/:visitId/prescriptions`  
+**Then** the response contains those prescriptions in the `data` array
+
+### AC-PRES-03: Updating a prescription changes the dosage field
+
+**Given** an existing prescription  
+**When** a PATCH request updates the `dosage` field  
+**Then** the response reflects the new dosage value
+
+### AC-PRES-04: Prescription without drugName is rejected
+
+**Given** an active visit  
+**When** a prescription is submitted with `drugName` omitted  
+**Then** the request is rejected with a 400 validation error
+
+### AC-PRES-05: Prescription medication name is required
+
+**Given** an active visit  
+**When** a prescription body is submitted without a medication name (`drugName`)  
+**Then** the request returns 400 with an `error` key in the response body
 
 ---
 
@@ -299,6 +358,19 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 **When** a staff member attempts to void the invoice  
 **Then** the action is blocked with an error: "Invoice has an active payment plan"  
 
+### AC-PAY-04: Payment plan with installments persists all records
+
+**Given** an issued invoice  
+**When** a payment plan is created with `numberOfInstallments: 3`  
+**Then** the response includes an `installments` array of length 3  
+**And** all 3 installment records are persisted in the database
+
+### AC-PAY-05: Active payment plan blocks invoice void
+
+**Given** an invoice with an active payment plan  
+**When** a void request is submitted for that invoice  
+**Then** the request is rejected with a 400 error code `ACTIVE_PAYMENT_PLAN`
+
 ---
 
 ## 12. PMD — Portable Medical Document (AC-PMD)
@@ -326,7 +398,44 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 
 ---
 
-## 13. Patient Profile (AC-PROF)
+## 13. Notifications (AC-NOTIF)
+
+### AC-NOTIF-01: Appointment creation triggers notification
+
+**Given** a valid appointment creation request  
+**When** the appointment is successfully created  
+**Then** `notifs.createNotification` is called with `type: 'booking.created'` and `channel: 'in-app'`  
+**And** the `relatedEntityType` is `'appointment'`  
+**And** if the notifs service is absent, the appointment is still created without error
+
+### AC-NOTIF-02: Invoice finalization triggers notification
+
+**Given** a draft invoice  
+**When** the invoice is successfully finalized  
+**Then** `notifs.createNotification` is called with `type: 'billing'`  
+**And** if the notifs service is absent, the finalization still succeeds without error
+
+---
+
+## 15. Imaging (AC-IMG)
+
+### AC-IMG-01: Create imaging study and receive upload URL
+
+**Given** an authenticated dentist with branch membership  
+**When** they submit a valid imaging study creation request  
+**Then** a 201 response is returned with an `uploadUrl` for direct file upload  
+**And** the imaging study record is linked to the patient and branch
+
+### AC-IMG-02: List patient images enforces branch membership
+
+**Given** a request to list images for a patient  
+**When** the requesting user has no membership in the specified branch  
+**Then** the request is rejected with 403  
+**And** when the user has membership, a 200 response is returned with branch-filtered results (no cross-branch data)
+
+---
+
+## 16. Patient Profile (AC-PROF)
 
 ### AC-PROF-01: View patient profile
 
@@ -342,7 +451,7 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 
 ---
 
-## 14. Reporting (AC-REPORT)
+## 17. Reporting (AC-REPORT)
 
 ### AC-REPORT-01: View daily report
 
@@ -357,3 +466,4 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-05-09 | 1.0 | Initial acceptance criteria — Plan B Phase 4 |
+| 2026-05-21 | 1.1 | G2.5-S2: promoted 15 orphan/unenumerated ACs (AC-SCHED-05, AC-SETTINGS-01, AC-MED-04, AC-MED-05, AC-PRES-01–05, AC-PAY-04–05, AC-NOTIF-01–02, AC-IMG-01–02); tagged AC-PMD-01/02 in test file |

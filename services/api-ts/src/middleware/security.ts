@@ -62,6 +62,21 @@ export function createCorsMiddleware(config: Config, logger?: Logger) {
   return cors(corsConfig);
 }
 
+// ASVS V8: PHI responses must not be cached by browsers or proxies.
+// Applies to all API routes; excludes public-safe paths.
+const PHI_EXEMPT_PREFIXES = ['/health', '/auth', '/docs', '/scalar', '/openapi'];
+
+export function createPhiCacheHeaders() {
+  return async function phiCacheHeaders(c: any, next: () => Promise<void>): Promise<void> {
+    const path = c.req.path as string;
+    const isExempt = PHI_EXEMPT_PREFIXES.some(p => path.startsWith(p));
+    await next();
+    if (!isExempt) {
+      c.res.headers.set('Cache-Control', 'no-store');
+    }
+  };
+}
+
 const CSRF_UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**

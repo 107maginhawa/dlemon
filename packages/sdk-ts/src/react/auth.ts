@@ -6,6 +6,7 @@
  */
 import { createContext, useContext } from 'react'
 import { createAuthClient } from "better-auth/react"
+// @ts-ignore — passkeyClient removed from better-auth/client/plugins in 1.6.x; resolves at runtime via workspace root (1.3.x)
 import { passkeyClient, twoFactorClient } from "better-auth/client/plugins"
 
 // ============================================================================

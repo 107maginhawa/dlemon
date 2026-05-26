@@ -321,3 +321,75 @@ jsonpath "$.installments[0].dueDate" isString
 jsonpath "$.installments[0].status" isString
 jsonpath "$.installments[1].amountCents" isInteger
 jsonpath "$.installments[2].amountCents" isInteger
+
+
+# ============================================================
+# NEW: G2.5-S6 — collections summary, patient balance, receipt, void
+# ============================================================
+
+# NEW: G2.5-S6 — collections summary
+GET {{api}}/dental/billing/collections/summary?period=today
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.totalCollectedCents" isInteger
+jsonpath "$.period" isString
+jsonpath "$.invoiceCount" isInteger
+
+
+# NEW: G2.5-S6 — collections summary auth check
+GET {{api}}/dental/billing/collections/summary?period=today
+HTTP 401
+
+
+# NEW: G2.5-S6 — patient balance
+GET {{api}}/dental/billing/patients/{{patient_id}}/balance
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.balanceCents" isInteger
+jsonpath "$.overdueInvoices" isInteger
+
+
+# NEW: G2.5-S6 — patient balance auth check
+GET {{api}}/dental/billing/patients/{{patient_id}}/balance
+HTTP 401
+
+
+# NEW: G2.5-S6 — payment receipt
+GET {{api}}/dental/billing/invoices/{{invoice_id}}/payments/{{payment_id}}/receipt
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+
+
+# NEW: G2.5-S6 — void invoice (create a fresh invoice to void)
+POST {{api}}/dental/billing/invoices
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "visitId": "{{visit_id}}",
+  "issuedByMemberId": "{{dentist_member_id}}"
+}
+HTTP 201
+[Captures]
+void_invoice_id: jsonpath "$.id"
+
+
+POST {{api}}/dental/billing/invoices/{{void_invoice_id}}/void
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "voided"
+jsonpath "$.voidedAt" != null
+
+
+# NEW: G2.5-S6 — void invoice auth check
+POST {{api}}/dental/billing/invoices/{{void_invoice_id}}/void
+Content-Type: application/json
+{}
+HTTP 401

@@ -86,7 +86,15 @@ export class TreatmentRepository {
     return updated ?? null;
   }
 
-  async update(id: string, patch: Partial<Pick<DentalTreatment, 'status' | 'dismissReason' | 'refusalReason' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'priceCents' | 'clinicalNotes'>>): Promise<DentalTreatment | null> {
+  async setBilledInvoiceId(ids: string[], invoiceId: string): Promise<void> {
+    if (ids.length === 0) return;
+    await this.db
+      .update(dentalTreatments)
+      .set({ billedInvoiceId: invoiceId, updatedAt: new Date() })
+      .where(inArray(dentalTreatments.id, ids));
+  }
+
+  async update(id: string, patch: Partial<Pick<DentalTreatment, 'status' | 'dismissReason' | 'refusalReason' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'priceCents' | 'clinicalNotes' | 'performedAt' | 'billedInvoiceId'>>): Promise<DentalTreatment | null> {
     const [updated] = await this.db
       .update(dentalTreatments)
       .set({ ...patch, updatedAt: new Date() })

@@ -1,0 +1,7 @@
+{
+  "GET /dental/patients": { "p95": 80 },
+  "GET /dental/patients/:id": { "p95": 50 },
+  "POST /dental/visits": { "p95": 100 },
+  "GET /dental/visits/:id": { "p95": 120 },
+  "GET /dental/perio-charts/:id": { "p95": 60 }
+}

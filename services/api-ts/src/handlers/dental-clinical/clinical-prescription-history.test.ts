@@ -38,6 +38,8 @@ const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const ORG_ID = 'd2000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
 const STAFF_MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
+const SCHEDULING_USER = { id: '00000000-0000-0000-0000-000000000098', email: 'scheduling@clinic.com' };
+const SCHEDULING_MEMBER_ID = 'c0000000-0000-1000-8000-000000000098';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
 
 const PERSON_ID = 'f2000000-0000-1000-8000-000000000002';
@@ -66,6 +68,12 @@ beforeAll(async () => {
   await db.insert(dentalMemberships).values({
     id: STAFF_MEMBER_ID, branchId: BRANCH_ID,
     personId: STAFF_USER.id, displayName: 'Test Staff', role: 'staff_full',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: SCHEDULING_MEMBER_ID, branchId: BRANCH_ID,
+    personId: SCHEDULING_USER.id, displayName: 'Scheduling Staff', role: 'staff_scheduling',
     status: 'active', pinFailedAttempts: 0,
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
@@ -691,13 +699,26 @@ describe('updateMedicalHistoryEntry handler', () => {
 // ---------------------------------------------------------------------------
 
 describe('createPrescription role gate', () => {
+  const roleGateBody = { patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID' };
+
   test('staff_full → 403', async () => {
     const visit = await seedVisit();
     const app = buildTestApp(STAFF_USER);
     const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+      body: JSON.stringify(roleGateBody),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_scheduling → 403', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(SCHEDULING_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(roleGateBody),
     });
     expect(res.status).toBe(403);
   });
@@ -708,7 +729,7 @@ describe('createPrescription role gate', () => {
     const res = await app.request(`/dental/visits/${visit.id}/prescriptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, prescriberMemberId: MEMBER_ID, medicationName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', durationDays: 7 }),
+      body: JSON.stringify(roleGateBody),
     });
     expect(res.status).not.toBe(403);
   });

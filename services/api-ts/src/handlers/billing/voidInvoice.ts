@@ -10,6 +10,7 @@ import type { VoidInvoiceParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
 
 /**
  * voidInvoice
@@ -89,7 +90,7 @@ export async function voidInvoice(
   }
 
   // Extract Stripe IDs and provider decision from metadata
-  const invoiceMetadata = invoice.metadata as any;
+  const invoiceMetadata = invoice.metadata as InvoiceMetadata | undefined;
   const providerDecision = invoiceMetadata?.providerDecision;
   const stripePaymentIntentId = invoiceMetadata?.stripePaymentIntentId;
 
@@ -114,7 +115,7 @@ export async function voidInvoice(
     });
   }
   
-  const metadata = merchantAccount.metadata as any;
+  const metadata = merchantAccount.metadata as MerchantMetadata;
   if (!metadata?.stripeAccountId) {
     throw new BusinessLogicError(
       'Provider Stripe account not found',
@@ -131,7 +132,7 @@ export async function voidInvoice(
     );
 
     // Update invoice with void details in metadata
-    const updatedMetadata = {
+    const updatedMetadata: InvoiceMetadata = {
       ...invoiceMetadata,
       providerDecision: 'void',
       providerDecisionAt: new Date().toISOString(),
@@ -164,9 +165,10 @@ export async function voidInvoice(
 
     // Return the full invoice as defined in TypeSpec
     // Expose safe metadata fields for client use
-    const safeMetadata = updatedInvoice.metadata ? {
-      stripePaymentIntentId: (updatedInvoice.metadata as any)?.stripePaymentIntentId,
-      providerDecision: (updatedInvoice.metadata as any)?.providerDecision,
+    const updatedMeta = updatedInvoice.metadata as InvoiceMetadata | undefined;
+    const safeMetadata = updatedMeta ? {
+      stripePaymentIntentId: updatedMeta.stripePaymentIntentId,
+      providerDecision: updatedMeta.providerDecision,
     } : null;
 
     return ctx.json({

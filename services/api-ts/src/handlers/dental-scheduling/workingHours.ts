@@ -22,6 +22,7 @@ import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { eq } from 'drizzle-orm';
 import { assertBranchAccess } from './utils/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { z } from 'zod';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -120,7 +121,7 @@ export async function updateWorkingHours(ctx: BaseContext) {
   const [existingBranch] = await db.select({ id: dentalBranches.id }).from(dentalBranches).where(eq(dentalBranches.id, branchId));
   if (!existingBranch) throw new NotFoundError('Branch not found');
 
-  await assertBranchAccess(db, user.id, branchId);
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
 
   let rawBody: unknown;
   try { rawBody = await ctx.req.json(); } catch { rawBody = {}; }

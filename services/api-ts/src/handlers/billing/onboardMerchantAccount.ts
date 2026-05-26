@@ -16,6 +16,7 @@ import type { OnboardMerchantAccountBody, OnboardMerchantAccountParams } from '@
 import type { Session } from '@/types/auth';
 import { MerchantAccountRepository } from './repos/billing.repo';
 import { PersonRepository } from '../person/repos/person.repo';
+import type { MerchantMetadata } from './billing.types';
 
 /**
  * onboardMerchantAccount
@@ -37,11 +38,11 @@ export async function onboardMerchantAccount(
   const user = session.user;
 
   // Extract validated parameters
-  const params = ctx.req.valid('param') as any;
+  const params = ctx.req.valid('param');
   const merchantAccountId = params.merchantAccount;
 
   // Extract request body (redirect URLs)
-  const body = ctx.req.valid('json') as any;
+  const body = ctx.req.valid('json');
   const { refreshUrl, returnUrl } = body;
 
   logger.info({ merchantAccountId, userId: user.id, refreshUrl, returnUrl }, 'Getting merchant account onboarding URL');
@@ -75,7 +76,7 @@ export async function onboardMerchantAccount(
 
   try {
     // Extract Stripe account data from metadata
-    const metadata = merchantAccount.metadata as any;
+    const metadata = merchantAccount.metadata as MerchantMetadata;
     let stripeAccountId = metadata?.stripeAccountId;
 
     // Handle missing Stripe account (imported accounts or misconfiguration)

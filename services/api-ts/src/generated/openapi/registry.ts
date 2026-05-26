@@ -151,6 +151,11 @@ import { acceptTreatmentPlan } from '../../handlers/dental-patient/acceptTreatme
 import { getTreatmentPlanVersion } from '../../handlers/dental-patient/getTreatmentPlanVersion';
 import { listPatientConditions } from '../../handlers/dental-patient/listPatientConditions';
 import { listPatientVisits } from '../../handlers/dental-patient/listPatientVisits';
+import { createPerioChart } from '../../handlers/dental-perio/createPerioChart';
+import { getPerioChart } from '../../handlers/dental-perio/getPerioChart';
+import { completePerioChart } from '../../handlers/dental-perio/completePerioChart';
+import { upsertToothReading } from '../../handlers/dental-perio/upsertToothReading';
+import { getVisitPerioChart } from '../../handlers/dental-perio/getVisitPerioChart';
 import { importPMD } from '../../handlers/dental-pmd/importPMD';
 import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
 import { getImportedPMD } from '../../handlers/dental-pmd/getImportedPMD';
@@ -403,6 +408,13 @@ export const registry = {
   getTreatmentPlanVersion,
   listPatientConditions,
   listPatientVisits,
+
+  // Dental-perio handlers
+  createPerioChart,
+  getPerioChart,
+  completePerioChart,
+  upsertToothReading,
+  getVisitPerioChart,
 
   // Dental-pmd handlers
   importPMD,

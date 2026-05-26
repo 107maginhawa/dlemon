@@ -255,3 +255,9 @@ apps/dentalemon/.journey-tmp/
 .gemini-clipboard
 .gstack/
 .worktrees/
+
+# Claude scheduled tasks
+.claude/scheduled_tasks.lock
+
+# Scratch/working prompt directories
+docs/prompts-erase/

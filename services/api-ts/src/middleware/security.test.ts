@@ -8,7 +8,7 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { Hono } from 'hono';
-import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard } from './security';
+import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard, createPhiCacheHeaders } from './security';
 import { createOriginValidator } from '@/utils/cors';
 import type { Config } from '@/core/config';
 
@@ -244,5 +244,34 @@ describe('createCsrfGuard', () => {
       () => { called = true; return Promise.resolve(); },
     );
     expect(called).toBe(true);
+  });
+});
+
+describe('createPhiCacheHeaders', () => {
+  async function fetchPath(path: string): Promise<Response> {
+    const app = new Hono();
+    app.use('*', createPhiCacheHeaders() as any);
+    app.get('*', (c) => c.text('ok'));
+    return app.fetch(new Request(`http://localhost${path}`));
+  }
+
+  test('API route gets Cache-Control: no-store', async () => {
+    const res = await fetchPath('/dental/visits');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('/health is exempt — no Cache-Control override', async () => {
+    const res = await fetchPath('/health');
+    expect(res.headers.get('cache-control')).not.toBe('no-store');
+  });
+
+  test('/auth is exempt', async () => {
+    const res = await fetchPath('/auth/session');
+    expect(res.headers.get('cache-control')).not.toBe('no-store');
+  });
+
+  test('/docs is exempt', async () => {
+    const res = await fetchPath('/docs');
+    expect(res.headers.get('cache-control')).not.toBe('no-store');
   });
 });

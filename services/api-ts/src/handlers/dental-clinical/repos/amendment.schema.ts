@@ -14,6 +14,7 @@ export const amendments = pgTable('amendment', {
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   authorMemberId: uuid('author_member_id').notNull().references(() => dentalMemberships.id),
   originalRecordType: text('original_record_type').notNull(),
+  // not a FK — polymorphic reference; originalRecordType determines which table this ID belongs to (no DB FK possible)
   originalRecordId: uuid('original_record_id').notNull(),
   reason: text('reason').notNull(),
   content: text('content').notNull(),

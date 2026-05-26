@@ -1,1 +1,2 @@
+-- MIGRATION-SAFETY: ALTER TYPE ADD VALUE cannot run inside a transaction block in PG < 12; safe on PG 12+ (project requires PG 16). Adds 'discarded' status for visit voiding workflow; purely additive, no data loss.
 ALTER TYPE "public"."dental_visit_status" ADD VALUE 'discarded';

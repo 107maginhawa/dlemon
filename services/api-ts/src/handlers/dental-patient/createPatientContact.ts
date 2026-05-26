@@ -1,0 +1,53 @@
+/**
+ * createPatientContact — POST /dental/patients/:patientId/contacts
+ *
+ * AC-001 / AC-008 / AC-009: Create a contact (guardian or emergency) for a patient.
+ * PAT-BR-002: Supports guardian linkage for minor patients.
+ */
+
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { PatientContactRepository } from './repos/patient-contact.repo';
+import { logAuditEvent } from '@/core/audit-logger';
+import type { DatabaseInstance } from '@/core/database';
+
+export async function createPatientContact(ctx: any): Promise<Response> {
+  const user = ctx.get('user');
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const { patientId } = ctx.req.valid('param');
+  const body = ctx.req.valid('json');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const patientRepo = new PatientRepository(db, logger);
+  const patient = await patientRepo.findOneById(patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+
+  const contactRepo = new PatientContactRepository(db, logger);
+  const contact = await contactRepo.create({
+    patientId,
+    name: body.name,
+    relationship: body.relationship ?? null,
+    phone: body.phone ?? null,
+    email: body.email ?? null,
+    isGuardian: body.isGuardian ?? false,
+    isEmergencyContact: body.isEmergencyContact ?? false,
+    notes: body.notes ?? null,
+    createdBy: user.id,
+    updatedBy: user.id,
+  });
+
+  logger?.info({ action: 'createPatientContact', patientId, contactId: contact.id }, 'Patient contact created');
+
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.contact.create',
+    resourceType: 'dental_patient_contact',
+    resourceId: contact.id,
+  });
+
+  return ctx.json(contact, 201);
+}

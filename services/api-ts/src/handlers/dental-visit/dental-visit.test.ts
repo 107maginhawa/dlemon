@@ -3,7 +3,7 @@
  *
  * Covers: createDentalVisit, getDentalVisit, listDentalVisits, updateDentalVisit,
  *         getDentalChart, upsertDentalChart, updateTooth,
- *         getVisitNotes, upsertVisitNotes, getToothHistory
+ *         getVisitNotes, upsertVisitNotes, getToothHistory, updateDentalTreatment
  *
  * Tests HTTP-level behavior: auth, validation, success on seeded data.
  */
@@ -21,6 +21,7 @@ import {
   UpsertDentalChartBody, UpsertDentalChartParams,
   UpdateToothBody, UpdateToothParams,
   UpsertVisitNotesBody, UpsertVisitNotesParams,
+  UpdateDentalTreatmentBody, UpdateDentalTreatmentParams,
 } from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalChartRepository } from './repos/dental-chart.repo';
@@ -37,6 +38,7 @@ import { updateTooth } from './updateTooth';
 import { getVisitNotes } from './getVisitNotes';
 import { upsertVisitNotes } from './upsertVisitNotes';
 import { getToothHistory } from './getToothHistory';
+import { updateDentalTreatment } from './updateDentalTreatment';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
@@ -134,6 +136,9 @@ function buildTestApp(user?: typeof TEST_USER) {
   // Notes routes
   app.get('/dental/visits/:visitId/notes', getVisitNotes as any);
   app.post('/dental/visits/:visitId/notes', zValidator('param', UpsertVisitNotesParams, ve), zValidator('json', VisitNotesBodyOnly, ve), upsertVisitNotes as any);
+
+  // Treatment routes
+  app.patch('/dental/visits/:visitId/treatments/:treatmentId', zValidator('param', UpdateDentalTreatmentParams, ve), zValidator('json', UpdateDentalTreatmentBody, ve), updateDentalTreatment as any);
 
   return app;
 }
@@ -989,5 +994,50 @@ describe('upsertVisitNotes role gate', () => {
       body: JSON.stringify({ notes: 'some notes' }),
     });
     expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateDentalTreatment
+// ---------------------------------------------------------------------------
+
+describe('updateDentalTreatment handler', () => {
+  test('sets performedAt when treatment transitions to performed', async () => {
+    // 1. Create a visit
+    const visit = await seedVisit();
+
+    // 2. Create a treatment in 'planned' status
+    const treatRepo = new TreatmentRepository(db);
+    const treatment = await treatRepo.createOne({
+      visitId: visit!.id,
+      patientId: PATIENT_ID,
+      cdtCode: 'D2150',
+      description: 'Amalgam filling',
+      priceCents: 8000,
+      status: 'planned',
+      carriedOver: false,
+      createdBy: TEST_USER.id,
+      updatedBy: TEST_USER.id,
+    });
+
+    // 3. Insert a signed consent form for the visit
+    await seedSignedConsent(visit!.id);
+
+    // 4. PATCH treatment to status: 'performed'
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'performed' }),
+    });
+
+    // 5. Expect 200
+    expect(res.status).toBe(200);
+
+    // 6. Expect body.performedAt to be a non-null ISO string
+    const body = await res.json() as any;
+    expect(body.performedAt).not.toBeNull();
+    expect(typeof body.performedAt).toBe('string');
+    expect(new Date(body.performedAt).getTime()).not.toBeNaN();
   });
 });

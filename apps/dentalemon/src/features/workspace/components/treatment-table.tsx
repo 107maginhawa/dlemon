@@ -12,13 +12,14 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, ChevronRight, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@radix-ui/react-popover';
 import type { Treatment } from '@/features/workspace/hooks/use-treatments';
 import type { TreatmentPlanItem } from '@/features/workspace/hooks/use-treatment-plan';
 import type { VisitCard } from '@/features/workspace/components/timeline-carousel';
 import { useUpdateTreatment } from '../hooks/use-update-treatment';
+import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 interface TreatmentTableProps {
@@ -28,7 +29,7 @@ interface TreatmentTableProps {
   visits?: VisitCard[];
   onSelectTreatment?: (id: string) => void;
   selectedTreatmentId?: string | null;
-  onMarkDone?: (treatmentId: string, visitId: string, currentStatus: string) => void;
+  onMarkDone?: (treatmentId: string, visitId: string, currentStatus: string) => void; // kept for API compat; component now uses useMarkTreatmentDone directly
   readOnly?: boolean;
 }
 
@@ -71,7 +72,7 @@ export function TreatmentTable({
   visits = [],
   onSelectTreatment,
   selectedTreatmentId,
-  onMarkDone,
+  onMarkDone: _onMarkDone,
   readOnly = false,
 }: TreatmentTableProps) {
   // TXTBL-02: inline price edit state
@@ -89,8 +90,26 @@ export function TreatmentTable({
   const [refusalReason, setRefusalReason] = useState<Record<string, string>>({});
   const [openDeclineId, setOpenDeclineId] = useState<string | null>(null);
 
+  // Mark Done error tracking — which row triggered the 422
+  const [markDoneErrorId, setMarkDoneErrorId] = useState<string | null>(null);
+
   // TXTBL-02 + TXTBL-03: mutation hook
   const updateMutation = useUpdateTreatment(visitId);
+
+  // Mark Done mutation — used directly so we can show inline consent error
+  const {
+    markDone,
+    isPending: isMarkDonePending,
+    isError: isMarkDoneError,
+    error: _markDoneError,
+  } = useMarkTreatmentDone();
+
+  // Clear error tracking on success
+  useEffect(() => {
+    if (!isMarkDoneError) {
+      setMarkDoneErrorId(null);
+    }
+  }, [isMarkDoneError]);
 
   const hasRows = treatments.length > 0 || carriedOverItems.length > 0;
   const completedCount = treatments.filter(
@@ -203,17 +222,26 @@ export function TreatmentTable({
                     {t.status === 'performed' || t.status === 'verified' ? (
                       <Check className="h-4 w-4 text-green-600 mx-auto" />
                     ) : !readOnly ? (
-                      <button
-                        type="button"
-                        data-testid="mark-done-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onMarkDone?.(t.id, t.visitId, t.status);
-                        }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Mark Done
-                      </button>
+                      <div className="flex flex-col items-center">
+                        <button
+                          type="button"
+                          data-testid="mark-done-btn"
+                          disabled={isMarkDonePending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMarkDoneErrorId(t.id);
+                            markDone(t.id, t.visitId, t.status as Parameters<typeof markDone>[2]);
+                          }}
+                          className="text-xs text-primary hover:underline disabled:opacity-50"
+                        >
+                          Mark Done
+                        </button>
+                        {isMarkDoneError && markDoneErrorId === t.id && (
+                          <p className="text-xs text-destructive mt-1">
+                            Consent required — ask patient to sign before completing.
+                          </p>
+                        )}
+                      </div>
                     ) : null}
                   </td>
                   <td className="px-4 py-2">

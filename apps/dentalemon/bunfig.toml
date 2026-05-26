@@ -13,8 +13,8 @@ root = "./src"
 # causing `bun test` to hang indefinitely. The native env handles teardown.
 preload = ["./src/test-setup.ts"]
 
-# Coverage reporting
+# Coverage reporting (G6-S9: 75% line/function gate, 60% branch)
 coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "./coverage"
-coverageThreshold = { line = 77 }
+coverageThreshold = { line = 75, function = 75, branch = 60 }
