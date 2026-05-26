@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalSyncLogs, type DentalSyncLog, type NewDentalSyncLog, type SyncStatus } from './sync-log.schema';
 
@@ -29,7 +29,7 @@ export class SyncLogRepository {
   ): Promise<DentalSyncLog | null> {
     const [row] = await this.db
       .update(dentalSyncLogs)
-      .set({ ...values, updatedAt: new Date() })
+      .set({ ...values, version: sql`${dentalSyncLogs.version} + 1`, updatedAt: new Date() })
       .where(eq(dentalSyncLogs.id, id))
       .returning();
     return row ?? null;

@@ -19,4 +19,5 @@ export const UpdateSyncLogBody = z.object({
   syncStatus: z.enum(SYNC_STATUSES).optional(),
   serverId: z.string().optional(),
   error: z.string().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
+  version: z.number().int().optional(),
+}).refine((d) => Object.keys(d).filter(k => k !== 'version').length > 0, { message: 'At least one field required' });

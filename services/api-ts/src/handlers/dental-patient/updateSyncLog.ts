@@ -23,6 +23,15 @@ export async function updateSyncLog(ctx: any): Promise<Response> {
   const existing = await repo.findOneById(logId);
   if (!existing) throw new NotFoundError('Sync log not found');
 
+  // LF-BR-004: stale-write conflict detection
+  if (body['version'] !== undefined && body['version'] !== existing.version) {
+    return ctx.json({
+      error: `Stale write: client version ${body['version']}, server version ${existing.version}`,
+      code: 'CONFLICT',
+      conflictPayload: { current: existing, incoming: body },
+    }, 409 as any);
+  }
+
   const updates: Record<string, unknown> = {};
 
   if (body['serverId'] !== undefined) updates['serverId'] = body['serverId'];

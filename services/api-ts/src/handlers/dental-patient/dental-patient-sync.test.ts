@@ -381,3 +381,42 @@ describe('Validation (AC-005)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ── GAP-006: LF-BR-004 stale-write conflict detection ─────────────────────────
+
+describe('GAP-006: LF-BR-004 — stale-write conflict returns 409', () => {
+  test('AC-008: PATCH with stale version → 409 with conflictPayload', async () => {
+    const app = buildTestApp(TEST_USER);
+
+    // Create sync log (version = 1)
+    const createRes = await app.request('/dental/sync-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: 'conflict-test-001', entityType: 'dental_visit', entityId: 'visit-001' }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    const logId = created.id;
+    expect(created.version).toBe(1);
+
+    // Valid update → version bumps to 2
+    const updateRes = await app.request(`/dental/sync-logs/${logId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ syncStatus: 'syncing' }),
+    });
+    expect(updateRes.status).toBe(200);
+
+    // Stale push: client still thinks version is 1
+    const conflictRes = await app.request(`/dental/sync-logs/${logId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ syncStatus: 'synced', version: 1 }),
+    });
+    expect(conflictRes.status).toBe(409);
+    const body = await conflictRes.json();
+    expect(body.code).toBe('CONFLICT');
+    expect(body.conflictPayload.current.version).toBe(2);
+    expect(body.conflictPayload.incoming.version).toBe(1);
+  });
+});
