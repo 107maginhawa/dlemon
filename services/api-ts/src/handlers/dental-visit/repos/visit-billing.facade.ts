@@ -10,8 +10,12 @@ import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalVisits } from './visit.schema';
 import { TreatmentRepository } from './treatment.repo';
+import type { DentalTreatment } from './treatment.schema';
 
-export async function getVisitForBilling(db: DatabaseInstance, visitId: string) {
+export async function getVisitForBilling(
+  db: DatabaseInstance,
+  visitId: string,
+): Promise<{ id: string; completedAt: Date | null; branchId: string; patientId: string } | null> {
   const [visit] = await db
     .select({
       id: dentalVisits.id,
@@ -25,7 +29,7 @@ export async function getVisitForBilling(db: DatabaseInstance, visitId: string) 
   return visit ?? null;
 }
 
-export async function getTreatmentsForInvoice(db: DatabaseInstance, visitId: string) {
+export async function getTreatmentsForInvoice(db: DatabaseInstance, visitId: string): Promise<DentalTreatment[]> {
   return new TreatmentRepository(db).findByVisit(visitId);
 }
 

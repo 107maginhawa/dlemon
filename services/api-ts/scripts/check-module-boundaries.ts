@@ -54,6 +54,9 @@ async function getTypeScriptFiles(dir: string): Promise<string[]> {
   return results;
 }
 
+// NOTE: Only matches @/-aliased imports. Relative cross-module imports
+// (e.g. '../../other-module/repos/...') are not detected — pre-existing
+// schema-level coupling uses relative paths and is tracked as a separate issue.
 const CROSS_REPO_IMPORT = /from ['"](@\/handlers\/([^/]+)\/repos\/[^'"]+)['"]/g;
 
 async function checkModule(moduleName: string, violations: Violation[]): Promise<void> {
