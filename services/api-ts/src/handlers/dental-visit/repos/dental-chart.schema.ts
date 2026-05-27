@@ -40,6 +40,14 @@ export const chartEntryClassificationEnum = pgEnum('chart_entry_classification',
 
 export type ChartEntryClassification = typeof chartEntryClassificationEnum.enumValues[number];
 
+export const chartLayerEnum = pgEnum('chart_layer', [
+  'baseline',
+  'proposed',
+  'completed',
+]);
+
+export type ChartLayer = typeof chartLayerEnum.enumValues[number];
+
 export interface ToothChartState {
   toothNumber: number;
   state: string;
@@ -55,6 +63,7 @@ export const dentalCharts = pgTable('dental_chart', {
   ...syncableEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
+  layer: chartLayerEnum('layer').notNull().default('proposed'),
   teeth: jsonb('teeth').notNull().$type<ToothChartState[]>(),
 }, (table) => ({
   visitIdx: index('dental_chart_visit_id_idx').on(table.visitId),
