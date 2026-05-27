@@ -77,29 +77,7 @@ export async function listAuditLogs(
   
   // Build pagination metadata
   const paginationMeta = buildPaginationMeta(auditLogs, totalCount, limit, offset);
-  
-  // Log audit trail - someone accessed audit logs
-  await repo.logEvent({
-    eventType: 'data-access',
-    category: 'administrative',
-    action: 'read',
-    outcome: 'success',
-    user: user.id,
-    userType: 'admin',
-    resourceType: 'audit_log',
-    resource: 'audit_logs_query',
-    description: 'Audit logs queried by administrator',
-    details: {
-      filtersApplied: Object.keys(filters).length > 0 ? filters : null,
-      resultCount: auditLogs.length,
-      pagination: { limit, offset }
-    },
-    ipAddress: ctx.req.header('x-forwarded-for') || ctx.req.header('x-real-ip'),
-    userAgent: ctx.req.header('user-agent'),
-    session: ctx.req.header('x-session-id'),
-    request: ctx.req.header('x-request-id')
-  }, user.id);
-  
+
   // Log successful query
   logger?.info({
     userId: user.id,
