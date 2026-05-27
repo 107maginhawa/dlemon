@@ -17,7 +17,7 @@ import { getSurfacesForTooth, isAnteriorTooth } from './five-surface-selector.he
 import type { ToothSurface } from './five-surface-selector.helpers';
 import { useToothHistory } from '../hooks/use-tooth-history';
 import type { ToothHistoryEntry } from '@monobase/sdk-ts/generated';
-import type { ChartEntryClassification } from './tooth-slideout';
+import type { ChartEntryClassification } from './dental-chart.helpers';
 
 type ExtendedToothHistoryEntry = ToothHistoryEntry & {
   surfaces?: string[];
