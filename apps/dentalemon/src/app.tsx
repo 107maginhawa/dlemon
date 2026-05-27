@@ -103,6 +103,21 @@ function App() {
     window.location.assign('/auth/sign-in?session_expired=1')
   }, [])
 
+  // UJ-ORG-003: Reset PIN inactivity timer on any user activity.
+  // Global listeners are registered once so the timer is always reset when
+  // the user interacts with the page, regardless of which route is active.
+  useEffect(() => {
+    const handleActivity = () => pinSession.updateActivity()
+    window.addEventListener('mousemove', handleActivity)
+    window.addEventListener('keydown', handleActivity)
+    window.addEventListener('click', handleActivity)
+    return () => {
+      window.removeEventListener('mousemove', handleActivity)
+      window.removeEventListener('keydown', handleActivity)
+      window.removeEventListener('click', handleActivity)
+    }
+  }, [])
+
   // Show loading while fetching runtime config
   if (!config) {
     return <Loading />

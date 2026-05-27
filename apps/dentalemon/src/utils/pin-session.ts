@@ -28,6 +28,13 @@ export interface StartSessionOptions {
 
 export class PinSessionManager {
   private session: PinSessionData | null = null;
+  private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  private onExpireCallback: (() => void) | null = null;
+
+  /** Register a callback to invoke when the inactivity timer fires. */
+  onExpire(callback: () => void): void {
+    this.onExpireCallback = callback;
+  }
 
   /** Start a new session for the given member. Replaces any existing session. */
   startSession(opts: StartSessionOptions): void {
@@ -38,6 +45,7 @@ export class PinSessionManager {
       lastActiveAt: Date.now(),
       locked: false,
     };
+    this._resetTimer();
   }
 
   /** Return the current session, or null if no session is active. */
@@ -45,10 +53,14 @@ export class PinSessionManager {
     return this.session;
   }
 
-  /** Update the last-activity timestamp (call on any user interaction). */
+  /**
+   * Update the last-activity timestamp and reset the inactivity timer.
+   * Call on any user interaction (mousemove, keydown, click, etc.).
+   */
   updateActivity(now: number = Date.now()): void {
     if (this.session) {
       this.session.lastActiveAt = now;
+      this._resetTimer();
     }
   }
 
@@ -73,17 +85,39 @@ export class PinSessionManager {
     }
   }
 
-  /** Unlock the session after successful re-auth. Refreshes lastActiveAt. */
+  /** Unlock the session after successful re-auth. Refreshes lastActiveAt and resets timer. */
   unlockSession(): void {
     if (this.session) {
       this.session.locked = false;
       this.session.lastActiveAt = Date.now();
+      this._resetTimer();
     }
   }
 
   /** Clear the session completely (log out). */
   clearSession(): void {
+    this._clearTimer();
     this.session = null;
+  }
+
+  /** Reset (or start) the inactivity countdown timer. */
+  private _resetTimer(): void {
+    this._clearTimer();
+    if (!this.session) return;
+    this.inactivityTimer = setTimeout(() => {
+      if (this.session && !this.isLocked()) {
+        this.lockForReauth();
+        this.onExpireCallback?.();
+      }
+    }, INACTIVITY_TIMEOUT_MS);
+  }
+
+  /** Cancel any pending inactivity timer. */
+  private _clearTimer(): void {
+    if (this.inactivityTimer !== null) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
   }
 }
 
