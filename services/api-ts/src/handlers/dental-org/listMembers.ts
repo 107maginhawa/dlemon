@@ -33,8 +33,10 @@ export async function listMembers(ctx: Context): Promise<Response> {
   const repo = new MembershipRepository(db, logger);
   const allItems = await repo.listByBranch(branchId, { includeInactive });
 
-  // Strip pinHash from each member
-  const safeItems = allItems.map(({ pinHash, ...rest }) => rest);
+  // Strip sensitive credential fields from each member
+  const safeItems = allItems.map(
+    ({ pinHash, securityAnswerHash, securityQuestion, ...rest }) => rest,
+  );
   const total = safeItems.length;
   const page = safeItems.slice(offset, offset + limit);
 
