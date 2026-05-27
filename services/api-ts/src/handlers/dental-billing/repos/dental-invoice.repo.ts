@@ -5,6 +5,7 @@
  * Handles invoice number generation, payment tracking, and discount application.
  */
 
+import { randomUUID } from 'node:crypto';
 import { eq, and, sql, lte, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import {
@@ -27,30 +28,16 @@ export class DentalInvoiceRepository {
   constructor(private db: DatabaseInstance, private logger?: any) {}
 
   /**
-   * Generate a sequential invoice number: INV-{year}-{padded 4-digit sequence}
-   * Uses MAX to find the highest existing sequence (not COUNT, which is vulnerable
-   * to gaps from deleted invoices producing duplicates under concurrency).
+   * Generate an invoice number: INV-{year}-{8-char UUID slice}.
+   * EM-BILL-006: Previous implementation used a MAX(invoice_number) read-then-write
+   * pattern that races under concurrent invoice creation — two parallel callers
+   * could compute the same next sequence. UUID-based generation is collision-safe
+   * without DB-level locking. Format changed from INV-YYYY-0001 to INV-YYYY-ABCD1234.
    */
   async generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const prefix = `INV-${year}-`;
-
-    // Find the highest existing sequence number for this year
-    const result = await this.db
-      .select({ maxNum: sql<string>`MAX(${dentalInvoices.invoiceNumber})` })
-      .from(dentalInvoices)
-      .where(sql`${dentalInvoices.invoiceNumber} LIKE ${prefix + '%'}`);
-
-    let nextSeq = 1;
-    const maxNum = result?.[0]?.maxNum;
-    if (maxNum) {
-      const seqStr = maxNum.replace(prefix, '');
-      const parsed = parseInt(seqStr, 10);
-      if (!isNaN(parsed)) nextSeq = parsed + 1;
-    }
-
-    const sequence = nextSeq.toString().padStart(4, '0');
-    return `${prefix}${sequence}`;
+    const id = randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+    return `INV-${year}-${id}`;
   }
 
   async createOne(data: NewDentalInvoice): Promise<DentalInvoice> {
