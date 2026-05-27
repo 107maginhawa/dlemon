@@ -95,6 +95,19 @@ jobs:
       - name: Lint migration safety
         run: cd services/api-ts && bun run lint:migrations
 
+  duplicate-op-check:
+    name: No Duplicate OperationId
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+      - name: Fail if routes.ts registers the same operationId or path twice
+        run: cd services/api-ts && bun run check:duplicate-ops
+
   traceability:
     name: BR Traceability Gate
     runs-on: ubuntu-latest

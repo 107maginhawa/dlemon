@@ -23,6 +23,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:migrations": "bun scripts/lint-migrations.ts",
+    "check:duplicate-ops": "bun scripts/check-duplicate-operation-ids.ts",
     "perf": "bun run tests/perf/run.ts"
   },
   "dependencies": {
