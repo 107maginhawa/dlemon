@@ -211,6 +211,17 @@ The generation script (`scripts/generate.ts`):
 8. ✅ Creates handler registry
 9. ✅ Creates handler stubs (only for new endpoints)
 
+### OperationId Naming Convention
+
+Every TypeSpec operation **must** carry a unique `@operationId`. Two styles are used:
+
+- **camelCase short** (e.g. `createFinding`, `listPatients`) — the base style for operations defined directly on an interface.
+- **`ModuleName_action`** (e.g. `ImagingFindingsMgmt_createFinding`, `DentalMembershipManagement_create`) — the shim/generated suffix style emitted when TypeSpec compiles a named interface into a management-interface prefix; keep the original short form as the primary operationId and use the prefixed form only when the spec compiler forces it.
+
+**Why this matters**: `bun run generate` imports handlers by operationId (`import { createFinding } from '../../handlers/.../createFinding'`) and registers them in `registry.ts`. If two operations share an operationId — or if a short and a prefixed form both appear — the generator writes duplicate imports and duplicate registry entries, causing a silent dual-registration bug at runtime (the second handler silently overwrites the first). This exact bug was found in the `dental-org` module and fixed in Phase 0.
+
+**Rule**: Each `.tsp` operation must have a unique `@operationId` **AND** a matching handler file at `services/api-ts/src/handlers/{module}/{operationId}.ts` **AND** a Hurl contract test file at `specs/api/tests/contract/{operationId}.hurl`. The post-generate check (`bun run scripts/verify-registry-uniqueness.ts`, chained automatically) will fail with a clear error if any operationId is duplicated in `registry.ts`.
+
 ### Troubleshooting
 
 **Problem**: Routes not updating after TypeSpec changes
