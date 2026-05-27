@@ -9,17 +9,18 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError } from '@/core/errors';
 import { AuditLogRepository } from './repos/audit-log.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  // Admin role only
+  // dentist_owner role only
   const userRole: string = user.role ?? '';
   const roles = userRole.split(',').map((r: string) => r.trim());
-  if (!roles.includes('admin')) {
-    throw new ForbiddenError('Admin role required to access audit log');
+  if (!roles.includes('dentist_owner')) {
+    throw new ForbiddenError('dentist_owner role required to access audit log');
   }
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -28,6 +29,11 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   const actorId     = ctx.req.query('actorId')     ?? ctx.req.query('personId')      ?? undefined;
   const tenantId    = ctx.req.query('tenantId')     ?? undefined;
   const branchId    = ctx.req.query('branchId')     ?? undefined;
+
+  // Branch-level isolation: dentist_owner must have active membership in the queried branch
+  if (branchId) {
+    await assertBranchAccess(db, user.id, branchId);
+  }
   const targetType  = ctx.req.query('targetType')   ?? ctx.req.query('resourceType') ?? undefined;
   const targetId    = ctx.req.query('targetId')     ?? ctx.req.query('resourceId')   ?? undefined;
   const action      = ctx.req.query('action')       ?? undefined;
