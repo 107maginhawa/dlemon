@@ -59,9 +59,12 @@ export async function createDentalInvoice(
     throw new BusinessLogicError('Invoice total must be positive', 'INVALID_AMOUNT');
   }
 
-  const taxRate = body.taxRate ?? 0;
-  const taxCents = Math.round(subtotalCents * taxRate);
-  const totalCents = subtotalCents + taxCents;
+  // EM-BILL-001: taxRate must not be caller-controlled (privilege escalation —
+  // client could set 0% to avoid tax or inflate to overcharge). Hardcoded to 0
+  // until branch-level tax configuration is implemented.
+  const taxRate = 0;
+  const taxCents = 0;
+  const totalCents = subtotalCents;
 
   // Generate invoice number
   const invoiceNumber = await invoiceRepo.generateInvoiceNumber();
