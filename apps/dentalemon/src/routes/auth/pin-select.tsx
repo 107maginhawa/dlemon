@@ -11,10 +11,17 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/utils/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { composeGuards, requireAuth } from '@/utils/guards';
+import { loadOrgContext } from '@/utils/load-org-context';
 
 const API = apiBaseUrl;
 
 export const Route = createFileRoute('/auth/pin-select')({
+  // CF-44 (Slice H): PIN select is part of the authenticated device flow.
+  // Without this guard, an unauthenticated browser tab could reach this page
+  // and enumerate staff members. Better-Auth session is required first.
+  // loadOrgContext seeds the Zustand store so the useEffect below can fetch members.
+  beforeLoad: composeGuards(requireAuth, async () => { await loadOrgContext() }),
   component: PinSelectRoute,
 });
 
@@ -122,6 +129,11 @@ function PinSelectRoute() {
       <PinSelect
         members={members}
         onSelect={(member) => {
+          // UJ-ORG-004: Persist org context to localStorage so pin-entry
+          // (and any deep-link reload) can reconstruct the correct context.
+          const { orgId, branchId: storeBranchId } = useOrgContextStore.getState();
+          if (orgId) localStorage.setItem('currentOrgId', orgId);
+          if (storeBranchId) localStorage.setItem('currentBranchId', storeBranchId);
           navigate({ to: '/auth/pin-entry/$memberId', params: { memberId: member.id } });
         }}
       />
