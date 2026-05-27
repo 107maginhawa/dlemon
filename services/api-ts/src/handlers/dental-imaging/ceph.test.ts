@@ -165,7 +165,11 @@ function makeCephDb(opts: {
       let rows: Promise<any[]>;
 
       if (hasPersonId) {
-        rows = Promise.resolve(hasMembership ? [{ id: 'membership-id' }] : []);
+        const isRoleQuery = fields != null && 'role' in fields;
+        const memberRow = hasMembership
+          ? (isRoleQuery ? [{ id: 'membership-id', role: 'dentist_owner' }] : [{ id: 'membership-id' }])
+          : [];
+        rows = Promise.resolve(memberRow);
         return Object.assign(rows, { limit: (_n: number) => rows });
       }
 

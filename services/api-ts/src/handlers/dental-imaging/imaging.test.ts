@@ -100,6 +100,7 @@ function makeDb(opts: {
     const hasStudyId = tableRef?.studyId !== undefined;          // imaging_study_image
     const hasToothNumber = tableRef?.toothNumber !== undefined && !hasStudyId; // imagingStudyTeeth
     const hasPatientId = tableRef?.patientId !== undefined && !hasStudyId; // imaging_study
+    const hasOrganizationId = tableRef?.organizationId !== undefined; // dental_branch (tier gate)
     const isRoleQuery = hasPersonId && fields && 'role' in fields; // getMemberRole
 
     return {
@@ -138,7 +139,8 @@ function makeDb(opts: {
 
         return { limit: resolveLimit };
       },
-      // innerJoin is used by listImagingImagesForPatient (imaging_study_image table)
+      // innerJoin is used by listImagingImagesForPatient (imaging_study_image table),
+      // createMeasurement tier gate (dental_branch → dental_organization),
       // and by listPatientImages legacy query (dental_attachment table joined to dental_visit)
       innerJoin: (_joinTable: any, _cond: any) => ({
         where: (_cond2: any) => {
@@ -147,6 +149,11 @@ function makeDb(opts: {
             return Promise.resolve(
               image ? [{ ...image, studyBranchId: (study as any)?.branchId ?? BRANCH_ID }] : [],
             );
+          }
+          if (hasOrganizationId) {
+            // dental_branch → dental_organization tier gate
+            const tierRows = Promise.resolve([{ imagingTier: 'addon' }]);
+            return Object.assign(tierRows, { limit: (_n: number) => tierRows });
           }
           // dental_attachment → innerJoin dental_visit (legacy query, returns empty for mocks)
           return Promise.resolve([]);
@@ -518,7 +525,7 @@ describe('BR-026 delete roles - hygienist forbidden', () => {
   test('BR-028: delete sets status to archived (soft delete)', async () => {
     const { deleteImage } = await import('./deleteImage');
     let capturedSetArg: any = null;
-    const db = makeDb({ image: MOCK_IMAGE, study: MOCK_STUDY, hasMembership: true, memberRole: 'dentist' });
+    const db = makeDb({ image: MOCK_IMAGE, study: MOCK_STUDY, hasMembership: true, memberRole: 'dentist_owner' });
     const origUpdate = db.update.bind(db);
     db.update = (_table: any) => ({
       set: (data: any) => {
@@ -549,11 +556,11 @@ describe('BR-027 delete own-only associate', () => {
       image: associateImage,
       study: associateStudy,
       hasMembership: true,
-      memberRole: 'associate',
+      memberRole: 'dentist_associate',
     });
     const app = buildApp((await import('./deleteImage')).deleteImage as any, {
       user: ASSOCIATE_USER,
-      role: 'associate',
+      role: 'dentist_associate',
       db,
       method: 'DELETE',
       path: '/:imageId',
@@ -732,14 +739,18 @@ function makeMeasurementDb(opts: {
   const annotation = opts.annotation !== undefined ? opts.annotation : MOCK_ANNOTATION;
   const imagingTier = opts.imagingTier !== undefined ? opts.imagingTier : 'basic';
 
-  const buildSelectChain = (tableRef: any) => {
+  const buildSelectChain = (tableRef: any, fields?: any) => {
     const hasPersonId = tableRef?.personId !== undefined;        // dental_membership
     const hasStudyId = tableRef?.studyId !== undefined;         // imaging_study_image OR imaging_annotation
     const hasPatientId = tableRef?.patientId !== undefined && !hasStudyId; // imaging_study
     // imaging_annotation has geometry + imageId but no studyId
     const hasGeometry = tableRef?.geometry !== undefined;
+    const isRoleQuery = hasPersonId && fields != null && 'role' in fields;
 
     const resolveRows = () => {
+      if (isRoleQuery) {
+        return Promise.resolve(hasMembership ? [{ id: 'membership-id', role: 'dentist_owner' }] : []);
+      }
       if (hasPersonId) {
         return Promise.resolve(hasMembership ? [{ id: 'membership-id' }] : []);
       }
@@ -777,8 +788,8 @@ function makeMeasurementDb(opts: {
   };
 
   return {
-    select: (_fields?: any) => ({
-      from: (table: any) => buildSelectChain(table),
+    select: (fields?: any) => ({
+      from: (table: any) => buildSelectChain(table, fields),
     }),
     insert: (_table: any) => ({
       values: (_data: any) => ({
@@ -873,7 +884,7 @@ describe('updateImageCalibration', () => {
 describe('updateImageModality', () => {
   test('returns 200 with updated modality', async () => {
     const { updateImageModality } = await import('./updateImageModality');
-    const db = makeDb({ image: MOCK_IMAGE, study: MOCK_STUDY, hasMembership: true, memberRole: 'dentist' });
+    const db = makeDb({ image: MOCK_IMAGE, study: MOCK_STUDY, hasMembership: true, memberRole: 'dentist_owner' });
     const app = buildApp(updateImageModality as any, { user: DENTIST_USER, db, method: 'PATCH', path: '/:imageId' });
     const res = await app.request('/test-image-id', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modality: 'panoramic' }) });
     expect(res.status).toBe(200);
@@ -1421,7 +1432,7 @@ function makeFindingDb(opts: {
   const image = opts.image !== undefined ? opts.image : MOCK_IMAGE;
   const finding = opts.finding !== undefined ? opts.finding : MOCK_FINDING;
 
-  const buildSelectChain = (tableRef: any) => {
+  const buildSelectChain = (tableRef: any, fields?: any) => {
     const hasPersonId = tableRef?.personId !== undefined;         // dental_membership
     const hasStudyId = tableRef?.studyId !== undefined;          // imaging_study_image
     const hasGeometry = tableRef?.geometry !== undefined;        // imaging_annotation
@@ -1429,8 +1440,10 @@ function makeFindingDb(opts: {
     const isFindingTable = tableRef?.type !== undefined && tableRef?.imageId !== undefined && !hasGeometry && !hasStudyId;
     // imaging_study: patientId but no studyId and not finding
     const hasPatientId = tableRef?.patientId !== undefined && !hasStudyId && !isFindingTable;
+    const isRoleQuery = hasPersonId && fields != null && 'role' in fields;
 
     const resolveRows = () => {
+      if (isRoleQuery) return Promise.resolve(hasMembership ? [{ id: 'membership-id', role: 'dentist_owner' }] : []);
       if (hasPersonId) return Promise.resolve(hasMembership ? [{ id: 'membership-id' }] : []);
       if (isFindingTable) return Promise.resolve(finding ? [finding] : []);
       if (hasStudyId) return Promise.resolve(image ? [image] : []);
@@ -1451,8 +1464,8 @@ function makeFindingDb(opts: {
   };
 
   return {
-    select: (_fields?: any) => ({
-      from: (table: any) => buildSelectChain(table),
+    select: (fields?: any) => ({
+      from: (table: any) => buildSelectChain(table, fields),
     }),
     insert: (_table: any) => ({
       values: (_data: any) => ({

@@ -193,14 +193,16 @@ function makeFindingDb(opts: {
   const image   = opts.image   !== undefined ? opts.image   : MOCK_IMAGE;
   const finding = opts.finding !== undefined ? opts.finding : MOCK_FINDING;
 
-  const buildSelectChain = (tableRef: any) => {
+  const buildSelectChain = (tableRef: any, fields?: any) => {
     const hasPersonId    = tableRef?.personId  !== undefined;
     const hasStudyId     = tableRef?.studyId   !== undefined;
     const hasGeometry    = tableRef?.geometry  !== undefined;
     const isFindingTable = tableRef?.type !== undefined && tableRef?.imageId !== undefined && !hasGeometry && !hasStudyId;
     const hasPatientId   = tableRef?.patientId !== undefined && !hasStudyId && !isFindingTable;
+    const isRoleQuery    = hasPersonId && fields != null && 'role' in fields;
 
     const resolveRows = () => {
+      if (isRoleQuery)    return Promise.resolve(hasMembership ? [{ id: 'membership-id', role: 'dentist_owner' }] : []);
       if (hasPersonId)    return Promise.resolve(hasMembership ? [{ id: 'membership-id' }] : []);
       if (isFindingTable) return Promise.resolve(finding ? [finding] : []);
       if (hasStudyId)     return Promise.resolve(image   ? [image]   : []);
@@ -217,8 +219,8 @@ function makeFindingDb(opts: {
   };
 
   return {
-    select: (_fields?: any) => ({
-      from: (table: any) => buildSelectChain(table),
+    select: (fields?: any) => ({
+      from: (table: any) => buildSelectChain(table, fields),
     }),
     insert: (_table: any) => ({
       values: (_data: any) => ({
@@ -575,7 +577,7 @@ describe('ImagingMgmt_deleteImage wrapper', () => {
     const { ImagingMgmt_deleteImage } = await import('./ImagingMgmt_deleteImage');
     const app = buildApp(ImagingMgmt_deleteImage as any, {
       user: DENTIST_USER,
-      db:   makeDb({ memberRole: 'dentist' }),
+      db:   makeDb({ memberRole: 'dentist_owner' }),
       method: 'DELETE',
       path: '/:imageId',
     });
@@ -655,7 +657,7 @@ describe('ImagingMgmt_updateImageModality wrapper', () => {
     // getMemberRole must return a role in ['dentist', 'associate', 'hygienist']
     const app = buildApp(ImagingMgmt_updateImageModality as any, {
       user:   DENTIST_USER,
-      db:     makeDb({ memberRole: 'dentist' }),
+      db:     makeDb({ memberRole: 'dentist_owner' }),
       method: 'PATCH',
       path:   '/:imageId/modality',
     });

@@ -17,87 +17,13 @@
 # These are pre-existing failures surfaced when monobase_test infra landed.
 # Added 2026-05-27 after db-guard infrastructure fix.
 (fail) AC-SCHED-03: cancelling appointment sets status cancelled; visit is preserved > cancelled appointment has status cancelled; a visit created by another appt is not deleted [AC-SCHED-03]
-(fail) Addon tier gate — free org → 403 > batch upsert on free tier returns 403
-(fail) Addon tier gate — free org → 403 > null imagingTier treated as free → 403
-(fail) Addon tier gate — free org → 403 > PATCH landmark on free tier returns 403
-(fail) annotation geometry types > annotation types allowed on free tier — arrow → 201
-(fail) annotation geometry types > annotation types allowed on free tier — freehand → 201
-(fail) annotation geometry types > annotation types allowed on free tier — shape → 201
-(fail) annotation geometry types > annotation types allowed on free tier — tooth → 201
-(fail) annotation geometry types > annotation types allowed on free tier (no tier gate) — label → 201
-(fail) annotation geometry types > arrow annotation: missing to field → 400
-(fail) annotation geometry types > arrow annotation: valid from→to → 201
-(fail) annotation geometry types > freehand annotation: 2+ points → 201
-(fail) annotation geometry types > freehand annotation: only 1 point → 400
-(fail) annotation geometry types > label annotation: empty text → 400
-(fail) annotation geometry types > label annotation: text > 200 chars → 400
-(fail) annotation geometry types > label annotation: valid point + text → 201
-(fail) annotation geometry types > shape annotation: ellipse → 201
-(fail) annotation geometry types > shape annotation: invalid shapeType → 400
-(fail) annotation geometry types > shape annotation: rect → 201
-(fail) annotation geometry types > tooth annotation: toothNumber 0 → 400
-(fail) annotation geometry types > tooth annotation: toothNumber 33 → 400
-(fail) annotation geometry types > tooth annotation: valid toothNumber 1 → 201
-(fail) annotation geometry types > tooth annotation: valid toothNumber 32 → 201
-(fail) annotation geometry types > unknown type → 400
 (fail) audit trail > updatedBy is set to user.id on cancel
-(fail) Batch response completeness > response items includes all current landmarks (not just those in batch)
-(fail) BR-026 delete roles - hygienist forbidden > BR-028: delete sets status to archived (soft delete)
-(fail) BR-027 delete own-only associate > associate deletes own image - success
-(fail) BR-030 recompute-on-write > batch upsert response has both items array and analysis object
-(fail) BR-030 recompute-on-write > PATCH landmark response has both items array and analysis object
 (fail) cancelAppointment handler > returns 204 and appointment is cancelled
-(fail) CIMG-07 batch upsert landmarks > D-G response has analysisType steiner_hybrid_sn
-(fail) CIMG-07 batch upsert landmarks > returns 200 with {items, analysis}
-(fail) CIMG-11 report assembly > createCephReport returns 201 with {id, imageId, version, snapshot, createdAt}
-(fail) CIMG-13 PATCH landmark > returns 200 with full {items, analysis} state (client reconciles out-of-order responses)
-(fail) CIMG-14 lock matrix > DELETE locked landmark → 422 LANDMARK_LOCKED
-(fail) CIMG-14 lock matrix > DELETE placed landmark → 204
-(fail) CIMG-14 lock matrix > PATCH x coordinate on locked landmark → 422 LANDMARK_LOCKED
-(fail) CIMG-14 lock matrix > PATCH y coordinate on locked landmark → 422 LANDMARK_LOCKED
-(fail) CIMG-15 recompute idempotent > POST recompute returns 200 with analysis object (not {items, analysis})
-(fail) createAppointment working hours enforcement (FR3.10) > allowed exactly at close boundary
-(fail) createAppointment working hours enforcement (FR3.10) > allowed when no working hours configured
-(fail) createAppointment working hours enforcement (FR3.10) > allowed when within working hours
-(fail) createMeasurement > invalid geometry (1 point for distance) returns 400
-(fail) createMeasurement > valid distance measurement returns 201
-(fail) D-G label — steiner_hybrid_sn > createCephReport snapshot.analysis_label is steiner_hybrid_sn
-(fail) D-I immutability > recompute response has no version field (analysis only, not a report)
-(fail) D-I immutability > second createCephReport returns version 2 (immutable append, D-I)
-(fail) D-J calibration provenance > calibrated image → calibrationMethod manual_ruler in analysis
-(fail) D-J calibration provenance > uncalibrated image → calibrationMethod not_calibrated and uncalibrated flag
-(fail) D-L confirm-gate > report blocked (422 REPORT_GATE_UNCONFIRMED) when A/B/Go/Po not confirmed
-(fail) D-L confirm-gate > report blocked when gate landmarks are placed (not confirmed)
-(fail) D-L confirm-gate > report succeeds when A/B/Go/Po are all confirmed
-(fail) D-L confirm-gate > report succeeds when gate landmarks are locked (counts as confirmed)
-(fail) D4 snapshot fields > createCephReport snapshot contains study_date, patient_display_id, branch_name
-(fail) deleteMeasurement > valid delete returns 204
 (fail) FR2.7: archive and restore patient (EC1 guard) > restore brings patient back to active status
 (fail) FR6.3: Tier-based member limits > solo plan: deactivated member frees a slot (does not count toward limit)
-(fail) imaging findings > createFinding returns 201
-(fail) imaging findings > deleteFinding returns 204
-(fail) imaging findings > updateFinding allows valid transition (suspected → confirmed)
-(fail) imaging findings > updateFinding rejects invalid transition (resolved → suspected)
-(fail) imaging findings > updateFinding returns 200
-(fail) ImagingFindingsMgmt_createFinding wrapper > delegates to createFinding — returns 201
-(fail) ImagingFindingsMgmt_deleteFinding wrapper > delegates to deleteFinding — returns 204
-(fail) ImagingFindingsMgmt_updateFinding wrapper > delegates to updateFinding — returns 200
-(fail) ImagingMgmt_deleteImage wrapper > delegates to deleteImage — dentist can delete, returns 200
-(fail) ImagingMgmt_updateImageModality wrapper > delegates to updateImageModality — returns 200
-(fail) Invalid status transition > PATCH confirmed → placed (backward) → 422 INVALID_STATUS_TRANSITION
-(fail) Invalid status transition > PATCH placed → confirmed (valid forward) → 200
-(fail) Invalid status transition > PATCH placed → locked skips confirmed → 422 INVALID_STATUS_TRANSITION
 (fail) listAuditLogs > calls repo.logEvent to self-log the access
 (fail) mergePatients handler > returns 500 (not implemented) for valid request body
 (fail) pagination on listAppointments > offset skips earlier results
-(fail) Pino audit emission > batch upsert emits logger.info with action ceph_landmarks_batch_upsert and by user.id
-(fail) Pino audit emission > createCephReport emits logger.info with action ceph_report_create
-(fail) Pino audit emission > DELETE landmark emits logger.info with action ceph_landmark_delete
-(fail) Pino audit emission > PATCH landmark emits logger.info with action ceph_landmark_update
-(fail) Pino audit emission > recompute emits logger.info with action ceph_analysis_recompute
 (fail) status transition guards > cannot mark noShow on a cancelled appointment
 (fail) unmergePatients handler > returns 500 (not implemented) for valid request body
-(fail) updateImageModality > returns 200 with updated modality
 (fail) Validation (AC-007, BR-002) > AC-007: POST returns 400 when name is missing
-(fail) Version monotonicity > first createCephReport returns version 1
-(fail) Version monotonicity > second createCephReport returns version 2 (maxVersion + 1)
