@@ -110,16 +110,28 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 
 ## Frontend Development
 
-### Account App (Vite + TanStack Router)
-- **Port**: 3002
-- **Routing**: File-based in `src/routes/`
+Three frontend workspaces exist; their roles are distinct:
+
+### `apps/dentalemon/` — Primary application (work here)
+- **Port**: 3001
+- **Routing**: TanStack Router, file-based in `src/routes/`
 - **Auth**: Better-Auth with TanStack integration
-- **Data Fetching**: TanStack Query
-- **UI Components**: Radix UI primitives via `@/components` (shadcn/ui patterns)
+- **Data Fetching**: TanStack Query via `@monobase/sdk-ts` hooks
+- **UI Components**: shadcn/ui primitives in `src/components/ui/` (Radix-based)
+- **State**: Zustand stores in `src/stores/`
+- All product features live here. This is the app agents build, test, and ship.
 
-To scaffold a new app, copy `apps/account/` and update `package.json` name + `vite.config.ts` port.
+### `apps/account/` — Upstream-template reference (do not feature-develop)
+- **Port**: 3002
+- Frozen reference implementation from `mono-js-lf` upstream
+- Use only to pull upstream auth/account patterns; do not add product features here
+- May be deleted or archived in Phase 8 of the structural remediation plan
 
-**Standards**: See [CONTRIBUTING.md#coding-standards](./CONTRIBUTING.md#coding-standards)
+### `apps/sample-workspace/` — Prototype sandbox (do not ship from)
+- UI prototypes and design explorations only
+- Code here is not production-ready; migrate proven patterns to `apps/dentalemon/`
+
+**Standards**: See [docs/development/CONTRIBUTING_FRONTEND.md](./docs/development/CONTRIBUTING_FRONTEND.md)
 
 ## Testing Approach
 

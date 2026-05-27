@@ -1,6 +1,9 @@
-# Account App Development Guide
+# Dentalemon App Development Guide
 
-This guide covers account app-specific development details. **For shared frontend patterns**, see [Root CONTRIBUTING.md > Frontend Development Patterns](../../CONTRIBUTING.md#frontend-development-patterns).
+This guide covers `apps/dentalemon/`-specific development details. For shared project patterns, see:
+- [Root CONTRIBUTING.md](../../CONTRIBUTING.md) — project setup, API-first workflow, quality gates
+- [docs/development/CONTRIBUTING_FRONTEND.md](../../docs/development/CONTRIBUTING_FRONTEND.md) — frontend patterns
+- [docs/development/VERTICAL_TDD.md](../../docs/development/VERTICAL_TDD.md) — mandatory TDD protocol
 
 ## Table of Contents
 
@@ -15,302 +18,142 @@ This guide covers account app-specific development details. **For shared fronten
 
 ## App Overview
 
-**Purpose**: User-facing account management portal for Monobase Application Platform
+**Purpose**: Primary dental practice management application — the product AI agents build, test, and ship.
+
+**Role**: `apps/dentalemon/` is the **primary** frontend workspace. All product features live here.
+
+**Related workspaces** (do not feature-develop in these):
+- `apps/account/` — upstream-template reference (Better-Auth / account management patterns)
+- `apps/sample-workspace/` — UI prototype sandbox
 
 **Current Features**:
-- User authentication (Better-Auth with cookie sessions)
-- Protected dashboard routes
-- Push notifications (OneSignal integration)
-- Responsive UI (shadcn/ui + Tailwind CSS)
+- PIN-based staff authentication
+- Queue board / appointment management
+- Dental workspace (charting, imaging, clinical records)
+- Patient management
+- Billing (invoices, payments)
+- Org management (branches, memberships, roles)
 
-**API Integration**: Uses `@monobase/sdk-ts` package for type-safe backend communication
+**API Integration**: Uses `@monobase/sdk-ts` package for type-safe backend communication.
 
-**Port**: 3002 (development)
+**Port**: 3001 (development)
 
 ---
 
 ## Tech Stack
 
-- **Framework**: TanStack Router (type-safe file-based routing)
-- **Runtime**: Bun 1.2.21+
-- **State**: TanStack Query v5, React Hook Form
-- **UI**: shadcn/ui + Tailwind CSS + Radix UI
-- **Auth**: Better-Auth (cookie-based sessions)
-- **SDK**: `@monobase/sdk-ts` (type-safe API client)
-
-**For detailed patterns and conventions**, see [Root CONTRIBUTING.md > Frontend Development Patterns](../../CONTRIBUTING.md#frontend-development-patterns).
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Bun |
+| Framework | Vite + React 19 |
+| Routing | TanStack Router (file-based, `src/routes/`) |
+| Data fetching | TanStack Query via `@monobase/sdk-ts` hooks |
+| UI primitives | shadcn/ui (Radix-based, `src/components/ui/`) |
+| Styling | Tailwind CSS |
+| State | Zustand (`src/stores/`) |
+| Auth | Better-Auth with TanStack integration |
+| Forms | TanStack Form + Zod validation |
+| E2E tests | Playwright (`tests/e2e/`) |
 
 ---
 
 ## Directory Structure
 
 ```
-src/
-├── components/               # React components
-│   ├── app-sidebar.tsx      # Dashboard sidebar navigation
-│   ├── logo.tsx             # App logo component
-│   ├── loading.tsx          # Loading state component
-│   └── not-found.tsx        # 404 component
-│
-├── hooks/                    # Custom React hooks
-│   └── use-onesignal.ts     # OneSignal push notifications hook
-│
-├── routes/                   # File-based routing (TanStack Router)
-│   ├── __root.tsx           # Root layout with providers
-│   ├── index.tsx            # Landing page
-│   ├── auth/                # Auth pages
-│   │   └── $authView.tsx    # Dynamic auth view (sign-in, sign-up, etc.)
-│   ├── _dashboard/          # Protected routes (layout)
-│   │   ├── _dashboard.tsx   # Dashboard layout
-│   │   ├── dashboard.tsx    # Dashboard home
-│   │   ├── notifications.tsx # Notifications view
-│   │   └── settings/
-│   │       ├── account.tsx  # Account settings
-│   │       └── security.tsx # Security settings
-│   ├── onboarding.tsx       # Onboarding flow
-│   └── verify-email.tsx     # Email verification
-│
-├── services/                 # Business logic
-│   └── onesignal.ts         # OneSignal service initialization
-│
-├── styles/                   # Global styles
-│   └── globals.css          # Tailwind + custom styles
-│
-└── utils/                    # Utilities
-    ├── config.ts            # App configuration (env vars)
-    └── guards.ts            # Route guards (auth checks)
+apps/dentalemon/src/
+├── components/
+│   ├── ui/          # shadcn/ui primitives (Radix-based)
+│   └── {domain}/    # Domain-specific shared components
+├── features/        # Feature modules (workspace, imaging, billing…)
+├── lib/             # Pure utilities (format-date, rbac, guards)
+├── routes/          # TanStack Router file-based routes
+├── stores/          # Zustand stores (org-context, etc.)
+└── utils/           # (being migrated into lib/ — avoid adding here)
+```
+
+Key domain feature dirs:
+```
+features/
+├── workspace/       # Dental workspace (charting, tooth chart, SOAP notes)
+├── imaging/         # X-ray / CBCT imaging workspace
+├── billing/         # Invoices, payments, CDT codes
+└── notifications/   # OneSignal push + in-app
 ```
 
 ---
 
 ## Routes
 
-### Public Routes
+Routes live in `src/routes/` using TanStack Router file-based convention:
 
-Routes accessible without authentication:
-
-- `/` - Landing page
-- `/auth/$authView` - Dynamic auth views
-  - `/auth/sign-in` - Sign in page
-  - `/auth/sign-up` - Sign up page
-  - `/auth/forgot-password` - Password reset request
-  - `/auth/reset-password` - Password reset confirmation
-- `/verify-email` - Email verification page
-
-### Protected Routes (Layout: `_dashboard`)
-
-All dashboard routes require authentication and use the `_dashboard` layout.
-
-**Dashboard**:
-- `/dashboard` - Dashboard home
-
-**Notifications**:
-- `/dashboard/notifications` - Notification center
-
-**Settings**:
-- `/dashboard/settings/account` - Account settings
-- `/dashboard/settings/security` - Security settings (password, 2FA)
-
-### Special Routes
-
-- `/onboarding` - Onboarding flow (requires auth without profile)
-  - Uses `requireAuthWithoutProfile()` guard
-  - Redirects to dashboard if profile exists
-
-### Route Guards
-
-Route guards are defined in `src/utils/guards.ts`:
-
-- **`requireAuth()`** - Basic authentication check
-- **`requireAuthWithProfile()`** - Requires auth + profile completion
-- **`requireAuthWithoutProfile()`** - Requires auth but NO profile (onboarding)
-- **`requireGuest()`** - Requires NO authentication (landing page)
-
-**Guard Usage**:
-```typescript
-// In route file
-import { requireAuthWithProfile } from '@/utils/guards'
-
-export const Route = createFileRoute('/_dashboard/dashboard')({
-  beforeLoad: requireAuthWithProfile,
-  // ... component
-})
+```
+routes/
+├── _dashboard.tsx         # Dashboard layout wrapper
+├── _workspace.tsx         # Workspace layout wrapper
+├── _workspace/
+│   ├── queue-board.tsx    # Appointment queue
+│   └── patient.$id/       # Patient workspace
+│       ├── index.tsx
+│       ├── chart.tsx
+│       ├── imaging.tsx
+│       └── billing.tsx
+└── auth/
+    ├── pin-select.tsx     # Staff PIN login flow
+    └── pin-entry.$memberId.tsx
 ```
 
-**For complete guard patterns**, see [Root CONTRIBUTING.md > Routing](../../CONTRIBUTING.md#routing-tanstack-router).
+`routeTree.gen.ts` is auto-generated by TanStack Router — **never edit manually**.
 
 ---
 
 ## Development Workflow
 
-### Starting Development
-
 ```bash
-cd apps/account
-bun dev              # Start dev server on port 3002
+# Start the app (API must be running on port 7213)
+cd apps/dentalemon && bun dev        # port 3001
+
+# Typecheck
+cd apps/dentalemon && bun run typecheck
+
+# Unit tests
+cd apps/dentalemon && bun test
+
+# E2E tests (requires running API + app)
+cd apps/dentalemon && bun run test:e2e
 ```
 
-### Type Checking
+Before shipping any change, all four gates must be green:
+1. `bun test` (backend unit)
+2. `bun run test:contract` (Hurl contract)
+3. `cd apps/dentalemon && bun test` (frontend unit)
+4. `cd apps/dentalemon && bun run test:e2e` (Playwright E2E)
 
-```bash
-bun run typecheck    # Run TypeScript checks
-```
-
-### Building
-
-```bash
-bun run build        # Build for production
-bun run preview      # Preview production build
-```
-
-### Testing
-
-```bash
-bun run test:e2e        # Run E2E tests (Playwright)
-bun run test:e2e:ui     # Open Playwright UI
-bun run test:e2e:debug  # Debug tests
-```
-
----
-
-## API Integration
-
-This app uses the `@monobase/sdk-ts` package for API communication.
-
-### Using the SDK
-
-```typescript
-import { createClient } from '@monobase/sdk-ts'
-
-// Create client instance
-const client = createClient({
-  baseURL: import.meta.env.VITE_API_URL
-})
-
-// Make type-safe API calls
-const person = await client.persons.getPerson(personId)
-const notifications = await client.notifs.listNotifications()
-```
-
-### Type Safety
-
-All API types are automatically generated from the OpenAPI specification:
-- Request/response types are inferred
-- Parameters are type-checked
-- Validation errors are caught at compile time
-
-**For API integration patterns**, see [Root CONTRIBUTING.md > API Integration](../../CONTRIBUTING.md#api-integration).
-
----
-
-## Adding shadcn/ui Components
-
-shadcn components live inside this app at `apps/account/src/components/`:
-
-```bash
-cd apps/account
-bunx shadcn@latest add [component-name]
-```
-
-Components are imported via the `@/components/*` path alias. Each app owns
-its own copy — there is no shared UI package.
-
-**For component patterns**, see [Root CONTRIBUTING.md > Component Patterns](../../CONTRIBUTING.md#component-patterns).
+See [docs/development/VERTICAL_TDD.md](../../docs/development/VERTICAL_TDD.md) for the full 10-step per-module sequence.
 
 ---
 
 ## Quick Reference
 
-### Development Commands
-
 ```bash
-cd apps/account
+# Dev server
+cd apps/dentalemon && bun dev
 
-# Development
-bun install          # Install dependencies
-bun dev             # Start dev server (port 3002)
-bun run build       # Build for production
-bun run typecheck   # TypeScript checking
+# Build
+cd apps/dentalemon && bun run build
 
-# Testing
-bun run test:e2e        # E2E tests (Playwright)
-bun run test:e2e:ui     # Playwright UI
-bun run test:e2e:debug  # Debug tests
+# Typecheck
+cd apps/dentalemon && bun run typecheck
+
+# Unit tests
+cd apps/dentalemon && bun test
+
+# E2E tests
+cd apps/dentalemon && bun run test:e2e
+
+# Add a shadcn component
+cd apps/dentalemon && bunx shadcn@latest add <component>
 ```
 
-### Environment Variables
+**Route generation**: TanStack Router auto-generates `src/routeTree.gen.ts` when you create or rename files in `src/routes/`. No manual editing needed.
 
-Required env vars in `.env`:
-
-```bash
-VITE_API_URL=http://localhost:7213        # API service URL
-VITE_ONESIGNAL_APP_ID=your-app-id         # OneSignal app ID
-VITE_ONESIGNAL_APP_TAG=account            # OneSignal app tag
-```
-
-### Path Aliases
-
-```typescript
-// ✅ Good - Use path aliases
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/hooks/use-auth'
-import { config } from '@/utils/config'
-
-// ❌ Bad - Relative paths
-import { Button } from '../../../components/ui/button'
-```
-
-### Common Patterns
-
-**Protected Route**:
-```typescript
-import { createFileRoute } from '@tanstack/react-router'
-import { requireAuthWithProfile } from '@/utils/guards'
-
-export const Route = createFileRoute('/_dashboard/settings/account')({
-  beforeLoad: requireAuthWithProfile,
-  component: AccountSettings,
-})
-
-function AccountSettings() {
-  // Implementation
-}
-```
-
-**Loading States**:
-```typescript
-const { data, isLoading, error } = useQuery({
-  queryKey: ['resource', id],
-  queryFn: () => client.resource.get(id)
-})
-
-if (isLoading) return <LoadingSpinner />
-if (error) return <ErrorAlert error={error} />
-if (!data) return <EmptyState />
-return <Content data={data} />
-```
-
----
-
-## Complete Development Patterns
-
-For complete details on:
-- Module architecture and file patterns
-- API integration with SDK
-- Form patterns and validation
-- Component patterns (shadcn/ui)
-- Query hooks with TanStack Query
-- Type safety rules and conventions
-- Error handling patterns
-
-**See**: [Root CONTRIBUTING.md > Frontend Development Patterns](../../CONTRIBUTING.md#frontend-development-patterns)
-
----
-
-## Useful Resources
-
-- **TanStack Router Docs**: https://tanstack.com/router
-- **TanStack Query Docs**: https://tanstack.com/query
-- **shadcn/ui Docs**: https://ui.shadcn.com
-- **Better-Auth Docs**: https://better-auth.com
-- **OpenAPI Spec**: `../../specs/api/dist/openapi/openapi.json`
+**SDK hooks**: Import from `@monobase/sdk-ts` — e.g. `import { useGetPatient } from '@monobase/sdk-ts/react'`.

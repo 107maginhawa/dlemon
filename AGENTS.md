@@ -50,16 +50,26 @@ Before marking any module complete:
 
 - [ ] Backend unit tests pass (`cd services/api-ts && bun test`)
 - [ ] Contract tests pass (`bun run test:contract`)
-- [ ] Frontend unit tests pass (`cd apps/{app} && bun test`)
-- [ ] E2E test passes (`cd apps/{app} && bun run test:e2e`)
+- [ ] Frontend unit tests pass (`cd apps/dentalemon && bun test`)
+- [ ] E2E test passes (`cd apps/dentalemon && bun run test:e2e`)
 - [ ] Type check clean (`bun run typecheck`)
 - [ ] No regressions in other modules
+
+## App Roles (Three Frontend Workspaces)
+
+| App | Role | Port |
+|-----|------|------|
+| `apps/dentalemon/` | **Primary** — build all features here | 3001 |
+| `apps/account/` | Upstream-template reference — do not add features | 3002 |
+| `apps/sample-workspace/` | Prototype sandbox — do not ship from here | — |
+
+Unless explicitly told otherwise, all frontend work targets `apps/dentalemon/`.
 
 ## Tech Stack
 
 - **Runtime**: Bun (not Node.js)
 - **Backend**: Hono + Drizzle ORM + PostgreSQL
-- **Frontend**: Vite + React 19 + TanStack Router + shadcn/ui
+- **Frontend**: Vite + React 19 + TanStack Router + shadcn/ui (`apps/dentalemon/`)
 - **API Spec**: TypeSpec → OpenAPI → codegen
 - **Testing**: bun:test (unit), Hurl (contract), Playwright (E2E)
 - **Auth**: Better-Auth
@@ -76,8 +86,8 @@ cd packages/sdk-ts && bun run generate           # OpenAPI → SDK hooks
 # Testing
 cd services/api-ts && bun test                   # Backend unit tests
 bun run test:contract                            # Hurl contract tests
-cd apps/{app} && bun test                        # Frontend unit tests
-cd apps/{app} && bun run test:e2e                # Playwright E2E
+cd apps/dentalemon && bun test                   # Frontend unit tests
+cd apps/dentalemon && bun run test:e2e           # Playwright E2E
 
 # Quality gates
 bun run typecheck                                # TypeScript validation
