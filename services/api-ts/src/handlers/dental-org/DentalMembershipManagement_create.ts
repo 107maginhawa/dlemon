@@ -1,3 +1,15 @@
+/**
+ * @deprecated Use POST /dental/org/members (createMember) instead.
+ *
+ * This endpoint (POST /dental/organizations/{orgId}/branches/{branchId}/members/) is a
+ * duplicate registration. The canonical endpoint is createMember which now includes
+ * FR6.3 tier-limit enforcement. This shim is retained only because registry.ts imports
+ * it by name — remove after regenerating routes from a spec that drops this operationId.
+ *
+ * Deprecation: true  (per RFC 8594)
+ * Sunset: 2026-09-01
+ */
+
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, AppError } from '@/core/errors';
@@ -7,11 +19,6 @@ import { OrganizationRepository } from '@/handlers/dental-org/repos/organization
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import type { DentalMembershipManagement_createBody, DentalMembershipManagement_createParams } from '@/generated/openapi/validators';
 
-/**
- * FR6.3: Tier-based member limits
- * Solo: 2 users, Clinic/Practice: 5 users
- * Deactivated members do NOT count toward the limit.
- */
 const TIER_MEMBER_LIMITS: Record<string, number> = {
   solo: 2,
   clinic: 5,
@@ -19,12 +26,6 @@ const TIER_MEMBER_LIMITS: Record<string, number> = {
   enterprise: Infinity,
 };
 
-/**
- * DentalMembershipManagement_create
- *
- * Path: POST /dental/organizations/{orgId}/branches/{branchId}/members/
- * OperationId: DentalMembershipManagement_create
- */
 export async function DentalMembershipManagement_create(
   ctx: ValidatedContext<DentalMembershipManagement_createBody, never, DentalMembershipManagement_createParams>
 ): Promise<Response> {
@@ -36,7 +37,6 @@ export async function DentalMembershipManagement_create(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // FR6.3: Enforce tier-based member limit
   const orgRepo = new OrganizationRepository(db, logger);
   const org = await orgRepo.findOneById(orgId);
   if (!org) {
@@ -64,5 +64,11 @@ export async function DentalMembershipManagement_create(
     status: 'active',
   });
 
-  return ctx.json(membership, 201);
+  // Add deprecation headers per RFC 8594
+  const response = ctx.json(membership, 201) as Response;
+  const headers = new Headers(response.headers);
+  headers.set('Deprecation', 'true');
+  headers.set('Sunset', 'Tue, 01 Sep 2026 00:00:00 GMT');
+  headers.set('Link', '</dental/org/members>; rel="successor-version"');
+  return new Response(response.body, { status: response.status, headers });
 }
