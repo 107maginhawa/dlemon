@@ -142,4 +142,24 @@ export class MembershipRepository extends DatabaseRepository<
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(dentalMemberships.id, id));
   }
+
+  /**
+   * EM-ORG-002: Locate the caller's active membership in a given branch by personId.
+   * Returns null when the caller has no active membership in that branch.
+   *
+   * Used by setPin to determine whether the caller is (a) the target member
+   * themselves or (b) a dentist_owner authorized to set another member's PIN.
+   */
+  async findByPersonAndBranch(personId: string, branchId: string): Promise<DentalMembership | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalMemberships)
+      .where(and(
+        eq(dentalMemberships.personId, personId),
+        eq(dentalMemberships.branchId, branchId),
+        eq(dentalMemberships.status, 'active'),
+      ))
+      .limit(1);
+    return row ?? null;
+  }
 }
