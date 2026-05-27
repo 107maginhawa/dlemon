@@ -160,6 +160,7 @@ function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Measuremen
         style={{ cursor: onAnnotationClick ? 'pointer' : 'default' }}
         onClick={() => onAnnotationClick?.(annotation.id)}
       >
+        {/* UJ-IMG-002: annotation text rendered as JSX string child — React escapes it, no XSS possible */}
         <text x={pt.x} y={pt.y} fill="#FFE97D" fontSize={13} fontWeight={600}>
           {text}
         </text>

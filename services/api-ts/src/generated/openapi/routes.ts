@@ -765,6 +765,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // recoverPin
   app.post('/dental/org/members/:memberId/recover-pin',
+    authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.RecoverPinParams, validationErrorHandler),
     zValidator('json', validators.RecoverPinBody, validationErrorHandler),
     registry.recoverPin as unknown as Handler
@@ -855,7 +856,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // DentalMembershipManagement_setPin
   app.post('/dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin',
-    authMiddleware(),
+    authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.DentalMembershipManagement_setPinParams, validationErrorHandler),
     zValidator('json', validators.DentalMembershipManagement_setPinBody, validationErrorHandler),
     registry.DentalMembershipManagement_setPin as unknown as Handler
@@ -863,7 +864,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // DentalMembershipManagement_verifyPin
   app.post('/dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin',
-    authMiddleware(),
+    authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.DentalMembershipManagement_verifyPinParams, validationErrorHandler),
     zValidator('json', validators.DentalMembershipManagement_verifyPinBody, validationErrorHandler),
     registry.DentalMembershipManagement_verifyPin as unknown as Handler
