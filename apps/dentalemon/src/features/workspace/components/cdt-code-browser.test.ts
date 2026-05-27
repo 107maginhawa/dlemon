@@ -7,7 +7,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'bun:test';
-import cdtCodes from '@/data/cdt-codes.json';
+import cdtCodes from '@/features/workspace/data/cdt-codes.json';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

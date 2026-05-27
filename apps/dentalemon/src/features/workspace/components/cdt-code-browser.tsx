@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import cdtCodes from '@/data/cdt-codes.json';
+import cdtCodes from '@/features/workspace/data/cdt-codes.json';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 

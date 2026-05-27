@@ -365,3 +365,45 @@ const client = await db
 
 // Bad: Duplicating person data in client table
 ```
+
+---
+
+## Directory Conventions (`apps/dentalemon/src/`)
+
+### `lib/` — Pure computational utilities (no app state, no side effects)
+
+Put here: math functions, date/string formatters, locale detectors, CSS class utilities.
+```
+lib/ceph-coords.ts       # cephalometric math
+lib/ceph-export.ts       # canvas → PNG export
+lib/detect-country.ts    # locale detection
+lib/detect-language.ts
+lib/detect-timezone.ts
+lib/format-currency.ts
+lib/format-date.ts
+lib/utils.ts             # cn() tailwind classname merge
+```
+
+**Rule**: Files in `lib/` must have zero imports from `@/utils/`, `@/features/`, `@/stores/`, or any app-specific module.
+
+### `utils/` — Application-domain utilities (app-aware, may access config/state)
+
+Put here: RBAC rules, route guards, auth session helpers, runtime config parsers.
+```
+utils/config.ts          # API base URL + runtime config access
+utils/guards.ts          # route guard functions (requireAuth, requireGuest)
+utils/pin-session.ts     # PIN session management
+utils/rbac.ts            # DentalRole, DentalModule, canAccess
+utils/runtime-config.ts  # runtime config parsing (window.__RUNTIME_CONFIG__)
+utils/load-org-context.ts
+```
+
+**Rule**: `lib/` and `utils/` serve distinct purposes — do not merge them. When in doubt: if the file could be published as a standalone npm package with no app coupling, it belongs in `lib/`. If it knows about dental roles, API URLs, or app config, it belongs in `utils/`.
+
+### `services/` — Third-party SDK integrations
+
+Currently: `services/onesignal.ts`. Files here initialize and wrap external SDKs. Do not move to a feature until a dedicated feature directory exists for that domain.
+
+### `stores/` — Zustand global state stores
+
+All Zustand stores go here (`org-context.store.ts`, etc.). Feature-specific ephemeral state stays in the feature's component or hook — only shared cross-feature state earns a store.
