@@ -107,7 +107,8 @@ export async function carryOverTreatments(ctx: BaseContext) {
       .where(
         and(
           inArray(dentalTreatments.id, body.restoreDismissedIds),
-          eq(dentalTreatments.status, 'dismissed')
+          eq(dentalTreatments.status, 'dismissed'),
+          eq(dentalTreatments.patientId, currentVisit.patientId)
         )
       );
 

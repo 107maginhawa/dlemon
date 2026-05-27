@@ -12,8 +12,10 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
+import { importedPmds } from './repos/pmd-document.schema';
 import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { eq } from 'drizzle-orm';
 
 export async function getImportedPMD(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -23,15 +25,23 @@ export async function getImportedPMD(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new ImportedPMDRepository(db);
 
-  const record = await repo.findOneById(id);
-  if (!record) throw new NotFoundError('Imported PMD not found');
+  // Lightweight probe — get patientId without loading sensitive content
+  const [stub] = await db
+    .select({ id: importedPmds.id, patientId: importedPmds.patientId })
+    .from(importedPmds)
+    .where(eq(importedPmds.id, id));
+  if (!stub) throw new NotFoundError('Imported PMD not found');
 
   // Branch-level authorization via patient's preferred branch
   const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneById(record.patientId);
+  const patient = await patientRepo.findOneById(stub.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
   await assertBranchAccess(db, user.id, patient.preferredBranchId);
+
+  // Auth passed — load full record with content
+  const record = await repo.findOneById(id);
+  if (!record) throw new NotFoundError('Imported PMD not found');
 
   // FR12.2: Parse content — try JSON first, fall back to raw text
   let parsedContent: unknown;

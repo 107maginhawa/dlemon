@@ -3,6 +3,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { DentalBranchManagement_getParams } from '@/generated/openapi/validators';
 
 /**
@@ -24,6 +25,8 @@ export async function DentalBranchManagement_get(
   const repo = new BranchRepository(db, logger);
   const branch = await repo.findOneById(branchId);
   if (!branch) throw new NotFoundError('Branch');
+
+  await assertBranchAccess(db, user.id, branchId);
 
   return ctx.json(branch);
 }

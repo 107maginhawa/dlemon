@@ -36,7 +36,8 @@ export async function updateDentalTreatment(
   // Branch authorization — look up visit to get branchId
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(treatment.visitId);
-  if (visit) await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  if (!visit) throw new NotFoundError('Visit');
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   // BR-007: verified treatment fields are immutable (status transitions still allowed)
   if (treatment.status === 'verified') {

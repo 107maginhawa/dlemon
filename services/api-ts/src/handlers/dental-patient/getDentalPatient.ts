@@ -8,7 +8,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, desc } from 'drizzle-orm';
@@ -34,9 +34,8 @@ export async function getDentalPatient(
   if (!patient) throw new NotFoundError('Patient not found');
 
   // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
-  }
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchAccess(db, user.id, patient.preferredBranchId);
 
   // Visit count + last visit date
   const visits = await db

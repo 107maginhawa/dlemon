@@ -39,10 +39,9 @@ export async function createDentalPatient(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // Branch-level authorization
-  if (body.branchId) {
-    await assertBranchAccess(db, user.id, body.branchId);
-  }
+  // Branch-level authorization — branchId required for all patient registrations
+  if (!body.branchId) throw new ValidationError('branchId is required');
+  await assertBranchAccess(db, user.id, body.branchId);
 
   // Split displayName into firstName + lastName
   const parts = body.displayName.trim().split(/\s+/);

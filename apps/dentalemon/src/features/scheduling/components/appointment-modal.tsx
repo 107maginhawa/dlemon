@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { createAppointment } from '@monobase/sdk-ts/generated';
+import { createAppointment, updateAppointment } from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const DURATION_OPTIONS = [
@@ -110,20 +110,35 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
     setErrors([]);
     setSaving(true);
     try {
-      const payload = buildAppointmentPayload({
-        patientId,
-        dentistMemberId,
-        branchId,
-        date,
-        time,
-        durationMinutes,
-        serviceType,
-        notes,
-        walkIn,
-      });
-      const { data: appointment } = await createAppointment({ body: payload as unknown as Parameters<typeof createAppointment>[0]['body'] });
+      let appointment: unknown;
+      if (appointmentId) {
+        const { data } = await updateAppointment({
+          path: { appointmentId },
+          body: {
+            scheduledAt: new Date(`${date}T${time}:00`),
+            durationMinutes,
+            serviceType: serviceType.trim(),
+            notes: notes.trim() || undefined,
+          },
+        });
+        appointment = data;
+      } else {
+        const payload = buildAppointmentPayload({
+          patientId,
+          dentistMemberId,
+          branchId,
+          date,
+          time,
+          durationMinutes,
+          serviceType,
+          notes,
+          walkIn,
+        });
+        const { data } = await createAppointment({ body: payload as unknown as Parameters<typeof createAppointment>[0]['body'] });
+        appointment = data;
+      }
       if (!appointment) {
-        setErrors(['Failed to create appointment']);
+        setErrors([appointmentId ? 'Failed to update appointment' : 'Failed to create appointment']);
         return;
       }
       onSaved?.(appointment);
