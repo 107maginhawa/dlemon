@@ -26,6 +26,10 @@ All Playwright E2E tests use `.spec.ts` suffix:
 
 ### Test Organization Patterns
 
+#### Cross-Cutting Backend Tests
+
+Cross-cutting backend tests live in `services/api-ts/src/tests/`; handler-specific tests are co-located with their handler.
+
 #### Unit Tests - Colocated with Source
 
 **Unit tests are placed next to the files they test:**
