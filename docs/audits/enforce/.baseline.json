@@ -1,0 +1,3931 @@
+{
+  "version": 2,
+  "run_id": "baseline-004-section-10-2-auth-resolved",
+  "generated_at": "2026-05-27",
+  "generated_by": "oli-enforce-all v1.0 (targeted reclassification run-4)",
+  "flags": [
+    "--auto",
+    "--json"
+  ],
+  "note": "Run-1 (2026-05-27, baseline-001): 486 findings. Run-2 (+2 P0s EM-ORG-019/020). Run-3 (2026-05-27): 19 findings reclassified RESOLVED after P0 sprint (commits verified). Run-4 (2026-05-27): 8 §10.2 P0 auth/IDOR findings reclassified RESOLVED (enforce-fix-004, commit 80f11f7). EX-006 remains BLOCKED as own-phase.",
+  "total_findings_reported": 488,
+  "total_findings_in_baseline": 392,
+  "baseline_coverage_note": "392 findings in baseline. 27 RESOLVED (19 P0 sprint + 8 §10.2 auth fixes). P0 open: 146 (173 total P0 in JSON, 27 resolved). p0_counts in module_identity are computed from findings (authoritative).",
+  "module_identity": {
+    "dental-audit": {
+      "spec_path": "docs/product/modules/dental-audit/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-org/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 52,
+      "p0_count": 9,
+      "p1_count": 14
+    },
+    "dental-billing": {
+      "spec_path": "docs/product/modules/dental-billing/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-billing/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 72,
+      "p0_count": 21,
+      "p1_count": 19
+    },
+    "dental-clinical": {
+      "spec_path": "docs/product/modules/dental-clinical/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-clinical/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 68,
+      "p0_count": 17,
+      "p1_count": 16
+    },
+    "dental-emr-integration": {
+      "spec_path": "docs/product/modules/dental-emr-integration/MODULE_SPEC.md",
+      "source_path": null,
+      "v1_status": "FUTURE_PHASE",
+      "coverage_score": null,
+      "p0_count": 6,
+      "p1_count": 9
+    },
+    "dental-imaging": {
+      "spec_path": "docs/product/modules/dental-imaging/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-imaging/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 61,
+      "p0_count": 26,
+      "p1_count": 21
+    },
+    "dental-org": {
+      "spec_path": "docs/product/modules/dental-org/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-org/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 64,
+      "p0_count": 5,
+      "p1_count": 14,
+      "last_run": "run-4-section-10-2-auth-2026-05-27"
+    },
+    "dental-patient": {
+      "spec_path": "docs/product/modules/dental-patient/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-patient/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 55,
+      "p0_count": 13,
+      "p1_count": 20
+    },
+    "dental-perio": {
+      "spec_path": "docs/product/modules/dental-perio/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-perio/",
+      "v1_status": "CONDITIONAL",
+      "coverage_score": 90,
+      "p0_count": 7,
+      "p1_count": 7
+    },
+    "dental-pmd": {
+      "spec_path": "docs/product/modules/dental-pmd/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-pmd/",
+      "v1_status": "CONDITIONAL",
+      "coverage_score": 82,
+      "p0_count": 13,
+      "p1_count": 15
+    },
+    "dental-scheduling": {
+      "spec_path": "docs/product/modules/dental-scheduling/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-scheduling/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 75,
+      "p0_count": 15,
+      "p1_count": 15
+    },
+    "dental-visit": {
+      "spec_path": "docs/product/modules/dental-visit/MODULE_SPEC.md",
+      "source_path": "services/api-ts/src/handlers/dental-visit/",
+      "v1_status": "NOT_READY",
+      "coverage_score": 73,
+      "p0_count": 13,
+      "p1_count": 19
+    }
+  },
+  "findings": [
+    {
+      "id": "EC-DAUD-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "getAuditEvents.ts role check admin not dentist_owner; dentist owners get 403"
+    },
+    {
+      "id": "EC-DAUD-002",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Endpoint at /dental/admin/audit not spec /dental/audit-events"
+    },
+    {
+      "id": "EC-DAUD-003",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-096 pg-boss consumer entirely absent"
+    },
+    {
+      "id": "EC-DCLI-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "updateMedicalHistoryEntry handler exists but spec declares append-only (AC-CLI-005)"
+    },
+    {
+      "id": "EC-DIMG-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Dual handler sets (old + facade) coexist — route conflicts likely"
+    },
+    {
+      "id": "EC-DORG-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "6 PIN handlers entirely unspecced in MODULE_SPEC §10 / API_CONTRACTS"
+    },
+    {
+      "id": "EC-DORG-002",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Dual handler sets coexist — facade migration incomplete"
+    },
+    {
+      "id": "EC-DPAT-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Treatment plan ownership conflict between dental-patient and dental-visit"
+    },
+    {
+      "id": "EC-DSCH-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "MODULE_SPEC §8 states no standalone queue table; 3 queue handlers exist"
+    },
+    {
+      "id": "EC-DBIL-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P2",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "API_CONTRACTS uses status sent; code uses issued — mismatch"
+    },
+    {
+      "id": "EC-DVIS-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-008 carry-over implementation deviates from source_visit_id contract"
+    },
+    {
+      "id": "EC-DVIS-002",
+      "source": "oli-enforce-coverage",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "FSM init state missing not_started from schema"
+    },
+    {
+      "id": "EC-DVIS-003",
+      "source": "oli-enforce-coverage",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Dentition path inconsistency"
+    },
+    {
+      "id": "EC-DEMR-001",
+      "source": "oli-enforce-coverage",
+      "severity": "P3",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "7 spec sections absent (§4, §9, §12, §13, §15, §17, §18)"
+    },
+    {
+      "id": "EM-AUDIT-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "Auth model mismatch — admin enforced, spec requires dentist_owner",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "481af31",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-AUDIT-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "No assertBranchAccess guard — cross-branch data leak",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "481af31",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-AUDIT-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "G-005 PHI leak — displayName written to audit_log_entry.details in verifyPin",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "144f74e",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-AUDIT-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "listAuditLogs writes a new audit entry on every call — recursion violation",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "9bc870d",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-AUDIT-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "setPin writes no audit event — sensitive operation unaudited"
+    },
+    {
+      "id": "EM-AUDIT-006",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No 405 routes for PATCH/PUT/DELETE on audit events (AC-AUD-002)"
+    },
+    {
+      "id": "EM-AUDIT-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-096 async pg-boss consumer entirely absent"
+    },
+    {
+      "id": "EM-AUDIT-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "~28 write handlers across modules missing logAuditEvent calls"
+    },
+    {
+      "id": "EM-AUDIT-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental_audit_log missing 5 declared §7 fields"
+    },
+    {
+      "id": "EM-AUDIT-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "metadata field silently dropped in audit log writes"
+    },
+    {
+      "id": "EM-AUDIT-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "INVALID_DATE_RANGE (422) validation absent"
+    },
+    {
+      "id": "EM-AUDIT-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "limit/offset NaN not guarded — malformed params cause DB errors"
+    },
+    {
+      "id": "EM-AUDIT-013",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Query param names diverge from spec (snake_case vs camelCase)"
+    },
+    {
+      "id": "EM-AUDIT-014",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No HTTP-level test for getAuditEvents handler"
+    },
+    {
+      "id": "EM-AUDIT-015",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "verifyPin lockout check uses pre-increment failed-attempt count"
+    },
+    {
+      "id": "EM-AUDIT-016",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "AC-003 test label conflates repo test and AC"
+    },
+    {
+      "id": "EM-AUDIT-017",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Two parallel audit tables create ambiguity"
+    },
+    {
+      "id": "EM-AUDIT-018",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-audit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Stale as any casts in wiring test"
+    },
+    {
+      "id": "EM-BILL-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "taxRate accepted from client body — violates BR-010",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "1fabc23",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-BILL-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "staff_full excluded from invoice issue endpoint"
+    },
+    {
+      "id": "EM-BILL-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Payment accepted on draft invoices — bypasses FSM"
+    },
+    {
+      "id": "EM-BILL-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "voidInvoice reads reason but never stores it — BR-016 violated"
+    },
+    {
+      "id": "EM-BILL-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-007 InvoiceCreated, DE-008 InvoicePaid, DE-009 InvoiceVoided never emitted"
+    },
+    {
+      "id": "EM-BILL-006",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "Invoice number generation is non-atomic — duplicate numbers under concurrency",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "e429dcb",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-BILL-007",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "patientId in payment plan creation is caller-controlled (IDOR)"
+    },
+    {
+      "id": "EM-BILL-008",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listInvoices has no branchId scope guard — returns all-org invoices"
+    },
+    {
+      "id": "EM-BILL-009",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Void payment does not handle overdue status — overdue→voided not in FSM"
+    },
+    {
+      "id": "EM-BILL-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Payment plan installment status camelCase/snake_case mismatch — labels always blank"
+    },
+    {
+      "id": "EM-BILL-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "markUncollectible returns 501 but missing from route registration"
+    },
+    {
+      "id": "EM-BILL-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Fee schedule lookup (WF-042) handler absent — 404 in production"
+    },
+    {
+      "id": "EM-BILL-013",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Overdue cron (WF-054) pg-boss job registered but consumer absent"
+    },
+    {
+      "id": "EM-BILL-014",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "discountCents applies no permission check — any role can apply discounts"
+    },
+    {
+      "id": "EM-BILL-015",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Payment exceeds balance check absent — overpayment possible"
+    },
+    {
+      "id": "EM-CLIN-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-003 visit immutability not enforced on 6 write handlers"
+    },
+    {
+      "id": "EM-CLIN-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-035 Revoke Consent handler entirely absent"
+    },
+    {
+      "id": "EM-CLIN-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "signConsentForm allows staff/hygienist to sign on behalf of patient"
+    },
+    {
+      "id": "EM-CLIN-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-012..016 none emitted in any handler"
+    },
+    {
+      "id": "EM-CLIN-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "updateMedicalHistoryEntry allows full PATCH on append-only records"
+    },
+    {
+      "id": "EM-CLIN-006",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createPrescription allergy check uses unvalidated patientId (IDOR)"
+    },
+    {
+      "id": "EM-CLIN-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Lab order FSM status names diverge from API contract"
+    },
+    {
+      "id": "EM-CLIN-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listPrescriptions fetches all rows then paginates in-memory"
+    },
+    {
+      "id": "EM-CLIN-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "signConsentForm checks existing.signed boolean instead of status field"
+    },
+    {
+      "id": "EM-CLIN-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createConsentForm allows hygienist role — not in MODULE_SPEC §6"
+    },
+    {
+      "id": "EM-CLIN-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createAmendment does not validate referenced record exists"
+    },
+    {
+      "id": "EM-CLIN-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "AttachmentsSheet All tab leaks cross-visit attachments without branch-scope auth"
+    },
+    {
+      "id": "EM-CLIN-013",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "toggleEntry in medical history calls updateMedicalHistoryEntry — append-only violation"
+    },
+    {
+      "id": "EM-CLIN-014",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "AC-PRES-04 and AC-PRES-05 are duplicate tests"
+    },
+    {
+      "id": "EM-CLIN-015",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "console.error in AmendmentForm without user feedback"
+    },
+    {
+      "id": "EM-CLIN-016",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "deleteAttachment allows deletion on locked visit"
+    },
+    {
+      "id": "EM-CLIN-017",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-038 amendment spec requires audit event; handler emits none"
+    },
+    {
+      "id": "EM-EMR-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Route path collision: GET /dental/emr/:patientId vs GET /dental/emr/:id"
+    },
+    {
+      "id": "EM-EMR-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Spec contradiction: §6 permits DELETE; AC-EMR-001 mandates 405"
+    },
+    {
+      "id": "EM-EMR-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Active services/api-ts/src/handlers/emr/ conflicts with planned dental-emr-integration location"
+    },
+    {
+      "id": "EM-EMR-004",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "MODULE_SPEC missing §9, §12, §13, §15, §17, §18"
+    },
+    {
+      "id": "EM-EMR-005",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "ROLE_PERMISSION_MATRIX has no rows for dental-emr-integration"
+    },
+    {
+      "id": "EM-EMR-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No branchId scoping declared — cross-branch EMR isolation unspecified"
+    },
+    {
+      "id": "EM-EMR-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Schema §7.3 missing source_system_version field declared in API_CONTRACTS"
+    },
+    {
+      "id": "EM-IMG-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-018/019/020 never published in any handler"
+    },
+    {
+      "id": "EM-IMG-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "IMAGING_TIER_REQUIRED error code never emitted — always FORBIDDEN"
+    },
+    {
+      "id": "EM-IMG-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "imaging_finding.schema.ts has DB-level FKs to dental_visit, patients, dental_branch"
+    },
+    {
+      "id": "EM-IMG-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "CephMgmt_recomputeCephAnalysis missing NOT_CALIBRATED and INSUFFICIENT_LANDMARKS guards"
+    },
+    {
+      "id": "EM-IMG-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "patient_display_id stores raw UUID not human-readable identifier"
+    },
+    {
+      "id": "EM-IMG-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-019 study state machine not implemented — studies skip to active"
+    },
+    {
+      "id": "EM-IMG-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "study_date falls back to createdAt — spec requires explicit capture"
+    },
+    {
+      "id": "EM-IMG-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createImagingStudy comment says hygienist may upload but role check excludes them"
+    },
+    {
+      "id": "EM-IMG-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "imagingTier derivation from study type not implemented — tier check bypassed"
+    },
+    {
+      "id": "EM-IMG-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "upsertAnalysis does not update calibrationValue/calibrationMethod on conflict"
+    },
+    {
+      "id": "EM-IMG-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-040 finding immutability after visit lock not enforced"
+    },
+    {
+      "id": "EM-IMG-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "AC-IMG-002 annotation status reversal 422 — imaging_annotation has no status column"
+    },
+    {
+      "id": "EM-IMG-013",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DICOM MIME type absent from ALLOWED_IMAGING_MIME_TYPES"
+    },
+    {
+      "id": "EM-IMG-014",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listPatientImages missing mimeType and fileSizeBytes for imaging-source rows"
+    },
+    {
+      "id": "EM-IMG-015",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Ceph report imagingTier check may have null-tier free mapping gap"
+    },
+    {
+      "id": "EM-ORG-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "recoverPin route missing authMiddleware — unauthenticated cross-tenant PIN reset possible",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "61ed52c",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-ORG-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "setPin only checks assertBranchAccess — any branch member can overwrite any member's PIN",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "d1acbb5",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-ORG-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "listMembers exposes securityAnswerHash and securityQuestion to all branch members",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "bdce591",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-ORG-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "DentalOrganizationManagement_update has no ownership check — any authenticated user can PATCH any org",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "d1acbb5",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-ORG-005",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "deactivateMember uses assertBranchAccess not assertBranchRole — any member can deactivate peers"
+    },
+    {
+      "id": "EM-ORG-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "recordFailedPinAttempt is non-atomic read-modify-write — lockout bypassable"
+    },
+    {
+      "id": "EM-ORG-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createMember has no dentist_owner role gate — any branch member can add staff"
+    },
+    {
+      "id": "EM-ORG-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DentalBranchManagement_create has no ownership check"
+    },
+    {
+      "id": "EM-ORG-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DentalOrganizationManagement_get has no ownership/membership check"
+    },
+    {
+      "id": "EM-ORG-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "updateMember response leaks securityAnswerHash"
+    },
+    {
+      "id": "EM-ORG-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Membership status enum mismatch — invited state missing from schema"
+    },
+    {
+      "id": "EM-ORG-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Duplicate handler files for setPin and verifyPin"
+    },
+    {
+      "id": "EM-ORG-013",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "recoverPin lockout check uses stale pre-request member state"
+    },
+    {
+      "id": "EM-ORG-014",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "ROLE_LABELS in pin-select.tsx only maps 4 roles; schema has 9"
+    },
+    {
+      "id": "EM-ORG-015",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DentalMembershipManagement_create marked deprecated but still registered as live route"
+    },
+    {
+      "id": "EM-ORG-016",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "API contract specifies org_tier field; implementation uses tier"
+    },
+    {
+      "id": "EM-ORG-017",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Lockout thresholds are magic numbers — not named constants"
+    },
+    {
+      "id": "EM-ORG-018",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listMembers pagination computes total before slicing but passes sliced-page length to buildPaginationMeta"
+    },
+    {
+      "id": "EM-PAT-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-015b archived read-only gate missing from ALL write handlers"
+    },
+    {
+      "id": "EM-PAT-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "archiveDentalPatient uses assertBranchAccess not dentist_owner — any member can archive"
+    },
+    {
+      "id": "EM-PAT-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "archiveDentalPatient reads no request body — reason field never captured"
+    },
+    {
+      "id": "EM-PAT-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listDentalPatients silently expands to org-wide when branch has organizationId"
+    },
+    {
+      "id": "EM-PAT-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "branchId optional in createDentalPatient — assertBranchAccess skipped"
+    },
+    {
+      "id": "EM-PAT-006",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "importPatients skips consent validation entirely (BR-015)"
+    },
+    {
+      "id": "EM-PAT-007",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "if (patient.preferredBranchId) guard — null preferredBranchId silently skips auth"
+    },
+    {
+      "id": "EM-PAT-008",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "addFollowUpNote uses two sequential non-atomic db.update() calls — concurrent data loss"
+    },
+    {
+      "id": "EM-PAT-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Export endpoint path diverges from API contract"
+    },
+    {
+      "id": "EM-PAT-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Export uses assertBranchAccess not assertBranchRole — dentist_owner restriction not enforced"
+    },
+    {
+      "id": "EM-PAT-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "bulkArchiveDentalPatients enforces access not role check"
+    },
+    {
+      "id": "EM-PAT-012",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "getDentalPatientStatement accessible by staff_scheduling — spec restricts to staff_full + dentist_owner"
+    },
+    {
+      "id": "EM-PAT-013",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createDentalPatient returns 400 for consent violation instead of spec 422"
+    },
+    {
+      "id": "EM-PAT-014",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "addFollowUpNote duplicate implementations with divergent validation"
+    },
+    {
+      "id": "EM-PAT-015",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "getDentalPatient response missing medications and conditions"
+    },
+    {
+      "id": "EM-PAT-016",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-021 PatientRegistered event never emitted"
+    },
+    {
+      "id": "EM-PAT-017",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "patients.tsx uses raw fetch instead of SDK; invalidates wrong query key"
+    },
+    {
+      "id": "EM-PAT-018",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "onSelect navigates to workspace route not patient profile route"
+    },
+    {
+      "id": "EM-PAT-019",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "importPatients returns 201 (not 202 async) — deviates from contract"
+    },
+    {
+      "id": "EM-PAT-020",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "logAuditEvent in getDentalPatient uses preferredBranchId ?? patientId as tenantId"
+    },
+    {
+      "id": "EM-PAT-021",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "useExportPatients client-side CSV omits branchId query param"
+    },
+    {
+      "id": "EM-PERIO-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createPerioChart throws 422 on duplicate chart — spec mandates 409 CHART_EXISTS"
+    },
+    {
+      "id": "EM-PERIO-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "upsertToothReading checks chart status but not parent visit lock status"
+    },
+    {
+      "id": "EM-PERIO-003",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "getPerioChart admits staff_scheduling role — spec forbids it"
+    },
+    {
+      "id": "EM-PERIO-004",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "hygienist role granted clinical write access — not declared in MODULE_SPEC §6"
+    },
+    {
+      "id": "EM-PERIO-005",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "completePerioChart already-complete error emits 422 instead of 409"
+    },
+    {
+      "id": "EM-PERIO-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-perio",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "perio.chart.locked event and visit-lock cascade not implemented"
+    },
+    {
+      "id": "EM-PMD-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "imported_pmd has live DB FK to patients — GDPR erasure broken"
+    },
+    {
+      "id": "EM-PMD-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "checksum field is optional, not verified server-side — §7.2 invariant #4 violated"
+    },
+    {
+      "id": "EM-PMD-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "source_description maps to sourceFacility — effectively optional; §7.2 invariant #5 violated"
+    },
+    {
+      "id": "EM-PMD-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "getImportedPMD fetches record before branch authorization — IDOR window"
+    },
+    {
+      "id": "EM-PMD-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "sha256Hex() is a charcode sum not SHA-256 — in production code",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "096e455",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-PMD-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "pmd_document has live DB FKs to dental_visit, patients, dental_memberships, dental_branch"
+    },
+    {
+      "id": "EM-PMD-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No 405 route-level rejection for PATCH/PUT/DELETE on imported PMDs"
+    },
+    {
+      "id": "EM-PMD-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listPMDs pagination is post-hoc — incorrect total count returned"
+    },
+    {
+      "id": "EM-PMD-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "generatePMD allows staff_full to generate PMDs — spec restricts to dentist roles"
+    },
+    {
+      "id": "EM-PMD-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "membership null not guarded before use — undefined dereference at runtime"
+    },
+    {
+      "id": "EM-PMD-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "exportPMD calls JSON.parse(pmd.content) without error guard — throws 500 on corrupt content"
+    },
+    {
+      "id": "EM-PMD-012",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "API contract uses path param :patientId; impl uses query param ?patientId="
+    },
+    {
+      "id": "EM-PMD-013",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PMDDocument frontend type missing branchId field"
+    },
+    {
+      "id": "EM-PMD-014",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "pmd-import.tsx requires JSON content; API contract accepts PDF/XML multipart"
+    },
+    {
+      "id": "EM-SCHED-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Cancel endpoint ignores reason query param — spec defines query param, impl reads body"
+    },
+    {
+      "id": "EM-SCHED-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "checkInAppointment returns {appointment, visitId} — contract mandates {data: {appointment_id, visit_id}}"
+    },
+    {
+      "id": "EM-SCHED-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "useQueueBoard raw fetch() with no auth headers — returns 401 in production"
+    },
+    {
+      "id": "EM-SCHED-004",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "cancelAppointment swallows JSON parse errors"
+    },
+    {
+      "id": "EM-SCHED-005",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listAppointments returns raw array not {data, meta} envelope"
+    },
+    {
+      "id": "EM-SCHED-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "buildAppointmentPayload calls Zustand store outside React context"
+    },
+    {
+      "id": "EM-VISIT-001",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "carryOverTreatments restore path has no patientId filter — cross-patient treatment IDOR"
+    },
+    {
+      "id": "EM-VISIT-002",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "upsertDentalChart and updateTooth never check visit.status — charts of completed/locked visits writable"
+    },
+    {
+      "id": "EM-VISIT-003",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "updateDentalTreatment calls assertBranchRole inside if (visit) — orphaned treatment auth skipped"
+    },
+    {
+      "id": "EM-VISIT-004",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-007 immutability guards verified status only — performed treatment freely patchable"
+    },
+    {
+      "id": "EM-VISIT-005",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "VISIT_HAS_OPEN_TREATMENTS block absent from MODULE_SPEC and API_CONTRACTS"
+    },
+    {
+      "id": "EM-VISIT-006",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-001 relies solely on DB unique index — application-level 409 never returned"
+    },
+    {
+      "id": "EM-VISIT-007",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "upsertVisitNotes does not block writes on completed visit (only locked)"
+    },
+    {
+      "id": "EM-VISIT-008",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "carryOverTreatments auto-discovers up to 5 previous visits — contradicts source_visit_id contract"
+    },
+    {
+      "id": "EM-VISIT-009",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "initializeDentition does not throw DENTITION_ALREADY_INITIALIZED 409"
+    },
+    {
+      "id": "EM-VISIT-010",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Inline price editor renders for performed/verified treatments — EC4 immutability not enforced in UI"
+    },
+    {
+      "id": "EM-VISIT-011",
+      "source": "oli-enforce-module",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "window.confirm used for irreversible visit-lock action — blocks automated testing"
+    },
+    {
+      "id": "EM-VISIT-012",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "TRANSITION_LABELS has dead entries in TreatmentPlansSheet"
+    },
+    {
+      "id": "EM-VISIT-013",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "useSaveToothFlow silently drops treatment-save failure"
+    },
+    {
+      "id": "EM-VISIT-014",
+      "source": "oli-enforce-module",
+      "severity": "P3",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "getTreatmentPlan includes declined treatments in totalEstimateCents"
+    },
+    {
+      "id": "EF-AUDIT-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-audit",
+      "file": "getAuditEvents.ts:21",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Admin role check instead of dentist_owner"
+    },
+    {
+      "id": "EF-AUDIT-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-audit",
+      "file": "getAuditEvents.ts:30",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No assertBranchAccess — cross-branch data leak"
+    },
+    {
+      "id": "EF-AUDIT-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-audit",
+      "file": "route-registration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No 405 routes for PATCH/PUT/DELETE on audit events"
+    },
+    {
+      "id": "EF-AUDIT-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-audit",
+      "file": "audit-logger.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Writes are synchronous inline — not async via pg-boss"
+    },
+    {
+      "id": "EF-AUDIT-005",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-audit",
+      "file": "getAuditEvents.ts:34-37",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Query params from/to, limit/offset vs spec date_from/date_to, page/per_page"
+    },
+    {
+      "id": "EF-AUDIT-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-audit",
+      "file": "getAuditEvents.ts:34",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Default limit 50 max 200 vs spec default 20 max 100"
+    },
+    {
+      "id": "EF-AUDIT-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-audit",
+      "file": "retention-job",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Does not cover dental_audit_log table"
+    },
+    {
+      "id": "EF-AUDIT-008",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-audit",
+      "file": "audit_log_entry.details",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "reason and metadata JSONB fields are open PHI vectors"
+    },
+    {
+      "id": "EF-AUDIT-009",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-audit",
+      "file": "observability",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "audit_events_written_total metric absent"
+    },
+    {
+      "id": "EF-BILL-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "createDentalInvoice.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "taxRate accepted from client — BR-010 violation"
+    },
+    {
+      "id": "EF-BILL-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "issueDentalInvoice.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "staff_full excluded from allowed roles"
+    },
+    {
+      "id": "EF-BILL-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "recordDentalPayment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Accepts payment on draft invoices"
+    },
+    {
+      "id": "EF-BILL-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "voidDentalInvoice.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Void reason captured but never stored"
+    },
+    {
+      "id": "EF-BILL-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "all-billing-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-007/008/009 never emitted"
+    },
+    {
+      "id": "EF-BILL-006",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "createDentalInvoice.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Invoice number generation race condition"
+    },
+    {
+      "id": "EF-BILL-007",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "createPaymentPlan.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "patientId caller-controlled (IDOR)"
+    },
+    {
+      "id": "EF-BILL-008",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "listDentalInvoices.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No branchId scope guard"
+    },
+    {
+      "id": "EF-BILL-009",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "voidDentalInvoice.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "overdue→voided transition not handled"
+    },
+    {
+      "id": "EF-BILL-010",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "payment-plan-view.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "formatPlanStatus maps camelCase onTrack vs DB snake_case on_track — labels always blank"
+    },
+    {
+      "id": "EF-BILL-011",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-billing",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "GET /dental/patients/:id/statement endpoint missing"
+    },
+    {
+      "id": "EF-BILL-012",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-billing",
+      "file": "listDentalInvoices.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "date_from/date_to filter params absent"
+    },
+    {
+      "id": "EF-BILL-013",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-billing",
+      "file": "createDentalPaymentPlan.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No installment-count upper bound"
+    },
+    {
+      "id": "EF-BILL-014",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-billing",
+      "file": "applyDentalDiscount.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No dentist_owner role gate on discount endpoint"
+    },
+    {
+      "id": "EF-BILL-015",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-billing",
+      "file": "billing-list.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Collected This Month uses createdAt not payment date"
+    },
+    {
+      "id": "EF-CLIN-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "route-registry",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "revokeConsentForm handler and route entirely absent"
+    },
+    {
+      "id": "EF-CLIN-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "createPrescription.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No visit status check before write (BR-003)"
+    },
+    {
+      "id": "EF-CLIN-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "signConsentForm.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Stale boolean check existing.signed instead of status field"
+    },
+    {
+      "id": "EF-CLIN-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "updateMedicalHistoryEntry.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Full PATCH on append-only records (AC-CLI-005)"
+    },
+    {
+      "id": "EF-CLIN-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "createPrescription.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Allergy cross-check uses caller-supplied patientId (IDOR)"
+    },
+    {
+      "id": "EF-CLIN-006",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "file": "all-clinical-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-012..DE-016 never emitted"
+    },
+    {
+      "id": "EF-CLIN-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "file": "createLabOrder.ts+updateLabOrder.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Lab order status names diverge from API contract"
+    },
+    {
+      "id": "EF-CLIN-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "file": "listPrescriptions.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Unbounded fetch-all + in-memory pagination"
+    },
+    {
+      "id": "EF-CLIN-009",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "file": "attachments-sheet.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "All tab leaks cross-visit attachments without scope guard"
+    },
+    {
+      "id": "EF-CLIN-010",
+      "source": "oli-enforce-file",
+      "severity": "P2",
+      "module": "dental-clinical",
+      "file": "unspecced-files",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "13 handler files with no spec coverage: inventory, occlusion screening, post-op templates"
+    },
+    {
+      "id": "EF-EMR-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "file": "handler-directory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Handler directory does not exist"
+    },
+    {
+      "id": "EF-EMR-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "file": "schema",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Schema / repo files do not exist"
+    },
+    {
+      "id": "EF-EMR-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-emr-integration",
+      "file": "endpoints",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No public API endpoints implemented"
+    },
+    {
+      "id": "EF-EMR-004",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "file": "route-registration",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Route registration absent"
+    },
+    {
+      "id": "EF-EMR-005",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "file": "auth",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Auth / permission enforcement absent"
+    },
+    {
+      "id": "EF-EMR-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-emr-integration",
+      "file": "business-rules",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Business rules (immutability) absent"
+    },
+    {
+      "id": "EF-IMG-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "createImagingStudy.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Request body schema diverges from contract"
+    },
+    {
+      "id": "EF-IMG-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "GET /dental/imaging/studies list handler entirely missing"
+    },
+    {
+      "id": "EF-IMG-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "POST /dental/imaging/studies/:id/images upload handler missing"
+    },
+    {
+      "id": "EF-IMG-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "All annotation endpoints absent"
+    },
+    {
+      "id": "EF-IMG-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "finding-endpoint",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "URL mismatch: impl uses images/:imageId/findings; contract uses studies/:id/findings"
+    },
+    {
+      "id": "EF-IMG-006",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "POST /dental/imaging/ceph-analyses creation endpoint missing"
+    },
+    {
+      "id": "EF-IMG-007",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "ceph-handler",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Landmark/recompute URLs diverge from contract"
+    },
+    {
+      "id": "EF-IMG-008",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "ceph_analysis.schema.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Anchors on image_id not analysis_id — structural FK mismatch"
+    },
+    {
+      "id": "EF-IMG-009",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "imaging_annotation",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "SM-01 state machine absent — no status column on imaging_annotation table"
+    },
+    {
+      "id": "EF-IMG-010",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "SM-02",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Missing not_placed initial state for landmark state machine"
+    },
+    {
+      "id": "EF-IMG-011",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "imaging_finding.schema.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "3 DB-level FKs to external modules (dental_visit, patients, dental_branch)"
+    },
+    {
+      "id": "EF-IMG-012",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "createImagingStudy.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "UNSUPPORTED_MIME_TYPE returns 400; spec defines 422"
+    },
+    {
+      "id": "EF-IMG-013",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "imaging_finding.fsm.property.test.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Test file is empty / unreadable — zero coverage"
+    },
+    {
+      "id": "EF-IMG-014",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "file": "all-imaging-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-018/019/020 never emitted"
+    },
+    {
+      "id": "EF-IMG-015",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "use-imaging-br.test.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Test file has no corresponding implementation file"
+    },
+    {
+      "id": "EF-IMG-016",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "ImagingCephRepository.upsertAnalysis",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Does not update calibration fields on conflict"
+    },
+    {
+      "id": "EF-IMG-017",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "ceph-report.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "URL uses /ceph/report (singular); handler may use /reports (plural)"
+    },
+    {
+      "id": "EF-IMG-018",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "createImagingStudy.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "MIME type check uses as any cast"
+    },
+    {
+      "id": "EF-IMG-019",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "listFindings.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Pagination always returns page size = total (bug in buildPaginationMeta)"
+    },
+    {
+      "id": "EF-IMG-020",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "deleteFinding.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Allows deletion of confirmed findings — no immutability enforcement"
+    },
+    {
+      "id": "EF-IMG-021",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "use-imaging-findings.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Errors logged to console.error only — no user feedback"
+    },
+    {
+      "id": "EF-IMG-022",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "feature-flags",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental_imaging_ceph_enabled and dental_imaging_auto_landmark never checked at runtime"
+    },
+    {
+      "id": "EF-IMG-023",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-imaging",
+      "file": "CephMgmt_updateCephLandmark",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "locked state on confirmed landmark unreachable via normal PATCH"
+    },
+    {
+      "id": "EF-ORG-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-org",
+      "file": "deactivateMember.ts:27",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "No dentist_owner role check — any active member can deactivate peers"
+    },
+    {
+      "id": "EF-ORG-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-org",
+      "file": "DentalBranchManagement_get.ts:25",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "Skips assertBranchAccess — any user can read any branch (IDOR)"
+    },
+    {
+      "id": "EF-ORG-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-org",
+      "file": "verifyPin.ts vs DentalMembershipManagement_verifyPin.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Duplicate handlers — one skips trackLastLogin; FR6.4 silently fails"
+    },
+    {
+      "id": "EF-ORG-004",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-org",
+      "file": "dental_membership schema",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "member_status enum missing invited state"
+    },
+    {
+      "id": "EF-ORG-005",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-org",
+      "file": "dental_organization.schema.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "imaging_tier on org table; spec says branch-level"
+    },
+    {
+      "id": "EF-ORG-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-org",
+      "file": "DentalOrganizationManagement_create.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Allows any authenticated user to create an org — no admin gate"
+    },
+    {
+      "id": "EF-ORG-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-org",
+      "file": "setPin.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Any branch member can change another member's PIN"
+    },
+    {
+      "id": "EF-ORG-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-org",
+      "file": "onboarding-wizard.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Creates member with no branchId validation"
+    },
+    {
+      "id": "EF-ORG-009",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-org",
+      "file": "pinRecovery.ts:98",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PIN lockout counter shared with security-question attempts"
+    },
+    {
+      "id": "EF-ORG-010",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-org",
+      "file": "listMembers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Strips pinHash only; securityAnswerHash/securityQuestion remain in response"
+    },
+    {
+      "id": "EF-ORG-011",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-org",
+      "file": "pin-select.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PinSelectMember type accepts only 4 roles; schema has 9"
+    },
+    {
+      "id": "EF-ORG-012",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-org",
+      "file": "getDashboardSummary",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "branchId guard is redundant dead code"
+    },
+    {
+      "id": "EF-PAT-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-patient",
+      "file": "addFollowUpNote.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Duplicate export with two separate non-atomic db.update() calls — clinical data race"
+    },
+    {
+      "id": "EF-PAT-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-patient",
+      "file": "addFollowUpNote.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "needsFollowUp = true set in two sequential non-atomic writes"
+    },
+    {
+      "id": "EF-PAT-003",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "audit-log",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "tenantId fallback to patientId — incorrect audit correlation"
+    },
+    {
+      "id": "EF-PAT-004",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "export-handler",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Status filter applied in-memory after fetching 10k rows"
+    },
+    {
+      "id": "EF-PAT-005",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "patients.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "as any navigation type cast"
+    },
+    {
+      "id": "EF-PAT-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "patients.tsx:onSelect",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Navigates to workspace route instead of patient profile route"
+    },
+    {
+      "id": "EF-PAT-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "csv-import-parser",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Does not handle quoted fields — malformed import on names containing comma"
+    },
+    {
+      "id": "EF-PAT-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-patient",
+      "file": "createDentalPatient.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "branchId optional creates unscoped patients that bypass all auth"
+    },
+    {
+      "id": "EF-PAT-009",
+      "source": "oli-enforce-file",
+      "severity": "P2",
+      "module": "dental-patient",
+      "file": "PatientRegistrationModal",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "displayName + single consentGiven vs spec first_name/last_name + 4 consent fields"
+    },
+    {
+      "id": "EF-PAT-010",
+      "source": "oli-enforce-file",
+      "severity": "P2",
+      "module": "dental-patient",
+      "file": "missing-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "GET /dental/patients/:id/alerts, contacts, recalls not implemented"
+    },
+    {
+      "id": "EF-PAT-011",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-patient",
+      "file": "DentalPatientSafetyFloor",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Does not include medications or conditions in response"
+    },
+    {
+      "id": "EF-PERIO-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-perio",
+      "file": "PerioChartRepository.upsertToothReading",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Partial upsert onConflictDoUpdate nullifies omitted columns — destructive partial write"
+    },
+    {
+      "id": "EF-PERIO-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-perio",
+      "file": "PerioChartRepository.getChartSummary",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "summaryDeepPocketCount counts sites not teeth (spec counts distinct teeth)"
+    },
+    {
+      "id": "EF-PERIO-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-perio",
+      "file": "perio-validation.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Deep pocket threshold is 5mm; spec (BR-P03) says 6mm"
+    },
+    {
+      "id": "EF-PERIO-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-perio",
+      "file": "all-perio-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Error codes diverge from API_CONTRACTS (PERIO_CHART_DUPLICATE vs CHART_EXISTS)"
+    },
+    {
+      "id": "EF-PERIO-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-perio",
+      "file": "completePerioChart.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "examinerMemberId resolved without branch filter — cross-branch member possible"
+    },
+    {
+      "id": "EF-PERIO-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-perio",
+      "file": "upsertToothReading.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Visit-lock check absent"
+    },
+    {
+      "id": "EF-PERIO-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-perio",
+      "file": "completePerioChart.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Wrong HTTP code on already-complete (422 vs 409)"
+    },
+    {
+      "id": "EF-PERIO-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-perio",
+      "file": "dental_perio_tooth_reading",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Missing gingival_recession and furcation columns declared in §7"
+    },
+    {
+      "id": "EF-PMD-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "file": "imported_pmd.schema.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "5 §7.2 import contract invariants violated"
+    },
+    {
+      "id": "EF-PMD-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "file": "importPMD.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Multipart file upload entirely absent — only JSON textarea"
+    },
+    {
+      "id": "EF-PMD-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "file": "file-inventory",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "GET /dental/pmd/:id/download endpoint missing"
+    },
+    {
+      "id": "EF-PMD-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "file": "route-mounting",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "generatePMD mounted at /dental/visits/:visitId/pmd not spec /dental/pmd/generate"
+    },
+    {
+      "id": "EF-PMD-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "file": "route-mounting",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "listPMDs uses query param ?patientId= not spec path param :patientId"
+    },
+    {
+      "id": "EF-PMD-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "file": "schema",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "pmd_document has 4 live FKs to external modules (§20 violation)"
+    },
+    {
+      "id": "EF-PMD-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "file": "all-pmd-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No 405 routes for PATCH/PUT/DELETE on imported PMDs"
+    },
+    {
+      "id": "EF-PMD-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "file": "listPMDs.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Post-hoc pagination — incorrect total count"
+    },
+    {
+      "id": "EF-PMD-009",
+      "source": "oli-enforce-file",
+      "severity": "P2",
+      "module": "dental-pmd",
+      "file": "frontend-type",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PMDDocument missing branchId"
+    },
+    {
+      "id": "EF-PMD-010",
+      "source": "oli-enforce-file",
+      "severity": "P2",
+      "module": "dental-pmd",
+      "file": "pmd-import.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Forces JSON content type; prevents PDF/XML imports"
+    },
+    {
+      "id": "EF-SCHED-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "createAppointment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "API field names diverge from contract: dentistMemberId/scheduledAt vs provider_id/start_at"
+    },
+    {
+      "id": "EF-SCHED-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "cancelAppointment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Cancel reason in body vs contract query param"
+    },
+    {
+      "id": "EF-SCHED-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "updateAppointment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Reschedule conflict error code CONFLICT not DOUBLE_BOOKING"
+    },
+    {
+      "id": "EF-SCHED-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "checkInAppointment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Check-in active visit returns CONFLICT not CHECKIN_ACTIVE_VISIT"
+    },
+    {
+      "id": "EF-SCHED-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "all-scheduling-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Role-based permissions not enforced — only assertBranchAccess"
+    },
+    {
+      "id": "EF-SCHED-006",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "file": "listAppointments.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "date_from/date_to range filter absent — only single date param"
+    },
+    {
+      "id": "EF-SCHED-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "AppointmentModal",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DOUBLE_BOOKING warning from API response discarded silently"
+    },
+    {
+      "id": "EF-SCHED-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "AppointmentModal",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Edit mode never populates existing appointment data — edits create duplicates"
+    },
+    {
+      "id": "EF-SCHED-009",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "check-in-flow.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Referenced in tests but file does not exist"
+    },
+    {
+      "id": "EF-SCHED-010",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "cancelAppointment.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-011 AppointmentCancelled event not emitted"
+    },
+    {
+      "id": "EF-SCHED-011",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "all-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "All 4 observability hooks missing"
+    },
+    {
+      "id": "EF-SCHED-012",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "file": "dental_appointment schema",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "checked_in_at field named checkInTime — spec divergence"
+    },
+    {
+      "id": "EF-SCHED-013",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-scheduling",
+      "file": "listQueueBoard.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Queue board FSM states deviate from spec annotation"
+    },
+    {
+      "id": "EF-SCHED-014",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-scheduling",
+      "file": "queue-handlers",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "ctx: any type cast in queue board handlers"
+    },
+    {
+      "id": "EF-VISIT-001",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-visit",
+      "file": "createDentalVisit.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-001: no concurrent active/draft visit check"
+    },
+    {
+      "id": "EF-VISIT-002",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-visit",
+      "file": "upsertDentalChart.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-003: no visit status check; completed/locked chart can be overwritten"
+    },
+    {
+      "id": "EF-VISIT-003",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-visit",
+      "file": "upsertVisitNotes.ts:35",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BR-003 incomplete: only locked blocked; completed visits notes freely editable"
+    },
+    {
+      "id": "EF-VISIT-004",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-visit",
+      "file": "updateDentalTreatment.ts:39",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Branch authorization skipped when visit is null"
+    },
+    {
+      "id": "EF-VISIT-005",
+      "source": "oli-enforce-file",
+      "severity": "P0",
+      "module": "dental-visit",
+      "file": "initializeDentition.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DENTITION_ALREADY_INITIALIZED 409 never returned"
+    },
+    {
+      "id": "EF-VISIT-006",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-visit",
+      "file": "updateDentalVisit.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "VISIT_HAS_OPEN_TREATMENTS block undeclared in spec"
+    },
+    {
+      "id": "EF-VISIT-007",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-visit",
+      "file": "upsertVisitNotes.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Note type field mismatch: impl uses SOAP fields; contract uses note_type enum + content"
+    },
+    {
+      "id": "EF-VISIT-008",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-visit",
+      "file": "dental-chart.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Inline price editor visible for performed/verified treatments"
+    },
+    {
+      "id": "EF-VISIT-009",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-visit",
+      "file": "treatment-plans-sheet.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Status labels use wrong locale format (USD vs PHP; hardcoded peso sign)"
+    },
+    {
+      "id": "EF-VISIT-010",
+      "source": "oli-enforce-file",
+      "severity": "P1",
+      "module": "dental-visit",
+      "file": "timeline-carousel.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "activeIndex not synced when visits array grows"
+    },
+    {
+      "id": "EF-VISIT-011",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-visit",
+      "file": "treatment-table.tsx",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "markDoneErrorId tracks clicked row before mutation outcome"
+    },
+    {
+      "id": "EF-VISIT-012",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-visit",
+      "file": "TreatmentTable",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "declined status in component type but useMarkTreatmentDone type lacks it"
+    },
+    {
+      "id": "EF-VISIT-013",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-visit",
+      "file": "getTreatmentPlan.ts",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "declined treatments included in totalEstimateCents"
+    },
+    {
+      "id": "EF-VISIT-014",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-visit",
+      "file": "tests",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Six key carousel tests permanently skipped via skipMockDependent alias"
+    },
+    {
+      "id": "EF-VISIT-015",
+      "source": "oli-enforce-file",
+      "severity": "P3",
+      "module": "dental-visit",
+      "file": "handleNewVisit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Mixes reactive selectors and imperative getState() for same store"
+    },
+    {
+      "id": "UJ-BILL-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "staff_full has billing: false in rbac.ts — primary payment-recording role locked out"
+    },
+    {
+      "id": "UJ-BILL-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Void fires immediately on button click — no confirmation dialog, no reason field"
+    },
+    {
+      "id": "UJ-BILL-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "pendingCount counts diagnosed|planned (non-billable) treatments — BR-009 will 422"
+    },
+    {
+      "id": "UJ-BILL-004",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WF-015 create payment plan has zero UI — entire P1 workflow unreachable"
+    },
+    {
+      "id": "UJ-BILL-005",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No receipt preview or generation (§8.4 V1 Required)"
+    },
+    {
+      "id": "UJ-BILL-006",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No discount/write-off UI — discountCents display-only"
+    },
+    {
+      "id": "UJ-BILL-007",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-billing",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Void button shown to non-owner roles — canVoid() checks only status, not role"
+    },
+    {
+      "id": "UJ-CLIN-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Lab order FSM wrong: 5 UI states vs 3 backend states — every transition 422s"
+    },
+    {
+      "id": "UJ-CLIN-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "MedicalHistoryForm calls PATCH on append-only records — overwrites prior data"
+    },
+    {
+      "id": "UJ-CLIN-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "View Medical History button opens PMD Import sheet — wrong handler wired"
+    },
+    {
+      "id": "UJ-CLIN-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Consent revoke flow entirely absent from UI"
+    },
+    {
+      "id": "UJ-CLIN-005",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Amendment form has no error display — console.error only"
+    },
+    {
+      "id": "UJ-CLIN-006",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Prescription Save disabled for hygienist role even on unsigned consent"
+    },
+    {
+      "id": "UJ-IMG-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Imaging tier gate absent from UI — free tier users reach upload silently"
+    },
+    {
+      "id": "UJ-IMG-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "XSS via unsanitized SVG label text — annotation text rendered to DOM",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "61ed52c",
+      "resolved_reason": "already-fixed-jsx"
+    },
+    {
+      "id": "UJ-IMG-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Calibration PATCH uses bare fetch() without credentials: include — 401 in authenticated sessions"
+    },
+    {
+      "id": "UJ-IMG-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Split-brain from duplicate useImagingStudy hook instances"
+    },
+    {
+      "id": "UJ-IMG-005",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "handleLockAll concurrent mutations break optimistic rollback"
+    },
+    {
+      "id": "UJ-IMG-006",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "IndexedDB connection leak — useImagingCache opens new IDB connection per render"
+    },
+    {
+      "id": "UJ-IMG-007",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "API error text rendered to DOM via innerHTML — XSS from server-controlled errors",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "61ed52c",
+      "resolved_reason": "already-fixed-jsx"
+    },
+    {
+      "id": "UJ-ORG-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "recoverPin UI allows cross-tenant PIN reset — form submits without tenant validation"
+    },
+    {
+      "id": "UJ-ORG-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Deployed verifyPin facade skips trackLastLogin — FR6.4 activity visibility silently fails"
+    },
+    {
+      "id": "UJ-ORG-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "PIN session timer starts at login not last activity — dentists logged out during active use",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "ab78a03",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "UJ-ORG-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "localStorage PIN session keys never written — PIN selection shows empty member list every load",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "48f1d4a",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "UJ-ORG-005",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Security question answers stored in localStorage — XSS-accessible credential exposure"
+    },
+    {
+      "id": "UJ-ORG-006",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PIN reset flow has no rate limiting in UI — brute-force via UI possible"
+    },
+    {
+      "id": "UJ-PAT-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Medical alerts absent from PatientProfilePage — safety-critical display gap"
+    },
+    {
+      "id": "UJ-PAT-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Guardian/contact entirely absent from patient profile UI"
+    },
+    {
+      "id": "UJ-PAT-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Client-side search double-filters — pagination breaks"
+    },
+    {
+      "id": "UJ-PAT-004",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No empty state for patient profile tabs"
+    },
+    {
+      "id": "UJ-PAT-005",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Archive confirmation dialog absent — irreversible action with no friction"
+    },
+    {
+      "id": "UJ-PMD-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Checksum never sent in import payload — every import rejected on strict validation"
+    },
+    {
+      "id": "UJ-PMD-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No file upload input — import UI only shows JSON textarea"
+    },
+    {
+      "id": "UJ-PMD-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No PMD list route — existing imported PMDs cannot be browsed"
+    },
+    {
+      "id": "UJ-PMD-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "No download button — exported PMD URL unreachable from UI"
+    },
+    {
+      "id": "UJ-PMD-005",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PMD viewer unreachable in workspace — View PMD button not wired"
+    },
+    {
+      "id": "UJ-SCHED-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Silent error suppression on check-in — checkIn() swallows errors"
+    },
+    {
+      "id": "UJ-SCHED-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Walk-in flag _walkIn has underscore prefix — walk-in mode silently disabled"
+    },
+    {
+      "id": "UJ-SCHED-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "resolved_at": "2026-05-27",
+      "resolved_reason": "fixed in commit 80f11f7 (enforce-fix-004)",
+      "description": "Edit appointment modal calls createAppointment not updateAppointment — edits create duplicates"
+    },
+    {
+      "id": "UJ-SCHED-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Double-booking warning from API discarded at UI level"
+    },
+    {
+      "id": "UJ-SCHED-005",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Cancel appointment UI entirely absent from calendar view"
+    },
+    {
+      "id": "UJ-SCHED-006",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Check-in disconnected from queue board — checked-in patients do not appear in queue"
+    },
+    {
+      "id": "UJ-VISIT-001",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "handleNewVisit fails silently when org context is missing"
+    },
+    {
+      "id": "UJ-VISIT-002",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Pre-completion checklist disables Complete Visit on ANY warning — emergency cases uncompletable"
+    },
+    {
+      "id": "UJ-VISIT-003",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Dental chart has no baseline/proposed/completed layer switching — entryClassification dead code"
+    },
+    {
+      "id": "UJ-VISIT-004",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "useSaveToothFlow calls onSuccess before treatment mutation fires — silent data divergence"
+    },
+    {
+      "id": "UJ-VISIT-005",
+      "source": "oli-ui-journey",
+      "severity": "P0",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Accept Plan sends POST with no patient approval record or consent reference — TP-BR-007 not met"
+    },
+    {
+      "id": "UJ-VISIT-006",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "TreatmentTable receives no visitId — all mutations fire to invalid URL /dental/visits//treatments/:id"
+    },
+    {
+      "id": "UJ-VISIT-007",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Carousel activeIndex not synced after new visit created"
+    },
+    {
+      "id": "UJ-VISIT-008",
+      "source": "oli-ui-journey",
+      "severity": "P1",
+      "module": "dental-visit",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "TreatmentPlansSheet transitions plan at plan level only — no item-level completion"
+    },
+    {
+      "id": "EX-001",
+      "source": "oli-enforce-cross-module",
+      "severity": "P1",
+      "module": "dental-org",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-org circularly depends on downstream modules (billing/clinical/visit) for dashboard summary"
+    },
+    {
+      "id": "EX-002",
+      "source": "oli-enforce-cross-module",
+      "severity": "P0",
+      "module": "dental-imaging",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-imaging imports dental-clinical schema directly + has DB FK to dental_visit"
+    },
+    {
+      "id": "EX-003",
+      "source": "oli-enforce-cross-module",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-pmd bypasses facade pattern with direct repo instantiation"
+    },
+    {
+      "id": "EX-004",
+      "source": "oli-enforce-cross-module",
+      "severity": "P0",
+      "module": "dental-patient",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-patient imports from 3 downstream modules across 7 files — inverted dependency direction"
+    },
+    {
+      "id": "EX-005",
+      "source": "oli-enforce-cross-module",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-scheduling has undocumented DB FK to dental_visit.id"
+    },
+    {
+      "id": "EX-006",
+      "source": "oli-enforce-cross-module",
+      "severity": "P0",
+      "module": "GLOBAL",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "All 23 domain events (DE-001..DE-023) declared in EVENT_CONTRACTS.md are never emitted anywhere in the codebase"
+    },
+    {
+      "id": "TR-5A-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-patient",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PAT-BR-002: Minor patient guardian linkage — enforcement gap"
+    },
+    {
+      "id": "TR-5A-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-visit",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "ENC-BR-002: Chief complaint not required server-side"
+    },
+    {
+      "id": "TR-5A-003",
+      "source": "oli-trace",
+      "severity": "P0",
+      "module": "dental-visit",
+      "algorithm": "5a",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "CHART-BR-001/002/006: No baseline/proposed/completed layer separation in data model",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "b045539",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "TR-5A-004",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-visit",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "TP-BR-003/007: Treatment plan status transitions + patient approval record unimplemented"
+    },
+    {
+      "id": "TR-5A-005",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-billing",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "BILL-BR-004: Discounts require permission + reason — unenforced"
+    },
+    {
+      "id": "TR-5A-006",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-patient",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "CLAIM-BR-002/003: CDT + ICD-10 code support unimplemented"
+    },
+    {
+      "id": "TR-5A-007",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "ATT-BR-003/004: Attachment metadata + visit/procedure linkage partially present"
+    },
+    {
+      "id": "TR-5A-008",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "LF-BR-001/002: Local IDs stable; local→server mapping — SyncLog exists but entity endpoints accept no localId"
+    },
+    {
+      "id": "TR-5A-009",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-audit",
+      "algorithm": "5a",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "AUD-BR-004: Audit log must include before/after or reason — metadata silently dropped"
+    },
+    {
+      "id": "TR-5B-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5b",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "G-003: dental-clinical directly imports VisitRepository — cross-module repo import"
+    },
+    {
+      "id": "TR-5B-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5b",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "DE-019 consumer absent from dental-clinical — confirmed imaging findings never reach clinical safety floor"
+    },
+    {
+      "id": "TR-5B-003",
+      "source": "oli-trace",
+      "severity": "P0",
+      "module": "dental-audit",
+      "algorithm": "5b",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "description": "No pg-boss consumer file found for dental-audit — audit log silently empty",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "40d433c",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "TR-5B-004",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-perio",
+      "algorithm": "5b",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dental-perio uses hard CASCADE FK to dental_visit — all other modules use UUID-only refs"
+    },
+    {
+      "id": "TR-5C-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "createQueueItem/listQueueBoard/updateQueueItemStatus — MODULE_SPEC explicitly states no standalone queue table"
+    },
+    {
+      "id": "TR-5C-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Inventory management handlers — no spec coverage, wrong module"
+    },
+    {
+      "id": "TR-5C-003",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Occlusion screening handlers — no spec coverage"
+    },
+    {
+      "id": "TR-5C-004",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-clinical",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Post-op template handlers — no spec coverage"
+    },
+    {
+      "id": "TR-5C-005",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-patient",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Claims/insurance handlers — no MODULE_SPEC owner"
+    },
+    {
+      "id": "TR-5C-006",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5c",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "emr/ createConsultation/finalizeConsultation/listEMRPatients — MODULE_SPEC says future phase; active route collision"
+    },
+    {
+      "id": "TR-5D-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-billing",
+      "algorithm": "5d",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dentist_associate own patients only billing unenforced at DB level"
+    },
+    {
+      "id": "TR-5D-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-pmd",
+      "algorithm": "5d",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "PMD snapshot excludes lab orders and imaging studies — incomplete clinical snapshot"
+    },
+    {
+      "id": "TR-5D-003",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-visit",
+      "algorithm": "5d",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Visit carry-over creates new treatment rows without billing notification — DE-004 ambiguity"
+    },
+    {
+      "id": "TR-5D-004",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5d",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "G-005 PHI in audit logs — no cross-module remediation plan"
+    },
+    {
+      "id": "TR-5D-005",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5d",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "notifs module subscriptions to billing events DE-007/008 have no confirmed implementation"
+    },
+    {
+      "id": "TR-5E-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-002: Check-in partial failure — no recovery path"
+    },
+    {
+      "id": "TR-5E-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-billing",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-004: Concurrent invoice creation — no idempotency guard for same visit"
+    },
+    {
+      "id": "TR-5E-003",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-patient",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-006: GDPR patient erasure — not implemented"
+    },
+    {
+      "id": "TR-5E-004",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-visit",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-001: BR-005 discard on empty-draft visit — false positive, implemented"
+    },
+    {
+      "id": "TR-5E-005",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-007: 24h appointment reminder cron — pg-boss job registered; consumer absent"
+    },
+    {
+      "id": "TR-5E-006",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-patient",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-008: Recall auto-scheduling — createRecall exists; no E2E spec or test"
+    },
+    {
+      "id": "TR-5E-007",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Workflow 4.2: Recall scheduling step — no dedicated E2E spec"
+    },
+    {
+      "id": "TR-5E-008",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Workflow 4.6: Offline-ready clinical — Cadence CRDT not activated end-to-end"
+    },
+    {
+      "id": "TR-5E-009",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5e",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "WFG-009: Lab order completion notification — DE-015 consumer absent in notifs"
+    },
+    {
+      "id": "TR-5F-001",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-scheduling",
+      "algorithm": "5f",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "staff_scheduling check-in gate — checkInAppointment spec restricts to dentist_*; enforcement unverified"
+    },
+    {
+      "id": "TR-5F-002",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "GLOBAL",
+      "algorithm": "5f",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "Platform admin impersonation has no break-glass audit trail"
+    },
+    {
+      "id": "TR-5F-003",
+      "source": "oli-trace",
+      "severity": "P1",
+      "module": "dental-billing",
+      "algorithm": "5f",
+      "status": "NEW",
+      "first_seen": "2026-05-27",
+      "description": "dentist_associate own patients only billing — no enforcement in any layer"
+    },
+    {
+      "id": "EM-ORG-019",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "run": "run-2-dental-org-pin-batch",
+      "description": "DentalMembershipManagement_setPin route (routes.ts:857) registered without authMiddleware — route currently always 401; unauthenticated PIN set possible once authMiddleware is wired",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "61ed52c",
+      "resolved_reason": "fixed-in-code"
+    },
+    {
+      "id": "EM-ORG-020",
+      "source": "oli-enforce-module",
+      "severity": "P0",
+      "module": "dental-org",
+      "status": "RESOLVED",
+      "first_seen": "2026-05-27",
+      "run": "run-2-dental-org-pin-batch",
+      "description": "DentalMembershipManagement_verifyPin route (routes.ts:865) registered without authMiddleware — route currently always 401; facade also missing trackLastLogin (FR6.4)",
+      "resolved_at": "2026-05-27",
+      "resolved_commit": "61ed52c",
+      "resolved_reason": "fixed-in-code"
+    }
+  ],
+  "summary": {
+    "by_severity": {
+      "P0": {
+        "EC": 9,
+        "EM": 59,
+        "EF": 60,
+        "UJ": 39,
+        "EX": 4,
+        "TR": 5,
+        "total": 176
+      },
+      "P1": {
+        "EC": 5,
+        "EM": 64,
+        "EF": 60,
+        "UJ": 35,
+        "EX": 2,
+        "TR": 31,
+        "total": 197
+      },
+      "P2": {
+        "EC": 9,
+        "EM": 15,
+        "EF": 20,
+        "UJ": 15,
+        "EX": 0,
+        "TR": 0,
+        "total": 59
+      },
+      "P3": {
+        "EC": 1,
+        "EM": 20,
+        "EF": 20,
+        "UJ": 15,
+        "EX": 0,
+        "TR": 0,
+        "total": 56
+      }
+    },
+    "total_by_source": {
+      "oli-enforce-coverage": 24,
+      "oli-enforce-module": 158,
+      "oli-enforce-file": 160,
+      "oli-ui-journey": 104,
+      "oli-enforce-cross-module": 6,
+      "oli-trace": 36
+    },
+    "regressions": 0,
+    "known": 0,
+    "resolved": 19,
+    "new": 469
+  }
+}
