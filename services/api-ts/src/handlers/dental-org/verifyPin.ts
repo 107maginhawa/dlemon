@@ -12,11 +12,18 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from './repos/membership.repo';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { AuditRepository } from '@/handlers/audit/repos/audit.repo';
 import type {
   DentalMembershipManagement_verifyPinBody,
   DentalMembershipManagement_verifyPinParams,
 } from '@/generated/openapi/validators';
 
+/**
+ * Security fixes (Slice H):
+ *   CF-38/AUTH-02: assertBranchAccess ensures caller belongs to the same branch.
+ *   CF-46/AUTH-07: Audit log entry written on successful PIN verification.
+ */
 export async function DentalMembershipManagement_verifyPin(
   ctx: ValidatedContext<DentalMembershipManagement_verifyPinBody, never, DentalMembershipManagement_verifyPinParams>
 ): Promise<Response> {
@@ -31,6 +38,9 @@ export async function DentalMembershipManagement_verifyPin(
   const repo = new MembershipRepository(db, logger);
   const member = await repo.findOneById(membershipId);
   if (!member) throw new NotFoundError('Membership');
+
+  // CF-38/AUTH-02: Enforce branch-level isolation — caller must be a member of the same branch.
+  await assertBranchAccess(db, user.id, member.branchId);
 
   // Check if currently locked out
   if (repo.isLockedOut(member)) {
@@ -52,6 +62,27 @@ export async function DentalMembershipManagement_verifyPin(
     const reset = await repo.resetPinAttempts(membershipId);
     // FR6.4: Track last login for activity visibility
     await repo.trackLastLogin(membershipId);
+
+    // CF-46/AUTH-07: Write audit log entry on successful PIN verification.
+    try {
+      const auditRepo = new AuditRepository(db, logger);
+      await auditRepo.logEvent({
+        eventType: 'authentication',
+        category: 'security',
+        action: 'login',
+        outcome: 'success',
+        user: user.id,
+        userType: 'host',
+        resourceType: 'dental_membership',
+        resource: membershipId,
+        description: `PIN verified successfully for membership ${membershipId}`,
+        details: { memberId: membershipId },
+      }, user.id);
+    } catch (auditErr) {
+      // Audit failure must not block login — log and continue.
+      logger?.warn?.({ auditErr }, 'Failed to write PIN_VERIFIED audit log');
+    }
+
     return ctx.json({ success: true, failedAttempts: reset?.pinFailedAttempts ?? 0 });
   }
 
