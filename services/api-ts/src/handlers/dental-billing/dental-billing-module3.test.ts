@@ -43,7 +43,7 @@ import {
   ApplyDentalDiscountBody,
 } from '@/generated/openapi/validators';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique BRANCH_ID + MEMBER_ID (tag a04)
 const TEST_USER  = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };

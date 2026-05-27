@@ -27,7 +27,7 @@ import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.sche
 import { visitNotes } from './repos/treatment.schema';
 import { dentalAttachments } from '@/handlers/dental-clinical/repos/attachment.schema';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // ─── Fixture IDs (a06 namespace) ─────────────────────────────────────────────
 const TEST_USER   = { id: 'e6000000-0000-1000-8000-000000000001', email: 'dentist6@clinic.com' };

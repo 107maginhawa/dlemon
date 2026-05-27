@@ -12,7 +12,7 @@ import { createOrganization } from './createOrganization';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Helper: build a minimal Hono test app with auth stub and error handler
 function buildTestApp(user?: { id: string; email: string }) {

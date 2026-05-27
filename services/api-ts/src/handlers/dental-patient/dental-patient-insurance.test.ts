@@ -34,7 +34,7 @@ import { listPatientClaims } from './listPatientClaims';
 import { getClaimReadiness } from './getClaimReadiness';
 import { updateClaimStatus } from './updateClaimStatus';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique IDs (tag ins01)
 const TEST_USER = { id: 'a0000000-0000-1000-8000-000000ins0101', email: 'staff@ins01.com' };

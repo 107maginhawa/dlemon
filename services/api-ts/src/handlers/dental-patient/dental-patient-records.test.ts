@@ -24,7 +24,7 @@ import {
 import { listPatientVisits } from './listPatientVisits';
 import { listPatientConditions } from './listPatientConditions';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique IDs — b700 namespace
 const TEST_USER  = { id: 'e7000000-0000-1000-8000-000000000001', email: 'dentist7@clinic.com' };

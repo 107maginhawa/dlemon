@@ -23,7 +23,7 @@ import {
 import { createOcclusionScreening } from './createOcclusionScreening';
 import { listOcclusionScreenings } from './listOcclusionScreenings';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite tag: occ01 — unique IDs to avoid collision
 const TEST_USER  = { id: 'a0000000-0000-1000-8000-000000000002', email: 'occ@clinic.com' };

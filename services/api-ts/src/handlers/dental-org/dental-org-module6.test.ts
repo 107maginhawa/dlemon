@@ -17,7 +17,7 @@ import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000066', email: 'test@clinic.com' };
 const ORG_ID = 'eeeeeeee-0000-1000-8000-000000000066';

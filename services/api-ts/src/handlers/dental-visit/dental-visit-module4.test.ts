@@ -40,7 +40,7 @@ import { createDentalTreatment } from './createDentalTreatment';
 import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { visitNotes } from './repos/treatment.schema';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique IDs — b400 namespace for branch+member; reuse existing org owned by TEST_USER
 const TEST_USER    = { id: 'e4000000-0000-1000-8000-000000000001', email: 'dentist4@clinic.com' };

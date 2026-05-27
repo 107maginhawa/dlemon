@@ -56,7 +56,7 @@ import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const STAFF_USER_ID = 'c1000000-0000-1000-8000-000000000001';
 const authedUser = { id: STAFF_USER_ID, email: 'staff@clinic.com' };

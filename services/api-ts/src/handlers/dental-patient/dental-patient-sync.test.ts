@@ -29,7 +29,7 @@ import { createSyncLog } from './createSyncLog';
 import { listSyncLogs } from './listSyncLogs';
 import { updateSyncLog } from './updateSyncLog';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: 'a0000000-0000-1000-8000-000000000001', email: 'staff@clinic.com' };
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000044';

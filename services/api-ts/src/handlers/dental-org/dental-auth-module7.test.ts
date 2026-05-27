@@ -23,7 +23,7 @@ import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { setSecurityQuestion, recoverPin } from './pinRecovery';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000055', email: 'test@clinic.com' };
 const ORG_ID = 'eeeeeeee-0000-1000-8000-000000000055';
@@ -150,7 +150,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('recovers PIN with correct answer', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -169,7 +170,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('401 with wrong answer (normalized response)', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +184,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('no security question returns same shape as wrong answer (no info leak)', async () => {
     await seedData(); // no security question
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -197,7 +200,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('wrong answer increments failed attempts', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     // First wrong attempt
     await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
@@ -211,7 +215,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('returns 429 after too many wrong answers', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const repo = new MembershipRepository(db);
     // Exhaust attempts (threshold is 5 by default)
     for (let i = 0; i < 5; i++) {
@@ -235,7 +240,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('successful recovery resets attempt counter', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     // Make a couple wrong attempts first
     for (let i = 0; i < 2; i++) {
       await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
@@ -262,7 +268,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('400 when newPin invalid format', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -273,7 +280,8 @@ describe('POST .../recover-pin (FR9.7)', () => {
 
   test('case-insensitive answer matching', async () => {
     await setupSecurityQuestion();
-    const app = buildTestApp();
+    // CF-39/AUTH-03: recoverPin now requires authentication — pass TEST_USER
+    const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/org/members/${MEMBER_ID}/recover-pin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

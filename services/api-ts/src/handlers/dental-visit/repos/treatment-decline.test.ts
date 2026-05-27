@@ -11,7 +11,7 @@ import { openTestTx } from '@/core/test-tx';
 import { createDatabase } from '@/core/database';
 import { seedAuditWorkspace, AUDIT_IDS } from '@/tests/fixtures/audit-workspace-fixtures';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 beforeAll(async () => {
   await seedAuditWorkspace(db);

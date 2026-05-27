@@ -38,7 +38,7 @@ import { retryEmailQueueItem } from './retryEmailQueueItem';
 // DB + fixtures
 // ---------------------------------------------------------------------------
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Fixture tag: em01 — all IDs are valid UUIDs (hex only)
 const ADMIN_USER = {

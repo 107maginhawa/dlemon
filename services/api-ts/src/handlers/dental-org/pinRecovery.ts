@@ -62,8 +62,14 @@ export async function setSecurityQuestion(ctx: Context): Promise<Response> {
 }
 
 export async function recoverPin(ctx: Context): Promise<Response> {
-  // FR9.7: PIN recovery is intentionally unauthenticated — the user is locked out
-  // and cannot authenticate. The security answer is the auth mechanism here.
+  // CF-39/AUTH-03 (Slice H): recoverPin MUST be authenticated. Even though the
+  // staff member is "locked out" of PIN entry, the device owner (practice
+  // owner/admin) holds the Better-Auth session and must be authenticated before
+  // a PIN can be reset via security question. An unauthenticated endpoint would
+  // allow any internet attacker to brute-force the security question.
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
   const memberId = ctx.req.param('memberId')!;
   const rawBody = await ctx.req.json();
   const { answer, newPin } = recoverPinSchema.parse(rawBody);

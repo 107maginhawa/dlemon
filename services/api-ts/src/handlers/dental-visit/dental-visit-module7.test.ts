@@ -31,7 +31,7 @@ import { signVisitNotes } from './signVisitNotes';
 import { createVisitNoteAddendum } from './createVisitNoteAddendum';
 import { createDentalVisit } from './createDentalVisit';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique IDs — b700 namespace
 const TEST_USER  = { id: 'e7000000-0000-1000-8000-000000000001', email: 'dentist7@clinic.com' };

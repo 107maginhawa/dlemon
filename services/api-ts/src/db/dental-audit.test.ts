@@ -7,7 +7,7 @@ import { describe, test, expect } from 'bun:test';
 import { createDatabase } from '@/core/database';
 import { DentalAuditRepository } from './audit.repo';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 const repo = new DentalAuditRepository(db);
 
 const ACTOR_ID = 'a0000000-0000-1000-8000-000000000001';

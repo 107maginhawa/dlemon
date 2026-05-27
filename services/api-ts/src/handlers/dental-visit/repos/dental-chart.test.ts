@@ -16,7 +16,7 @@ import { createDatabase } from '@/core/database';
 import { seedAuditWorkspace, AUDIT_IDS } from '@/tests/fixtures/audit-workspace-fixtures';
 
 // Prerequisite: seed FK targets into the real DB (committed; visible to all test TXs).
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 beforeAll(async () => {
   await seedAuditWorkspace(db);

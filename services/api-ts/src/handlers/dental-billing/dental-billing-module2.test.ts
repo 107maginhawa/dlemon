@@ -28,7 +28,7 @@ import { getPatientBalance } from './getPatientBalance';
 import { getCollectionsSummary } from './getCollectionsSummary';
 import { getDentalPaymentReceipt } from './getDentalPaymentReceipt';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const FIXED_NOW = new Date('2026-01-15T12:00:00Z');
 const FIXED_NOW_MS = FIXED_NOW.getTime();

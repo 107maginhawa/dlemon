@@ -43,7 +43,7 @@ import {
 } from '@/generated/openapi/validators';
 import { z } from 'zod';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Fixed test IDs — valid UUID v1 format (all hex chars)
 const TEST_USER_ID    = 'a0000000-0000-1000-8000-000000000001';

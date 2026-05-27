@@ -31,7 +31,7 @@ import { listAppointments } from './listAppointments';
 import { checkInAppointment } from './checkInAppointment';
 import { cancelAppointment } from './cancelAppointment';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique tag: ac1 — avoids membership unique-index collision with other scheduling test suites
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };

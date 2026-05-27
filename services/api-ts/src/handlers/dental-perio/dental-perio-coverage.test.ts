@@ -38,7 +38,7 @@ import { getVisitPerioChart } from './getVisitPerioChart';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
-const DB_URL = 'postgres://postgres:password@localhost:5432/monobase';
+const DB_URL = process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test';
 const db = createDatabase({ url: DB_URL });
 
 // ee-prefix = perio-coverage suite namespace (all valid hex)

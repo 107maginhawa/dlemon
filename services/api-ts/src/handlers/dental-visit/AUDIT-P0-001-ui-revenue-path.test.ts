@@ -36,7 +36,7 @@ import { createDentalTreatment } from './createDentalTreatment';
 import { listDentalTreatments } from './listDentalTreatments';
 import { updateDentalTreatment } from './updateDentalTreatment';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-0000000000a1', email: 'audit-p0001@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-0000000000a1';

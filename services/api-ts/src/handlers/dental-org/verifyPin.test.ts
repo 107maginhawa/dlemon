@@ -22,7 +22,7 @@ import {
   DentalMembershipManagement_setPinBody,
 } from '@/generated/openapi/validators';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const ORG_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000001';
@@ -99,7 +99,18 @@ describe('verifyPin handler', () => {
     await orgRepo.createOne({ id: ORG_ID, name: 'Test Clinic', tier: 'solo', ownerPersonId: PERSON_ID, countryCode: 'PH', active: true });
     const branchRepo = new BranchRepository(db);
     await branchRepo.createOne({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', active: true });
-    return new MembershipRepository(db);
+    const membershipRepo = new MembershipRepository(db);
+    // CF-38/AUTH-02: authedUser must have an active membership in the branch
+    // for assertBranchAccess to pass in verifyPin/setPin handlers.
+    await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      personId: PERSON_ID,
+      displayName: 'Owner Dr.',
+      role: 'dentist_owner',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    return membershipRepo;
   }
 
   test('returns 401 when unauthenticated', async () => {
@@ -253,7 +264,18 @@ describe('setPin handler', () => {
     await orgRepo.createOne({ id: ORG_ID, name: 'Test Clinic', tier: 'solo', ownerPersonId: PERSON_ID, countryCode: 'PH', active: true });
     const branchRepo = new BranchRepository(db);
     await branchRepo.createOne({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', active: true });
-    return new MembershipRepository(db);
+    const membershipRepo = new MembershipRepository(db);
+    // CF-38/AUTH-02: authedUser must have an active membership in the branch
+    // for assertBranchAccess to pass in setPin handler.
+    await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      personId: PERSON_ID,
+      displayName: 'Owner Dr.',
+      role: 'dentist_owner',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    return membershipRepo;
   }
 
   test('returns 401 when unauthenticated', async () => {

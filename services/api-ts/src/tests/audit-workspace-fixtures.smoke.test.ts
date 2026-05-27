@@ -11,7 +11,7 @@ import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { dentalTreatments } from '@/handlers/dental-visit/repos/treatment.schema';
 import { dentalCharts } from '@/handlers/dental-visit/repos/dental-chart.schema';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 beforeAll(async () => {
   // Run twice to confirm idempotency.

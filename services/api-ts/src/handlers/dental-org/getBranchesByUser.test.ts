@@ -7,7 +7,7 @@ import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { getBranchesByUser } from './getBranchesByUser';
 
-const DB_URL = 'postgres://postgres:password@localhost:5432/monobase';
+const DB_URL = process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test';
 const db = createDatabase({ url: DB_URL });
 
 // ff-prefix namespace — no collision with ee (perio), dd (module6), etc.

@@ -33,7 +33,7 @@ const testConfig: Pick<Config, 'logging'> & Partial<Config> = {
   logging: { level: 'info', pretty: false },
 } as unknown as Config;
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const STAFF_USER = { id: 'c1000000-0000-1000-8000-000000000001', email: 'staff@clinic.com' };
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';

@@ -49,7 +49,7 @@ import { updateDentalTreatment } from './updateDentalTreatment';
 import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
 import { initializeDentition } from './initializeDentition';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: 'e1000000-0000-1000-8000-000000000001', email: 'dentist@clinic.com' };
 const PATIENT_ID = 'f1000000-0000-1000-8000-000000000001';

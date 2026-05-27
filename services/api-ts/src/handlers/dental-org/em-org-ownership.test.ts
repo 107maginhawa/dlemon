@@ -31,7 +31,7 @@ import {
   DentalOrganizationManagement_updateBody,
 } from '@/generated/openapi/validators';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const ORG_ID = 'a0000000-0000-1000-8000-00000000ee01';
 const BRANCH_ID = 'b0000000-0000-1000-8000-00000000ee01';

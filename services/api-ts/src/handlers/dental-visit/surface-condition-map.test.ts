@@ -29,7 +29,7 @@ import { updateTooth } from './updateTooth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
-const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Unique IDs for this suite (tag a09 avoids collisions with other suites)
 const TEST_USER      = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };

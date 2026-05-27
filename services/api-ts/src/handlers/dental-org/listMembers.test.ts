@@ -15,7 +15,7 @@ import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const ORG_ID    = 'a3000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b3000000-0000-1000-8000-000000000001';

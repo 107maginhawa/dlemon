@@ -82,7 +82,7 @@ import { VisitRepository } from './dental-visit/repos/visit.repo';
 import { persons } from './person/repos/person.schema';
 import { patients } from './patient/repos/patient.schema';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Suite-unique IDs (g2s1 / ff00 namespace)

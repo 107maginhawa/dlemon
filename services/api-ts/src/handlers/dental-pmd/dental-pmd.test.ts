@@ -30,7 +30,7 @@ import {
   ListPMDsQuery,
 } from '@/generated/openapi/validators';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique BRANCH_ID + membership id (tag a04) breaks the cross-suite
 // collision on dental_membership's (person_id, branch_id) partial unique index.

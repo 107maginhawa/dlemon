@@ -24,7 +24,7 @@ import { Pool, type PoolClient } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-const TEST_DB_URL = 'postgres://postgres:password@localhost:5432/monobase';
+const TEST_DB_URL = process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test';
 
 // Shared pool — one Pool per process, not one per test.
 // max: 2 keeps per-worker connections low. With ~20 parallel bun test workers

@@ -45,7 +45,7 @@ import { createLabOrder } from './createLabOrder';
 import { updateLabOrder } from './updateLabOrder';
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique tag: ac2 — avoids membership unique-index collision with other clinical suites
 const TEST_USER  = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };

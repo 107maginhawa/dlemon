@@ -23,7 +23,7 @@ import { seedClinicalChain, CHAIN_IDS } from './fixtures/seed-clinical-chain';
 // Real DB + repo
 // ---------------------------------------------------------------------------
 
-const db = createDatabase({ url: 'postgres://postgres:password@localhost:5432/monobase' });
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 const repo = new AttachmentRepository(db);
 
 // ---------------------------------------------------------------------------
