@@ -40,10 +40,12 @@ export async function voidDentalPayment(
 
   // Resolve membership ID from personId + branchId
   const membership = await getActiveMembershipId(db, session.userId, payment.branchId);
+  if (!membership) {
+    throw new BusinessLogicError('No active membership found for current user in this branch', 'NO_ACTIVE_MEMBERSHIP');
+  }
 
   // Void the payment
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const voided = await paymentRepo.voidPayment(paymentId, body.voidReason, membership!.id);
+  const voided = await paymentRepo.voidPayment(paymentId, body.voidReason, membership.id);
 
   // Reverse the amount on the invoice
   const invoiceRepo = new DentalInvoiceRepository(db);
