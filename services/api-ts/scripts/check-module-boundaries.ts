@@ -20,6 +20,10 @@ const ALLOWED_CROSS_MODULE = new Set(['shared']);
 /** Modules that may import from any other module's repos (legitimate hubs). */
 const EXEMPT_SOURCE_MODULES = new Set(['shared']);
 const IS_ERROR_MODE = process.argv.includes('--error');
+const FILTER_MODULE = (() => {
+  const idx = process.argv.indexOf('--module');
+  return idx !== -1 ? process.argv[idx + 1] : null;
+})();
 
 interface Violation {
   file: string;
@@ -43,14 +47,14 @@ async function getTypeScriptFiles(dir: string): Promise<string[]> {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       results.push(...(await getTypeScriptFiles(fullPath)));
-    } else if (entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+    } else if (entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.facade.ts')) {
       results.push(fullPath);
     }
   }
   return results;
 }
 
-const CROSS_REPO_IMPORT = /from ['"]@\/handlers\/([^/]+)\/repos\//g;
+const CROSS_REPO_IMPORT = /from ['"](@\/handlers\/([^/]+)\/repos\/[^'"]+)['"]/g;
 
 async function checkModule(moduleName: string, violations: Violation[]): Promise<void> {
   const moduleDir = join(HANDLERS_DIR, moduleName);
@@ -68,16 +72,18 @@ async function checkModule(moduleName: string, violations: Violation[]): Promise
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       let match: RegExpExecArray | null;
-      const re = /from ['"]@\/handlers\/([^/]+)\/repos\//g;
+      const re = /from ['"](@\/handlers\/([^/]+)\/repos\/[^'"]+)['"]/g;
       while ((match = re.exec(line)) !== null) {
-        const importedModule = match[1];
+        const [, fullImportPath, importedModule] = match;
+        // Facade imports are allowed — they are the migration destination
+        if (fullImportPath.endsWith('.facade') || fullImportPath.includes('.facade.ts')) continue;
         if (importedModule !== moduleName && !ALLOWED_CROSS_MODULE.has(importedModule) && !EXEMPT_SOURCE_MODULES.has(moduleName)) {
           violations.push({
             file: relative(join(HANDLERS_DIR, '..', '..'), filePath),
             module: moduleName,
             importedModule,
             line: i + 1,
-            importPath: match[0].replace("from '", '').replace("from \"", '').replace(/['"]/g, ''),
+            importPath: fullImportPath,
           });
         }
       }
@@ -91,21 +97,30 @@ async function main() {
 
   await Promise.all(modules.map((m) => checkModule(m, violations)));
 
-  if (violations.length === 0) {
-    console.log('✅ No cross-module repo boundary violations found.');
+  // Apply per-module filter if --module flag provided
+  const activeViolations = FILTER_MODULE
+    ? violations.filter(v => v.module === FILTER_MODULE)
+    : violations;
+
+  if (activeViolations.length === 0) {
+    if (FILTER_MODULE) {
+      console.log(`✅ No cross-module repo boundary violations found in module [${FILTER_MODULE}].`);
+    } else {
+      console.log('✅ No cross-module repo boundary violations found.');
+    }
     process.exit(0);
   }
 
   // Group by module for readability
   const byModule = new Map<string, Violation[]>();
-  for (const v of violations) {
+  for (const v of activeViolations) {
     const key = v.module;
     if (!byModule.has(key)) byModule.set(key, []);
     byModule.get(key)!.push(v);
   }
 
   const emoji = IS_ERROR_MODE ? '❌' : '⚠️';
-  console.log(`\n${emoji} Cross-module repo boundary violations (${violations.length} total)\n`);
+  console.log(`\n${emoji} Cross-module repo boundary violations (${activeViolations.length} total)\n`);
   console.log('Rule: handlers/{A}/ must not import from handlers/{B}/repos/ unless B="shared"');
   console.log('Fix:  expose a facade function in module B that returns only what A needs.\n');
 
