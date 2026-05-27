@@ -17,6 +17,7 @@ services:
       - test-network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z

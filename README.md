@@ -307,6 +307,11 @@ on every PR (`.github/workflows/contract.yml`).
 ### Unit & Integration Tests (TypeScript impl)
 ```bash
 cd services/api-ts
+
+# First time only: create and migrate the test database
+bun run db:setup:test
+
+# Run the test suite (routes to monobase_test automatically)
 bun test
 ```
 
