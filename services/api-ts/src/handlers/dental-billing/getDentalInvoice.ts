@@ -11,11 +11,8 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { eq } from 'drizzle-orm';
-import { patients } from '@/handlers/patient/repos/patient.schema';
-import { persons } from '@/handlers/person/repos/person.schema';
-import { dentalInvoices } from './repos/dental-invoice.schema';
-import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient-billing.facade';
+import { getVisitForBilling } from '@/handlers/dental-visit/repos/visit-billing.facade';
 
 export async function getDentalInvoice(
   ctx: ValidatedContext<never, never, any>
@@ -38,26 +35,16 @@ export async function getDentalInvoice(
   const payments = await paymentRepo.findByInvoice(invoiceId);
 
   // Resolve patient name
-  const patientRows = await db
-    .select({ firstName: persons.firstName, lastName: persons.lastName })
-    .from(patients)
-    .leftJoin(persons, eq(persons.id, patients.person))
-    .where(eq(patients.id, result.invoice.patientId));
-
-  const personRow = patientRows[0];
-  const patientName = personRow?.firstName
-    ? [personRow.firstName, personRow.lastName].filter(Boolean).join(' ')
+  const patientRow = await getPatientWithPersonForInvoice(db, result.invoice.patientId);
+  const patientName = patientRow?.firstName
+    ? [patientRow.firstName, patientRow.lastName].filter(Boolean).join(' ')
     : undefined;
 
   // Resolve visit date (visitId is nullable on invoice)
   let visitDate: Date | null | undefined;
   if (result.invoice.visitId) {
-    const visitRows = await db
-      .select({ activatedAt: dentalVisits.activatedAt, completedAt: dentalVisits.completedAt })
-      .from(dentalVisits)
-      .where(eq(dentalVisits.id, result.invoice.visitId));
-    const visitRow = visitRows[0];
-    visitDate = visitRow?.activatedAt ?? visitRow?.completedAt;
+    const visit = await getVisitForBilling(db, result.invoice.visitId);
+    visitDate = visit?.completedAt;
   }
 
   // Map line items: rename amountCents → priceCents for frontend compatibility

@@ -12,7 +12,7 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { applyDiscountRate } from './utils/rounding';
 import { logAuditEvent } from '@/core/audit-logger';
-import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 
 export async function applyDentalDiscount(
   ctx: ValidatedContext<any, never, any>
@@ -47,7 +47,7 @@ export async function applyDentalDiscount(
   const taxRate = Number(invoice.taxRate);
 
   const updated = await repo.applyDiscount(invoiceId, discountCents, taxRate, body.reason.trim(), session.userId);
-  const branchForAudit = await new BranchRepository(db).findOneById(invoice.branchId);
+  const branchForAudit = await getBranchOrgId(db, invoice.branchId);
   await logAuditEvent(db, ctx.get('logger'), {
     personId: session.userId,
     tenantId: branchForAudit?.organizationId ?? invoice.branchId,

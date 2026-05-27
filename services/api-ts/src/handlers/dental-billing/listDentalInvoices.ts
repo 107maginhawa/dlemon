@@ -12,11 +12,10 @@ import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { dentalInvoices } from './repos/dental-invoice.schema';
-import { patients } from '@/handlers/patient/repos/patient.schema';
-import { persons } from '@/handlers/person/repos/person.schema';
-import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient-billing.facade';
+import { getVisitForBilling } from '@/handlers/dental-visit/repos/visit-billing.facade';
 
 export async function listDentalInvoices(
   ctx: ValidatedContext<never, any, never>
@@ -59,31 +58,23 @@ export async function listDentalInvoices(
       voidedAt: dentalInvoices.voidedAt,
       createdAt: dentalInvoices.createdAt,
       updatedAt: dentalInvoices.updatedAt,
-      // Patient name from person table
-      firstName: persons.firstName,
-      lastName: persons.lastName,
-      // Visit date
-      visitActivatedAt: dentalVisits.activatedAt,
-      visitCompletedAt: dentalVisits.completedAt,
     })
     .from(dentalInvoices)
-    .leftJoin(patients, eq(patients.id, dentalInvoices.patientId))
-    .leftJoin(persons, eq(persons.id, patients.person))
-    .leftJoin(dentalVisits, eq(dentalVisits.id, dentalInvoices.visitId))
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-  const invoices = rows.map((row) => {
-    const { firstName, lastName, visitActivatedAt, visitCompletedAt, ...inv } = row;
-    const patientName = firstName
-      ? [firstName, lastName].filter(Boolean).join(' ')
+  const invoices = await Promise.all(rows.map(async (inv) => {
+    const patientRow = await getPatientWithPersonForInvoice(db, inv.patientId);
+    const patientName = patientRow?.firstName
+      ? [patientRow.firstName, patientRow.lastName].filter(Boolean).join(' ')
       : undefined;
-    const visitDate = visitActivatedAt ?? visitCompletedAt ?? undefined;
-    return {
-      ...inv,
-      patientName,
-      visitDate: visitDate ? visitDate.toISOString().split('T')[0] : undefined,
-    };
-  });
+    let visitDate: string | undefined;
+    if (inv.visitId) {
+      const visit = await getVisitForBilling(db, inv.visitId);
+      const d = visit?.completedAt;
+      visitDate = d ? d.toISOString().split('T')[0] : undefined;
+    }
+    return { ...inv, patientName, visitDate };
+  }));
 
   const { limit, offset } = parsePagination(query);
   const total = invoices.length;

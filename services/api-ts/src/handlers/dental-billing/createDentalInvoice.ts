@@ -6,13 +6,12 @@
  * and creates line items from CDT codes and prices.
  */
 
-import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
-import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
-import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
+import { getTreatmentsForInvoice, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
+import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/consent-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
@@ -29,20 +28,15 @@ export async function createDentalInvoice(
   await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   // BR-011: signed consent form required before invoicing
-  const [signedConsent] = await db
-    .select({ id: consentForms.id })
-    .from(consentForms)
-    .where(and(eq(consentForms.visitId, body.visitId), eq(consentForms.signed, true)))
-    .limit(1);
-  if (!signedConsent) {
+  const hasSigned = await hasSignedConsentForVisit(db, body.visitId);
+  if (!hasSigned) {
     throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');
   }
 
   const invoiceRepo = new DentalInvoiceRepository(db);
-  const treatmentRepo = new TreatmentRepository(db);
 
   // Fetch performed/verified treatments for the visit
-  const treatments = await treatmentRepo.findByVisit(body.visitId);
+  const treatments = await getTreatmentsForInvoice(db, body.visitId);
   const billable = treatments.filter(t => t.status === 'performed' || t.status === 'verified');
 
   if (billable.length === 0) {
@@ -103,7 +97,7 @@ export async function createDentalInvoice(
   const createdLineItems = await invoiceRepo.createLineItems(lineItems);
 
   // Mark treatments as billed to prevent double-billing (S1-T7)
-  await treatmentRepo.setBilledInvoiceId(billable.map(t => t.id), invoice.id);
+  await markTreatmentsAsBilled(db, billable.map(t => t.id), invoice.id);
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

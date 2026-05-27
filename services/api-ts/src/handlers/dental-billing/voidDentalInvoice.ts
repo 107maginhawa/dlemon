@@ -12,7 +12,7 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
-import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 
 export async function voidDentalInvoice(
   ctx: ValidatedContext<never, never, any>
@@ -53,7 +53,7 @@ export async function voidDentalInvoice(
     { requestId: ctx.get('requestId'), action: 'dental_invoice_void', invoiceId, branchId: invoice.branchId, by: session.userId },
     'Dental invoice voided',
   );
-  const branchForAudit = await new BranchRepository(db).findOneById(invoice.branchId);
+  const branchForAudit = await getBranchOrgId(db, invoice.branchId);
   await logAuditEvent(db, logger, {
     personId: session.userId,
     tenantId: branchForAudit?.organizationId ?? invoice.branchId,
