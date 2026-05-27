@@ -6,6 +6,7 @@
  * Only completed or locked visits can generate a PMD.
  */
 
+import { createHash } from 'node:crypto';
 import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
@@ -19,11 +20,15 @@ import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema
 import type { User } from '@/types/auth';
 import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
 
+/**
+ * EM-PMD-005: Real SHA-256 via node:crypto.
+ * NOTE: Prior implementation used a charcode sum producing a 16-char hex.
+ * Existing PMD documents in the DB retain those legacy checksums; they are
+ * not cryptographically valid but are acceptable for V1. New documents use
+ * the standard 64-char SHA-256 hex digest.
+ */
 function sha256Hex(content: string): string {
-  // Simple checksum using content length + first/last chars for demo
-  // In production use node:crypto
-  const sum = content.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return `sha256-${sum.toString(16).padStart(16, '0')}`;
+  return `sha256-${createHash('sha256').update(content).digest('hex')}`;
 }
 
 export async function generatePMD(
