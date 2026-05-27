@@ -1,5 +1,10 @@
 # Account App
 
+> **⚠️ FROZEN — Upstream Template Reference**
+> This app is a frozen upstream reference implementation from `mono-js-lf`. Do NOT add product features here.
+> All product development happens in `apps/dentalemon/`. Pull upstream auth/account patterns from here only.
+> See `CLAUDE.md` for the authoritative workspace guide.
+
 User-facing web application for the Monobase Application Platform. Built with modern React patterns for account management and user authentication.
 
 ## Tech Stack
