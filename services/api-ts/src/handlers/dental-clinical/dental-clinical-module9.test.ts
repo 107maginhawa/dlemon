@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, afterEach, beforeAll, beforeEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
@@ -41,9 +41,17 @@ beforeAll(async () => {
   const { persons } = await import('@/handlers/person/repos/person.schema');
   const { patients } = await import('@/handlers/patient/repos/patient.schema');
   const { dentalVisits } = await import('@/handlers/dental-visit/repos/visit.schema');
+
+  // Clean up stale state from previous runs — unique(person_id, branch_id) on dental_membership
+  // can block insert if a previous run used a different membership id for this person+branch pair.
+  await db.execute(sql`DELETE FROM dental_visit WHERE id = ${VISIT_ID}`);
+  await db.delete(dentalMemberships).where(
+    and(eq(dentalMemberships.personId, TEST_USER.id), eq(dentalMemberships.branchId, BRANCH_ID))
+  );
+
   await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'Module9 Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
-  await db.insert(dentalMemberships).values({ id: 'ee900000-0000-1000-8000-000000000009', branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test User', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Test User', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalVisits).values({ id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();

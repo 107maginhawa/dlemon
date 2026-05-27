@@ -8,83 +8,18 @@
 (fail) authMiddleware > internal service token bypasses auth
 (fail) CORS Configuration > createOriginValidator > should allow explicit origins
 (fail) CORS Configuration > createOriginValidator > should work in strict mode with only explicit origins
-(fail) BR-001: no two active visits for same patient > checkInAppointment blocks via ConflictError when active visit exists (repo-level invariant)
-(fail) BR-001: no two active visits for same patient > findInProgressByPatient returns null when no in-progress visit
-(fail) BR-001: no two active visits for same patient > findInProgressByPatient returns the existing draft/active visit
-(fail) BR-001: no two active visits for same patient > two patients can each have one active visit at the same time
 (fail) BR-002: visit state transitions are linear, no reversal > forward transition active → completed succeeds (200)
-(fail) BR-002: visit state transitions are linear, no reversal > forward transition completed → locked succeeds (200)
-(fail) BR-002: visit state transitions are linear, no reversal > forward transition draft → active succeeds (200)
-(fail) BR-002: visit state transitions are linear, no reversal > reverse transition: cannot modify a locked visit at all (4xx VISIT_LOCKED)
-(fail) BR-002: visit state transitions are linear, no reversal > reverse transition: cannot transition active → draft (4xx VISIT_TRANSITION_INVALID)
-(fail) BR-002: visit state transitions are linear, no reversal > reverse transition: cannot transition completed → active (4xx VISIT_TRANSITION_INVALID)
-(fail) BR-003: visit immutable after completed or locked > can add treatment to an active visit (201)
-(fail) BR-003: visit immutable after completed or locked > cannot add lab order to a completed visit (4xx VISIT_IMMUTABLE)
-(fail) BR-003: visit immutable after completed or locked > cannot add lab order to a locked visit (4xx VISIT_IMMUTABLE)
-(fail) BR-003: visit immutable after completed or locked > cannot add treatment to a completed visit (4xx VISIT_IMMUTABLE)
-(fail) BR-003: visit immutable after completed or locked > cannot add treatment to a locked visit (4xx VISIT_IMMUTABLE)
-(fail) BR-004: deleting an appointment does not delete the associated visit > cancelling an appointment leaves its linked visit intact
-(fail) BR-004: deleting an appointment does not delete the associated visit > cancelling an appointment without a linked visit still succeeds
-(fail) BR-006: treatment state transitions forward-only > dismissed is terminal: dismissed → planned is rejected (4xx)
-(fail) BR-006: treatment state transitions forward-only > dismissed reachable from planned (200)
-(fail) BR-006: treatment state transitions forward-only > forward: diagnosed → planned succeeds (200)
-(fail) BR-006: treatment state transitions forward-only > forward: performed → verified succeeds (200)
-(fail) BR-006: treatment state transitions forward-only > forward: planned → performed succeeds (200)
-(fail) BR-006: treatment state transitions forward-only > reverse: planned → diagnosed is rejected (4xx)
-(fail) BR-006: treatment state transitions forward-only > reverse: verified → performed is rejected (4xx)
-(fail) BR-007: verified treatment immutability (field edits) >
-(fail) BR-007: verified treatment immutability (field edits) > [GAP] cdtCode update on verified treatment — documents current (permissive) behavior
-(fail) BR-007: verified treatment immutability (field edits) > status transition from verified is restricted to dismissed only
 (fail) BR-009: invoice requires at least one billable treatment > creating invoice for a visit with no performed/verified treatments fails (4xx)
 (fail) BR-009: invoice requires at least one billable treatment > creating invoice with a performed treatment succeeds (201)
 (fail) BR-010: dental invoices always have taxCents === 0 > created invoice has taxCents === 0
-(fail) BR-011: active payment plan blocks invoice void > payment plan can be created for an issued invoice
-(fail) BR-011: active payment plan blocks invoice void > voiding an invoice with an active payment plan is rejected
-(fail) BR-012: invoice state machine > draft → issued succeeds (200)
-(fail) BR-012: invoice state machine > draft → void succeeds (200) — direct void from draft is allowed
-(fail) BR-012: invoice state machine > issuing an already-issued invoice fails (4xx INVALID_STATUS)
-(fail) BR-012: invoice state machine > voiding an already-voided invoice fails (4xx ALREADY_VOIDED)
-(fail) BR-014: consent form immutable after signing > repo.sign returns null when called on already-signed form (idempotency guard)
-(fail) BR-014: consent form immutable after signing > signing an already-signed consent form fails (4xx)
-(fail) BR-014: consent form immutable after signing > signing an unsigned consent form succeeds
-(fail) BR-016: branch membership required for all clinical data access > user with active membership can create a visit (201)
-(fail) BR-016: branch membership required for all clinical data access > user without membership gets 403 when creating a visit
-(fail) BR-018: lab order status lifecycle > cancelled is a terminal state — backward transition not allowed (4xx)
-(fail) BR-018: lab order status lifecycle > delivered → fitted is a valid transition (200)
-(fail) BR-018: lab order status lifecycle > fitted is a terminal state — no further transitions allowed (4xx)
-(fail) BR-018: lab order status lifecycle > inFabrication → delivered is a valid transition (200)
-(fail) BR-018: lab order status lifecycle > ordered → cancelled is allowed (non-terminal can cancel) (200)
-(fail) BR-018: lab order status lifecycle > ordered → delivered is an invalid transition (4xx)
-(fail) BR-018: lab order status lifecycle > ordered → inFabrication is a valid transition (200)
-(fail) BR-019: treatment amendments are append-only > amendment as new record: creating a second treatment on same visit succeeds
-(fail) BR-019: treatment amendments are append-only > verified treatment cannot have its status reversed — backward transition rejected
-(fail) BR-021: PMD is a per-visit snapshot with checksum > generatePMD fails on active (non-completed) visit (4xx)
-(fail) BR-021: PMD is a per-visit snapshot with checksum > generatePMD succeeds on completed visit and returns checksum (201)
-(fail) BR-021: PMD is a per-visit snapshot with checksum > old PMD is marked superseded after regeneration
-(fail) BR-021: PMD is a per-visit snapshot with checksum > PMD snapshot is stable: regenerating PMD supersedes old but checksum is content-derived
-(fail) BR-022: imported PMD records are read-only > DELETE /dental/pmd/imported/:id → 404 (no such route = no delete endpoint)
-(fail) BR-022: imported PMD records are read-only > PATCH /dental/pmd/imported/:id → 404 (no such route = no edit endpoint)
-(fail) BR-022: imported PMD records are read-only > PUT /dental/pmd/imported/:id → 404 (no update route registered)
-(fail) P1-BIL-01: payment idempotency > duplicate payment with same receipt number returns existing (200)
-(fail) P1-VAL-01: negative and zero amount validation > negative payment amount rejected
-(fail) P1-VAL-01: negative and zero amount validation > zero payment amount rejected
 
 # Previously hidden by db-guard (guard was blocking all tests).
 # These are pre-existing failures surfaced when monobase_test infra landed.
 # Added 2026-05-27 after db-guard infrastructure fix.
-(fail) AC-SCHED-02: check-in creates a draft visit with correct patientId and branchId > check-in response contains visitId and appointment has visitId linked [AC-SCHED-02]
 (fail) AC-SCHED-03: cancelling appointment sets status cancelled; visit is preserved > cancelled appointment has status cancelled; a visit created by another appt is not deleted [AC-SCHED-03]
-(fail) AC-SCHED-04: walk-in appointments created without prior appointment ID > creating a walk-in appointment returns 201 with walkIn=true and no appointmentId prerequisite [AC-SCHED-04]
-(fail) AC-SCHED-05: listing appointments with date filter returns only appointments on that date > appointments outside the filter date are excluded from results [AC-SCHED-05]
 (fail) Addon tier gate — free org → 403 > batch upsert on free tier returns 403
 (fail) Addon tier gate — free org → 403 > null imagingTier treated as free → 403
 (fail) Addon tier gate — free org → 403 > PATCH landmark on free tier returns 403
-(fail) AmendmentRepository > create > can amend different record types
-(fail) AmendmentRepository > create > can create multiple amendments for the same original record (additive)
-(fail) AmendmentRepository > create > creates an amendment with all required fields
-(fail) AmendmentRepository > findMany > filters by originalRecordId
-(fail) AmendmentRepository > findMany > filters by visitId
-(fail) AmendmentRepository > findOneById > returns amendment by id
 (fail) annotation geometry types > annotation types allowed on free tier — arrow → 201
 (fail) annotation geometry types > annotation types allowed on free tier — freehand → 201
 (fail) annotation geometry types > annotation types allowed on free tier — shape → 201
@@ -105,39 +40,7 @@
 (fail) annotation geometry types > tooth annotation: valid toothNumber 1 → 201
 (fail) annotation geometry types > tooth annotation: valid toothNumber 32 → 201
 (fail) annotation geometry types > unknown type → 400
-(fail) APPOINTMENT_TRANSITIONS: cancelAppointment > invalid: cancelled → cancelled rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: cancelAppointment > invalid: completed → cancelled rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: cancelAppointment > invalid: noShow → cancelled rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: cancelAppointment > valid: checkedIn → cancelled returns 204
-(fail) APPOINTMENT_TRANSITIONS: cancelAppointment > valid: scheduled → cancelled returns 204
-(fail) APPOINTMENT_TRANSITIONS: checkInAppointment > invalid: cancelled → checkedIn rejected (4xx)
-(fail) APPOINTMENT_TRANSITIONS: checkInAppointment > invalid: checkedIn → checkedIn rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: checkInAppointment > invalid: completed → checkedIn rejected (4xx)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (cancelled via PATCH) > invalid: cancelled → cancelled via PATCH rejected (4xx)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (cancelled via PATCH) > invalid: completed → cancelled via PATCH rejected (4xx)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (cancelled via PATCH) > valid: checkedIn → cancelled via PATCH returns 200
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (cancelled via PATCH) > valid: scheduled → cancelled via PATCH returns 200
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (completed / revertNoShow) > invalid: cancelled → completed via PATCH rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (completed / revertNoShow) > valid: noShow → completed returns 200
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (noShow) > invalid: cancelled → noShow rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (noShow) > invalid: completed → noShow rejected (422)
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (noShow) > valid: checkedIn → noShow returns 200
-(fail) APPOINTMENT_TRANSITIONS: updateAppointment (noShow) > valid: scheduled → noShow returns 200
-(fail) AttachmentRepository > create > accepts all image types
-(fail) AttachmentRepository > create > creates an attachment with required fields
-(fail) AttachmentRepository > create > stores optional note
-(fail) AttachmentRepository > create > stores optional toothNumbers array
-(fail) AttachmentRepository > findMany > filters by visitId
-(fail) AttachmentRepository > softDelete > soft-deleted attachment excluded from findMany
-(fail) AttachmentRepository > softDelete > soft-deletes an existing attachment and returns true
 (fail) audit trail > updatedBy is set to user.id on cancel
-(fail) AuditLogRepository > list() filters by targetType
-(fail) AuditRepository > archiveOldLogs > returns count of archived entries (0 for fresh db)
-(fail) AuditRepository > getAuditStatistics > returns statistics object with expected keys
-(fail) AuditRepository > logEvent > creates audit entry with integrity hash
-(fail) AuditRepository > logEvent > creates entries with unique integrity hashes
-(fail) AuditRepository > verifyIntegrity > returns no compromised entries for unmodified logs
-(fail) Auth required (AC-007) > POST insurance-profile returns 401 without user
 (fail) Batch response completeness > response items includes all current landmarks (not just those in batch)
 (fail) BR-026 delete roles - hygienist forbidden > BR-028: delete sets status to archived (soft delete)
 (fail) BR-027 delete own-only associate > associate deletes own image - success
@@ -153,41 +56,11 @@
 (fail) CIMG-14 lock matrix > PATCH x coordinate on locked landmark → 422 LANDMARK_LOCKED
 (fail) CIMG-14 lock matrix > PATCH y coordinate on locked landmark → 422 LANDMARK_LOCKED
 (fail) CIMG-15 recompute idempotent > POST recompute returns 200 with analysis object (not {items, analysis})
-(fail) ConsentFormRepository > create > creates an unsigned form by default
-(fail) ConsentFormRepository > create > stores templateId and templateName
-(fail) ConsentFormRepository > findMany > filters by visitId
-(fail) ConsentFormRepository > sign > immutable after signing — re-sign returns null
-(fail) ConsentFormRepository > sign > marks form as signed with timestamp and signature data
-(fail) ConsentFormRepository > sign > original signature data is preserved after attempted re-sign
 (fail) createAppointment working hours enforcement (FR3.10) > allowed exactly at close boundary
 (fail) createAppointment working hours enforcement (FR3.10) > allowed when no working hours configured
 (fail) createAppointment working hours enforcement (FR3.10) > allowed when within working hours
-(fail) createAttachment handler > returns 401 when user is not authenticated
-(fail) createConsentForm handler > returns 201 with created consent form on valid input
-(fail) createConsentForm handler > returns 400 when patientId is missing
-(fail) createConsentForm handler > returns 400 when templateId is missing
-(fail) createConsentForm handler > returns 400 when templateName is missing
-(fail) createConsentForm handler > returns 401 when user is not authenticated
-(fail) createLabOrder handler > returns 201 with created lab order on valid input
-(fail) createLabOrder handler > returns 400 when description is missing
-(fail) createLabOrder handler > returns 400 when labName is missing
-(fail) createLabOrder handler > returns 400 when patientId is missing
-(fail) createLabOrder handler > returns 401 when user is not authenticated
 (fail) createMeasurement > invalid geometry (1 point for distance) returns 400
 (fail) createMeasurement > valid distance measurement returns 201
-(fail) createPrescription handler > returns 201 with created prescription on valid input
-(fail) createPrescription handler > returns 400 when dosage is missing
-(fail) createPrescription handler > returns 400 when drugName is missing
-(fail) createPrescription handler > returns 400 when frequency is missing
-(fail) createPrescription handler > returns 400 when patientId is missing
-(fail) createPrescription handler > returns 400 when prescriberMemberId is missing
-(fail) createPrescription handler > returns 401 when user is not authenticated
-(fail) createPrescription role gate > dentist_owner → passes role gate (not 403)
-(fail) createPrescription role gate > staff_full → 403
-(fail) createPrescription role gate > staff_scheduling → 403
-(fail) createQueueItem handler > returns 201 with status waiting
-(fail) createQueueItem handler > returns 401 when unauthenticated
-(fail) createQueueItem handler > returns 404 for nonexistent appointment
 (fail) D-G label — steiner_hybrid_sn > createCephReport snapshot.analysis_label is steiner_hybrid_sn
 (fail) D-I immutability > recompute response has no version field (analysis only, not a report)
 (fail) D-I immutability > second createCephReport returns version 2 (immutable append, D-I)
@@ -199,70 +72,8 @@
 (fail) D-L confirm-gate > report succeeds when gate landmarks are locked (counts as confirmed)
 (fail) D4 snapshot fields > createCephReport snapshot contains study_date, patient_display_id, branch_name
 (fail) deleteMeasurement > valid delete returns 204
-(fail) DentalAppointmentRepository > cancel > cancel with reason stores cancellation reason
-(fail) DentalAppointmentRepository > cancel > sets status to cancelled and records cancelledAt
-(fail) DentalAppointmentRepository > cancel status guard > allows cancelling a checkedIn appointment
-(fail) DentalAppointmentRepository > cancel status guard > allows cancelling a scheduled appointment
-(fail) DentalAppointmentRepository > cancel status guard > returns null when cancelling a completed appointment
-(fail) DentalAppointmentRepository > checkIn > returns null if appointment is not in scheduled status
-(fail) DentalAppointmentRepository > checkIn > sets status to checkedIn and records checkInTime
-(fail) DentalAppointmentRepository > create > creates appointment with scheduled status
-(fail) DentalAppointmentRepository > create > stores null operatoryId (no chair assigned)
-(fail) DentalAppointmentRepository > create > stores optional notes
-(fail) DentalAppointmentRepository > create > stores serviceType and durationMinutes
-(fail) DentalAppointmentRepository > create > walk-in appointments have walkIn=true
-(fail) DentalAppointmentRepository > findMany > finds appointments by branchId
-(fail) DentalAppointmentRepository > findMany > finds appointments by date range
-(fail) DentalAppointmentRepository > findMany > finds appointments by dentistMemberId
-(fail) DentalAppointmentRepository > findMany > finds appointments by status
-(fail) DentalAppointmentRepository > findMany > returns all when no filters
-(fail) DentalAppointmentRepository > findOneById > returns appointment by id
-(fail) DentalAppointmentRepository > findOneById > returns null for missing appointment
-(fail) DentalAppointmentRepository > findOverlapping > detects overlap for appointments 15 minutes apart (same dentist/branch)
-(fail) DentalAppointmentRepository > findOverlapping > detects overlap for long appointments that would have been missed by 2h heuristic
-(fail) DentalAppointmentRepository > linkVisit > sets visitId on appointment
-(fail) DentalAppointmentRepository > markNoShow > sets status to noShow and records noShowAt
-(fail) DentalAppointmentRepository > markNoShow status guard > allows markNoShow on a scheduled appointment
-(fail) DentalAppointmentRepository > markNoShow status guard > returns null when marking a cancelled appointment as noShow
-(fail) DentalAppointmentRepository > Operatory FK (P1-002: AC-001..AC-003) > AC-001: appointment can reference a real operatory
-(fail) DentalAppointmentRepository > Operatory FK (P1-002: AC-001..AC-003) > AC-002: appointment with null operatoryId inserts (nullable FK)
-(fail) DentalAppointmentRepository > revertNoShow > returns null if not in noShow status
-(fail) DentalAppointmentRepository > revertNoShow > sets status to completed from noShow
-(fail) DentalAppointmentRepository > updateOneById > updates appointment fields
-(fail) DentalInvoiceRepository > invoice number generation > generates sequential invoice numbers
-(fail) DentalInvoiceRepository > invoice number generation > generates year-prefixed invoice numbers (INV-2026-0001)
-(fail) DentalPaymentPlanRepository > auto-generates correct number of installment records
-(fail) DentalPaymentPlanRepository > creates plan with monthly installments
-(fail) DentalPaymentPlanRepository > creates plan with weekly installments
-(fail) DentalPaymentPlanRepository > findByPatient returns all patient plans
-(fail) DentalPaymentPlanRepository > installment amounts sum to plan total
-(fail) DentalPaymentPlanRepository > installment due dates spaced by frequency
-(fail) DentalPaymentPlanRepository > recordInstallmentPayment marks installment paid
-(fail) DentalPaymentPlanRepository > updatePlanStatus: 7+ days overdue -> behind
-(fail) DentalPaymentPlanRepository > updatePlanStatus: all paid -> completed
-(fail) DentalPaymentRepository > creates payment with correct fields
-(fail) DentalPaymentRepository > findByInvoice returns non-voided payments
-(fail) DentalPaymentRepository > voidPayment does not delete record (still retrievable)
-(fail) DentalPaymentRepository > voidPayment sets isVoid and voidedAt
-(fail) DentalPaymentRepository > voidPayment stores void reason
-(fail) findByPatient returns all patient plans
-(fail) FR1.12: Prescription allergy cross-check > case-insensitive matching
-(fail) FR1.12: Prescription allergy cross-check > no warning when drug does not match any allergy
-(fail) FR1.12: Prescription allergy cross-check > no warning when patient has no allergies
-(fail) FR1.12: Prescription allergy cross-check > only active allergies trigger warning
-(fail) FR1.12: Prescription allergy cross-check > prescription is created despite allergy conflict
-(fail) FR1.12: Prescription allergy cross-check > warning returned when drug matches an allergy (exact match)
 (fail) FR2.7: archive and restore patient (EC1 guard) > restore brings patient back to active status
 (fail) FR6.3: Tier-based member limits > solo plan: deactivated member frees a slot (does not count toward limit)
-(fail) GAP-004: InventoryItem status lifecycle (IDEAL §3.11) > GAP-004 AC-001: POST item defaults to status=active
-(fail) GAP-004: InventoryItem status lifecycle (IDEAL §3.11) > GAP-004 AC-002: PATCH item status to discontinued succeeds
-(fail) GET /dental/branches/:branchId/inventory (inv01-AC-002) > inv01-AC-002: returns all items for the branch
-(fail) GET /dental/branches/:branchId/inventory (inv01-AC-002) > inv01-AC-002: returns empty array when no items exist
-(fail) GET /dental/patients/:patientId/claims/:claimId/readiness (AC-004) > ready=false when icd10Code is missing
-(fail) GET /dental/patients/:patientId/insurance-profiles (AC-002) > returns list including created profile
-(fail) GET adjustments (inv01-AC-005) > inv01-AC-005: returns list of adjustments for an item
-(fail) getCollectionsSummary — period and branchId branches > branchId filter returns 403 when user has no membership in branch
-(fail) getPatientBalance — overdue and active-plan branches + branch-auth > returns 403 when user has no membership in patient preferred branch
 (fail) imaging findings > createFinding returns 201
 (fail) imaging findings > deleteFinding returns 204
 (fail) imaging findings > updateFinding allows valid transition (suspected → confirmed)
@@ -273,117 +84,20 @@
 (fail) ImagingFindingsMgmt_updateFinding wrapper > delegates to updateFinding — returns 200
 (fail) ImagingMgmt_deleteImage wrapper > delegates to deleteImage — dentist can delete, returns 200
 (fail) ImagingMgmt_updateImageModality wrapper > delegates to updateImageModality — returns 200
-(fail) ImportedPMDRepository > create > creates an imported PMD
-(fail) ImportedPMDRepository > create > stores optional sourceReference
-(fail) ImportedPMDRepository > filters unmerged safety floor records
-(fail) ImportedPMDRepository > findMany > filters by patientId
-(fail) ImportedPMDRepository > findMany > filters unmerged safety floor records
-(fail) ImportedPMDRepository > markSafetyFloorMerged > marks safety floor as merged
-(fail) ImportedPMDRepository > markSafetyFloorMerged > returns null for unknown id
-(fail) ImportedPMDRepository > returns null for unknown id
-(fail) ImportedPMDRepository > stores optional sourceReference
 (fail) Invalid status transition > PATCH confirmed → placed (backward) → 422 INVALID_STATUS_TRANSITION
 (fail) Invalid status transition > PATCH placed → confirmed (valid forward) → 200
 (fail) Invalid status transition > PATCH placed → locked skips confirmed → 422 INVALID_STATUS_TRANSITION
-(fail) InvoiceRepository > createWithLineItems > creates invoice and line items atomically
-(fail) InvoiceRepository > createWithLineItems > sequential calls generate consecutive invoice numbers
-(fail) InvoiceRepository > filters by status
-(fail) InvoiceRepository > findMany > filters by customer
-(fail) InvoiceRepository > findMany > filters by status
-(fail) InvoiceRepository > findOneWithLineItems > returns invoice with attached line items
-(fail) InvoiceRepository > findOneWithLineItems > returns null for unknown invoice id
-(fail) InvoiceRepository > generateInvoiceNumber > increments from the last invoice number for this year
-(fail) InvoiceRepository > generateInvoiceNumber > returns INV-YYYY-000001 when no invoices exist
-(fail) InvoiceRepository > increments from the last invoice number for this year
-(fail) InvoiceRepository > returns invoice with attached line items
-(fail) InvoiceRepository > sequential calls generate consecutive invoice numbers
-(fail) InvoiceRepository > sets paymentStatus to failed
-(fail) InvoiceRepository > sets status to open without setting paidAt or voidedAt
-(fail) InvoiceRepository > updatePaymentStatus > sets paymentStatus to failed
-(fail) InvoiceRepository > updatePaymentStatus > sets paymentStatus to succeeded
-(fail) InvoiceRepository > updateStatus > sets status to open without setting paidAt or voidedAt
-(fail) InvoiceRepository > updateStatus > sets status to paid and stamps paidAt
-(fail) InvoiceRepository > updateStatus > sets status to void and stamps voidedAt
 (fail) listAuditLogs > calls repo.logEvent to self-log the access
-(fail) listConsentForms handler > returns 200 with empty items array for a new visit
-(fail) listConsentForms handler > returns 200 with seeded consent forms
-(fail) listConsentForms handler > returns 401 when user is not authenticated
-(fail) listLabOrders handler > returns 200 with empty items array for a new visit
-(fail) listLabOrders handler > returns 200 with seeded lab orders
-(fail) listLabOrders handler > returns 401 when user is not authenticated
-(fail) listPrescriptions handler > returns 200 with empty items array for a new visit
-(fail) listPrescriptions handler > returns 200 with seeded prescriptions
-(fail) listPrescriptions handler > returns 401 when user is not authenticated
-(fail) listQueueBoard handler > does not return completed items
-(fail) listQueueBoard handler > returns 401 when unauthenticated
-(fail) listQueueBoard handler > returns active items for branch
-(fail) MerchantAccountRepository > findByPerson > returns merchant account for a known person
-(fail) MerchantAccountRepository > findByPerson > returns null when person has no merchant account
-(fail) MerchantAccountRepository > findByStripeAccountId > queries the metadata JSONB field and returns matching account
-(fail) MerchantAccountRepository > findByStripeAccountId > returns null for unknown stripe account id
-(fail) MerchantAccountRepository > findOneWithPerson > joins person data onto the merchant account
-(fail) MerchantAccountRepository > findOneWithPerson > returns null for unknown id
-(fail) MerchantAccountRepository > joins person data onto the merchant account
-(fail) MerchantAccountRepository > queries the metadata JSONB field and returns matching account
-(fail) MerchantAccountRepository > returns merchant account for a known person
-(fail) MerchantAccountRepository > toggles active flag via updateOneById
-(fail) MerchantAccountRepository > updateMetadata > replaces metadata with new values
-(fail) MerchantAccountRepository > updateMetadata > toggles active flag via updateOneById
 (fail) mergePatients handler > returns 500 (not implemented) for valid request body
 (fail) pagination on listAppointments > offset skips earlier results
-(fail) PATCH /dental/branches/:branchId/inventory/:itemId (inv01-AC-003) > inv01-AC-003: updates name + reorderLevel and returns 200
-(fail) PATCH /dental/branches/:branchId/inventory/:itemId (inv01-AC-003) > inv01-AC-007: PATCH returns 404 for non-existent itemId
-(fail) PATCH /dental/patients/:patientId/claims/:claimId/status (AC-005, AC-006) > AC-005: draft→ready transition returns 200
-(fail) PATCH /dental/patients/:patientId/claims/:claimId/status (AC-005, AC-006) > AC-006: ready→draft transition returns 422 (invalid FSM)
 (fail) Pino audit emission > batch upsert emits logger.info with action ceph_landmarks_batch_upsert and by user.id
 (fail) Pino audit emission > createCephReport emits logger.info with action ceph_report_create
 (fail) Pino audit emission > DELETE landmark emits logger.info with action ceph_landmark_delete
 (fail) Pino audit emission > PATCH landmark emits logger.info with action ceph_landmark_update
 (fail) Pino audit emission > recompute emits logger.info with action ceph_analysis_recompute
-(fail) PMDDocumentRepository > create > creates a PMD in generated status
-(fail) PMDDocumentRepository > create > stores content JSON and checksum
-(fail) PMDDocumentRepository > create > supersedesId is null by default
-(fail) PMDDocumentRepository > filters by status
-(fail) PMDDocumentRepository > findByVisit > returns null if no PMD for visit
-(fail) PMDDocumentRepository > findByVisit > returns the generated PMD for a visit
-(fail) PMDDocumentRepository > findMany > filters by patientId
-(fail) PMDDocumentRepository > findMany > filters by status
-(fail) PMDDocumentRepository > marks old PMD as superseded and creates new with supersedesId
-(fail) PMDDocumentRepository > original signature preserved after failed re-sign
-(fail) PMDDocumentRepository > returns null if no PMD for visit
-(fail) PMDDocumentRepository > sign > cannot sign an already-signed PMD (returns null)
-(fail) PMDDocumentRepository > sign > original signature preserved after failed re-sign
-(fail) PMDDocumentRepository > sign > transitions generated → signed and records signedAt
-(fail) PMDDocumentRepository > supersede > marks old PMD as superseded and creates new with supersedesId
-(fail) PMDDocumentRepository > supersedesId is null by default
-(fail) POST /dental/branches/:branchId/inventory (inv01-AC-001) > inv01-AC-001: applies defaults for quantityOnHand and reorderLevel
-(fail) POST /dental/branches/:branchId/inventory (inv01-AC-001) > inv01-AC-001: creates item and returns 201
-(fail) POST /dental/patients/:patientId/claims (AC-003) > creates claim draft with status=draft
-(fail) POST /dental/patients/:patientId/insurance-profiles (AC-001) > creates profile and returns 201
-(fail) POST adjustment (inv01-AC-004) > inv01-AC-004: restock +5 increments quantityOnHand
-(fail) POST adjustment (inv01-AC-004) > inv01-AC-004: usage -3 decrements quantityOnHand
-(fail) POST adjustment (inv01-AC-004) > inv01-AC-007: POST adjustment returns 404 for non-existent item
-(fail) signConsentForm handler > returns 200 with signed consent form on valid input
-(fail) signConsentForm handler > returns 400 when signatureData is missing
-(fail) signConsentForm handler > returns 400 when trying to sign an already-signed consent form
-(fail) signConsentForm handler > returns 401 when user is not authenticated
-(fail) signConsentForm handler > returns 404 when consent form does not exist
 (fail) status transition guards > cannot mark noShow on a cancelled appointment
 (fail) unmergePatients handler > returns 500 (not implemented) for valid request body
 (fail) updateImageModality > returns 200 with updated modality
-(fail) updateLabOrder handler > returns 200 when updating non-status fields
-(fail) updateLabOrder handler > returns 200 with updated lab order on valid status transition
-(fail) updateLabOrder handler > returns 400 when status transition is invalid
-(fail) updateLabOrder handler > returns 400 when status value is unknown
-(fail) updateLabOrder handler > returns 401 when user is not authenticated
-(fail) updateLabOrder handler > returns 404 when lab order does not exist
-(fail) updatePrescription handler > returns 200 with updated prescription fields
-(fail) updatePrescription handler > returns 401 when user is not authenticated
-(fail) updatePrescription handler > returns 404 when prescription does not exist
-(fail) updateQueueItemStatus handler > rejects invalid FSM transition with 422
-(fail) updateQueueItemStatus handler > transitions waiting → called and sets calledAt
 (fail) Validation (AC-007, BR-002) > AC-007: POST returns 400 when name is missing
 (fail) Version monotonicity > first createCephReport returns version 1
 (fail) Version monotonicity > second createCephReport returns version 2 (maxVersion + 1)
-(fail) VisitRepository > queries > findMany filters by status
-(fail) voidPayment does not delete record (still retrievable)
