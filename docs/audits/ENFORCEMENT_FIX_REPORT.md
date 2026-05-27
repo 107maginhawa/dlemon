@@ -1,112 +1,81 @@
 # Enforcement Fix Report
-<!-- oli-enforce-fix v1.0 | Run: 2026-05-27 | Branch: main -->
+
+<!-- oli-enforce-fix v1 | run-id: enforce-fix-004-section-10-2-auth | 2026-05-27 -->
+
+**Scope:** `--scope section-10.2` — §10.2 auth/security P0 findings  
+**Run:** enforce-fix-004 | Branch: main | Commit: 80f11f7
+
+---
 
 ## Fix Summary
 
 | Metric | Value |
 |--------|-------|
-| Findings in scope | 20 (Fix-Now P0 list) |
-| Fixed this run | **19** |
-| Blocked | **1** (EX-006 — event bus, own phase) |
-| Pending (undispatched) | **0** |
-| Loop | 2 of 3 |
-| Commits | 13 atomic commits (40d433c, b045539 added) |
+| Findings in scope | 8 |
+| Fixed this session | 8 |
+| Blocked | 0 |
+| Regressions introduced | 0 |
+| Loops used | 1 of 3 |
+
+All 8 §10.2 P0 findings closed in a single loop. Zero regressions. Typecheck clean on all modified modules.
+
+---
 
 ## Wave Classification
 
-| Wave | Findings | Count | Status |
-|------|----------|-------|--------|
-| W1 Mechanical | EM-AUDIT-001, EM-AUDIT-003, EM-AUDIT-004, EM-PMD-005, EM-BILL-001 | 5 | ✅ All fixed |
-| W2 Structural | EM-ORG-001, EM-ORG-002, EM-ORG-003, EM-ORG-004, EM-ORG-019, EM-ORG-020, EM-AUDIT-002, EM-BILL-006, UJ-ORG-003, UJ-ORG-004, UJ-IMG-007, TR-5B-003 | 12 | 10 fixed, 1 pending, 1 already-fixed |
-| W3 Design | UJ-IMG-002, TR-5A-003, EX-006 | 3 | 1 already-fixed, 1 pending, 1 blocked |
+| Wave | Label | Findings | Count |
+|------|-------|----------|-------|
+| 1 | Mechanical | EF-ORG-001, EF-ORG-002, EM-PAT-005 | 3 |
+| 2 | Structural | EM-PAT-007, EM-VISIT-003, EM-PMD-004, EM-VISIT-001 | 4 |
+| 3 | Design/Frontend | UJ-SCHED-003 | 1 |
 
-Sum: 5+12+3=20 ✓
+Sum: 3 + 4 + 1 = 8 ✅
+
+---
 
 ## Fix Log
 
-| ID | Finding | Commit | Status |
-|----|---------|--------|--------|
-| EM-ORG-001 | Add authMiddleware to recoverPin route | 61ed52c | ✅ FIXED |
-| EM-ORG-002 | assertBranchRole/self-check to setPin (both files) | d1acbb5 | ✅ FIXED |
-| EM-ORG-003 | Strip securityAnswerHash/securityQuestion from listMembers | bdce591 | ✅ FIXED |
-| EM-ORG-004 | Org ownership check in DentalOrganizationManagement_update | d1acbb5 | ✅ FIXED |
-| EM-ORG-019 | authMiddleware({ roles: ["user"] }) on set-pin route | 61ed52c | ✅ FIXED |
-| EM-ORG-020 | authMiddleware({ roles: ["user"] }) on verify-pin + trackLastLogin in facade | 61ed52c | ✅ FIXED |
-| EM-AUDIT-001 | Role check admin→dentist_owner in getAuditEvents | 481af31 | ✅ FIXED |
-| EM-AUDIT-002 | assertBranchAccess guard in getAuditEvents | 481af31 | ✅ FIXED |
-| EM-AUDIT-003 | Remove displayName from verifyPin audit details (both files) | 144f74e | ✅ FIXED |
-| EM-AUDIT-004 | Remove self-audit repo.logEvent() from listAuditLogs | 9bc870d | ✅ FIXED |
-| UJ-IMG-002 | Annotation text XSS | — | ✅ ALREADY_FIXED (JSX string rendering, React-escaped) |
-| UJ-IMG-007 | Replace innerHTML with textContent for API errors | — | ✅ ALREADY_FIXED (no innerHTML in imaging components) |
-| UJ-ORG-003 | PIN session timer resets on user activity | ab78a03 | ✅ FIXED |
-| UJ-ORG-004 | Write PIN session keys to localStorage on member selection | 48f1d4a | ✅ FIXED |
-| EM-BILL-001 | Strip taxRate from createDentalInvoice accepted fields | 1fabc23 | ✅ FIXED |
-| EM-BILL-006 | UUID-based invoice numbering (replace MAX race condition) | e429dcb | ✅ FIXED |
-| EM-PMD-005 | Real node:crypto SHA-256 replacing charcode sum | 096e455 | ✅ FIXED |
-| TR-5B-003 | pg-boss consumer for dental-audit domain events | 40d433c | ✅ FIXED |
-| TR-5A-003 | Add baseline/proposed/completed layer to dental_chart | b045539 | ✅ FIXED |
-| EX-006 | Implement event bus + emit all 23 domain events | — | 🚫 BLOCKED (see below) |
+| Finding | Severity | File | Fix | Commit |
+|---------|----------|------|-----|--------|
+| EF-ORG-001 | P0 | `dental-org/deactivateMember.ts` | Upgraded `assertBranchAccess` → `assertBranchRole(['dentist_owner'])` | 80f11f7 |
+| EF-ORG-002 | P0 | `dental-org/DentalBranchManagement_get.ts` | Added `assertBranchAccess` before returning branch data | 80f11f7 |
+| EM-PAT-005 | P0 | `dental-patient/createDentalPatient.ts` | Made `branchId` required; removed optional guard | 80f11f7 |
+| EM-PAT-007 | P0 | `dental-patient/getDentalPatient.ts` | Throw `ForbiddenError` when patient has no branch; removed optional access check | 80f11f7 |
+| EM-VISIT-003 | P0 | `dental-visit/updateDentalTreatment.ts` | Throw `NotFoundError` on null visit; always assert branch role | 80f11f7 |
+| EM-PMD-004 | P0 | `dental-pmd/getImportedPMD.ts` | Auth-before-data: lightweight `patientId` probe before loading sensitive `content` field | 80f11f7 |
+| EM-VISIT-001 | P0 | `dental-visit/carryOverTreatments.ts` | Added `eq(dentalTreatments.patientId, currentVisit.patientId)` to dismissed restore query (cross-patient IDOR) | 80f11f7 |
+| UJ-SCHED-003 | P0 | `apps/dentalemon/…/appointment-modal.tsx` | Import `updateAppointment`; branch in `handleSave` on `!!appointmentId` — edit mode now calls PATCH | 80f11f7 |
 
-## Finding Manifest (Full — all 20 P0 Fix-Now findings)
+---
 
-| ID | Sev | Module | Wave | Status | Notes |
-|----|-----|--------|------|--------|-------|
-| EX-006 | P0 | cross-module | W3 | BLOCKED | Own phase needed |
-| EM-ORG-001 | P0 | dental-org | W2 | FIXED | commit 61ed52c |
-| EM-ORG-002 | P0 | dental-org | W2 | FIXED | commit d1acbb5 |
-| EM-ORG-003 | P0 | dental-org | W1 | FIXED | commit bdce591 |
-| EM-ORG-004 | P0 | dental-org | W2 | FIXED | commit d1acbb5 |
-| EM-ORG-019 | P0 | dental-org | W2 | FIXED | commit 61ed52c |
-| EM-ORG-020 | P0 | dental-org | W2 | FIXED | commit 61ed52c |
-| EM-AUDIT-001 | P0 | dental-audit | W1 | FIXED | commit 481af31 |
-| EM-AUDIT-002 | P0 | dental-audit | W2 | FIXED | commit 481af31 |
-| EM-AUDIT-003 | P0 | dental-audit | W1 | FIXED | commit 144f74e |
-| EM-AUDIT-004 | P0 | dental-audit | W1 | FIXED | commit 9bc870d |
-| UJ-IMG-002 | P0 | dental-imaging | W3 | ALREADY_FIXED | JSX escapes annotation text |
-| UJ-IMG-007 | P0 | dental-imaging | W2 | ALREADY_FIXED | No innerHTML in imaging UI |
-| UJ-ORG-003 | P0 | dental-org | W2 | FIXED | commit ab78a03 |
-| UJ-ORG-004 | P0 | dental-org | W2 | FIXED | commit 48f1d4a |
-| EM-BILL-001 | P0 | dental-billing | W1 | FIXED | commit 1fabc23 |
-| EM-BILL-006 | P0 | dental-billing | W2 | FIXED | commit e429dcb |
-| EM-PMD-005 | P0 | dental-pmd | W1 | FIXED | commit 096e455 |
-| TR-5B-003 | P0 | dental-audit | W2 | PENDING | Needs pg-boss consumer file |
-| TR-5A-003 | P0 | dental-visit | W3 | PENDING | Needs DB migration |
+## Finding Manifest
+
+| ID | Module | Severity | Status | Notes |
+|----|--------|----------|--------|-------|
+| EF-ORG-001 | dental-org | P0 | FIXED | assertBranchAccess → assertBranchRole |
+| EF-ORG-002 | dental-org | P0 | FIXED | missing auth on branch GET |
+| EM-PAT-005 | dental-patient | P0 | FIXED | branchId optional → required |
+| EM-PAT-007 | dental-patient | P0 | FIXED | patients without branch bypassed auth |
+| EM-VISIT-003 | dental-visit | P0 | FIXED | null visit silently skipped auth guard |
+| EM-PMD-004 | dental-pmd | P0 | FIXED | sensitive content loaded before auth |
+| EM-VISIT-001 | dental-visit | P0 | FIXED | dismissed restore lacked patientId scope |
+| UJ-SCHED-003 | scheduling (UI) | P0 | FIXED | edit mode always called createAppointment |
+
+---
 
 ## Blocked Findings
 
-### EX-006 — Event bus (BLOCKED — own phase required)
-**Finding:** All 23 domain events (DE-001..DE-023) declared in EVENT_CONTRACTS.md are never emitted anywhere.
+None.
 
-**Why blocked:** This requires implementing a full event bus infrastructure across every module (billing, clinical, imaging, org, patient, scheduling, visit, pmd). It is not a sprint-level fix — it is a phase-level architectural change involving:
-- Choosing/configuring an event bus (pg-boss is already used elsewhere)
-- Adding emit calls at every handler call site across 8+ modules
-- Creating consumers for dental-audit, notifs, dental-clinical
-- Writing integration tests for event flow
-
-**Recommendation:** Schedule as a dedicated phase after the P0 auth/security fixes ship. Reference EVENT_CONTRACTS.md for the 23 event definitions.
-
-## Pending Findings (undispatched due to context limit)
-
-### TR-5B-003 — pg-boss consumer for dental-audit
-**What's needed:** Create `services/api-ts/src/handlers/dental-audit/consumers/domain-events.consumer.ts` that subscribes to dental domain events via pg-boss and writes to the audit log. Check if pg-boss is configured at `services/api-ts/src/core/queue.ts` or similar.
-
-**Dispatch in next session:** `/oli-enforce-fix --module dental-audit` or dispatch a focused executor against TR-5B-003 alone.
-
-### TR-5A-003 — dental_chart baseline/proposed/completed layer
-**What's needed:** `services/api-ts/src/handlers/dental-visit/repos/dental-chart-baseline.schema.ts` already exists. The finding requires a `layer` column or equivalent to distinguish `baseline`/`proposed`/`completed` states on chart data. Requires schema change + Drizzle migration.
-
-**Dispatch in next session:** Requires `cd services/api-ts && bun run db:generate` after schema change. Verify migration doesn't break existing chart tests.
+---
 
 ## What's Next
 
-**Condition:** FIXED findings remain (17 resolved) + BLOCKED (EX-006) + PENDING (2 undispatched)
+All P0/P1 in scope are fixed. Routing: **continue down P0 backlog**.
 
-**Routing:**
-1. **Immediate:** Run `cd services/api-ts && bun test` to verify no regressions from the 11 commits
-2. **Next session:** Dispatch TR-5B-003 (pg-boss consumer) and TR-5A-003 (dental_chart layer) — `/oli-enforce-fix --module dental-audit` and `/oli-enforce-fix --module dental-visit`
-3. **After TR fixes:** Run `/oli-enforce-all` re-verification to reclassify FIXED findings as RESOLVED in baseline
-4. **Separate phase:** EX-006 event bus — plan with `/office-hours` before committing to scope
+Per `ENFORCEMENT_REPORT.md §11`, 157 open P0s remain across all modules. Recommended next targets (highest density):
 
-## Follow-up Note: routes.ts TypeSpec Source
-
-Commits 61ed52c modified `services/api-ts/src/generated/openapi/routes.ts` directly. This file is hand-maintained despite the `generated/` path. TypeSpec sources at `specs/api/src/` should be updated to add `@useAuth` or equivalent annotations to the recoverPin, set-pin, and verify-pin operations so that future codegen regeneration preserves the authMiddleware configuration.
+1. **EX-006** — Event bus (all 23 domain events never emitted): still BLOCKED as own-phase. Plan with `/office-hours` before committing scope.
+2. **322 pre-existing test failures** in `.allowed-failures` — start with `dental-org` and `dental-billing` modules (most critical auth surfaces).
+3. **TypeSpec `@useAuth` annotations** for `recoverPin`, `set-pin`, `verify-pin` in `specs/api/src/` — needed to preserve `authMiddleware` config added in commit 61ed52c through future codegen.
+4. Run `/oli-enforce-all` to reclassify the 8 newly fixed findings as RESOLVED in the baseline and get an updated P0 count.
