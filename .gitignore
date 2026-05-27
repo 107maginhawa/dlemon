@@ -251,6 +251,9 @@ test-results.json
 # Journey harness transient per-journey records (aggregated into journey-results.json)
 apps/dentalemon/.journey-tmp/
 
+# TanStack Router generated cache
+.tanstack/
+
 # Gemini
 .gemini-clipboard
 .gstack/
