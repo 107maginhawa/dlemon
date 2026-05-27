@@ -26,6 +26,7 @@
     "check:duplicate-ops": "bun scripts/check-duplicate-operation-ids.ts",
     "check:boundaries": "bun scripts/check-module-boundaries.ts",
     "check:boundaries:error": "bun scripts/check-module-boundaries.ts --error",
+    "check:boundaries:dental-billing": "bun scripts/check-module-boundaries.ts --error --module dental-billing",
     "perf": "bun run tests/perf/run.ts"
   },
   "dependencies": {
