@@ -24,6 +24,8 @@
     "lint": "eslint src",
     "lint:migrations": "bun scripts/lint-migrations.ts",
     "check:duplicate-ops": "bun scripts/check-duplicate-operation-ids.ts",
+    "check:boundaries": "bun scripts/check-module-boundaries.ts",
+    "check:boundaries:error": "bun scripts/check-module-boundaries.ts --error",
     "perf": "bun run tests/perf/run.ts"
   },
   "dependencies": {
