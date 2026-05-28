@@ -9,7 +9,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';

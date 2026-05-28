@@ -19,6 +19,8 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import {
   UpdateAppointmentBody,
   UpdateAppointmentParams,
@@ -32,6 +34,7 @@ import { cancelAppointment } from './cancelAppointment';
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000077', email: 'transitions@clinic.com' };
+const PERSON_ID  = 'a0000000-0000-1000-8000-000000000076';
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000077';
 const ORG_ID = 'f0000000-0000-1000-8000-000000000077';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000077';
@@ -57,12 +60,30 @@ beforeAll(async () => {
     updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 
+  // Ensure the membership has the exact ID used by seedAppointment(); purge any stale record first.
+  await db.execute(sql`DELETE FROM dental_membership WHERE branch_id = ${BRANCH_ID} AND person_id = ${TEST_USER.id} AND id != ${MEMBER_ID}`);
   await db.insert(dentalMemberships).values({
+    id: MEMBER_ID,
     branchId: BRANCH_ID,
     personId: TEST_USER.id,
     displayName: 'Transitions Dentist',
     role: 'dentist_owner',
     status: 'active',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(persons).values({
+    id: PERSON_ID,
+    firstName: 'Test',
+    lastName: 'Patient',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(patients).values({
+    id: PATIENT_ID,
+    person: PERSON_ID,
     createdBy: TEST_USER.id,
     updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
@@ -182,7 +203,11 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
   test('valid: scheduled → cancelled returns 204', async () => {
     const appt = await seedAppointment();
     const app = buildApp(TEST_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Patient requested cancellation' }),
+    });
     expect(res.status).toBe(204);
   });
 
@@ -190,7 +215,11 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
     const appt = await seedAppointment();
     await forceStatus(appt.id, 'checked_in');
     const app = buildApp(TEST_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Patient requested cancellation' }),
+    });
     expect(res.status).toBe(204);
   });
 

@@ -1,8 +1,8 @@
-import { VisitRepository } from './repos/visit.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import type { DatabaseInstance } from '@/core/database';
 import { NotFoundError } from '@/core/errors';
-import type { VisitFilters } from './repos/visit.repo';
-import type { DentalVisit, NewDentalVisit } from './repos/visit.schema';
+import type { VisitFilters } from '../repos/visit.repo';
+import type { DentalVisit, NewDentalVisit } from '../repos/visit.schema';
 
 export type { DentalVisit };
 

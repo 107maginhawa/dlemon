@@ -10,7 +10,7 @@
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import type { User } from '@/types/auth';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';

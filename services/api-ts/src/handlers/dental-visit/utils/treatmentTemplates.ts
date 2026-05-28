@@ -12,9 +12,9 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
-import { TreatmentRepository } from './repos/treatment.repo';
-import { VisitRepository } from './repos/visit.repo';
+import { dentalTreatmentTemplates } from '../repos/treatment-template.schema';
+import { TreatmentRepository } from '../repos/treatment.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 

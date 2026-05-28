@@ -7,7 +7,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { AmendmentRepository } from './repos/amendment.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';

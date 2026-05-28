@@ -7,7 +7,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError } from '@/core/errors';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { AmendmentRepository } from './repos/amendment.repo';
 import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';

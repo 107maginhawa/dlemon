@@ -1,1 +1,1 @@
-export { applyTemplate } from './treatmentTemplates';
+export { applyTemplate } from './utils/treatmentTemplates';

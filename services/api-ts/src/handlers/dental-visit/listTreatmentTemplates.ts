@@ -1,1 +1,1 @@
-export { listTreatmentTemplates } from './treatmentTemplates';
+export { listTreatmentTemplates } from './utils/treatmentTemplates';

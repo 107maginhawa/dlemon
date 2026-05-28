@@ -15,7 +15,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
-import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/visit.service';
+import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/utils/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';

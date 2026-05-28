@@ -41,7 +41,7 @@ import {
   updateTreatmentTemplate,
   deleteTreatmentTemplate,
   applyTemplate,
-} from './treatmentTemplates';
+} from './utils/treatmentTemplates';
 import { carryOverTreatments } from './carryOverTreatments';
 import { getTreatmentPlan } from './getTreatmentPlan';
 import { acceptTreatmentPlan } from './acceptTreatmentPlan';

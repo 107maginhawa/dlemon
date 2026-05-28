@@ -5,9 +5,14 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { AttachmentRepository } from './attachment.repo';
 import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-const VISIT_1   = 'e3000000-0000-4000-8000-000000000001';
-const PATIENT_1 = 'e3000000-0000-4000-8000-000000000010';
+let db: NodePgDatabase;
+
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
 
 const baseAttachment = {
   visitId: VISIT_1,
@@ -24,8 +29,10 @@ describe('AttachmentRepository', () => {
   let teardown: () => Promise<void>;
 
   beforeEach(async () => {
-    const { db, rollback } = await openTestTx();
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new AttachmentRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
     teardown = rollback;
   });
 
@@ -86,7 +93,7 @@ describe('AttachmentRepository', () => {
   describe('findMany', () => {
     test('filters by visitId', async () => {
       await repo.createOne(baseAttachment);
-      await repo.createOne({ ...baseAttachment, visitId: 'e3000000-0000-4000-8000-000000000002' });
+      await repo.createOne({ ...baseAttachment, visitId: VISIT_2 });
 
       const results = await repo.findMany({ visitId: VISIT_1 });
       expect(results).toHaveLength(1);

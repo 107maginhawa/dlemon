@@ -9,9 +9,14 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { ConsentFormRepository } from './consent-form.repo';
 import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-const VISIT_1   = 'e2000000-0000-4000-8000-000000000001';
-const PATIENT_1 = 'e2000000-0000-4000-8000-000000000010';
+let db: NodePgDatabase;
+
+const VISIT_1   = CHAIN_IDS.VISIT_1;
+const VISIT_2   = CHAIN_IDS.VISIT_2;
+const PATIENT_1 = CHAIN_IDS.PATIENT_1;
 
 const baseForm = {
   visitId: VISIT_1,
@@ -25,8 +30,10 @@ describe('ConsentFormRepository', () => {
   let teardown: () => Promise<void>;
 
   beforeEach(async () => {
-    const { db, rollback } = await openTestTx();
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new ConsentFormRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
     teardown = rollback;
   });
 
@@ -81,7 +88,7 @@ describe('ConsentFormRepository', () => {
   describe('findMany', () => {
     test('filters by visitId', async () => {
       await repo.createOne(baseForm);
-      await repo.createOne({ ...baseForm, visitId: 'e2000000-0000-4000-8000-000000000002' });
+      await repo.createOne({ ...baseForm, visitId: VISIT_2 });
 
       const results = await repo.findMany({ visitId: VISIT_1 });
       expect(results).toHaveLength(1);

@@ -16,7 +16,7 @@ import {
   BusinessLogicError,
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';

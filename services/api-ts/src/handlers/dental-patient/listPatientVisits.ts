@@ -16,7 +16,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { findVisits } from '@/handlers/dental-visit/visit.service';
+import { findVisits } from '@/handlers/dental-visit/utils/visit.service';
 import { getChartForPatientVisit } from '@/handlers/dental-visit/repos/visit-dental-patient.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';

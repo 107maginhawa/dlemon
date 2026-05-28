@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, UnauthorizedError, ForbiddenError } from '@/core/errors';
-import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
+import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getTreatmentsForPMD } from '@/handlers/dental-visit/repos/visit-pmd.facade';
 import { getPrescriptionsForPMD } from '@/handlers/dental-clinical/repos/clinical-pmd.facade';

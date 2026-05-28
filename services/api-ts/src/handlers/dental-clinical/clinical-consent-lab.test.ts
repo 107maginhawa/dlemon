@@ -32,10 +32,11 @@ import { updateLabOrder } from './updateLabOrder';
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000001', email: 'test@clinic.com' };
+const PERSON_ID  = 'e0000000-0000-1000-8000-000000000003';
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
-const ORG_ID = 'd1000000-0000-1000-8000-000000000002';
-const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+const BRANCH_ID  = 'b0000000-0000-1000-8000-000000000002';
+const ORG_ID     = 'd1000000-0000-1000-8000-000000000002';
+const MEMBER_ID  = 'c0000000-0000-1000-8000-000000000003';
 const NONEXISTENT_ID = 'ffffffff-ffff-4000-8000-ffffffffffff';
 
 beforeAll(async () => {
@@ -51,10 +52,24 @@ beforeAll(async () => {
     id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
     timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
+  await db.execute(
+    sql`DELETE FROM dental_membership WHERE branch_id = ${BRANCH_ID} AND id != ${MEMBER_ID}`,
+  );
   await db.insert(dentalMemberships).values({
-    id: 'ee100000-0000-1000-8000-000000000002', branchId: BRANCH_ID,
+    id: MEMBER_ID, branchId: BRANCH_ID,
     personId: TEST_USER.id, displayName: 'Test User', role: 'dentist_owner',
     status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  await db.insert(persons).values({
+    id: PERSON_ID, firstName: 'Test', lastName: 'Patient',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(patients).values({
+    id: PATIENT_ID, person: PERSON_ID,
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 });
@@ -123,10 +138,19 @@ async function seedVisit() {
 }
 
 afterEach(async () => {
-  await db.execute(
-    sql`TRUNCATE TABLE amendment, consent_form, dental_attachment, lab_order, medical_history_entry, prescription, dental_treatment, dental_visit CASCADE`,
-  );
-  // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT truncated here
+  // Scoped deletes (visit-children first, then visits, then patient-direct) to avoid
+  // racing with other test files that use a global TRUNCATE — TRUNCATE wipes ALL
+  // patients' rows and breaks parallel suites sharing the same tables.
+  const visitIds = sql`(SELECT id FROM dental_visit WHERE patient_id = ${PATIENT_ID})`;
+  await db.execute(sql`DELETE FROM amendment        WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM consent_form     WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM dental_attachment WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM lab_order        WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM prescription     WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM dental_treatment WHERE visit_id IN ${visitIds}`);
+  await db.execute(sql`DELETE FROM medical_history_entry WHERE patient_id = ${PATIENT_ID}`);
+  await db.execute(sql`DELETE FROM dental_visit     WHERE patient_id = ${PATIENT_ID}`);
+  // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT cleaned here
 });
 
 // ---------------------------------------------------------------------------
