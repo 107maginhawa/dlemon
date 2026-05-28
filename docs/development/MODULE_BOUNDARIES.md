@@ -15,11 +15,24 @@ Without this rule, all handler modules become one tangled ball of schema. The co
 
 ## Enforcement
 
-Run the boundary checker:
+Two complementary checks:
+
+**1. Boundary checker script** (absolute `@/handlers/` alias imports):
 ```bash
 cd services/api-ts
-bun run check:boundaries          # warn mode (current: 99 violations in migration)
-bun run check:boundaries:error    # error mode (add to CI after migration completes)
+bun run check:boundaries          # warn mode
+bun run check:boundaries:error    # error mode (used in CI per-module once a module reaches 0)
+```
+
+**2. ESLint rule** (relative `../module/repos/` imports — in `eslint.config.js`):
+```
+no-restricted-imports: warn on ../module-name/repos/
+```
+Fires during `bun run lint`. Excludes: `*.test.ts`, `repos/*.schema.ts` (Drizzle FK coupling is DB-layer, not code-layer), `repos/*.facade.ts` (the approved bridge).
+
+Run both with:
+```bash
+cd services/api-ts && bun run lint && bun run check:boundaries
 ```
 
 ## Migration Pattern: Expose a Facade
@@ -71,8 +84,11 @@ Once a module reaches 0 violations, flip `check:boundaries:error` on for that mo
 
 ## Current Status
 
-Baseline captured: **99 violations** (2026-05-27, after Phase 5 merger).
-Target: **0 violations** — each module migrated one PR at a time.
+- Boundary checker (alias imports): **0 violations** ✅
+- ESLint lint rule (relative imports): ~30 warnings — migration in progress
+- First production fix: `dental-billing/getDentalPaymentReceipt.ts` migrated to `patient-billing.facade` (2026-05-28)
+
+Target: **0 lint warnings** — each module migrated one PR at a time.
 
 ## Exempt Modules
 
