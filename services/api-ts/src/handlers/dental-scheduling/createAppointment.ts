@@ -9,10 +9,9 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchAccess } from './utils/assert-branch-access';
-import { eq } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 import type { NotificationService } from '@/core/notifs';
@@ -38,7 +37,7 @@ export async function createAppointment(ctx: HandlerContext) {
 
   // FR3.10: Validate against configured working hours (blocking); walk-ins bypass this check (BR-SCH-002)
   if (!body.walkIn) {
-    const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
+    const branch = await getBranchSchedulingConfig(db, branchId);
     if (branch?.workingHours) {
       const hours = parseWorkingHours(branch.workingHours);
       if (hours && !isWithinWorkingHours(scheduledAt, durationMinutes, hours, branch.timezone ?? 'UTC')) {

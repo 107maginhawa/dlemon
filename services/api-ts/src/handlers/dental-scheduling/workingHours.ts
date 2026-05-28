@@ -19,8 +19,7 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
-import { eq } from 'drizzle-orm';
+import { getBranchSchedulingConfig, updateBranchWorkingHours as updateBranchWorkingHoursDb } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { z } from 'zod';
@@ -102,7 +101,7 @@ export async function getWorkingHours(ctx: BaseContext) {
   const branchId = ctx.req.param('branchId')!;
   const db = ctx.get('database') as DatabaseInstance;
 
-  const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, branchId));
+  const branch = await getBranchSchedulingConfig(db, branchId);
   if (!branch) throw new NotFoundError('Branch not found');
 
   await assertBranchAccess(db, user.id, branchId);
@@ -118,7 +117,7 @@ export async function updateWorkingHours(ctx: BaseContext) {
   const branchId = ctx.req.param('branchId')!;
   const db = ctx.get('database') as DatabaseInstance;
 
-  const [existingBranch] = await db.select({ id: dentalBranches.id }).from(dentalBranches).where(eq(dentalBranches.id, branchId));
+  const existingBranch = await getBranchSchedulingConfig(db, branchId);
   if (!existingBranch) throw new NotFoundError('Branch not found');
 
   await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
@@ -132,9 +131,7 @@ export async function updateWorkingHours(ctx: BaseContext) {
   }
   const { workingHours } = parsed.data;
 
-  await db.update(dentalBranches)
-    .set({ workingHours: JSON.stringify(workingHours), updatedAt: new Date(), updatedBy: user.id })
-    .where(eq(dentalBranches.id, branchId!));
+  await updateBranchWorkingHoursDb(db, branchId, JSON.stringify(workingHours), user.id);
 
   return ctx.json({ branchId, workingHours }, 200);
 }

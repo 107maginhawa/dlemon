@@ -9,11 +9,11 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { listAppointmentsWithPatientName } from './repos/appointment-patient.facade';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import type { User } from '@/types/auth';
-import { eq, and, gte, lt, inArray, type SQL } from 'drizzle-orm';
+import { eq, gte, lt, inArray, type SQL } from 'drizzle-orm';
 import { dentalAppointments } from './repos/dental-appointment.schema';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { ListAppointmentsQuery } from '@/generated/openapi/validators';
 
@@ -39,7 +39,6 @@ export async function listAppointments(ctx: HandlerContext) {
   const offset = Math.max(parseInt(rawQuery['offset'] ?? '0', 10) || 0, 0);
 
   const db = ctx.get('database') as DatabaseInstance;
-  const repo = new DentalAppointmentRepository(db);
 
   // Build conditions
   const conditions: (SQL<unknown> | undefined)[] = [];
@@ -50,11 +49,7 @@ export async function listAppointments(ctx: HandlerContext) {
     conditions.push(eq(dentalAppointments.branchId, filters.branchId));
   } else {
     // No branchId filter — restrict to branches where user has active membership
-    const memberships = await db
-      .select({ branchId: dentalMemberships.branchId })
-      .from(dentalMemberships)
-      .where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.status, 'active')));
-    const accessibleBranchIds = memberships.map(m => m.branchId);
+    const accessibleBranchIds = await getActiveBranchIdsForPerson(db, user.id);
     if (accessibleBranchIds.length === 0) return ctx.json([]);
     conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds));
   }
@@ -69,6 +64,6 @@ export async function listAppointments(ctx: HandlerContext) {
     conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)));
   }
 
-  const appointments = await repo.findManyWithPatientName(conditions, limit, offset);
+  const appointments = await listAppointmentsWithPatientName(db, conditions, limit, offset);
   return ctx.json(appointments);
 }

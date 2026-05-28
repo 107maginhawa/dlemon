@@ -10,10 +10,9 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchAccess } from './utils/assert-branch-access';
-import { eq } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { UpdateAppointmentBody, UpdateAppointmentParams } from '@/generated/openapi/validators';
 import type { DentalAppointment } from './repos/dental-appointment.schema';
@@ -78,7 +77,7 @@ export async function updateAppointment(ctx: HandlerContext) {
   // Re-validate working hours and check overlap if scheduledAt is being changed
   if (newScheduledAt !== undefined) {
     const durationMinutes = body.durationMinutes ?? existing.durationMinutes;
-    const [branch] = await db.select().from(dentalBranches).where(eq(dentalBranches.id, existing.branchId));
+    const branch = await getBranchSchedulingConfig(db, existing.branchId);
     if (branch?.workingHours) {
       const hours = parseWorkingHours(branch.workingHours);
       if (hours && !isWithinWorkingHours(newScheduledAt, durationMinutes, hours, branch.timezone ?? 'UTC')) {

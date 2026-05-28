@@ -8,7 +8,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { getAppointmentWithPatientName } from './repos/appointment-patient.facade';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
 import type { GetAppointmentParams } from '@/generated/openapi/validators';
@@ -19,9 +19,8 @@ export async function getAppointment(ctx: HandlerContext) {
 
   const { appointmentId } = ctx.req.valid('param') as GetAppointmentParams;
   const db = ctx.get('database') as DatabaseInstance;
-  const repo = new DentalAppointmentRepository(db);
 
-  const appt = await repo.findOneWithPatientName(appointmentId);
+  const appt = await getAppointmentWithPatientName(db, appointmentId);
   if (!appt) throw new NotFoundError('Appointment');
 
   await assertBranchAccess(db, user.id, appt.branchId);
