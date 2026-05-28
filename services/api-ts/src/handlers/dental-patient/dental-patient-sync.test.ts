@@ -25,9 +25,9 @@ import {
   CreateSyncLogBody,
   UpdateSyncLogBody,
 } from './utils/sync-log-validators';
-import { createSyncLog } from './createSyncLog';
-import { listSyncLogs } from './listSyncLogs';
-import { updateSyncLog } from './updateSyncLog';
+import { createSyncLog } from './sync/createSyncLog';
+import { listSyncLogs } from './sync/listSyncLogs';
+import { updateSyncLog } from './sync/updateSyncLog';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

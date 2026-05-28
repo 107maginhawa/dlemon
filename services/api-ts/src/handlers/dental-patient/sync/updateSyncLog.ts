@@ -5,8 +5,8 @@
  */
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { SyncLogRepository } from './repos/sync-log.repo';
-import { SYNC_FSM, type SyncStatus } from './repos/sync-log.schema';
+import { SyncLogRepository } from '../repos/sync-log.repo';
+import { SYNC_FSM, type SyncStatus } from '../repos/sync-log.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateSyncLog(ctx: any): Promise<Response> {

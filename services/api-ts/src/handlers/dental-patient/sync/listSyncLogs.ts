@@ -5,7 +5,7 @@
  */
 
 import { UnauthorizedError } from '@/core/errors';
-import { SyncLogRepository } from './repos/sync-log.repo';
+import { SyncLogRepository } from '../repos/sync-log.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function listSyncLogs(ctx: any): Promise<Response> {

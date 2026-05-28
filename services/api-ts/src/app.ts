@@ -63,9 +63,9 @@ import { getTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/getT
 import { updateTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/updateTreatmentPlan';
 import { acceptTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
 import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody } from '@/handlers/dental-patient/utils/treatment-plan-validators';
-import { createSyncLog } from '@/handlers/dental-patient/createSyncLog';
-import { listSyncLogs } from '@/handlers/dental-patient/listSyncLogs';
-import { updateSyncLog } from '@/handlers/dental-patient/updateSyncLog';
+import { createSyncLog } from '@/handlers/dental-patient/sync/createSyncLog';
+import { listSyncLogs } from '@/handlers/dental-patient/sync/listSyncLogs';
+import { updateSyncLog } from '@/handlers/dental-patient/sync/updateSyncLog';
 import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/utils/sync-log-validators';
 import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
 import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
