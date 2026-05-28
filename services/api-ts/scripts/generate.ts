@@ -592,6 +592,37 @@ async function generateRoutes(paths: Record<string, PathItem>, spec: any) {
   console.log('   ✓ Generated routes.ts');
 }
 
+// Cache: module -> Map<operationId, relative path without .ts>
+const handlerFileCache = new Map<string, Map<string, string>>();
+
+async function findHandlerFile(
+  handlersDir: string,
+  module: string,
+  operationId: string
+): Promise<string | null> {
+  // Populate cache for module on first call
+  if (!handlerFileCache.has(module)) {
+    const moduleMap = new Map<string, string>();
+    const moduleDir = path.join(handlersDir, module);
+    const glob = new Glob('**/*.ts');
+    try {
+      for await (const file of glob.scan({ cwd: moduleDir, absolute: false })) {
+        // file is like "createDentalPatient.ts" or "identity/createDentalPatient.ts"
+        const withoutExt = file.replace(/\.ts$/, '');
+        const baseName = path.basename(withoutExt);
+        // Store by base filename -> relative path from handlersDir
+        moduleMap.set(baseName, `${module}/${withoutExt}`);
+      }
+    } catch {
+      // Module directory may not exist yet
+    }
+    handlerFileCache.set(module, moduleMap);
+  }
+
+  const moduleMap = handlerFileCache.get(module)!;
+  return moduleMap.get(operationId) ?? null;
+}
+
 async function generateRegistry(paths: Record<string, PathItem>) {
   console.log('🔧 Generating handler registry...');
   
@@ -615,9 +646,15 @@ async function generateRegistry(paths: Record<string, PathItem>) {
   // Generate static imports and registry entries
   for (const [module, operations] of operationsByModule) {
     registryEntries.push(`  // ${capitalize(module)} handlers`);
-    for (const operationId of operations) {
+    const sortedOperations = [...operations].sort();
+    for (const operationId of sortedOperations) {
+      // Resolve handler path: check for subfoldered file first, fall back to flat
+      const foundPath = await findHandlerFile(HANDLERS_DIR, module, operationId);
+      const importPath = foundPath
+        ? `../../handlers/${foundPath}`
+        : `../../handlers/${module}/${operationId}`;
       // Add static import
-      imports.push(`import { ${operationId} } from '../../handlers/${module}/${operationId}';`);
+      imports.push(`import { ${operationId} } from '${importPath}';`);
       // Add registry entry as direct function reference
       registryEntries.push(`  ${operationId},`);
     }
@@ -655,8 +692,9 @@ async function generateHandlerStubs(paths: Record<string, PathItem>, spec: any) 
       const handlerDir = path.join(HANDLERS_DIR, module);
       const handlerPath = path.join(handlerDir, `${operation.operationId}.ts`);
       
-      // Check if handler already exists
-      if (await exists(handlerPath)) {
+      // Check if handler already exists (flat or in any subdirectory)
+      const alreadyExists = (await findHandlerFile(HANDLERS_DIR, module, operation.operationId)) !== null;
+      if (alreadyExists) {
         skipped++;
         continue;
       }
