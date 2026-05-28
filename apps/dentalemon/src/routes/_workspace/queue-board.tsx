@@ -9,8 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { QueueBoard } from '@/features/scheduling/components/queue-board';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const Route = createFileRoute('/_workspace/queue-board' as any)({
+export const Route = createFileRoute('/_workspace/queue-board')({
   component: QueueBoardPage,
 });
 

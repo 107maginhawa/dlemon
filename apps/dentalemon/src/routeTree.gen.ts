@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ImagingCephReportImageIdRouteImport } from './routes/imaging-ceph-report.$imageId'
 import { Route as AuthPinSelectRouteImport } from './routes/auth/pin-select'
 import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
+import { Route as WorkspaceQueueBoardRouteImport } from './routes/_workspace/queue-board'
 import { Route as WorkspacePatientIdRouteImport } from './routes/_workspace/$patientId'
 import { Route as DashboardStaffRouteImport } from './routes/_dashboard/staff'
 import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
@@ -67,6 +68,11 @@ const AuthAuthViewRoute = AuthAuthViewRouteImport.update({
   id: '/auth/$authView',
   path: '/auth/$authView',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceQueueBoardRoute = WorkspaceQueueBoardRouteImport.update({
+  id: '/queue-board',
+  path: '/queue-board',
+  getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspacePatientIdRoute = WorkspacePatientIdRouteImport.update({
   id: '/$patientId',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof DashboardSettingsRoute
   '/staff': typeof DashboardStaffRoute
   '/$patientId': typeof WorkspacePatientIdRoute
+  '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/settings': typeof DashboardSettingsRoute
   '/staff': typeof DashboardStaffRoute
   '/$patientId': typeof WorkspacePatientIdRoute
+  '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/staff': typeof DashboardStaffRoute
   '/_workspace/$patientId': typeof WorkspacePatientIdRoute
+  '/_workspace/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/staff'
     | '/$patientId'
+    | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
     | '/imaging-ceph-report/$imageId'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/staff'
     | '/$patientId'
+    | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
     | '/imaging-ceph-report/$imageId'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_dashboard/settings'
     | '/_dashboard/staff'
     | '/_workspace/$patientId'
+    | '/_workspace/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
     | '/imaging-ceph-report/$imageId'
@@ -317,6 +329,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/$authView'
       preLoaderRoute: typeof AuthAuthViewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_workspace/queue-board': {
+      id: '/_workspace/queue-board'
+      path: '/queue-board'
+      fullPath: '/queue-board'
+      preLoaderRoute: typeof WorkspaceQueueBoardRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/$patientId': {
       id: '/_workspace/$patientId'
@@ -428,10 +447,12 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 
 interface WorkspaceRouteChildren {
   WorkspacePatientIdRoute: typeof WorkspacePatientIdRoute
+  WorkspaceQueueBoardRoute: typeof WorkspaceQueueBoardRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspacePatientIdRoute: WorkspacePatientIdRoute,
+  WorkspaceQueueBoardRoute: WorkspaceQueueBoardRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(

@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/utils/guards'
-import { getRuntimeConfig } from '@/utils/config'
 import { useOrgContextStore } from '@/stores/org-context.store'
+import { loadOrgContext } from '@/utils/load-org-context'
+import { pinSession } from '@/utils/pin-session'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
   SidebarProvider,
@@ -23,36 +24,28 @@ export const Route = createFileRoute('/_dashboard')({
     // Require authentication first
     await requireAuth(opts)
 
+    // CF-37/CF-89 (Slice H): Enforce server-side PIN session — Zustand store is
+    // client-only and can be stale or spoofed. The in-memory pinSession is the
+    // authoritative source: if no active PIN session exists (or it is locked /
+    // expired), redirect to the PIN selection screen to force re-authentication.
+    const session = pinSession.getSession()
+    const pinExpired = pinSession.isExpired()
+    const pinLocked = pinSession.isLocked()
+    if (!session || pinExpired || pinLocked) {
+      throw redirect({ to: '/auth/pin-select' as any })
+    }
+
     // FR7.5/FR9.8: If no dental org is set up yet, redirect to the setup wizard
     // (unless the user is already on the dental-onboarding route itself)
     const pathname = opts.location?.pathname ?? ''
     if (!pathname.includes('dental-onboarding')) {
       // Always refresh org context from API
       // (e.g. after re-seeding, branch ID changes, or first load after onboarding)
-      try {
-        const { apiUrl } = await getRuntimeConfig()
-        const res = await fetch(`${apiUrl}/dental/org/context`, {
-          credentials: 'include',
-        })
-        if (res.ok) {
-          const ctx = await res.json() as any
-          if (ctx.branch?.id) {
-            useOrgContextStore.getState().setContext({
-              branchId: ctx.branch.id,
-              orgId: ctx.org?.id ?? null,
-              role: ctx.member?.role ?? null,
-              memberId: ctx.member?.id ?? null,
-            })
-            return
-          }
-        }
-      } catch {
-        // API unreachable — fall through to onboarding check
-      }
+      const branchId = await loadOrgContext()
+      if (branchId) return
 
       // No branch found — redirect to onboarding if store also has nothing
-      const { branchId } = useOrgContextStore.getState()
-      if (!branchId) {
+      if (!useOrgContextStore.getState().branchId) {
         throw redirect({ to: '/dental-onboarding' as any })
       }
     }

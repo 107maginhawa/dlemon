@@ -12,8 +12,13 @@ import React, { useState, useEffect } from 'react';
 import { pinSession } from '@/utils/pin-session';
 import { apiBaseUrl } from '@/utils/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { requireAuth } from '@/utils/guards';
 
 export const Route = createFileRoute('/auth/pin-entry/$memberId')({
+  // CF-44 (Slice H): PIN entry is part of the authenticated device flow.
+  // Without this guard, an unauthenticated browser tab could attempt to verify
+  // PINs for any membership ID it knows. Better-Auth session is required first.
+  beforeLoad: requireAuth,
   component: PinEntryRoute,
 });
 
