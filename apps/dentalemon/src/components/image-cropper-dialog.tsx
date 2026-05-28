@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react'
 import CropperLib, { Area } from 'react-easy-crop'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Cropper = CropperLib as any
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './dialog'
-import { Button } from './button'
-import { Slider } from './slider'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@monobase/ui'
+import { Button } from '@monobase/ui'
+import { Slider } from '@monobase/ui'
 import { Loader2 } from 'lucide-react'
 
 interface ImageCropperDialogProps {

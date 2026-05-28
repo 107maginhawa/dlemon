@@ -3,8 +3,8 @@
 import * as React from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/button"
-import { Badge } from "@/components/badge"
+import { Button } from "@monobase/ui"
+import { Badge } from "@monobase/ui"
 import {
   Command,
   CommandEmpty,
@@ -12,12 +12,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/command"
+} from "@monobase/ui"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/popover"
+} from "@monobase/ui"
 
 export interface ComboboxOption {
   value: string

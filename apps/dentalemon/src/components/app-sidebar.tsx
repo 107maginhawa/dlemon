@@ -13,8 +13,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/sidebar"
-import { Logo } from "@/components/logo"
+} from "@monobase/ui"
+import { Logo } from "@monobase/ui"
 import { useSession, useSignOut } from "@monobase/sdk-ts/react/hooks/use-auth"
 
 export interface NavItem {
