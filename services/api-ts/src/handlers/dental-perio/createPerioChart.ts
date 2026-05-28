@@ -15,10 +15,9 @@ import {
   NotFoundError,
   BusinessLogicError,
 } from '@/core/errors';
-import { eq } from 'drizzle-orm';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreatePerioChartBody } from '@/generated/openapi/validators';
@@ -43,11 +42,7 @@ export async function createPerioChart(
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   // Resolve examiner membership for this user on this branch.
-  const [membership] = await db
-    .select({ id: dentalMemberships.id })
-    .from(dentalMemberships)
-    .where(eq(dentalMemberships.personId, user.id))
-    .limit(1);
+  const membership = await getActiveMembershipId(db, user.id, visit.branchId);
   if (!membership) throw new NotFoundError('Membership');
 
   const repo = new PerioChartRepository(db);
