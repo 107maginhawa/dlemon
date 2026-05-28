@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: "structural-remediation"
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-05-28T12:00:00.000Z"
+last_updated: "2026-05-28T16:00:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 28
   completed_plans: 28
-  percent: 80
+  percent: 85
 ---
 
 ## Current Position
@@ -37,7 +37,7 @@ Plan file: `~/.claude/plans/id-like-to-understand-wiggly-storm.md`
 - Phase 7 (package extraction: ui, shared-utils, ceph-math) — ~3-5 days
 - Phase 9c (large file splits: imaging-workspace.tsx 1051 LOC, others) — deferred
 - Phase 10 continued (facade migration: 99 violations → 0, one module at a time)
-- Phase 11 (module template + bloated module split) — requires Phase 10 complete
+- Phase 11 (module template + bloated module split) — ✅ 739388e9 — dental-visit (6 buckets) + dental-clinical (9 buckets) + dental-patient (8 buckets, prior sessions)
 - Phase 12 (legacy module resolution) — HIGH risk, requires Phase 11 complete
 
 #### Phase 10 violation baseline → COMPLETE (2026-05-28)
