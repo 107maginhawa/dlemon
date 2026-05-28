@@ -24,7 +24,7 @@ workspace.
 
 **Monorepo Structure**:
 - `apps/` - Frontend applications:
-  - `account/` - Vite + TanStack Router reference app (auth, profile, settings)
+  - `account/` - Frozen upstream-template reference (auth, profile, settings patterns). Do not add product features.
   - `account/src-tauri/` - Tauri 2 desktop/mobile wrapper (Rust). Embeds api-ts (via the `api-ts-embedded` crate / QuickJS runtime) + the cadence P2P sync engine for offline-first operation. Optional — only built when packaging desktop/mobile.
 - `services/` - Backend services:
   - `api-ts/` - Reference TypeScript API impl (Hono + Drizzle). Sibling impls (`api-rs`, `api-go`, …) are documented in `specs/api/IMPLEMENTING.md` but not yet present.
