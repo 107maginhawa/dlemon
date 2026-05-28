@@ -16,14 +16,3 @@
 # Previously hidden by db-guard (guard was blocking all tests).
 # These are pre-existing failures surfaced when monobase_test infra landed.
 # Added 2026-05-27 after db-guard infrastructure fix.
-(fail) AC-SCHED-03: cancelling appointment sets status cancelled; visit is preserved > cancelled appointment has status cancelled; a visit created by another appt is not deleted [AC-SCHED-03]
-(fail) audit trail > updatedBy is set to user.id on cancel
-(fail) cancelAppointment handler > returns 204 and appointment is cancelled
-(fail) FR2.7: archive and restore patient (EC1 guard) > restore brings patient back to active status
-(fail) FR6.3: Tier-based member limits > solo plan: deactivated member frees a slot (does not count toward limit)
-(fail) listAuditLogs > calls repo.logEvent to self-log the access
-(fail) mergePatients handler > returns 500 (not implemented) for valid request body
-(fail) pagination on listAppointments > offset skips earlier results
-(fail) status transition guards > cannot mark noShow on a cancelled appointment
-(fail) unmergePatients handler > returns 500 (not implemented) for valid request body
-(fail) Validation (AC-007, BR-002) > AC-007: POST returns 400 when name is missing

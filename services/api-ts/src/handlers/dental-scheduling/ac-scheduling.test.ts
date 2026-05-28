@@ -207,6 +207,8 @@ describe('AC-SCHED-03: cancelling appointment sets status cancelled; visit is pr
     // Cancel appointment B
     const cancelRes = await app.request(`/dental/appointments/${apptB.id}`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
     expect(cancelRes.status).toBe(204);
 

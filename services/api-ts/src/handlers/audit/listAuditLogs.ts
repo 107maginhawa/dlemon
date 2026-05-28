@@ -78,6 +78,18 @@ export async function listAuditLogs(
   // Build pagination metadata
   const paginationMeta = buildPaginationMeta(auditLogs, totalCount, limit, offset);
 
+  // Self-log this access for compliance audit trail
+  await repo.logEvent({
+    eventType: 'data-access',
+    category: 'hipaa',
+    action: 'read',
+    outcome: 'success',
+    resourceType: 'audit_log',
+    resource: 'audit_log_list',
+    description: 'Audit logs accessed',
+    user: user.id,
+  }, user.id);
+
   // Log successful query
   logger?.info({
     userId: user.id,

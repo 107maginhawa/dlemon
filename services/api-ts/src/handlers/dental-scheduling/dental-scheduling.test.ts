@@ -533,6 +533,8 @@ describe('cancelAppointment handler', () => {
 
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
     expect(res.status).toBe(204);
 
@@ -682,7 +684,11 @@ describe('status transition guards', () => {
     const app = buildTestApp(TEST_USER);
 
     // Cancel first
-    await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
+    });
 
     // Now attempt noShow
     const res = await app.request(`/dental/appointments/${appt.id}`, {
@@ -783,7 +789,11 @@ describe('audit trail', () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
+    });
 
     const repo = new DentalAppointmentRepository(db);
     const updated = await repo.findOneById(appt.id);

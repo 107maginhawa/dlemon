@@ -3,6 +3,8 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
+import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
+import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { DentalMembershipManagement_deactivateBody, DentalMembershipManagement_deactivateParams } from '@/generated/openapi/validators';
 
@@ -32,8 +34,14 @@ export async function DentalMembershipManagement_deactivate(
   const existing = await repo.findOneById(membershipId);
   if (!existing) throw new NotFoundError('Membership');
 
-  // G7-S1: IDOR guard — caller must be a member of the same branch
-  await assertBranchAccess(db, user.id, existing.branchId);
+  // G7-S1: IDOR guard — org owners may deactivate; otherwise caller must be a branch member
+  const branchRepo = new BranchRepository(db, logger);
+  const branch = await branchRepo.findOneById(existing.branchId);
+  const orgRepo = new OrganizationRepository(db, logger);
+  const org = branch ? await orgRepo.findOneById(branch.organizationId) : null;
+  if (org?.ownerPersonId !== user.id) {
+    await assertBranchAccess(db, user.id, existing.branchId);
+  }
 
   const membership = await repo.deactivate(membershipId);
   if (!membership) throw new NotFoundError('Membership');

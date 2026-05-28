@@ -10,7 +10,7 @@ export const PatientContactContactParams = z.object({
 });
 
 export const CreatePatientContactBody = z.object({
-  name: z.string().trim().min(1, 'name is required and cannot be blank'),
+  name: z.string({ error: 'name is required' }).trim().min(1, 'name is required and cannot be blank'),
   relationship: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
