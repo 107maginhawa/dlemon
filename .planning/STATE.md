@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: "structural-remediation"
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-05-28T10:37:56.908Z"
+last_updated: "2026-05-28T00:00:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 13
   total_plans: 28
-  completed_plans: 27
-  percent: 77
+  completed_plans: 28
+  percent: 100
 ---
 
 ## Current Position
@@ -18,27 +18,37 @@ progress:
 
 Plan file: `~/.claude/plans/id-like-to-understand-wiggly-storm.md`
 
-#### Completed phases (as of 2026-05-27)
+#### Completed phases (as of 2026-05-28)
 
-- Phase 0 (baseline): ✅ cb4c5c2 — cfbddd1
-- Phase 1 (cruft/dead docs): ✅ 4756d47
-- Phase 2 (doc truth): ✅ cb4c5c2
-- Phase 3 (test hygiene + type cycle): ✅ 2aafb04
-- Phase 4 (kill as any): ✅ fecf859
-- Phase 6 (generator hardening): ✅ ffd07f2
-- Phase 8 (account freeze): ✅ f3f92d9 — README banner added; dentalemon has Tauri too
-- Phase 9a (z_pages → __tests__, spike relocated): ✅ f3f92d9
-- Phase 5 (dental-org dup): ✅ 47f7a74 — FR6.3 migrated into createMember; DentalMembershipManagement_create deprecated (Sunset: 2026-09-01)
-- Phase 9b (cdt-codes relocation, lib/utils docs): ✅ d49a1b1
-- Phase 10 (boundary checker): ✅ e39b867 — 99 violations at baseline; check:boundaries script; MODULE_BOUNDARIES.md
+- Phase 0 (baseline): ✅ (prior session)
+- Phase 1 (cruft/dead docs): ✅ (prior session)
+- Phase 2 (doc truth): ✅ (prior session)
+- Phase 3 (test hygiene + type cycle): ✅ bc31a60f — removed vestigial ChartEntryClassification re-export from tooth-slideout
+- Phase 4 (kill as any): ✅ d027c067 — replaced ctx as any → ctx as BaseContext in 9 imaging shims
+- Phase 5 (dental-org dup): ✅ 47f7a749 — FR6.3 migrated into createMember; DentalMembershipManagement_create deprecated (Sunset: 2026-09-01)
+- Phase 6 (generator hardening): ✅ 38142fe0 — duplicate operationId detection in generateRegistry()
+- Phase 7a (packages/ui): ✅ (prior session)
+- Phase 7b (packages/shared-utils): ✅ (prior session)
+- Phase 7c (packages/ceph-math): ✅ (prior session)
+- Phase 8 (account freeze): ✅ b9aee2d8 — CLAUDE.md monorepo structure updated; README banner already in place
+- Phase 9a/9b (dentalemon src cleanup): ✅ a3708288 + 5faa4783 — services/→features/notifications/, utils/→lib/
+- Phase 9c (large file splits): ✅ 8af49db9 (prior session)
+- Phase 10 (boundary lint + CODEOWNERS): ✅ 233bad8b — 99→0 violations, check:boundaries:error exits 0
+- Phase 11 (module template + bucket): ✅ 739388e9 — dental-visit/clinical/patient bucketed
+- Phase 12 (legacy fate decisions): ✅ 2119b423 — MODULE_FATE.md decisions documented
 
 #### Remaining phases
 
-- Phase 7 (package extraction: ui, shared-utils, ceph-math) — ~3-5 days
-- Phase 9c (large file splits: imaging-workspace.tsx 1051 LOC, others) — deferred
-- Phase 10 continued (facade migration: 99 violations → 0, one module at a time)
-- Phase 11 (module template + bloated module split) — ✅ 739388e9 — dental-visit (6 buckets) + dental-clinical (9 buckets) + dental-patient (8 buckets, prior sessions)
-- Phase 12 (legacy module resolution) — HIGH risk, requires Phase 11 complete
+**All Phases 0–12 complete.** See future work in plan file §Future Work (F1–F7).
+
+Outstanding deferred items (from plan §Future Work):
+- F1: Ticket-ID test rename (after audit archive)
+- F2: Backend service-layer/DI refactor (after Phases 10+11)
+- F3: Schema unification legacy↔dental-* (multi-quarter, H2 2026→H1 2027)
+- F4: Offline-sync/Tauri (cadence stub activation)
+- F5: sample-workspace decision
+- F6: Spec change embargo unwind (lift freeze now that Phase 6 generator validation is live)
+- F7: Re-run /oli-structure-audit to verify dimension scores ≥ 8/10
 
 #### Phase 10 violation baseline → COMPLETE (2026-05-28)
 
