@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/skeleton'
+import { Skeleton } from '@monobase/ui'
 import type { CephAnalysis } from '../hooks/use-ceph-analysis'
 
 export interface CephMeasurementsPanelProps {

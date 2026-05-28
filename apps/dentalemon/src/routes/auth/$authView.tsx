@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Logo } from '@/components/logo'
+import { Logo } from '@monobase/ui'
 import { AuthView } from '@daveyplate/better-auth-ui'
 
 export const Route = createFileRoute('/auth/$authView')({

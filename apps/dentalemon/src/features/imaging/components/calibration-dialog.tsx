@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/dialog'
+} from '@monobase/ui'
 
 interface CalibrationDialogProps {
   open: boolean

@@ -11,7 +11,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '@/components/sheet';
+} from '@monobase/ui';
 import { PMDViewer } from './pmd-viewer';
 import type { PMDDocument } from '../types';
 

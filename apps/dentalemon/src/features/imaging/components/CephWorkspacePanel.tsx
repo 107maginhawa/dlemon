@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Lock, FileText, Download } from 'lucide-react'
-import { Button } from '@/components/button'
+import { Button } from '@monobase/ui'
 import { useMutation } from '@tanstack/react-query'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'

@@ -1,4 +1,4 @@
-import { Badge } from '@/components/badge'
+import { Badge } from '@monobase/ui'
 
 export type ToolMode = 'none' | 'calibration' | 'distance' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth' | 'ceph'
 

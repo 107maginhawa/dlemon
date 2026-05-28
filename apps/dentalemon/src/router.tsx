@@ -1,7 +1,7 @@
 // src/router.tsx
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen.ts'
-import { NotFound } from '@/components/not-found'
+import { NotFound } from '@monobase/ui'
 import type { Person } from '@/utils/guards'
 import type { User, Session } from 'better-auth'
 

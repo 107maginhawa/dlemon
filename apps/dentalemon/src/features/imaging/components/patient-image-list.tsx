@@ -5,7 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/sheet'
+} from '@monobase/ui'
 import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 import { ImageUpload } from './image-upload'
 

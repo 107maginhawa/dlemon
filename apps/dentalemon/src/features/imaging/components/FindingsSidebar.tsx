@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { X, Trash2, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/button'
-import { Input } from '@/components/input'
-import { Textarea } from '@/components/textarea'
+import { Button } from '@monobase/ui'
+import { Input } from '@monobase/ui'
+import { Textarea } from '@monobase/ui'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/select'
-import { Skeleton } from '@/components/skeleton'
+} from '@monobase/ui'
+import { Skeleton } from '@monobase/ui'
 import { useImagingFindings, type ImagingFinding, type ImagingFindingType, type ImagingFindingStatus } from '@/features/imaging/hooks/use-imaging-findings'
 
 // ── Type map ──────────────────────────────────────────────────────────────────
