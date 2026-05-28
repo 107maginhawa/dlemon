@@ -71,13 +71,13 @@ import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
 import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
 import { updateQueueItemStatus } from '@/handlers/dental-scheduling/updateQueueItemStatus';
 import { QueueItemAppointmentParams, QueueItemIdParams, QueueBoardParams, CreateQueueItemBody, UpdateQueueItemStatusBody } from '@/handlers/dental-scheduling/queue-item-validators';
-import { createInsuranceProfile } from '@/handlers/dental-patient/createInsuranceProfile';
-import { listPatientInsuranceProfiles } from '@/handlers/dental-patient/listPatientInsuranceProfiles';
-import { updateInsuranceProfile } from '@/handlers/dental-patient/updateInsuranceProfile';
-import { createClaimDraft } from '@/handlers/dental-patient/createClaimDraft';
-import { listPatientClaims } from '@/handlers/dental-patient/listPatientClaims';
-import { getClaimReadiness } from '@/handlers/dental-patient/getClaimReadiness';
-import { updateClaimStatus } from '@/handlers/dental-patient/updateClaimStatus';
+import { createInsuranceProfile } from '@/handlers/dental-patient/insurance/createInsuranceProfile';
+import { listPatientInsuranceProfiles } from '@/handlers/dental-patient/insurance/listPatientInsuranceProfiles';
+import { updateInsuranceProfile } from '@/handlers/dental-patient/insurance/updateInsuranceProfile';
+import { createClaimDraft } from '@/handlers/dental-patient/insurance/createClaimDraft';
+import { listPatientClaims } from '@/handlers/dental-patient/insurance/listPatientClaims';
+import { getClaimReadiness } from '@/handlers/dental-patient/insurance/getClaimReadiness';
+import { updateClaimStatus } from '@/handlers/dental-patient/insurance/updateClaimStatus';
 import {
   InsuranceProfileParams,
   InsuranceProfileIdParams,

@@ -3,7 +3,7 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { InsuranceProfileRepository } from './repos/insurance-profile.repo';
+import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateInsuranceProfile(ctx: any): Promise<Response> {

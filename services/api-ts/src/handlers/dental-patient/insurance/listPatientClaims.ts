@@ -4,7 +4,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { ClaimDraftRepository } from './repos/claim-draft.repo';
+import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function listPatientClaims(ctx: any): Promise<Response> {

@@ -3,8 +3,8 @@
  */
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { ClaimDraftRepository } from './repos/claim-draft.repo';
-import { CLAIM_DRAFT_FSM, type ClaimDraftStatus } from './repos/claim-draft.schema';
+import { ClaimDraftRepository } from '../repos/claim-draft.repo';
+import { CLAIM_DRAFT_FSM, type ClaimDraftStatus } from '../repos/claim-draft.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateClaimStatus(ctx: any): Promise<Response> {

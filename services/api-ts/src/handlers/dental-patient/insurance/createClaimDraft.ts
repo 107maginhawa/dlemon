@@ -4,8 +4,8 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { InsuranceProfileRepository } from './repos/insurance-profile.repo';
-import { ClaimDraftRepository } from './repos/claim-draft.repo';
+import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
+import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createClaimDraft(ctx: any): Promise<Response> {

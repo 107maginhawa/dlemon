@@ -26,13 +26,13 @@ import {
   CreateClaimDraftBody,
   UpdateClaimDraftStatusBody,
 } from './utils/insurance-validators';
-import { createInsuranceProfile } from './createInsuranceProfile';
-import { listPatientInsuranceProfiles } from './listPatientInsuranceProfiles';
-import { updateInsuranceProfile } from './updateInsuranceProfile';
-import { createClaimDraft } from './createClaimDraft';
-import { listPatientClaims } from './listPatientClaims';
-import { getClaimReadiness } from './getClaimReadiness';
-import { updateClaimStatus } from './updateClaimStatus';
+import { createInsuranceProfile } from './insurance/createInsuranceProfile';
+import { listPatientInsuranceProfiles } from './insurance/listPatientInsuranceProfiles';
+import { updateInsuranceProfile } from './insurance/updateInsuranceProfile';
+import { createClaimDraft } from './insurance/createClaimDraft';
+import { listPatientClaims } from './insurance/listPatientClaims';
+import { getClaimReadiness } from './insurance/getClaimReadiness';
+import { updateClaimStatus } from './insurance/updateClaimStatus';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

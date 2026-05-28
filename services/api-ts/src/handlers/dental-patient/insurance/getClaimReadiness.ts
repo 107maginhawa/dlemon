@@ -3,8 +3,8 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { ClaimDraftRepository } from './repos/claim-draft.repo';
-import { InsuranceProfileRepository } from './repos/insurance-profile.repo';
+import { ClaimDraftRepository } from '../repos/claim-draft.repo';
+import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function getClaimReadiness(ctx: any): Promise<Response> {
