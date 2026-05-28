@@ -1,0 +1,30 @@
+# CODEOWNERS — Fragile Hub Protection
+#
+# Files with fan-in > 20 (audit SA-API-HUB-001 through -007).
+# Changes to these files require 2 reviewers because they are de-facto
+# shared infrastructure consumed by most of the codebase. A rename or
+# schema change here is a mass-refactor event.
+#
+# Source: docs/audits/STRUCT_AUDIT_REPORT.md §5 Dependency Graph Health
+# Fan-in counts measured 2026-05-28.
+
+# SA-API-HUB-001 — fan-in 65: central patient record, consumed by every dental module
+services/api-ts/src/handlers/patient/repos/patient.schema.ts @eladventures
+
+# SA-API-HUB-002 — fan-in 56: patient repository, consumed by every dental module
+services/api-ts/src/handlers/patient/repos/patient.repo.ts @eladventures
+
+# SA-API-HUB-003 — fan-in 48: branch schema, tenancy-critical (all branch-scoped handlers)
+services/api-ts/src/handlers/dental-org/repos/branch.schema.ts @eladventures
+
+# SA-API-HUB-004 — fan-in 47: person schema, Better-Auth-coupled (PII layer)
+services/api-ts/src/handlers/person/repos/person.schema.ts @eladventures
+
+# SA-API-HUB-005 — fan-in 46: membership schema, tier/role-critical
+services/api-ts/src/handlers/dental-org/repos/membership.schema.ts @eladventures
+
+# SA-API-HUB-006 — fan-in 38: visit repo, load-bearing for billing + clinical
+services/api-ts/src/handlers/dental-visit/repos/visit.repo.ts @eladventures
+
+# SA-API-HUB-007 — fan-in 37: visit schema, load-bearing FK anchor
+services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts @eladventures

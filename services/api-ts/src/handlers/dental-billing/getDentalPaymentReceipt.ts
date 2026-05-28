@@ -10,10 +10,8 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient-billing.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { persons } from '../person/repos/person.schema';
-import { eq } from 'drizzle-orm';
 
 export async function getDentalPaymentReceipt(ctx: BaseContext) {
   const user = ctx.get('user');
@@ -40,12 +38,10 @@ export async function getDentalPaymentReceipt(ctx: BaseContext) {
     throw new NotFoundError('Payment not found');
   }
 
-  // Fetch patient name via patient → person join
-  const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneByIdWithPerson(invoice.patientId);
-  const person = patient?.person;
-  const patientName = person
-    ? [person.firstName, person.lastName].filter(Boolean).join(' ')
+  // Fetch patient name via billing facade (avoids direct cross-module repo import)
+  const patientRow = await getPatientWithPersonForInvoice(db, invoice.patientId);
+  const patientName = patientRow
+    ? [patientRow.firstName, patientRow.lastName].filter(Boolean).join(' ')
     : 'Unknown Patient';
 
   logger?.info({ action: 'getDentalPaymentReceipt', invoiceId, paymentId }, 'Receipt generated');
