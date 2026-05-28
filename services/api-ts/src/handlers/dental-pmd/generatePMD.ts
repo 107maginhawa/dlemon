@@ -7,16 +7,15 @@
  */
 
 import { createHash } from 'node:crypto';
-import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, ForbiddenError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
-import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
-import { PrescriptionRepository } from '@/handlers/dental-clinical/repos/prescription.repo';
+import { getTreatmentsForPMD } from '@/handlers/dental-visit/repos/visit-pmd.facade';
+import { getPrescriptionsForPMD } from '@/handlers/dental-clinical/repos/clinical-pmd.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
 
@@ -45,26 +44,16 @@ export async function generatePMD(
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   // Resolve membership ID from personId + branchId
-  const [membership] = await db
-    .select({ id: dentalMemberships.id })
-    .from(dentalMemberships)
-    .where(and(
-      eq(dentalMemberships.personId, user.id),
-      eq(dentalMemberships.branchId, visit.branchId),
-      eq(dentalMemberships.status, 'active'),
-    ))
-    .limit(1);
+  const membership = await getActiveMembershipId(db, user.id, visit.branchId);
+  if (!membership) throw new ForbiddenError('No active membership at this branch');
 
   if (visit.status !== 'completed' && visit.status !== 'locked') {
     throw new ValidationError('PMD can only be generated from a completed or locked visit');
   }
 
   // Collect visit data snapshot
-  const treatmentRepo = new TreatmentRepository(db);
-  const prescriptionRepo = new PrescriptionRepository(db);
-
-  const treatments = await treatmentRepo.findByVisit(visitId);
-  const prescriptions = await prescriptionRepo.findMany({ visitId });
+  const treatments = await getTreatmentsForPMD(db, visitId);
+  const prescriptions = await getPrescriptionsForPMD(db, visitId);
 
   const contentSnapshot = JSON.stringify({
     visitId,
@@ -101,7 +90,7 @@ export async function generatePMD(
     pmd = await pmdRepo.supersede(existing.id, {
       visitId,
       patientId: body.patientId,
-      authorMemberId: membership!.id,
+      authorMemberId: membership.id,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,
@@ -110,7 +99,7 @@ export async function generatePMD(
     pmd = await pmdRepo.createOne({
       visitId,
       patientId: body.patientId,
-      authorMemberId: membership!.id,
+      authorMemberId: membership.id,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,

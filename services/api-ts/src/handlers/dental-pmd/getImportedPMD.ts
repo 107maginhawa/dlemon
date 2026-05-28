@@ -13,7 +13,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import type { User } from '@/types/auth';
 import { ImportedPMDRepository } from './repos/imported-pmd.repo';
 import { importedPmds } from './repos/pmd-document.schema';
-import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { getPatientForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq } from 'drizzle-orm';
 
@@ -33,8 +33,7 @@ export async function getImportedPMD(ctx: Context): Promise<Response> {
   if (!stub) throw new NotFoundError('Imported PMD not found');
 
   // Branch-level authorization via patient's preferred branch
-  const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneById(stub.patientId);
+  const patient = await getPatientForPMD(db, stub.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
   await assertBranchAccess(db, user.id, patient.preferredBranchId);
