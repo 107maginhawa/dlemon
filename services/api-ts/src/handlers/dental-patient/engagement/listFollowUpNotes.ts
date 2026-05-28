@@ -8,9 +8,9 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import type { FollowUpNote } from '../patient/repos/patient.schema';
+import type { FollowUpNote } from '../../patient/repos/patient.schema';
 import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
 
 export async function listFollowUpNotes(

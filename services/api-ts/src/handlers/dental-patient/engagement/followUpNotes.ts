@@ -9,11 +9,11 @@ import { z } from 'zod';
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import type { FollowUpNote } from '../patient/repos/patient.schema';
+import type { FollowUpNote } from '../../patient/repos/patient.schema';
 import { sql } from 'drizzle-orm';
-import { patients } from '../patient/repos/patient.schema';
+import { patients } from '../../patient/repos/patient.schema';
 import { eq } from 'drizzle-orm';
 
 const addFollowUpNoteSchema = z.object({

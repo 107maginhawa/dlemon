@@ -92,9 +92,9 @@ import { createDentalAlert } from '@/handlers/dental-patient/alerts/createDental
 import { listDentalAlerts } from '@/handlers/dental-patient/alerts/listDentalAlerts';
 import { updateDentalAlert } from '@/handlers/dental-patient/alerts/updateDentalAlert';
 import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/utils/dental-alert-validators';
-import { createTask } from '@/handlers/dental-patient/createTask';
-import { listPatientTasks } from '@/handlers/dental-patient/listPatientTasks';
-import { updateTask } from '@/handlers/dental-patient/updateTask';
+import { createTask } from '@/handlers/dental-patient/engagement/createTask';
+import { listPatientTasks } from '@/handlers/dental-patient/engagement/listPatientTasks';
+import { updateTask } from '@/handlers/dental-patient/engagement/updateTask';
 import { TaskParams, TaskTaskParams, CreateTaskBody, UpdateTaskBody } from '@/handlers/dental-patient/utils/task-validators';
 import { createOcclusionScreening } from '@/handlers/dental-clinical/createOcclusionScreening';
 import { listOcclusionScreenings } from '@/handlers/dental-clinical/listOcclusionScreenings';

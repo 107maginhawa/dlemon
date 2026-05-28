@@ -27,9 +27,9 @@ import {
   CreateTaskBody,
   UpdateTaskBody,
 } from './utils/task-validators';
-import { createTask } from './createTask';
-import { listPatientTasks } from './listPatientTasks';
-import { updateTask } from './updateTask';
+import { createTask } from './engagement/createTask';
+import { listPatientTasks } from './engagement/listPatientTasks';
+import { updateTask } from './engagement/updateTask';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

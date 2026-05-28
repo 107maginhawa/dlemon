@@ -7,8 +7,8 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { TaskRepository } from './repos/task.repo';
-import { TASK_FSM, type TaskStatus } from './repos/task.schema';
+import { TaskRepository } from '../repos/task.repo';
+import { TASK_FSM, type TaskStatus } from '../repos/task.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateTask(ctx: any): Promise<Response> {

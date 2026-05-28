@@ -6,7 +6,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { TaskRepository } from './repos/task.repo';
+import { TaskRepository } from '../repos/task.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createTask(ctx: any): Promise<Response> {
