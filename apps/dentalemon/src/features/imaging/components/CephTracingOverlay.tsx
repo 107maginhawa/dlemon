@@ -1,6 +1,6 @@
 import { activeLinesForLandmarks } from '../lib/ceph-geometry'
-import { imageToScreen } from '../../../lib/ceph-coords'
-import type { CephTransformState } from '../../../lib/ceph-coords'
+import { imageToScreen } from '@monobase/ceph-math'
+import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark } from '../hooks/use-ceph-landmarks'
 
 export interface CephTracingOverlayProps {

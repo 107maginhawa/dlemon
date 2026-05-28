@@ -13,7 +13,7 @@ import { CephTracingOverlay } from './CephTracingOverlay'
 import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
-import type { CephTransformState } from '../../../lib/ceph-coords'
+import type { CephTransformState } from '@monobase/ceph-math'
 import { computeAngleDeg, computePolygonArea, euclidean } from '../lib/geometry'
 
 interface ImagingWorkspaceProps {

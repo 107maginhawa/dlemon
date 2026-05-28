@@ -1,7 +1,7 @@
 /**
  * Screen ↔ image coordinate transform for the cephalometric workspace.
  *
- * Inverts the 6-step canvas matrix drawn in imaging-workspace.tsx:497-500:
+ * Inverts the 6-step canvas matrix drawn in imaging-workspace.tsx:
  *   ctx.translate(W/2 + offsetX, H/2 + offsetY)
  *   ctx.scale(s * (flip ? -1 : 1), s)
  *   ctx.rotate(rot * π/2)

@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from 'bun:test'
 import { render, cleanup } from '@testing-library/react'
 import React from 'react'
 import { CephAngleArcLayer } from './CephAngleArcLayer'
-import type { CephTransformState } from '../../../lib/ceph-coords'
+import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark } from '../hooks/use-ceph-landmarks'
 
 afterEach(cleanup)

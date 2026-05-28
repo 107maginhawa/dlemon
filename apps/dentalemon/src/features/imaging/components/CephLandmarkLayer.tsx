@@ -1,6 +1,6 @@
 import { useRef } from 'react'
-import { imageToScreen, screenToImage } from '../../../lib/ceph-coords'
-import type { CephTransformState } from '../../../lib/ceph-coords'
+import { imageToScreen, screenToImage } from '@monobase/ceph-math'
+import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark, CephLandmarkCode } from '../hooks/use-ceph-landmarks'
 
 export interface CephLandmarkLayerProps {
