@@ -84,7 +84,8 @@ export function createOriginValidator(corsConfig: Config['cors'], logger?: Logge
       return origin;
     }
 
-    // Blocked — return null so no ACAO header is set.
+    // Blocked — return first explicit origin so ACAO is set but won't match
+    // request origin; browser still blocks the cross-origin request.
     if (logger) {
       logger.warn({
         origin,

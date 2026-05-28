@@ -25,7 +25,7 @@ import { AppError } from '@/core/errors';
 
 // Repos — direct DB access for seeding
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
-import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
+import { TreatmentRepository, VisitNotesRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { ConsentFormRepository } from '@/handlers/dental-clinical/repos/consent-form.repo';
 import { LabOrderRepository } from '@/handlers/dental-clinical/repos/lab-order.repo';
 import { DentalInvoiceRepository } from '@/handlers/dental-billing/repos/dental-invoice.repo';
@@ -336,6 +336,19 @@ async function seedPerformedTreatment(visitId: string) {
   });
 }
 
+async function seedVisitNotes(visitId: string) {
+  const repo = new VisitNotesRepository(db);
+  return repo.upsert({ visitId, authorMemberId: MEMBER_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id });
+}
+
+async function seedCompletableActiveVisit(overrides?: { patientId?: string }) {
+  const visit = await seedActiveVisit(overrides);
+  await seedVisitNotes(visit!.id);
+  await seedPerformedTreatment(visit!.id);
+  await seedSignedConsent(visit!.id);
+  return visit;
+}
+
 async function seedVerifiedTreatment(visitId: string) {
   const repo = new TreatmentRepository(db);
   return repo.createOne({
@@ -468,7 +481,7 @@ describe('BR-002: visit state transitions are linear, no reversal', () => {
   });
 
   test('forward transition active → completed succeeds (200)', async () => {
-    const visit = await seedActiveVisit();
+    const visit = await seedCompletableActiveVisit();
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}`, {
       method: 'PATCH',
@@ -838,6 +851,7 @@ describe('BR-009: invoice requires at least one billable treatment', () => { // 
     const visit = await seedActiveVisit();
     // Only a diagnosed treatment — not billable
     await seedTreatment(visit!.id, { status: 'diagnosed' });
+    await seedSignedConsent(visit!.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',
@@ -857,6 +871,7 @@ describe('BR-009: invoice requires at least one billable treatment', () => { // 
   test('creating invoice with a performed treatment succeeds (201)', async () => { // [BR-009]
     const visit = await seedActiveVisit();
     await seedPerformedTreatment(visit!.id);
+    await seedSignedConsent(visit!.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',
@@ -884,6 +899,7 @@ describe('BR-010: dental invoices always have taxCents === 0', () => { // [BR-01
   test('created invoice has taxCents === 0', async () => { // [BR-010]
     const visit = await seedActiveVisit();
     await seedPerformedTreatment(visit!.id);
+    await seedSignedConsent(visit!.id);
     const app = makeApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices', {
       method: 'POST',

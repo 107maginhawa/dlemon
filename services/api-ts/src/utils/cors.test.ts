@@ -24,7 +24,7 @@ describe('CORS Configuration', () => {
 
       expect(validator('https://app.example.com', mockContext)).toBe('https://app.example.com');
       expect(validator('https://admin.example.com', mockContext)).toBe('https://admin.example.com');
-      expect(validator('https://malicious.com', mockContext)).toBe('https://app.example.com');
+      expect(validator('https://malicious.com', mockContext)).toBeNull();
     });
 
     it('should allow localhost when allowLocalNetwork is enabled', () => {
@@ -73,8 +73,8 @@ describe('CORS Configuration', () => {
       const validator = createOriginValidator(config);
 
       expect(validator('https://app.example.com', mockContext)).toBe('https://app.example.com');
-      expect(validator('http://localhost:3000', mockContext)).toBe('https://app.example.com');
-      expect(validator('https://test.ngrok.io', mockContext)).toBe('https://app.example.com');
+      expect(validator('http://localhost:3000', mockContext)).toBeNull();
+      expect(validator('https://test.ngrok.io', mockContext)).toBeNull();
     });
 
     it('should handle wildcard origins', () => {

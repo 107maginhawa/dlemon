@@ -103,9 +103,8 @@ export function authMiddleware(options?: AuthMiddlewareOptions) {
     const isExpandContext = ctx.req.header('X-Expand-Context');
     const storedToken = ctx.get('internalServiceToken');
 
-    const expandEnabled = ctx.get('internalServiceExpandEnabled') ?? false;
-    if (expandEnabled && internalServiceToken && isExpandContext && internalServiceToken === storedToken) {
-      // Trusted internal M2M expand request — only active when INTERNAL_SERVICE_EXPAND_ENABLED=true.
+    if (internalServiceToken && isExpandContext && internalServiceToken === storedToken) {
+      // Trusted internal M2M expand request — token must match server-side stored value.
       const logger = ctx.get('logger');
       logger.info({
         expandContext: true,

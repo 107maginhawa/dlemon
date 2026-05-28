@@ -5,13 +5,6 @@
 #
 # To find the exact string: grep '^(fail)' test-output | sed 's/ \[[0-9.]*ms\]$//'
 
-(fail) authMiddleware > internal service token bypasses auth
-(fail) CORS Configuration > createOriginValidator > should allow explicit origins
-(fail) CORS Configuration > createOriginValidator > should work in strict mode with only explicit origins
-(fail) BR-002: visit state transitions are linear, no reversal > forward transition active → completed succeeds (200)
-(fail) BR-009: invoice requires at least one billable treatment > creating invoice for a visit with no performed/verified treatments fails (4xx)
-(fail) BR-009: invoice requires at least one billable treatment > creating invoice with a performed treatment succeeds (201)
-(fail) BR-010: dental invoices always have taxCents === 0 > created invoice has taxCents === 0
 
 # Previously hidden by db-guard (guard was blocking all tests).
 # These are pre-existing failures surfaced when monobase_test infra landed.
