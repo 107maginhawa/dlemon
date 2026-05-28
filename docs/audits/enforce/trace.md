@@ -1,6 +1,206 @@
-# OLI-TRACE: Enforcement Coverage Report
-<!-- skill: oli-trace | algorithms: 5a-5f | generated: 2026-05-27 -->
-<!-- anchors: IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD.md, WORKFLOW_MAP.md, 11x MODULE_SPEC.md, EVENT_CONTRACTS.md, ROLE_PERMISSION_MATRIX.md -->
+# Traceability Enforcement
+<!-- oli-trace v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+<!-- supersedes: 2026-05-27 run | phase: B/C | algorithms: 5a,5b,5c,5d,5e,5f | phase-gated: 4b/4c suppressed (no VERTICAL_SLICE_PLAN) -->
+<!-- artifacts: WORKFLOW_MAP.md, BUSINESS_RULES.md, 11x MODULE_SPEC.md, 11x API_CONTRACTS.md, OpenAPI (137 dental ops), 323 handler files -->
+
+---
+
+## Summary (run: run-5-f2-service-layer-di · 2026-05-28)
+
+| Algorithm | Description | Count |
+|-----------|-------------|-------|
+| 5a | Orphan BRs (in BUSINESS_RULES.md, not in any MODULE_SPEC or handler code) | 12 |
+| 5b | Orphan spec operations (MODULE_SPEC declares op, no handler exists) | 3 |
+| 5c | Unspecced implementations (handler exists, not in OpenAPI / MODULE_SPEC) | 45 |
+| 5d | Platform module gaps (used by dental modules, no integration spec) | 4 |
+| 5e | Workflow coverage gaps (WF step with no handler or integration contract) | 4 |
+| 5f | Contract-spec mismatches (API_CONTRACTS.md vs MODULE_SPEC.md deltas) | 3 |
+| **Total findings (new run)** | | **71** |
+| P0 | | 0 |
+| P1 | | 17 |
+| P2 | | 30 |
+| P3 | | 12 (BRs in spec, missing handler code citation only) |
+
+**Phase health:** No P0 gaps. Phase B→C boundary is clear. 17 P1 findings present — resolve before slice planning.
+
+**Key coverage stats:**
+- OpenAPI dental ops: 137 | Handler coverage: 137/137 (100%)
+- BRs defined: 47 | BRs with any code ref: 23 (49%) | BRs with spec AND code ref: 11 (23%)
+- WF explicit steps: 25 | Covered: 21 (84%) | Gaps: 4
+- Cross-module flows: 16 | Event contracts: 0/16 (EVENT_CONTRACTS.md is empty)
+
+---
+
+## 5a: Orphan Business Requirements
+
+BRs in `docs/prd/BUSINESS_RULES.md` not cited in any `MODULE_SPEC` section 5 or referenced in handler code comments.
+
+| ID | BR | Domain | Issue | Severity |
+|----|-----|--------|-------|----------|
+| TR-BR-6b9be64d | BR-031 | Imaging | Ceph report idempotent re-gen: cited in BUSINESS_RULES.md test table only; no MODULE_SPEC section 5 entry | P1 |
+| TR-BR-7ad3bb1d | BR-037 | Ceph | Batch upsert rejects locked landmarks: tested in `ceph.test.ts` (CIMG-14) but no `// BR-037` comment in handler code | P1 |
+| TR-BR-9c451736 | BR-038 | Ceph | Recompute idempotent: tested (CIMG-15) but no code comment | P1 |
+| TR-BR-50c9c5d7 | BR-039 | Ceph | Calibration provenance (D-J): tested but no code comment | P1 |
+| TR-BR-09cffe2e | BR-040 | Ceph | Uncalibrated measurement UX label: no test, no code comment, no MODULE_SPEC | P1 |
+| TR-BR-b7b326ca | BR-041 | Ceph | Non-existent image → 404 not 403: no code comment | P1 |
+| TR-BR-f88e366a | BR-042 | Ceph | Ceph report version monotonically increasing: no code comment | P1 |
+| TR-BR-ed01f5a4 | BR-043 | Ceph | `steiner_hybrid_sn` mandatory analysis type: no code comment | P1 |
+| TR-BR-c5356ac7 | BR-044 | Ceph | DELETE on confirmed/placed only (not locked): no code comment | P1 |
+| TR-BR-b0e76c94 | BR-045 | Ceph | Inline recompute on update; standalone idempotent: no code comment | P1 |
+| TR-BR-c70a6952 | BR-046 | Ceph | All ceph ops require valid imageId or 404: no code comment | P1 |
+| TR-BR-aa68a750 | BR-047 | Ceph | All ceph operations are image-scoped: no code comment | P1 |
+
+**Pattern:** BR-037..047 are Ceph workspace rules — implemented and partially tested (`ceph.test.ts`) but lack `// Enforces BR-NNN` comments. This breaks the automated trace chain. BR-040 has no test at all (P2 gap per BUSINESS_RULES.md).
+
+**Fix:** Add `// Enforces BR-NNN` comments to `CephMgmt_*.ts` handlers. Backfill `dental-imaging` MODULE_SPEC section 5 for ceph BRs via `/oli-module-specs`.
+
+---
+
+## 5b: Orphan Spec Operations
+
+MODULE_SPEC declares operations with no handler directory or OpenAPI entry.
+
+| ID | Module | Operations | Handler | Severity |
+|----|--------|-----------|---------|----------|
+| TR-EMR-8259e3c2 | dental-emr-integration | `POST /dental/emr/import`, `GET /dental/emr/:patientId`, `GET /dental/emr/:id` (3 ops) | NONE — dir does not exist | P1 |
+
+**Context:** Intentionally deferred to Phase 3+ per `MODULE_MAP.md`. These endpoints are absent from the OpenAPI spec, confirming future-phase status. No action needed until Phase 3. Flagged P1 (phase-boundary awareness).
+
+---
+
+## 5c: Unspecced Implementations
+
+Handler files exist with no corresponding OpenAPI operation entry (45 total across 6 modules).
+
+| ID | Module | Handler Group | Count | Clinically Significant | Severity |
+|----|--------|--------------|-------|----------------------|----------|
+| TR-PATIENT-464bc41e | dental-patient | Insurance: createInsuranceProfile, listPatientInsuranceProfiles, updateInsuranceProfile, createClaimDraft, updateClaimStatus, getClaimReadiness | 6 | YES — affects billing + claim readiness | P2 |
+| TR-PATIENT-d22eadfc | dental-patient | Recalls / Contacts / Alerts: listPatientRecalls, createRecall, updateRecall, createPatientContact, listPatientContacts, updatePatientContact, deletePatientContact, createDentalAlert, listDentalAlerts, updateDentalAlert | 10 | YES — recall is care continuity | P2 |
+| TR-PATIENT-9ae3a08a | dental-patient | Treatment Plans / Engagement / Sync: createTreatmentPlan, listPatientTreatmentPlans, updateTreatmentPlan, createTask, listPatientTasks, updateTask, createSyncLog, listSyncLogs, updateSyncLog | 10 | YES — treatment plan continuity | P2 |
+| TR-CLINICAL-8e8bf79f | dental-clinical | Inventory: createInventoryItem, listInventoryItems, updateInventoryItem, createInventoryAdjustment, listInventoryAdjustments | 5 | NO — operational only | P2 |
+| TR-CLINICAL-b3c420bc | dental-clinical | Postop / Occlusion: createPostopTemplate, listPostopTemplates, updatePostopTemplate, createOcclusionScreening, listOcclusionScreenings | 5 | Medium — occlusion is V1-Recommended | P2 |
+| TR-ORG-ce264bd6 | dental-org | Member / Org Mgmt: createOrganization, getBranchesByUser, deactivateMember, updateMember | 4 | NO — admin only | P2 |
+| TR-SCHED-d9a12bfa | dental-scheduling | Queue Board: createQueueItem, listQueueBoard, updateQueueItemStatus | 3 | Medium — front desk workflow | P2 |
+
+**Most critical:** 26 dental-patient shadow endpoints (insurance, recalls, contacts, alerts, treatment-plans, engagement, sync) span clinically important features that affect care continuity and billing integration. These must be spec'd before dental-patient vertical slice planning.
+
+**Fix:** Run `/oli-module-specs --module dental-patient` to backfill MODULE_SPEC section 3 for all 26. Repeat for `dental-clinical` (inventory, postop/occlusion). Use `/typespec` to add to OpenAPI spec.
+
+---
+
+## 5d: Platform Module Gaps
+
+Platform (base layer) modules used by dental modules with no formal MODULE_SPEC or integration contract doc.
+
+| ID | Platform Module | Used By | Has MODULE_SPEC | Severity |
+|----|----------------|---------|-----------------|----------|
+| TR-GLOBAL-752cd240 | person | dental-visit, dental-org, dental-perio, dental-patient, dental-scheduling, dental-billing (6 modules) | NO — MODULE_MAP only | P1 |
+| TR-GLOBAL-b14d7a18 | notifs | dental-scheduling (WF-095 appointment reminders) | NO — MODULE_MAP only | P1 |
+| TR-GLOBAL-0b379a8a | storage | dental-visit, dental-org, dental-imaging (WF-098, WF-099) | NO — MODULE_MAP only | P1 |
+| TR-GLOBAL-ecf58f67 | booking | Listed as dep for dental-scheduling in MODULE_MAP | NO — MODULE_MAP only | P1 |
+
+**`person` is the most critical:** imported by 6/10 dental modules as the central PII safeguard. No formal integration contract exists defining PII access patterns.
+
+**Algorithm 4d (cross-module blind spots):** `EVENT_CONTRACTS.md` is empty (0 events documented). All 5 async cross-module flows (WF-095/096/103/104 + WF-091) have pg-boss jobs but no event shape contracts.
+
+**Fix:** Populate `docs/product/EVENT_CONTRACTS.md` with at minimum WF-095 (`appointment.reminder`), WF-096 (`audit.event.written`), WF-103 (`booking.slot.generated`). Add person-integration contract section to dental-patient MODULE_SPEC.
+
+---
+
+## 5e: Workflow Coverage Gaps
+
+WORKFLOW_MAP steps with no handler or missing async integration contract.
+
+| ID | WF | Step | Handler Status | Gap | Severity |
+|----|-----|------|---------------|-----|----------|
+| TR-WF-e2739876 | WF-004 | Patient invitation | No dedicated dental handler — relies on platform `notifs`/`email` with no integration contract | Missing contract | P1 |
+| TR-WF-a818f2b5 | WF-095 | Appointment notification | `dental-scheduling → notifs` async pg-boss exists; no EVENT_CONTRACTS entry | No event contract | P1 |
+| TR-WF-3c9d48a9 | WF-096 | Audit trail on every write | All modules → `dental-audit` async pg-boss; `getAuditEvents` handler present but no formal cross-module event shape | No event contract | P1 |
+| TR-WF-72b76c6a | WF-103 | Booking slot generation | `booking → dental-scheduling` async pg-boss; `booking` module has no spec | Missing contract | P1 |
+
+**False positives resolved:** WF-011 (clinical notes), WF-016 (prescriptions), WF-017 (lab orders), WF-019 (consent) initially appeared as gaps — they ARE covered in OpenAPI: notes → `upsertVisitNotes/signVisitNotes`, prescriptions → `createPrescription/listPrescriptions/updatePrescription`, lab orders → `createLabOrder/listLabOrders`, consent → `createConsentForm/listConsentForms/signConsentForm`.
+
+**Fix:** Populate `EVENT_CONTRACTS.md` (3 events minimum). Document WF-004 invitation flow as a notifs integration contract in dental-patient MODULE_SPEC section 12.
+
+---
+
+## 5f: Contract-Spec Mismatches
+
+Discrepancies between `API_CONTRACTS.md` and `MODULE_SPEC.md` within the same module.
+
+| ID | Module | API_CONTRACTS Ops | MODULE_SPEC Ops | Issue | Severity |
+|----|--------|------------------|-----------------|-------|----------|
+| TR-PERIO-5a01d4c6 | dental-perio | 6 | 1 | MODULE_SPEC section 3 documents only 1 operation (CRUD section severely undercounts); 6 handler files and 6 API_CONTRACTS endpoints exist — 5 undocumented in spec | P2 |
+| TR-VISIT-e277e541 | dental-visit | 16 | 9 | API_CONTRACTS covers carry-over, dentition init, treatment plan view, note-signing that MODULE_SPEC section 3 omits (delta = 7) | P2 |
+| TR-AUDIT-2f099c89 | dental-audit | — | — | API_CONTRACTS has malformed `PATCH /DELETE` entry (parse artifact); `getAuditEvents` handler lives in `dental-org/` not `dental-audit/` — ownership ambiguity | P2 |
+
+**dental-audit ownership:** `getAuditEvents` is tagged `Dental:Org` in OpenAPI and physically in `dental-org/`. The `dental-audit` MODULE_SPEC claims it. This dual-ownership breaks the module boundary and creates spec-code mismatch.
+
+**Fix:** Rewrite `dental-perio` MODULE_SPEC section 3 (expand to 6 ops). Expand `dental-visit` MODULE_SPEC section 3 (add 7 missing ops). Fix dental-audit/API_CONTRACTS.md malformed entry. Clarify `getAuditEvents` ownership in MODULE_MAP.
+
+---
+
+## P3 Informational: BRs in MODULE_SPEC Without Handler Code Citation
+
+12 BRs are properly spec'd but handler code lacks `// BR-NNN` citation comments. Not structural gaps — documentation debt only.
+
+| BR | Module(s) | Rule Summary |
+|----|----------|-------------|
+| BR-010 | dental-billing | Tax stub (always 0) |
+| BR-012 | dental-billing | Invoice state machine |
+| BR-013 | dental-billing | No uncollectible status for dental invoices |
+| BR-014 | dental-clinical, dental-visit | Consent required to complete visit |
+| BR-015 | dental-patient | Patient contact deduplication |
+| BR-016 | dental-org, dental-imaging | Imaging tier enforcement |
+| BR-017 | dental-clinical | Dentist-only prescription rule |
+| BR-018 | dental-clinical | Amendment approval workflow |
+| BR-020 | dental-patient | Patient search/merge (501 stub) |
+| BR-021 | dental-pmd | PMD checksum verification on import |
+| BR-022 | dental-emr-integration, dental-pmd | PMD import creates read-only records |
+| BR-036 | dental-imaging | Imaging finding state machine |
+
+---
+
+## Graph Statistics
+
+| Metric | Value |
+|--------|-------|
+| workflow nodes referenced in WORKFLOW_MAP | 104 (WF-001..WF-104) |
+| business_rule nodes (BUSINESS_RULES.md) | 47 (BR-001..BR-047) |
+| api_endpoint nodes (OpenAPI dental ops) | 137 |
+| handler files (all dental-* dirs) | 323 |
+| MODULE_SPEC files | 11 (10 active + 1 deferred) |
+| API_CONTRACTS files | 11 |
+| state_machine nodes | 6 (Visit, Treatment, Invoice, ConsentForm, LabOrder, ImagingFinding SM-01, Ceph SM-02) |
+| cross-module flows | 16 (WF-089..WF-104) |
+| EVENT_CONTRACTS entries | 0 |
+| WF→handler edges (covered) | 21/25 (84%) |
+| BR→code citation edges | 23/47 (49%) |
+| handler→OpenAPI coverage | 137/137 (100%) |
+
+---
+
+## Routing Recommendation
+
+**State:** Phase B/C. No P0 gaps. 17 P1 gaps. Phase B→C boundary is passable.
+
+**Before `/oli-vertical-slice-plan` (dental-patient):**
+1. Add `// Enforces BR-NNN` to `CephMgmt_*.ts` handlers for BR-037..047 (30 min, resolves 11 P1 gaps)
+2. Populate `EVENT_CONTRACTS.md` with 3 events: `appointment.reminder`, `audit.event.written`, `booking.slot.generated`
+3. Backfill `dental-patient` MODULE_SPEC section 3 for 26 unspecced handlers
+4. Fix `dental-perio` MODULE_SPEC section 3 (expand 1 → 6 operations)
+5. Clarify `getAuditEvents` ownership (dental-org vs dental-audit)
+
+**If P1 gaps accepted as known-risk:** Trace is clean enough to begin dental-patient slice execution.
+
+**Skills:** `/oli-module-specs --module dental-patient`, `/oli-module-specs --module dental-perio`, `/typespec` for new endpoints
+
+---
+
+<!-- PRIOR RUN ARCHIVE: 2026-05-27 findings preserved below for diff reference -->
+---
+
+# Prior Run: 2026-05-27 (archived)
 
 ---
 

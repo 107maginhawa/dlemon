@@ -1,3 +1,108 @@
+# dental-perio — File Enforcement
+<!-- oli-enforce-file v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+
+---
+
+> **NOTE:** This file prepends the F2 file-enforcement pass (naming conventions, file size, service-layer DI, forbidden patterns) to the prior 2026-05-27 spec-compliance audit. The prior audit content is preserved below as an appendix.
+
+---
+
+## Summary
+- Files scanned: 12
+- Findings: 3 (P0: 0, P1: 1, P2: 1, P3: 1)
+- Service files present: `.service.ts` ❌ (none), `.repo.ts` ✅ (`perio-chart.repo.ts`, `perio-reading.repo.ts`)
+
+---
+
+## Findings
+
+| ID | Sev | Description | File | Line |
+|----|-----|-------------|------|------|
+| EF-PER-001 | P1 | No `.service.ts` — module has complex business logic (BR-P07 min-readings enforcement, BOP%/mean-depth/deep-pocket aggregation) inlined in `completePerioChart.ts`. The stat computation (lines 55–75 approx) belongs in a service layer, not a handler. | `completePerioChart.ts` | 55–75 |
+| EF-PER-002 | P2 | Test file at 311 lines; near the 500-line threshold but currently within limits. Flag for monitoring as coverage grows (locked-visit tests, invalid-depth tests, getPerioChart tests are all missing per prior audit). | `dental-perio-coverage.test.ts` | 311 lines |
+| EF-PER-003 | P3 | `utils/perio-validation.ts` (44 lines) is a pure utility file — acceptable location and size. No action needed but note: if validation grows it should stay here rather than inlining back into handlers. | `utils/perio-validation.ts` | 44 lines |
+
+---
+
+## File Inventory
+
+### Root handler files — 5 files
+| File | Lines | Notes |
+|------|-------|-------|
+| `completePerioChart.ts` | 117 | ⚠ P1: business logic inline (EF-PER-001) |
+| `createPerioChart.ts` | 79 | |
+| `getPerioChart.ts` | 42 | |
+| `getVisitPerioChart.ts` | 49 | |
+| `upsertToothReading.ts` | 94 | |
+
+### `repos/` — 5 files ✅
+| File | Lines |
+|------|-------|
+| `perio-chart.repo.ts` | 58 |
+| `perio-chart.repo.test.ts` | 120 |
+| `perio-chart.schema.ts` | 38 |
+| `perio-reading.repo.ts` | 87 |
+| `perio-reading.schema.ts` | 40 |
+
+### `utils/` — 1 file ✅
+| File | Lines |
+|------|-------|
+| `perio-validation.ts` | 44 |
+
+### Root-level test files — 1 file
+| File | Lines | Notes |
+|------|-------|-------|
+| `dental-perio-coverage.test.ts` | 311 | ⚠ P2 approaching threshold (EF-PER-002) |
+
+---
+
+## Naming Convention Check
+
+- All handler files: camelCase `.ts` ✅
+- Repo files: `perio-chart.repo.ts`, `perio-reading.repo.ts` ✅
+- Schema files: `perio-chart.schema.ts`, `perio-reading.schema.ts` ✅
+- Util file: `perio-validation.ts` ✅
+- No PascalCase violations ✅
+- No `.service.ts` files ❌ (P1 — EF-PER-001)
+
+## Forbidden Pattern Check
+
+- No direct `db.insert` / `db.select` / `db.update` / `db.delete` in handler files ✅
+  - All DB operations in handlers go through `new PerioChartRepository(db)` or `new PerioReadingRepository(db)` — repo pattern correctly used
+  - `db.*` calls in `dental-perio-coverage.test.ts` are test setup/teardown only — acceptable ✅
+- No P0 cross-module DB schema imports in production handlers ✅
+  - Test file imports `dentalOrganizations`, `dentalBranches`, `dentalMemberships`, `persons`, `patients`, `dentalVisits` from other modules — acceptable for integration test setup ✅
+
+## Cross-Module Import Check (production handlers)
+
+- `@/handlers/dental-visit/utils/visit.service` — `getVisitOrThrow` used in `createPerioChart.ts` and `getVisitPerioChart.ts` ✅
+- `@/handlers/dental-org/repos/org-billing.facade` — `getActiveMembershipId` used in `createPerioChart.ts` ✅
+- `@/handlers/shared/assert-branch-role` — shared utility ✅
+- No direct cross-module schema imports in production handlers ✅
+
+---
+
+## F2 Service-Layer Remediation Plan
+
+The primary gap is the **stat computation logic inlined in `completePerioChart.ts`**.
+
+Recommended action:
+1. **Create `utils/perio-stats.ts`** (or `perio-chart.service.ts`) — extract:
+   - BOP% calculation (lines ~55–65)
+   - Mean depth calculation (~65–70)
+   - Deep pocket count calculation (~70–75) — also fixes the per-site vs per-tooth bug from prior audit (DEVIATION-09)
+   - `MIN_READINGS_FOR_COMPLETE` and `DEEP_POCKET_THRESHOLD_MM` constants
+2. Handler becomes: validate → fetch readings → call `computePerioSummary(readings)` → persist → respond.
+3. This also makes the business logic unit-testable in isolation (fix for W-06 in prior audit).
+
+---
+
+_Enforced by: oli-enforce-file v1.0 | run: run-5-f2-service-layer-di | 2026-05-28_
+
+---
+
+## Appendix: Prior Spec-Compliance Audit (2026-05-27)
+
 <!--
 oli: oli-enforce-file v1.0 | generated: 2026-05-27 | module: dental-perio
 -->

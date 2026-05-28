@@ -1,12 +1,21 @@
-<!-- oli-enforce-module v1.0 | generated: 2026-05-27 | module: dental-emr-integration -->
+<!-- oli-enforce-module v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 | FUTURE_PHASE -->
 
-# Module Enforcement Audit — dental-emr-integration
+# dental-emr-integration — Module Enforcement
 
-**Audit Date:** 2026-05-27  
-**Auditor:** oli-enforce-module (adversarial)  
-**Module Spec:** `docs/product/modules/dental-emr-integration/MODULE_SPEC.md`  
-**API Contracts:** `docs/product/modules/dental-emr-integration/API_CONTRACTS.md`  
-**Implementation Status:** Future Phase (Phase 3+) per spec — **HOWEVER** an `emr` handler exists at `services/api-ts/src/handlers/emr/` that is NOT the dental-emr-integration module. See §1.
+**Audit Date:** 2026-05-28 (updated from 2026-05-27; F2 service-layer/DI pass added)
+**Run ID:** run-5-f2-service-layer-di
+**Auditor:** oli-enforce-module v1.0
+**Module Spec:** `docs/product/modules/dental-emr-integration/MODULE_SPEC.md`
+**API Contracts:** `docs/product/modules/dental-emr-integration/API_CONTRACTS.md`
+**Implementation Status:** FUTURE_PHASE — handler directory unexpectedly EXISTS; wrong-domain implementation present
+
+## Summary
+- **Status:** FUTURE_PHASE
+- **Findings:** 12 (P0: 2, P1: 7, P2: 3)
+- **Service-Layer Pattern (F2):** ABSENT — all handlers use inline `new Repository(db, logger)` instantiation
+- **Compliance Score:** 22/100 (exempted from gate — FUTURE_PHASE; P0 caps score at 3 per dimension)
+
+> **Key finding (F2 focus):** The `handlers/emr/` directory contains a fully-implemented Consultation Notes system that is **not** the dental-emr-integration module. All 6 handlers use inline repo instantiation with no DI. No service layer exists. The correct dental-emr-integration module (file import bridge, `emr_record` table) is entirely absent.
 
 ---
 
@@ -286,7 +295,58 @@ All test coverage is MISSING. This is expected for Phase 3+. Tests must be writt
 
 ---
 
-_Audit produced by: oli-enforce-module (adversarial review)_  
-_Standard reference: `docs/audits/reference/IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD.md`_  
-_Inputs: MODULE_SPEC.md, API_CONTRACTS.md, ROLE_PERMISSION_MATRIX.md, EVENT_CONTRACTS.md, DOMAIN_MODEL.md_  
-_Implementation checked: `services/api-ts/src/handlers/emr/` (NOT this module — see §1 and G-EMR-03)_
+---
+
+## §13 F2: Service-Layer / DI Assessment (run-5-f2-service-layer-di)
+
+**Pattern: ABSENT**
+
+All six handlers in `services/api-ts/src/handlers/emr/` instantiate repositories inline on every request. No service class, no factory, no context-injected singleton.
+
+**Representative pattern (createConsultation.ts:36-38):**
+```typescript
+const consultationRepo = new ConsultationNoteRepository(db, logger);
+const providerRepo = new ProviderRepository(db, logger);
+const patientRepo = new PatientRepository(db, logger);
+```
+
+Same pattern repeated in: `listEMRPatients.ts`, `getConsultation.ts`, `listConsultations.ts`, `updateConsultation.ts`, `finalizeConsultation.ts`.
+
+**Repo export (emr.repo.ts:678):**
+```typescript
+export const consultationNoteRepo = ConsultationNoteRepository;
+// Exports the CLASS, not an instance — no singleton
+```
+
+**Confidence:** HIGH (all 6 handler files read; repo file read)
+
+**DI impact by layer:**
+
+| Layer | Status | Notes |
+|-------|--------|-------|
+| Repository | Inline `new` on every request | No injection point |
+| Service | None exists | No service wrapper class |
+| Context injection | `ctx.get('database')` only | DB injected; repos are not |
+| Test isolation | Manual DB required for all tests | Cannot stub repo methods without full DB |
+
+**Comparison to correct pattern (other modules):** Modules like `dental-visit` and `dental-patient` pass `db` via Hono context but provide injectable repo instances or service factories registered at app startup. The `emr/` module skips this step entirely.
+
+**Findings from this pass:**
+
+| ID | Sev | Description | File | Line |
+|----|-----|-------------|------|------|
+| EM-EMR-1f36ddd3 | P3 | Inline repo instantiation in all 6 handlers; no DI, no service layer, no singleton export — limits mock injection in tests | `services/api-ts/src/handlers/emr/createConsultation.ts` (and 5 others) | 36–38 |
+| EM-EMR-d936bbb5 | P1 | Wrong-domain implementation registered in live app against MODULE_SPEC AI Instruction #3 prohibition | `services/api-ts/src/handlers/emr/` | — |
+
+**Recommended fix (for when this module is scheduled):**
+1. Create `emr.service.ts` exporting a service class wrapping `EmrRecordRepository`
+2. Register singleton on app startup: `app.set('emrService', new EmrService(db, logger))`
+3. Handlers retrieve via `ctx.get('emrService')` — enabling mock injection in tests
+4. Note: this applies to the **correct** dental-emr-integration module (file import bridge), not the consultation notes system currently at `handlers/emr/`
+
+---
+
+_Audit produced by: oli-enforce-module v1.0 | run: run-5-f2-service-layer-di_
+_Standard reference: `docs/audits/reference/IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD.md`_
+_Inputs: MODULE_SPEC.md, API_CONTRACTS.md, ROLE_PERMISSION_MATRIX.md, EVENT_CONTRACTS.md, DOMAIN_MODEL.md_
+_Implementation checked: `services/api-ts/src/handlers/emr/` (NOT the dental-emr-integration module — see §1 and G-EMR-03)_
