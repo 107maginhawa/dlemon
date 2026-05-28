@@ -7,7 +7,7 @@
 
 > All responses wrap in `{ data, meta }`.
 > Key business rules: BR-001 (one active visit), BR-003 (locked visit immutable), BR-006/BR-007 (treatment transitions).
-> Visit FSM: `scheduled` → `active` → `completed` → `locked`
+> Visit FSM: `draft` → `active` → `completed` → `locked`. `draft` and `active` can transition to `discarded` (terminal). See MODULE_SPEC §8.
 
 ---
 
@@ -173,22 +173,23 @@ Get dental chart for visit.
 
 ---
 
-### POST /api/v1/dental/visits/:id/initialize-dentition
+### POST /api/v1/dental/patients/:patientId/dentition
 
-Initialize dentition template (adult/pediatric/mixed) — idempotent.
+Initialize dentition for patient. Dentition type derived from `dateOfBirth`: age≤5 = `deciduous`, age 6–12 = `mixed`, else `permanent`. Idempotent on (patientId, visitId).
 
 **Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (uuid)
+**Path params:** `patientId` (uuid)
 
 **Request body:**
 
-| Field | Type | Nullable | Required | Enum | Example |
-|-------|------|----------|----------|------|---------|
-| `dentition_type` | string | NO | YES | `adult`, `pediatric`, `mixed` | `"adult"` |
+| Field | Type | Nullable | Required | Constraints | Example |
+|-------|------|----------|----------|-------------|---------|
+| `dateOfBirth` | string | NO | YES | ISO-8601 date | `"2015-04-12"` |
+| `visitId` | string (uuid) | NO | YES | — | `"..."` |
 
-**Response 201:** `{ data: { ok: true, dentition_type: "adult" } }`
+**Response 201:** `{ chartId: uuid, patientId: uuid, dentitionType: "deciduous"|"mixed"|"permanent", toothCount: number, teeth: ToothChartState[] }`
 
-**Errors:** `DENTITION_ALREADY_INITIALIZED(409)`, `FORBIDDEN(403)`
+**Errors:** `DENTITION_ALREADY_INITIALIZED(409)`, `NOT_FOUND(404)`, `FORBIDDEN(403)`
 
 ---
 

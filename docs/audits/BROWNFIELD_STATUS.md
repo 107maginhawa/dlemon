@@ -1,6 +1,6 @@
 # Dentalemon — Brownfield Status Dashboard
 
-<!-- oli-magic v1 | generated: 2026-05-25 | cycle: 1 | --update -->
+<!-- oli-magic v2 | generated: 2026-05-26 | cycle: 2 | 4-agent parallel audit -->
 
 ---
 
@@ -8,14 +8,55 @@
 
 | Field | Value |
 |---|---|
-| **Brownfield state** | `graduated` |
+| **Brownfield state** | `cycle_2` — new security findings since graduation |
 | **Score at graduation** | 9.0 / 10 (2026-05-21) |
 | **Graduation threshold** | P0 = 0, audit/compliance/confidence ≥ 9.0 |
-| **v1.5 spec pipeline** | COMPLETE (2026-05-24) — 70 UI blueprints + spec-consistency PASS |
-| **Current branch** | `feat/v1.5-g1-foundation` — P0 domain gap execution (all P0 slices ✅) |
+| **2026-05-26 audit** | 3x P0 security findings (IDOR, hash-leak, privilege-escalation) |
+| **Current branch** | `main` — G7 (security) + G8 (spec/UI) waves planned |
 | **Typecheck** | ✅ PASSING — 0 errors (2026-05-25) |
-| **Tests** | 2347 pass / 536 fail (536 = pre-existing E2E needing live DB, not regressions) |
-| **NEXT ACTION** | PR review → merge to main → seed DB → manual smoke test |
+| **Tests** | 964 pass / 2508 fail (DB offline in test env — not logic bugs) |
+| **NEXT ACTION** | Execute G7 (sequential, P0 security) → then G8 (parallel, spec/UI) |
+
+---
+
+## 2026-05-26 Parallel Audit — Cycle 2 Findings
+
+> 4 specialist agents ran concurrently. Source files in `docs/audits/mapping-audit/`.
+
+### Scores
+
+| Dimension | Score | Source |
+|-----------|:-----:|--------|
+| Security | —/10 | 3x P0, 3x P1, 1x P2 found |
+| Spec compliance | 7/10 | `spec-compliance-audit.md` |
+| Test confidence | 4/10 | `test-confidence-audit.md` |
+| UI compliance | 5.5/10 | `ui-compliance-audit.md` |
+
+### P0 Security Findings (block all feature work)
+
+| ID | Finding | File |
+|----|---------|------|
+| SEC-P0-1 | IDOR — `DentalMembershipManagement_*` skip `assertBranchAccess` → cross-tenant writes | dental-org handlers |
+| SEC-P0-2 | Hash leak — `pinHash`, `securityAnswerHash` returned in list/deactivate responses | DentalMembershipManagement_list |
+| SEC-P0-3 | Privilege escalation — `updateMember` accepts `role` with only `assertBranchAccess` gate | updateMember handler |
+
+### P1 Findings
+
+| ID | Finding |
+|----|---------|
+| SEC-P1-1 | `recoverPin` missing `authMiddleware` + schema mismatch |
+| SEC-P1-2 | PIN validators allow non-digit strings (no `/^\d{4,6}$/`) |
+| SEC-P1-3 | Rate limiting per-membership only (parallel brute possible) |
+| TEST-P1-1 | `auth-security-hardening.test.ts` untracked — NOT in CI |
+| SPEC-P1-1 | `handlers/emr/` live + tested with zero MODULE_SPEC |
+| UI-P1-1 | `timeline-carousel` + `pin-select` missing `isLoading`/`isError` |
+
+### New Waves Planned
+
+| Wave | Goal | Parallel? | Status |
+|------|------|-----------|--------|
+| G7 | Close P0 security + P1 auth gaps (8 slices) | NO — sequential | 🔴 not-started |
+| G8 | Spec docs + UI compliance (8 slices) | YES | 🔴 not-started |
 
 ---
 

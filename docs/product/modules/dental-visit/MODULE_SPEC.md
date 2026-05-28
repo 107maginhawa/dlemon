@@ -72,7 +72,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | BR-005 | Auto-discard empty draft visit (deferred ADR-010) | Draft visits | NOT IMPLEMENTED |
 | BR-006 | Treatment state forward-only: diagnosed→planned→performed→verified; any→dismissed | updateTreatment | 422 on reversal |
 | BR-007 | Completed treatment immutable (code, tooth, surface, price) | updateTreatment | 422 |
-| BR-008 | Carry-over treatments are visual indicators only; not auto-charged | Workspace UI | Display only |
+| BR-008 | Carry-over creates new `dental_treatment` rows on the next visit with `carriedOver=true, sourceVisitId=<prior visit id>`, status=`diagnosed`; not billed until status moves to `performed` | `carryOverTreatments.ts` | Enforced |
 
 ---
 
@@ -93,7 +93,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 
 **`dental_visit`:** id, patient_id, branch_id, dentist_member_id, status (enum), chief_complaint, check_in_time, completed_at, locked_at, version, notes_count (computed — count of visit_notes rows)
 
-**`dental_treatment`:** id, visit_id, tooth_fdi, surface, cdt_code, icd10_code, status (enum: diagnosed/planned/performed/verified/dismissed), price_cents, notes, created_by
+**`dental_treatment`:** id, visit_id, tooth_fdi, surface, cdt_code, icd10_code, status (enum: diagnosed/planned/performed/verified/dismissed), price_cents, notes, created_by, carried_over, source_visit_id
 
 **`dental_chart`:** id, visit_id, patient_id, teeth (JSONB per-tooth conditions/treatments)
 
@@ -132,7 +132,7 @@ Treatment: diagnosed → planned → performed → verified  (+dismissed from an
 
 ## 10. API Expectations (key endpoints; full list in existing spec)
 
-POST /dental/visits (BR-001), GET /dental/visits/:id, PATCH /dental/visits/:id (BR-002/BR-003), POST /dental/visits/:id/treatments (BR-003), PATCH /dental/visits/:id/treatments/:tid (BR-006/BR-007), POST/GET /dental/visits/:id/chart (BR-003), POST/GET/sign /dental/visits/:id/notes (BR-003), POST /dental/visits/:id/initialize-dentition, GET /dental/patients/:id/treatment-plan, POST /dental/visits/:id/carry-over
+POST /dental/visits (BR-001), GET /dental/visits/:id, PATCH /dental/visits/:id (BR-002/BR-003), POST /dental/visits/:id/treatments (BR-003), PATCH /dental/visits/:id/treatments/:tid (BR-006/BR-007), POST/GET /dental/visits/:id/chart (BR-003), POST/GET/sign /dental/visits/:id/notes (BR-003), POST /dental/patients/:patientId/dentition, GET /dental/patients/:id/treatment-plan, POST /dental/visits/:id/carry-over
 
 ---
 

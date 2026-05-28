@@ -1,0 +1,329 @@
+{
+  "meta": {
+    "schema_version": 1,
+    "generated_by": "oli-enforce-all v1.0",
+    "run_id": "baseline-001",
+    "generated_at": "2026-05-27",
+    "flags": ["--auto", "--json"],
+    "run_type": "FIRST_BASELINE",
+    "baseline_file": "docs/audits/enforce/.baseline.json",
+    "report_file": "docs/audits/ENFORCEMENT_REPORT.md"
+  },
+
+  "scope": {
+    "modules_targeted": 11,
+    "modules_audited": 11,
+    "agents_dispatched": 33,
+    "phases": ["0-coverage", "1-module", "1-file", "1.5-ui-journey", "2-cross-module", "2.5-trace"],
+    "ui_journey_skipped": ["dental-audit", "dental-emr-integration", "dental-perio"],
+    "artifacts": {
+      "ENFORCEMENT_COVERAGE.md": "docs/audits/ENFORCEMENT_COVERAGE.md",
+      "module_reports": "docs/audits/enforce/module/*.md",
+      "file_reports": "docs/audits/enforce/file/*.md",
+      "trace_report": "docs/audits/enforce/trace.md",
+      "journey_reports": "docs/audits/JOURNEY_COVERAGE_REPORT*.md"
+    }
+  },
+
+  "coverage": {
+    "overall_average_pct": 70,
+    "range_min_pct": 52,
+    "range_max_pct": 90,
+    "handlers_with_spec_coverage": 77,
+    "total_handlers": 222,
+    "handler_coverage_pct": 35,
+    "modules_below_70pct": ["dental-audit", "dental-patient", "dental-imaging", "dental-org", "dental-clinical"]
+  },
+
+  "findings_summary": {
+    "total": 486,
+    "new": 486,
+    "regressions": 0,
+    "known": 0,
+    "resolved": 0,
+    "by_severity": {
+      "P0_BLOCKER": 174,
+      "P1_WARNING": 197,
+      "P2_INFO": 59,
+      "P3_NOTE": 56
+    },
+    "by_source": {
+      "EC": {"label": "oli-enforce-coverage", "total": 24, "P0": 9, "P1": 5, "P2": 9, "P3": 1},
+      "EM": {"label": "oli-enforce-module",   "total": 156, "P0": 57, "P1": 64, "P2": 15, "P3": 20},
+      "EF": {"label": "oli-enforce-file",     "total": 160, "P0": 60, "P1": 60, "P2": 20, "P3": 20},
+      "UJ": {"label": "oli-ui-journey",       "total": 104, "P0": 39, "P1": 35, "P2": 15, "P3": 15},
+      "EX": {"label": "oli-enforce-cross-module", "total": 6, "P0": 4, "P1": 2, "P2": 0, "P3": 0},
+      "TR": {"label": "oli-trace",            "total": 36, "P0": 5, "P1": 31, "P2": 0, "P3": 0}
+    }
+  },
+
+  "modules": [
+    {
+      "name": "dental-audit",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 1.5,
+      "coverage_pct": 52,
+      "p0": 15, "p1": 14, "p2_p3": 5,
+      "top_blockers": [
+        "EM-AUDIT-001: Auth model mismatch — admin enforced, spec requires dentist_owner",
+        "EM-AUDIT-002: No assertBranchAccess guard",
+        "EM-AUDIT-003: PHI leak in audit log details",
+        "EM-AUDIT-004: Audit recursion on listAuditLogs",
+        "TR-5B-003: pg-boss consumer absent — audit log silently empty"
+      ]
+    },
+    {
+      "name": "dental-billing",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 4.0,
+      "coverage_pct": 72,
+      "p0": 22, "p1": 19, "p2_p3": 7,
+      "top_blockers": [
+        "EM-BILL-001: taxRate accepted from client body (BR-010)",
+        "EM-BILL-005: DE-007/008/009 never emitted",
+        "EM-BILL-006: Invoice number race condition",
+        "EM-BILL-007: patientId IDOR in payment plan",
+        "UJ-BILL-001: staff_full locked out of billing page"
+      ]
+    },
+    {
+      "name": "dental-clinical",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 3.5,
+      "coverage_pct": 68,
+      "p0": 18, "p1": 16, "p2_p3": 8,
+      "top_blockers": [
+        "EM-CLIN-001: BR-003 visit immutability unenforced on 6 handlers",
+        "EM-CLIN-002: WF-035 Revoke Consent handler absent",
+        "EM-CLIN-004: updateMedicalHistoryEntry allows PATCH on append-only records",
+        "EM-CLIN-006: createPrescription allergy check IDOR",
+        "UJ-CLIN-003: View Medical History button opens PMD Import (wrong wiring)"
+      ]
+    },
+    {
+      "name": "dental-emr-integration",
+      "v1_status": "FUTURE_PHASE",
+      "v1_readiness_score": null,
+      "coverage_pct": null,
+      "p0": 6, "p1": 9, "p2_p3": 3,
+      "top_blockers": [
+        "EM-EMR-001: Route path collision with existing emr/ handlers",
+        "EM-EMR-002: Spec self-contradiction (§6 DELETE vs AC-EMR-001 405)",
+        "EM-EMR-003: Active emr/ directory conflicts with planned module location"
+      ]
+    },
+    {
+      "name": "dental-imaging",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 4.0,
+      "coverage_pct": 61,
+      "p0": 26, "p1": 21, "p2_p3": 5,
+      "top_blockers": [
+        "EM-IMG-001: DE-018/019/020 never published",
+        "EF-IMG-002: Study list handler missing",
+        "EF-IMG-003: Image upload handler missing",
+        "EF-IMG-004: All annotation endpoints absent",
+        "UJ-IMG-002: XSS via unsanitized SVG annotation text",
+        "UJ-IMG-007: API error text rendered via innerHTML (XSS)"
+      ]
+    },
+    {
+      "name": "dental-org",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 3.0,
+      "coverage_pct": 64,
+      "p0": 11, "p1": 14, "p2_p3": 9,
+      "top_blockers": [
+        "EM-ORG-001: recoverPin missing authMiddleware — unauthenticated PIN reset",
+        "EM-ORG-002: setPin privilege escalation across members",
+        "EM-ORG-003: listMembers leaks securityAnswerHash",
+        "EM-ORG-004: DentalOrganizationManagement_update no ownership check",
+        "UJ-ORG-004: localStorage PIN session keys never written"
+      ]
+    },
+    {
+      "name": "dental-patient",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 3.0,
+      "coverage_pct": 55,
+      "p0": 13, "p1": 20, "p2_p3": 9,
+      "top_blockers": [
+        "EM-PAT-001: Archived read-only gate missing from all write handlers",
+        "EM-PAT-005: branchId optional in create — auth bypass",
+        "EM-PAT-007: null preferredBranchId silently skips auth",
+        "EM-PAT-008: addFollowUpNote non-atomic concurrent data loss",
+        "UJ-PAT-001: Medical alerts absent from PatientProfilePage (safety floor)"
+      ]
+    },
+    {
+      "name": "dental-perio",
+      "v1_status": "CONDITIONAL",
+      "v1_readiness_score": 6.0,
+      "coverage_pct": 90,
+      "p0": 7, "p1": 7, "p2_p3": 0,
+      "top_blockers": [
+        "EF-PERIO-001: Partial upsert nullifies omitted columns",
+        "EF-PERIO-003: Deep pocket threshold 5mm vs spec 6mm",
+        "EF-PERIO-004: Error codes diverge from API_CONTRACTS",
+        "EM-PERIO-001: createPerioChart returns 422 instead of 409 CHART_EXISTS"
+      ]
+    },
+    {
+      "name": "dental-pmd",
+      "v1_status": "CONDITIONAL",
+      "v1_readiness_score": 3.5,
+      "coverage_pct": 82,
+      "p0": 15, "p1": 15, "p2_p3": 7,
+      "top_blockers": [
+        "EM-PMD-001: imported_pmd FK to patients breaks GDPR erasure",
+        "EM-PMD-005: sha256Hex() is a charcode sum not SHA-256 — in production",
+        "UJ-PMD-003: No PMD list route",
+        "UJ-PMD-005: PMD viewer unreachable in workspace",
+        "EF-PMD-002: Multipart file upload absent"
+      ]
+    },
+    {
+      "name": "dental-scheduling",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 4.5,
+      "coverage_pct": 75,
+      "p0": 15, "p1": 15, "p2_p3": 4,
+      "top_blockers": [
+        "EM-SCHED-003: useQueueBoard raw fetch() — 401 in production",
+        "EF-SCHED-001: API field names diverge from contract",
+        "EF-SCHED-005: Role-based permissions not enforced",
+        "UJ-SCHED-003: Edit modal calls createAppointment (creates duplicates)",
+        "UJ-SCHED-005: Cancel appointment UI absent from calendar"
+      ]
+    },
+    {
+      "name": "dental-visit",
+      "v1_status": "NOT_READY",
+      "v1_readiness_score": 5.0,
+      "coverage_pct": 73,
+      "p0": 15, "p1": 19, "p2_p3": 12,
+      "top_blockers": [
+        "EM-VISIT-001: carryOverTreatments cross-patient IDOR",
+        "TR-5A-003: No baseline/proposed/completed chart layer separation",
+        "UJ-VISIT-002: Pre-completion checklist blocks emergency case completion",
+        "UJ-VISIT-003: Dental chart layer switching dead code",
+        "UJ-VISIT-005: Accept Plan sends no patient approval record"
+      ]
+    }
+  ],
+
+  "cross_module_findings": [
+    {"id":"EX-001","severity":"P1","description":"dental-org circular dependency on downstream modules for dashboard"},
+    {"id":"EX-002","severity":"P0","description":"dental-imaging imports dental-clinical schema + DB FK to dental_visit"},
+    {"id":"EX-003","severity":"P1","description":"dental-pmd bypasses facade — direct repo instantiation"},
+    {"id":"EX-004","severity":"P0","description":"dental-patient imports from 3 downstream modules — inverted dependency"},
+    {"id":"EX-005","severity":"P1","description":"dental-scheduling undocumented DB FK to dental_visit.id"},
+    {"id":"EX-006","severity":"P0","description":"SYSTEMIC: All 23 domain events (DE-001..023) never emitted anywhere in the codebase"}
+  ],
+
+  "traceability": {
+    "orphan_brs": 9,
+    "broken_chains": 4,
+    "unspecced_implementations": 6,
+    "cross_module_blind_spots": 5,
+    "workflow_gaps": 14,
+    "role_gaps": 3,
+    "e2e_journey_coverage": {
+      "total": 10,
+      "covered": 4,
+      "partial": 5,
+      "missing": 1,
+      "missing_ids": ["E2E-010"]
+    }
+  },
+
+  "stabilization": {
+    "fix_now_p0_critical": [
+      "EX-006: Implement event bus — emit all 23 domain events",
+      "EM-ORG-001: Add authMiddleware to recoverPin",
+      "EM-ORG-002: Add assertBranchRole(dentist_owner) to setPin",
+      "EM-ORG-003: Strip securityAnswerHash from listMembers response",
+      "EM-AUDIT-001: Fix role check admin → dentist_owner",
+      "EM-AUDIT-004: Remove logEvent from listAuditLogs",
+      "UJ-IMG-002: Sanitize annotation text at read time (XSS)",
+      "UJ-IMG-007: Replace innerHTML with textContent for API errors (XSS)",
+      "EM-BILL-001: Strip taxRate from createDentalInvoice",
+      "EM-BILL-006: Atomic invoice number generation",
+      "EM-PMD-005: Replace sha256Hex charcode sum with node:crypto",
+      "TR-5B-003: Implement pg-boss consumer for dental-audit",
+      "TR-5A-003: Add baseline/proposed/completed layer to dental_chart"
+    ],
+    "before_new_work": [
+      "EM-PAT-007: Remove if(patient.preferredBranchId) auth bypass",
+      "EM-PAT-005: Make branchId required in createDentalPatient",
+      "EM-VISIT-001: Add patientId filter to carryOverTreatments",
+      "EM-VISIT-003: Move assertBranchRole outside if(visit) guard",
+      "EM-PMD-004: Move authorization before fetch in getImportedPMD",
+      "EF-ORG-002: Add assertBranchAccess to DentalBranchManagement_get",
+      "UJ-SCHED-003: Fix edit modal to call updateAppointment"
+    ]
+  },
+
+  "reference_standard_alignment": {
+    "source": "docs/audits/reference/IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD.md",
+    "sections": [
+      {
+        "section": "§3 Bounded Contexts (13 contexts)",
+        "verdict": "PARTIAL",
+        "reason": "11 of 13 present. Missing: Claims/Insurance (no MODULE_SPEC), Notifications (no dental-notifs module).",
+        "key_findings": ["TR-5C-005", "TR-5D-005", "EC-DPAT-001"]
+      },
+      {
+        "section": "§4 End-to-End Workflows (4.1–4.6)",
+        "verdict": "PARTIAL",
+        "reason": "4.1 partial (audit consumer absent, chart layers absent). 4.2 partial (no recall E2E). 4.3 partial (_walkIn disabled). 4.4 covered. 4.5 partial (upload/annotation endpoints missing). 4.6 GAP (Cadence not activated).",
+        "key_findings": ["TR-5A-003", "UJ-SCHED-002", "EF-IMG-002", "TR-5E-008"]
+      },
+      {
+        "section": "§5 Business Rule Registry (50+ BRs)",
+        "verdict": "PARTIAL",
+        "reason": "9 confirmed orphan BRs. Most critical: CHART-BR-001/002/006 (P0), LF-BR-001/002, AUD-BR-004. CLAIM registry entirely unspecced.",
+        "key_findings": ["TR-5A-001", "TR-5A-002", "TR-5A-003", "TR-5A-004", "TR-5A-005", "TR-5A-006", "TR-5A-007", "TR-5A-008", "TR-5A-009"]
+      },
+      {
+        "section": "§6 Entity Reference (8 entity tables)",
+        "verdict": "PARTIAL",
+        "reason": "Domain terms present but cross-module FKs on imaging_finding and pmd_document violate loose-coupling. dental_perio_tooth_reading missing 2 declared fields. Patient table diverges on consent fields.",
+        "key_findings": ["EF-IMG-011", "EF-PMD-006", "EF-PERIO-008", "EF-PAT-009"]
+      },
+      {
+        "section": "§7 Permission Matrix (8 roles)",
+        "verdict": "GAP",
+        "reason": "Systemic permission gaps across 6 modules. admin vs dentist_owner mismatch in audit. staff_full locked out of billing. Role checks entirely absent in scheduling. Associate billing scope unenforced.",
+        "key_findings": ["EM-AUDIT-001", "UJ-BILL-001", "EF-SCHED-005", "TR-5F-001", "TR-5F-002", "TR-5F-003"]
+      },
+      {
+        "section": "§8 UI/UX Standard (4 sub-standards)",
+        "verdict": "PARTIAL",
+        "reason": "iPad-first baseline implemented. Chart layer separation (baseline/proposed/completed) ENTIRELY ABSENT — entryClassification is dead code. Navigation integrity broken in 3+ journey flows.",
+        "key_findings": ["UJ-VISIT-003", "TR-5A-003", "UJ-ORG-004", "UJ-PMD-005"]
+      },
+      {
+        "section": "§9 Test Coverage Standard (E2E-001..010)",
+        "verdict": "PARTIAL",
+        "reason": "7/10 E2E journeys covered or partially covered. E2E-010 missing entirely. 6 carousel tests permanently skipped. imaging_finding FSM property test empty.",
+        "key_findings": ["EF-VISIT-014", "EF-IMG-013", "EM-AUDIT-014"]
+      },
+      {
+        "section": "§10 Seed Data Expectations",
+        "verdict": "PARTIAL",
+        "reason": "10 patient scenarios vs §10.1 requirement of 20+. GAP-007 comment in seed-demo.ts:466 confirms known gap. Missing: pediatric, orthodontic, full perio history scenarios.",
+        "key_findings": ["scripts/seed-demo.ts:466 GAP-007"]
+      }
+    ],
+    "overall": "PARTIAL — 0 PASS, 6 PARTIAL, 1 GAP across 8 IDEAL sections"
+  },
+
+  "what_next": {
+    "branch_1_regressions": false,
+    "branch_2_high_p0_volume": true,
+    "branch_4_coverage_below_70": true,
+    "branch_5_trace_gaps": true,
+    "recommended_action": "Stabilization sprint required. Route all engineering through /oli-enforce-fix prioritized by Fix Now list before any new features. P0 density (174 blockers, 9/11 modules NOT READY) prevents V1 ship."
+  }
+}
