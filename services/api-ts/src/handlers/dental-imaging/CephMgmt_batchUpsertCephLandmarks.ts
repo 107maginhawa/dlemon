@@ -8,15 +8,12 @@
  * Ceph is Addon-tier only (resolveImagingTier free → 403).
  */
 
-import { eq } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { resolveImagingTier } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import type { CephMgmt_batchUpsertCephLandmarksBody, CephMgmt_batchUpsertCephLandmarksParams } from '@/generated/openapi/validators';
 import { ImagingRepository } from './repos/imaging.repo';
@@ -48,13 +45,8 @@ export async function CephMgmt_batchUpsertCephLandmarks(
     throw new NotFoundError('Image not found');
   }
 
-  const [orgRow] = await db
-    .select({ imagingTier: dentalOrganizations.imagingTier })
-    .from(dentalBranches)
-    .innerJoin(dentalOrganizations, eq(dentalBranches.organizationId, dentalOrganizations.id))
-    .where(eq(dentalBranches.id, study.branchId))
-    .limit(1);
-  if (resolveImagingTier(orgRow?.imagingTier ?? null) === 'free') {
+  const imagingTier = await getImagingTierForBranch(db, study.branchId);
+  if (imagingTier === 'free') {
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 

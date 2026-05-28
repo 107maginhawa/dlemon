@@ -10,15 +10,13 @@
  * Sorted by createdAt DESC.
  */
 
-import { and, eq, isNull, inArray } from 'drizzle-orm';
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { ImagingRepository } from './repos/imaging.repo';
-import { dentalAttachments, type DentalAttachment } from '@/handlers/dental-clinical/repos/attachment.schema';
-import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { getLegacyAttachmentImages, type LegacyAttachmentImage } from '@/handlers/dental-clinical/repos/clinical-imaging.facade';
 
 // ---------------------------------------------------------------------------
 // Legacy attachment mapping (exported for unit tests)
@@ -43,7 +41,7 @@ export interface PatientImageItem {
   createdAt: Date;
 }
 
-export function mapLegacyAttachment(att: DentalAttachment): PatientImageItem {
+export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageItem {
   return {
     id: att.id,
     source: 'legacy',
@@ -99,31 +97,8 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   });
 
   // 2. Fetch legacy dental_attachment rows for patient, filtered by branch via visit join
-  const legacyRows = await db
-    .select({
-      id: dentalAttachments.id,
-      patientId: dentalAttachments.patientId,
-      visitId: dentalAttachments.visitId,
-      imageType: dentalAttachments.imageType,
-      fileName: dentalAttachments.fileName,
-      mimeType: dentalAttachments.mimeType,
-      fileSizeBytes: dentalAttachments.fileSizeBytes,
-      toothNumbers: dentalAttachments.toothNumbers,
-      createdAt: dentalAttachments.createdAt,
-      deletedAt: dentalAttachments.deletedAt,
-    })
-    .from(dentalAttachments)
-    .innerJoin(dentalVisits, eq(dentalAttachments.visitId, dentalVisits.id))
-    .where(
-      and(
-        eq(dentalAttachments.patientId, patientId),
-        eq(dentalVisits.branchId, branchId),
-        isNull(dentalAttachments.deletedAt),
-        inArray(dentalAttachments.imageType, ['xray', 'photo', 'scan']),
-      ),
-    );
-
-  const legacyItems = legacyRows.map((row) => mapLegacyAttachment(row as DentalAttachment));
+  const legacyRows = await getLegacyAttachmentImages(db, patientId, branchId);
+  const legacyItems = legacyRows.map(mapLegacyAttachment);
 
   // 3. Combine and sort by createdAt DESC
   const allItems: PatientImageItem[] = [...imagingItems, ...legacyItems].sort(

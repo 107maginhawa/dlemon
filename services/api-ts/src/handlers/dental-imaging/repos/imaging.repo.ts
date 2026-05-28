@@ -16,7 +16,7 @@ import {
   type ImagingAnnotation,
   type NewImagingAnnotation,
 } from './imaging.schema';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
 
 export class ImagingRepository {
   constructor(private readonly db: DatabaseInstance) {}
@@ -204,11 +204,6 @@ export class ImagingRepository {
   }
 
   async getMemberRole(userId: string, branchId: string): Promise<string | null> {
-    const [member] = await this.db
-      .select({ role: dentalMemberships.role })
-      .from(dentalMemberships)
-      .where(and(eq(dentalMemberships.personId, userId), eq(dentalMemberships.branchId, branchId)))
-      .limit(1);
-    return member?.role ?? null;
+    return getMemberRoleForImaging(this.db, userId, branchId);
   }
 }

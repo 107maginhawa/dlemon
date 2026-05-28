@@ -9,15 +9,12 @@
  * D-4: Snapshot includes study_date, patient_display_id, branch_name.
  */
 
-import { eq } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { resolveImagingTier } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { getOrgDataForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import type { CephMgmt_createCephReportParams } from '@/generated/openapi/validators';
 import { ImagingRepository } from './repos/imaging.repo';
@@ -51,13 +48,8 @@ export async function CephMgmt_createCephReport(
     throw new NotFoundError('Image not found');
   }
 
-  const [orgRow] = await db
-    .select({ imagingTier: dentalOrganizations.imagingTier, branchName: dentalBranches.name })
-    .from(dentalBranches)
-    .innerJoin(dentalOrganizations, eq(dentalBranches.organizationId, dentalOrganizations.id))
-    .where(eq(dentalBranches.id, study.branchId))
-    .limit(1);
-  if (resolveImagingTier(orgRow?.imagingTier ?? null) === 'free') {
+  const orgData = await getOrgDataForBranch(db, study.branchId);
+  if (orgData.imagingTier === 'free') {
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 
@@ -81,7 +73,7 @@ export async function CephMgmt_createCephReport(
   // D-4: context fields from imaging_study + branch
   // study_date: use study.createdAt as fallback (no study_date column yet)
   const studyDate = study.createdAt.toISOString().split('T')[0] ?? study.createdAt.toISOString();
-  const branchName = orgRow?.branchName ?? study.branchId;
+  const branchName = orgData.branchName ?? study.branchId;
 
   const snapshot: Record<string, unknown> = {
     landmarks: allLandmarks.map((l) => ({

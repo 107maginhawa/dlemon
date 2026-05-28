@@ -14,12 +14,9 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { resolveImagingTier } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
-import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { ImagingRepository } from './repos/imaging.repo';
 
 // ---------------------------------------------------------------------------
@@ -145,14 +142,7 @@ export async function createMeasurement(ctx: BaseContext): Promise<Response> {
 
   // Tier gate applies only to measurement types (T-08-03); annotations are unrestricted (D3)
   if (isMeasurementType) {
-    const [orgRow] = await db
-      .select({ imagingTier: dentalOrganizations.imagingTier })
-      .from(dentalBranches)
-      .innerJoin(dentalOrganizations, eq(dentalBranches.organizationId, dentalOrganizations.id))
-      .where(eq(dentalBranches.id, study.branchId))
-      .limit(1);
-
-    const tier = resolveImagingTier(orgRow?.imagingTier ?? null);
+    const tier = await getImagingTierForBranch(db, study.branchId);
     if (tier === 'free') {
       throw new ForbiddenError('Measurements require an imaging add-on. Upgrade your plan.');
     }
