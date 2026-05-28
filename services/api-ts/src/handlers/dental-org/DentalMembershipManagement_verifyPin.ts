@@ -4,7 +4,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { AuditRepository } from '@/handlers/audit/repos/audit.repo';
+import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
 import type { DentalMembershipManagement_verifyPinBody, DentalMembershipManagement_verifyPinParams } from '@/generated/openapi/validators';
 
 /**
@@ -55,8 +55,7 @@ export async function DentalMembershipManagement_verifyPin(
 
     // CF-46/AUTH-07: Write audit log entry on successful PIN verification.
     try {
-      const auditRepo = new AuditRepository(db, logger);
-      await auditRepo.logEvent({
+      await logAuditEvent(db, logger, {
         eventType: 'authentication',
         category: 'security',
         action: 'login',

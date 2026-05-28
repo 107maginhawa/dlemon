@@ -30,6 +30,7 @@
     "check:boundaries:error": "bun scripts/check-module-boundaries.ts --error",
     "check:boundaries:dental-billing": "bun scripts/check-module-boundaries.ts --error --module dental-billing",
     "check:boundaries:dental-perio": "bun scripts/check-module-boundaries.ts --error --module dental-perio",
+    "check:boundaries:dental-org": "bun scripts/check-module-boundaries.ts --error --module dental-org",
     "perf": "bun run tests/perf/run.ts"
   },
   "dependencies": {
