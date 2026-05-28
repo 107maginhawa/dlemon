@@ -29,9 +29,9 @@ import {
   CreateTreatmentPlanBody,
   UpdateTreatmentPlanBody,
 } from './utils/treatment-plan-validators';
-import { createTreatmentPlan } from './createTreatmentPlan';
-import { listPatientTreatmentPlans } from './listPatientTreatmentPlans';
-import { updateTreatmentPlan } from './updateTreatmentPlan';
+import { createTreatmentPlan } from './treatment-plans/createTreatmentPlan';
+import { listPatientTreatmentPlans } from './treatment-plans/listPatientTreatmentPlans';
+import { updateTreatmentPlan } from './treatment-plans/updateTreatmentPlan';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

@@ -6,8 +6,8 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { TreatmentPlanRepository } from './repos/treatment-plan.repo';
-import { TREATMENT_PLAN_FSM, type TreatmentPlanStatus } from './repos/treatment-plan.schema';
+import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
+import { TREATMENT_PLAN_FSM, type TreatmentPlanStatus } from '../repos/treatment-plan.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateTreatmentPlan(ctx: any): Promise<Response> {

@@ -6,7 +6,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { TreatmentPlanRepository } from './repos/treatment-plan.repo';
+import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createTreatmentPlan(ctx: any): Promise<Response> {

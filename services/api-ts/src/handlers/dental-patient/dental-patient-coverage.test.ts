@@ -21,9 +21,9 @@ import {
   InitializeDentitionBody,
   InitializeDentitionParams,
 } from '@/generated/openapi/validators';
-import { getTreatmentPlan } from './getTreatmentPlan';
-import { acceptTreatmentPlan } from './acceptTreatmentPlan';
-import { getTreatmentPlanVersion } from './getTreatmentPlanVersion';
+import { getTreatmentPlan } from './treatment-plans/getTreatmentPlan';
+import { acceptTreatmentPlan } from './treatment-plans/acceptTreatmentPlan';
+import { getTreatmentPlanVersion } from './treatment-plans/getTreatmentPlanVersion';
 import { initializeDentition } from './initializeDentition';
 import { listPatientVisits } from './listPatientVisits';
 import { listPatientConditions } from './listPatientConditions';

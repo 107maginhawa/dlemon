@@ -753,14 +753,12 @@ export const CreateDentalChartRequestSchema = z.object({
   teeth: z.array(ToothChartStateSchema)
 });
 
-// EM-BILL-001: taxRate removed — must not be caller-controlled.
-// Tax is computed server-side per branch configuration (hardcoded to 0 until
-// branch tax config lands). This file is generated but hand-maintained.
 export const CreateDentalInvoiceRequestSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
   branchId: UUIDSchema,
   dentistMemberId: UUIDSchema,
+  taxRate: z.number().optional(),
   dueDate: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 

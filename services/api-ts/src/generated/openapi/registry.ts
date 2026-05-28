@@ -132,7 +132,7 @@ import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/Imag
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
 import { ImagingMgmt_updateImageModality } from '../../handlers/dental-imaging/ImagingMgmt_updateImageModality';
 import { PatientImageMgmt_listPatientImages } from '../../handlers/dental-imaging/PatientImageMgmt_listPatientImages';
-import { acceptTreatmentPlan } from '../../handlers/dental-patient/acceptTreatmentPlan';
+import { acceptTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
 import { addFollowUpNote } from '../../handlers/dental-patient/addFollowUpNote';
 import { archiveDentalPatient } from '../../handlers/dental-patient/archiveDentalPatient';
 import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/bulkArchiveDentalPatients';
@@ -141,8 +141,8 @@ import { exportDentalPatients } from '../../handlers/dental-patient/exportDental
 import { getDentalPatient } from '../../handlers/dental-patient/getDentalPatient';
 import { getDentalPatientSafetyFloor } from '../../handlers/dental-patient/getDentalPatientSafetyFloor';
 import { getDentalPatientStatement } from '../../handlers/dental-patient/getDentalPatientStatement';
-import { getTreatmentPlan } from '../../handlers/dental-patient/getTreatmentPlan';
-import { getTreatmentPlanVersion } from '../../handlers/dental-patient/getTreatmentPlanVersion';
+import { getTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/getTreatmentPlan';
+import { getTreatmentPlanVersion } from '../../handlers/dental-patient/treatment-plans/getTreatmentPlanVersion';
 import { importPatients } from '../../handlers/dental-patient/importPatients';
 import { initializeDentition } from '../../handlers/dental-patient/initializeDentition';
 import { listDentalPatients } from '../../handlers/dental-patient/listDentalPatients';
