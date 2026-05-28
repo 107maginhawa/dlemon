@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { requireAuth } from '@/utils/guards'
-import { loadOrgContext } from '@/utils/load-org-context'
+import { requireAuth } from '@/lib/guards'
+import { loadOrgContext } from '@/lib/load-org-context'
 
 export const Route = createFileRoute('/_workspace')({
   beforeLoad: async (opts) => {

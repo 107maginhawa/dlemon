@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 interface SafetyFloorPreview {
   conditions: string[];

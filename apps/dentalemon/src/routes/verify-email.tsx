@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@mono
 import { Alert, AlertDescription } from '@monobase/ui'
 import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react'
 import { Logo } from '@monobase/ui'
-import { composeGuards, requireAuth, requireNotEmailVerified } from '@/utils/guards'
+import { composeGuards, requireAuth, requireNotEmailVerified } from '@/lib/guards'
 import { useAuthClient } from '@monobase/sdk-ts/react/auth'
 import { toast } from 'sonner'
 

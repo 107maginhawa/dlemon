@@ -5,7 +5,7 @@
  * Polls every 30s.
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 export type SyncLogStatus = 'pending' | 'syncing' | 'synced' | 'failed';
 

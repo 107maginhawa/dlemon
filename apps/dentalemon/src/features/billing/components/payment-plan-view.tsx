@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 const API = apiBaseUrl;
 

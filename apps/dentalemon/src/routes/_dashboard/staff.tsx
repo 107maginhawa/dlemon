@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { StaffList } from '@/features/staff/components/staff-list'
 import { StaffAccessDenied } from '@/features/staff/components/staff-list'
 import { useOrgContextStore } from '@/stores/org-context.store'
-import { requireRole } from '@/utils/guards'
+import { requireRole } from '@/lib/guards'
 
 export const Route = createFileRoute('/_dashboard/staff')({
   beforeLoad: requireRole('staff'),

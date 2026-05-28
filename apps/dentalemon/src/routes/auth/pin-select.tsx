@@ -9,10 +9,10 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
-import { composeGuards, requireAuth } from '@/utils/guards';
-import { loadOrgContext } from '@/utils/load-org-context';
+import { composeGuards, requireAuth } from '@/lib/guards';
+import { loadOrgContext } from '@/lib/load-org-context';
 
 const API = apiBaseUrl;
 

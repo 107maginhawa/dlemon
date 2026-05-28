@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { ClinicStep } from './wizard-step-clinic';
 import { DentistStep } from './wizard-step-dentist';

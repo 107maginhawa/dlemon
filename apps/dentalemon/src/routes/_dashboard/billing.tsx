@@ -9,7 +9,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useState } from 'react'
-import { requireRole } from '@/utils/guards'
+import { requireRole } from '@/lib/guards'
 import { useQueryClient } from '@tanstack/react-query'
 import { BillingList } from '../../features/billing/components/billing-list'
 import { InvoiceDetail } from '../../features/billing/components/invoice-detail'

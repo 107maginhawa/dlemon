@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { components } from '@monobase/api-spec/types'
-import { apiBaseUrl } from '@/utils/config'
+import { apiBaseUrl } from '@/lib/config'
 
 export type PatientImageItem = components['schemas']['DentalImagingModule.PatientImageItem']
 

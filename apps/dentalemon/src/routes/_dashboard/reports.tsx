@@ -3,10 +3,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { RevenueReport } from '../../features/reports/components/revenue-report'
 import { TreatmentReport } from '../../features/reports/components/treatment-report'
 import { PatientReport } from '../../features/reports/components/patient-report'
-import { canAccessReports } from '../../utils/rbac'
-import type { DentalRole } from '../../utils/rbac'
+import { canAccessReports } from '@/lib/rbac'
+import type { DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
-import { requireRole } from '@/utils/guards'
+import { requireRole } from '@/lib/guards'
 
 export const Route = createFileRoute('/_dashboard/reports')({
   beforeLoad: requireRole('reports'),

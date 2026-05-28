@@ -9,10 +9,10 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
-import { pinSession } from '@/utils/pin-session';
-import { apiBaseUrl } from '@/utils/config';
+import { pinSession } from '@/lib/pin-session';
+import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
-import { requireAuth } from '@/utils/guards';
+import { requireAuth } from '@/lib/guards';
 
 export const Route = createFileRoute('/auth/pin-entry/$memberId')({
   // CF-44 (Slice H): PIN entry is part of the authenticated device flow.

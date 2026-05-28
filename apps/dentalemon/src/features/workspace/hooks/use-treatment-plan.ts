@@ -7,7 +7,7 @@
  * API: GET /dental/patients/:patientId/treatment-plan?branchId=...
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 export interface TreatmentPlanItem {
   id: string;

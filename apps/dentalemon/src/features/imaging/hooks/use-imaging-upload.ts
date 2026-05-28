@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { apiBaseUrl } from '@/utils/config'
+import { apiBaseUrl } from '@/lib/config'
 
 export interface UploadOptions {
   patientId: string

@@ -6,7 +6,7 @@
  *      PATCH /dental/patients/:patientId/recalls/:recallId
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 export type RecallStatus = 'pending' | 'sent' | 'completed' | 'cancelled';
 export type RecallType = 'cleaning' | 'checkup' | 'treatment' | 'other';

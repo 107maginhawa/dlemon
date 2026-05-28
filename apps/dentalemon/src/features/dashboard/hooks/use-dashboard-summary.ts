@@ -6,7 +6,7 @@
  * roles) overdue invoices and daily collections.
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 const API = apiBaseUrl;
 

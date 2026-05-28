@@ -11,7 +11,7 @@ import {
   ArrowRight,
   Lock
 } from "lucide-react"
-import { requireGuest } from '@/utils/guards'
+import { requireGuest } from '@/lib/guards'
 
 export const Route = createFileRoute('/')({
   beforeLoad: requireGuest,

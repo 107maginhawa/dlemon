@@ -1,4 +1,4 @@
-import { getRuntimeConfig } from '@/utils/config'
+import { getRuntimeConfig } from '@/lib/config'
 import { useOrgContextStore } from '@/stores/org-context.store'
 
 /**

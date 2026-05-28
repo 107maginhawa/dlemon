@@ -7,8 +7,8 @@
 import { redirect } from '@tanstack/react-router'
 import type { RouterContext } from '@/router'
 import { useOrgContextStore } from '@/stores/org-context.store'
-import { canAccess } from '@/utils/rbac'
-import type { DentalModule, DentalRole } from '@/utils/rbac'
+import { canAccess } from '@/lib/rbac'
+import type { DentalModule, DentalRole } from '@/lib/rbac'
 
 // Re-export types for convenience.
 // `PersonCreateRequest` / `PersonUpdateRequest` are the canonical schema names

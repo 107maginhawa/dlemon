@@ -6,7 +6,7 @@
  * Polls every 15s.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 export type QueueItemStatus = 'waiting' | 'called' | 'in_progress' | 'completed' | 'cancelled';
 

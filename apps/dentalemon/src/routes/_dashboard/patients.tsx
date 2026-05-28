@@ -23,7 +23,7 @@ import {
   useBulkArchive,
   useExportPatients,
 } from '@/features/patients/hooks/use-patient-actions';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/_dashboard/patients')({

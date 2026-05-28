@@ -15,9 +15,9 @@
 
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { canViewFinancials } from '../../../utils/rbac';
+import { canViewFinancials } from '@/lib/rbac';
 import { MetricCard } from './metric-card';
-import type { DentalRole } from '../../../utils/rbac';
+import type { DentalRole } from '@/lib/rbac';
 import { useDashboardSummary } from '../hooks/use-dashboard-summary';
 import {
   getGreeting, formatTodayDate, calcTrend,

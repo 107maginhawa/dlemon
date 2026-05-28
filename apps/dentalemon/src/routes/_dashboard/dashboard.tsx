@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { MorningBriefing } from '../../features/dashboard/components/morning-briefing'
-import type { DentalRole } from '../../utils/rbac'
+import type { DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
 
 export const Route = createFileRoute('/_dashboard/dashboard')({

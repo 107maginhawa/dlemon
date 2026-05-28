@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { canAccess, type DentalRole, type DentalModule } from '@/utils/rbac';
+import { canAccess, type DentalRole, type DentalModule } from '@/lib/rbac';
 import { useStaffMutations } from '../hooks/use-staff-members';
 
 // ---------------------------------------------------------------------------

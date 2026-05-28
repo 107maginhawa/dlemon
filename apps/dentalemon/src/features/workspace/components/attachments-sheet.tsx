@@ -9,7 +9,7 @@
  */
 import React, { useRef, useState } from 'react';
 import { Paperclip, Upload, Trash2, Download, X, FileText, Image } from 'lucide-react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import {
   useAttachments,
   useUploadAttachment,

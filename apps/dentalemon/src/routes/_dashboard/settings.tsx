@@ -5,10 +5,10 @@ import { FeeSchedule } from '../../features/settings/components/fee-schedule'
 import { LocaleSettings } from '../../features/settings/components/locale-settings'
 import { WorkingHours } from '../../features/settings/components/working-hours'
 import { NotificationSettings } from '../../features/settings/components/notification-settings'
-import { canAccess } from '../../utils/rbac'
-import type { DentalRole } from '../../utils/rbac'
+import { canAccess } from '@/lib/rbac'
+import type { DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
-import { requireRole } from '@/utils/guards'
+import { requireRole } from '@/lib/guards'
 
 export const Route = createFileRoute('/_dashboard/settings')({
   beforeLoad: requireRole('settings'),

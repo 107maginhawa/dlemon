@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
 

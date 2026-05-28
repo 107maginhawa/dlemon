@@ -5,7 +5,7 @@
  * Both mutations invalidate ['staff-members', branchId] on success.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 const API = apiBaseUrl;
 

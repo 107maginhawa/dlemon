@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 import {
   type InvoiceData,
   canIssue, canVoid, canRecord,

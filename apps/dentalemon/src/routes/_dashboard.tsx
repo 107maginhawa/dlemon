@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { requireAuth } from '@/utils/guards'
+import { requireAuth } from '@/lib/guards'
 import { useOrgContextStore } from '@/stores/org-context.store'
-import { loadOrgContext } from '@/utils/load-org-context'
-import { pinSession } from '@/utils/pin-session'
+import { loadOrgContext } from '@/lib/load-org-context'
+import { pinSession } from '@/lib/pin-session'
 import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
 import {
   SidebarProvider,

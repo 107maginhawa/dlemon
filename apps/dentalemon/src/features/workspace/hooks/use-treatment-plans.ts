@@ -9,7 +9,7 @@
  *      PATCH /dental/patients/:patientId/treatment-plans/:planId
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/utils/config';
+import { apiBaseUrl } from '@/lib/config';
 
 export type TreatmentPlanStatus =
   | 'draft'
