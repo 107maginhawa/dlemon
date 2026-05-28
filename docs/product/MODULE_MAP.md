@@ -8,6 +8,11 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 > 10 dental domain modules layered on top of 13 Monobase platform primitives.
 > Dependencies listed as upstream → downstream (arrow = "depends on").
 
+> **Layout & Bucketing**: Handler sub-domain folder structure and handler-count thresholds are defined in
+> [`docs/development/MODULE_TEMPLATE.md`](../development/MODULE_TEMPLATE.md).
+> Import boundary rules (what may cross module lines and what may not) are enforced via ESLint and documented in
+> [`docs/development/MODULE_BOUNDARIES.md`](../development/MODULE_BOUNDARIES.md).
+
 ---
 
 ## Dental Domain Modules
@@ -22,7 +27,7 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 
 ### M2: dental-patient
 **Responsibility**: Dental-specific patient extensions (dentition record, dental identifiers, patient preferences).
-**Handler**: `services/api-ts/src/handlers/dental-patient/`
+**Handler**: `services/api-ts/src/handlers/dental-patient/` — 46 handlers across 8 sub-domains: `identity/`, `contacts/`, `insurance/`, `alerts/`, `engagement/`, `recalls/`, `sync/`, `treatment-plans/`
 **Key tables**: `dental_patient` (extends base `patient`)
 **PRD Section**: §6.2 Patient Records, §11.2 Clinical Entities
 **Dependencies**: `patient` (base PII), `dental-org` (branch scope)
@@ -30,7 +35,7 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 
 ### M3: dental-visit
 **Responsibility**: Clinical encounter state machine, tooth charting, treatment recording, visit notes, treatment templates, carry-over, treatment plans.
-**Handler**: `services/api-ts/src/handlers/dental-visit/`
+**Handler**: `services/api-ts/src/handlers/dental-visit/` — 26 handlers across 6 sub-domains: `chart/`, `notes/`, `templates/`, `treatments/`, `treatment-plans/`, `visits/`
 **Key tables**: `dental_visit`, `dental_treatment`, `dental_chart`, `visit_notes`, `visit_note_version`, `dental_treatment_template`, `treatment_plan_version`
 **PRD Section**: §6.1 Dental Workspace (primary), §3 Timeline Carousel, §4 Per-Tooth Timeline
 **Dependencies**: `dental-org`, `dental-patient`, `patient`
@@ -56,7 +61,7 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 
 ### M6: dental-clinical
 **Responsibility**: Prescriptions, lab orders, consent forms, medical history, file attachments, clinical amendments.
-**Handler**: `services/api-ts/src/handlers/dental-clinical/`
+**Handler**: `services/api-ts/src/handlers/dental-clinical/` — 27 handlers across 9 sub-domains: `amendments/`, `attachments/`, `consent/`, `inventory/`, `lab-orders/`, `medical-history/`, `occlusion/`, `postop/`, `prescriptions/`
 **Key tables**: `prescription`, `lab_order`, `consent_form`, `medical_history_entry`, `dental_attachment`, `amendment`
 **PRD Section**: §6.1 Workspace (clinical tabs), §6.12 PMD
 **Dependencies**: `dental-org`, `dental-visit` (visit context), `patient`, `storage` (attachments)

@@ -23,10 +23,7 @@ import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { TreatmentTable } from '@/features/workspace/components/treatment-table';
-import { PatientImageList } from '@/features/imaging/components/patient-image-list';
-import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace';
-import { ComparisonView } from '@/features/imaging/components/comparison-view';
-import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies';
+import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
 import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
 import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
@@ -70,8 +67,6 @@ function WorkspacePage() {
   const [imagingOpen, setImagingOpen] = useState(false);
   const [recallsOpen, setRecallsOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
-  const [selectedImageItem, setSelectedImageItem] = useState<PatientImageItem | null>(null);
-  const [comparisonItems, setComparisonItems] = useState<[PatientImageItem, PatientImageItem] | null>(null);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
 
@@ -393,52 +388,13 @@ function WorkspacePage() {
       )}
 
       {/* Imaging tab overlay */}
-      {imagingOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="imaging-overlay">
-          <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-            <h2 className="text-sm font-semibold">Imaging</h2>
-            <button
-              type="button"
-              onClick={() => { setImagingOpen(false); setSelectedImageItem(null); setComparisonItems(null); }}
-              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Close imaging"
-            >
-              ×
-            </button>
-          </div>
-          <div className="flex flex-1 min-h-0">
-            <PatientImageList
-              patientId={patientId}
-              branchId={branchId ?? ''}
-              onSelectImage={(item) => setSelectedImageItem(item)}
-              onCompare={(items) => { setComparisonItems(items); setSelectedImageItem(null); }}
-            />
-            <div className="flex-1 min-w-0">
-              {comparisonItems ? (
-                <ComparisonView
-                  imageA={comparisonItems[0]}
-                  imageB={comparisonItems[1]}
-                  onClose={() => setComparisonItems(null)}
-                />
-              ) : selectedImageItem ? (
-                <ImagingWorkspace
-                  imageId={selectedImageItem.id}
-                  imageUrl={selectedImageItem.fileName}
-                  className="h-full w-full"
-                  visitId={currentVisitId ?? ''}
-                  patientId={patientId}
-                  branchId={branchId ?? ''}
-                  modality={selectedImageItem.modality}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Select an image to view
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <WorkspaceImagingOverlay
+        patientId={patientId}
+        branchId={branchId ?? ''}
+        currentVisitId={currentVisitId}
+        open={imagingOpen}
+        onClose={() => setImagingOpen(false)}
+      />
 
       {/* WBAR-02: RxSheet */}
       {currentVisitId && (

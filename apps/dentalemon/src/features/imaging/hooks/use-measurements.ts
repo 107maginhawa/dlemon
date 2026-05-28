@@ -11,7 +11,7 @@ export interface ImagingAnnotation {
   createdAt: string
 }
 
-interface CreateMeasurementInput {
+export interface CreateMeasurementInput {
   type: string
   geometry: unknown
   measurementValue?: number | null

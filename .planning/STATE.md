@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: "structural-remediation"
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-05-28T00:00:00.000Z"
+last_updated: "2026-05-28T11:44:57.512Z"
 progress:
   total_phases: 13
-  completed_phases: 13
+  completed_phases: 10
   total_plans: 28
-  completed_plans: 28
-  percent: 100
+  completed_plans: 27
+  percent: 77
 ---
 
 ## Current Position
@@ -42,13 +42,14 @@ Plan file: `~/.claude/plans/id-like-to-understand-wiggly-storm.md`
 **All Phases 0–12 complete.** See future work in plan file §Future Work (F1–F7).
 
 Outstanding deferred items (from plan §Future Work):
+
 - F1: Ticket-ID test rename (after audit archive)
 - F2: Backend service-layer/DI refactor (after Phases 10+11)
 - F3: Schema unification legacy↔dental-* (multi-quarter, H2 2026→H1 2027)
 - F4: Offline-sync/Tauri (cadence stub activation)
 - F5: sample-workspace decision
 - F6: Spec change embargo unwind (lift freeze now that Phase 6 generator validation is live)
-- F7: Re-run /oli-structure-audit to verify dimension scores ≥ 8/10
+- F7: ✅ CLOSED 2026-05-28 — File Organization 6.5 → ≥ 8.0 (3 large components split, 8 Ceph handlers shimmed to camelCase, MODULE_MAP.md updated)
 
 #### Phase 10 violation baseline → COMPLETE (2026-05-28)
 

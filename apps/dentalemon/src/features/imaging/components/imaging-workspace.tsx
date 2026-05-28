@@ -14,8 +14,12 @@ import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
-import { computeAngleDeg, computePolygonArea, euclidean } from '../lib/geometry'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
+import {
+  processToolClick,
+  buildLabelMeasurement,
+  buildToothMeasurement,
+} from './imaging-workspace.handlers'
 
 interface ImagingWorkspaceProps {
   imageId: string
@@ -206,143 +210,52 @@ export function ImagingWorkspace({
   // SVG click handler
   const handleSvgClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
-      if (toolMode === 'none') return
       const svg = svgRef.current
       if (!svg) return
       const rect = svg.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
+      const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      const action = processToolClick({
+        toolMode,
+        drawPoints,
+        newPoint,
+        isDoubleClick: e.detail === 2,
+        pixelSpacingMm,
+      })
 
-      const newPoints = [...drawPoints, { x, y }]
-
-      if (toolMode === 'calibration') {
-        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
-        const dist = euclidean(newPoints[0]!, newPoints[1]!)
-        setCalibrationPixelDist(dist)
-        setDrawPoints(newPoints)
-        setCalibrationOpen(true)
-        return
-      }
-
-      if (toolMode === 'distance') {
-        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
-        const distPx = euclidean(newPoints[0]!, newPoints[1]!)
-        const value = pixelSpacingMm ? distPx * pixelSpacingMm : distPx
-        const unit = pixelSpacingMm ? 'mm' : 'px'
-        createMeasurement.mutate({
-          type: 'distance',
-          geometry: { points: newPoints },
-          measurementValue: Math.round(value * 10) / 10,
-          measurementUnit: unit,
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
-      }
-
-      if (toolMode === 'angle') {
-        if (newPoints.length < 3) { setDrawPoints(newPoints); return }
-        const deg = computeAngleDeg(newPoints[0]!, newPoints[1]!, newPoints[2]!)
-        createMeasurement.mutate({
-          type: 'angle',
-          geometry: { points: newPoints },
-          measurementValue: Math.round(deg * 10) / 10,
-          measurementUnit: 'deg',
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
-      }
-
-      if (toolMode === 'area') {
-        if (e.detail === 2 && newPoints.length >= 3) {
-          const areaPx = computePolygonArea(newPoints.slice(0, -1))
-          const value = pixelSpacingMm ? areaPx * pixelSpacingMm * pixelSpacingMm : areaPx
-          const unit = pixelSpacingMm ? 'mm²' : 'px²'
-          createMeasurement.mutate({
-            type: 'area',
-            geometry: { points: newPoints.slice(0, -1) },
-            measurementValue: Math.round(value * 10) / 10,
-            measurementUnit: unit,
-          })
+      switch (action.type) {
+        case 'noop':
+          return
+        case 'setPoints':
+          setDrawPoints(action.points)
+          return
+        case 'openCalibration':
+          setCalibrationPixelDist(action.pixelDistance)
+          setDrawPoints(action.points)
+          setCalibrationOpen(true)
+          return
+        case 'commit':
+          createMeasurement.mutate(action.input)
+          setDrawPoints([])
+          onMeasurementSaved?.()
+          return
+        case 'promptLabel': {
+          const text = window.prompt('Label text (max 200 chars):')
+          const input = text == null ? null : buildLabelMeasurement(action.point, text)
+          if (!input) { setDrawPoints([]); return }
+          createMeasurement.mutate(input)
           setDrawPoints([])
           onMeasurementSaved?.()
           return
         }
-        setDrawPoints(newPoints)
-        return
-      }
-
-      if (toolMode === 'label') {
-        const text = window.prompt('Label text (max 200 chars):')
-        if (!text || text.trim().length === 0) { setDrawPoints([]); return }
-        createMeasurement.mutate({
-          type: 'label',
-          geometry: { type: 'label', point: { x, y }, text: text.trim().slice(0, 200) },
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
-      }
-
-      if (toolMode === 'tooth') {
-        const input = window.prompt('Tooth number (1–32):')
-        const toothNumber = input ? parseInt(input, 10) : NaN
-        if (!input || isNaN(toothNumber) || toothNumber < 1 || toothNumber > 32) { setDrawPoints([]); return }
-        createMeasurement.mutate({
-          type: 'tooth',
-          geometry: { type: 'tooth', point: { x, y }, toothNumber },
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
-      }
-
-      if (toolMode === 'arrow') {
-        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
-        const from = newPoints[0]!
-        const to = newPoints[1]!
-        createMeasurement.mutate({
-          type: 'arrow',
-          geometry: { type: 'arrow', from, to },
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
-      }
-
-      if (toolMode === 'freehand') {
-        if (e.detail === 2 && newPoints.length >= 2) {
-          createMeasurement.mutate({
-            type: 'freehand',
-            geometry: { type: 'freehand', points: newPoints.slice(0, -1) },
-          })
+        case 'promptTooth': {
+          const raw = window.prompt('Tooth number (1–32):')
+          const input = raw == null ? null : buildToothMeasurement(action.point, raw)
+          if (!input) { setDrawPoints([]); return }
+          createMeasurement.mutate(input)
           setDrawPoints([])
           onMeasurementSaved?.()
           return
         }
-        setDrawPoints(newPoints)
-        return
-      }
-
-      if (toolMode === 'shape') {
-        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
-        const p0 = newPoints[0]!
-        const p1 = newPoints[1]!
-        createMeasurement.mutate({
-          type: 'shape',
-          geometry: {
-            type: 'shape',
-            shapeType: 'rect',
-            x: Math.min(p0.x, p1.x),
-            y: Math.min(p0.y, p1.y),
-            width: Math.abs(p1.x - p0.x),
-            height: Math.abs(p1.y - p0.y),
-          },
-        })
-        setDrawPoints([])
-        onMeasurementSaved?.()
-        return
       }
     },
     [toolMode, drawPoints, pixelSpacingMm, createMeasurement, onMeasurementSaved],
