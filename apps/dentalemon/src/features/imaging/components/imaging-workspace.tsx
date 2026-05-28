@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { composeCephCanvas, canvasToPngBlob } from '../../../lib/ceph-export'
 import type { LayerState } from './CephLayerPanel'
 import { useOfflineCache } from '../hooks/use-offline-cache'
-import { useMeasurements, type ImagingAnnotation } from '../hooks/use-measurements'
+import { useMeasurements } from '../hooks/use-measurements'
 import { MeasurementToolbar, type ToolMode } from './measurement-toolbar'
 import { AnnotationToolbar } from './annotation-toolbar'
 import { CalibrationDialog } from './calibration-dialog'
@@ -15,6 +15,7 @@ import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { computeAngleDeg, computePolygonArea, euclidean } from '../lib/geometry'
+import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
 
 interface ImagingWorkspaceProps {
   imageId: string
@@ -30,421 +31,6 @@ interface ImagingWorkspaceProps {
   patientId?: string
   branchId?: string
 }
-
-// --- Sub-components ---
-
-interface MeasurementShapeProps {
-  annotation: ImagingAnnotation
-  pixelSpacingMm: number | null | undefined
-  onDelete: (id: string) => void
-  onAnnotationClick?: (id: string) => void
-}
-
-function MeasurementShape({ annotation, onDelete }: MeasurementShapeProps) {
-  const geo = annotation.geometry as Record<string, unknown>
-
-  if (annotation.type === 'line' || annotation.type === 'distance') {
-    const pts = geo.points as { x: number; y: number }[] | undefined
-    if (!pts || pts.length < 2) return null
-    const p1 = pts[0]!
-    const p2 = pts[1]!
-    const mx = (p1.x + p2.x) / 2
-    const my = (p1.y + p2.y) / 2
-    const label =
-      annotation.measurementValue !== null
-        ? `${annotation.measurementValue.toFixed(1)} ${annotation.measurementUnit ?? 'px'}`
-        : ''
-    return (
-      <g>
-        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#FFE97D" strokeWidth={2} />
-        <text x={mx} y={my - 6} fill="#FFE97D" fontSize={12} textAnchor="middle">
-          {label}
-        </text>
-        <circle
-          cx={p2.x}
-          cy={p2.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  if (annotation.type === 'angle') {
-    const pts = geo.points as { x: number; y: number }[] | undefined
-    if (!pts || pts.length < 3) return null
-    const p1 = pts[0]!
-    const p2 = pts[1]!
-    const p3 = pts[2]!
-    const label =
-      annotation.measurementValue !== null
-        ? `${annotation.measurementValue.toFixed(1)}°`
-        : ''
-    return (
-      <g>
-        <polyline
-          points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
-          fill="none"
-          stroke="#FFE97D"
-          strokeWidth={2}
-        />
-        <text x={p2.x} y={p2.y - 8} fill="#FFE97D" fontSize={12} textAnchor="middle">
-          {label}
-        </text>
-        <circle
-          cx={p3.x}
-          cy={p3.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  if (annotation.type === 'area') {
-    const pts = geo.points as { x: number; y: number }[] | undefined
-    if (!pts || pts.length < 3) return null
-    const pointsStr = pts.map((p) => `${p.x},${p.y}`).join(' ')
-    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length
-    const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
-    const lastPt = pts[pts.length - 1]!
-    const label =
-      annotation.measurementValue !== null
-        ? `${annotation.measurementValue.toFixed(1)} ${annotation.measurementUnit ?? 'px²'}`
-        : ''
-    return (
-      <g>
-        <polygon
-          points={pointsStr}
-          fill="#FFE97D"
-          fillOpacity={0.2}
-          stroke="#FFE97D"
-          strokeWidth={2}
-        />
-        <text x={cx} y={cy} fill="#FFE97D" fontSize={12} textAnchor="middle">
-          {label}
-        </text>
-        <circle
-          cx={lastPt.x}
-          cy={lastPt.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  return null
-}
-
-// --- Annotation shape renderer ---
-
-function AnnotationShape({ annotation, onDelete, onAnnotationClick }: MeasurementShapeProps) {
-  const geo = annotation.geometry as Record<string, unknown>
-
-  if (annotation.type === 'label') {
-    const pt = geo.point as { x: number; y: number } | undefined
-    const text = geo.text as string | undefined
-    if (!pt || !text) return null
-    return (
-      <g
-        style={{ cursor: onAnnotationClick ? 'pointer' : 'default' }}
-        onClick={() => onAnnotationClick?.(annotation.id)}
-      >
-        {/* UJ-IMG-002: annotation text rendered as JSX string child — React escapes it, no XSS possible */}
-        <text x={pt.x} y={pt.y} fill="#FFE97D" fontSize={13} fontWeight={600}>
-          {text}
-        </text>
-        <circle
-          cx={pt.x}
-          cy={pt.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={(e) => { e.stopPropagation(); onDelete(annotation.id) }}
-        />
-      </g>
-    )
-  }
-
-  if (annotation.type === 'arrow') {
-    const from = geo.from as { x: number; y: number } | undefined
-    const to = geo.to as { x: number; y: number } | undefined
-    if (!from || !to) return null
-    return (
-      <g>
-        <line
-          x1={from.x}
-          y1={from.y}
-          x2={to.x}
-          y2={to.y}
-          stroke="#FFE97D"
-          strokeWidth={2}
-          markerEnd="url(#arrowhead)"
-        />
-        <circle
-          cx={to.x}
-          cy={to.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  if (annotation.type === 'freehand') {
-    const pts = geo.points as { x: number; y: number }[] | undefined
-    if (!pts || pts.length < 2) return null
-    const lastPt = pts[pts.length - 1]!
-    return (
-      <g>
-        <polyline
-          points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
-          fill="none"
-          stroke="#FFE97D"
-          strokeWidth={2}
-        />
-        <circle
-          cx={lastPt.x}
-          cy={lastPt.y}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  if (annotation.type === 'shape') {
-    const shapeType = geo.shapeType as 'rect' | 'ellipse' | undefined
-    const x = geo.x as number | undefined
-    const y = geo.y as number | undefined
-    const width = geo.width as number | undefined
-    const height = geo.height as number | undefined
-    if (shapeType == null || x == null || y == null || width == null || height == null) return null
-
-    const deleteX = x + (width ?? 0)
-    const deleteY = y
-
-    if (shapeType === 'rect') {
-      return (
-        <g>
-          <rect
-            x={x}
-            y={y}
-            width={width}
-            height={height}
-            fill="#FFE97D"
-            fillOpacity={0.1}
-            stroke="#FFE97D"
-            strokeWidth={2}
-          />
-          <circle
-            cx={deleteX}
-            cy={deleteY}
-            r={6}
-            fill="red"
-            fillOpacity={0.7}
-            style={{ cursor: 'pointer' }}
-            onClick={() => onDelete(annotation.id)}
-          />
-        </g>
-      )
-    }
-
-    if (shapeType === 'ellipse') {
-      const cx = x + width / 2
-      const cy = y + height / 2
-      return (
-        <g>
-          <ellipse
-            cx={cx}
-            cy={cy}
-            rx={width / 2}
-            ry={height / 2}
-            fill="#FFE97D"
-            fillOpacity={0.1}
-            stroke="#FFE97D"
-            strokeWidth={2}
-          />
-          <circle
-            cx={deleteX}
-            cy={deleteY}
-            r={6}
-            fill="red"
-            fillOpacity={0.7}
-            style={{ cursor: 'pointer' }}
-            onClick={() => onDelete(annotation.id)}
-          />
-        </g>
-      )
-    }
-  }
-
-  if (annotation.type === 'tooth') {
-    const pt = geo.point as { x: number; y: number } | undefined
-    const toothNumber = geo.toothNumber as number | undefined
-    if (!pt || toothNumber == null) return null
-    return (
-      <g>
-        <circle cx={pt.x} cy={pt.y} r={14} fill="#FFE97D" fillOpacity={0.2} stroke="#FFE97D" strokeWidth={2} />
-        <text x={pt.x} y={pt.y + 5} fill="#FFE97D" fontSize={11} fontWeight={700} textAnchor="middle">
-          {toothNumber}
-        </text>
-        <circle
-          cx={pt.x + 14}
-          cy={pt.y - 14}
-          r={6}
-          fill="red"
-          fillOpacity={0.7}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onDelete(annotation.id)}
-        />
-      </g>
-    )
-  }
-
-  return null
-}
-
-interface DrawingPreviewProps {
-  toolMode: ToolMode | undefined
-  points: { x: number; y: number }[]
-}
-
-function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
-  if (points.length === 0) return null
-
-  if (toolMode === 'calibration' || toolMode === 'distance') {
-    const p0 = points[0]
-    if (!p0) return null
-    if (points.length < 2) {
-      return (
-        <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
-      )
-    }
-    const p1 = points[1]!
-    return (
-      <line
-        x1={p0.x}
-        y1={p0.y}
-        x2={p1.x}
-        y2={p1.y}
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="6 3"
-      />
-    )
-  }
-
-  if (toolMode === 'angle') {
-    return (
-      <polyline
-        points={points.map((p) => `${p.x},${p.y}`).join(' ')}
-        fill="none"
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="6 3"
-      />
-    )
-  }
-
-  if (toolMode === 'area' && points.length >= 2) {
-    return (
-      <polyline
-        points={points.map((p) => `${p.x},${p.y}`).join(' ')}
-        fill="#FFE97D"
-        fillOpacity={0.15}
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="6 3"
-      />
-    )
-  }
-
-  // Annotation mode previews
-  if (toolMode === 'label' || toolMode === 'tooth') {
-    const p0 = points[0]
-    if (!p0) return null
-    return <circle cx={p0.x} cy={p0.y} r={5} fill="#FFE97D" fillOpacity={0.7} />
-  }
-
-  if (toolMode === 'arrow' && points.length >= 1) {
-    const p0 = points[0]!
-    if (points.length < 2) {
-      return <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
-    }
-    const p1 = points[1]!
-    return (
-      <line
-        x1={p0.x}
-        y1={p0.y}
-        x2={p1.x}
-        y2={p1.y}
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="6 3"
-        markerEnd="url(#arrowhead)"
-      />
-    )
-  }
-
-  if (toolMode === 'freehand' && points.length >= 2) {
-    return (
-      <polyline
-        points={points.map((p) => `${p.x},${p.y}`).join(' ')}
-        fill="none"
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="4 2"
-      />
-    )
-  }
-
-  if (toolMode === 'shape' && points.length >= 1) {
-    const p0 = points[0]!
-    if (points.length < 2) {
-      return <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
-    }
-    const p1 = points[1]!
-    const x = Math.min(p0.x, p1.x)
-    const y = Math.min(p0.y, p1.y)
-    const width = Math.abs(p1.x - p0.x)
-    const height = Math.abs(p1.y - p0.y)
-    return (
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill="#FFE97D"
-        fillOpacity={0.1}
-        stroke="#FFE97D"
-        strokeWidth={2}
-        strokeDasharray="6 3"
-      />
-    )
-  }
-
-  return null
-}
-
-// --- Main component ---
 
 export function ImagingWorkspace({
   imageId,
@@ -630,11 +216,7 @@ export function ImagingWorkspace({
       const newPoints = [...drawPoints, { x, y }]
 
       if (toolMode === 'calibration') {
-        if (newPoints.length < 2) {
-          setDrawPoints(newPoints)
-          return
-        }
-        // 2 points — open dialog
+        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
         const dist = euclidean(newPoints[0]!, newPoints[1]!)
         setCalibrationPixelDist(dist)
         setDrawPoints(newPoints)
@@ -643,10 +225,7 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'distance') {
-        if (newPoints.length < 2) {
-          setDrawPoints(newPoints)
-          return
-        }
+        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
         const distPx = euclidean(newPoints[0]!, newPoints[1]!)
         const value = pixelSpacingMm ? distPx * pixelSpacingMm : distPx
         const unit = pixelSpacingMm ? 'mm' : 'px'
@@ -662,10 +241,7 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'angle') {
-        if (newPoints.length < 3) {
-          setDrawPoints(newPoints)
-          return
-        }
+        if (newPoints.length < 3) { setDrawPoints(newPoints); return }
         const deg = computeAngleDeg(newPoints[0]!, newPoints[1]!, newPoints[2]!)
         createMeasurement.mutate({
           type: 'angle',
@@ -679,7 +255,6 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'area') {
-        // Double-click to close polygon
         if (e.detail === 2 && newPoints.length >= 3) {
           const areaPx = computePolygonArea(newPoints.slice(0, -1))
           const value = pixelSpacingMm ? areaPx * pixelSpacingMm * pixelSpacingMm : areaPx
@@ -698,17 +273,9 @@ export function ImagingWorkspace({
         return
       }
 
-      // -----------------------------------------------------------------------
-      // Annotation modes (no tier gate)
-      // -----------------------------------------------------------------------
-
       if (toolMode === 'label') {
-        // Single click → prompt for text
         const text = window.prompt('Label text (max 200 chars):')
-        if (!text || text.trim().length === 0) {
-          setDrawPoints([])
-          return
-        }
+        if (!text || text.trim().length === 0) { setDrawPoints([]); return }
         createMeasurement.mutate({
           type: 'label',
           geometry: { type: 'label', point: { x, y }, text: text.trim().slice(0, 200) },
@@ -719,13 +286,9 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'tooth') {
-        // Single click → prompt for tooth number
         const input = window.prompt('Tooth number (1–32):')
         const toothNumber = input ? parseInt(input, 10) : NaN
-        if (!input || isNaN(toothNumber) || toothNumber < 1 || toothNumber > 32) {
-          setDrawPoints([])
-          return
-        }
+        if (!input || isNaN(toothNumber) || toothNumber < 1 || toothNumber > 32) { setDrawPoints([]); return }
         createMeasurement.mutate({
           type: 'tooth',
           geometry: { type: 'tooth', point: { x, y }, toothNumber },
@@ -736,10 +299,7 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'arrow') {
-        if (newPoints.length < 2) {
-          setDrawPoints(newPoints)
-          return
-        }
+        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
         const from = newPoints[0]!
         const to = newPoints[1]!
         createMeasurement.mutate({
@@ -752,7 +312,6 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'freehand') {
-        // Double-click to finish
         if (e.detail === 2 && newPoints.length >= 2) {
           createMeasurement.mutate({
             type: 'freehand',
@@ -767,25 +326,18 @@ export function ImagingWorkspace({
       }
 
       if (toolMode === 'shape') {
-        if (newPoints.length < 2) {
-          setDrawPoints(newPoints)
-          return
-        }
+        if (newPoints.length < 2) { setDrawPoints(newPoints); return }
         const p0 = newPoints[0]!
         const p1 = newPoints[1]!
-        const shapeX = Math.min(p0.x, p1.x)
-        const shapeY = Math.min(p0.y, p1.y)
-        const shapeW = Math.abs(p1.x - p0.x)
-        const shapeH = Math.abs(p1.y - p0.y)
         createMeasurement.mutate({
           type: 'shape',
           geometry: {
             type: 'shape',
             shapeType: 'rect',
-            x: shapeX,
-            y: shapeY,
-            width: shapeW,
-            height: shapeH,
+            x: Math.min(p0.x, p1.x),
+            y: Math.min(p0.y, p1.y),
+            width: Math.abs(p1.x - p0.x),
+            height: Math.abs(p1.y - p0.y),
           },
         })
         setDrawPoints([])
@@ -834,52 +386,22 @@ export function ImagingWorkspace({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col bg-black ${className ?? ''}`}>
-      {/* Existing toolbar */}
+      {/* Viewer toolbar */}
       <div className="flex items-center gap-2 p-2 bg-zinc-900">
-        <button
-          onClick={() => rotate(-1)}
-          className="px-2 py-1 text-xs text-white bg-zinc-700 rounded"
-        >
-          ↺ CCW
-        </button>
-        <button
-          onClick={() => rotate(1)}
-          className="px-2 py-1 text-xs text-white bg-zinc-700 rounded"
-        >
-          ↻ CW
-        </button>
-        <button onClick={flip} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">
-          ⇆ Flip
-        </button>
+        <button onClick={() => rotate(-1)} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↺ CCW</button>
+        <button onClick={() => rotate(1)} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↻ CW</button>
+        <button onClick={flip} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">⇆ Flip</button>
         <label className="text-xs text-zinc-300">
           Brightness
-          <input
-            type="range"
-            min={0}
-            max={200}
-            value={brightness}
-            onChange={(e) => setBrightness(Number(e.target.value))}
-            className="ml-1 w-20"
-          />
+          <input type="range" min={0} max={200} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="ml-1 w-20" />
         </label>
         <label className="text-xs text-zinc-300">
           Contrast
-          <input
-            type="range"
-            min={0}
-            max={200}
-            value={contrast}
-            onChange={(e) => setContrast(Number(e.target.value))}
-            className="ml-1 w-20"
-          />
+          <input type="range" min={0} max={200} value={contrast} onChange={(e) => setContrast(Number(e.target.value))} className="ml-1 w-20" />
         </label>
         <button
           onClick={() => setFindingsPanelOpen((prev) => !prev)}
-          className={`px-2 py-1 text-xs rounded ${
-            findingsPanelOpen
-              ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40'
-              : 'text-white bg-zinc-700'
-          }`}
+          className={`px-2 py-1 text-xs rounded ${findingsPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
           aria-pressed={findingsPanelOpen}
         >
           Findings
@@ -887,47 +409,25 @@ export function ImagingWorkspace({
         {isCeph && (
           <button
             onClick={() => setCephPanelOpen((prev) => !prev)}
-            className={`px-2 py-1 text-xs rounded ${
-              cephPanelOpen
-                ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40'
-                : 'text-white bg-zinc-700'
-            }`}
+            className={`px-2 py-1 text-xs rounded ${cephPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
             aria-pressed={cephPanelOpen}
             aria-label="Toggle ceph panel"
           >
             Ceph
           </button>
         )}
-        <button
-          onClick={fullscreen}
-          className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded"
-        >
-          ⛶ Fullscreen
-        </button>
+        <button onClick={fullscreen} className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
       </div>
 
-      {/* Measurement toolbar */}
-      <MeasurementToolbar
-        toolMode={toolMode}
-        onToolChange={setToolMode}
-        isCalibrated={isCalibrated}
-        modality={modality}
-      />
-
-      {/* Annotation toolbar */}
+      <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} />
       <AnnotationToolbar toolMode={toolMode} onToolChange={setToolMode} />
 
-      {/* Canvas + SVG overlay + FindingsSidebar */}
       <div className="flex flex-row flex-1 overflow-hidden">
         <div
           style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)`, flex: 1, position: 'relative' }}
           className="overflow-hidden"
         >
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full cursor-grab active:cursor-grabbing"
-            style={{ display: 'block' }}
-          />
+          <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" style={{ display: 'block' }} />
           <svg
             ref={svgRef}
             className="absolute inset-0 w-full h-full"
@@ -938,16 +438,8 @@ export function ImagingWorkspace({
             }}
             onClick={handleSvgClick}
           >
-            {/* Arrowhead marker for arrow annotations */}
             <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="8"
-                markerHeight="6"
-                refX="8"
-                refY="3"
-                orient="auto"
-              >
+              <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                 <polygon points="0 0, 8 3, 0 6" fill="#FFE97D" />
               </marker>
             </defs>
@@ -961,10 +453,7 @@ export function ImagingWorkspace({
                     annotation={m}
                     pixelSpacingMm={pixelSpacingMm}
                     onDelete={(id) => deleteMeasurement.mutate(id)}
-                    onAnnotationClick={(id) => {
-                      setSelectedAnnotationId(id)
-                      setFindingsPanelOpen(true)
-                    }}
+                    onAnnotationClick={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
                   />
                 )
               }
@@ -980,25 +469,13 @@ export function ImagingWorkspace({
             <DrawingPreview toolMode={toolMode} points={drawPoints} />
           </svg>
 
-          {/* Ceph overlays — rendered when ceph panel open and transform ready */}
           {isCeph && cephPanelOpen && cephTransform && (
             <>
               {cephLayers.tracing && (
-                <CephTracingOverlay
-                  landmarks={cephLandmarks}
-                  transform={cephTransform}
-                  width={cephTransform.canvasWidth}
-                  height={cephTransform.canvasHeight}
-                />
+                <CephTracingOverlay landmarks={cephLandmarks} transform={cephTransform} width={cephTransform.canvasWidth} height={cephTransform.canvasHeight} />
               )}
               {cephLayers.arcs && (
-                <CephAngleArcLayer
-                  landmarks={cephLandmarks}
-                  transform={cephTransform}
-                  measurements={cephAnalysis?.measurements ?? {}}
-                  width={cephTransform.canvasWidth}
-                  height={cephTransform.canvasHeight}
-                />
+                <CephAngleArcLayer landmarks={cephLandmarks} transform={cephTransform} measurements={cephAnalysis?.measurements ?? {}} width={cephTransform.canvasWidth} height={cephTransform.canvasHeight} />
               )}
               {cephLayers.landmarks && (
                 <CephLandmarkLayer
@@ -1007,10 +484,7 @@ export function ImagingWorkspace({
                   transform={cephTransform}
                   width={cephTransform.canvasWidth}
                   height={cephTransform.canvasHeight}
-                  onPlace={(code, x, y) => {
-                    setCephSelectedCode(null)
-                    void commitLandmark.mutateAsync({ code, x, y })
-                  }}
+                  onPlace={(code, x, y) => { setCephSelectedCode(null); void commitLandmark.mutateAsync({ code, x, y }) }}
                   onDrag={(code, x, y) => dragLandmark(code, x, y)}
                   onCommit={(code, x, y) => void commitLandmark.mutateAsync({ code, x, y })}
                 />
@@ -1019,15 +493,7 @@ export function ImagingWorkspace({
           )}
         </div>
 
-        {/* Findings sidebar */}
-        <FindingsSidebar
-          imageId={imageId}
-          isOpen={findingsPanelOpen}
-          onClose={() => setFindingsPanelOpen(false)}
-          initialAnnotationId={selectedAnnotationId ?? undefined}
-        />
-
-        {/* Ceph workspace panel */}
+        <FindingsSidebar imageId={imageId} isOpen={findingsPanelOpen} onClose={() => setFindingsPanelOpen(false)} initialAnnotationId={selectedAnnotationId ?? undefined} />
         <CephWorkspacePanel
           imageId={imageId}
           isOpen={isCeph && cephPanelOpen}
@@ -1037,15 +503,11 @@ export function ImagingWorkspace({
         />
       </div>
 
-      {/* Calibration dialog */}
       <CalibrationDialog
         open={calibrationOpen}
         pixelDistance={calibrationPixelDist}
         onConfirm={(mm) => void handleCalibrationConfirm(mm)}
-        onCancel={() => {
-          setCalibrationOpen(false)
-          setDrawPoints([])
-        }}
+        onCancel={() => { setCalibrationOpen(false); setDrawPoints([]) }}
       />
     </div>
   )
