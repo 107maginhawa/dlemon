@@ -4,13 +4,12 @@
  * POST /dental/visits/{visitId}/amendments
  */
 
-import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/visit.service';
 import { AmendmentRepository } from './repos/amendment.repo';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
 
@@ -28,15 +27,7 @@ export async function createAmendment(
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
 
-  const [membership] = await db
-    .select({ id: dentalMemberships.id })
-    .from(dentalMemberships)
-    .where(and(
-      eq(dentalMemberships.personId, user.id),
-      eq(dentalMemberships.branchId, visit.branchId),
-      eq(dentalMemberships.status, 'active'),
-    ))
-    .limit(1);
+  const membership = await getActiveMembershipId(db, user.id, visit.branchId);
   if (!membership) throw new ForbiddenError('You do not have access to this branch');
 
   const authorMemberId = membership.id;

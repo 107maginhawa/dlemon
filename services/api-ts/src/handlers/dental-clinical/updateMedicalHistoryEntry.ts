@@ -8,7 +8,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
-import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { UpdateMedicalHistoryEntryBody, UpdateMedicalHistoryEntryParams } from '@/generated/openapi/validators';
@@ -29,8 +29,7 @@ export async function updateMedicalHistoryEntry(
   if (!existing) throw new NotFoundError('Medical history entry');
 
   // Branch-level authorization via patient's preferred branch
-  const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneById(existing.patientId);
+  const patient = await getPatientForClinical(db, existing.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
   await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
