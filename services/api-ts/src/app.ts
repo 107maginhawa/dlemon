@@ -88,9 +88,9 @@ import {
   CreateClaimDraftBody,
   UpdateClaimDraftStatusBody,
 } from '@/handlers/dental-patient/utils/insurance-validators';
-import { createDentalAlert } from '@/handlers/dental-patient/createDentalAlert';
-import { listDentalAlerts } from '@/handlers/dental-patient/listDentalAlerts';
-import { updateDentalAlert } from '@/handlers/dental-patient/updateDentalAlert';
+import { createDentalAlert } from '@/handlers/dental-patient/alerts/createDentalAlert';
+import { listDentalAlerts } from '@/handlers/dental-patient/alerts/listDentalAlerts';
+import { updateDentalAlert } from '@/handlers/dental-patient/alerts/updateDentalAlert';
 import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/utils/dental-alert-validators';
 import { createTask } from '@/handlers/dental-patient/createTask';
 import { listPatientTasks } from '@/handlers/dental-patient/listPatientTasks';

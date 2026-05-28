@@ -23,9 +23,9 @@ import {
   CreateDentalAlertBody,
   UpdateDentalAlertBody,
 } from './utils/dental-alert-validators';
-import { createDentalAlert } from './createDentalAlert';
-import { listDentalAlerts } from './listDentalAlerts';
-import { updateDentalAlert } from './updateDentalAlert';
+import { createDentalAlert } from './alerts/createDentalAlert';
+import { listDentalAlerts } from './alerts/listDentalAlerts';
+import { updateDentalAlert } from './alerts/updateDentalAlert';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

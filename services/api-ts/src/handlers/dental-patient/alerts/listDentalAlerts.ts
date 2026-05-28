@@ -6,7 +6,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { DentalAlertRepository } from './repos/dental-alert.repo';
+import { DentalAlertRepository } from '../repos/dental-alert.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function listDentalAlerts(ctx: any): Promise<Response> {
