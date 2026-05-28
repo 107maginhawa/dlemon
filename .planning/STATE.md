@@ -43,12 +43,12 @@ Plan file: `~/.claude/plans/id-like-to-understand-wiggly-storm.md`
 
 Outstanding deferred items (from plan §Future Work):
 
-- F1: Ticket-ID test rename (after audit archive)
-- F2: Backend service-layer/DI refactor (after Phases 10+11)
+- F1: ✅ CLOSED 2026-05-28 — Renamed 21 ticket-ID test files to descriptive names (dental-visit.treatment-templates, dental-billing.payment-plan-fsm, acceptance.billing-payments, etc.); SA-GLOBAL-006 resolved
+- F2: Backend service-layer/DI refactor (after Phases 10+11) — READY, run `/oli-enforce-all` to seed ENFORCEMENT_REPORT.md
 - F3: Schema unification legacy↔dental-* (multi-quarter, H2 2026→H1 2027)
-- F4: Offline-sync/Tauri (cadence stub activation)
-- F5: sample-workspace decision
-- F6: Spec change embargo unwind (lift freeze now that Phase 6 generator validation is live)
+- F4: Offline-sync/Tauri (cadence stub activation) — separate milestone
+- F5: ✅ CLOSED 2026-05-28 — sample-workspace role documented in ARCHITECTURE.md (Frontend App Roles section); SA-GLOBAL-001 resolved
+- F6: ✅ CLOSED 2026-05-28 — spec-change freeze lifted; TypeSpec workflow + generator safety documented in ARCHITECTURE.md (TypeSpec Change Safety section) and CONTRIBUTING_API.md
 - F7: ✅ CLOSED 2026-05-28 — File Organization 6.5 → ≥ 8.0 (3 large components split, 8 Ceph handlers shimmed to camelCase, MODULE_MAP.md updated)
 
 #### Phase 10 violation baseline → COMPLETE (2026-05-28)

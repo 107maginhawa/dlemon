@@ -87,6 +87,28 @@ notificationRepo.createNotificationForModule({
 });
 ```
 
+### Frontend App Roles
+
+The monorepo contains three frontend workspaces with distinct, non-overlapping roles:
+
+| App | Port | Role | Status |
+|-----|------|------|--------|
+| `apps/dentalemon/` | 3001 | **Production app** — all product features live here | Active |
+| `apps/account/` | 3002 | **Upstream-template reference** — frozen at merge; pull auth/account patterns from here, do not add product features | Frozen (Phase 8) |
+| `apps/sample-workspace/` | — | **Prototype sandbox** — UI explorations and proof-of-concepts only; code is not production-ready. Migrate proven patterns to `apps/dentalemon/` before shipping. Do not commit feature work here. | Sandbox only |
+
+**Rule**: Feature development happens exclusively in `apps/dentalemon/`. `apps/account/` and `apps/sample-workspace/` are read-only references for their respective purposes.
+
+### TypeSpec Change Safety
+
+TypeSpec modifications are safe to make at any time. The generator enforces correctness:
+
+- `bun run generate` auto-runs `scripts/verify-registry-uniqueness.ts` after codegen — fails loudly if any `operationId` is duplicated in `registry.ts`.
+- Generated files (`src/generated/openapi/`) are never edited manually; they are always fully regenerated.
+- Add a Hurl contract test at `specs/api/tests/contract/{operationId}.hurl` for every new operation.
+
+See [CONTRIBUTING_API.md](../development/CONTRIBUTING_API.md) for the full workflow.
+
 ### Module Structure Pattern
 Backend handlers follow: **Router → Validators → Handlers → Repositories**
 
