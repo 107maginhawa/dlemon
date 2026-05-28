@@ -61,24 +61,19 @@ describe('DentalInvoiceRepository', () => {
   // --------------------------------------------------------------------------
 
   describe('invoice number generation', () => {
-    test('generates sequential invoice numbers', async () => {
+    test('generates unique invoice numbers with year prefix', async () => {
+      const year = new Date().getFullYear();
       const num1 = await repo.generateInvoiceNumber();
-      expect(num1).toMatch(/^INV-\d{4}-0001$/);
-
-      await repo.createOne({
-        visitId: VISIT_1, patientId: PATIENT_1, branchId: BRANCH_1,
-        dentistMemberId: DENTIST_1, invoiceNumber: num1,
-        subtotalCents: 0, totalCents: 0, balanceCents: 0,
-      });
-
       const num2 = await repo.generateInvoiceNumber();
-      expect(num2).toMatch(/^INV-\d{4}-0002$/);
+      expect(num1).toMatch(new RegExp(`^INV-${year}-[A-F0-9]{8}$`));
+      expect(num2).toMatch(new RegExp(`^INV-${year}-[A-F0-9]{8}$`));
+      expect(num1).not.toBe(num2);
     });
 
-    test('generates year-prefixed invoice numbers (INV-2026-0001)', async () => {
+    test('generates year-prefixed invoice numbers (INV-2026-ABCD1234)', async () => {
       const num = await repo.generateInvoiceNumber();
       const year = new Date().getFullYear();
-      expect(num).toBe(`INV-${year}-0001`);
+      expect(num).toMatch(new RegExp(`^INV-${year}-[A-F0-9]{8}$`));
     });
   });
 

@@ -195,39 +195,28 @@ export class InvoiceRepository extends DatabaseRepository<Invoice, NewInvoice, I
     invoiceData: Omit<NewInvoice, 'id' | 'invoiceNumber'>,
     lineItemsData: Omit<NewInvoiceLineItem, 'id' | 'invoice'>[]
   ): Promise<InvoiceWithLineItems> {
-    return await this.db.transaction(async (tx) => {
-      // Generate invoice number
-      const invoiceNumber = await this.generateInvoiceNumber();
+    const invoiceNumber = await this.generateInvoiceNumber();
 
-      // Create the invoice
-      const [invoice] = await tx
-        .insert(invoices)
-        .values({
-          ...invoiceData,
-          invoiceNumber
-        })
-        .returning();
+    const [invoice] = await this.db
+      .insert(invoices)
+      .values({ ...invoiceData, invoiceNumber })
+      .returning();
 
-      // Create line items
-      if (!invoice) {
-        throw new Error('Failed to create invoice');
-      }
-      
-      const lineItems = await tx
-        .insert(invoiceLineItems)
-        .values(
-          lineItemsData.map(item => ({
-            ...item,
-            invoice: invoice.id
-          }))
-        )
-        .returning();
+    if (!invoice) {
+      throw new Error('Failed to create invoice');
+    }
 
-      return {
-        ...invoice,
-        lineItems
-      } as InvoiceWithLineItems;
-    });
+    const lineItems = lineItemsData.length > 0
+      ? await this.db
+          .insert(invoiceLineItems)
+          .values(lineItemsData.map(item => ({ ...item, invoice: invoice.id })))
+          .returning()
+      : [];
+
+    return {
+      ...invoice,
+      lineItems
+    } as InvoiceWithLineItems;
   }
 }
 

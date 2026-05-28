@@ -8,39 +8,38 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { DentalPaymentPlanRepository } from './dental-payment-plan.repo';
 import { DentalInvoiceRepository } from './dental-invoice.repo';
+import { DentalPaymentRepository } from './dental-payment.repo';
 import { openTestTx } from '@/core/test-tx';
+import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-
-const PATIENT_1 = 'b0000000-0000-2000-8000-000000000001';
-const PATIENT_2 = 'b0000000-0000-2000-8000-000000000002';
-const VISIT_1 = 'e0000000-0000-2000-8000-000000000001';
-const VISIT_2 = 'e0000000-0000-2000-8000-000000000002';
-const BRANCH_1 = 'c0000000-0000-2000-8000-000000000001';
-const DENTIST_1 = 'd0000000-0000-2000-8000-000000000001';
-const PAYMENT_1 = 'a0000000-0000-2000-8000-000000000099';
 
 describe('DentalPaymentPlanRepository', () => {
   let repo: DentalPaymentPlanRepository;
   let invoiceRepo: DentalInvoiceRepository;
+  let paymentRepo: DentalPaymentRepository;
+  let db: NodePgDatabase;
   let testInvoiceId: string;
   let testInvoiceId2: string;
   let teardown: () => Promise<void>;
 
   beforeEach(async () => {
-    const { db, rollback } = await openTestTx();
+    const { db: txDb, rollback } = await openTestTx();
+    db = txDb;
     repo = new DentalPaymentPlanRepository(db);
     invoiceRepo = new DentalInvoiceRepository(db);
+    paymentRepo = new DentalPaymentRepository(db);
+    await seedClinicalChain(db, { visits: 2 });
 
     const invoice = await invoiceRepo.createOne({
-      visitId: VISIT_1, patientId: PATIENT_1, branchId: BRANCH_1,
-      dentistMemberId: DENTIST_1, invoiceNumber: 'INV-2026-PP01',
+      visitId: CHAIN_IDS.VISIT_1, patientId: CHAIN_IDS.PATIENT_1, branchId: CHAIN_IDS.BRANCH_1,
+      dentistMemberId: CHAIN_IDS.MEMBERSHIP_1, invoiceNumber: 'INV-2026-PP01',
       subtotalCents: 12000, totalCents: 12000, balanceCents: 12000,
     });
     testInvoiceId = invoice.id;
 
     const invoice2 = await invoiceRepo.createOne({
-      visitId: VISIT_2, patientId: PATIENT_1, branchId: BRANCH_1,
-      dentistMemberId: DENTIST_1, invoiceNumber: 'INV-2026-PP02',
+      visitId: CHAIN_IDS.VISIT_2, patientId: CHAIN_IDS.PATIENT_1, branchId: CHAIN_IDS.BRANCH_1,
+      dentistMemberId: CHAIN_IDS.MEMBERSHIP_1, invoiceNumber: 'INV-2026-PP02',
       subtotalCents: 6000, totalCents: 6000, balanceCents: 6000,
     });
     testInvoiceId2 = invoice2.id;
@@ -56,7 +55,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('creates plan with monthly installments', async () => {
     const { plan, installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 12000,
       numberOfInstallments: 3,
       frequency: 'monthly',
@@ -73,7 +72,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('creates plan with weekly installments', async () => {
     const { plan, installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 4000,
       numberOfInstallments: 4,
       frequency: 'weekly',
@@ -88,7 +87,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('auto-generates correct number of installment records', async () => {
     const { installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 10000,
       numberOfInstallments: 5,
       frequency: 'monthly',
@@ -107,7 +106,7 @@ describe('DentalPaymentPlanRepository', () => {
     const startDate = new Date('2026-06-01T00:00:00Z');
     const { installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 12000,
       numberOfInstallments: 3,
       frequency: 'monthly',
@@ -124,7 +123,7 @@ describe('DentalPaymentPlanRepository', () => {
     // Use a total that doesn't divide evenly
     const { installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 10000,
       numberOfInstallments: 3,
       frequency: 'monthly',
@@ -143,7 +142,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('recordInstallmentPayment marks installment paid', async () => {
     const { installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 12000,
       numberOfInstallments: 3,
       frequency: 'monthly',
@@ -151,16 +150,26 @@ describe('DentalPaymentPlanRepository', () => {
       amountPerInstallmentCents: 4000,
     });
 
+    const payment = await paymentRepo.createOne({
+      invoiceId: testInvoiceId,
+      patientId: CHAIN_IDS.PATIENT_1,
+      branchId: CHAIN_IDS.BRANCH_1,
+      amountCents: 4000,
+      method: 'cash',
+      receiptNumber: 'REC-PP001',
+      recordedByMemberId: CHAIN_IDS.MEMBERSHIP_1,
+    });
+
     const updated = await repo.recordInstallmentPayment(
       installments[0]!.id,
-      PAYMENT_1,
+      payment.id,
       4000,
       new Date('2026-06-01'),
     );
 
     expect(updated!.status).toBe('paid');
     expect(updated!.paidCents).toBe(4000);
-    expect(updated!.paymentId).toBe(PAYMENT_1);
+    expect(updated!.paymentId).toBe(payment.id);
   });
 
   // --------------------------------------------------------------------------
@@ -170,7 +179,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('updatePlanStatus: all paid -> completed', async () => {
     const { plan, installments } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 6000,
       numberOfInstallments: 2,
       frequency: 'monthly',
@@ -178,9 +187,18 @@ describe('DentalPaymentPlanRepository', () => {
       amountPerInstallmentCents: 3000,
     });
 
-    // Pay both installments
-    for (const inst of installments) {
-      await repo.recordInstallmentPayment(inst.id, PAYMENT_1, inst.amountCents, new Date());
+    // Pay both installments with real payment records
+    for (const [i, inst] of installments.entries()) {
+      const payment = await paymentRepo.createOne({
+        invoiceId: testInvoiceId,
+        patientId: CHAIN_IDS.PATIENT_1,
+        branchId: CHAIN_IDS.BRANCH_1,
+        amountCents: inst.amountCents,
+        method: 'cash',
+        receiptNumber: `REC-COMPLETE-${i}`,
+        recordedByMemberId: CHAIN_IDS.MEMBERSHIP_1,
+      });
+      await repo.recordInstallmentPayment(inst.id, payment.id, inst.amountCents, new Date());
     }
 
     const updated = await repo.updatePlanStatus(plan.id);
@@ -194,7 +212,7 @@ describe('DentalPaymentPlanRepository', () => {
 
     const { plan } = await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 6000,
       numberOfInstallments: 2,
       frequency: 'monthly',
@@ -214,7 +232,7 @@ describe('DentalPaymentPlanRepository', () => {
   test('findByPatient returns all patient plans', async () => {
     await repo.createWithInstallments({
       invoiceId: testInvoiceId,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 12000,
       numberOfInstallments: 3,
       frequency: 'monthly',
@@ -223,7 +241,7 @@ describe('DentalPaymentPlanRepository', () => {
     });
     await repo.createWithInstallments({
       invoiceId: testInvoiceId2,
-      patientId: PATIENT_1,
+      patientId: CHAIN_IDS.PATIENT_1,
       totalCents: 6000,
       numberOfInstallments: 2,
       frequency: 'monthly',
@@ -231,7 +249,7 @@ describe('DentalPaymentPlanRepository', () => {
       amountPerInstallmentCents: 3000,
     });
 
-    const plans = await repo.findByPatient(PATIENT_1);
+    const plans = await repo.findByPatient(CHAIN_IDS.PATIENT_1);
     expect(plans).toHaveLength(2);
   });
 });

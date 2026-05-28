@@ -87,10 +87,11 @@ describe('AuditLogRepository', () => {
   });
 
   test('list() filters by targetType', async () => {
-    await repo.insert(makeEntry({ targetType: 'dental_visit' }));
-    await repo.insert(makeEntry({ targetType: 'dental_invoice', action: 'invoice.voided' }));
+    const UNIQUE_TENANT = 'da010001-0000-0000-0000-000000000012';
+    await repo.insert(makeEntry({ tenantId: UNIQUE_TENANT, targetType: 'dental_visit' }));
+    await repo.insert(makeEntry({ tenantId: UNIQUE_TENANT, targetType: 'dental_invoice', action: 'invoice.voided' }));
 
-    const { entries } = await repo.list({ targetType: 'dental_invoice' }, { limit: 10, offset: 0 });
+    const { entries } = await repo.list({ tenantId: UNIQUE_TENANT, targetType: 'dental_invoice' }, { limit: 10, offset: 0 });
     expect(entries.length).toBe(1);
     expect(entries[0]?.targetType).toBe('dental_invoice');
   });
