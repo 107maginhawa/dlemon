@@ -47,7 +47,7 @@ import { archiveDentalPatient } from './identity/archiveDentalPatient';
 import { restoreDentalPatient } from './identity/restoreDentalPatient';
 import { bulkArchiveDentalPatients } from './identity/bulkArchiveDentalPatients';
 import { exportDentalPatients } from './identity/exportDentalPatients';
-import { listFollowUpNotes, addFollowUpNote } from './followUpNotes';
+import { listFollowUpNotes, addFollowUpNote } from './engagement/followUpNotes';
 import { getDentalPatientSafetyFloor } from './identity/getDentalPatientSafetyFloor';
 import { getDentalPatientStatement } from './identity/getDentalPatientStatement';
 import { PatientRepository } from '../patient/repos/patient.repo';

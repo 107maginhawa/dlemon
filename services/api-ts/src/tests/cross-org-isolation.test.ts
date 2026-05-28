@@ -30,7 +30,7 @@ import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.sc
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
-import { getDentalPatient } from './dental-patient/getDentalPatient';
+import { getDentalPatient } from './dental-patient/identity/getDentalPatient';
 import { getDentalVisit } from './dental-visit/getDentalVisit';
 import {
   GetDentalPatientParams,

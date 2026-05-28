@@ -54,9 +54,9 @@ import {
 } from '@/generated/openapi/validators';
 
 // Handlers — dental-patient
-import { createDentalPatient } from './dental-patient/createDentalPatient';
-import { getDentalPatient } from './dental-patient/getDentalPatient';
-import { listDentalPatients } from './dental-patient/listDentalPatients';
+import { createDentalPatient } from './dental-patient/identity/createDentalPatient';
+import { getDentalPatient } from './dental-patient/identity/getDentalPatient';
+import { listDentalPatients } from './dental-patient/identity/listDentalPatients';
 
 // Handlers — dental-visit
 import { createDentalVisit } from './dental-visit/createDentalVisit';

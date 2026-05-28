@@ -23,9 +23,9 @@ import {
   GetDentalPatientParams,
   ArchiveDentalPatientParams,
 } from '@/generated/openapi/validators';
-import { createDentalPatient } from '@/handlers/dental-patient/createDentalPatient';
-import { getDentalPatient } from '@/handlers/dental-patient/getDentalPatient';
-import { archiveDentalPatient } from '@/handlers/dental-patient/archiveDentalPatient';
+import { createDentalPatient } from '@/handlers/dental-patient/identity/createDentalPatient';
+import { getDentalPatient } from '@/handlers/dental-patient/identity/getDentalPatient';
+import { archiveDentalPatient } from '@/handlers/dental-patient/identity/archiveDentalPatient';
 
 // ─── Minimal config (mirrors production logging.level default) ───────────────
 
