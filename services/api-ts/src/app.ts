@@ -45,7 +45,7 @@ import { createSecurityHeaders, createCorsMiddleware, createCsrfGuard, createPhi
 import { metricsMiddleware } from '@/middleware/metrics-middleware';
 import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
-import { getToothHistory } from '@/handlers/dental-visit/getToothHistory';
+import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
