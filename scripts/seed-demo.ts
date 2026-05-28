@@ -348,7 +348,8 @@ async function seed() {
 
   // ── 2. Person ────────────────────────────────────────────────────────────
   section('2. Person profile')
-  await post('/persons', { firstName: 'Maria', lastName: 'Reyes', gender: 'female', timezone: 'Asia/Manila' }, cookie)
+  const personR = await post('/persons', { firstName: 'Maria', lastName: 'Reyes', gender: 'female', timezone: 'Asia/Manila' }, cookie)
+  if (!personR.ok && personR.status !== 409) must(personR, 'create person profile')
   log('✓ Person profile')
 
   // ── 3. Org + Branch ──────────────────────────────────────────────────────
@@ -378,17 +379,26 @@ async function seed() {
   } else {
     log(`→ ${ownerMember.displayName} (${ownerMember.role})`)
   }
-  const pinR = await post(`/dental/organizations/${org.id}/branches/${branch.id}/members/${ownerMember.id}/set-pin`, { pin: '123456' }, cookie)
-  if (pinR.ok) log('  PIN: 1 2 3 4 5 6')
+  must(await post(`/dental/organizations/${org.id}/branches/${branch.id}/members/${ownerMember.id}/set-pin`, { pin: '123456' }, cookie), 'owner set-pin')
+  log('  PIN: 1 2 3 4 5 6')
 
-  const staffR = await post(`/dental/organizations/${org.id}/branches/${branch.id}/members`, {
-    displayName: 'Ana Santos', role: 'staff_full',
-  }, cookie)
-  if (staffR.ok) {
-    await post(`/dental/organizations/${org.id}/branches/${branch.id}/members/${staffR.data.id}/set-pin`, { pin: '654321' }, cookie)
-    log('✓ Ana Santos (staff_full) PIN: 6 5 4 3 2 1')
+  // Check if Ana Santos already exists (seed idempotency — avoids duplicates on re-run)
+  const membersR = await get(`/dental/organizations/${org.id}/branches/${branch.id}/members`, cookie)
+  const existingStaff = membersR.ok
+    ? (membersR.data?.data ?? membersR.data?.members ?? membersR.data ?? []).find((m: any) => m.displayName === 'Ana Santos' && m.role === 'staff_full')
+    : null
+  if (existingStaff) {
+    log(`→ Ana Santos (staff_full) already exists`)
   } else {
-    log('→ Staff assistant already exists')
+    const staffR = await post(`/dental/organizations/${org.id}/branches/${branch.id}/members`, {
+      displayName: 'Ana Santos', role: 'staff_full',
+    }, cookie)
+    if (staffR.ok) {
+      must(await post(`/dental/organizations/${org.id}/branches/${branch.id}/members/${staffR.data.id}/set-pin`, { pin: '654321' }, cookie), 'staff set-pin')
+      log('✓ Ana Santos (staff_full) PIN: 6 5 4 3 2 1')
+    } else {
+      log(`⚠ Ana Santos creation failed (${staffR.status})`)
+    }
   }
 
   // ── 5. Org setup: imagingTier + templates ────────────────────────────────
@@ -1417,18 +1427,17 @@ async function seedSyncLog(cookie: string, branchId: string, entityId: string) {
 
 // IDEAL Wave 5 — P1-001: insert 5+ explicit audit log rows (covers role.changed which has no handler)
 async function seedAuditLogRows() {
-  const { Pool } = await import('pg')
-  const pool = new Pool({ connectionString: 'postgres://postgres:password@localhost:5432/monobase' })
+  const DB_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
+  const sql = new Bun.SQL(DB_URL)
   try {
-    // Grab first completed visit + its branch/org for realistic IDs
-    const { rows } = await pool.query(`
+    const rows = await sql`
       SELECT v.id, v.branch_id, v.created_by as actor_id, b.organization_id as tenant_id
       FROM dental_visit v
       JOIN dental_branch b ON b.id = v.branch_id
       WHERE v.status = 'completed'
       ORDER BY v.created_at
       LIMIT 1
-    `)
+    `
     if (!rows.length) { log('⚠ Audit seed: no completed visit found'); return }
     const { id: visitId, branch_id: branchId, actor_id: actorId, tenant_id: tenantId } = rows[0]
     const events = [
@@ -1439,33 +1448,32 @@ async function seedAuditLogRows() {
       { action: 'role.changed',        target_type: 'dental_membership',  target_id: null    },
     ]
     for (const ev of events) {
-      await pool.query(
-        `INSERT INTO dental_audit_log
-           (id, tenant_id, branch_id, actor_id, action, target_type, target_id, created_by, updated_by)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $3, $3)`,
-        [tenantId, branchId, actorId, ev.action, ev.target_type, ev.target_id],
-      )
+      await sql`
+        INSERT INTO dental_audit_log
+          (id, tenant_id, branch_id, actor_id, action, target_type, target_id, created_by, updated_by)
+        VALUES (gen_random_uuid(), ${tenantId}, ${branchId}, ${actorId}, ${ev.action}, ${ev.target_type}, ${ev.target_id}, ${actorId}, ${actorId})
+      `
     }
     log(`✓ Audit log: 5 demo rows (visit.complete, treatment.performed, discount.applied, invoice.voided, role.changed)`)
   } finally {
-    await pool.end()
+    await sql.close()
   }
 }
 
 // IDEAL Wave 5 — P2-005: one visit with syncStatus='pending' + localId for offline-first demo
 async function patchVisitForOfflineDemo() {
-  const { Pool } = await import('pg')
-  const pool = new Pool({ connectionString: 'postgres://postgres:password@localhost:5432/monobase' })
+  const DB_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
+  const sql = new Bun.SQL(DB_URL)
   try {
-    const { rowCount } = await pool.query(`
+    const result = await sql`
       UPDATE dental_visit
       SET local_id = 'demo-offline-001', sync_status = 'pending'
       WHERE id = (SELECT id FROM dental_visit ORDER BY created_at LIMIT 1)
-    `)
-    if (rowCount) log('✓ P2-005: visit patched — syncStatus=pending, localId=demo-offline-001')
+    `
+    if (result.count) log('✓ P2-005: visit patched — syncStatus=pending, localId=demo-offline-001')
     else log('⚠ P2-005: no visit found to patch')
   } finally {
-    await pool.end()
+    await sql.close()
   }
 }
 

@@ -6,8 +6,7 @@
  */
 import { createContext, useContext } from 'react'
 import { createAuthClient } from "better-auth/react"
-// @ts-ignore — passkeyClient removed from better-auth/client/plugins in 1.6.x; resolves at runtime via workspace root (1.3.x)
-import { passkeyClient, twoFactorClient } from "better-auth/client/plugins"
+import { twoFactorClient } from "better-auth/client/plugins"
 
 // ============================================================================
 // Auth Client Configuration
@@ -21,8 +20,6 @@ export function createAuth(config: AuthConfig) {
   return createAuthClient({
     baseURL: `${config.baseURL}/auth`,
     plugins: [
-      // @ts-ignore — better-auth passkeyClient types diverge from BetterAuthClientPlugin; upstream version mismatch
-      passkeyClient(),
       twoFactorClient(),
     ],
   })
