@@ -1,3 +1,4 @@
 [test]
 coverage = true
 coverageThreshold = { line = 70 }
+preload = ["./tests/db-guard.ts"]
