@@ -35,6 +35,7 @@
     "check:boundaries:dental-scheduling": "bun scripts/check-module-boundaries.ts --error --module dental-scheduling",
     "check:boundaries:dental-clinical": "bun scripts/check-module-boundaries.ts --error --module dental-clinical",
     "check:boundaries:dental-pmd": "bun scripts/check-module-boundaries.ts --error --module dental-pmd",
+    "check:boundaries:dental-patient": "bun scripts/check-module-boundaries.ts --error --module dental-patient",
     "perf": "bun run tests/perf/run.ts"
   },
   "dependencies": {

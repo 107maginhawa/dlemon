@@ -17,7 +17,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { findVisits } from '@/handlers/dental-visit/visit.service';
-import { DentalChartRepository } from '@/handlers/dental-visit/repos/dental-chart.repo';
+import { getChartForPatientVisit } from '@/handlers/dental-visit/repos/visit-dental-patient.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
@@ -41,11 +41,9 @@ export async function listPatientVisits(ctx: HandlerContext) {
   if (branchId) filters.branchId = branchId;
   const visits = await findVisits(db, filters);
 
-  const chartRepo = new DentalChartRepository(db);
-
   const patientVisitRecords = await Promise.all(
     visits.map(async (visit) => {
-      const chart = await chartRepo.findByVisit(visit.id);
+      const chart = await getChartForPatientVisit(db, visit.id);
       const teeth = (chart?.teeth ?? []).map((t: any) => ({
         toothNumber: t.toothNumber,
         state: t.state,

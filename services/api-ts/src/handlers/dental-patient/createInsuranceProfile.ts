@@ -3,7 +3,7 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { InsuranceProfileRepository } from './repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
 
@@ -17,8 +17,8 @@ export async function createInsuranceProfile(ctx: any): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const patientRepo = new PatientRepository(db, logger);
-  const patient = await patientRepo.findOneById(patientId);
+  // patient lookup via facade
+  const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   const repo = new InsuranceProfileRepository(db, logger);

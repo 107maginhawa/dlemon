@@ -15,8 +15,8 @@ import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import type { User } from '@/types/auth';
-import { persons } from '@/handlers/person/repos/person.schema';
-import { patients } from '@/handlers/patient/repos/patient.schema';
+import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
+import { insertPatientForImport } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 interface PatientRow {
@@ -132,25 +132,27 @@ export async function importPatients(ctx: Context): Promise<Response> {
   try {
     await db.transaction(async (tx) => {
       for (const row of validRows) {
-        const [person] = await tx.insert(persons).values({
-          firstName: row.firstName,
-          ...(row.lastName ? { lastName: row.lastName } : {}),
-          ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
-          ...(row.gender ? { gender: row.gender as typeof persons.gender._.data } : {}),
-          createdBy: user.id,
-          updatedBy: user.id,
-        }).returning();
+        const person = await createPersonForDentalPatient(
+          tx as unknown as DatabaseInstance,
+          {
+            firstName: row.firstName,
+            ...(row.lastName ? { lastName: row.lastName } : {}),
+            ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
+            ...(row.gender ? { gender: row.gender } : {}),
+          },
+          user.id,
+        );
 
-        const [patient] = await tx.insert(patients).values({
-          person: person!.id,
-          preferredBranchId: row.branchId,
-          createdBy: user.id,
-          updatedBy: user.id,
-        }).returning();
+        const patient = await insertPatientForImport(
+          tx as unknown as DatabaseInstance,
+          person.id,
+          row.branchId,
+          user.id,
+        );
 
         imported.push({
-          id: patient!.id,
-          personId: person!.id,
+          id: patient.id,
+          personId: person.id,
           firstName: row.firstName,
           ...(row.lastName ? { lastName: row.lastName } : {}),
           branchId: row.branchId,

@@ -20,8 +20,8 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import type { User } from '@/types/auth';
-import { PatientRepository } from '@/handlers/patient/repos/patient.repo';
-import { persons } from '@/handlers/person/repos/person.schema';
+import { findDuplicateDentalPatients, createPatientForRegistration } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { CreateDentalPatientBody } from '@/generated/openapi/validators';
 
@@ -49,35 +49,22 @@ export async function createDentalPatient(
   const lastName = parts.slice(1).join(' ') || null;
 
   // FR2.5: Duplicate detection — non-blocking warning
-  const patientRepo = new PatientRepository(db, logger);
-  const potentialDuplicates = await patientRepo.findPotentialDuplicates(firstName, lastName, body.branchId);
+  const potentialDuplicates = await findDuplicateDentalPatients(db, firstName, lastName, body.branchId);
   const duplicateWarning = potentialDuplicates.length > 0
     ? { hasDuplicates: true, count: potentialDuplicates.length, duplicateIds: potentialDuplicates.map(p => p.id) }
     : null;
 
   // Create a new person record for the patient (distinct from the logged-in user)
-  const [newPerson] = await db
-    .insert(persons)
-    .values({
-      id: crypto.randomUUID(),
-      firstName,
-      ...(lastName ? { lastName } : {}),
-      ...(body.dateOfBirth ? { dateOfBirth: body.dateOfBirth } : {}),
-      ...(body.gender ? { gender: body.gender as typeof persons.gender._.data } : {}),
-      createdBy: user.id,
-      updatedBy: user.id,
-    })
-    .returning();
-
-  if (!newPerson) {
-    return ctx.json({ error: 'Failed to create person record' }, 500);
-  }
+  const newPerson = await createPersonForDentalPatient(db, {
+    id: crypto.randomUUID(),
+    firstName,
+    ...(lastName ? { lastName } : {}),
+    ...(body.dateOfBirth ? { dateOfBirth: body.dateOfBirth } : {}),
+    ...(body.gender ? { gender: body.gender } : {}),
+  }, user.id);
 
   // Create patient record linked to the new person
-  const patient = await patientRepo.createOne({
-    person: newPerson.id,
-    ...(body.branchId ? { preferredBranchId: body.branchId } : {}),
-  });
+  const patient = await createPatientForRegistration(db, newPerson.id, body.branchId);
 
   const response = {
     ...patient,
