@@ -22,8 +22,6 @@ import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 type Step = 'overview' | 'treatment' | 'review';
 
-export type { ChartEntryClassification };
-
 export interface ToothSlideoutData {
   state: ToothState;
   surfaces: ToothSurface[];
