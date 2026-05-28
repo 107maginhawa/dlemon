@@ -1,5 +1,5 @@
 import { getTimeZones } from '@vvo/tzdb'
-import { type Country } from '@/constants/countries'
+import { type Country } from '../constants/countries'
 import { detectTimezone } from './detect-timezone'
 
 /**

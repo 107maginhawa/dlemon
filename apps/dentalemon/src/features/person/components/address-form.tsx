@@ -12,7 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ScrollArea } from '@monobase/ui'
 import { cn } from '@/lib/utils'
 import { optionalAddressSchema, addressSchema, type OptionalAddress } from '../schemas'
-import { detectCountry } from '@/lib/detect-country'
+import { detectCountry } from '@monobase/shared-utils'
 
 interface AddressFormProps {
   defaultValues?: Partial<OptionalAddress>

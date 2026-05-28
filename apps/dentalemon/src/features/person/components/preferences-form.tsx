@@ -4,10 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@monobase/ui'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@monobase/ui'
 import { Combobox } from '@/components/combobox'
-import { LANGUAGES } from '@/constants/languages'
-import { TIMEZONES } from '@/constants/timezones'
-import { useDetectTimezone } from '@/hooks/use-detect-timezone'
-import { useDetectLanguage } from '@/hooks/use-detect-language'
+import { LANGUAGES, TIMEZONES, useDetectTimezone, useDetectLanguage } from '@monobase/shared-utils'
 import { preferencesSchema, type Preferences } from '../schemas'
 
 // Map constants to Combobox format (code/name → value/label)

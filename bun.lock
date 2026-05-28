@@ -113,6 +113,7 @@
         "@monobase/api-spec": "workspace:*",
         "@monobase/ceph-math": "workspace:*",
         "@monobase/sdk-ts": "workspace:*",
+        "@monobase/shared-utils": "workspace:*",
         "@monobase/ui": "workspace:*",
         "@radix-ui/react-alert-dialog": "^1.1.15",
         "@radix-ui/react-avatar": "^1.1.10",
@@ -259,6 +260,27 @@
         "@tauri-apps/api",
         "react-hook-form",
       ],
+    },
+    "packages/shared-utils": {
+      "name": "@monobase/shared-utils",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@cospired/i18n-iso-languages": "^4.2.0",
+        "@monobase/typescript-config": "workspace:*",
+        "@types/country-list": "^2.1.4",
+        "@types/react": "^19.1.8",
+        "@types/react-dom": "^19.1.6",
+        "@vvo/tzdb": "^6.186.0",
+        "bun-types": "^1.2.21",
+        "country-list": "^2.4.1",
+        "date-fns": "^4.1.0",
+        "react-phone-number-input": "^3.4.12",
+        "typescript": "^5.9.2",
+      },
+      "peerDependencies": {
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
     },
     "packages/typescript-config": {
       "name": "@monobase/typescript-config",
@@ -835,6 +857,8 @@
     "@monobase/eslint-config": ["@monobase/eslint-config@workspace:packages/eslint-config"],
 
     "@monobase/sdk-ts": ["@monobase/sdk-ts@workspace:packages/sdk-ts"],
+
+    "@monobase/shared-utils": ["@monobase/shared-utils@workspace:packages/shared-utils"],
 
     "@monobase/typescript-config": ["@monobase/typescript-config@workspace:packages/typescript-config"],
 

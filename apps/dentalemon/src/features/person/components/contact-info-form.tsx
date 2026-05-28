@@ -6,7 +6,7 @@ import { Button } from '@monobase/ui'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@monobase/ui'
 import { Input } from '@monobase/ui'
 import { PhoneInput } from '@/components/phone-input'
-import { useDetectCountry } from '@/hooks/use-detect-country'
+import { useDetectCountry } from '@monobase/shared-utils'
 import { contactInfoSchema, type ContactInfo } from '../schemas'
 
 interface ContactInfoFormProps {

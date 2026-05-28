@@ -10,7 +10,7 @@ import {
   type FormatDateOptions,
   type FormatRelativeDateOptions,
   type DateFormat
-} from '@/lib/format-date'
+} from '../lib/format-date'
 
 /**
  * Hook options extending format date options
@@ -25,43 +25,13 @@ export interface UseFormatDateOptions extends FormatDateOptions {
  */
 export interface UseFormatDateReturn {
   /** Format a date for display */
-  formatDate: (date: Date | number | string) => string
+  formatDate: (date: Date | number | string | null | undefined) => string
   /** Format a date as relative time */
-  formatRelativeDate: (date: Date | number | string, options?: FormatRelativeDateOptions) => string
+  formatRelativeDate: (date: Date | number | string | null | undefined, options?: FormatRelativeDateOptions) => string
   /** Current format type */
   format: DateFormat
 }
 
-/**
- * Hook for formatting date values
- *
- * @param options - Formatting options
- * @returns Object with date formatting utilities
- *
- * @example
- * ```tsx
- * function DateDisplay({ date }: { date: Date }) {
- *   const { formatDate } = useFormatDate()
- *   return <span>{formatDate(date)}</span>
- * }
- * ```
- *
- * @example
- * ```tsx
- * function RelativeTime({ timestamp }: { timestamp: number }) {
- *   const { formatRelativeDate } = useFormatDate()
- *   return <time>{formatRelativeDate(timestamp)}</time>
- * }
- * ```
- *
- * @example
- * ```tsx
- * function ShortRelativeTime({ date }: { date: Date }) {
- *   const { formatRelativeDate } = useFormatDate()
- *   return <time>{formatRelativeDate(date, { style: 'short' })}</time>
- * }
- * ```
- */
 export function useFormatDate(
   options: UseFormatDateOptions = {}
 ): UseFormatDateReturn {
@@ -69,7 +39,7 @@ export function useFormatDate(
   const format = formatOptions.format || 'long'
 
   const formatDate = useCallback(
-    (date: Date | number | string) => {
+    (date: Date | number | string | null | undefined) => {
       return formatDateUtil(date, formatOptions)
     },
     memoize
@@ -81,7 +51,7 @@ export function useFormatDate(
   )
 
   const formatRelativeDate = useCallback(
-    (date: Date | number | string, relativeOptions?: FormatRelativeDateOptions) => {
+    (date: Date | number | string | null | undefined, relativeOptions?: FormatRelativeDateOptions) => {
       return formatRelativeDateUtil(date, {
         locale: formatOptions.locale,
         ...relativeOptions

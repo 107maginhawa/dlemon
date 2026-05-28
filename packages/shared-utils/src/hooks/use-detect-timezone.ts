@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
-import { type Timezone } from '@/constants/timezones'
-import { detectTimezone } from '@/lib/detect-timezone'
+import { type Timezone } from '../constants/timezones'
+import { detectTimezone } from '../lib/detect-timezone'
 
 /**
  * Hook to auto-detect user's timezone from browser
  *
  * @param opts - Options object with optional fallback timezone code
  * @returns Detected or fallback timezone code
- *
- * @example
- * ```tsx
- * const timezone = useDetectTimezone()
- * const customTimezone = useDetectTimezone({ fallback: 'UTC' })
- * ```
  */
 export function useDetectTimezone(opts?: {
   fallback?: Timezone['code']

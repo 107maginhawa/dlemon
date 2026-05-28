@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@monobase/ui'
-import { formatDate } from '../lib/format-date'
+import { formatDate } from '@monobase/shared-utils'
 
 export type DateTimeFilterValue = 
   | 'any'

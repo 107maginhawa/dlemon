@@ -7,7 +7,7 @@ import { useMemo, useCallback } from 'react'
 import {
   formatCurrency as formatCurrencyUtil,
   type FormatCurrencyOptions
-} from '@/lib/format-currency'
+} from '../lib/format-currency'
 
 /**
  * Hook options extending format currency options
@@ -25,30 +25,6 @@ export interface UseFormatCurrencyReturn {
   formatCurrency: (amount: number) => string
 }
 
-/**
- * Hook for formatting currency values
- *
- * @param options - Formatting options
- * @returns Object with formatCurrency function
- *
- * @example
- * ```tsx
- * function PriceDisplay({ cents }: { cents: number }) {
- *   const { formatCurrency } = useFormatCurrency({ symbol: true })
- *   return <span>{formatCurrency(cents)}</span>
- * }
- * ```
- *
- * @example
- * ```tsx
- * function CustomPrice() {
- *   const { formatCurrency } = useFormatCurrency({ symbol: '€' })
- *   const [value, setValue] = useState(1500)
- *
- *   return <div>{formatCurrency(value)}</div>
- * }
- * ```
- */
 export function useFormatCurrency(
   options: UseFormatCurrencyOptions = {}
 ): UseFormatCurrencyReturn {

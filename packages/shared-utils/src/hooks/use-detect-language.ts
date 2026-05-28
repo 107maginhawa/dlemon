@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
-import { type Language } from '@/constants/languages'
-import { detectLanguage } from '@/lib/detect-language'
+import { type Language } from '../constants/languages'
+import { detectLanguage } from '../lib/detect-language'
 
 /**
  * Hook to auto-detect user's language from browser
  *
  * @param opts - Options object with optional fallback language code
  * @returns Detected or fallback language code
- *
- * @example
- * ```tsx
- * const language = useDetectLanguage()
- * const customLanguage = useDetectLanguage({ fallback: 'fr' })
- * ```
  */
 export function useDetectLanguage(opts?: {
   fallback?: Language['code']

@@ -68,70 +68,36 @@ const FORMAT_MAP: Record<PredefinedFormat, string> = {
   iso: "yyyy-MM-dd'T'HH:mm:ss.SSSxxx",
 }
 
-/**
- * Format a date for display
- *
- * @param date - Date to format (Date object, timestamp, or ISO string)
- * @param options - Formatting options
- * @returns Formatted date string
- *
- * @example
- * ```ts
- * formatDate(new Date()) // "October 5, 2023" (default 'long')
- * formatDate(new Date(), { format: 'short' }) // "10/5/23"
- * formatDate(new Date(), { format: 'full' }) // "Thursday, October 5, 2023"
- * formatDate(new Date(), { format: 'time' }) // "3:30 PM"
- * formatDate(new Date(), { format: 'date' }) // "2023-10-05" (ISO 8601 date-only)
- * formatDate(new Date(), { format: 'yyyy-MM-dd' }) // "2023-10-05" (custom)
- * ```
- */
 export function formatDate(
-  date: Date | number | string,
+  date: Date | number | string | null | undefined,
   options: FormatDateOptions = {}
 ): string {
+  if (date == null) return ''
   const opts = { ...DEFAULT_OPTIONS, ...options }
   const dateObj = typeof date === 'object' ? date : new Date(date)
 
-  // Handle invalid dates
   if (isNaN(dateObj.getTime())) {
     return 'Invalid date'
   }
 
-  // Special handling for ISO format
   if (opts.format === 'iso') {
     return dateObj.toISOString()
   }
 
-  // Get format string (either from map or use as-is for custom formats)
   const formatString = FORMAT_MAP[opts.format as PredefinedFormat] || opts.format || FORMAT_MAP.long
 
   try {
     return dateFnsFormat(dateObj, formatString)
   } catch (error) {
-    // Fallback for invalid format strings
     return dateFnsFormat(dateObj, FORMAT_MAP.long)
   }
 }
 
-/**
- * Format a date as relative time
- *
- * @param date - Date to format
- * @param options - Formatting options
- * @returns Relative time string
- *
- * @example
- * ```ts
- * formatRelativeDate(new Date(Date.now() - 3600000)) // "about 1 hour ago"
- * formatRelativeDate(new Date(Date.now() - 3600000), { style: 'short' }) // "1h ago"
- * formatRelativeDate(new Date(Date.now() + 86400000)) // "in about 1 day"
- * formatRelativeDate(new Date(Date.now() + 86400000), { style: 'short' }) // "in 1d"
- * ```
- */
 export function formatRelativeDate(
-  date: Date | number | string,
+  date: Date | number | string | null | undefined,
   options: FormatRelativeDateOptions = {}
 ): string {
+  if (date == null) return ''
   const {
     style = 'long',
     locale = 'en-US',
@@ -141,13 +107,11 @@ export function formatRelativeDate(
   const dateObj = typeof date === 'object' ? date : new Date(date)
   const now = new Date()
 
-  // Handle invalid dates
   if (isNaN(dateObj.getTime())) {
     return 'Invalid date'
   }
 
   if (style === 'short') {
-    // Custom short format implementation
     const diffInSeconds = Math.round((dateObj.getTime() - now.getTime()) / 1000)
     const absDiff = Math.abs(diffInSeconds)
     const isPast = diffInSeconds < 0
@@ -184,7 +148,6 @@ export function formatRelativeDate(
     }
     return formatted
   } else {
-    // Use date-fns for long format
     return formatDistance(dateObj, now, { addSuffix })
   }
 }

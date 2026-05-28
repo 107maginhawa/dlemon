@@ -1,4 +1,4 @@
-import { LANGUAGES, type Language } from '@/constants/languages'
+import { LANGUAGES, type Language } from '../constants/languages'
 
 /**
  * Detect user's language from browser

@@ -1,4 +1,4 @@
-import { type Timezone } from '@/constants/timezones'
+import { type Timezone } from '../constants/timezones'
 
 /**
  * Detect user's timezone from browser
