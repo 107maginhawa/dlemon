@@ -7,7 +7,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { canAccess, canViewFinancials } from '../../../utils/rbac';
+import { canAccess, canViewFinancials } from '../../../lib/rbac';
 import {
   getGreeting,
   formatTodayDate,
