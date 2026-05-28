@@ -23,7 +23,7 @@ import {
   CreateInventoryItemBody,
   UpdateInventoryItemBody,
   CreateAdjustmentBody,
-} from './inventory-validators';
+} from './utils/inventory-validators';
 import { createInventoryItem } from './createInventoryItem';
 import { listInventoryItems } from './listInventoryItems';
 import { updateInventoryItem } from './updateInventoryItem';

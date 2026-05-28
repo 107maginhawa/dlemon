@@ -19,7 +19,7 @@ import {
   PostopTemplateIdParams,
   CreatePostopTemplateBody,
   UpdatePostopTemplateBody,
-} from './postop-validators';
+} from './utils/postop-validators';
 import { createPostopTemplate } from './createPostopTemplate';
 import { listPostopTemplates } from './listPostopTemplates';
 import { updatePostopTemplate } from './updatePostopTemplate';

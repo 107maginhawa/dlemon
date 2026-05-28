@@ -19,7 +19,7 @@ import {
   OcclusionIdParams,
   CreateOcclusionBody,
   UpdateOcclusionBody,
-} from './occlusion-validators';
+} from './utils/occlusion-validators';
 import { createOcclusionScreening } from './createOcclusionScreening';
 import { listOcclusionScreenings } from './listOcclusionScreenings';
 
