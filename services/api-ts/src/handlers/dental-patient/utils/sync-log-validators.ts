@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SYNC_STATUSES } from './repos/sync-log.schema';
+import { SYNC_STATUSES } from '../repos/sync-log.schema';
 
 export const SyncLogParams = z.object({});
 

@@ -26,7 +26,7 @@ import {
   RecallRecallParams,
   CreateRecallBody,
   UpdateRecallBody,
-} from './recall-validators';
+} from './utils/recall-validators';
 import { createRecall } from './createRecall';
 import { listPatientRecalls } from './listPatientRecalls';
 import { updateRecall } from './updateRecall';

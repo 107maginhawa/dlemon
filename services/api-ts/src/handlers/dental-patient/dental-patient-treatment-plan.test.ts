@@ -28,7 +28,7 @@ import {
   TreatmentPlanPlanParams,
   CreateTreatmentPlanBody,
   UpdateTreatmentPlanBody,
-} from './treatment-plan-validators';
+} from './utils/treatment-plan-validators';
 import { createTreatmentPlan } from './createTreatmentPlan';
 import { listPatientTreatmentPlans } from './listPatientTreatmentPlans';
 import { updateTreatmentPlan } from './updateTreatmentPlan';

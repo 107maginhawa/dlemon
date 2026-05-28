@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DENTAL_ALERT_TYPES, DENTAL_ALERT_SEVERITIES } from './repos/dental-alert.schema';
+import { DENTAL_ALERT_TYPES, DENTAL_ALERT_SEVERITIES } from '../repos/dental-alert.schema';
 
 export const DentalAlertParams = z.object({
   patientId: z.string().uuid(),

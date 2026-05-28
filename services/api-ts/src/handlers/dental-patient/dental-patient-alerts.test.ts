@@ -22,7 +22,7 @@ import {
   DentalAlertIdParams,
   CreateDentalAlertBody,
   UpdateDentalAlertBody,
-} from './dental-alert-validators';
+} from './utils/dental-alert-validators';
 import { createDentalAlert } from './createDentalAlert';
 import { listDentalAlerts } from './listDentalAlerts';
 import { updateDentalAlert } from './updateDentalAlert';

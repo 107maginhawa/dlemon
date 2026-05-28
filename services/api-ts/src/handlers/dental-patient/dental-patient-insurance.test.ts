@@ -25,7 +25,7 @@ import {
   UpdateInsuranceProfileBody,
   CreateClaimDraftBody,
   UpdateClaimDraftStatusBody,
-} from './insurance-validators';
+} from './utils/insurance-validators';
 import { createInsuranceProfile } from './createInsuranceProfile';
 import { listPatientInsuranceProfiles } from './listPatientInsuranceProfiles';
 import { updateInsuranceProfile } from './updateInsuranceProfile';
@@ -37,12 +37,12 @@ import { updateClaimStatus } from './updateClaimStatus';
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 // Suite-unique IDs (tag ins01)
-const TEST_USER = { id: 'a0000000-0000-1000-8000-000000ins0101', email: 'staff@ins01.com' };
-const ORG_ID    = 'c0000000-0000-1000-8000-000000ins0101';
-const BRANCH_ID = 'b0000000-0000-1000-8000-000000ins0101';
-const PERSON_ID = 'e0000000-0000-1000-8000-000000ins0101';
-const PATIENT_ID = 'd0000000-0000-1000-8000-000000ins0101';
-const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000ins0199';
+const TEST_USER = { id: 'a0000000-0000-1000-8000-00000000a101', email: 'staff@ins01.com' };
+const ORG_ID    = 'c0000000-0000-1000-8000-00000000a101';
+const BRANCH_ID = 'b0000000-0000-1000-8000-00000000a101';
+const PERSON_ID = 'e0000000-0000-1000-8000-00000000a101';
+const PATIENT_ID = 'd0000000-0000-1000-8000-00000000a101';
+const NONEXISTENT_ID = 'f0000000-0000-1000-8000-00000000a199';
 
 const ve = (result: any, c: any) => {
   if (!result.success) {
@@ -69,7 +69,7 @@ beforeAll(async () => {
   }).onConflictDoNothing();
 
   await db.insert(dentalMemberships).values({
-    id: 'a1000000-0000-1000-8000-000000ins0101',
+    id: 'a1000000-0000-1000-8000-00000000a101',
     branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Insurance Staff', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,

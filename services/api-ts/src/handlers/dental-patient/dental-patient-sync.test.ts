@@ -24,7 +24,7 @@ import {
   SyncLogIdParams,
   CreateSyncLogBody,
   UpdateSyncLogBody,
-} from './sync-log-validators';
+} from './utils/sync-log-validators';
 import { createSyncLog } from './createSyncLog';
 import { listSyncLogs } from './listSyncLogs';
 import { updateSyncLog } from './updateSyncLog';

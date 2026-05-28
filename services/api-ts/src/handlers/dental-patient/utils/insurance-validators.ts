@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CLAIM_DRAFT_STATUSES } from './repos/claim-draft.schema';
+import { CLAIM_DRAFT_STATUSES } from '../repos/claim-draft.schema';
 
 export const InsuranceProfileParams = z.object({
   patientId: z.string().uuid(),

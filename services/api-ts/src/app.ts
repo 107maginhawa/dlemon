@@ -52,21 +52,21 @@ import { createPatientContact } from '@/handlers/dental-patient/createPatientCon
 import { listPatientContacts } from '@/handlers/dental-patient/listPatientContacts';
 import { updatePatientContact } from '@/handlers/dental-patient/updatePatientContact';
 import { deletePatientContact } from '@/handlers/dental-patient/deletePatientContact';
-import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/contact-validators';
+import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/utils/contact-validators';
 import { createRecall } from '@/handlers/dental-patient/createRecall';
 import { listPatientRecalls } from '@/handlers/dental-patient/listPatientRecalls';
 import { updateRecall } from '@/handlers/dental-patient/updateRecall';
-import { RecallParams, RecallRecallParams, CreateRecallBody, UpdateRecallBody } from '@/handlers/dental-patient/recall-validators';
+import { RecallParams, RecallRecallParams, CreateRecallBody, UpdateRecallBody } from '@/handlers/dental-patient/utils/recall-validators';
 import { createTreatmentPlan } from '@/handlers/dental-patient/createTreatmentPlan';
 import { listPatientTreatmentPlans } from '@/handlers/dental-patient/listPatientTreatmentPlans';
 import { getTreatmentPlan } from '@/handlers/dental-patient/getTreatmentPlan';
 import { updateTreatmentPlan } from '@/handlers/dental-patient/updateTreatmentPlan';
 import { acceptTreatmentPlan } from '@/handlers/dental-patient/acceptTreatmentPlan';
-import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody } from '@/handlers/dental-patient/treatment-plan-validators';
+import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody } from '@/handlers/dental-patient/utils/treatment-plan-validators';
 import { createSyncLog } from '@/handlers/dental-patient/createSyncLog';
 import { listSyncLogs } from '@/handlers/dental-patient/listSyncLogs';
 import { updateSyncLog } from '@/handlers/dental-patient/updateSyncLog';
-import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/sync-log-validators';
+import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/utils/sync-log-validators';
 import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
 import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
 import { updateQueueItemStatus } from '@/handlers/dental-scheduling/updateQueueItemStatus';
@@ -87,15 +87,15 @@ import {
   UpdateInsuranceProfileBody,
   CreateClaimDraftBody,
   UpdateClaimDraftStatusBody,
-} from '@/handlers/dental-patient/insurance-validators';
+} from '@/handlers/dental-patient/utils/insurance-validators';
 import { createDentalAlert } from '@/handlers/dental-patient/createDentalAlert';
 import { listDentalAlerts } from '@/handlers/dental-patient/listDentalAlerts';
 import { updateDentalAlert } from '@/handlers/dental-patient/updateDentalAlert';
-import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/dental-alert-validators';
+import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/utils/dental-alert-validators';
 import { createTask } from '@/handlers/dental-patient/createTask';
 import { listPatientTasks } from '@/handlers/dental-patient/listPatientTasks';
 import { updateTask } from '@/handlers/dental-patient/updateTask';
-import { TaskParams, TaskTaskParams, CreateTaskBody, UpdateTaskBody } from '@/handlers/dental-patient/task-validators';
+import { TaskParams, TaskTaskParams, CreateTaskBody, UpdateTaskBody } from '@/handlers/dental-patient/utils/task-validators';
 import { createOcclusionScreening } from '@/handlers/dental-clinical/createOcclusionScreening';
 import { listOcclusionScreenings } from '@/handlers/dental-clinical/listOcclusionScreenings';
 import { OcclusionParams, OcclusionIdParams, CreateOcclusionBody, UpdateOcclusionBody } from '@/handlers/dental-clinical/occlusion-validators';

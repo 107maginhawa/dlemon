@@ -294,7 +294,7 @@ describe('FR2.5: duplicate detection on create', () => {
     const res = await app.request('/dental/patients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: 'Unique Patient XYZ', consentGiven: true }),
+      body: JSON.stringify({ displayName: 'Unique Patient XYZ', consentGiven: true, branchId: BRANCH_ID }),
     });
 
     expect(res.status).toBe(201);

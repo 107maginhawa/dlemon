@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RECALL_TYPES, RECALL_STATUSES } from './repos/recall.schema';
+import { RECALL_TYPES, RECALL_STATUSES } from '../repos/recall.schema';
 
 export const RecallParams = z.object({
   patientId: z.string().uuid(),

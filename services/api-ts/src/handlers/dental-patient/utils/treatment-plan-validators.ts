@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TREATMENT_PLAN_STATUSES } from './repos/treatment-plan.schema';
+import { TREATMENT_PLAN_STATUSES } from '../repos/treatment-plan.schema';
 
 export const TreatmentPlanParams = z.object({
   patientId: z.string().uuid(),

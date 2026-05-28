@@ -31,7 +31,7 @@ import {
   PatientContactContactParams,
   CreatePatientContactBody,
   UpdatePatientContactBody,
-} from './contact-validators';
+} from './utils/contact-validators';
 import { createPatientContact } from './createPatientContact';
 import { listPatientContacts } from './listPatientContacts';
 import { updatePatientContact } from './updatePatientContact';

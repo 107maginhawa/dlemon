@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TASK_TYPES, TASK_STATUSES } from './repos/task.schema';
+import { TASK_TYPES, TASK_STATUSES } from '../repos/task.schema';
 
 export const TaskParams = z.object({
   patientId: z.string().uuid(),

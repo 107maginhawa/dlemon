@@ -26,7 +26,7 @@ import {
   TaskTaskParams,
   CreateTaskBody,
   UpdateTaskBody,
-} from './task-validators';
+} from './utils/task-validators';
 import { createTask } from './createTask';
 import { listPatientTasks } from './listPatientTasks';
 import { updateTask } from './updateTask';
