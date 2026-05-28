@@ -8,9 +8,9 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { VisitRepository, type VisitFilters } from './repos/visit.repo';
+import { VisitRepository, type VisitFilters } from '../repos/visit.repo';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
-import type { DentalVisitStatus } from './repos/visit.schema';
+import type { DentalVisitStatus } from '../repos/visit.schema';
 import type { User } from '@/types/auth';
 
 export async function listDentalVisits(ctx: HandlerContext) {

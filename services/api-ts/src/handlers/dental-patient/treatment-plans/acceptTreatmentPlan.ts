@@ -1,1 +1,1 @@
-export { acceptTreatmentPlan } from '../../dental-visit/acceptTreatmentPlan';
+export { acceptTreatmentPlan } from '../../dental-visit/treatments/acceptTreatmentPlan';

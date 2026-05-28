@@ -13,8 +13,8 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { VisitNotesRepository } from './repos/treatment.repo';
-import { VisitRepository } from './repos/visit.repo';
+import { VisitNotesRepository } from '../repos/treatment.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { SignVisitNotesBody, SignVisitNotesParams } from '@/generated/openapi/validators';
 

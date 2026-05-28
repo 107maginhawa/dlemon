@@ -1,1 +1,1 @@
-export { getTreatmentPlan } from '../../dental-visit/getTreatmentPlan';
+export { getTreatmentPlan } from '../../dental-visit/treatment-plans/getTreatmentPlan';

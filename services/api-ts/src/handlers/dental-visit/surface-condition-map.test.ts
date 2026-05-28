@@ -23,9 +23,9 @@ import {
   UpdateToothBody, UpdateToothParams,
 } from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
-import { getDentalChart } from './getDentalChart';
-import { upsertDentalChart } from './upsertDentalChart';
-import { updateTooth } from './updateTooth';
+import { getDentalChart } from './chart/getDentalChart';
+import { upsertDentalChart } from './chart/upsertDentalChart';
+import { updateTooth } from './chart/updateTooth';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 

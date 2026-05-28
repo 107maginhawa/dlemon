@@ -20,8 +20,8 @@ import {
   CreateOcclusionBody,
   UpdateOcclusionBody,
 } from './utils/occlusion-validators';
-import { createOcclusionScreening } from './createOcclusionScreening';
-import { listOcclusionScreenings } from './listOcclusionScreenings';
+import { createOcclusionScreening } from './occlusion/createOcclusionScreening';
+import { listOcclusionScreenings } from './occlusion/listOcclusionScreenings';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

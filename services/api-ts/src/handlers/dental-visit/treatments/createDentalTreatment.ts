@@ -8,9 +8,9 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { TreatmentRepository } from './repos/treatment.repo';
-import { VisitRepository } from './repos/visit.repo';
-import { DentalChartRepository } from './repos/dental-chart.repo';
+import { TreatmentRepository } from '../repos/treatment.repo';
+import { VisitRepository } from '../repos/visit.repo';
+import { DentalChartRepository } from '../repos/dental-chart.repo';
 import type { User } from '@/types/auth';
 import type { CreateDentalTreatmentBody, CreateDentalTreatmentParams } from '@/generated/openapi/validators';
 

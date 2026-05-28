@@ -20,8 +20,8 @@ import {
   CreatePrescriptionBody, CreatePrescriptionParams,
   CreateMedicalHistoryEntryBody,
 } from '@/generated/openapi/validators';
-import { createPrescription } from './createPrescription';
-import { createMedicalHistoryEntry } from './createMedicalHistoryEntry';
+import { createPrescription } from './prescriptions/createPrescription';
+import { createMedicalHistoryEntry } from './medical-history/createMedicalHistoryEntry';
 import { medicalHistoryEntries } from './repos/medical-history.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });

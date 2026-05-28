@@ -24,11 +24,11 @@ import {
   UpdateInventoryItemBody,
   CreateAdjustmentBody,
 } from './utils/inventory-validators';
-import { createInventoryItem } from './createInventoryItem';
-import { listInventoryItems } from './listInventoryItems';
-import { updateInventoryItem } from './updateInventoryItem';
-import { createInventoryAdjustment } from './createInventoryAdjustment';
-import { listInventoryAdjustments } from './listInventoryAdjustments';
+import { createInventoryItem } from './inventory/createInventoryItem';
+import { listInventoryItems } from './inventory/listInventoryItems';
+import { updateInventoryItem } from './inventory/updateInventoryItem';
+import { createInventoryAdjustment } from './inventory/createInventoryAdjustment';
+import { listInventoryAdjustments } from './inventory/listInventoryAdjustments';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

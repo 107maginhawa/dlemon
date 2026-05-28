@@ -8,7 +8,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
-import { LabOrderRepository } from './repos/lab-order.repo';
+import { LabOrderRepository } from '../repos/lab-order.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateLabOrderBody, CreateLabOrderParams } from '@/generated/openapi/validators';

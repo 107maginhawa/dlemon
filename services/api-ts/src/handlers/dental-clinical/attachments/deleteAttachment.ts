@@ -8,7 +8,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
-import { AttachmentRepository } from './repos/attachment.repo';
+import { AttachmentRepository } from '../repos/attachment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 

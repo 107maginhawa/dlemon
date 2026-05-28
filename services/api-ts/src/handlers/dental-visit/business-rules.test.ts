@@ -22,7 +22,7 @@ import {
   UpdateDentalVisitParams,
 } from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
-import { updateDentalVisit } from './updateDentalVisit';
+import { updateDentalVisit } from './visits/updateDentalVisit';
 import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { visitNotes } from './repos/treatment.schema';
 import { dentalAttachments } from '@/handlers/dental-clinical/repos/attachment.schema';

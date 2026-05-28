@@ -16,9 +16,9 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { DentalChartRepository } from './repos/dental-chart.repo';
-import { VisitRepository } from './repos/visit.repo';
-import type { ToothChartState } from './repos/dental-chart.schema';
+import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { VisitRepository } from '../repos/visit.repo';
+import type { ToothChartState } from '../repos/dental-chart.schema';
 import { z } from 'zod';
 
 const initializeDentitionSchema = z.object({

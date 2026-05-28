@@ -11,9 +11,9 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalTreatments } from './repos/treatment.schema';
-import { dentalVisits } from './repos/visit.schema';
-import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
+import { dentalTreatments } from '../repos/treatment.schema';
+import { dentalVisits } from '../repos/visit.schema';
+import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 
 export async function getTreatmentPlan(ctx: BaseContext) {

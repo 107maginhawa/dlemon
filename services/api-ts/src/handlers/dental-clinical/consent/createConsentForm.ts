@@ -8,7 +8,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
-import { ConsentFormRepository } from './repos/consent-form.repo';
+import { ConsentFormRepository } from '../repos/consent-form.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateConsentFormBody, CreateConsentFormParams } from '@/generated/openapi/validators';

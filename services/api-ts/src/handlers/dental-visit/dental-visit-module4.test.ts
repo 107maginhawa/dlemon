@@ -30,13 +30,13 @@ import {
   UpsertVisitNotesBody,
   UpsertVisitNotesParams,
 } from '@/generated/openapi/validators';
-import { updateDentalTreatment } from './updateDentalTreatment';
-import { updateDentalVisit } from './updateDentalVisit';
-import { carryOverTreatments } from './carryOverTreatments';
-import { getToothHistory } from './getToothHistory';
-import { upsertVisitNotes } from './upsertVisitNotes';
-import { createDentalVisit } from './createDentalVisit';
-import { createDentalTreatment } from './createDentalTreatment';
+import { updateDentalTreatment } from './treatments/updateDentalTreatment';
+import { updateDentalVisit } from './visits/updateDentalVisit';
+import { carryOverTreatments } from './treatments/carryOverTreatments';
+import { getToothHistory } from './chart/getToothHistory';
+import { upsertVisitNotes } from './notes/upsertVisitNotes';
+import { createDentalVisit } from './visits/createDentalVisit';
+import { createDentalTreatment } from './treatments/createDentalTreatment';
 import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { visitNotes } from './repos/treatment.schema';
 

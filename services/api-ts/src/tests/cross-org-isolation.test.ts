@@ -31,7 +31,7 @@ import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
 import { getDentalPatient } from './dental-patient/identity/getDentalPatient';
-import { getDentalVisit } from './dental-visit/getDentalVisit';
+import { getDentalVisit } from './dental-visit/visits/getDentalVisit';
 import {
   GetDentalPatientParams,
   GetDentalVisitParams,

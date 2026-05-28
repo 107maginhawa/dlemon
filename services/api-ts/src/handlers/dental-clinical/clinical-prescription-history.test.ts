@@ -22,12 +22,12 @@ import {
   CreateMedicalHistoryEntryBody,
   UpdateMedicalHistoryEntryBody, UpdateMedicalHistoryEntryParams,
 } from '@/generated/openapi/validators';
-import { createPrescription } from './createPrescription';
-import { listPrescriptions } from './listPrescriptions';
-import { updatePrescription } from './updatePrescription';
-import { createMedicalHistoryEntry } from './createMedicalHistoryEntry';
-import { listMedicalHistory } from './listMedicalHistory';
-import { updateMedicalHistoryEntry } from './updateMedicalHistoryEntry';
+import { createPrescription } from './prescriptions/createPrescription';
+import { listPrescriptions } from './prescriptions/listPrescriptions';
+import { updatePrescription } from './prescriptions/updatePrescription';
+import { createMedicalHistoryEntry } from './medical-history/createMedicalHistoryEntry';
+import { listMedicalHistory } from './medical-history/listMedicalHistory';
+import { updateMedicalHistoryEntry } from './medical-history/updateMedicalHistoryEntry';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

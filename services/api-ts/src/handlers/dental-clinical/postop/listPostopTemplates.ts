@@ -4,10 +4,10 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PostopTemplateRepository } from './repos/postop-template.repo';
+import { PostopTemplateRepository } from '../repos/postop-template.repo';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
-import type { PostopCategory } from './repos/postop-template.schema';
+import type { PostopCategory } from '../repos/postop-template.schema';
 
 export async function listPostopTemplates(ctx: any): Promise<Response> {
   const user = ctx.get('user');

@@ -19,8 +19,8 @@ import {
   AcceptTreatmentPlanParams,
   GetTreatmentPlanVersionParams,
 } from '@/generated/openapi/validators';
-import { acceptTreatmentPlan } from './acceptTreatmentPlan';
-import { getTreatmentPlanVersion } from './getTreatmentPlanVersion';
+import { acceptTreatmentPlan } from './treatments/acceptTreatmentPlan';
+import { getTreatmentPlanVersion } from './treatment-plans/getTreatmentPlanVersion';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

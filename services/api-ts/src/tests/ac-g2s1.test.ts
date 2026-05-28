@@ -59,20 +59,20 @@ import { getDentalPatient } from './dental-patient/identity/getDentalPatient';
 import { listDentalPatients } from './dental-patient/identity/listDentalPatients';
 
 // Handlers — dental-visit
-import { createDentalVisit } from './dental-visit/createDentalVisit';
-import { listDentalVisits } from './dental-visit/listDentalVisits';
-import { updateDentalVisit } from './dental-visit/updateDentalVisit';
-import { getDentalChart } from './dental-visit/getDentalChart';
-import { upsertDentalChart } from './dental-visit/upsertDentalChart';
-import { getToothHistory } from './dental-visit/getToothHistory';
-import { getTreatmentPlan } from './dental-visit/getTreatmentPlan';
+import { createDentalVisit } from './dental-visit/visits/createDentalVisit';
+import { listDentalVisits } from './dental-visit/visits/listDentalVisits';
+import { updateDentalVisit } from './dental-visit/visits/updateDentalVisit';
+import { getDentalChart } from './dental-visit/chart/getDentalChart';
+import { upsertDentalChart } from './dental-visit/chart/upsertDentalChart';
+import { getToothHistory } from './dental-visit/chart/getToothHistory';
+import { getTreatmentPlan } from './dental-visit/treatment-plans/getTreatmentPlan';
 
 // Handlers — dental-clinical
-import { createAttachment } from './dental-clinical/createAttachment';
-import { listAttachments } from './dental-clinical/listAttachments';
-import { createPrescription } from './dental-clinical/createPrescription';
-import { createLabOrder } from './dental-clinical/createLabOrder';
-import { updateLabOrder } from './dental-clinical/updateLabOrder';
+import { createAttachment } from './dental-clinical/attachments/createAttachment';
+import { listAttachments } from './dental-clinical/attachments/listAttachments';
+import { createPrescription } from './dental-clinical/prescriptions/createPrescription';
+import { createLabOrder } from './dental-clinical/lab-orders/createLabOrder';
+import { updateLabOrder } from './dental-clinical/lab-orders/updateLabOrder';
 
 // Handlers — dental-billing
 import { createDentalInvoice } from './dental-billing/createDentalInvoice';

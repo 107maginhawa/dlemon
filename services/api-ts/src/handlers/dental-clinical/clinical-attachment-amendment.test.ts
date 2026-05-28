@@ -19,11 +19,11 @@ import {
   CreateAttachmentBody, CreateAttachmentParams,
   CreateAmendmentBody, CreateAmendmentParams,
 } from '@/generated/openapi/validators';
-import { createAttachment } from './createAttachment';
-import { listAttachments } from './listAttachments';
-import { deleteAttachment } from './deleteAttachment';
-import { createAmendment } from './createAmendment';
-import { listAmendments } from './listAmendments';
+import { createAttachment } from './attachments/createAttachment';
+import { listAttachments } from './attachments/listAttachments';
+import { deleteAttachment } from './attachments/deleteAttachment';
+import { createAmendment } from './amendments/createAmendment';
+import { listAmendments } from './amendments/listAmendments';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

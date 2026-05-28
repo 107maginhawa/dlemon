@@ -5,7 +5,7 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { InventoryRepository } from './repos/inventory.repo';
+import { InventoryRepository } from '../repos/inventory.repo';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
 

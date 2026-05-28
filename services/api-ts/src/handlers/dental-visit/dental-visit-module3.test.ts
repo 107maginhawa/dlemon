@@ -32,9 +32,9 @@ import { DentalChartRepository } from './repos/dental-chart.repo';
 import { dentalVisits } from './repos/visit.schema';
 import { dentalTreatments } from './repos/treatment.schema';
 import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
-import { createDentalVisit } from './createDentalVisit';
-import { updateDentalVisit } from './updateDentalVisit';
-import { createDentalTreatment } from './createDentalTreatment';
+import { createDentalVisit } from './visits/createDentalVisit';
+import { updateDentalVisit } from './visits/updateDentalVisit';
+import { createDentalTreatment } from './treatments/createDentalTreatment';
 import {
   listTreatmentTemplates,
   createTreatmentTemplate,
@@ -42,12 +42,12 @@ import {
   deleteTreatmentTemplate,
   applyTemplate,
 } from './utils/treatmentTemplates';
-import { carryOverTreatments } from './carryOverTreatments';
-import { getTreatmentPlan } from './getTreatmentPlan';
-import { acceptTreatmentPlan } from './acceptTreatmentPlan';
-import { updateDentalTreatment } from './updateDentalTreatment';
+import { carryOverTreatments } from './treatments/carryOverTreatments';
+import { getTreatmentPlan } from './treatment-plans/getTreatmentPlan';
+import { acceptTreatmentPlan } from './treatments/acceptTreatmentPlan';
+import { updateDentalTreatment } from './treatments/updateDentalTreatment';
 import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
-import { initializeDentition } from './initializeDentition';
+import { initializeDentition } from './chart/initializeDentition';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

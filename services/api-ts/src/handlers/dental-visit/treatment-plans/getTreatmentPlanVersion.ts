@@ -10,7 +10,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
+import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function getTreatmentPlanVersion(ctx: BaseContext) {

@@ -4,7 +4,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
-import { OcclusionScreeningRepository } from './repos/occlusion-screening.repo';
+import { OcclusionScreeningRepository } from '../repos/occlusion-screening.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createOcclusionScreening(ctx: any): Promise<Response> {

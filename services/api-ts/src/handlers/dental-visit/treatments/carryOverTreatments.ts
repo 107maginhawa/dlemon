@@ -14,10 +14,10 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { VisitRepository } from './repos/visit.repo';
-import { TreatmentRepository } from './repos/treatment.repo';
-import { dentalTreatments } from './repos/treatment.schema';
-import { dentalVisits } from './repos/visit.schema';
+import { VisitRepository } from '../repos/visit.repo';
+import { TreatmentRepository } from '../repos/treatment.repo';
+import { dentalTreatments } from '../repos/treatment.schema';
+import { dentalVisits } from '../repos/visit.schema';
 import { eq, and, inArray, ne, desc } from 'drizzle-orm';
 import { z } from 'zod';
 

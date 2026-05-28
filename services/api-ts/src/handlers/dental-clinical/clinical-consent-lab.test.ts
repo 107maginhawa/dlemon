@@ -22,12 +22,12 @@ import {
   CreateLabOrderBody, CreateLabOrderParams,
   UpdateLabOrderBody, UpdateLabOrderParams,
 } from '@/generated/openapi/validators';
-import { createConsentForm } from './createConsentForm';
-import { listConsentForms } from './listConsentForms';
-import { signConsentForm } from './signConsentForm';
-import { createLabOrder } from './createLabOrder';
-import { listLabOrders } from './listLabOrders';
-import { updateLabOrder } from './updateLabOrder';
+import { createConsentForm } from './consent/createConsentForm';
+import { listConsentForms } from './consent/listConsentForms';
+import { signConsentForm } from './consent/signConsentForm';
+import { createLabOrder } from './lab-orders/createLabOrder';
+import { listLabOrders } from './lab-orders/listLabOrders';
+import { updateLabOrder } from './lab-orders/updateLabOrder';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

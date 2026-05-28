@@ -8,10 +8,10 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { DentalChartRepository } from './repos/dental-chart.repo';
-import { DentalChartBaselineRepository } from './repos/dental-chart-baseline.repo';
-import type { ToothChartState } from './repos/dental-chart.schema';
-import { VisitRepository } from './repos/visit.repo';
+import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { DentalChartBaselineRepository } from '../repos/dental-chart-baseline.repo';
+import type { ToothChartState } from '../repos/dental-chart.schema';
+import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { UpsertDentalChartBody, UpsertDentalChartParams } from '@/generated/openapi/validators';
 

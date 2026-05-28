@@ -8,8 +8,8 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { VisitNotesRepository } from './repos/treatment.repo';
-import { VisitRepository } from './repos/visit.repo';
+import { VisitNotesRepository } from '../repos/treatment.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 
 export async function getVisitNotes(ctx: HandlerContext) {

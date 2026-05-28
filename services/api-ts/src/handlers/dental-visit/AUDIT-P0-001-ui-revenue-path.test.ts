@@ -32,9 +32,9 @@ import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { consentForms } from '@/handlers/dental-clinical/repos/consent-form.schema';
 import { VisitRepository } from './repos/visit.repo';
-import { createDentalTreatment } from './createDentalTreatment';
-import { listDentalTreatments } from './listDentalTreatments';
-import { updateDentalTreatment } from './updateDentalTreatment';
+import { createDentalTreatment } from './treatments/createDentalTreatment';
+import { listDentalTreatments } from './treatments/listDentalTreatments';
+import { updateDentalTreatment } from './treatments/updateDentalTreatment';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

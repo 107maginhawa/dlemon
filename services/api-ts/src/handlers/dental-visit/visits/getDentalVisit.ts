@@ -8,7 +8,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { VisitRepository } from './repos/visit.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 
 export async function getDentalVisit(ctx: HandlerContext) {

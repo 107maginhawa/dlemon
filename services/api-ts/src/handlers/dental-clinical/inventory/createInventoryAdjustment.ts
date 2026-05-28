@@ -6,7 +6,7 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { InventoryRepository } from './repos/inventory.repo';
+import { InventoryRepository } from '../repos/inventory.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createInventoryAdjustment(ctx: any): Promise<Response> {

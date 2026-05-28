@@ -25,11 +25,11 @@ import {
   CreateVisitNoteAddendumBody,
   CreateDentalVisitBody,
 } from '@/generated/openapi/validators';
-import { upsertVisitNotes } from './upsertVisitNotes';
-import { getVisitNotes } from './getVisitNotes';
-import { signVisitNotes } from './signVisitNotes';
-import { createVisitNoteAddendum } from './createVisitNoteAddendum';
-import { createDentalVisit } from './createDentalVisit';
+import { upsertVisitNotes } from './notes/upsertVisitNotes';
+import { getVisitNotes } from './notes/getVisitNotes';
+import { signVisitNotes } from './notes/signVisitNotes';
+import { createVisitNoteAddendum } from './notes/createVisitNoteAddendum';
+import { createDentalVisit } from './visits/createDentalVisit';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

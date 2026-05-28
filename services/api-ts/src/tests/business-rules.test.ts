@@ -37,19 +37,19 @@ import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.sc
 import { DentalAppointmentRepository } from '@/handlers/dental-scheduling/repos/dental-appointment.repo';
 
 // Handlers under test
-import { createDentalVisit } from '@/handlers/dental-visit/createDentalVisit';
-import { updateDentalVisit } from '@/handlers/dental-visit/updateDentalVisit';
-import { createDentalTreatment } from '@/handlers/dental-visit/createDentalTreatment';
-import { updateDentalTreatment } from '@/handlers/dental-visit/updateDentalTreatment';
+import { createDentalVisit } from '@/handlers/dental-visit/visits/createDentalVisit';
+import { updateDentalVisit } from '@/handlers/dental-visit/visits/updateDentalVisit';
+import { createDentalTreatment } from '@/handlers/dental-visit/treatments/createDentalTreatment';
+import { updateDentalTreatment } from '@/handlers/dental-visit/treatments/updateDentalTreatment';
 import { createDentalInvoice } from '@/handlers/dental-billing/createDentalInvoice';
 import { issueDentalInvoice } from '@/handlers/dental-billing/issueDentalInvoice';
 import { voidDentalInvoice } from '@/handlers/dental-billing/voidDentalInvoice';
 import { createDentalPaymentPlan } from '@/handlers/dental-billing/createDentalPaymentPlan';
-import { signConsentForm } from '@/handlers/dental-clinical/signConsentForm';
-import { createConsentForm } from '@/handlers/dental-clinical/createConsentForm';
-import { createLabOrder } from '@/handlers/dental-clinical/createLabOrder';
-import { updateLabOrder } from '@/handlers/dental-clinical/updateLabOrder';
-import { createPrescription } from '@/handlers/dental-clinical/createPrescription';
+import { signConsentForm } from '@/handlers/dental-clinical/consent/signConsentForm';
+import { createConsentForm } from '@/handlers/dental-clinical/consent/createConsentForm';
+import { createLabOrder } from '@/handlers/dental-clinical/lab-orders/createLabOrder';
+import { updateLabOrder } from '@/handlers/dental-clinical/lab-orders/updateLabOrder';
+import { createPrescription } from '@/handlers/dental-clinical/prescriptions/createPrescription';
 import { generatePMD } from '@/handlers/dental-pmd/generatePMD';
 import { importPMD } from '@/handlers/dental-pmd/importPMD';
 import { getImportedPMD } from '@/handlers/dental-pmd/getImportedPMD';

@@ -8,8 +8,8 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { DentalChartRepository } from './repos/dental-chart.repo';
-import { VisitRepository } from './repos/visit.repo';
+import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { UpdateToothBody, UpdateToothParams } from '@/generated/openapi/validators';
 

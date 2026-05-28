@@ -3,7 +3,7 @@
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PostopTemplateRepository } from './repos/postop-template.repo';
+import { PostopTemplateRepository } from '../repos/postop-template.repo';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updatePostopTemplate(ctx: any): Promise<Response> {

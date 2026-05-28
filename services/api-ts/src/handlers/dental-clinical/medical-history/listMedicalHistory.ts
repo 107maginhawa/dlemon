@@ -7,7 +7,7 @@
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { MedicalHistoryRepository } from './repos/medical-history.repo';
+import { MedicalHistoryRepository } from '../repos/medical-history.repo';
 import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';

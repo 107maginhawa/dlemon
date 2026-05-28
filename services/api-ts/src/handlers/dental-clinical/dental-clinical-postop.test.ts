@@ -20,9 +20,9 @@ import {
   CreatePostopTemplateBody,
   UpdatePostopTemplateBody,
 } from './utils/postop-validators';
-import { createPostopTemplate } from './createPostopTemplate';
-import { listPostopTemplates } from './listPostopTemplates';
-import { updatePostopTemplate } from './updatePostopTemplate';
+import { createPostopTemplate } from './postop/createPostopTemplate';
+import { listPostopTemplates } from './postop/listPostopTemplates';
+import { updatePostopTemplate } from './postop/updatePostopTemplate';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

@@ -16,9 +16,9 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { createSnapshotVersion } from '@/core/database.schema';
-import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
-import { dentalTreatments } from './repos/treatment.schema';
-import { dentalVisits } from './repos/visit.schema';
+import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
+import { dentalTreatments } from '../repos/treatment.schema';
+import { dentalVisits } from '../repos/visit.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -98,7 +98,7 @@ export async function acceptTreatmentPlan(ctx: BaseContext) {
 
   // Link consent form if provided
   if (body.consentFormId) {
-    const { consentForms } = await import('../dental-clinical/repos/consent-form.schema');
+    const { consentForms } = await import('../../dental-clinical/repos/consent-form.schema');
     const [form] = await db
       .select({ id: consentForms.id })
       .from(consentForms)

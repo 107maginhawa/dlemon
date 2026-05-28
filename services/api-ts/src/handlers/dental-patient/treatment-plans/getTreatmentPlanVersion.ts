@@ -1,1 +1,1 @@
-export { getTreatmentPlanVersion } from '../../dental-visit/getTreatmentPlanVersion';
+export { getTreatmentPlanVersion } from '../../dental-visit/treatment-plans/getTreatmentPlanVersion';

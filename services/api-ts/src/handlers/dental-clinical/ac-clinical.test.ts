@@ -33,16 +33,16 @@ import {
   CreateLabOrderBody, CreateLabOrderParams,
   UpdateLabOrderBody, UpdateLabOrderParams,
 } from '@/generated/openapi/validators';
-import { createPrescription } from './createPrescription';
-import { listPrescriptions } from './listPrescriptions';
-import { updatePrescription } from './updatePrescription';
-import { createMedicalHistoryEntry } from './createMedicalHistoryEntry';
-import { listMedicalHistory } from './listMedicalHistory';
-import { updateMedicalHistoryEntry } from './updateMedicalHistoryEntry';
-import { createConsentForm } from './createConsentForm';
-import { signConsentForm } from './signConsentForm';
-import { createLabOrder } from './createLabOrder';
-import { updateLabOrder } from './updateLabOrder';
+import { createPrescription } from './prescriptions/createPrescription';
+import { listPrescriptions } from './prescriptions/listPrescriptions';
+import { updatePrescription } from './prescriptions/updatePrescription';
+import { createMedicalHistoryEntry } from './medical-history/createMedicalHistoryEntry';
+import { listMedicalHistory } from './medical-history/listMedicalHistory';
+import { updateMedicalHistoryEntry } from './medical-history/updateMedicalHistoryEntry';
+import { createConsentForm } from './consent/createConsentForm';
+import { signConsentForm } from './consent/signConsentForm';
+import { createLabOrder } from './lab-orders/createLabOrder';
+import { updateLabOrder } from './lab-orders/updateLabOrder';
 import { MedicalHistoryRepository } from './repos/medical-history.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });

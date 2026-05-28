@@ -7,7 +7,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { MedicalHistoryRepository } from './repos/medical-history.repo';
+import { MedicalHistoryRepository } from '../repos/medical-history.repo';
 import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';

@@ -27,10 +27,10 @@ import {
   CreateVisitNoteAddendumParams,
   GetVisitNoteHistoryParams,
 } from '@/generated/openapi/validators';
-import { upsertVisitNotes } from './upsertVisitNotes';
-import { signVisitNotes } from './signVisitNotes';
-import { createVisitNoteAddendum } from './createVisitNoteAddendum';
-import { getVisitNoteHistory } from './getVisitNoteHistory';
+import { upsertVisitNotes } from './notes/upsertVisitNotes';
+import { signVisitNotes } from './notes/signVisitNotes';
+import { createVisitNoteAddendum } from './notes/createVisitNoteAddendum';
+import { getVisitNoteHistory } from './notes/getVisitNoteHistory';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

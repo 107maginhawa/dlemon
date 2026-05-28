@@ -9,9 +9,9 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { VisitRepository } from './repos/visit.repo';
-import { DentalChartRepository } from './repos/dental-chart.repo';
-import { TreatmentRepository } from './repos/treatment.repo';
+import { VisitRepository } from '../repos/visit.repo';
+import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { TreatmentRepository } from '../repos/treatment.repo';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
