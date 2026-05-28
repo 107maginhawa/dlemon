@@ -1,373 +1,118 @@
 # dental-perio — File Enforcement
-<!-- oli-enforce-file v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+<!-- oli-enforce-file --strict | run: run-6-strict-2026-05-29 | 2026-05-29 -->
 
 ---
 
-> **NOTE:** This file prepends the F2 file-enforcement pass (naming conventions, file size, service-layer DI, forbidden patterns) to the prior 2026-05-27 spec-compliance audit. The prior audit content is preserved below as an appendix.
+## Run Metadata
+
+| Field | Value |
+|-------|-------|
+| Run ID | run-6-strict-2026-05-29 |
+| Module | dental-perio |
+| Handler path | services/api-ts/src/handlers/dental-perio/ |
+| Files checked | 12 |
+| Audit date | 2026-05-29 |
 
 ---
 
 ## Summary
-- Files scanned: 12
-- Findings: 3 (P0: 0, P1: 1, P2: 1, P3: 1)
-- Service files present: `.service.ts` ❌ (none), `.repo.ts` ✅ (`perio-chart.repo.ts`, `perio-reading.repo.ts`)
+
+| Severity | Count |
+|----------|-------|
+| P0 | 1 |
+| P1 | 1 |
+| P2 | 1 |
+| P3 | 0 |
 
 ---
 
 ## Findings
 
-| ID | Sev | Description | File | Line |
-|----|-----|-------------|------|------|
-| EF-PER-001 | P1 | No `.service.ts` — module has complex business logic (BR-P07 min-readings enforcement, BOP%/mean-depth/deep-pocket aggregation) inlined in `completePerioChart.ts`. The stat computation (lines 55–75 approx) belongs in a service layer, not a handler. | `completePerioChart.ts` | 55–75 |
-| EF-PER-002 | P2 | Test file at 311 lines; near the 500-line threshold but currently within limits. Flag for monitoring as coverage grows (locked-visit tests, invalid-depth tests, getPerioChart tests are all missing per prior audit). | `dental-perio-coverage.test.ts` | 311 lines |
-| EF-PER-003 | P3 | `utils/perio-validation.ts` (44 lines) is a pure utility file — acceptable location and size. No action needed but note: if validation grows it should stay here rather than inlining back into handlers. | `utils/perio-validation.ts` | 44 lines |
+### EF-PER-001 · P0 · Visit Lock Not Propagated to Chart
+
+**Files:** `upsertToothReading.ts`, `completePerioChart.ts`
+
+**Rule:** BR-P02 — Chart immutable after visit locked. Spec: `locked` state auto-applied when parent visit is locked.
+
+**Finding:** Both write handlers check `chart.status !== 'draft'` to block writes. This works only if the chart status has already been updated to `locked`. However, there is no mechanism in the codebase to propagate a visit lock event to perio chart status. If a visit transitions to `locked` after a perio chart was created, the chart status remains `draft` and all writes succeed — violating BR-P02.
+
+Neither `upsertToothReading` nor `completePerioChart` performs a live lookup of the parent visit's current status. The check is entirely chart-status-based with no visit join or event hook.
+
+**Required fix (choose one):**
+1. In `upsertToothReading` and `completePerioChart`, fetch the parent visit and check `visit.status === 'locked'` — throw `VISIT_LOCKED` (422) if so.
+2. Add a DB trigger / domain event that sets `perio_chart.status = 'locked'` when `dental_visit.status` transitions to `locked`.
+
+Option 1 is safer (no eventual consistency lag). The chart row already carries `visitId`; the visit lookup adds one DB round-trip.
+
+**AC violated:** AC-P08 — Any write to chart when visit is locked returns 422.
+
+---
+
+### EF-PER-002 · P1 · staff_scheduling Allowed to View Chart (Spec Forbids)
+
+**Files:** `getVisitPerioChart.ts` (line 35), `getPerioChart.ts` (line 35)
+
+**Rule:** MODULE_SPEC §6 Permissions — `staff_scheduling` row: View chart ❌, Print chart ❌.
+
+**Finding:** Both read handlers pass `'staff_scheduling'` in the `assertBranchRole` allowed-roles array, granting view access to a role the spec explicitly excludes.
+
+```typescript
+// getVisitPerioChart.ts lines 30-36 — same pattern in getPerioChart.ts
+await assertBranchRole(db, user.id, visit.branchId, [
+  'dentist_owner',
+  'dentist_associate',
+  'hygienist',
+  'staff_full',
+  'staff_scheduling',  // ← must be removed per spec
+]);
+```
+
+**Required fix:** Remove `'staff_scheduling'` from allowed roles in both `getVisitPerioChart.ts` and `getPerioChart.ts`.
+
+**Test gap:** `dental-perio-coverage.test.ts` tests staff_scheduling 403 for create/write only (AC-P09). No test asserts 403 on GET for staff_scheduling. Add a test case.
+
+---
+
+### EF-PER-003 · P2 · No Service Layer (Repositories Instantiated Directly in Handlers)
+
+**Files:** createPerioChart.ts, upsertToothReading.ts, completePerioChart.ts, getVisitPerioChart.ts, getPerioChart.ts
+
+**Rule:** F2 Service Layer / DI baseline — handlers must delegate to a service class with constructor-injected dependencies.
+
+**Finding:** All five handlers instantiate `PerioChartRepository` and `PerioReadingRepository` directly via `new PerioChartRepository(db)` / `new PerioReadingRepository(db)`. No `PerioService` class exists. No singleton export for DI. Unit testing handlers with mocked repos is not possible.
+
+**Required fix:** Extract a `PerioService` class at `services/api-ts/src/handlers/dental-perio/perio.service.ts` encapsulating chart and reading operations with constructor-injected repos. Export a singleton `perioService`. Handlers receive the service instance via DI (context or default parameter).
+
+---
+
+## Check Results
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| A. assertBranchRole | ✅ Present | All write handlers call assertBranchRole with correct dentist/hygienist roles |
+| B. Visit Lock Check | ❌ MISSING — P0 | Chart status checked but visit lock not propagated — EF-PER-001 |
+| C. Depth Validation [0,20] | ✅ Present | assertValidDepths in utils/perio-validation.ts, called in upsertToothReading |
+| D. FDI Validation | ✅ Present | assertValidToothNumber: adult 11-18/21-28/31-38/41-48, primary 51-55/61-65/71-75/81-85 |
+| E. Completion Gate ≥16 | ✅ Present | MIN_READINGS_FOR_COMPLETE = 16 enforced in completePerioChart |
+| F. Unique Constraint | ✅ Present | visitId UNIQUE on perio_chart; (chartId, toothNumber) UNIQUE on perio_reading |
+| G. Service Layer | ❌ Missing — P2 | Direct repo instantiation in all handlers — EF-PER-003 |
+| H. Test Coverage | ⚠️ Partial | All AC covered except staff_scheduling view restriction (read 403 untested) |
 
 ---
 
 ## File Inventory
 
-### Root handler files — 5 files
-| File | Lines | Notes |
-|------|-------|-------|
-| `completePerioChart.ts` | 117 | ⚠ P1: business logic inline (EF-PER-001) |
-| `createPerioChart.ts` | 79 | |
-| `getPerioChart.ts` | 42 | |
-| `getVisitPerioChart.ts` | 49 | |
-| `upsertToothReading.ts` | 94 | |
-
-### `repos/` — 5 files ✅
-| File | Lines |
-|------|-------|
-| `perio-chart.repo.ts` | 58 |
-| `perio-chart.repo.test.ts` | 120 |
-| `perio-chart.schema.ts` | 38 |
-| `perio-reading.repo.ts` | 87 |
-| `perio-reading.schema.ts` | 40 |
-
-### `utils/` — 1 file ✅
-| File | Lines |
-|------|-------|
-| `perio-validation.ts` | 44 |
-
-### Root-level test files — 1 file
-| File | Lines | Notes |
-|------|-------|-------|
-| `dental-perio-coverage.test.ts` | 311 | ⚠ P2 approaching threshold (EF-PER-002) |
-
----
-
-## Naming Convention Check
-
-- All handler files: camelCase `.ts` ✅
-- Repo files: `perio-chart.repo.ts`, `perio-reading.repo.ts` ✅
-- Schema files: `perio-chart.schema.ts`, `perio-reading.schema.ts` ✅
-- Util file: `perio-validation.ts` ✅
-- No PascalCase violations ✅
-- No `.service.ts` files ❌ (P1 — EF-PER-001)
-
-## Forbidden Pattern Check
-
-- No direct `db.insert` / `db.select` / `db.update` / `db.delete` in handler files ✅
-  - All DB operations in handlers go through `new PerioChartRepository(db)` or `new PerioReadingRepository(db)` — repo pattern correctly used
-  - `db.*` calls in `dental-perio-coverage.test.ts` are test setup/teardown only — acceptable ✅
-- No P0 cross-module DB schema imports in production handlers ✅
-  - Test file imports `dentalOrganizations`, `dentalBranches`, `dentalMemberships`, `persons`, `patients`, `dentalVisits` from other modules — acceptable for integration test setup ✅
-
-## Cross-Module Import Check (production handlers)
-
-- `@/handlers/dental-visit/utils/visit.service` — `getVisitOrThrow` used in `createPerioChart.ts` and `getVisitPerioChart.ts` ✅
-- `@/handlers/dental-org/repos/org-billing.facade` — `getActiveMembershipId` used in `createPerioChart.ts` ✅
-- `@/handlers/shared/assert-branch-role` — shared utility ✅
-- No direct cross-module schema imports in production handlers ✅
-
----
-
-## F2 Service-Layer Remediation Plan
-
-The primary gap is the **stat computation logic inlined in `completePerioChart.ts`**.
-
-Recommended action:
-1. **Create `utils/perio-stats.ts`** (or `perio-chart.service.ts`) — extract:
-   - BOP% calculation (lines ~55–65)
-   - Mean depth calculation (~65–70)
-   - Deep pocket count calculation (~70–75) — also fixes the per-site vs per-tooth bug from prior audit (DEVIATION-09)
-   - `MIN_READINGS_FOR_COMPLETE` and `DEEP_POCKET_THRESHOLD_MM` constants
-2. Handler becomes: validate → fetch readings → call `computePerioSummary(readings)` → persist → respond.
-3. This also makes the business logic unit-testable in isolation (fix for W-06 in prior audit).
-
----
-
-_Enforced by: oli-enforce-file v1.0 | run: run-5-f2-service-layer-di | 2026-05-28_
-
----
-
-## Appendix: Prior Spec-Compliance Audit (2026-05-27)
-
-<!--
-oli: oli-enforce-file v1.0 | generated: 2026-05-27 | module: dental-perio
--->
-
-# Enforcement Report: dental-perio
-
-**Module:** `dental-perio` — Periodontal Charting  
-**Generated:** 2026-05-27  
-**Spec:** `docs/product/modules/dental-perio/MODULE_SPEC.md`  
-**API Contracts:** `docs/product/modules/dental-perio/API_CONTRACTS.md`  
-**Backend source:** `services/api-ts/src/handlers/dental-perio/`  
-**Frontend:** UI prototype documented only (`docs/product/modules/dental-perio/ui-prototype/`). Not yet implemented in production app.
-
----
-
-## Summary
-
-| Category | Declared | Found | Missing | Deviated |
-|----------|----------|-------|---------|----------|
-| Endpoints | 5 | 5 | 0 | 3 |
-| Business Rules | 7 | 7 | 0 | 3 |
-| Schema Tables | 2 | 2 | 0 | 0 |
-| Schema Fields | 31 (chart 11, reading 20) | 31 | 0 | 0 |
-| Permissions | 5 actions | 5 | 0 | 2 |
-| Error Codes | 6 | 6 | 0 | 3 |
-| Workflows | 5 | 3 | 2 | 0 |
-| Domain Events | 3 | 2 | 1 | 0 |
-| Tests (handler) | 5 endpoints | 4 | 1 | 0 |
-| Tests (repo) | CRUD + upsert + complete | 3 | 0 | 0 |
-
-**Overall status: PARTIAL — all spec items have a handler, but 3 deviations are spec violations.**
-
----
-
-## Endpoints
-
-### POST /dental/perio-charts
-**File:** `createPerioChart.ts`  
-**Status:** FOUND — 201, draft chart, `readings: []` inline.  
-**Deviations:**
-- DEVIATION-01: `assertBranchRole` allows `hygienist` role (line 43). Spec §6 and API_CONTRACTS POST auth say dentist_owner | dentist_associate only. `hygienist` is not a spec-declared role for create.
-- DEVIATION-02: Error code for duplicate chart is `PERIO_CHART_DUPLICATE` (line 58). Spec §15 and AC-P02 declare the code `CHART_EXISTS`. Mismatch breaks client error-code contracts.
-- DEVIATION-03: Membership lookup uses `personId = user.id` with no `branchId` filter (lines 48–49). If a user has memberships in multiple branches, the first matching row is returned regardless of branch. `examinerMemberId` may reference the wrong branch's membership.
-
-### GET /dental/perio-charts/:id
-**File:** `getPerioChart.ts`  
-**Status:** FOUND — 200 with readings.  
-**Deviations:**
-- DEVIATION-04: `assertBranchRole` allows `staff_scheduling` (line 32–36). Spec §6 View action grants staff_full but NOT staff_scheduling. Over-permissive.
-
-### GET /dental/visits/:visitId/perio-chart
-**File:** `getVisitPerioChart.ts`  
-**Status:** FOUND — 200 / 204 correctly handled.  
-**Deviations:**
-- DEVIATION-05: Same as DEVIATION-04 — `staff_scheduling` allowed at line 30–34. Spec denies staff_scheduling view access.
-
-### PUT /dental/perio-charts/:chartId/readings/:toothNumber
-**File:** `upsertToothReading.ts`  
-**Status:** FOUND — upsert, depth validation, FDI validation, role check.  
-**Deviations:**
-- DEVIATION-06: Error code when chart is not draft is `PERIO_CHART_LOCKED` (line 50). API_CONTRACTS declares the code `CHART_COMPLETED` for this condition. Wrong code shipped.
-- DEVIATION-07: `assertBranchRole` allows `hygienist` (line 54). Spec §6 Record readings: dentist_owner | dentist_associate only.
-- NOTE: Spec §13 edge case "partial reading upsert — only provided sites stored" is NOT implemented. The upsert `set` block explicitly overwrites all fields with `value ?? null` / `value ?? 0`, wiping existing depth values when a partial body omits them (perio-reading.repo.ts lines 53–73). A partial update with `{ depthBM: 6 }` will null out all other depth columns. This violates the spec's explicit partial-upsert contract and AC-P03 semantics.
-
-### POST /dental/perio-charts/:id/complete
-**File:** `completePerioChart.ts`  
-**Status:** FOUND — 200, summary stats.  
-**Deviations:**
-- DEVIATION-08: `DEEP_POCKET_THRESHOLD_MM = 5` (line 25). Spec §2 defines "deep pocket" as ≥6 mm (Probing Depth: Normal ≤3 mm; color coding ≥6 mm = red). WF-P03 summary says "teeth with furcation involvement" and separately "deep pockets (≥6 mm)". Using 5 mm threshold will over-count `summaryDeepPocketCount`.
-- DEVIATION-09: `deepPocketCount` counts individual sites ≥ threshold (line 72), not teeth. A single tooth with all 6 sites ≥5 mm increments the count by 6. Spec says "teeth with max depth ≥6 mm" (WF-P04) — the count should be per-tooth (distinct tooth with any site ≥6 mm), not per-site.
-- DEVIATION-10: Error code for already-completed is `PERIO_CHART_ALREADY_COMPLETE`. API_CONTRACTS §POST complete declares `CHART_COMPLETED` (409). Code mismatch.
-- DEVIATION-11: `assertBranchRole` allows `hygienist` (line 46). Spec §6 Complete chart: dentist_owner | dentist_associate only.
-
----
-
-## Business Rules
-
-| Rule | Status | Notes |
-|------|--------|-------|
-| BR-P01 — one chart per visit | FOUND | `findByVisitId` pre-check + DB unique index. Error code deviated (DEVIATION-02). |
-| BR-P02 — chart immutable after visit locked | FOUND (partial) | `createPerioChart` checks visit status; `upsertToothReading` checks chart.status !== 'draft'. No explicit visit-lock re-check in upsert — relies on chart status being promoted to locked via visit lifecycle. |
-| BR-P03 — depths 0–20 mm | FOUND | `assertValidDepths` in perio-validation.ts. |
-| BR-P04 — FDI tooth numbers | FOUND | `assertValidToothNumber` in perio-validation.ts. |
-| BR-P05 — dentist role required for write | FOUND (deviated) | All three write handlers add `hygienist` — not in spec. See DEVIATION-01, -07, -11. |
-| BR-P06 — upsert idempotent | FOUND (deviated) | Unique-on-conflict upsert exists, but NOT idempotent for partial updates — omitted fields are reset to null/default. See DEVIATION-07 note. |
-| BR-P07 — min 16 readings for complete | FOUND | `readings.length < 16` check. Spec §13 edge case for primary dentition (min 8/20) is not handled. |
-
----
-
-## Schema Tables
-
-### dental_perio_chart
-**File:** `repos/perio-chart.schema.ts`  
-**Status:** FOUND — all 11 spec fields present.
-
-| Spec Field | Found | Notes |
-|-----------|-------|-------|
-| id (UUID PK) | ✅ | via baseEntityFields |
-| visitId | ✅ | FK → dental_visits, CASCADE |
-| patientId | ✅ | FK → patients |
-| branchId | ✅ | FK → dental_branches |
-| examinerMemberId | ✅ | UUID only, no FK (correct per spec §7b) |
-| status enum draft/completed/locked | ✅ | pgEnum |
-| completedAt | ✅ | timestamp nullable |
-| notes | ✅ | text nullable |
-| summaryBopPercent | ✅ | numeric(5,2) |
-| summaryMeanDepth | ✅ | numeric(5,2) |
-| summaryDeepPocketCount | ✅ | integer nullable |
-
-### dental_perio_tooth_reading
-**File:** `repos/perio-reading.schema.ts`  
-**Status:** FOUND — all spec fields present.
-
-| Spec Field | Found | Notes |
-|-----------|-------|-------|
-| id (UUID PK) | ✅ | via baseEntityFields |
-| chartId | ✅ | FK → dental_perio_charts, CASCADE |
-| toothNumber | ✅ | smallint |
-| depthBM/BC/BD | ✅ | smallint nullable |
-| depthLM/LC/LD | ✅ | smallint nullable |
-| bopBM/BC/BD | ✅ | boolean nullable |
-| bopLM/LC/LD | ✅ | boolean nullable |
-| recession | ✅ | smallint nullable |
-| mobility | ✅ | smallint default 0 |
-| furcation | ✅ | smallint default 0 |
-| plaque | ✅ | boolean default false |
-| suppuration | ✅ | boolean default false |
-| notes | ✅ | text nullable |
-
-**Note:** Spec §13 edge case mentions `missing: true` flag for extracted teeth. This field is absent from the schema. Not a blocking omission (spec lists it as an edge case without a formal field definition) but a gap.
-
----
-
-## Permissions
-
-| Spec Action | Allowed Roles (Spec) | Allowed Roles (Impl) | Status |
-|-------------|----------------------|----------------------|--------|
-| Create chart | dentist_owner, dentist_associate | dentist_owner, dentist_associate, **hygienist** | DEVIATED |
-| Record readings | dentist_owner, dentist_associate | dentist_owner, dentist_associate, **hygienist** | DEVIATED |
-| Complete chart | dentist_owner, dentist_associate | dentist_owner, dentist_associate, **hygienist** | DEVIATED |
-| View chart | dentist_owner, dentist_associate, staff_full | all above + **staff_scheduling** | DEVIATED |
-| Print chart | dentist_owner, dentist_associate, staff_full | N/A — no print endpoint implemented | N/A |
-
----
-
-## Error Codes
-
-| Spec Code | HTTP | Handler Code | HTTP | Status |
-|-----------|------|-------------|------|--------|
-| CHART_EXISTS | 409 | PERIO_CHART_DUPLICATE | 422 | DEVIATED (code + HTTP) |
-| VISIT_LOCKED | 422 | PERIO_VISIT_LOCKED | 422 | DEVIATED (code name) |
-| INVALID_DEPTH | 422 | ValidationError (no code field) | 422 | DEVIATED (no structured code) |
-| INVALID_TOOTH_NUMBER | 422 | ValidationError (no code field) | 422 | DEVIATED (no structured code) |
-| INSUFFICIENT_READINGS | 422 | PERIO_INSUFFICIENT_READINGS | 422 | DEVIATED (code name) |
-| FORBIDDEN | 403 | AuthorizationError/UnauthorizedError | 403 | FOUND |
-
----
-
-## Workflows
-
-| Workflow | Status | Notes |
-|----------|--------|-------|
-| WF-P01 — Create chart | FOUND | `createPerioChart.ts` |
-| WF-P02 — Record readings | FOUND | `upsertToothReading.ts` |
-| WF-P03 — Complete chart | FOUND | `completePerioChart.ts` |
-| WF-P04 — View historical chart | FOUND | `getPerioChart.ts` + `getVisitPerioChart.ts` |
-| WF-P05 — Print chart | MISSING | No print/PDF endpoint. Spec says client-side `@media print` is acceptable; no backend PDF endpoint is strictly required for phase. Low risk. |
-
----
-
-## Domain Events
-
-| Event | Trigger | Status |
-|-------|---------|--------|
-| `perio.chart.created` | WF-P01 | FOUND — structured log in createPerioChart.ts:72 (action: `dental_perio_chart_create`) |
-| `perio.chart.completed` | WF-P03 | FOUND — structured log in completePerioChart.ts:95 with summary stats |
-| `perio.chart.locked` | Visit lock cascade | MISSING — no handler locks perio charts when parent visit locks. Lock propagation not implemented. |
-
----
-
-## Tests
-
-### Handler coverage test (`dental-perio-coverage.test.ts`)
-
-| AC | Endpoint | Test Status |
-|----|----------|-------------|
-| AC-P01 POST creates 201 | createPerioChart | FOUND |
-| AC-P02 Duplicate → 409 | createPerioChart | FOUND (but expects 422 — test matches impl deviation, not spec) |
-| AC-P03 PUT upsert → 200 | upsertToothReading | FOUND |
-| AC-P04 Depth out of range → 422 | upsertToothReading | MISSING — no test for invalid depth |
-| AC-P05 Invalid FDI → 422 | upsertToothReading | MISSING — no test for invalid tooth number |
-| AC-P06 < 16 readings → 422 | completePerioChart | FOUND |
-| AC-P07 ≥ 16 readings → 200 | completePerioChart | FOUND |
-| AC-P08 Write on locked visit → 422 | any write | MISSING — no locked-visit test |
-| AC-P09 staff_scheduling → 403 on create | createPerioChart | PARTIAL (tests no-membership → 403, not staff_scheduling role specifically) |
-| AC-P10 GET returns readings array | getVisitPerioChart | FOUND |
-
-**getPerioChart (GET /dental/perio-charts/:id) has zero test coverage** — not registered in `buildApp` and no test describe block.
-
-### Repo tests (`perio-chart.repo.test.ts`)
-
-| Test | Status |
-|------|--------|
-| chart create + findByVisitId | FOUND |
-| unique constraint blocks duplicate | FOUND |
-| reading upsert insert path | FOUND |
-| reading upsert update path | FOUND |
-| countByChart | FOUND |
-| chart complete + summary | FOUND |
-
----
-
-## Findings Summary
-
-### BLOCKER
-
-**B-01: Partial upsert destroys existing field values**  
-`perio-reading.repo.ts` lines 53–73. `onConflictDoUpdate.set` replaces all fields with `value ?? null`, so a partial body `{ depthBM: 6 }` nullifies all other depth, BOP, recession fields. Spec §13 explicitly requires partial updates to preserve un-sent fields.  
-Fix: use `sql\`EXCLUDED.field\`` only for explicitly provided fields, or perform a SELECT-then-merge before upsert.
-
-**B-02: deepPocketCount counts sites, not teeth**  
-`completePerioChart.ts` line 72. Counter increments per-site when any site depth ≥ threshold. Spec and WF-P04 define `summaryDeepPocketCount` as count of teeth with max depth ≥6 mm.  
-Fix: group by tooth; count only when any site on that tooth ≥6 mm.
-
-**B-03: DEEP_POCKET_THRESHOLD_MM = 5 contradicts spec**  
-`completePerioChart.ts` line 25. Spec defines deep pockets as ≥6 mm throughout (WF-P02 color coding, WF-P04 list). Threshold should be 6.
-
-**B-04: Error codes diverge from API_CONTRACTS**  
-`CHART_EXISTS` → emits `PERIO_CHART_DUPLICATE`; `CHART_COMPLETED` → emits `PERIO_CHART_ALREADY_COMPLETE`; `VISIT_LOCKED` → emits `PERIO_VISIT_LOCKED`. Clients implementing against API_CONTRACTS.md will get unrecognized codes.  
-Fix: align code strings to spec values or formally update API_CONTRACTS.
-
-**B-05: examinerMemberId resolved without branchId filter**  
-`createPerioChart.ts` lines 48–49. First membership row by `personId` used regardless of branch. Multi-branch users will have wrong `examinerMemberId` on the chart.  
-Fix: add `.where(and(eq(dentalMemberships.personId, user.id), eq(dentalMemberships.branchId, visit.branchId)))`.
-
-### WARNING
-
-**W-01: `hygienist` role added to write endpoints — not in spec**  
-`createPerioChart.ts:43`, `upsertToothReading.ts:54`, `completePerioChart.ts:46`. Spec §6 permission table has no hygienist row.
-
-**W-02: `staff_scheduling` allowed to read charts**  
-`getPerioChart.ts:32–36`, `getVisitPerioChart.ts:30–34`. Spec §6: staff_scheduling has no view access.
-
-**W-03: `perio.chart.locked` event not implemented**  
-Spec §10b. Visit-lock cascade to perio chart status not wired anywhere.
-
-**W-04: Primary dentition min-readings threshold not handled**  
-`completePerioChart.ts` always uses 16. Spec §13 requires 8/20 for primary dentition. No detection of dentition type.
-
-**W-05: `getPerioChart` has no test coverage**  
-Handler file exists, endpoint not registered in coverage test app, zero assertions.
-
-**W-06: AC-P04, AC-P05, AC-P08 have no test coverage**  
-Invalid depth, invalid tooth number, write-on-locked-visit — all acceptance criteria without tests.
-
-**W-07: `missing: true` flag for extracted teeth absent from schema**  
-Spec §13 edge case. Without it, extracted-tooth readings still require all validation and are counted in BR-P07 minimums.
-
----
-
-## Frontend
-
-UI prototype documented in `docs/product/modules/dental-perio/ui-prototype/` (components.md, screens.md, interaction-states.md, microcopy.md, data-table-contracts.md, form-contracts.md, mock-data.md).  
-**Not yet implemented in production app (`apps/dentalemon/`).** No frontend source files exist for this module. This is expected per module status = PLANNED.
-
----
-
-_Enforced by: oli-enforce-file v1.0 | 2026-05-27_
+| File | Role | Issues |
+|------|------|--------|
+| `createPerioChart.ts` | Handler | No service layer (P2) |
+| `upsertToothReading.ts` | Handler | Visit lock not checked (P0); no service layer (P2) |
+| `completePerioChart.ts` | Handler | Visit lock not checked (P0); no service layer (P2) |
+| `getVisitPerioChart.ts` | Handler | staff_scheduling allowed (P1); no service layer (P2) |
+| `getPerioChart.ts` | Handler | staff_scheduling allowed (P1); no service layer (P2) |
+| `repos/perio-chart.schema.ts` | Schema | Clean — UNIQUE on visitId present |
+| `repos/perio-reading.schema.ts` | Schema | Clean — UNIQUE on (chartId, toothNumber) present |
+| `repos/perio-chart.repo.ts` | Repository | Clean — extends DatabaseRepository, complete() method present |
+| `repos/perio-reading.repo.ts` | Repository | Clean — upsert uses onConflictDoUpdate on (chartId, toothNumber) |
+| `repos/perio-chart.repo.test.ts` | Test | Clean — covers create/upsert/complete/countByChart via openTestTx |
+| `dental-perio-coverage.test.ts` | Integration test | Partial — staff_scheduling view restriction untested |
+| `utils/perio-validation.ts` | Util | Clean — correct FDI sets and depth range [0,20] |

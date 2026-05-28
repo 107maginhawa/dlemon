@@ -1,207 +1,337 @@
-# Cross-Module Enforcement
-<!-- oli-enforce-cross-module v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
-<!-- skill: oli-enforce-cross-module | depth: full | auto: true -->
-<!-- modules-scoped: all dental-* modules -->
+# Cross-Module Enforcement Report — Run 6 (Strict)
 
-## Summary
+<!-- oli-enforce-cross-module v2.0 | run: run-6-strict-2026-05-29 | depth: exhaustive -->
+<!-- modules-scoped: dental-audit, dental-billing, dental-clinical, dental-emr-integration(emr), dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit -->
 
-| Metric | Count |
+**Run ID:** run-6-strict-2026-05-29
+**Phase:** 2 — Cross-Module Contract Boundaries
+**Scope:** 11 dental modules + EMR legacy module
+**Checks:** A=Import Direction, B=Event Schema, C=API Contract, D=Drizzle FK, E=Domain Terms
+
+---
+
+## Executive Summary
+
+| Severity | Count |
+|----------|-------|
+| P0 | 7 |
+| P1 | 24 |
+| P2 | 2 |
+| P3 | 0 |
+| **Total** | **33** |
+
+| Metric | Value |
 |--------|-------|
-| **Total findings** | **44** |
-| P0 — Cross-module DB schema import | 25 |
-| P1 — Cross-module handler/repo import, event contract gap | 16 |
-| P2 — Indirect coupling, facade bypass | 2 |
-| P3 — Style / infra inconsistency | 1 |
-| Import boundary violations | 34 |
-| Event contract gaps | 7 |
-| API boundary violations | 7 |
-| Auth propagation violations | 0 |
-
-**Overall health: POOR.** Cross-module DB schema imports are pervasive (25 P0s). The pattern is widespread enough to be systemic, not incidental — every dental module with FK relationships directly imports the foreign module's Drizzle schema table object. No domain event emission exists anywhere in source code despite 24 events declared in EVENT_CONTRACTS.
+| Event coverage (DE-001–DE-024 emitted) | 0% — 0/24 |
+| Import violations (non-facade, non-exempt) | 7 |
+| DB FK violations (hard FKs contra arch decision) | 3 |
+| DB FK known/exempt (schema-layer) | 26 |
+| New findings (vs run-5 baseline) | 8 |
 
 ---
 
-## Findings
+## A. Import Direction Violations
 
-| ID | Sev | Type | Description | File | Line |
-|----|-----|------|-------------|------|------|
-| EX:dental-patient:dental-visit:f566a2f3 | **P0** | Cross-module DB schema import | `dental-patient` queries `dentalVisits` table directly from `dental-visit` repos | `dental-patient/identity/getDentalPatient.ts` | 15 |
-| EX:dental-patient:dental-billing:c53e86f4 | **P0** | Cross-module DB schema import | `dental-patient` queries `dentalInvoices` table directly from `dental-billing` repos | `dental-patient/identity/getDentalPatient.ts` | 16 |
-| EX:dental-patient:dental-visit:c8b7dd12 | **P0** | Cross-module DB schema import | `dental-patient` queries `dentalVisits` from `dental-visit` repos (patient statement) | `dental-patient/identity/getDentalPatientStatement.ts` | 13 |
-| EX:dental-patient:dental-billing:c8aad36c | **P0** | Cross-module DB schema import | `dental-patient` queries `dentalInvoices`, `dentalInvoiceLineItems`, `dentalPayments` from `dental-billing` repos | `dental-patient/identity/getDentalPatientStatement.ts` | 14 |
-| EX:dental-patient:dental-visit:d9acaea5 | **P0** | Cross-module DB schema import | `dental-patient` queries `dentalVisits` from `dental-visit` repos (list patients) | `dental-patient/identity/listDentalPatients.ts` | 17 |
-| EX:dental-patient:dental-clinical:226e325d | **P0** | Cross-module DB schema import | `dental-patient` queries `medicalHistoryEntries` from `dental-clinical` repos (safety floor) | `dental-patient/identity/getDentalPatientSafetyFloor.ts` | 16 |
-| EX:dental-clinical:dental-visit:e100282c | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` FK from `dental-visit` (amendment schema) | `dental-clinical/repos/amendment.schema.ts` | 7 |
-| EX:dental-clinical:dental-org:77da2568 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalMemberships` FK from `dental-org` (amendment schema) | `dental-clinical/repos/amendment.schema.ts` | 9 |
-| EX:dental-clinical:dental-org:46928718 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalBranches` FK from `dental-org` (postop-template schema) | `dental-clinical/repos/postop-template.schema.ts` | 3 |
-| EX:dental-clinical:dental-visit:1c67021e | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` FK from `dental-visit` (attachment schema) | `dental-clinical/repos/attachment.schema.ts` | 7 |
-| EX:dental-clinical:dental-org:fc68f5c3 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalBranches` FK from `dental-org` (inventory schema) | `dental-clinical/repos/inventory.schema.ts` | 11 |
-| EX:dental-clinical:dental-visit:dd31647d | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` FK from `dental-visit` (lab-order schema) | `dental-clinical/repos/lab-order.schema.ts` | 9 |
-| EX:dental-clinical:dental-visit:a5226be7 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` + `dentalMemberships` from `dental-visit`/`dental-org` (prescription schema) | `dental-clinical/repos/prescription.schema.ts` | 7 |
-| EX:dental-clinical:dental-visit:5e8e22ba | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` + `treatmentPlanVersions` from `dental-visit` (consent-form schema) | `dental-clinical/repos/consent-form.schema.ts` | 7 |
-| EX:dental-clinical:dental-visit:75674565 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` from `dental-visit` in clinical-dashboard facade | `dental-clinical/repos/clinical-dashboard.facade.ts` | 11 |
-| EX:dental-clinical:dental-visit:ccb039d4 | **P0** | Cross-module DB schema import | `dental-clinical` imports `dentalVisits` from `dental-visit` in clinical-imaging facade | `dental-clinical/repos/clinical-imaging.facade.ts` | 9 |
-| EX:dental-billing:dental-visit:60d88414 | **P0** | Cross-module DB schema import | `dental-billing` imports `dentalVisits` + `dentalTreatments` FKs from `dental-visit` (invoice schema) | `dental-billing/repos/dental-invoice.schema.ts` | 10 |
-| EX:dental-billing:dental-org:556683fc | **P0** | Cross-module DB schema import | `dental-billing` imports `dentalBranches` + `dentalMemberships` FKs from `dental-org` (invoice schema) | `dental-billing/repos/dental-invoice.schema.ts` | 13 |
-| EX:dental-billing:dental-org:8871bb35 | **P0** | Cross-module DB schema import | `dental-billing` imports `dentalBranches` + `dentalMemberships` FKs from `dental-org` (payment schema) | `dental-billing/repos/dental-payment.schema.ts` | 12 |
-| EX:dental-visit:dental-org:a3287ccf | **P0** | Cross-module DB schema import | `dental-visit` imports `dentalMemberships` FK from `dental-org` (treatment schema) | `dental-visit/repos/treatment.schema.ts` | 11 |
-| EX:dental-visit:dental-org:a0226aa9 | **P0** | Cross-module DB schema import | `dental-visit` imports `dentalBranches` FK from `dental-org` (treatment-template schema) | `dental-visit/repos/treatment-template.schema.ts` | 10 |
-| EX:dental-visit:dental-org:de72373e | **P0** | Cross-module DB schema import | `dental-visit` imports `dentalBranches` + `dentalMemberships` FKs from `dental-org` (visit schema) | `dental-visit/repos/visit.schema.ts` | 12 |
-| EX:dental-imaging:dental-visit:c589ae73 | **P0** | Cross-module DB schema import | `dental-imaging` imports `dentalVisits` + `dentalBranches` FKs from `dental-visit`/`dental-org` (imaging_finding schema) | `dental-imaging/repos/imaging_finding.schema.ts` | 11 |
-| EX:dental-pmd:dental-visit:39909324 | **P0** | Cross-module DB schema import | `dental-pmd` imports `dentalVisits`/`dentalBranches`/`dentalMemberships` FKs from `dental-visit`/`dental-org` (pmd-document schema) | `dental-pmd/repos/pmd-document.schema.ts` | 10 |
-| EX:dental-scheduling:dental-visit:33046210 | **P0** | Cross-module DB schema import | `dental-scheduling` imports `dentalVisits` FK from `dental-visit` (dental-appointment schema) | `dental-scheduling/repos/dental-appointment.schema.ts` | 13 |
-| EX:dental-patient:dental-visit:118575cf | **P1** | Cross-module handler re-export | `dental-patient/treatment-plans/getTreatmentPlanVersion.ts` is a pure re-export shim for a `dental-visit` handler | `dental-patient/treatment-plans/getTreatmentPlanVersion.ts` | 1 |
-| EX:dental-patient:dental-visit:88e93216 | **P1** | Cross-module handler re-export | `dental-patient/treatment-plans/getTreatmentPlan.ts` is a pure re-export shim for a `dental-visit` handler | `dental-patient/treatment-plans/getTreatmentPlan.ts` | 1 |
-| EX:dental-patient:dental-visit:76c3c851 | **P1** | Cross-module handler re-export | `dental-patient/treatment-plans/acceptTreatmentPlan.ts` is a pure re-export shim for a `dental-visit` handler | `dental-patient/treatment-plans/acceptTreatmentPlan.ts` | 1 |
-| EX:dental-org:dental-scheduling:5e7e6b09 | **P1** | Cross-module handler re-export | `dental-org/updateWorkingHours.ts` is a pure re-export shim for a `dental-scheduling` handler | `dental-org/updateWorkingHours.ts` | 1 |
-| EX:dental-org:dental-scheduling:750443cf | **P1** | Cross-module handler re-export | `dental-org/getWorkingHours.ts` is a pure re-export shim for a `dental-scheduling` handler | `dental-org/getWorkingHours.ts` | 1 |
-| EX:dental-patient:dental-visit:6c085626 | **P1** | Cross-module service function import | `dental-patient` calls `findVisits()` from `dental-visit/utils/visit.service` directly | `dental-patient/identity/listPatientConditions.ts` | 15 |
-| EX:dental-patient:dental-visit:9455d18d | **P1** | Cross-module facade import | `dental-patient` calls `getChartForPatientVisit`/`getTreatmentsForPatientConditions` from `dental-visit` repos facade | `dental-patient/identity/listPatientConditions.ts` | 16 |
-| EX:dental-patient:dental-visit:7aa47f0a | **P1** | Cross-module repo class import | `dental-patient` instantiates `DentalChartRepository` and `VisitRepository` from `dental-visit` repos | `dental-patient/identity/initializeDentition.ts` | 14 |
-| EX:dental-patient:dental-org:4f5df4fd | **P1** | Cross-module repo class import | `dental-patient` instantiates `BranchRepository` from `dental-org` repos | `dental-patient/identity/listDentalPatients.ts` | 13 |
-| EX:dental-visit:EVENT_CONTRACTS:7ae5f63a | **P1** | Event contract gap — emitter missing | DE-001 (VisitCheckedIn), DE-002 (VisitCompleted), DE-003 (VisitLocked): zero event emission code found in `dental-visit/`; events declared in EVENT_CONTRACTS but never published | `dental-visit/` | — |
-| EX:dental-visit:EVENT_CONTRACTS:88bb23d9 | **P1** | Event contract gap — emitter missing | DE-004 (TreatmentDiagnosed), DE-005 (TreatmentPerformed), DE-006 (TreatmentDismissed): zero event emission code found; `dental-billing` is declared subscriber but events are never emitted | `dental-visit/` | — |
-| EX:dental-billing:EVENT_CONTRACTS:669a7972 | **P1** | Event contract gap — emitter missing | DE-007 (InvoiceCreated), DE-008 (InvoicePaid), DE-009 (InvoiceVoided): zero event emission code found in `dental-billing/` handlers | `dental-billing/` | — |
-| EX:dental-scheduling:EVENT_CONTRACTS:9db2f4b8 | **P1** | Event contract gap — emitter missing | DE-010 (AppointmentBooked), DE-011 (AppointmentCancelled): zero event emission code found in `dental-scheduling/` handlers | `dental-scheduling/` | — |
-| EX:dental-billing:EVENT_CONTRACTS:96796cc1 | **P1** | Event contract gap — consumer not implemented | `dental-billing` declared as consumer of DE-001..DE-006 (visit/treatment events) in EVENT_CONTRACTS §4 but no consumer/subscriber code exists in module | `dental-billing/` | — |
-| EX:dental-pmd:EVENT_CONTRACTS:1b4e7b93 | **P1** | Event contract gap — consumer not implemented | `dental-pmd` declared as consumer of DE-002 (VisitCompleted) in EVENT_CONTRACTS §4 but no consumer code exists in module | `dental-pmd/` | — |
-| EX:dental-audit:EVENT_CONTRACTS:07c379af | **P1** | Event contract schema mismatch | `dental-audit` consumer uses generic `DentalAuditDomainEvent{action, targetType}` envelope; does not match typed DE-001..DE-023 payload schemas (visit_id, patient_id, invoice_id, etc.) declared in EVENT_CONTRACTS | `dental-audit/consumers/domain-events.consumer.ts` | 7 |
-| EX:dental-patient:dental-visit:1af67d7b | **P2** | Facade boundary bypass | `dental-patient` imports internal `visit-dental-patient.facade` directly from `dental-visit/repos/` rather than a published API surface | `dental-patient/identity/listPatientConditions.ts` | 16 |
-| EX:dental-imaging:dental-clinical:f4be7918 | **P2** | Indirect coupling — 2-hop schema chain | `dental-clinical/repos/clinical-imaging.facade.ts` re-exports data that includes `dentalVisits` schema; `dental-imaging` consumes this creating an undeclared transitive schema dependency | `dental-clinical/repos/clinical-imaging.facade.ts` | 9 |
-| EX:dental-audit:all:6fae3730 | **P3** | Audit infra inconsistency | `publishAuditEvent` / `DENTAL_AUDIT_EVENTS_QUEUE` defined in `dental-audit` but never imported by other modules; actual audit calls use `logAuditEvent` (core) which bypasses the typed event queue — inconsistent with EVENT_CONTRACTS consumer table declaring `dental-audit` as subscriber of DE-001..DE-023 | `dental-audit/consumers/domain-events.consumer.ts` | 19 |
+**Rule (MODULE_BOUNDARIES.md):** A handler in `handlers/{A}/` must not import from `handlers/{B}/repos/` unless `B = "shared"`. Facade files (`repos/*.facade.ts`) are the approved bridge. Relative imports in `repos/*.schema.ts` for Drizzle FK coupling are DB-layer and excluded from the code-layer checker.
+
+**Boundary checker result:** `✅ No cross-module repo boundary violations found.` — the alias-path checker (`@/handlers/`) passes clean for dental modules.
+
+**`shared` → `dental-org`:** `shared/assert-branch-access.ts` and `shared/assert-branch-role.ts` import `dentalMemberships`/`MemberRole` from `dental-org/repos/`. MODULE_BOUNDARIES.md explicitly allows this ("shared/ — cross-cutting hub, may import from any module's repos"). **EXEMPT.**
 
 ---
 
-## Import Graph (cross-module)
-
-```
-dental-patient  ──→ dental-visit   (schema: dentalVisits; repos: DentalChartRepository, VisitRepository; utils: findVisits; facade: visit-dental-patient.facade; handler re-exports: 3 shims)
-dental-patient  ──→ dental-billing (schema: dentalInvoices, dentalInvoiceLineItems, dentalPayments)
-dental-patient  ──→ dental-clinical (schema: medicalHistoryEntries)
-dental-patient  ──→ dental-org     (repo class: BranchRepository)
-
-dental-clinical ──→ dental-visit   (schema: dentalVisits, treatmentPlanVersions — 7 schema files)
-dental-clinical ──→ dental-org     (schema: dentalBranches, dentalMemberships — 4 schema files)
-
-dental-billing  ──→ dental-visit   (schema: dentalVisits, dentalTreatments)
-dental-billing  ──→ dental-org     (schema: dentalBranches, dentalMemberships)
-
-dental-visit    ──→ dental-org     (schema: dentalBranches, dentalMemberships — 3 schema files)
-
-dental-imaging  ──→ dental-visit   (schema: dentalVisits)
-dental-imaging  ──→ dental-org     (schema: dentalBranches)
-dental-imaging  ──→ dental-clinical (facade: clinical-imaging.facade — indirect via schema)
-
-dental-pmd      ──→ dental-visit   (schema: dentalVisits)
-dental-pmd      ──→ dental-org     (schema: dentalBranches, dentalMemberships)
-
-dental-scheduling ──→ dental-visit  (schema: dentalVisits)
-dental-scheduling ──→ dental-org    (schema: dentalBranches, dentalMemberships)
-
-dental-org      ──→ dental-scheduling (handler re-exports: 2 shims)
-```
-
-> **dental-org is the gravitational center.** Every module pulls its schema directly. This is the primary remediation target.
+### EX-001
+- **Severity:** P1
+- **Type:** IMPORT_DIRECTION
+- **From:** `dental-clinical` (facade files)
+- **To:** `dental-visit`
+- **Description:** Two facade files import raw schema from `dental-visit/repos/visit.schema`: `repos/clinical-dashboard.facade.ts:11` and `repos/clinical-imaging.facade.ts:9` both import `dentalVisits` directly. Facade files are explicitly exempt from the boundary checker per MODULE_BOUNDARIES.md. Architectural smell only — facades should ideally accept UUIDs rather than importing foreign schemas.
+- **Files:**
+  - `services/api-ts/src/handlers/dental-clinical/repos/clinical-dashboard.facade.ts:11`
+  - `services/api-ts/src/handlers/dental-clinical/repos/clinical-imaging.facade.ts:9`
+- **Status:** KNOWN — facade exemption applies
+- **Confidence:** HIGH
 
 ---
 
-## Event Contract Status
-
-| Event | Declared | Emitter in code | Consumer in code | Status |
-|-------|----------|----------------|-----------------|--------|
-| DE-001 `VisitCheckedIn@1` | ✅ | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-002 `VisitCompleted@1` | ✅ | ❌ not found | ❌ dental-pmd: missing, dental-audit: generic | GAP |
-| DE-003 `VisitLocked@1` | ✅ | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-004 `TreatmentDiagnosed@1` | ✅ | ❌ not found | ❌ dental-billing: missing | GAP |
-| DE-005 `TreatmentPerformed@1` | ✅ | ❌ not found | ❌ dental-billing: missing | GAP |
-| DE-006 `TreatmentDismissed@1` | ✅ | ❌ not found | ❌ dental-billing: missing | GAP |
-| DE-007 `InvoiceCreated@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-008 `InvoicePaid@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-009 `InvoiceVoided@1` | ✅ | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-010 `AppointmentBooked@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-011 `AppointmentCancelled@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-012 `ConsentSigned@1` | ✅ | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-013 `ConsentRevoked@1` | ✅ | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-014 `LabOrderCreated@1` | ✅ | ❌ not found | ❌ none confirmed | GAP |
-| DE-015 `LabOrderCompleted@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-016 `PrescriptionWritten@1` | ✅ | ❌ not found | ❌ none confirmed | GAP |
-| DE-017 `PMDGenerated@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-018 `ImagingStudyUploaded@1` | ✅ | ❌ not found | ❌ none confirmed | GAP |
-| DE-019 `ImagingFindingConfirmed@1` | ✅ | ❌ not found | ❌ dental-clinical: no consumer code | GAP |
-| DE-020 `CephAnalysisComputed@1` | ✅ | ❌ not found | ❌ none confirmed | GAP |
-| DE-021 `PatientRegistered@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-022 `MembershipAssigned@1` | ✅ | ❌ not found | ❌ notifs: no consumer found | GAP |
-| DE-023 `MembershipRevoked@1` | ✅ [INFERRED] | ❌ not found | ❌ dental-audit (generic only) | GAP |
-| DE-024 `PatientMergeRequested@1` | ✅ [NOT IMPLEMENTED] | ❌ n/a | ❌ n/a | FUTURE |
-
-> **All 23 active events: emitter = ❌.** The event system is fully specified but not wired. No module publishes typed domain events. `dental-audit` has a consumer registered for a generic internal queue `dental.audit.domain-events` but this queue is never triggered from other modules — only `logAuditEvent` (core) is called.
+### EX-002
+- **Severity:** P1
+- **Type:** IMPORT_DIRECTION
+- **From:** `patient` (platform module)
+- **To:** `person` (platform module)
+- **Description:** `handlers/patient/repos/patient-billing.facade.ts:12` imports `persons` table directly from `@/handlers/person/repos/person.schema`. Facade file importing a raw schema from a sibling platform module. Facade exemption applies.
+- **Files:**
+  - `services/api-ts/src/handlers/patient/repos/patient-billing.facade.ts:12`
+- **Status:** KNOWN — facade exemption applies
+- **Confidence:** HIGH
 
 ---
 
-## Dependency Health Matrix
-
-| Module A → Module B | Import Type | Count | P0 | P1 | Declared in MODULE_MAP? |
-|---------------------|-------------|-------|----|----|------------------------|
-| dental-patient → dental-visit | schema + repo-class + handler re-exports + service fn + facade | 9 | 3 | 6 | Yes (undocumented depth) |
-| dental-patient → dental-billing | schema | 3 | 3 | 0 | No |
-| dental-patient → dental-clinical | schema | 1 | 1 | 0 | No |
-| dental-patient → dental-org | repo-class | 1 | 0 | 1 | No |
-| dental-clinical → dental-visit | schema (7 files) | 7 | 7 | 0 | Yes (documented as P1 risk) |
-| dental-clinical → dental-org | schema (4 files) | 4 | 4 | 0 | Yes |
-| dental-billing → dental-visit | schema | 2 | 2 | 0 | Yes (documented as P2 risk) |
-| dental-billing → dental-org | schema | 2 | 2 | 0 | Yes (documented as P2 risk) |
-| dental-visit → dental-org | schema (3 files) | 3 | 3 | 0 | Not documented |
-| dental-imaging → dental-visit | schema | 1 | 1 | 0 | Loose coupling OK (UUID) |
-| dental-imaging → dental-org | schema | 1 | 1 | 0 | Not documented |
-| dental-imaging → dental-clinical | facade (indirect) | 1 | 0 | 0 | No |
-| dental-pmd → dental-visit | schema | 1 | 1 | 0 | Not documented |
-| dental-pmd → dental-org | schema | 1 | 1 | 0 | Not documented |
-| dental-scheduling → dental-visit | schema | 1 | 1 | 0 | Not documented |
-| dental-scheduling → dental-org | schema | 2 | 2 | 0 | Not documented |
-| dental-org → dental-scheduling | handler re-export | 2 | 0 | 2 | Not documented |
+### EX-003
+- **Severity:** P1
+- **Type:** IMPORT_DIRECTION
+- **From:** `dental-scheduling`
+- **To:** `patient`, `person`
+- **Description:** `handlers/dental-scheduling/repos/appointment-patient.facade.ts:11-12` imports `patients` from `patient/repos/patient.schema` and `persons` from `person/repos/person.schema` via relative paths inside a facade file. Facade exemption applies.
+- **Files:**
+  - `services/api-ts/src/handlers/dental-scheduling/repos/appointment-patient.facade.ts:11-12`
+- **Status:** KNOWN — facade exemption applies
+- **Confidence:** HIGH
 
 ---
 
-## Analysis Notes
-
-### Why so many P0 schema imports?
-
-All FK references in Drizzle ORM schemas require importing the parent table's Drizzle table object for the `.references()` call. This is idiomatic Drizzle — you cannot define a FK without the parent table object. The **root cause** is that all dental modules share a single PostgreSQL database with cross-schema FK constraints modeled in Drizzle. This makes these P0s unavoidable under the current architecture.
-
-**Remediation path (choose one):**
-1. **Consolidate schema** — move all `dental-*` Drizzle schemas into a single `dental-core/schemas/` package consumed by all modules as a shared type layer (allows FK references without module boundary violations)
-2. **Decouple FKs** — replace cross-module FK columns with bare UUID columns; enforce referential integrity at the application layer or via DB triggers instead of Drizzle `.references()`. Schema imports then become pure `type` imports only
-3. **Accept as structural debt** — document schema imports as "allowed structural FK coupling" in MODULE_BOUNDARIES.md; enforce that only `*.schema.ts` files may cross-import schemas (no handler or repo logic allowed)
-
-Option 3 is the lowest-friction path for an MVP-stage codebase. The MODULE_BOUNDARIES.md **Exempt Modules** section should be expanded to cover schema FK coupling explicitly.
-
-### Handler re-exports (P1)
-
-Five shim files (`dental-patient/treatment-plans/*.ts`, `dental-org/getWorkingHours.ts`, `dental-org/updateWorkingHours.ts`) are thin pass-through re-exports from another module's handler. These exist because route registration needed the handler under a different URL namespace. Fix: either move the handler to a shared location, duplicate the registration in the source module, or accept the re-export as a documented routing adapter (lower priority than schema issues).
-
-### Event system (P1 — systemic)
-
-Zero domain events are emitted anywhere in the codebase. The entire event system in EVENT_CONTRACTS is aspirational. No publication, no typed consumer subscriptions (dental-billing, dental-pmd, notifs). Only `dental-audit` has a consumer registered, but it uses a bespoke generic queue not triggered by any other module. This is a complete event system gap — the CONTRACT is declared but the wire is not connected.
+### EX-004 ⚠️ P0
+- **Severity:** P0
+- **Type:** IMPORT_DIRECTION
+- **From:** `emr` (dental-emr-integration)
+- **To:** `patient`
+- **Description:** Four handler files in `emr/` import `PatientRepository` directly from `../patient/repos/patient.repo` — the owning module's concrete repository class. This is a direct cross-module repo import in **handler code** (not a schema file, not a facade file). No facade exists. No exemption applies.
+  - `emr/createConsultation.ts:12` — `import { PatientRepository } from '../patient/repos/patient.repo'`
+  - `emr/listEMRPatients.ts:9` — `import { PatientRepository, type PatientFilters } from '../patient/repos/patient.repo'`
+  - `emr/listConsultations.ts:10` — `import { PatientRepository } from '../patient/repos/patient.repo'`
+  - `emr/getConsultation.ts:9` — `import { PatientRepository } from '../patient/repos/patient.repo'`
+- **Fix:** Create `patient/repos/patient-emr.facade.ts` exposing `getPatientForEMR()`. Replace direct repo instantiation.
+- **Status:** NEW
+- **Confidence:** HIGH
 
 ---
 
-## What's Next
+### EX-005
+- **Severity:** P1
+- **Type:** IMPORT_DIRECTION
+- **From:** `emr`
+- **To:** `patient` (repo file import)
+- **Description:** `emr/repos/emr.repo.ts:17` imports `patients` table from `../../patient/repos/patient.schema` in a **repo file** (not a schema file). Schema-layer exemption applies only to `*.schema.ts` files. A repo file importing a foreign schema is not exempt.
+- **Files:**
+  - `services/api-ts/src/handlers/emr/repos/emr.repo.ts:17`
+- **Status:** NEW
+- **Confidence:** HIGH
 
-### Immediate (P0 remediation)
-1. **Decide schema coupling strategy** — pick Option 1, 2, or 3 above. Document in MODULE_BOUNDARIES.md. This resolves 25 P0s in one architectural decision without necessarily rewriting code.
-2. **Expand MODULE_BOUNDARIES.md** — add explicit rule: "`*.schema.ts` files may import FKs from other dental modules; handler and repo logic files may NOT"
+---
 
-### Short-term (P1 remediation)
-3. **Remove handler re-export shims** — consolidate treatment-plan handlers under `dental-visit`; register `dental-patient` routes to `dental-visit` handlers directly in the router (no shim files needed)
-4. **Working hours ownership** — decide: does `workingHours` belong in `dental-org` or `dental-scheduling`? Move handler to the owning module; update router. Remove shim files.
-5. **Replace cross-module repo/service calls** — `listPatientConditions` and `initializeDentition` in `dental-patient` should call `dental-visit` via an HTTP sub-request or a published service interface, not by directly instantiating `VisitRepository`/`DentalChartRepository`
+### EX-006
+- **Severity:** P1
+- **Type:** IMPORT_DIRECTION
+- **From:** `emr`
+- **To:** `person`
+- **Description:** `emr/repos/emr.repo.ts:19` imports `persons` from `../../person/repos/person.schema` in a repo file.
+- **Files:**
+  - `services/api-ts/src/handlers/emr/repos/emr.repo.ts:19`
+- **Status:** NEW
+- **Confidence:** HIGH
 
-### Medium-term (event system)
-6. **Implement domain event emission** — instrument `checkIn`, `completeVisit`, `createInvoice`, `bookAppointment`, etc. to publish typed events matching EVENT_CONTRACTS payload schemas via pg-boss (already in use for dental-audit)
-7. **Implement dental-billing event consumer** — subscribe to DE-004..DE-006 for treatment billing triggers
-8. **Implement dental-pmd event consumer** — subscribe to DE-002 (VisitCompleted) to auto-generate PMD
-9. **Migrate dental-audit consumer** — replace generic `DentalAuditDomainEvent` with per-event typed handlers matching DE-001..DE-023 payload schemas
+---
 
-### Run after fixes
-- Re-run `/oli-enforce-module` on `dental-patient`, `dental-clinical`, `dental-billing`, `dental-visit`
-- Re-run `/oli-enforce-cross-module` to verify P0 count reduction
+### EX-007 ⚠️ P0
+- **Severity:** P0
+- **Type:** IMPORT_DIRECTION + DB_FK (see also EX-031)
+- **From:** `dental-imaging`
+- **To:** `dental-visit`, `patient`, `dental-org`
+- **Description:** `dental-imaging/repos/imaging_finding.schema.ts:11-13` imports raw schema tables from three foreign modules via relative paths to declare hard Drizzle `.references()` FKs. This contradicts the `dental-imaging` architectural decision in DOMAIN_MODEL.md ("Loose coupling — UUID refs only, no DB-level FKs"). The `imaging.schema.ts` file in the same module correctly comments each cross-module UUID field as "loose-coupling: no DB-level FK to avoid coupling." The `imaging_finding.schema.ts` imports and uses `.references()` for `visitId`, `patientId`, and `branchId` — inconsistent with the stated contract. (`treatmentId` in the same file correctly uses bare UUID with comment "cross-module FK — no .references()".)
+- **Files:**
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:11` (import dentalVisits)
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:12` (import patients)
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:13` (import dentalBranches)
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:64` — `visitId: uuid('visit_id').references(() => dentalVisits.id)`
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:65` — `patientId: uuid('patient_id').notNull().references(() => patients.id)`
+  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:66` — `branchId: uuid('branch_id').notNull().references(() => dentalBranches.id)`
+- **Status:** NEW
+- **Confidence:** HIGH
+
+---
+
+## B. Event Schema Compliance (DE-001 – DE-024)
+
+**Scan result:** Zero calls to `publishAuditEvent`, any event emission function, or any DE-NNN string found in handler code. The infrastructure (`domain-events.consumer.ts`) defines and registers the consumer queue but is never invoked by any producer.
+
+| Event | Source Context | Status | Finding |
+|-------|---------------|--------|---------|
+| DE-001 `VisitCheckedIn@1` | dental-visit | NOT EMITTED | EX-008 |
+| DE-002 `VisitCompleted@1` | dental-visit | NOT EMITTED | EX-009 |
+| DE-003 `VisitLocked@1` | dental-visit | NOT EMITTED | EX-010 |
+| DE-004 `TreatmentDiagnosed@1` | dental-visit | NOT EMITTED | EX-011 |
+| DE-005 `TreatmentPerformed@1` | dental-visit | NOT EMITTED | EX-012 |
+| DE-006 `TreatmentDismissed@1` | dental-visit | NOT EMITTED | EX-013 |
+| DE-007 `InvoiceCreated@1` | dental-billing | NOT EMITTED | EX-014 |
+| DE-008 `InvoicePaid@1` | dental-billing | NOT EMITTED | EX-015 |
+| DE-009 `InvoiceVoided@1` | dental-billing | NOT EMITTED | EX-016 |
+| DE-010 `AppointmentBooked@1` | dental-scheduling | NOT EMITTED | EX-017 |
+| DE-011 `AppointmentCancelled@1` | dental-scheduling | NOT EMITTED | EX-018 |
+| DE-012 `ConsentSigned@1` | dental-clinical | NOT EMITTED | EX-019 |
+| DE-013 `ConsentRevoked@1` | dental-clinical | NOT EMITTED | EX-020 |
+| DE-014 `LabOrderCreated@1` | dental-clinical | NOT EMITTED | EX-021 |
+| DE-015 `LabOrderCompleted@1` | dental-clinical | NOT EMITTED | EX-022 |
+| DE-016 `PrescriptionWritten@1` | dental-clinical | NOT EMITTED | EX-023 |
+| DE-017 `PMDGenerated@1` | dental-pmd | NOT EMITTED | EX-024 |
+| DE-018 `ImagingStudyUploaded@1` | dental-imaging | NOT EMITTED | EX-025 |
+| DE-019 `ImagingFindingConfirmed@1` | dental-imaging | NOT EMITTED | EX-026 |
+| DE-020 `CephAnalysisComputed@1` | dental-imaging | NOT EMITTED | EX-027 |
+| DE-021 `PatientRegistered@1` | dental-patient | NOT EMITTED | EX-028 |
+| DE-022 `MembershipAssigned@1` | dental-org | NOT EMITTED | EX-029 |
+| DE-023 `MembershipRevoked@1` [INFERRED] | dental-org | NOT EMITTED | EX-030 |
+| DE-024 `PatientMergeRequested@1` [NOT IMPL] | dental-patient | STUB 501 | — exempt |
+
+### EX-008 through EX-030 (23 findings)
+- **Severity:** P1 each (not P0 — no wrong schema being produced; infrastructure exists)
+- **Type:** EVENT_SCHEMA
+- **Description:** DE-001 through DE-023 fully specified in EVENT_CONTRACTS.md with payloads, source contexts, and consumer subscriptions but zero emission calls exist in any handler. Cross-module choreography is entirely inoperative: dental-billing subscribed to DE-001/004/005/006, dental-pmd to DE-002, dental-audit to all, notifs to 8 events — none receive any messages.
+- **Status:** KNOWN — event infrastructure ready, producers not yet wired to handlers
+- **Confidence:** HIGH
+
+---
+
+## C. API Contract Boundaries (Direct Table Access)
+
+All 24 cross-module import pairs in dental modules use approved facades. No direct repo class instantiation found in dental handler code.
+
+**Compliant facade-only pairs (24):**
+
+| Pair | Facade Imports | Status |
+|------|---------------|--------|
+| dental-billing → dental-clinical | 1 | OK |
+| dental-billing → dental-org | 3 | OK |
+| dental-billing → dental-visit | 3 | OK |
+| dental-billing → patient | 3 | OK |
+| dental-clinical → dental-org | 1 | OK |
+| dental-clinical → patient | 5 | OK |
+| dental-imaging → dental-clinical | 1 | OK |
+| dental-imaging → dental-org | 10 | OK |
+| dental-org → audit | 2 | OK |
+| dental-org → dental-billing | 1 | OK |
+| dental-org → dental-clinical | 1 | OK |
+| dental-patient → dental-visit | 4 | OK |
+| dental-patient → patient | 21 | OK |
+| dental-patient → person | 2 | OK |
+| dental-perio → dental-org | 1 | OK |
+| dental-perio → dental-visit | 2 | OK |
+| dental-pmd → dental-clinical | 1 | OK |
+| dental-pmd → dental-org | 1 | OK |
+| dental-pmd → dental-visit | 4 | OK |
+| dental-pmd → patient | 4 | OK |
+| dental-scheduling → dental-org | 4 | OK |
+| dental-scheduling → dental-visit | 1 | OK |
+| dental-visit → dental-clinical | 2 | OK |
+| dental-visit → dental-org | 3 | OK |
+
+**Violation:** `emr` module — 4 handler files directly instantiate `PatientRepository` (EX-004). No facade exists for the `emr → patient` dependency.
+
+---
+
+## D. Drizzle FK Cross-Module
+
+**Policy:** Schema-layer FK imports (`repos/*.schema.ts`) are excluded from the code-layer boundary checker (MODULE_BOUNDARIES.md). The `dental-imaging` module has an explicit architectural decision of loose coupling (UUID refs, no `.references()`).
+
+### EX-031 ⚠️ P0
+- **Severity:** P0
+- **Type:** DB_FK
+- **From:** `dental-imaging/repos/imaging_finding.schema.ts`
+- **To:** `dental-visit`, `patient`, `dental-org`
+- **Description:** Three hard Drizzle FK declarations in `imaging_finding.schema.ts` violate the stated `dental-imaging` architecture (DOMAIN_MODEL.md: "Loose coupling — UUID refs only, no DB-level FKs"). The same file correctly handles `treatmentId` as a bare UUID with a "cross-module FK — no .references()" comment. The `imaging.schema.ts` in the same module handles ALL cross-module refs as bare UUIDs with explicit comments. `imaging_finding.schema.ts` is inconsistent with both the contract and its sibling schema.
+  - Line 64: `visitId: uuid('visit_id').references(() => dentalVisits.id)` — VIOLATES
+  - Line 65: `patientId: uuid('patient_id').notNull().references(() => patients.id)` — VIOLATES
+  - Line 66: `branchId: uuid('branch_id').notNull().references(() => dentalBranches.id)` — VIOLATES
+- **Status:** NEW
+- **Confidence:** HIGH
+
+### Known/Exempt FK coupling (schema-layer, not violations)
+
+| Module | FK count | Target modules | Status |
+|--------|----------|---------------|--------|
+| dental-billing | 15 | dentalVisits, patients, dentalBranches, dentalMemberships, dentalTreatments | EXEMPT |
+| dental-clinical | 19 | dentalVisits, patients, dentalMemberships, dentalBranches | EXEMPT |
+| dental-imaging imaging.schema.ts | 0 cross-module | — (loose coupling, correct) | COMPLIANT |
+| dental-imaging imaging_finding.schema.ts | 3 cross-module | dentalVisits, patients, dentalBranches | VIOLATION (EX-031) |
+| dental-patient | 8 | patients, dentalInsuranceProfiles | EXEMPT |
+| dental-perio | 3 | dentalVisits, patients, dentalBranches | EXEMPT |
+| dental-scheduling | 7 | patients, dentalBranches, dentalMemberships, dentalVisits | EXEMPT |
+| dental-visit | 15 | patients, dentalBranches, dentalMemberships (self-context) | EXEMPT |
+| emr schema | 2 | patients, providers | EXEMPT |
+
+**Run-5 baseline (25 P0 FK findings):** All 25 now KNOWN/EXEMPT under MODULE_BOUNDARIES.md schema-layer exemption.
+
+---
+
+## E. Domain Term Consistency
+
+### EX-032
+- **Severity:** P2
+- **Type:** DOMAIN_TERM
+- **From:** `emr`
+- **Description:** Module directory is `handlers/emr/` but CLAUDE.md lists it as `dental-emr-integration`. All 11 dental modules use the `dental-*` prefix convention. The `emr` module has no entry in MODULE_BOUNDARIES.md migration priority table, no boundary policy, and 6+ violations untracked. Inconsistent naming creates ambiguity in audit tooling (the boundary checker does not target `emr/`).
+- **Status:** NEW
+- **Confidence:** HIGH
+
+---
+
+### EX-033
+- **Severity:** P2
+- **Type:** DOMAIN_TERM
+- **From:** `dental-imaging`
+- **Description:** `ImagingFinding` entity (implemented in `imaging_finding.schema.ts`) is absent from DOMAIN_MODEL.md §3 entity classification. The entity has its own state machine (`FINDING_TRANSITIONS`), its own aggregate lifecycle, and FK coupling decisions that conflict with its parent module's stated contract. Without an entity classification entry, its coupling contract (FK vs. UUID) and ownership boundary are undocumented. DOMAIN_MODEL.md §3 lists `ImagingStudy` and `CephAnalysis` as aggregate roots but not `ImagingFinding`.
+- **Status:** NEW
+- **Confidence:** MEDIUM
+
+---
+
+## Finding Index
+
+| ID | Severity | Type | From | To | Status |
+|----|----------|------|------|----|--------|
+| EX-001 | P1 | IMPORT_DIRECTION | dental-clinical | dental-visit | KNOWN/EXEMPT |
+| EX-002 | P1 | IMPORT_DIRECTION | patient | person | KNOWN/EXEMPT |
+| EX-003 | P1 | IMPORT_DIRECTION | dental-scheduling | patient, person | KNOWN/EXEMPT |
+| EX-004 | P0 | IMPORT_DIRECTION | emr | patient | NEW |
+| EX-005 | P1 | IMPORT_DIRECTION | emr | patient (repo) | NEW |
+| EX-006 | P1 | IMPORT_DIRECTION | emr | person (repo) | NEW |
+| EX-007 | P0 | IMPORT_DIRECTION | dental-imaging | dental-visit, patient, dental-org | NEW |
+| EX-008 | P1 | EVENT_SCHEMA | dental-visit | dental-billing, dental-audit | KNOWN |
+| EX-009 | P1 | EVENT_SCHEMA | dental-visit | dental-pmd, dental-billing, dental-audit | KNOWN |
+| EX-010 | P1 | EVENT_SCHEMA | dental-visit | dental-audit | KNOWN |
+| EX-011 | P1 | EVENT_SCHEMA | dental-visit | dental-billing, dental-audit | KNOWN |
+| EX-012 | P1 | EVENT_SCHEMA | dental-visit | dental-billing, dental-audit | KNOWN |
+| EX-013 | P1 | EVENT_SCHEMA | dental-visit | dental-billing, dental-audit | KNOWN |
+| EX-014 | P1 | EVENT_SCHEMA | dental-billing | notifs, dental-audit | KNOWN |
+| EX-015 | P1 | EVENT_SCHEMA | dental-billing | notifs, dental-audit | KNOWN |
+| EX-016 | P1 | EVENT_SCHEMA | dental-billing | dental-audit | KNOWN |
+| EX-017 | P1 | EVENT_SCHEMA | dental-scheduling | notifs, dental-audit | KNOWN |
+| EX-018 | P1 | EVENT_SCHEMA | dental-scheduling | notifs, dental-audit | KNOWN |
+| EX-019 | P1 | EVENT_SCHEMA | dental-clinical | dental-audit | KNOWN |
+| EX-020 | P1 | EVENT_SCHEMA | dental-clinical | dental-audit | KNOWN |
+| EX-021 | P1 | EVENT_SCHEMA | dental-clinical | dental-audit | KNOWN |
+| EX-022 | P1 | EVENT_SCHEMA | dental-clinical | notifs, dental-audit | KNOWN |
+| EX-023 | P1 | EVENT_SCHEMA | dental-clinical | dental-audit | KNOWN |
+| EX-024 | P1 | EVENT_SCHEMA | dental-pmd | dental-audit | KNOWN |
+| EX-025 | P1 | EVENT_SCHEMA | dental-imaging | dental-audit | KNOWN |
+| EX-026 | P1 | EVENT_SCHEMA | dental-imaging | dental-clinical, dental-audit | KNOWN |
+| EX-027 | P1 | EVENT_SCHEMA | dental-imaging | dental-audit | KNOWN |
+| EX-028 | P1 | EVENT_SCHEMA | dental-patient | notifs, dental-audit | KNOWN |
+| EX-029 | P1 | EVENT_SCHEMA | dental-org | notifs, dental-audit | KNOWN |
+| EX-030 | P1 | EVENT_SCHEMA | dental-org | dental-audit | KNOWN |
+| EX-031 | P0 | DB_FK | dental-imaging | dental-visit, patient, dental-org | NEW |
+| EX-032 | P2 | DOMAIN_TERM | emr | — | NEW |
+| EX-033 | P2 | DOMAIN_TERM | dental-imaging | dental-visit | NEW |
+
+---
+
+## MODULE_BOUNDARIES.md Assessment
+
+EXISTS and comprehensive. Gaps:
+- `emr` module entirely absent — no entry, no policy, no migration priority
+- `imaging_finding` FK coupling contract not documented
+
+---
+
+## Remediation Priority
+
+| Priority | Finding | Action |
+|----------|---------|--------|
+| 1 | EX-004 (P0) | Create `patient/repos/patient-emr.facade.ts`; remove 4 direct `PatientRepository` imports from `emr/` handlers |
+| 2 | EX-007 + EX-031 (P0) | Remove `.references()` from `imaging_finding.schema.ts` lines 64-66; replace with bare `uuid()` per `imaging.schema.ts` pattern; generate migration |
+| 3 | EX-005/006 (P1) | Move `patients`/`persons` imports in `emr/repos/emr.repo.ts` to a facade |
+| 4 | EX-032 (P2) | Rename `handlers/emr/` → `handlers/dental-emr/`; add to MODULE_BOUNDARIES.md migration table |
+| 5 | EX-033 (P2) | Add `ImagingFinding` entity to DOMAIN_MODEL.md §3 with coupling contract documented |
+| 6 | EX-008–030 (P1) | Wire `publishAuditEvent` (and typed event publishers) into 8 source modules at mutation points |
+
+---
+
+*Generated: 2026-05-29 | Run: run-6-strict-2026-05-29 | Supersedes run-5*

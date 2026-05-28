@@ -1,237 +1,242 @@
 # dental-billing — Module Enforcement
-<!-- oli-enforce-module v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+<!-- oli-enforce-module --strict | run: run-6-strict-2026-05-29 | baseline: run-5-f2-service-layer-di-2026-05-28 -->
 
 ## Summary
 
-- **Findings:** 9 (P0: 1, P1: 4, P2: 3, P3: 1)
-- **Service-Layer Pattern:** PARTIAL — repos present, no `.service.ts`, handlers instantiate repos inline via `new` in every handler body
-- **Compliance Score:** 61/100
+| Field | Value |
+|-------|-------|
+| Module | dental-billing |
+| Run ID | run-6-strict-2026-05-29 |
+| Handler path | `services/api-ts/src/handlers/dental-billing/` |
+| Handler count | 15 handlers, 3 repos, 12 test files |
+| Score | **55 / 100** (run-5 baseline: 61) |
+| V1 Status | **PARTIAL** |
+| P0 findings | 1 (unchanged) |
+| P1 findings | 6 (+1 new vs run-5) |
+| P2 findings | 5 (+3 new vs run-5) |
+| P3 findings | 1 (unchanged) |
+| New findings | 4 (EM-BIL-010..013) |
+| Resolved findings | 0 |
+
+**Score dropped 6 points** from run-5 (61→55): 4 new findings surfaced, 0 run-5 findings resolved.
 
 ### Score breakdown
 
-| Dimension | Score | Cap Hit |
-|-----------|-------|---------|
-| Public API completeness | 8/10 | — |
-| Workflow implementation | 7/10 | — |
-| Domain term consistency | 9/10 | — |
-| State machine enforcement | 8/10 | — |
-| Event publishing | 0/10 | — |
-| Auth / permission enforcement | 7/10 | P0 cap applies |
-| **F2 Service-layer / DI** | 3/10 | — |
-| **Overall** | **61/100** | |
+| Dimension | Score | Notes |
+|-----------|-------|-------|
+| 1. Public API Completeness | 8/10 | 7/7 spec endpoints; WF-042 fee schedule missing |
+| 2. Workflow Implementation | 7/10 | WF-042 absent; WF-054 overdue cron unwired |
+| 3. Domain Term Consistency | 8/10 | `sent` (DOMAIN_MODEL) vs `issued` (code) divergence |
+| 4. State Machine Enforcement | 7/10 | paid→void unspecced; uncollectible absent |
+| 5. Event Publishing | 0/10 | DE-007/008/009 never published; no event bus found |
+| 6. Auth / Permission Enforcement | 3/10 | P0 cap: EM-BIL-001 auth bypass still open |
+| 7. Service Layer / DI (F2) | 2/10 | No .service.ts; repos instantiated inline |
+| 8. Test Coverage | 8/10 | 12 test files, strong FSM property tests; AC-BIL-005 uncovered |
+| **Overall** | **55/100** | |
 
 ---
 
 ## Findings
 
-| ID | Sev | Description | File | Line | Spec Ref |
-|----|-----|-------------|------|------|---------|
-| EM-BIL-001 | P0 | `listDentalInvoices` performs no auth check when `branchId` query param is omitted — any authenticated user can enumerate all invoices across all branches | `listDentalInvoices.ts` | 14–17 | MODULE_SPEC §6: "View invoices — all dental roles" implies branch-scoped access, not org-wide |
-| EM-BIL-002 | P1 | `issueDentalInvoice` omits `staff_full` from allowed roles; spec declares `staff_full, dentist_associate, dentist_owner` — staff cannot issue invoices | `issueDentalInvoice.ts` | 28 | MODULE_SPEC §6, API_CONTRACTS PATCH `/invoices/:id/issue` |
-| EM-BIL-003 | P1 | No `.service.ts` file exists; all business logic lives directly in handler functions. Repository instances created ad-hoc with `new Dental*Repository(db)` inside every handler body — violates F2 service-layer/DI requirement | `createDentalInvoice.ts`, `recordDentalPayment.ts`, `voidDentalInvoice.ts`, (all 14 handlers) | — | MODULE_SPEC §20 AI Instructions; run F2 check |
-| EM-BIL-004 | P1 | Domain events DE-007 (`InvoiceCreated`), DE-008 (`InvoicePaid`), DE-009 (`InvoiceVoided`) declared in MODULE_SPEC §10b are **never published** — zero emission calls found across all handler files | `createDentalInvoice.ts`, `recordDentalPayment.ts`, `voidDentalInvoice.ts` | — | MODULE_SPEC §10b; DOMAIN_MODEL §5, SM-INVOICE event column |
-| EM-BIL-005 | P1 | BR-009 guard throws `ValidationError` (→ HTTP 400) instead of the spec-declared `422 NO_BILLABLE_TREATMENTS`; error class mismatch produces wrong HTTP status | `createDentalInvoice.ts` | 42–44 | MODULE_SPEC BR-009; API_CONTRACTS POST `/invoices` 422 error |
-| EM-BIL-006 | P1 | WF-042 (Fee schedule lookup) has no handler or endpoint; no code path for `GET /dental/billing/fee-schedule` or equivalent found in module source | — | — | MODULE_SPEC §3 WF-042 (P1) |
-| EM-BIL-007 | P2 | DOMAIN_MODEL SM-INVOICE uses state label `sent`; module schema/code uses `issued`. The DOMAIN_MODEL is designated "source of truth" (supersedes WORKFLOW_MAP). This terminology divergence means the canonical state machine and implementation disagree on state names | `dental-invoice.schema.ts` | 17 | DOMAIN_MODEL §6 SM-INVOICE; MODULE_SPEC §8 |
-| EM-BIL-008 | P2 | `markOverdueInvoices()` repo method exists but no pg-boss job or scheduler wires it; WF-054 (mark overdue cron) has no registration found in module source. The transition `issued/partial → overdue` is orphaned | `repos/dental-invoice.repo.ts` | 239 | MODULE_SPEC §3 WF-054; DOMAIN_MODEL SM-INVOICE |
-| EM-BIL-009 | P3 | BR-013 (`markUncollectible` → 501 NOT_IMPLEMENTED) referenced in spec but no handler endpoint found; the `sent → uncollectible` SM-INVOICE transition is entirely absent from module | — | — | MODULE_SPEC BR-013; DOMAIN_MODEL SM-INVOICE |
+| ID | Sev | Run | Section | Description | File | Line |
+|----|-----|-----|---------|-------------|------|------|
+| EM-BIL-001 | **P0** | KNOWN | §6 | `listDentalInvoices` no auth when `branchId` omitted — any authenticated user enumerates all-branch invoices | `listDentalInvoices.ts` | 14–17 |
+| EM-BIL-002 | P1 | KNOWN | §6 | `issueDentalInvoice` missing `staff_full` from allowed roles; spec declares staff_full, associate, owner | `issueDentalInvoice.ts` | 28 |
+| EM-BIL-003 | P1 | KNOWN | §20/F2 | No `.service.ts`; all BR guards and orchestration live in handler functions; repos instantiated with `new Repo(db)` inline in every handler body | all 15 handlers | — |
+| EM-BIL-004 | P1 | KNOWN | §10b | DE-007 `InvoiceCreated`, DE-008 `InvoicePaid`, DE-009 `InvoiceVoided` declared in MODULE_SPEC §10b — **never published**; zero emission calls across entire module; no event bus infrastructure found | `createDentalInvoice.ts`, `recordDentalPayment.ts`, `voidDentalInvoice.ts` | — |
+| EM-BIL-005 | P1 | KNOWN | §5/BR-009 | BR-009 throws `ValidationError` (→ HTTP 400) not spec-declared `422 NO_BILLABLE_TREATMENTS`; test at `dental-billing.test.ts:321` asserts 400, confirming wrong status propagates | `createDentalInvoice.ts` | 43 |
+| EM-BIL-006 | P1 | KNOWN | §3/WF-042 | WF-042 fee schedule lookup — no handler, no endpoint, no TypeSpec definition | — | — |
+| EM-BIL-010 | P1 | **NEW** | §11/AC-BIL-002 | MODULE_SPEC §11 AC-BIL-002 declares BR-011 void-with-active-plan → **409 Conflict**; code throws `BusinessLogicError` (422); both test files assert `expect(res.status).toBe(422)` — HTTP status contract violated | `voidDentalInvoice.ts` L48; `dental-billing.edge-cases.test.ts` L339; `acceptance.billing-payments.test.ts` L359 | — |
+| EM-BIL-007 | P2 | KNOWN | §8 | DOMAIN_MODEL §6 SM-INVOICE uses `sent`; implementation uses `issued` throughout schema/code — canonical state name divergence | `repos/dental-invoice.schema.ts` | 17 |
+| EM-BIL-008 | P2 | KNOWN | §3/WF-054 | `markOverdueInvoices()` repo method complete but no pg-boss job wires it; `issued/partial → overdue` transition is orphaned | `repos/dental-invoice.repo.ts` | 239 |
+| EM-BIL-011 | P2 | **NEW** | §8 | `voidDentalInvoice` allows voiding a `paid` invoice ("admin correction" comment L37); MODULE_SPEC §8 FSM only shows `draft/issued → void`; `paid` is terminal per spec — undocumented FSM extension | `voidDentalInvoice.ts` | 34–37 |
+| EM-BIL-012 | P2 | **NEW** | §5/BR-010 | `dental-billing.invoice-lifecycle.test.ts:440` seeds invoice with `taxCents: 1200` and asserts it persists (L449); BR-010 mandates `taxCents` always 0 — test contradicts the invariant (either test seeds DB directly bypassing handler, or invariant is leaking) | `dental-billing.invoice-lifecycle.test.ts` | 440, 449 |
+| EM-BIL-013 | P2 | **NEW** | §11/AC-BIL-005 | AC-BIL-005 (`markUncollectible → 501 NOT_IMPLEMENTED`) — no handler, no route, no test; zero grep hits for `markUncollectible` or `NOT_IMPLEMENTED` across billing module | — | — |
+| EM-BIL-009 | P3 | KNOWN | §5/BR-013 | `sent → uncollectible` transition (BR-013, explicitly deferred) entirely absent — no handler, no guard | — | — |
 
 ---
 
 ## Dimension Details
 
-### 1. Public API Completeness
+### 1. Public API Completeness (8/10)
 
 **Declared in API_CONTRACTS — 7 endpoints:**
 
 | Endpoint | Handler | Status |
 |----------|---------|--------|
 | POST `/api/v1/dental/invoices` | `createDentalInvoice.ts` | FOUND |
-| GET `/api/v1/dental/invoices` | `listDentalInvoices.ts` | FOUND |
+| GET `/api/v1/dental/invoices` | `listDentalInvoices.ts` | FOUND (auth gap — EM-BIL-001) |
 | GET `/api/v1/dental/invoices/:id` | `getDentalInvoice.ts` | FOUND |
 | PATCH `/api/v1/dental/invoices/:id/issue` | `issueDentalInvoice.ts` | FOUND (role gap — EM-BIL-002) |
 | POST `/api/v1/dental/invoices/:id/payments` | `recordDentalPayment.ts` | FOUND |
 | POST `/api/v1/dental/invoices/:id/void` | `voidDentalInvoice.ts` | FOUND |
 | POST `/api/v1/dental/invoices/:id/payment-plans` | `createDentalPaymentPlan.ts` | FOUND |
 
-**Extra handlers present (not in API_CONTRACTS):** `applyDentalDiscount`, `getCollectionsSummary`, `getDentalPaymentPlan`, `getDentalPaymentReceipt`, `getPatientBalance`, `listDentalPayments`, `updateDentalPaymentPlan`, `voidDentalPayment` — 8 handlers extend beyond spec. No P-finding; spec coverage is minimum.
+**Extra handlers (beyond spec minimum, no finding):** `applyDentalDiscount`, `getCollectionsSummary`, `getDentalPaymentPlan`, `getDentalPaymentReceipt`, `getPatientBalance`, `listDentalPayments`, `updateDentalPaymentPlan`, `voidDentalPayment`.
 
-**Not found:** WF-042 fee schedule lookup endpoint → EM-BIL-006 (P1).
-
-Score: **8/10**
+**Missing:** WF-042 fee schedule lookup → EM-BIL-006 (P1).
 
 ---
 
-### 2. Workflow Implementation
+### 2. Workflow Implementation (7/10)
 
 | Workflow | Priority | Code Path | Status |
 |----------|----------|-----------|--------|
 | WF-013 Create invoice from visit | P0 | `createDentalInvoice.ts` | FOUND |
 | WF-014 Record payment | P0 | `recordDentalPayment.ts` | FOUND |
 | WF-051 View invoice | P0 | `getDentalInvoice.ts` | FOUND |
-| WF-052 Issue invoice | P0 | `issueDentalInvoice.ts` | FOUND (role gap) |
+| WF-052 Issue invoice | P0 | `issueDentalInvoice.ts` | FOUND (role gap — EM-BIL-002) |
 | WF-015 Create payment plan | P1 | `createDentalPaymentPlan.ts` | FOUND |
-| WF-041 Void invoice | P1 | `voidDentalInvoice.ts` | FOUND |
-| WF-042 Fee schedule lookup | P1 | — | MISSING → EM-BIL-006 |
+| WF-041 Void invoice | P1 | `voidDentalInvoice.ts` | FOUND (paid-void unspecced — EM-BIL-011) |
+| WF-042 Fee schedule lookup | P1 | — | **MISSING → EM-BIL-006** |
 | WF-053 Mark partial (system) | P2 | `repos/dental-invoice.repo.ts` addPayment SQL CASE | FOUND |
-| WF-054 Mark overdue (cron) | P2 | `markOverdueInvoices()` exists; no job wiring | PARTIAL → EM-BIL-008 |
-
-Score: **7/10**
+| WF-054 Mark overdue (cron) | P2 | `markOverdueInvoices()` in repo | PARTIAL → EM-BIL-008 (no scheduler) |
 
 ---
 
-### 3. Domain Term Consistency
+### 3. Domain Term Consistency (8/10)
 
-All key bounded-context terms from MODULE_SPEC §2 are used correctly in code:
-- `Invoice`, `LineItem`, `PaymentPlan`, `Installment` — correctly named in schemas and repos
-- `Fee Schedule` — referenced in `createDentalInvoice.ts` via `getTreatmentsForInvoice` (uses treatment `priceCents`)
-
-**Divergence:** DOMAIN_MODEL §6 SM-INVOICE uses state `sent`; implementation uses `issued` (EM-BIL-007, P2). The MODULE_SPEC §8 itself uses `issued`, so implementation is consistent with its own spec — divergence is spec-vs-domain-model.
-
-Score: **9/10**
+All five domain terms (Invoice, LineItem, Payment, PaymentPlan, Installment) correctly reflected in code. One known divergence: DOMAIN_MODEL §6 SM-INVOICE uses `sent`; implementation schema/enum uses `issued` throughout. MODULE_SPEC §8 itself uses `issued`, so implementation is self-consistent — divergence is DOMAIN_MODEL vs module-spec (EM-BIL-007, P2).
 
 ---
 
-### 4. State Machine Enforcement
-
-SM-INVOICE declared transitions and guard status:
+### 4. State Machine Enforcement (7/10)
 
 | Transition | Guard in code | Notes |
 |------------|--------------|-------|
 | draft → issued | `issueDentalInvoice.ts` L32: `status !== 'draft'` → 422 | FOUND |
-| issued → paid | `recordDentalPayment.ts` addPayment CASE in repo | FOUND |
-| issued → partial | `recordDentalPayment.ts` + repo CASE | FOUND |
+| issued → paid | repo `addPayment` CASE | FOUND |
+| issued → partial | repo `addPayment` CASE | FOUND |
 | partial → paid | repo `addPayment` CASE | FOUND |
 | issued/partial → overdue | `markOverdueInvoices()` in repo | FOUND (no scheduler — EM-BIL-008) |
-| draft/issued → void | `voidDentalInvoice.ts` + BR-011 plan check | FOUND |
-| issued → uncollectible | No handler or guard | MISSING → EM-BIL-009 (P3, BR-013 deferred) |
-
-Score: **8/10**
+| draft/issued → void | `voidDentalInvoice.ts` + BR-011 check | FOUND |
+| paid → void | `voidDentalInvoice.ts` L37 (comment: "admin correction") | **UNSPECCED → EM-BIL-011** |
+| issued → uncollectible | No handler or guard | MISSING → EM-BIL-009 (P3, deferred) |
 
 ---
 
-### 5. Event Publishing
+### 5. Event Publishing (0/10)
 
 **Declared in MODULE_SPEC §10b:**
-- DE-007 `InvoiceCreated` — published on `createDentalInvoice`
-- DE-008 `InvoicePaid` — published on `recordDentalPayment` (paid state)
-- DE-009 `InvoiceVoided` — published on `voidDentalInvoice`
+- DE-007 `InvoiceCreated` — on `createDentalInvoice`
+- DE-008 `InvoicePaid` — on `recordDentalPayment` (paid path)
+- DE-009 `InvoiceVoided` — on `voidDentalInvoice`
 
-**Grep result:** Zero emission calls (`publishEvent`, `eventBus`, `InvoiceCreated`, `InvoicePaid`, `InvoiceVoided`) found anywhere in the module. `voidDentalInvoice.ts` and `createDentalInvoice.ts` call `logAuditEvent` (structured log) but that is not domain event publishing.
+**Result:** Zero emission calls (`publishEvent`, `eventBus`, `InvoiceCreated`, `InvoicePaid`, `InvoiceVoided`) anywhere in the module. No event bus infrastructure detected in `services/api-ts/src/core/`. Handlers call `logAuditEvent` (structured log) — not domain event publishing.
 
 → EM-BIL-004 (P1): All three declared domain events unimplemented.
 
-Score: **0/10**
-
 ---
 
-### 6. Auth / Permission Enforcement
+### 6. Auth / Permission Enforcement (3/10 — P0 cap)
 
 | Operation | Spec Allowed | Impl Guard | Match |
 |-----------|-------------|-----------|-------|
 | Create invoice | owner, associate, staff_full | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | MATCH |
-| Record payment | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate not in spec but present |
+| Record payment | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate extra (low risk) |
 | Void invoice | dentist_owner only | `assertBranchRole(['dentist_owner'])` | MATCH |
-| Create payment plan | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate extra |
-| View invoices | all dental roles | `assertBranchAccess(...)` when `branchId` provided; **no check** when omitted | **GAP → EM-BIL-001 (P0)** |
+| Create payment plan | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate extra (low risk) |
+| View invoices (list) | all dental roles (branch-scoped) | `assertBranchAccess` only when `branchId` provided; **no check** when omitted | **GAP → EM-BIL-001 (P0)** |
 | Issue invoice | staff_full, associate, owner | `assertBranchRole(['dentist_owner','dentist_associate'])` | **MISSING staff_full → EM-BIL-002 (P1)** |
 
-Score: **7/10** (P0 cap applies → capped at 3/10 for this dimension, but caps are per-overall not per-dimension in this scoring model)
+---
+
+### 7. Service Layer / DI Assessment (2/10)
+
+**Pattern: ABSENT (unchanged from run-5)**
+
+3 repo files present (`dental-invoice.repo.ts`, `dental-payment.repo.ts`, `dental-payment-plan.repo.ts`) with constructor-injected `DatabaseInstance` — correct at repo layer.
+
+No `dental-billing.service.ts` exists. All orchestration (BR-009, BR-011, BR-012 guards, state checks, audit logging, cross-repo side-effects) lives in handler functions. Repos instantiated inline with `new Dental*Repository(db)` in every handler body — no DI, no singleton, no factory.
+
+`createDentalInvoice.ts` (106 lines) most egregious: consent check → treatment fetch → billability filter → double-billing guard → subtotal compute → invoice create → `markTreatmentsAsBilled` side-effect — all service-layer logic in a handler.
+
+**Recommended:** Extract `dental-billing.service.ts` with `createInvoiceFromVisit()`, `issueInvoice()`, `voidInvoice()`, `recordPayment()`. Each handler becomes thin auth + validate + delegate.
+
+---
+
+### 8. Test Coverage (8/10)
+
+12 test files:
+- `dental-billing.test.ts` — happy-path CRUD
+- `dental-billing.invoice-lifecycle.test.ts` — FSM transitions
+- `dental-billing.edge-cases.test.ts` — error branches (BR-009, BR-011, BR-012)
+- `dental-billing.payment-plan-fsm.test.ts` — payment plan state machine
+- `invoice.fsm.property.test.ts` — property-based FSM invariants
+- `payment-plan.fsm.property.test.ts` — property-based plan invariants
+- `acceptance.billing-payments.test.ts` — AC-PAY-01..05
+- `billing-gate-http.test.ts` — HTTP-layer BR-009 enforcement
+- `repos/dental-invoice.test.ts`, `dental-payment.test.ts`, `dental-payment-plan.test.ts` — repo unit tests
+- `utils/rounding.test.ts` — rounding utilities
+
+**Gaps:**
+- AC-BIL-001 test exists but asserts 400 (wrong status per spec) — misaligned with spec 422 requirement
+- AC-BIL-005 (`markUncollectible → 501`) — no test anywhere (EM-BIL-013)
+- BR-010 invariant: `invoice-lifecycle.test.ts:440` seeds `taxCents:1200` — contradicts always-0 rule unless test bypasses handler (EM-BIL-012)
 
 ---
 
 ## F2: Service-Layer / DI Assessment
 
-### Pattern: PARTIAL
+### Pattern: ABSENT
 
-**Repos present:** 3 repository files exist under `repos/`:
+**Repos present:**
 ```
-repos/dental-invoice.repo.ts          — DentalInvoiceRepository class
-repos/dental-payment.repo.ts          — DentalPaymentRepository class
-repos/dental-payment-plan.repo.ts     — DentalPaymentPlanRepository class
+repos/dental-invoice.repo.ts          — DentalInvoiceRepository (constructor DI)
+repos/dental-payment.repo.ts          — DentalPaymentRepository (constructor DI)
+repos/dental-payment-plan.repo.ts     — DentalPaymentPlanRepository (constructor DI)
 ```
-Repos use constructor injection of `DatabaseInstance` — correct pattern at the repo layer.
 
-**Service layer: ABSENT.** No `dental-billing.service.ts` exists. All orchestration logic — BR validation, state checks, repo coordination, audit logging — lives directly in handler functions.
+**Service layer: ABSENT.** No `dental-billing.service.ts`. All orchestration in handlers.
 
-**Handler fatness evidence (inline `new` in handler body):**
+**Handler fatness (inline `new` in handler body):**
 ```typescript
 // issueDentalInvoice.ts:22
 const repo = new DentalInvoiceRepository(db);
-
 // recordDentalPayment.ts:25-26
 const invoiceRepo = new DentalInvoiceRepository(db);
 const paymentRepo = new DentalPaymentRepository(db);
-
 // voidDentalInvoice.ts:25,43
 const repo = new DentalInvoiceRepository(db);
 const paymentPlanRepo = new DentalPaymentPlanRepository(db);
-
 // createDentalInvoice.ts:36
 const invoiceRepo = new DentalInvoiceRepository(db);
 ```
-Pattern is identical across all 14 handler files — repos instantiated inline, not injected.
 
-**DI pattern:** None. No singleton export, no factory, no container. Each request creates fresh repo instances.
-
-**Drizzle access path:** Handlers call `ctx.get('database')` then pass `db` to `new Repo(db)`. Drizzle never called directly in handler — repo layer is correctly interposed. This is a positive signal.
-
-**Finding EM-BIL-003 (P1):** The absence of a service layer means:
-1. Business logic (BR-009, BR-011, BR-012 guards) is non-reusable across handlers
-2. No testable unit for business rules independent of HTTP context
-3. Adding a second consumer (e.g., a background job) would duplicate orchestration logic
-
-**Recommended remediation:**
-```typescript
-// services/api-ts/src/handlers/dental-billing/dental-billing.service.ts
-export class DentalBillingService {
-  constructor(
-    private invoiceRepo: DentalInvoiceRepository,
-    private paymentRepo: DentalPaymentRepository,
-    private planRepo: DentalPaymentPlanRepository,
-  ) {}
-
-  async createInvoice(db: DatabaseInstance, body: CreateDentalInvoiceBody, actorId: string) { ... }
-  async issueInvoice(db: DatabaseInstance, invoiceId: string, actorId: string) { ... }
-  async recordPayment(db: DatabaseInstance, invoiceId: string, body: RecordPaymentBody, actorId: string) { ... }
-  async voidInvoice(db: DatabaseInstance, invoiceId: string, actorId: string) { ... }
-}
-
-export const dentalBillingService = new DentalBillingService(
-  new DentalInvoiceRepository(db),
-  new DentalPaymentRepository(db),
-  new DentalPaymentPlanRepository(db),
-);
-```
+Identical pattern across all 15 handlers. Drizzle never called directly in handler (repo layer correctly interposed) — positive signal. DI pattern absent.
 
 ---
 
 ## Stabilization Plan
 
 ### Fix now (P0)
-- **EM-BIL-001** — Add `assertBranchAccess` (or require `branchId`) to `listDentalInvoices` when no branch filter is provided. Security gap: unauthenticated enumeration of all invoices. Options: (a) require `branchId` query param, or (b) derive accessible branches from session membership and scope query automatically.
+- **EM-BIL-001** — `listDentalInvoices`: require `branchId` query param OR call `assertBranchAccess` unconditionally. Unauthenticated cross-branch invoice enumeration is a data-isolation breach. Options: (a) require `branchId` (return 400 if absent), or (b) derive branches from session membership and scope query automatically.
 
 ### Fix before new work (P1)
-- **EM-BIL-002** — Add `'staff_full'` to `assertBranchRole` call in `issueDentalInvoice.ts:28`. One-line fix.
-- **EM-BIL-003** — Extract `DentalBillingService` class; move BR guards out of handlers. Medium effort — refactor across 7 write handlers.
-- **EM-BIL-004** — Implement domain event publishing for DE-007/008/009. Wire into `createDentalInvoice`, `recordDentalPayment` (paid path), and `voidDentalInvoice` using whatever event bus the platform provides.
-- **EM-BIL-005** — Change `throw new ValidationError(...)` → `throw new BusinessLogicError('No billable treatments found for this visit', 'NO_BILLABLE_TREATMENTS')` in `createDentalInvoice.ts:43`. One-line fix; ensures 422 not 400.
-- **EM-BIL-006** — Implement WF-042 fee schedule lookup handler. Requires TypeSpec definition + handler + repo query against dental-org fee schedule data.
+- **EM-BIL-002** — Add `'staff_full'` to `assertBranchRole` in `issueDentalInvoice.ts:28`. One-line fix.
+- **EM-BIL-005** — `createDentalInvoice.ts:43`: `throw new ValidationError(...)` → `throw new BusinessLogicError('No billable treatments found for this visit', 'NO_BILLABLE_TREATMENTS')`. Update `dental-billing.test.ts:321` and `billing-gate-http.test.ts:178` to assert `422`.
+- **EM-BIL-010** — `voidDentalInvoice.ts:48`: change `BusinessLogicError` (422) → `ConflictError` (409) for `ACTIVE_PAYMENT_PLAN`. Update both test assertions to `toBe(409)`.
+- **EM-BIL-003** — Extract `DentalBillingService`; move BR guards and orchestration out of handlers. Medium effort across 7 write handlers.
+- **EM-BIL-004** — Implement domain event publishing for DE-007/008/009 in `createDentalInvoice`, `recordDentalPayment` (paid path), `voidDentalInvoice` using platform event bus.
+- **EM-BIL-006** — Implement WF-042 fee schedule lookup handler. Requires TypeSpec + handler + repo query against dental-org fee schedule.
 
 ### Fix when touching (P2)
-- **EM-BIL-007** — Reconcile DOMAIN_MODEL SM-INVOICE state label `sent` with implementation label `issued`. Either update DOMAIN_MODEL to match code (simpler) or migrate DB enum from `issued` → `sent` (breaking schema change).
-- **EM-BIL-008** — Register `markOverdueInvoices()` with pg-boss scheduler. The repo method is complete; only the job registration is missing.
+- **EM-BIL-007** — Reconcile DOMAIN_MODEL `sent` vs code `issued`. Preferred: update DOMAIN_MODEL to `issued` (simpler, avoids DB migration).
+- **EM-BIL-008** — Register `markOverdueInvoices()` with pg-boss scheduler. Repo method complete; only job registration missing.
+- **EM-BIL-011** — Decide: if `paid → void` is intentional admin correction, add `paid` to MODULE_SPEC §8 FSM table with a note. If not, add guard `throw BusinessLogicError('Cannot void a paid invoice', 'INVALID_STATUS')`.
+- **EM-BIL-012** — Audit `invoice-lifecycle.test.ts:440`: if seeding DB directly (bypasses handler), add comment clarifying. If via handler, remove `taxCents: 1200` — handler hard-codes 0 per BR-010.
+- **EM-BIL-013** — Add stub `PATCH /dental/billing/invoices/:id/uncollectible` returning 501 `NOT_IMPLEMENTED`. Add test for AC-BIL-005.
 
 ### Track (P3)
-- **EM-BIL-009** — `sent → uncollectible` transition (BR-013) is explicitly deferred per spec. Track as future wave item; no action required before MVP.
+- **EM-BIL-009** — `markUncollectible` transition (BR-013, explicitly deferred per spec). No action until future wave.
 
 ---
 
 ## What's Next
 
-1. **Immediate:** Apply EM-BIL-001 (P0 auth gap) and EM-BIL-002 (role gap) — both are 1–3 line fixes.
-2. **This sprint:** EM-BIL-005 (error code), EM-BIL-008 (pg-boss job registration).
-3. **Before v2 feature work:** EM-BIL-003 (service layer extraction) + EM-BIL-004 (domain events).
-4. **Backlog:** EM-BIL-006 (WF-042 fee schedule), EM-BIL-007 (terminology sync).
+1. **Immediate (1–3 line fixes):** EM-BIL-001 (P0), EM-BIL-002, EM-BIL-005, EM-BIL-010.
+2. **This sprint:** EM-BIL-008 (pg-boss registration), EM-BIL-013 (501 stub + test).
+3. **Before v2 feature work:** EM-BIL-003 (service layer) + EM-BIL-004 (domain events) — best done together when platform event bus is established.
+4. **Backlog:** EM-BIL-006 (WF-042 fee schedule, requires dental-org coordination), EM-BIL-007 (terminology sync).
 
-> Next audit: run `/oli-enforce-module --module dental-patient` or `/oli-enforce-fix --module dental-billing` to generate patches for the P0/P1 findings.
+> Next: `/oli-enforce-fix --module dental-billing` to generate patches for P0/P1 findings.

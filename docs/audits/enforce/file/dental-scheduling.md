@@ -1,58 +1,212 @@
-# dental-scheduling — File Enforcement
-<!-- oli-enforce-file v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+# oli-enforce-file: dental-scheduling
+**Run ID:** run-6-strict-2026-05-29
+**Date:** 2026-05-29
+**Handler path:** `services/api-ts/src/handlers/dental-scheduling/`
+**Files checked:** 26
+**Finding prefix:** EF-SCH-NNN
+
+---
 
 ## Summary
-- Files scanned: 25 (source: 17, tests: 8)
-- Findings: 5 (P0: 0, P1: 2, P2: 2, P3: 1)
-- Service files present: `.service.ts` ❌, `.repo.ts` ✅ (2 repos: `dental-appointment.repo.ts`, `queue-item.repo.ts`)
+
+| Severity | Count |
+|----------|-------|
+| P0 | 2 |
+| P1 | 0 |
+| P2 | 1 |
+| P3 | 1 |
+
+**double_booking_prevented:** true (soft-warn on create, hard-block on reschedule — FR3.7 compliant)
+**checkin_emits_event:** false (DE-001 not in spec; spec publishes DE-010/DE-011; no domain event bus exists in codebase)
+
+---
+
+## Handler-by-Handler Analysis
+
+### createAppointment.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Called at line 29 |
+| B. Double-booking prevention | PASS | `repo.findOverlapping()` at line 50; soft-warn per FR3.7 |
+| C. Working hours gate | PASS | `isWithinWorkingHours` at line 43; walk-in bypass at line 39 |
+| D. State machine | N/A | Create always sets `scheduled` |
+| E. VisitCheckedIn event | N/A | Not this handler |
+| F. Service layer | PARTIAL | Direct repo instantiation; `NotificationService` injected via context |
+
+### updateAppointment.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Line 33 |
+| B. Double-booking (reschedule) | PASS | `findOverlapping` at lines 87-96; hard 409 per FR3.7 |
+| C. Working hours gate | PASS | Re-validated when `scheduledAt` changes (lines 80-85) |
+| D. State machine | PASS | `APPOINTMENT_TRANSITIONS` checked at lines 37-41 |
+| E. VisitCheckedIn event | N/A | Not this handler |
+| F. Service layer | PARTIAL | Direct repo instantiation |
+
+### checkInAppointment.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Line 37 |
+| B. Double-booking | N/A | Not applicable to check-in |
+| C. Working hours gate | N/A | Check-in, not booking |
+| D. State machine | PASS | `APPOINTMENT_TRANSITIONS` checked at line 39 |
+| E. VisitCheckedIn event (DE-001) | MISS | No domain event published; MODULE_SPEC 10b lists DE-010/DE-011 only (DE-001 not in spec); check-in does not publish any domain event |
+| F. Service layer | PARTIAL | Calls `createVisit`/`findInProgressVisitByPatient` from `visit.service` (correct cross-module pattern); appointment repo instantiated directly |
+
+### cancelAppointment.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| D. State machine | PASS | `APPOINTMENT_TRANSITIONS` checked before cancel |
+| F. Service layer | PARTIAL | Direct repo instantiation |
+
+### listAppointments.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| F. Service layer | PARTIAL | Direct repo |
+
+### listQueueBoard.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| F. Service layer | PARTIAL | Direct repo |
+
+### createQueueItem.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| D. State machine | N/A | Defaults to `waiting` |
+| F. Service layer | PARTIAL | Direct repo |
+
+### updateQueueItemStatus.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Line 29 |
+| D. State machine | PASS | `QUEUE_ITEM_FSM` enforced at lines 31-37 |
+| F. Service layer | PARTIAL | Direct repo |
+
+### workingHours.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| F. Service layer | PARTIAL | Direct DB facade call |
+
+### getAppointment.ts
+| Check | Result | Note |
+|-------|--------|------|
+| A. assertBranchAccess | PASS | Present |
+| F. Service layer | PARTIAL | Direct repo |
+
+---
 
 ## Findings
 
-| ID | Sev | Description | File | Line |
-|----|-----|-------------|------|------|
-| EF-SCH-001 | P1 | No `.service.ts` — `updateAppointment.ts` (101 lines) and `checkInAppointment.ts` (68 lines) contain complex orchestration including FSM enforcement, double-booking detection, working-hours validation, visit creation, and notification dispatch. This logic should live in a service layer, not directly in handlers. | `updateAppointment.ts`, `checkInAppointment.ts`, `createAppointment.ts` | — |
-| EF-SCH-002 | P1 | `workingHours.ts` (137 lines) uses camelCase filename for a multi-word concept. Convention requires `kebab-case` for multi-word handler files (`working-hours.ts`). Additionally the file bundles both GET and PUT handlers (2 operations, 137 lines) — should be split or at minimum renamed. | `workingHours.ts` | — |
-| EF-SCH-003 | P2 | `repos/appointment-patient.facade.ts` imports cross-module schemas: `@/handlers/patient/repos/patient.schema` and `@/handlers/person/repos/person.schema`. Direct cross-module schema imports at the repo/facade layer are a boundary violation. Should access patient data via a service abstraction. | `repos/appointment-patient.facade.ts` | 11–12 |
-| EF-SCH-004 | P2 | `utils/assert-branch-access.ts` is a 2-line stub file. Either inline the import at the call sites or implement properly. A 2-line re-export file adds navigation overhead with no encapsulation benefit. | `utils/assert-branch-access.ts` | 1–2 |
-| EF-SCH-005 | P3 | No `.test.ts` for `workingHours.ts` handler functions directly — `dental-scheduling.working-hours.test.ts` is an integration test, not a unit test of the working-hours helpers in isolation. Low risk but noted. | `workingHours.ts` | — |
+### EF-SCH-001 — P0: Domain events DE-010 and DE-011 not published
 
-## Notes
+**Severity:** P0
+**Files:** `createAppointment.ts`, `cancelAppointment.ts`
+**Spec ref:** MODULE_SPEC §10b
 
-- No direct `db.insert/select/update/delete` in handler files — all DB ops route through repo classes. ✅
-- No cross-module schema imports in handler files (only in facade). ✅
-- No files exceed 500 lines. ✅
-- Largest non-test file is `dental-appointment.repo.ts` at 186 lines — within limits. ✅
-- Handler files are individually small (29–101 lines); no single handler exceeds 300 lines. ✅
-- Strong test coverage: 8 test files including property-based FSM tests, acceptance tests, and notification tests. ✅
-- F2 gap: two repos exist; missing `.service.ts` means FSM logic, notification dispatch, and working-hours enforcement are handled inside handlers directly. A `dental-scheduling.service.ts` would centralize this.
+MODULE_SPEC §10b declares:
+- DE-010 `AppointmentBooked` — published by `createAppointment`
+- DE-011 `AppointmentCancelled` — published by `cancelAppointment`
 
-## File Inventory
+Neither handler publishes a domain event. `createAppointment` fires `notifs.createNotification` (AC-NOTIF-01) as a notification side-effect only — not a domain event. No event bus, no structured domain event object is emitted anywhere in the module.
 
-| File | Lines | Role |
-|------|-------|------|
-| `dental-scheduling.test.ts` | 1040 | Integration test |
-| `dental-scheduling-transitions.test.ts` | 405 | FSM transition test |
-| `repos/dental-appointment.test.ts` | 362 | Repo unit test |
-| `dental-scheduling.working-hours.test.ts` | 326 | Working hours integration test |
-| `dental-queue.test.ts` | 321 | Queue integration test |
-| `acceptance.scheduling-workflows.test.ts` | 296 | Acceptance test |
-| `createAppointment.notif.test.ts` | 126 | Notification test |
-| `appointment.fsm.property.test.ts` | 92 | Property-based FSM test |
-| `repos/dental-appointment.repo.ts` | 186 | Repository ✅ |
-| `workingHours.ts` | 137 | Handler (naming violation P1, bundles GET+PUT) |
-| `updateAppointment.ts` | 101 | Handler (orchestration-heavy) |
-| `repos/appointment-patient.facade.ts` | 95 | Facade (cross-module imports — P2) |
-| `createAppointment.ts` | 82 | Handler |
-| `listAppointments.ts` | 69 | Handler |
-| `repos/dental-appointment.schema.ts` | 68 | Schema |
-| `checkInAppointment.ts` | 68 | Handler |
-| `repos/queue-item.repo.ts` | 65 | Repository ✅ |
-| `updateQueueItemStatus.ts` | 54 | Handler |
-| `cancelAppointment.ts` | 54 | Handler |
-| `createQueueItem.ts` | 43 | Handler |
-| `repos/queue-item.schema.ts` | 35 | Schema |
-| `getAppointment.ts` | 29 | Handler |
-| `listQueueBoard.ts` | 26 | Handler |
-| `queue-item-validators.ts` | 23 | Validators |
-| `repos/operatory.schema.ts` | 17 | Schema |
-| `utils/assert-branch-access.ts` | 2 | Stub (P2) |
+**Impact:** Cross-module consumers (audit, notifs pipeline, future analytics) cannot react to appointment lifecycle changes via the event system.
+
+**Fix:** Publish DE-010 in `createAppointment` post-save and DE-011 in `cancelAppointment` post-cancel. Use the project's domain event bus pattern consistent with `ARCHITECTURE.md`. Payload: `{ appointmentId, branchId, patientId, dentistMemberId, timestamp }`.
+
+---
+
+### EF-SCH-002 — P0: No service layer — all handlers instantiate repos directly
+
+**Severity:** P0
+**Files:** All 9 handler files
+**Spec ref:** MODULE_SPEC §20 AI Instructions, ARCHITECTURE.md F2 baseline (run-5)
+
+Every handler constructs `new DentalAppointmentRepository(db)` and `new QueueItemRepository(db)` inline. No `DentalSchedulingService` class exists. The F2 service-layer/DI baseline requires a service layer between handler and repo for testability and DI.
+
+`checkInAppointment` correctly delegates to `visit.service` for cross-module work — the same pattern must apply within the module.
+
+**Impact:** Handlers cannot be unit-tested without a real DB. Business logic scattered across handlers. Violates F2 service-layer baseline.
+
+**Fix:** Create `services/api-ts/src/handlers/dental-scheduling/dental-scheduling.service.ts` with methods: `createAppointment`, `rescheduleAppointment`, `checkInAppointment`, `cancelAppointment`, `listAppointments`, `getAppointment`. Inject via `ctx.get('schedulingService')` or constructor injection matching other modules.
+
+---
+
+### EF-SCH-003 — P2: `cancelAppointment` reads body via raw `ctx.req.json()` instead of validated body
+
+**Severity:** P2
+**File:** `cancelAppointment.ts`
+**Spec ref:** CONTRIBUTING.md validator pattern
+
+The handler uses `ctx.req.valid('json')` for params but reads the cancellation reason via raw `await ctx.req.json()` inside a try/catch. This bypasses Zod validator middleware and risks a double-body-read issue (Hono body stream consumed once).
+
+**Fix:** Add `zValidator('json', CancelAppointmentBody)` in route registration; use `ctx.req.valid('json')` consistently.
+
+---
+
+### EF-SCH-004 — P3: `checkInAppointment` active-visit check is outside transaction (TOCTOU)
+
+**Severity:** P3
+**File:** `checkInAppointment.ts` lines 45-48
+**Spec ref:** MODULE_SPEC §13 Edge Cases EC7
+
+`findInProgressVisitByPatient` runs before the DB transaction block. A concurrent request could create a visit for the same patient between this check and the transaction, producing duplicate active visits.
+
+**Fix:** Move `findInProgressVisitByPatient` inside the `db.transaction` block, or add a unique partial index on `dental_visit(patient_id) WHERE status NOT IN ('completed','cancelled')`.
+
+---
+
+## Test Coverage Assessment
+
+| Area | Covered | Notes |
+|------|---------|-------|
+| FR3.7 soft-warn double-booking on create | PASS | `dental-scheduling.test.ts` lines 553-581 |
+| FR3.7 hard-block double-booking on reschedule | PASS | Lines 1003-1028 |
+| Working hours gate (OUTSIDE_WORKING_HOURS) | PASS | `dental-scheduling.working-hours.test.ts` |
+| Walk-in bypass | PASS | Covered in working-hours test |
+| State machine FSM (appointment) | PASS | `appointment.fsm.property.test.ts` + `dental-scheduling-transitions.test.ts` |
+| Queue item FSM | PASS | `dental-queue.test.ts` |
+| Check-in → visit creation | PASS | `dental-scheduling.test.ts` lines 500+ |
+| Domain event publication (DE-010/DE-011) | MISS | No test; events not implemented |
+| Service layer DI | MISS | No service class exists |
+| cancelAppointment body parse edge case | PARTIAL | Happy-path covered; double-read not tested |
+
+---
+
+## File List (26 files checked)
+
+```
+services/api-ts/src/handlers/dental-scheduling/
+├── acceptance.scheduling-workflows.test.ts
+├── appointment.fsm.property.test.ts
+├── cancelAppointment.ts
+├── checkInAppointment.ts
+├── createAppointment.notif.test.ts
+├── createAppointment.ts
+├── createQueueItem.ts
+├── dental-queue.test.ts
+├── dental-scheduling-transitions.test.ts
+├── dental-scheduling.test.ts
+├── dental-scheduling.working-hours.test.ts
+├── getAppointment.ts
+├── listAppointments.ts
+├── listQueueBoard.ts
+├── queue-item-validators.ts
+├── repos/
+│   ├── appointment-patient.facade.ts
+│   ├── dental-appointment.repo.ts
+│   ├── dental-appointment.schema.ts
+│   ├── dental-appointment.test.ts
+│   ├── operatory.schema.ts
+│   ├── queue-item.repo.ts
+│   └── queue-item.schema.ts
+├── updateAppointment.ts
+├── updateQueueItemStatus.ts
+├── utils/
+│   └── assert-branch-access.ts
+└── workingHours.ts
+```

@@ -1,29 +1,42 @@
 # dental-perio — Module Enforcement
-<!-- oli-enforce-module v1.0 | run: run-5-f2-service-layer-di | 2026-05-28 -->
+<!-- oli-enforce-module v1.0 | run: run-6-strict-2026-05-29 | 2026-05-29 -->
 
 ## Summary
 
-- **Findings:** 10 (P0: 0, P1: 3, P2: 5, P3: 2)
+- **Findings:** 11 (P0: 0, P1: 4, P2: 5, P3: 2)
 - **Service-Layer Pattern:** ABSENT (`.repo.ts` present; no `.service.ts`)
-- **Compliance Score:** 41/100
-- **vs Prior Run (2026-05-27):** Prior BLOCKERs BL-01/BL-02 (wrong HTTP codes) persist as P2. Prior WR-04 (locked cascade) promoted to P1. F2 focus surfaces two new P1s: DI violation (EM-PER-002) and deep pocket threshold mismatch (EM-PER-003). WR-01 (staff_scheduling read access) downgraded — spec cross-check shows `getPerioChart` and `getVisitPerioChart` admit `staff_full` which is correct; `staff_scheduling` is the undeclared extension.
+- **Compliance Score:** 38/100
+- **vs Prior Run (run-5, 2026-05-28):** All 10 run-5 findings KNOWN/unchanged. +1 NEW P1 (EM-PER-011): `missing` tooth flag column absent from `perio_tooth_reading` schema — spec §13 edge case requires it. Score −3 due to stricter checks surfacing schema gap.
 
 ---
 
 ## Findings
 
-| ID | Sev | Description | File | Line | Spec Ref |
-|----|-----|-------------|------|------|----------|
-| EM-PER-001 | **P1** | `completed→locked` state transition unimplemented — no cascade handler locks perio chart when parent visit is locked; `perio.chart.locked` event never emitted | `dental-perio/` (missing `lockPerioChartByVisit.ts`) | — | §8 State Transitions, §10b Domain Events |
-| EM-PER-002 | **P1** | **F2 DI violation** — no `.service.ts` file; business logic (BR-P01/P02/P05/P07, summary stat computation) lives inline in all 5 handlers; repos instantiated per-request via `new PerioChartRepository(db)` — not injectable or mockable without real DB | `createPerioChart.ts:48`, `upsertToothReading.ts:44,56`, `completePerioChart.ts:38,48`, `getPerioChart.ts:25,38`, `getVisitPerioChart.ts:38,45` | 48 | F2 Service-Layer/DI |
-| EM-PER-003 | **P1** | Deep pocket threshold mismatch — `DEEP_POCKET_THRESHOLD_MM = 5` (depth ≥5 counted); spec WF-P02 color coding defines ≥6 mm = red (severe); clinical threshold must be ≥6 mm | `completePerioChart.ts` | 25 | §2 Domain Terms, WF-P02 color coding |
-| EM-PER-004 | P2 | BR-P01 duplicate chart: `createPerioChart` throws `BusinessLogicError` → 422 instead of spec-required 409 Conflict | `createPerioChart.ts` | 57 | API_CONTRACTS POST → 409 `PERIO_CHART_DUPLICATE` |
-| EM-PER-005 | P2 | `completePerioChart` already-completed guard returns 422 instead of spec-required 409 | `completePerioChart.ts` | 40 | API_CONTRACTS POST `:id/complete` → 409 |
-| EM-PER-006 | P2 | `hygienist` role admitted to write operations (create/upsert/complete) — undeclared in §6 Permissions (only `dentist_owner`, `dentist_associate` listed for writes) | `createPerioChart.ts:39`, `upsertToothReading.ts:53`, `completePerioChart.ts:44` | 39 | §6 Permissions |
-| EM-PER-007 | P2 | Domain events `perio.chart.created` and `perio.chart.completed` are Pino log entries only — not published to `dental-audit` event bus; audit consumer cannot observe perio events | `createPerioChart.ts`, `completePerioChart.ts` | — | §10b Domain Events |
-| EM-PER-008 | P2 | `getPerioChart` (GET `/dental/perio-charts/:chartId`) missing from `dental-perio-coverage.test.ts` — only 4 of 5 endpoints tested | `dental-perio-coverage.test.ts` | — | §12 Test Expectations |
-| EM-PER-009 | P3 | No Hurl contract tests for dental-perio — §12 requires scenarios for all 5 endpoints (happy path + error paths) | `specs/api/tests/contract/` (missing) | — | §12 Test Expectations |
-| EM-PER-010 | P3 | WF-P05 Print perio chart — no export/print endpoint; not annotated as deferred in implementation | `dental-perio/` (missing) | — | WF-P05 |
+| ID | Sev | Run | Description | File | Line | Spec Ref |
+|----|-----|-----|-------------|------|------|----------|
+| EM-PER-001 | **P1** | KNOWN | `completed→locked` state transition unimplemented — no cascade handler locks perio chart when parent visit is locked; `perio.chart.locked` event never emitted | `dental-perio/` (missing `lockPerioChartByVisit.ts`) | — | §8 State Transitions, §10b Domain Events |
+| EM-PER-002 | **P1** | KNOWN | **F2 DI violation** — no `.service.ts` file; business logic (BR-P01/P02/P05/P07, summary stat computation) lives inline in all 5 handlers; repos instantiated per-request via `new PerioChartRepository(db)` — not injectable or mockable without real DB | `createPerioChart.ts:48`, `upsertToothReading.ts:44,56`, `completePerioChart.ts:38,48`, `getPerioChart.ts:25,38`, `getVisitPerioChart.ts:38,45` | 48 | F2 Service-Layer/DI |
+| EM-PER-003 | **P1** | KNOWN | Deep pocket threshold mismatch — `DEEP_POCKET_THRESHOLD_MM = 5` (depth ≥5 counted); spec WF-P02 color coding defines ≥6 mm = red (severe); clinical threshold must be ≥6 mm | `completePerioChart.ts:25` | 25 | §2 Domain Terms, WF-P02 color coding |
+| EM-PER-011 | **P1** | **NEW** | `missing` tooth flag absent from schema — spec §13 requires `missing: true` column on `dental_perio_tooth_reading` to skip depth/site validation for extracted teeth; column absent from `repos/perio-reading.schema.ts` and DB migration; `upsertToothReading` has no missing-tooth bypass path | `repos/perio-reading.schema.ts` | — | §13 Edge Cases |
+| EM-PER-004 | P2 | KNOWN | BR-P01 duplicate chart: `createPerioChart` throws `BusinessLogicError` → 422 instead of spec-required 409 Conflict | `createPerioChart.ts:57` | 57 | §15 Error Handling — CHART_EXISTS → 409 |
+| EM-PER-005 | P2 | KNOWN | `completePerioChart` already-completed guard returns 422 instead of spec-required 409 | `completePerioChart.ts:40` | 40 | §15 Error Handling — POST `:id/complete` → 409 |
+| EM-PER-006 | P2 | KNOWN | `hygienist` role admitted to write operations (create/upsert/complete) — undeclared in §6 Permissions (only `dentist_owner`, `dentist_associate` listed for writes); no spec update with justification | `createPerioChart.ts:42`, `upsertToothReading.ts:53`, `completePerioChart.ts:46` | 42 | §6 Permissions |
+| EM-PER-007 | P2 | KNOWN | Domain events `perio.chart.created` and `perio.chart.completed` are Pino log entries only — not published to `dental-audit` event bus; audit consumer cannot observe perio events | `createPerioChart.ts`, `completePerioChart.ts` | — | §10b Domain Events |
+| EM-PER-008 | P2 | KNOWN | `getPerioChart` (GET `/dental/perio-charts/:chartId`) missing from `dental-perio-coverage.test.ts` — only 4 of 5 endpoints tested | `dental-perio-coverage.test.ts` | — | §12 Test Expectations |
+| EM-PER-009 | P3 | KNOWN | No Hurl contract tests for dental-perio — §12 requires scenarios for all 5 endpoints (happy path + error paths) | `specs/api/tests/contract/` (missing) | — | §12 Test Expectations |
+| EM-PER-010 | P3 | KNOWN | WF-P05 Print perio chart — no export/print endpoint; not annotated as deferred in implementation | `dental-perio/` (missing) | — | WF-P05 |
+
+---
+
+## Strict Checks (run-6)
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| All 6 sites stored per tooth (BM/BC/BD/LM/LC/LD) | **PASS** | 6 depth + 6 BOP columns per row in `perio_tooth_reading`; matches §7 spec |
+| UNIQUE constraint on (chartId, toothNumber, site) | **PASS (by design)** | Design stores 6 sites as columns on 1 row/tooth — unique is `(chartId, toothNumber)`, correct per spec §7 column-per-site model |
+| Print/export endpoint exists | **FAIL** | EM-PER-010 (P3, KNOWN) — WF-P05 not implemented |
+| `missing` tooth flag in schema | **FAIL** | EM-PER-011 (P1, NEW) — column absent; §13 requires it |
+| `in_progress` state | **PASS** | Spec §8 diagram shows only 3 states: draft/completed/locked — code matches |
 
 ---
 
@@ -50,6 +63,7 @@
 | BR-P05 | Dentist role required → 403 | PARTIAL | EM-PER-006 (hygienist undeclared) |
 | BR-P06 | Tooth reading upsert idempotent | PASS | ON CONFLICT upsert in `perio-reading.repo.ts` |
 | BR-P07 | Min 16 readings to complete | PASS | `MIN_READINGS_FOR_COMPLETE = 16` enforced |
+| Missing tooth flag | Skip validation for extracted tooth | FAIL | EM-PER-011 (column absent in schema) |
 | Deep pocket threshold | ≥6 mm = severe (WF-P02 spec) | FAIL | EM-PER-003 (code uses ≥5) |
 
 ---
@@ -197,6 +211,8 @@ No `tenant_id` column on perio tables (consistent with project-wide branch-scope
 
 **EM-PER-003** — Change `DEEP_POCKET_THRESHOLD_MM` from `5` to `6` in `completePerioChart.ts:25`. Update repo test expected `deepPocketCount` value.
 
+**EM-PER-011** — Add `missing: boolean().notNull().default(false)` column to `dentalPerioToothReadings` in `repos/perio-reading.schema.ts`; generate migration; add bypass in `upsertToothReading` to skip depth/FDI validation when `body.missing === true`.
+
 ### Fix Before New Perio Work — P2
 
 **EM-PER-004** — Use `ConflictError` (409) for duplicate chart, not `BusinessLogicError` (422). Fix companion test assertion.
@@ -219,11 +235,11 @@ No `tenant_id` column on perio tables (consistent with project-wide branch-scope
 
 ## What's Next
 
-- **Immediate:** EM-PER-002 (F2 service extraction) + EM-PER-003 (threshold fix) — both mechanical, low-risk changes.
-- **Before v1.5 merge:** EM-PER-001 (locked cascade) blocks full state machine compliance and the `perio.chart.locked` audit trail.
-- **Before ship:** EM-PER-004/005 (HTTP status codes) fix client-facing contract.
-- **Route to:** `run-6-*` should verify F2 service extraction complete and EM-PER-001 cascade wired.
+- **Immediate:** EM-PER-003 (threshold fix — 1 line) + EM-PER-011 (missing column — schema + migration + handler bypass).
+- **Before v1.5 merge:** EM-PER-001 (locked cascade) blocks state machine compliance; EM-PER-002 (F2 service extraction) blocks testability.
+- **Before ship:** EM-PER-004/005 (HTTP 409 codes) fix client-facing contract.
+- **Next run:** run-7 should verify EM-PER-003 + EM-PER-011 resolved; track F2 service extraction progress.
 
 ---
 
-_Enforced by: oli-enforce-module v1.0 | run: run-5-f2-service-layer-di | 2026-05-28_
+_Enforced by: oli-enforce-module v1.0 | run: run-6-strict-2026-05-29 | 2026-05-29_
