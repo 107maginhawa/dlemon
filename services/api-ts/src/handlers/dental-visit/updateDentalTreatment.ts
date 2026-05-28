@@ -12,11 +12,11 @@ import { TreatmentRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
 import type { DentalTreatment, DentalTreatmentStatus } from './repos/treatment.schema';
 import { TREATMENT_TRANSITIONS } from './repos/treatment.schema';
-import { ConsentFormRepository } from '@/handlers/dental-clinical/repos/consent-form.repo';
+import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/clinical-visit.facade';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { UpdateDentalTreatmentBody, UpdateDentalTreatmentParams } from '@/generated/openapi/validators';
 import { logAuditEvent } from '@/core/audit-logger';
-import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 
 export async function updateDentalTreatment(
   ctx: ValidatedContext<UpdateDentalTreatmentBody, never, UpdateDentalTreatmentParams>
@@ -59,9 +59,7 @@ export async function updateDentalTreatment(
 
   // Require signed consent before marking a treatment as performed (P0-003)
   if (body.status === 'performed') {
-    const consentRepo = new ConsentFormRepository(db);
-    const consents = await consentRepo.findMany({ visitId: treatment.visitId });
-    if (!consents.some(c => c.signed)) {
+    if (!await hasSignedConsentForVisit(db, treatment.visitId)) {
       throw new BusinessLogicError(
         'Signed consent form required before marking treatment as performed',
         'TREATMENT_CONSENT_REQUIRED',
@@ -99,7 +97,7 @@ export async function updateDentalTreatment(
   const updated = await repo.update(treatmentId, patch);
 
   if (body.status === 'performed' && visit) {
-    const branchForAudit = await new BranchRepository(db).findOneById(visit.branchId);
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
     await logAuditEvent(db, ctx.get('logger'), {
       personId: user.id,
       tenantId: branchForAudit?.organizationId ?? visit.branchId,

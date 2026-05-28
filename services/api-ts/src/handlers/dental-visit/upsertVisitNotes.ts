@@ -4,14 +4,13 @@
  * POST /dental/visits/{visitId}/notes
  */
 
-import { eq, and } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitNotesRepository } from './repos/treatment.repo';
 import { VisitRepository } from './repos/visit.repo';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { UpsertVisitNotesBody, UpsertVisitNotesParams } from '@/generated/openapi/validators';
 
@@ -37,16 +36,7 @@ export async function upsertVisitNotes(
   }
 
   // Resolve membership ID from user's personId + visit's branchId
-  const [membership] = await db
-    .select({ id: dentalMemberships.id })
-    .from(dentalMemberships)
-    .where(and(
-      eq(dentalMemberships.personId, user.id),
-      eq(dentalMemberships.branchId, visit.branchId),
-      eq(dentalMemberships.status, 'active'),
-    ))
-    .limit(1);
-
+  const membership = await getActiveMembershipId(db, user.id, visit.branchId);
   if (!membership) throw new ForbiddenError('No active membership in this branch');
 
   const repo = new VisitNotesRepository(db);

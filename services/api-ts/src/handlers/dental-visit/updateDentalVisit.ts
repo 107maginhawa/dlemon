@@ -12,12 +12,11 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from './repos/visit.repo';
 import { VISIT_TRANSITIONS, type DentalVisitStatus } from './repos/visit.schema';
 import { TreatmentRepository, VisitNotesRepository } from './repos/treatment.repo';
-import { ConsentFormRepository } from '@/handlers/dental-clinical/repos/consent-form.repo';
-import { AttachmentRepository } from '@/handlers/dental-clinical/repos/attachment.repo';
+import { countAttachmentsForVisit, hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/clinical-visit.facade';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { UpdateDentalVisitBody, UpdateDentalVisitParams } from '@/generated/openapi/validators';
 import { logAuditEvent } from '@/core/audit-logger';
-import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 
 export async function updateDentalVisit(
   ctx: ValidatedContext<UpdateDentalVisitBody, never, UpdateDentalVisitParams>
@@ -87,8 +86,7 @@ export async function updateDentalVisit(
     const notesRepo = new VisitNotesRepository(db);
     const notes = await notesRepo.findByVisit(visitId);
 
-    const attachmentRepo = new AttachmentRepository(db);
-    const attachments = await attachmentRepo.findMany({ visitId });
+    const attachmentCount = await countAttachmentsForVisit(db, visitId);
 
     // BR-005: Auto-discard an empty visit (no treatments, no notes, no attachments).
     // When the session ends with nothing recorded, discard instead of completing.
@@ -96,7 +94,7 @@ export async function updateDentalVisit(
     // SOAP content rather than mere existence of the row.
     const hasNoTreatments = treatments.length === 0;
     const hasNoNotes = !notes || (!notes.subjective && !notes.objective && !notes.assessment && !notes.plan);
-    const hasNoAttachments = attachments.length === 0;
+    const hasNoAttachments = attachmentCount === 0;
 
     if (hasNoTreatments && hasNoNotes && hasNoAttachments) {
       const discardedRaw = await repo.discard(visitId);
@@ -112,9 +110,7 @@ export async function updateDentalVisit(
       throw new BusinessLogicError('Visit has incomplete treatments', 'VISIT_HAS_OPEN_TREATMENTS');
     }
 
-    const consentRepo = new ConsentFormRepository(db);
-    const consents = await consentRepo.findMany({ visitId });
-    if (!consents.some(c => c.signed)) {
+    if (!await hasSignedConsentForVisit(db, visitId)) {
       throw new BusinessLogicError('Signed consent form required before completing visit', 'VISIT_CONSENT_REQUIRED');
     }
 
@@ -127,7 +123,7 @@ export async function updateDentalVisit(
     if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
     const updated = patch.chiefComplaint ? await repo.findOneById(visitId) ?? completedRaw : completedRaw;
     log?.info({ requestId, action: 'dental_visit_complete', visitId, by: user.id }, 'Visit completed');
-    const branchForAudit = await new BranchRepository(db).findOneById(visit.branchId);
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
     await logAuditEvent(db, log, {
       personId: user.id,
       tenantId: branchForAudit?.organizationId ?? visit.branchId,
