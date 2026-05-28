@@ -39,17 +39,17 @@ import {
   GetDentalPatientSafetyFloorParams,
   GetDentalPatientStatementParams,
 } from '@/generated/openapi/validators';
-import { createDentalPatient } from './createDentalPatient';
-import { listDentalPatients } from './listDentalPatients';
-import { getDentalPatient } from './getDentalPatient';
-import { updateDentalPatient } from './updateDentalPatient';
-import { archiveDentalPatient } from './archiveDentalPatient';
-import { restoreDentalPatient } from './restoreDentalPatient';
-import { bulkArchiveDentalPatients } from './bulkArchiveDentalPatients';
-import { exportDentalPatients } from './exportDentalPatients';
+import { createDentalPatient } from './identity/createDentalPatient';
+import { listDentalPatients } from './identity/listDentalPatients';
+import { getDentalPatient } from './identity/getDentalPatient';
+import { updateDentalPatient } from './identity/updateDentalPatient';
+import { archiveDentalPatient } from './identity/archiveDentalPatient';
+import { restoreDentalPatient } from './identity/restoreDentalPatient';
+import { bulkArchiveDentalPatients } from './identity/bulkArchiveDentalPatients';
+import { exportDentalPatients } from './identity/exportDentalPatients';
 import { listFollowUpNotes, addFollowUpNote } from './followUpNotes';
-import { getDentalPatientSafetyFloor } from './getDentalPatientSafetyFloor';
-import { getDentalPatientStatement } from './getDentalPatientStatement';
+import { getDentalPatientSafetyFloor } from './identity/getDentalPatientSafetyFloor';
+import { getDentalPatientStatement } from './identity/getDentalPatientStatement';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { patients } from '../patient/repos/patient.schema';
 import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';

@@ -10,7 +10,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 

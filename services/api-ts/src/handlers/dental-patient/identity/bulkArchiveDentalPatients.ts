@@ -10,7 +10,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { BulkArchiveDentalPatientsBody } from '@/generated/openapi/validators';
 

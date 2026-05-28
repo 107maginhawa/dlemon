@@ -11,9 +11,9 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
+import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
 import { eq, and } from 'drizzle-orm';
 import type { GetDentalPatientSafetyFloorParams } from '@/generated/openapi/validators';
 

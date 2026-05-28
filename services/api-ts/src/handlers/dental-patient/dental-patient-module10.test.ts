@@ -19,7 +19,7 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
-import { importPatients } from './importPatients';
+import { importPatients } from './identity/importPatients';
 import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });

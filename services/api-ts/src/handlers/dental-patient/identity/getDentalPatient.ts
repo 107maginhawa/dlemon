@@ -9,11 +9,11 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, desc } from 'drizzle-orm';
-import { dentalVisits } from '../dental-visit/repos/visit.schema';
-import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { dentalInvoices } from '../../dental-billing/repos/dental-invoice.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { GetDentalPatientParams } from '@/generated/openapi/validators';
 

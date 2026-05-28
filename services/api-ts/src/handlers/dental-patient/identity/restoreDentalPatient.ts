@@ -1,18 +1,18 @@
 /**
- * archiveDentalPatient — POST /dental/patients/:id/archive
+ * restoreDentalPatient — POST /dental/patients/:id/restore
  *
- * FR2.7: Archive patient with EC1 guard (block if active payment plan).
+ * FR2.7: Restore an archived patient back to active status.
  */
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators';
+import type { RestoreDentalPatientParams } from '@/generated/openapi/validators';
 
-export async function archiveDentalPatient(
-  ctx: ValidatedContext<never, never, ArchiveDentalPatientParams>
+export async function restoreDentalPatient(
+  ctx: ValidatedContext<never, never, RestoreDentalPatientParams>
 ) {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
@@ -31,16 +31,16 @@ export async function archiveDentalPatient(
     await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
   }
 
-  const result = await repo.archivePatient(patientId);
+  const result = await repo.restorePatient(patientId);
 
   if (!result.success) {
     if (result.reason === 'Patient not found') {
       throw new NotFoundError(result.reason);
     }
-    throw new BusinessLogicError(result.reason ?? 'Cannot archive patient', 'ARCHIVE_BLOCKED');
+    throw new BusinessLogicError(result.reason ?? 'Cannot restore patient', 'RESTORE_BLOCKED');
   }
 
-  logger?.info({ action: 'archiveDentalPatient', patientId, actorId: user.id }, 'Patient archived');
+  logger?.info({ action: 'restoreDentalPatient', patientId, actorId: user.id }, 'Patient restored');
 
   const updated = await repo.findOneById(patientId);
   return ctx.json(updated, 200);

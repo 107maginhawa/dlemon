@@ -8,11 +8,11 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalVisits } from '../dental-visit/repos/visit.schema';
-import { dentalInvoices, dentalInvoiceLineItems } from '../dental-billing/repos/dental-invoice.schema';
-import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
+import { dentalInvoices, dentalInvoiceLineItems } from '../../dental-billing/repos/dental-invoice.schema';
+import { dentalPayments } from '../../dental-billing/repos/dental-payment.schema';
 import { eq, desc } from 'drizzle-orm';
 import type { GetDentalPatientStatementParams } from '@/generated/openapi/validators';
 

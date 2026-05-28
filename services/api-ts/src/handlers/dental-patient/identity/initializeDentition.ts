@@ -11,9 +11,9 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { DentalChartRepository } from '../dental-visit/repos/dental-chart.repo';
-import { VisitRepository } from '../dental-visit/repos/visit.repo';
-import type { ToothChartState } from '../dental-visit/repos/dental-chart.schema';
+import { DentalChartRepository } from '../../dental-visit/repos/dental-chart.repo';
+import { VisitRepository } from '../../dental-visit/repos/visit.repo';
+import type { ToothChartState } from '../../dental-visit/repos/dental-chart.schema';
 import type { InitializeDentitionBody, InitializeDentitionParams } from '@/generated/openapi/validators';
 
 // ISO 3950 deciduous tooth numbers (primary dentition)

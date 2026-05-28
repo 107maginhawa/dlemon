@@ -21,8 +21,8 @@ import {
   ListPatientConditionsParams,
   ListPatientConditionsQuery,
 } from '@/generated/openapi/validators';
-import { listPatientVisits } from './listPatientVisits';
-import { listPatientConditions } from './listPatientConditions';
+import { listPatientVisits } from './identity/listPatientVisits';
+import { listPatientConditions } from './identity/listPatientConditions';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 

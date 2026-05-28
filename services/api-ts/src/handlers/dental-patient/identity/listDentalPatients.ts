@@ -9,12 +9,12 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
-import { BranchRepository } from '../dental-org/repos/branch.repo';
+import { PatientRepository } from '../../patient/repos/patient.repo';
+import { BranchRepository } from '../../dental-org/repos/branch.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { buildPaginationMeta } from '@/utils/query';
 import { sql, inArray } from 'drizzle-orm';
-import { dentalVisits } from '../dental-visit/repos/visit.schema';
+import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import type { ListDentalPatientsQuery } from '@/generated/openapi/validators';
 
 export async function listDentalPatients(

@@ -8,8 +8,8 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { PatientRepository } from '../patient/repos/patient.repo';
-import type { PatientWithPerson } from '../patient/repos/patient.schema';
+import { PatientRepository } from '../../patient/repos/patient.repo';
+import type { PatientWithPerson } from '../../patient/repos/patient.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';
 
