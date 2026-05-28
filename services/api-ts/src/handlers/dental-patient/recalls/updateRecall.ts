@@ -7,8 +7,8 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { RecallRepository } from './repos/recall.repo';
-import { RECALL_FSM, type RecallStatus } from './repos/recall.schema';
+import { RecallRepository } from '../repos/recall.repo';
+import { RECALL_FSM, type RecallStatus } from '../repos/recall.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateRecall(ctx: any): Promise<Response> {

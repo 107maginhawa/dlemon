@@ -53,9 +53,9 @@ import { listPatientContacts } from '@/handlers/dental-patient/contacts/listPati
 import { updatePatientContact } from '@/handlers/dental-patient/contacts/updatePatientContact';
 import { deletePatientContact } from '@/handlers/dental-patient/contacts/deletePatientContact';
 import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/utils/contact-validators';
-import { createRecall } from '@/handlers/dental-patient/createRecall';
-import { listPatientRecalls } from '@/handlers/dental-patient/listPatientRecalls';
-import { updateRecall } from '@/handlers/dental-patient/updateRecall';
+import { createRecall } from '@/handlers/dental-patient/recalls/createRecall';
+import { listPatientRecalls } from '@/handlers/dental-patient/recalls/listPatientRecalls';
+import { updateRecall } from '@/handlers/dental-patient/recalls/updateRecall';
 import { RecallParams, RecallRecallParams, CreateRecallBody, UpdateRecallBody } from '@/handlers/dental-patient/utils/recall-validators';
 import { createTreatmentPlan } from '@/handlers/dental-patient/createTreatmentPlan';
 import { listPatientTreatmentPlans } from '@/handlers/dental-patient/listPatientTreatmentPlans';

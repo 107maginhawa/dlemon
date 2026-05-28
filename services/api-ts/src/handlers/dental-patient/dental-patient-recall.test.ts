@@ -27,9 +27,9 @@ import {
   CreateRecallBody,
   UpdateRecallBody,
 } from './utils/recall-validators';
-import { createRecall } from './createRecall';
-import { listPatientRecalls } from './listPatientRecalls';
-import { updateRecall } from './updateRecall';
+import { createRecall } from './recalls/createRecall';
+import { listPatientRecalls } from './recalls/listPatientRecalls';
+import { updateRecall } from './recalls/updateRecall';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
