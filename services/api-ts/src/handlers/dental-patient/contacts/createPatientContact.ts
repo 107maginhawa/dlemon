@@ -7,7 +7,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { PatientContactRepository } from './repos/patient-contact.repo';
+import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { DatabaseInstance } from '@/core/database';
 

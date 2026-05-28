@@ -32,10 +32,10 @@ import {
   CreatePatientContactBody,
   UpdatePatientContactBody,
 } from './utils/contact-validators';
-import { createPatientContact } from './createPatientContact';
-import { listPatientContacts } from './listPatientContacts';
-import { updatePatientContact } from './updatePatientContact';
-import { deletePatientContact } from './deletePatientContact';
+import { createPatientContact } from './contacts/createPatientContact';
+import { listPatientContacts } from './contacts/listPatientContacts';
+import { updatePatientContact } from './contacts/updatePatientContact';
+import { deletePatientContact } from './contacts/deletePatientContact';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
