@@ -630,6 +630,25 @@ async function generateRegistry(paths: Record<string, PathItem>) {
   const registryEntries: string[] = [];
   const operationsByModule = new Map<string, string[]>();
 
+  // Detect duplicate operationIds across all modules
+  const allOperationIds: string[] = [];
+  for (const [, methods] of Object.entries(paths)) {
+    for (const [, operation] of Object.entries(methods)) {
+      if (operation.operationId) allOperationIds.push(operation.operationId);
+    }
+  }
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const id of allOperationIds) {
+    if (seen.has(id)) duplicates.push(id);
+    else seen.add(id);
+  }
+  if (duplicates.length > 0) {
+    console.error(`❌ Duplicate operationIds detected in OpenAPI spec: ${duplicates.join(', ')}`);
+    console.error('   Each operationId must map to exactly one handler. Fix the TypeSpec source.');
+    process.exit(1);
+  }
+
   // Group operations by module (tag)
   for (const [path, methods] of Object.entries(paths)) {
     for (const [method, operation] of Object.entries(methods)) {
