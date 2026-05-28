@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: "structural-remediation"
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-05-28T16:00:00.000Z"
+last_updated: "2026-05-28T09:32:27.019Z"
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 10
   total_plans: 28
-  completed_plans: 28
-  percent: 85
+  completed_plans: 27
+  percent: 77
 ---
 
 ## Current Position

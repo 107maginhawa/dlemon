@@ -1,4 +1,4 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-24 (G5+G6 complete) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
+<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-26 (G7+G8 planned — security + spec/UI) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
 
 # Dentalemon — Brownfield Execution Roadmap
 
@@ -20,6 +20,8 @@
 | G4 | Feature Delivery | Sequential (dependency) | new-feature | ✅ COMPLETE (merged 2026-05-18, commit 5f246e3) |
 | G5 | Future Features | Parallel safe | new-feature | ✅ COMPLETE (2026-05-24) |
 | G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ✅ COMPLETE (2026-05-24) |
+| G7 | Security Stabilization | Sequential (P0 safety) | P0–P1 | 🔴 not-started |
+| G8 | Spec & UI Completeness | Parallel safe | P1–P2 | 🔴 not-started |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -257,3 +259,95 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 | After G4-P1 | v1.4 Phase 1 done | Vertical TDD gate (all layers green) |
 | After G4-P2 | v1.4 complete | `/oli-magic --update` |
 | Graduation check | After G1+G2 | `/oli-magic --graduation` |
+| After G7 | Security closed | `/oli-audit-compliance --all` → `/oli-magic --update` |
+| After G8 | Spec+UI clean | `/oli-confidence-stack` → `/oli-magic --update` |
+
+---
+
+## Wave G7: Security Stabilization
+
+**Mode:** tdd
+**Status:** 🔴 not-started
+**Parallel:** NO — sequential (P0 security fixes must not conflict)
+**Depends on:** G1–G6 (all complete)
+**Source:** `docs/audits/mapping-audit/security-audit-findings.md` (2026-05-26)
+
+**Goal:** Close all P0 IDOR, hash-leak, and privilege-escalation gaps in dental-org before any new feature work.
+
+### Requirements
+
+- **G7-S1 [P0]:** Add `assertBranchAccess` to all `DentalMembershipManagement_*`, `DentalBranchManagement_*`, and `DentalOrganizationManagement_update` handlers — currently skipped, enabling cross-tenant writes for any authenticated user
+- **G7-S2 [P0]:** Strip `pinHash`, `securityAnswerHash`, `securityQuestion` from `DentalMembershipManagement_list` and `DentalMembershipManagement_deactivate` response rows — currently returned in plaintext
+- **G7-S3 [P0]:** Guard `updateMember` role changes — require `dentist_owner` role; `assertBranchAccess` alone allows `staff_full` → self-promote to `dentist_owner`
+- **G7-S4 [P1]:** Fix `recoverPin` — add `authMiddleware` (currently missing → always 401) AND fix schema mismatch (generated: `{securityQuestion, answer}` vs handler: `{answer, newPin}`)
+- **G7-S5 [P1]:** Add `/^\d{4,6}$/` digit regex to `SetPin`/`VerifyPin`/`ResetMemberPin` TypeSpec validators — currently allow any 4–8 char string
+- **G7-S6 [P1]:** Add cross-membership rate limiting — lockout is per-membership only; attacker can parallel-brute all members
+- **G7-S7 [P1]:** Commit `auth-security-hardening.test.ts` (currently untracked, not in CI) — wire to CI gate
+- **G7-S8 [P2]:** Remove `setPin.ts` (duplicate of `DentalMembershipManagement_setPin.ts`); only the latter is router-registered
+
+### Slices
+
+| # | Slice | Module | Classification | Size |
+|---|-------|--------|----------------|------|
+| G7-S1 | Add assertBranchAccess to DentalMembershipManagement_*/DentalBranchManagement_* | dental-org | stabilize-existing | M |
+| G7-S2 | Strip pinHash/securityAnswerHash from list/deactivate responses | dental-org | stabilize-existing | S |
+| G7-S3 | Guard role changes to dentist_owner only | dental-org | stabilize-existing | S |
+| G7-S4 | Fix recoverPin authMiddleware + schema | dental-org | stabilize-existing | S |
+| G7-S5 | Add digit regex to TypeSpec PIN validators | dental-org | stabilize-existing | S |
+| G7-S6 | Cross-membership rate limiting | dental-org | stabilize-existing | M |
+| G7-S7 | Commit + CI-wire auth-security-hardening.test.ts | dental-org | stabilize-existing | S |
+| G7-S8 | Remove duplicate setPin.ts | dental-org | stabilize-existing | XS |
+
+### Success Criteria
+- 0 P0 findings in re-run of security audit
+- `auth-security-hardening.test.ts` committed and in CI
+- All 8 slices have TDD proof (RED → GREEN test per slice)
+- `bun run typecheck` passes
+
+---
+
+## Wave G8: Spec & UI Completeness
+
+**Mode:** tdd
+**Status:** 🔴 not-started
+**Parallel:** YES — frontend slices (G8-S5/S6/S7) and spec slices (G8-S1/S2/S3/S4/S8) are independent
+**Depends on:** G7 (security must be clean first)
+**Source:** `docs/audits/mapping-audit/spec-compliance-audit.md` + `ui-compliance-audit.md` (2026-05-26)
+
+**Goal:** Close spec documentation gaps and reduce UI compliance debt (5.5→7.0 target).
+
+### Requirements
+
+**Spec gaps:**
+- **G8-S1 [P2]:** Add PIN endpoints (`set-pin`, `verify-pin`, `recover-pin`, `reset-pin`) to `dental-org` MODULE_SPEC §10 API table
+- **G8-S2 [P1]:** Write MODULE_SPEC for `handlers/emr/` (live, tested consultation-note module with zero spec)
+- **G8-S3 [P2]:** Document 5 undocumented `member_role` values (`hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only`) in spec + ROLE_PERMISSION_MATRIX
+- **G8-S4 [P2]:** Fix dental-audit route path mismatch (spec: `GET /dental/audit-events` vs handler JSDoc: `GET /dental/admin/audit`)
+- **G8-S8 [P2]:** Clarify pg-boss vs inline audit architecture — implement queue or document decision as ADR
+
+**UI gaps:**
+- **G8-S5 [P2]:** Replace raw `<input>`/`<button>`/`<select>` with shadcn equivalents — start with worst offenders: `soap-notes-sheet.tsx` (17 hits), `onboarding-wizard.tsx` (16), `appointment-modal.tsx` (12)
+- **G8-S6 [P2]:** Replace hardcoded `#FFE97D`/`#4A4018`/`rgba(255,233,125,…)` with `BRAND_GOLD` constant — `imaging-workspace.tsx` alone has 31 hits
+- **G8-S7 [P1]:** Add `isLoading`/`isError` states to `timeline-carousel.tsx` (VisitChartCard) and `pin-select.tsx` (missing loading while fetching members)
+
+### Slices
+
+| # | Slice | Module | Classification | Size |
+|---|-------|--------|----------------|------|
+| G8-S1 | PIN endpoints in dental-org §10 API table | dental-org | refactor-existing | S |
+| G8-S2 | MODULE_SPEC for handlers/emr/ | dental-emr | new-feature | L |
+| G8-S3 | Document 5 undocumented member_role values | dental-org | refactor-existing | S |
+| G8-S4 | Fix dental-audit route path mismatch | dental-audit | refactor-existing | XS |
+| G8-S5 | Replace raw HTML elements with shadcn (top-3 files) | UI | refactor-existing | L |
+| G8-S6 | Replace hardcoded brand colors with BRAND_GOLD | UI | refactor-existing | M |
+| G8-S7 | Add isLoading/isError to carousel + pin-select | UI | stabilize-existing | S |
+| G8-S8 | pg-boss vs inline audit ADR | dental-audit | refactor-existing | S |
+
+**Cross-module integration test required:** G8-S2 (emr module — verify against dental-clinical and dental-visit)
+
+### Success Criteria
+- 0 spec gaps for dental-org PIN surface in MODULE_SPEC §10
+- MODULE_SPEC exists for handlers/emr/ with ≥10 sections populated
+- `dental-audit` route path consistent between spec and handler
+- UI compliance score ≥ 7.0 (from 5.5)
+- `bun run typecheck` passes

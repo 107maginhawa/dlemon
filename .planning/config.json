@@ -60,8 +60,8 @@
     "rationale": "Dentist-facing clinical product: ≥9 required — treatment decisions, PHI, prescriptions, billing all carry clinical/legal risk"
   },
   "brownfield": {
-    "execution_state": "graduated",
-    "execution_state_updated": "2026-05-24",
-    "execution_state_rationale": "GRADUATED 9.0/10 (2026-05-21). v1.5 spec pipeline complete (2026-05-24): 70 UI blueprints + spec-consistency PASS. G5 (periodontal) is next execution wave."
+    "execution_state": "cycle_2",
+    "execution_state_updated": "2026-05-26",
+    "execution_state_rationale": "3x P0 security findings (IDOR, hash-leak, privilege-escalation) discovered in 2026-05-26 parallel audit. G7 (security) + G8 (spec/UI) waves added. Re-graduation after G7+G8 complete."
   }
 }
