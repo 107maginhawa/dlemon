@@ -1,8 +1,9 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
+import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import type { DentalBranchManagement_createBody, DentalBranchManagement_createParams } from '@/generated/openapi/validators';
 
 /**
@@ -10,6 +11,8 @@ import type { DentalBranchManagement_createBody, DentalBranchManagement_createPa
  *
  * Path: POST /dental/organizations/{orgId}/branches/
  * OperationId: DentalBranchManagement_create
+ *
+ * Security (EF-ORG-001): Only the org owner may add branches to an org.
  */
 export async function DentalBranchManagement_create(
   ctx: ValidatedContext<DentalBranchManagement_createBody, never, DentalBranchManagement_createParams>
@@ -21,6 +24,14 @@ export async function DentalBranchManagement_create(
   const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // EF-ORG-001: Verify caller owns the organization
+  const orgRepo = new OrganizationRepository(db, logger);
+  const org = await orgRepo.findOneById(orgId);
+  if (!org) throw new NotFoundError('Organization');
+  if (org.ownerPersonId !== user.id) {
+    throw new ForbiddenError('Only the organization owner may add branches');
+  }
 
   const repo = new BranchRepository(db, logger);
   const branch = await repo.createOne({

@@ -5,7 +5,7 @@ import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DentalMembershipManagement_deactivateBody, DentalMembershipManagement_deactivateParams } from '@/generated/openapi/validators';
 
 /**
@@ -34,13 +34,15 @@ export async function DentalMembershipManagement_deactivate(
   const existing = await repo.findOneById(membershipId);
   if (!existing) throw new NotFoundError('Membership');
 
-  // G7-S1: IDOR guard — org owners may deactivate; otherwise caller must be a branch member
+  // EF-ORG-004 / G7-S1: IDOR guard — org owners may deactivate any member;
+  // branch-level callers must hold the dentist_owner role (not just any active member).
   const branchRepo = new BranchRepository(db, logger);
   const branch = await branchRepo.findOneById(existing.branchId);
   const orgRepo = new OrganizationRepository(db, logger);
   const org = branch ? await orgRepo.findOneById(branch.organizationId) : null;
   if (org?.ownerPersonId !== user.id) {
-    await assertBranchAccess(db, user.id, existing.branchId);
+    // Branch-level path: caller must be dentist_owner of the target branch
+    await assertBranchRole(db, user.id, existing.branchId, ['dentist_owner']);
   }
 
   const membership = await repo.deactivate(membershipId);

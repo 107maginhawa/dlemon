@@ -112,6 +112,8 @@ import { InventoryBranchParams, InventoryItemParams, CreateInventoryItemBody, Up
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
+import { recoverPin } from '@/handlers/dental-org/pinRecovery';
+import { RecoverPinParams, RecoverPinBody } from '@/generated/openapi/validators';
 
 
 /**
@@ -453,6 +455,16 @@ export function createApp(config: Config): App {
   // Prometheus scrape endpoint - register BEFORE generated routes so it takes priority.
   // Auth via static bearer token (METRICS_TOKEN env var).
   app.get('/metrics', metricsHandler);
+
+  // EM-ORG-001: Shadow the generated recoverPin route (which lacks authMiddleware)
+  // with an authenticated version. Hono matches first-registered route, so this
+  // shadow takes priority over the generated routes registered below.
+  (app as any).post('/dental/org/members/:memberId/recover-pin',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', RecoverPinParams),
+    zValidator('json', RecoverPinBody),
+    recoverPin,
+  );
 
   // Register API routes
   registerOpenAPIRoutes(app as any);

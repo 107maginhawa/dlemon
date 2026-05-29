@@ -11,7 +11,7 @@ import { z } from 'zod';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, AppError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schema';
@@ -51,7 +51,8 @@ export async function createMember(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  await assertBranchAccess(db, user.id, resolvedBranchId);
+  // EF-ORG-003: Only dentist_owner may invite new staff members
+  await assertBranchRole(db, user.id, resolvedBranchId, ['dentist_owner']);
 
   const branchRepo = new BranchRepository(db, logger);
   const branch = await branchRepo.findOneById(resolvedBranchId);
