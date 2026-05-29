@@ -9,7 +9,7 @@ import {
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
 import { ProviderRepository } from '../provider/repos/provider.repo';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { getPatientForEMR } from '../patient/repos/patient-emr.facade';
 import { type CreateConsultationRequest } from './repos/emr.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 
@@ -36,7 +36,6 @@ export async function createConsultation(ctx: HandlerContext) {
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
   const providerRepo = new ProviderRepository(db, logger);
-  const patientRepo = new PatientRepository(db, logger);
 
   // Validate provider exists and user has access
   const provider = await providerRepo.findOneById(body.provider);
@@ -59,7 +58,7 @@ export async function createConsultation(ctx: HandlerContext) {
   }
 
   // Validate patient exists
-  const patient = await patientRepo.findOneById(body.patient);
+  const patient = await getPatientForEMR(db, body.patient, logger);
   if (!patient) {
     throw new NotFoundError(`Patient ${body.patient} not found`, {
       resourceType: 'patient',

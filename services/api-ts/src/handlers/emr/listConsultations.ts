@@ -7,7 +7,7 @@ import {
 } from '@/core/errors';
 import { ConsultationNoteRepository, type ConsultationNoteFilters } from './repos/emr.repo';
 import { ProviderRepository } from '../provider/repos/provider.repo';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { getPatientByPersonIdForEMR } from '../patient/repos/patient-emr.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 
 /**
@@ -75,8 +75,7 @@ export async function listConsultations(ctx: HandlerContext) {
       filters.provider = provider.id;
     } else if (isPatient) {
       // For patients, find their patient profile and filter by it
-      const patientRepo = new PatientRepository(db, logger);
-      const patient = await patientRepo.findByPersonId(user.id);
+      const patient = await getPatientByPersonIdForEMR(db, user.id, logger);
       if (!patient) {
         throw new ForbiddenError('Patient profile not found for authenticated user');
       }

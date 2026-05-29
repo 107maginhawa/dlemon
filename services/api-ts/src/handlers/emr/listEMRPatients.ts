@@ -6,7 +6,11 @@ import {
   ForbiddenError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
-import { PatientRepository, type PatientFilters } from '../patient/repos/patient.repo';
+import {
+  listPatientsForEMR,
+  listPatientsWithPersonForEMR,
+  type PatientFilters
+} from '../patient/repos/patient-emr.facade';
 import { ProviderRepository } from '../provider/repos/provider.repo';
 import { parsePagination, parseFilters, buildPaginationMeta, shouldExpand } from '@/utils/query';
 import { subDays } from 'date-fns';
@@ -49,7 +53,6 @@ export async function listEMRPatients(ctx: HandlerContext) {
 
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
-  const patientRepo = new PatientRepository(db, logger);
 
   // Parse pagination with defaults suitable for patient listing
   const pagination = parsePagination(query, { limit: 25, maxLimit: 100 });
@@ -109,14 +112,14 @@ export async function listEMRPatients(ctx: HandlerContext) {
 
   if (expandPerson) {
     // Get patients with person expansion, filtered by our patient IDs using IN query
-    patients = await patientRepo.findManyWithPerson(patientFilters, {
+    patients = await listPatientsWithPersonForEMR(db, patientFilters, {
       pagination
-    });
+    }, logger);
   } else {
     // Get basic patient data, filtered by our patient IDs using IN query
-    patients = await patientRepo.findMany(patientFilters, {
+    patients = await listPatientsForEMR(db, patientFilters, {
       pagination
-    });
+    }, logger);
   }
 
   // Patients are already filtered by the IN query and paginated at the database level
