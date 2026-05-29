@@ -1,10 +1,11 @@
-# Cross-Module Enforcement Report — Run 6 (Strict)
+# Cross-Module Enforcement Report — Run 7 (Wave3 Verification)
 
-<!-- oli-enforce-cross-module v2.0 | run: run-6-strict-2026-05-29 | depth: exhaustive -->
+<!-- oli-enforce-cross-module v2.1 | run: run-7-wave3-verify-2026-05-29 | depth: exhaustive -->
 <!-- modules-scoped: dental-audit, dental-billing, dental-clinical, dental-emr-integration(emr), dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit -->
+<!-- supersedes: run-6-strict-2026-05-29 -->
 
-**Run ID:** run-6-strict-2026-05-29
-**Phase:** 2 — Cross-Module Contract Boundaries
+**Run ID:** run-7-wave3-verify-2026-05-29
+**Phase:** 2 — Cross-Module Contract Boundaries (post-Wave3 P0 verification)
 **Scope:** 11 dental modules + EMR legacy module
 **Checks:** A=Import Direction, B=Event Schema, C=API Contract, D=Drizzle FK, E=Domain Terms
 
@@ -12,21 +13,23 @@
 
 ## Executive Summary
 
-| Severity | Count |
-|----------|-------|
-| P0 | 7 |
-| P1 | 24 |
-| P2 | 2 |
-| P3 | 0 |
-| **Total** | **33** |
+| Severity | Count | Delta vs run-6 |
+|----------|-------|---------------|
+| P0 | 5 | -2 (EX-007, EX-031 RESOLVED) |
+| P1 | 24 | 0 |
+| P2 | 2 | 0 |
+| P3 | 0 | 0 |
+| **Total** | **31** | **-2** |
 
 | Metric | Value |
 |--------|-------|
 | Event coverage (DE-001–DE-024 emitted) | 0% — 0/24 |
-| Import violations (non-facade, non-exempt) | 7 |
-| DB FK violations (hard FKs contra arch decision) | 3 |
+| Import violations (non-facade, non-exempt) | 4 (boundary checker confirmed) |
+| DB FK violations (hard FKs contra arch decision) | 0 (EX-007/031 RESOLVED in Wave3) |
 | DB FK known/exempt (schema-layer) | 26 |
-| New findings (vs run-5 baseline) | 8 |
+| Resolved since run-6 | 2 (EX-007, EX-031) |
+
+> **Wave3 verification note (2026-05-29):** EX-007 and EX-031 (`imaging_finding.schema.ts` cross-module DB FKs) confirmed RESOLVED. File scan shows all four cross-module fields (`treatmentId`, `visitId`, `patientId`, `branchId`) are bare UUIDs with explicit loose-coupling comments — no `.references()` calls. Boundary checker now reports 4 violations total (emr x3 + dental-clinical x1 new).
 
 ---
 
@@ -122,20 +125,19 @@
 
 ---
 
-### EX-007 ⚠️ P0
-- **Severity:** P0
+### EX-007 ✅ RESOLVED (Wave3)
+- **Severity:** P0 → RESOLVED
 - **Type:** IMPORT_DIRECTION + DB_FK (see also EX-031)
 - **From:** `dental-imaging`
 - **To:** `dental-visit`, `patient`, `dental-org`
-- **Description:** `dental-imaging/repos/imaging_finding.schema.ts:11-13` imports raw schema tables from three foreign modules via relative paths to declare hard Drizzle `.references()` FKs. This contradicts the `dental-imaging` architectural decision in DOMAIN_MODEL.md ("Loose coupling — UUID refs only, no DB-level FKs"). The `imaging.schema.ts` file in the same module correctly comments each cross-module UUID field as "loose-coupling: no DB-level FK to avoid coupling." The `imaging_finding.schema.ts` imports and uses `.references()` for `visitId`, `patientId`, and `branchId` — inconsistent with the stated contract. (`treatmentId` in the same file correctly uses bare UUID with comment "cross-module FK — no .references()".)
-- **Files:**
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:11` (import dentalVisits)
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:12` (import patients)
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:13` (import dentalBranches)
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:64` — `visitId: uuid('visit_id').references(() => dentalVisits.id)`
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:65` — `patientId: uuid('patient_id').notNull().references(() => patients.id)`
-  - `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:66` — `branchId: uuid('branch_id').notNull().references(() => dentalBranches.id)`
-- **Status:** NEW
+- **Description (original):** `imaging_finding.schema.ts` imported cross-module schemas and declared hard Drizzle `.references()` FKs contradicting the dental-imaging loose-coupling architectural decision.
+- **Resolution (Wave3, 2026-05-29 verified):** All four cross-module fields now use bare UUID columns with explicit loose-coupling comments. No `.references()` calls exist. No cross-module imports in the file. Confirmed by source scan:
+  - `treatmentId uuid('treatment_id')` — comment: `// loose-coupling: cross-module UUID ref, no DB-level FK`
+  - `visitId uuid('visit_id')` — comment: `// loose-coupling: cross-module UUID ref, no DB-level FK`
+  - `patientId uuid('patient_id').notNull()` — comment: `// loose-coupling: cross-module UUID ref, no DB-level FK`
+  - `branchId uuid('branch_id').notNull()` — comment: `// loose-coupling: cross-module UUID ref, no DB-level FK`
+- **File:** `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts`
+- **Status:** ✅ RESOLVED
 - **Confidence:** HIGH
 
 ---
@@ -221,16 +223,14 @@ All 24 cross-module import pairs in dental modules use approved facades. No dire
 
 **Policy:** Schema-layer FK imports (`repos/*.schema.ts`) are excluded from the code-layer boundary checker (MODULE_BOUNDARIES.md). The `dental-imaging` module has an explicit architectural decision of loose coupling (UUID refs, no `.references()`).
 
-### EX-031 ⚠️ P0
-- **Severity:** P0
+### EX-031 ✅ RESOLVED (Wave3)
+- **Severity:** P0 → RESOLVED
 - **Type:** DB_FK
 - **From:** `dental-imaging/repos/imaging_finding.schema.ts`
 - **To:** `dental-visit`, `patient`, `dental-org`
-- **Description:** Three hard Drizzle FK declarations in `imaging_finding.schema.ts` violate the stated `dental-imaging` architecture (DOMAIN_MODEL.md: "Loose coupling — UUID refs only, no DB-level FKs"). The same file correctly handles `treatmentId` as a bare UUID with a "cross-module FK — no .references()" comment. The `imaging.schema.ts` in the same module handles ALL cross-module refs as bare UUIDs with explicit comments. `imaging_finding.schema.ts` is inconsistent with both the contract and its sibling schema.
-  - Line 64: `visitId: uuid('visit_id').references(() => dentalVisits.id)` — VIOLATES
-  - Line 65: `patientId: uuid('patient_id').notNull().references(() => patients.id)` — VIOLATES
-  - Line 66: `branchId: uuid('branch_id').notNull().references(() => dentalBranches.id)` — VIOLATES
-- **Status:** NEW
+- **Description (original):** Three hard Drizzle FK declarations violated stated dental-imaging loose-coupling architecture.
+- **Resolution (Wave3, 2026-05-29 verified):** All three lines confirmed clean. The fix removed the `.references()` calls and cross-module imports. Current file has no cross-module schema imports. All four UUID fields carry explicit loose-coupling comments.
+- **Status:** ✅ RESOLVED
 - **Confidence:** HIGH
 
 ### Known/Exempt FK coupling (schema-layer, not violations)
@@ -240,7 +240,7 @@ All 24 cross-module import pairs in dental modules use approved facades. No dire
 | dental-billing | 15 | dentalVisits, patients, dentalBranches, dentalMemberships, dentalTreatments | EXEMPT |
 | dental-clinical | 19 | dentalVisits, patients, dentalMemberships, dentalBranches | EXEMPT |
 | dental-imaging imaging.schema.ts | 0 cross-module | — (loose coupling, correct) | COMPLIANT |
-| dental-imaging imaging_finding.schema.ts | 3 cross-module | dentalVisits, patients, dentalBranches | VIOLATION (EX-031) |
+| dental-imaging imaging_finding.schema.ts | 0 cross-module | — (FIXED in Wave3, bare UUIDs) | ✅ COMPLIANT |
 | dental-patient | 8 | patients, dentalInsuranceProfiles | EXEMPT |
 | dental-perio | 3 | dentalVisits, patients, dentalBranches | EXEMPT |
 | dental-scheduling | 7 | patients, dentalBranches, dentalMemberships, dentalVisits | EXEMPT |
@@ -248,6 +248,7 @@ All 24 cross-module import pairs in dental modules use approved facades. No dire
 | emr schema | 2 | patients, providers | EXEMPT |
 
 **Run-5 baseline (25 P0 FK findings):** All 25 now KNOWN/EXEMPT under MODULE_BOUNDARIES.md schema-layer exemption.
+**Run-7 update:** EX-031 confirmed resolved — `imaging_finding.schema.ts` now fully compliant with loose-coupling architecture.
 
 ---
 
@@ -283,7 +284,7 @@ All 24 cross-module import pairs in dental modules use approved facades. No dire
 | EX-004 | P0 | IMPORT_DIRECTION | emr | patient | NEW |
 | EX-005 | P1 | IMPORT_DIRECTION | emr | patient (repo) | NEW |
 | EX-006 | P1 | IMPORT_DIRECTION | emr | person (repo) | NEW |
-| EX-007 | P0 | IMPORT_DIRECTION | dental-imaging | dental-visit, patient, dental-org | NEW |
+| EX-007 | ~~P0~~ | IMPORT_DIRECTION | dental-imaging | dental-visit, patient, dental-org | ✅ RESOLVED (Wave3) |
 | EX-008 | P1 | EVENT_SCHEMA | dental-visit | dental-billing, dental-audit | KNOWN |
 | EX-009 | P1 | EVENT_SCHEMA | dental-visit | dental-pmd, dental-billing, dental-audit | KNOWN |
 | EX-010 | P1 | EVENT_SCHEMA | dental-visit | dental-audit | KNOWN |
@@ -307,7 +308,7 @@ All 24 cross-module import pairs in dental modules use approved facades. No dire
 | EX-028 | P1 | EVENT_SCHEMA | dental-patient | notifs, dental-audit | KNOWN |
 | EX-029 | P1 | EVENT_SCHEMA | dental-org | notifs, dental-audit | KNOWN |
 | EX-030 | P1 | EVENT_SCHEMA | dental-org | dental-audit | KNOWN |
-| EX-031 | P0 | DB_FK | dental-imaging | dental-visit, patient, dental-org | NEW |
+| EX-031 | ~~P0~~ | DB_FK | dental-imaging | dental-visit, patient, dental-org | ✅ RESOLVED (Wave3) |
 | EX-032 | P2 | DOMAIN_TERM | emr | — | NEW |
 | EX-033 | P2 | DOMAIN_TERM | dental-imaging | dental-visit | NEW |
 
@@ -326,7 +327,7 @@ EXISTS and comprehensive. Gaps:
 | Priority | Finding | Action |
 |----------|---------|--------|
 | 1 | EX-004 (P0) | Create `patient/repos/patient-emr.facade.ts`; remove 4 direct `PatientRepository` imports from `emr/` handlers |
-| 2 | EX-007 + EX-031 (P0) | Remove `.references()` from `imaging_finding.schema.ts` lines 64-66; replace with bare `uuid()` per `imaging.schema.ts` pattern; generate migration |
+| 2 | ~~EX-007 + EX-031 (P0)~~ | ✅ RESOLVED in Wave3 — `imaging_finding.schema.ts` confirmed clean |
 | 3 | EX-005/006 (P1) | Move `patients`/`persons` imports in `emr/repos/emr.repo.ts` to a facade |
 | 4 | EX-032 (P2) | Rename `handlers/emr/` → `handlers/dental-emr/`; add to MODULE_BOUNDARIES.md migration table |
 | 5 | EX-033 (P2) | Add `ImagingFinding` entity to DOMAIN_MODEL.md §3 with coupling contract documented |
@@ -334,4 +335,29 @@ EXISTS and comprehensive. Gaps:
 
 ---
 
-*Generated: 2026-05-29 | Run: run-6-strict-2026-05-29 | Supersedes run-5*
+*Generated: 2026-05-29 | Run: run-7-wave3-verify-2026-05-29 | Supersedes run-6-strict-2026-05-29*
+
+---
+
+## Wave3 Verification Addendum (run-7)
+
+**Verified 2026-05-29** by full source scan of `imaging_finding.schema.ts`.
+
+### EX-007 / EX-031 — RESOLVED
+
+Both findings confirmed resolved. The `imaging_finding.schema.ts` file now matches the dental-imaging loose-coupling architecture:
+- Zero cross-module `import` statements
+- Zero `.references()` calls to foreign tables
+- All four cross-module UUID fields carry explicit `// loose-coupling: cross-module UUID ref, no DB-level FK` comments
+
+**Net P0 count change:** 7 → 5 (−2)
+
+### Boundary Checker Current State (run-7 scan)
+
+`bun run check:boundaries:error` reports **4 violations total**:
+1. `dental-imaging/repos/imaging.repo.ts:20` → imports from `storage/repos/` (EX-002 from run-6 — facade exemption contested; repo file not exempt)
+2. `dental-perio/upsertToothReading.ts:21` → imports from `dental-visit/repos/` (EX-003 from run-6)
+3. `dental-clinical/amendments/createAmendment.ts:13` → imports from `dental-org/repos/` (EX-001 from run-6)
+4. `dental-clinical/prescriptions/createPrescription.ts:14` → imports from `dental-org/repos/` (EX-001 from run-6)
+
+These 4 remain open P1 violations requiring facade fixes.

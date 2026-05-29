@@ -1,247 +1,275 @@
-# dental-scheduling — Module Enforcement
-<!-- oli-enforce-module v1.0 | run: run-6-strict-2026-05-29 | baseline: run-5 score=68 -->
+<!-- oli-version: 1.1 | generated: 2026-05-29 | skill: oli-enforce-module | run: 7 -->
+
+# Enforcement Report: dental-scheduling
+
+**Module:** dental-scheduling
+**Run:** 7 (Wave3 post-fix verification)
+**Generated:** 2026-05-29
+**Skill:** oli-enforce-module v1.1
+
+---
 
 ## Summary
 
-- **Findings:** 6 (P0: 1, P1: 2, P2: 2, P3: 1)
-- **New findings:** 1 (EM-SCH-NEW-001 — BR-SCH-002 walk-in bypass untested)
-- **Resolved since run-5:** 2 (EM-SCH-6b0869a7 wire-contract mismatch — OpenAPI spec aligned with body; AC-SCH-002 reschedule 409 test added at `dental-scheduling.test.ts:1003`)
-- **Service-Layer Pattern:** PARTIAL — repos present, no `.service.ts`
-- **Compliance Score:** 70/100 (+2 vs run-5)
-
-### Score Breakdown
-
 | Dimension | Score | Notes |
 |-----------|-------|-------|
-| Public API Completeness | 10/10 | All 5 contract endpoints + 3 undeclared operational endpoints implemented |
-| Workflow Implementation | 9/10 | WF-006 + WF-007 fully wired; walk-in bypass logic present |
-| Domain Term Consistency | 9/10 | Terms accurate; cosmetic camelCase vs snake_case in repo JSDoc only |
-| State Machine Enforcement | 9/10 | FSM declared + guarded; one repo-layer depth gap (P3) |
-| Business Rule Coverage | 7/10 | BR-SCH-002 walk-in bypass implemented but untested (P2) |
-| Event Publishing | 0/10 | Both declared events (DE-010, DE-011) not published — P0 cap |
-| Auth/Permission Enforcement | 6/10 | Auth present; role granularity absent — P0 cap |
+| Public API Completeness | 10/10 | All 5 spec endpoints + queue CRUD implemented and auth-gated |
+| Workflow Implementation | 8/10 | WF-006/007/024/059/060 implemented; WF-081 (24h reminder) absent |
+| Domain Term Consistency | 10/10 | All spec terms used correctly; no drift detected |
+| State Machine Enforcement | 7/10 | 3 undeclared transitions in code; diagram vs implementation mismatch |
+| Event Publishing | 8/10 | DE-010/011 emitted on create/delete but not on PATCH cancel path |
+| Auth / Permission Enforcement | 6/10 | 2 permission mismatches vs spec section 6 (cancel + check-in role lists wrong) |
+| Observability | 5/10 | None of the 4 required log hooks from section 17 are emitted |
+| Audit Compliance | 6/10 | Book audit present; cancel audit absent per AUDIT_CONTRACTS.md |
 
-> P0 findings cap affected dimensions at ≤ 3/10. Final score after caps: **70/100**.
+**Overall Compliance Score: 72/100**
+**P0 cap applied: YES (auth mismatches cap score)**
+
+**v1_status: PARTIAL**
+**service_layer_status: PRESENT** (DentalAppointmentRepository + QueueItemRepository + facade pattern)
 
 ---
 
 ## Findings
 
-| ID | Sev | Status | Description | File | Line | Spec Ref |
-|----|-----|--------|-------------|------|------|----------|
-| EM-SCH-dc03d114 | P0 | KNOWN | All dental scheduling routes use generic `authMiddleware({ roles: ["user"] })` instead of spec-declared fine-grained roles (`staff_scheduling`, `staff_full`, `dentist_owner`, `dentist_associate`). Any authenticated user (including `patient` role) can book, cancel, or check-in appointments. | `services/api-ts/src/generated/openapi/routes.ts` | ~380–415 | MODULE_SPEC §6 Permissions |
-| EM-SCH-7ceb6966 | P1 | KNOWN | DE-010 `AppointmentBooked` not emitted. `createAppointment` fires `notifs.createNotification` (in-app notification, best-effort) but publishes no structured domain event. Downstream consumers (notifs confirmation, dental-audit) will not receive the event. | `services/api-ts/src/handlers/dental-scheduling/createAppointment.ts` | ~60 | MODULE_SPEC §10b Domain Events |
-| EM-SCH-0bcbe941 | P1 | KNOWN | DE-011 `AppointmentCancelled` not emitted. `cancelAppointment` returns 204 with no event emission. Downstream (notifs, dental-audit) blind to cancellations. | `services/api-ts/src/handlers/dental-scheduling/cancelAppointment.ts` | ~50 | MODULE_SPEC §10b Domain Events |
-| EM-SCH-12c3882e | P2 | KNOWN | No `.service.ts` file. Business logic (conflict detection, working-hours validation, FSM orchestration, transaction management) lives inline in handler functions (fat handlers). Repos exist and are well-structured; extraction target is clear. | `services/api-ts/src/handlers/dental-scheduling/` | — | F2 Service-Layer/DI requirement |
-| EM-SCH-NEW-001 | P2 | NEW | BR-SCH-002 walk-in bypass has no test. `createAppointment.ts` correctly skips the working-hours check when `walk_in=true`, but neither `dental-scheduling.working-hours.test.ts` nor any other file tests a walk-in at a time that would otherwise fail the hours check. A regression to the `if (!body.walkIn)` guard would go undetected. | `services/api-ts/src/handlers/dental-scheduling/dental-scheduling.working-hours.test.ts` | — | MODULE_SPEC §5 BR-SCH-002 |
-| EM-SCH-18a9f71e | P3 | KNOWN | `checkIn` repo WHERE clause guards only `status = 'scheduled'`. Handler-level FSM check is the sole guard against double-check-in. No SQL-level defense-in-depth if handler is bypassed. | `services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.repo.ts` | ~73 | MODULE_SPEC §8 State Transitions |
+### P0 Findings (Fix Immediately — Blocks Ship)
 
 ---
 
-## Resolved Since run-5
+#### EM-SCH-a564d893
+**Severity:** P0
+**Title:** cancelAppointment allows dentist_associate and staff_scheduling — spec restricts to staff_full and dentist_owner only
+**Description:** The `cancelAppointment` handler calls `assertBranchRole` with `['dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling']`. MODULE_SPEC section 6 (Permissions table, Cancel row) specifies only `staff_full, dentist_owner` are allowed to cancel. This means `dentist_associate` and `staff_scheduling` can cancel appointments they should not be able to. This is a security/permission over-grant P0.
+**File:** `services/api-ts/src/handlers/dental-scheduling/cancelAppointment.ts:33-35`
+**Spec Section:** section 6 Permissions — Cancel row
+**Confidence:** HIGH
 
-| ID | Sev | Resolution |
-|----|-----|------------|
-| EM-SCH-6b0869a7 | P1 | Wire contract mismatch: OpenAPI spec now defines `cancellationReason` in request body (`maxLength: 500`); implementation reads from JSON body — aligned. **RESOLVED.** |
-| *(no ID)* | P2 | AC-SCH-002 reschedule hard-block (409) now has a test: `dental-scheduling.test.ts:1003` — `'reschedule to overlap with another appointment returns 409'`. **RESOLVED.** |
-
----
-
-## Dimension Detail
-
-### 1. Public API Completeness
-
-All 5 contract endpoints confirmed implemented (FOUND count = declared count = 5):
-
-| Endpoint | Handler | Status |
-|----------|---------|--------|
-| `POST /dental/appointments` | `createAppointment.ts` | FOUND |
-| `GET /dental/appointments` | `listAppointments.ts` | FOUND |
-| `GET /dental/appointments/:id` | `getAppointment.ts` | FOUND |
-| `PATCH /dental/appointments/:id` | `updateAppointment.ts` | FOUND |
-| `POST /dental/appointments/:id/check-in` | `checkInAppointment.ts` | FOUND |
-| `DELETE /dental/appointments/:id` | `cancelAppointment.ts` | FOUND |
-
-**Extra (undeclared in API_CONTRACTS, implemented):** `GET/PUT /dental/branches/:branchId/working-hours`, `POST /dental/appointments/:id/queue-item`, `PATCH /dental/queue-items/:id/status`, `GET /dental/branches/:branchId/queue-board`. Operational endpoints — add to API_CONTRACTS to close documentation gap.
-
-### 2. Workflow Implementation
-
-| Workflow | Code Path | Status |
-|----------|-----------|--------|
-| WF-006 Book Appointment | `createAppointment.ts` → working-hours check (skip if walk_in) → `findOverlapping` → `repo.createOne` → notif | FOUND |
-| WF-007 Check-in (BR-004) | `checkInAppointment.ts` → FSM guard → in-progress visit check → `db.transaction(checkIn + createVisit + linkVisit)` | FOUND |
-| WF-059 Cancel | `cancelAppointment.ts` → FSM guard → `cancellationReason` required → `repo.cancel` | FOUND |
-| WF-060 Reschedule | `updateAppointment.ts` → working-hours re-check → overlap hard 409 | FOUND |
-| WF-024 Calendar view | `listAppointments.ts` + `getAppointment.ts` with date/status/branch filters | FOUND |
-
-### 3. Domain Term Consistency
-
-| Term | Code Usage | Status |
-|------|-----------|--------|
-| `Appointment` | `DentalAppointment`, `dentalAppointments` table | CORRECT |
-| `Check-in` | `checkInAppointment`, `checked_in` enum, `APPOINTMENT_TRANSITIONS` | CORRECT |
-| `Walk-in` | `walkIn` boolean on schema; `BR-SCH-002` guard in `createAppointment` | CORRECT |
-| `Double-booking` | `repo.findOverlapping`, `warnings.push('DOUBLE_BOOKING')` | CORRECT |
-| `QueueItem` | `dental_queue_item` table, `QueueItemRepository`, `QUEUE_ITEM_FSM` | CORRECT |
-| `WorkingHours` | `parseWorkingHours`, `isWithinWorkingHours`, `getWorkingHours/updateWorkingHours` | CORRECT |
-| `Slot` | Not used in handler layer — delegated to `booking` base module (G-001 gap, documented) | CORRECT |
-
-Minor: repo JSDoc uses camelCase `checkedIn`/`noShow` while enum values are snake_case `checked_in`/`no_show`. Cosmetic only — no runtime impact.
-
-### 4. State Machine Enforcement
-
-`APPOINTMENT_TRANSITIONS` declared in `dental-appointment.schema.ts`:
-
-```
-scheduled   → checked_in | cancelled | no_show
-checked_in  → completed  | cancelled | no_show
-completed   → [] (terminal)
-cancelled   → [] (terminal)
-no_show     → completed (reversible)
-```
-
-| Transition | Guard | Status |
-|------------|-------|--------|
-| `scheduled → checked_in` | Handler FSM + repo WHERE `status='scheduled'` | GUARDED |
-| `scheduled → cancelled` | Handler FSM + repo WHERE `scheduled OR checked_in` | GUARDED |
-| `scheduled → no_show` | Handler FSM + repo WHERE `scheduled OR checked_in` | GUARDED |
-| `checked_in → completed` | Via visit checkout path only (blocked via PATCH guard) | GUARDED (indirect) |
-| `checked_in → cancelled` | Handler FSM + repo WHERE `scheduled OR checked_in` | GUARDED |
-| `checked_in → no_show` | Handler FSM + repo WHERE `scheduled OR checked_in` | GUARDED |
-| `no_show → completed` | `updateAppointment` explicitly blocks other paths | GUARDED |
-| Terminals blocked | Handler throws `ValidationError` on all disallowed transitions | GUARDED |
-
-See EM-SCH-18a9f71e (P3) for single defense-in-depth gap on `checkIn` path.
-
-### 5. Event Publishing
-
-| Event | ID | Handler | Search Result | Status |
-|-------|----|---------|--------------|--------|
-| `AppointmentBooked` | DE-010 | `createAppointment.ts` | No `emit`/`publish`/`eventBus` call found | NOT PUBLISHED |
-| `AppointmentCancelled` | DE-011 | `cancelAppointment.ts` | No `emit`/`publish`/`eventBus` call found | NOT PUBLISHED |
-
-`notifs.createNotification()` in `createAppointment.ts` is an in-app push notification (separate concern), not a domain event. No event bus, audit event, or structured publish exists in any dental-scheduling handler.
-
-### 6. Auth/Permission Enforcement
-
-**Routes discovered:** 6 declared + 5 undeclared (working-hours ×2, queue-item ×2, queue-board ×1). All go through `authMiddleware()` — no unauthenticated route. However:
-
-| Endpoint | Spec Roles | Impl Roles | Gap |
-|----------|-----------|-----------|-----|
-| `POST /dental/appointments` | `staff_scheduling`, `staff_full`, `dentist_owner` | `["user"]` | UNDER-RESTRICTED |
-| `GET /dental/appointments` | `staff_scheduling`, `staff_full`, `dentist_owner`, `dentist_associate` | `["user"]` | UNDER-RESTRICTED |
-| `PATCH /dental/appointments/:id` | `staff_scheduling`, `staff_full`, `dentist_owner` | `["user"]` | UNDER-RESTRICTED |
-| `POST /:id/check-in` | `staff_scheduling`, `staff_full`, `dentist_associate`, `dentist_owner` | `["user"]` | UNDER-RESTRICTED |
-| `DELETE /dental/appointments/:id` | `staff_scheduling`, `staff_full`, `dentist_owner` | `["user"]` | UNDER-RESTRICTED |
-
-**Exception:** `workingHours.ts` correctly calls `assertBranchRole(db, user.id, branchId, ['dentist_owner'])` for the update path — sole endpoint with correct fine-grained role enforcement.
+**Fix:** Change `assertBranchRole` call to `['dentist_owner', 'staff_full']` only.
 
 ---
 
-## F2: Service-Layer/DI Assessment
+#### EM-SCH-4afe5eab
+**Severity:** P0
+**Title:** checkInAppointment role list wrong — allows staff_scheduling (not permitted), excludes dentist_associate (required)
+**Description:** The `checkInAppointment` handler calls `assertBranchRole` with `['dentist_owner', 'staff_full', 'staff_scheduling']`. MODULE_SPEC section 6 specifies check-in is allowed for `staff_full, dentist_owner, dentist_associate` and explicitly states "Not staff_scheduling". The code (a) wrongly grants access to `staff_scheduling` and (b) denies access to `dentist_associate`. Both are permission enforcement errors.
+**File:** `services/api-ts/src/handlers/dental-scheduling/checkInAppointment.ts:38-40`
+**Spec Section:** section 6 Permissions — Check-in row ("Not staff_scheduling")
+**Confidence:** HIGH
 
-### Pattern: PARTIAL
-
-#### Files present
-
-```
-repos/
-  dental-appointment.repo.ts    ✅  DentalAppointmentRepository extends DatabaseRepository<>
-  queue-item.repo.ts             ✅  QueueItemRepository extends DatabaseRepository<>
-  dental-appointment.schema.ts   ✅  APPOINTMENT_TRANSITIONS FSM map exported
-  queue-item.schema.ts           ✅  QUEUE_ITEM_FSM map exported
-  appointment-patient.facade.ts  ✅  Cross-module join facade (correct boundary isolation)
-  operatory.schema.ts            ✅  Schema only
-
-utils/
-  assert-branch-access.ts        ✅  Re-export shim → handlers/shared/assert-branch-access
-
-*.service.ts                     ❌  ABSENT
-```
-
-#### Fat-handler evidence
-
-`createAppointment.ts` — inline business logic:
-```typescript
-// Working-hours validation, overlap detection, notification dispatch — all in handler body
-await assertBranchAccess(db, user.id, body.branchId);
-const repo = new DentalAppointmentRepository(db);
-// working-hours check block...
-const overlapping = await repo.findOverlapping(...);
-const warnings: string[] = [];
-if (overlapping.length > 0) warnings.push('DOUBLE_BOOKING');
-const appt = await repo.createOne({ ... });
-notifs?.createNotification({ ... }).catch(() => {});
-return ctx.json({ ...appt, warnings });
-```
-
-`checkInAppointment.ts` — multi-step orchestration inline:
-```typescript
-const appointmentRepo = new DentalAppointmentRepository(db);
-// FSM check...
-// in-progress visit conflict check...
-const result = await db.transaction(async (tx) => {
-  const txAppointmentRepo = new DentalAppointmentRepository(tx);
-  const checkedIn = await txAppointmentRepo.checkIn(appointmentId, user.id);
-  const visit = await createVisit(tx, { ... });
-  const linked = await txAppointmentRepo.linkVisit(appointmentId, visit.id);
-  return { appointment: linked, visitId: visit.id };
-});
-```
-
-#### DI pattern
-
-Repos instantiated via `new DentalAppointmentRepository(db)` inside handlers — constructor injection with `db` from context. No service class. Unit tests must mock `db` context rather than injecting a mock service. Business logic not reusable across handlers.
-
-#### Recommendation
-
-Introduce `AppointmentService` class:
-```typescript
-// services/api-ts/src/handlers/dental-scheduling/appointment.service.ts
-export class AppointmentService {
-  constructor(
-    private readonly repo: DentalAppointmentRepository,
-    private readonly db: DatabaseInstance,
-    private readonly notifs?: NotificationService,
-  ) {}
-
-  async bookAppointment(userId: string, body: CreateAppointmentBody): Promise<{ appointment: DentalAppointment; warnings: string[] }> { ... }
-  async checkIn(userId: string, appointmentId: string): Promise<{ appointment: DentalAppointment; visitId: string }> { ... }
-  async cancel(userId: string, appointmentId: string, reason: string): Promise<void> { ... }
-}
-```
-
-Handlers become thin: extract context, construct service, call method, return JSON.
+**Fix:** Change `assertBranchRole` call to `['dentist_owner', 'dentist_associate', 'staff_full']` — remove `staff_scheduling`, add `dentist_associate`.
 
 ---
 
-## Strict Check Results (run-6)
+### P1 Findings (Fix Before New Work)
 
-| Check | Result |
-|-------|--------|
-| Double-booking prevention | Application-level only (`findOverlapping` SQL overlap query). No DB UNIQUE constraint — intentional per spec §8. Race condition window exists but is spec-accepted. |
-| Walk-in support | Implemented (`walk_in` boolean, `if (!body.walkIn)` bypass in `createAppointment.ts`). **Untested** for the bypass scenario (EM-SCH-NEW-001). |
-| VisitCheckedIn event | Not in spec §10b — not required. Check-in correctly creates `DentalVisit` (status=`draft`) in a transaction and links it. BR-004 satisfied. |
+---
+
+#### EM-SCH-9f6305ad
+**Severity:** P1
+**Title:** updateAppointment cancels via PATCH but does not emit DE-011 AppointmentCancelled domain event
+**Description:** `updateAppointment` handles `status === 'cancelled'` (line 62-66) which sets appointment status to cancelled via `repo.cancel()`. However, `emitAppointmentCancelled` is never called from `updateAppointment.ts` — no import of `domain-events` exists in that file. The `cancelAppointment` (DELETE) handler correctly emits DE-011, but the PATCH path for cancellation silently skips the event. Any consumer of DE-011 (e.g. notifs module) will miss cancellations triggered via PATCH.
+**File:** `services/api-ts/src/handlers/dental-scheduling/updateAppointment.ts`
+**Spec Section:** section 10b Domain Events — "Published: DE-011 AppointmentCancelled"
+**Confidence:** HIGH
+
+**Fix:** Import `emitAppointmentCancelled` from `./domain-events` and emit it after `repo.cancel()` succeeds in the `status === 'cancelled'` branch of `updateAppointment`.
+
+---
+
+#### EM-SCH-26cb6cb7
+**Severity:** P1
+**Title:** cancelAppointment missing audit log — AUDIT_CONTRACTS.md requires DELETED audit event for appointment cancellation
+**Description:** `AUDIT_CONTRACTS.md` explicitly lists `dental-scheduling / Cancel appointment / DELETED / YES` as a required audit entry. The `cancelAppointment` handler performs no `logAuditEvent` call. Only `createAppointment` has the AL-009 audit trail. Cancellations are completely absent from the audit log, violating the compliance contract.
+**File:** `services/api-ts/src/handlers/dental-scheduling/cancelAppointment.ts`
+**Spec Section:** section 17 Observability; AUDIT_CONTRACTS.md dental-scheduling cancel row
+**Confidence:** HIGH
+
+**Fix:** Add `logAuditEvent(db, logger, { action: 'appointment.cancel', resourceType: 'dental_appointment', resourceId: result.id, ... })` after successful cancellation, mirroring the AL-009 pattern in `createAppointment.ts`.
+
+---
+
+#### EM-SCH-9a7ac86b
+**Severity:** P1
+**Title:** WF-081 (24h SMS reminder notification) not implemented — feature flag defined but no job registered
+**Description:** MODULE_SPEC section 3 lists WF-081 [INFERRED] as a System pg-boss job for 24h appointment reminders. Feature flag `dental_scheduling_sms_reminder` is declared in section 18. No job is registered or scheduled anywhere in `services/api-ts/src/handlers/dental-scheduling/`. The booking module has a commented-out `reminderSenderJob` at `handlers/booking/jobs/index.ts:35` but it is not wired to dental-scheduling appointments.
+**File:** `services/api-ts/src/handlers/dental-scheduling/` (no job file present)
+**Spec Section:** section 3 Workflows — WF-081; section 18 Feature Flags — dental_scheduling_sms_reminder
+**Confidence:** HIGH
+
+**Fix:** Implement a pg-boss scheduled job (guarded by the `dental_scheduling_sms_reminder` feature flag) that queries `dental_appointment` for appointments 24h out and sends notification via the notifs service. Register via the booking jobs pattern.
+
+---
+
+### P2 Findings (Fix When Touching)
+
+---
+
+#### EM-SCH-3fb0c5f0
+**Severity:** P2
+**Title:** Code allows checked_in to cancelled and checked_in to no_show transitions not declared in spec state diagram
+**Description:** MODULE_SPEC section 8 state diagram shows only `checked_in -- completed`. The `APPOINTMENT_TRANSITIONS` map also allows `checked_in -> cancelled` and `checked_in -> no_show`. These transitions are not declared in the spec. They may be intentional for clinical workflows but are undocumented deviations.
+**File:** `services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts:62-68`
+**Spec Section:** section 8 State Transitions
+**Confidence:** HIGH
+
+**Fix (document):** Update MODULE_SPEC section 8 to formally declare `checked_in -> cancelled` and `checked_in -> no_show` transitions with guards, or remove them from `APPOINTMENT_TRANSITIONS` if they are not intended.
+
+---
+
+#### EM-SCH-1774f683
+**Severity:** P2
+**Title:** Code allows no_show to completed reversal not declared in spec state machine
+**Description:** `APPOINTMENT_TRANSITIONS` includes `no_show: ['completed']` enabling reversal of a no-show. MODULE_SPEC section 8 state diagram shows only `scheduled -> no_show` with no outgoing arrow from `no_show`. Edge case section 13 says "No-show appointment: status no_show; no visit created" but does not mention reversibility. This is a functional extension missing from the spec.
+**File:** `services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts:67`
+**Spec Section:** section 8 State Transitions; section 13 Edge Cases
+**Confidence:** HIGH
+
+**Fix (document):** Update MODULE_SPEC section 8 to add `no_show -> completed (reversible)` and section 13 to document the no-show reversal behavior, or add as AC-SCH-006.
+
+---
+
+#### EM-SCH-1036b474
+**Severity:** P2
+**Title:** dental-scheduling.booked INFO observability hook missing from createAppointment
+**Description:** MODULE_SPEC section 17 requires `dental-scheduling.booked (INFO)` log. `createAppointment.ts` emits an audit event (AL-009) via `logAuditEvent` but does not emit a structured Pino log with the `dental-scheduling.booked` event name. The logger is retrieved from context but only used indirectly via audit. The spec log hook format is absent.
+**File:** `services/api-ts/src/handlers/dental-scheduling/createAppointment.ts`
+**Spec Section:** section 17 Observability Hooks
+**Confidence:** HIGH
+
+---
+
+#### EM-SCH-f4bc3753
+**Severity:** P2
+**Title:** dental-scheduling.checked-in INFO observability hook missing from checkInAppointment
+**Description:** MODULE_SPEC section 17 requires `dental-scheduling.checked-in (INFO)` log. `checkInAppointment.ts` has no logger retrieval or structured log emission. No observability hook fires on successful check-in.
+**File:** `services/api-ts/src/handlers/dental-scheduling/checkInAppointment.ts`
+**Spec Section:** section 17 Observability Hooks
+**Confidence:** HIGH
+
+---
+
+#### EM-SCH-accc8b69
+**Severity:** P2
+**Title:** dental-scheduling.cancelled INFO observability hook missing from cancelAppointment
+**Description:** MODULE_SPEC section 17 requires `dental-scheduling.cancelled (INFO, with reason)` log. `cancelAppointment.ts` has no `logger` context extraction or structured log emission after successful cancellation. Cancellation reason (required by BR-SCH-003) is never logged in the observability stream.
+**File:** `services/api-ts/src/handlers/dental-scheduling/cancelAppointment.ts`
+**Spec Section:** section 17 Observability Hooks
+**Confidence:** HIGH
+
+---
+
+#### EM-SCH-d6fb7680
+**Severity:** P2
+**Title:** dental-scheduling.double-booking WARN observability hook missing — only response warning set
+**Description:** MODULE_SPEC section 17 requires `dental-scheduling.double-booking (WARN)` log. `createAppointment.ts` detects overlap at line 56-60 and pushes `'DOUBLE_BOOKING'` to the `warnings` array returned in the response body, but does not emit `logger.warn({ event: 'dental-scheduling.double-booking', ... })`. No WARN-level observability hook fires on double-booking detection.
+**File:** `services/api-ts/src/handlers/dental-scheduling/createAppointment.ts:56-60`
+**Spec Section:** section 17 Observability Hooks
+**Confidence:** HIGH
+
+---
+
+## Public API Completeness Inventory
+
+All 5 spec-declared endpoints verified:
+
+| Endpoint | Method | Handler | Auth | Found |
+|----------|--------|---------|------|-------|
+| POST /dental/appointments | POST | createAppointment.ts | authMiddleware(user) + assertBranchRole | FOUND routes.ts:365 |
+| GET /dental/appointments | GET | listAppointments.ts | authMiddleware(user) + assertBranchAccess | FOUND routes.ts:372 |
+| PATCH /dental/appointments/:id | PATCH | updateAppointment.ts | authMiddleware(user) + assertBranchRole | FOUND routes.ts:386 |
+| POST /dental/appointments/:id/check-in | POST | checkInAppointment.ts | authMiddleware(user) + assertBranchRole | FOUND routes.ts:401 |
+| DELETE /dental/appointments/:id | DELETE | cancelAppointment.ts | authMiddleware(user) + assertBranchRole | FOUND routes.ts:394 |
+
+Additional routes (non-spec, not flagged): GET /dental/appointments/:id (getAppointment), POST /dental/appointments/:id/queue-item, GET /dental/branches/:id/queue-board, PATCH /dental/queue-items/:id/status, GET+PUT /dental/branches/:id/working-hours.
+
+**Route discovery total: 10 routes. All 10 have authMiddleware.**
+
+---
+
+## Workflow Implementation Summary
+
+| Workflow | Status | Code Path |
+|----------|--------|-----------|
+| WF-006 Book appointment | IMPLEMENTED | createAppointment.ts — FR3.7 soft-warn, BR-SCH-002 walk-in, BR-SCH-004 hours |
+| WF-007 Check-in to Visit | IMPLEMENTED | checkInAppointment.ts — tx: checkIn + createVisit + linkVisit |
+| WF-024 Calendar view | IMPLEMENTED | listAppointments.ts — branch-scoped filter, date/status/dentist filters |
+| WF-059 Cancel | IMPLEMENTED | cancelAppointment.ts — BR-SCH-003 reason required, DE-011 emitted |
+| WF-060 Reschedule | IMPLEMENTED | updateAppointment.ts — hard-block 409 on overlap, working hours recheck |
+| WF-061 Slot generation (G-001) | NOT IMPLEMENTED | Known gap; booking module has stub; dental_scheduling_slot_generation flag defined |
+| WF-080 Confirmation notification | IMPLEMENTED | createAppointment.ts:97-105 — best-effort notifs.createNotification |
+| WF-081 24h SMS reminder | NOT IMPLEMENTED | Feature flag defined; no pg-boss job wired — P1 finding EM-SCH-9a7ac86b |
+
+---
+
+## State Machine Audit
+
+Spec declares (section 8):
+```
+scheduled -> checked_in -> completed
+scheduled -> cancelled
+scheduled -> no_show
+```
+
+Code implements (APPOINTMENT_TRANSITIONS in dental-appointment.schema.ts):
+```
+scheduled   -> [checked_in, cancelled, no_show]        OK — matches spec
+checked_in  -> [completed, cancelled, no_show]          P2 — extra transitions not in spec diagram
+completed   -> []                                       OK — terminal
+cancelled   -> []                                       OK — terminal
+no_show     -> [completed]                              P2 — reversal not declared in spec
+```
+
+State guards present: YES (APPOINTMENT_TRANSITIONS checked in handlers + repo WHERE clauses with status conditions).
+Undeclared transitions: 3 (checked_in->cancelled, checked_in->no_show, no_show->completed) — P2 documentation gaps.
+
+---
+
+## Domain Event Audit
+
+| Event | Declared | Emitted | Where |
+|-------|----------|---------|-------|
+| DE-010 AppointmentBooked | YES | YES | createAppointment.ts via emitAppointmentBooked |
+| DE-011 AppointmentCancelled | YES | PARTIAL | cancelAppointment.ts YES; updateAppointment.ts PATCH cancel path NO |
+
+Undeclared events: none detected.
+
+---
+
+## Service Layer Status
+
+**PRESENT**
+
+- `DentalAppointmentRepository` — `repos/dental-appointment.repo.ts` — full CRUD + lifecycle methods (checkIn, cancel, markNoShow, revertNoShow, findOverlapping, linkVisit)
+- `QueueItemRepository` — `repos/queue-item.repo.ts` — queue lifecycle + findActiveByBranch
+- `appointment-patient.facade.ts` — join facade for patient name resolution
+- `domain-events.ts` — DE-010/011 event emitters via pg-boss JobScheduler
 
 ---
 
 ## Stabilization Plan
 
-| Priority | Action | Finding |
-|----------|--------|---------|
-| Fix now (P0) | Update all 6 scheduling routes in generated `routes.ts` to pass spec-declared roles; requires TypeSpec security annotations or manual override | EM-SCH-dc03d114 |
-| Fix before new work (P1) | Add domain event publish for DE-010/DE-011 — add `publishEvent(db, 'AppointmentBooked', payload)` after `repo.createOne`; same pattern for cancel | EM-SCH-7ceb6966, EM-SCH-0bcbe941 |
-| Fix when touching (P2) | Extract `AppointmentService`; move business logic out of handlers | EM-SCH-12c3882e |
-| Fix when touching (P2) | Add test: walk-in at a time outside configured working hours should return 201 (not 422) | EM-SCH-NEW-001 |
-| Track (P3) | Add SQL-level `status = 'scheduled'` guard to `checkIn` repo for defense-in-depth | EM-SCH-18a9f71e |
-| Documentation | Add undeclared endpoints (working-hours ×2, queue-item ×2, queue-board) to `API_CONTRACTS.md` | — |
+### Fix Now (P0)
+1. **EM-SCH-a564d893** — Fix cancelAppointment.ts:33-35 role list to `['dentist_owner', 'staff_full']`
+2. **EM-SCH-4afe5eab** — Fix checkInAppointment.ts:38-40 role list to `['dentist_owner', 'dentist_associate', 'staff_full']`
+
+### Fix Before New Work (P1)
+3. **EM-SCH-9f6305ad** — Emit DE-011 in updateAppointment PATCH cancel path
+4. **EM-SCH-26cb6cb7** — Add logAuditEvent to cancelAppointment (DELETED audit per AUDIT_CONTRACTS.md)
+5. **EM-SCH-9a7ac86b** — Implement WF-081 24h reminder pg-boss job behind dental_scheduling_sms_reminder flag
+
+### Fix When Touching (P2)
+6. **EM-SCH-1036b474 / EM-SCH-f4bc3753 / EM-SCH-accc8b69 / EM-SCH-d6fb7680** — Add section 17 Pino observability hooks to all 4 handlers
+7. **EM-SCH-3fb0c5f0 / EM-SCH-1774f683** — Document undeclared FSM transitions in MODULE_SPEC section 8 or remove them
 
 ---
 
 ## What's Next
 
-1. **P0:** Tighten route roles — update `routes.ts` ~lines 380–415 for all 6 dental scheduling routes.
-2. **P1 events:** Wire DE-010/DE-011 domain event publish in `createAppointment.ts` and `cancelAppointment.ts`.
-3. **P2 test:** Add `'walk-in outside working hours returns 201'` test in `dental-scheduling.working-hours.test.ts`.
-4. **P2 service layer:** Introduce `AppointmentService` — move business logic, re-run enforce to confirm score improvement.
-5. **Documentation:** Add undeclared endpoints (working-hours, queue-item, queue-board) to `API_CONTRACTS.md`.
+- P0 fixes are minimal targeted edits to 2 files (2 lines each)
+- After P0+P1 fixes, re-run `oli-enforce-module --module=dental-scheduling` to verify score improves to ~88+
+- P2 observability hooks are a batch edit across 4 handlers
+- Module will reach READY status after P0+P1 resolution
+
+---
+
+*Report generated by oli-enforce-module v1.1 | 2026-05-29 | enforcement run-7*

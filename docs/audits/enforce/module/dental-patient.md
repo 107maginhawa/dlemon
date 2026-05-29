@@ -1,5 +1,210 @@
+<!-- oli-version: 1.1 -->
+<!-- generated: 2026-05-29 | skill: oli-enforce-module | run: 7 -->
+<!-- module: dental-patient | spec: docs/product/modules/dental-patient/MODULE_SPEC.md -->
+
 # dental-patient — Module Enforcement
-<!-- oli-enforce-module v1.0 | run: run-6-strict-2026-05-29 | prev: run-5-f2-service-layer-di-2026-05-28 -->
+<!-- oli-enforce-module v1.0 | run: run-7-2026-05-29 | prev: run-6-strict-2026-05-29 -->
+
+## Run-7 Report (2026-05-29)
+
+**Compliance Score:** 72/100
+**v1 Status:** PARTIAL
+**Service Layer Status:** PRESENT
+
+### Dimension Results
+
+| Dimension | Score | Notes |
+|-----------|-------|-------|
+| 1. Public API Completeness | 9/10 | All 10 spec endpoints present |
+| 2. Workflow Implementation | 7/10 | WF-005/023/055/056 covered; WF-057/088 missing |
+| 3. Domain Term Consistency | 9/10 | All 7 terms correct |
+| 4. State Machine Enforcement | 8/10 | FSM enforced for recall/task/claim; patient status bypass in updateDentalPatient |
+| 5. Event Publishing | 2/10 | DE-021 not published; DE-008 consumer absent |
+| Auth/Permission Enforcement | 3/10 | P0: export/bulk-archive/restore use weak authZ |
+
+---
+
+### P0 Findings
+
+#### EM-PAT-001
+**Severity:** P0
+**Title:** Export endpoint allows any branch member — spec requires dentist_owner only
+**Description:** `exportDentalPatients.ts` calls `assertBranchAccess()` (membership check only), not `assertBranchRole(..., ['dentist_owner'])`. MODULE_SPEC §6 states "Export / bulk ops → dentist_owner only; all others restricted." ROLE_PERMISSION_MATRIX line 87 confirms "Export reports → dentist_owner ✅, all others ❌." Any `staff_full` or `dentist_associate` member can currently export all branch patient data.
+**File:** services/api-ts/src/handlers/dental-patient/identity/exportDentalPatients.ts:56
+**Spec Section:** §6 Permissions
+**Confidence:** HIGH
+
+#### EM-PAT-002
+**Severity:** P0
+**Title:** Bulk-archive endpoint allows any branch member — spec requires dentist_owner only
+**Description:** `bulkArchiveDentalPatients.ts` calls `assertBranchAccess()` for each branch, not `assertBranchRole(..., ['dentist_owner'])`. MODULE_SPEC §6 states "Archive patient → dentist_owner only." The individual `archiveDentalPatient` correctly enforces `dentist_owner`; the bulk path bypasses this gate.
+**File:** services/api-ts/src/handlers/dental-patient/identity/bulkArchiveDentalPatients.ts:39
+**Spec Section:** §6 Permissions
+**Confidence:** HIGH
+
+#### EM-PAT-003
+**Severity:** P0
+**Title:** Restore (reactivation) endpoint has no role guard — spec requires dentist_owner only
+**Description:** `restoreDentalPatient.ts` calls `assertBranchAccess()` (line 31), not `assertBranchRole`. The state machine declares `archived → active (reactivation by dentist_owner)` (§8). Any branch member can currently reactivate patients.
+**File:** services/api-ts/src/handlers/dental-patient/identity/restoreDentalPatient.ts:30-31
+**Spec Section:** §6 Permissions, §8 State Transitions
+**Confidence:** HIGH
+
+#### EM-PAT-004
+**Severity:** P0
+**Title:** updateDentalPatient allows any allowed role to set status=archived, bypassing dentist_owner gate
+**Description:** `updateDentalPatient.ts` (lines 51-55) allows setting `status: 'archived'` via PATCH for any user with `dentist_owner`, `dentist_associate`, `hygienist`, or `staff_full` role. The dedicated `archiveDentalPatient` endpoint correctly enforces `dentist_owner` only, but the PATCH shortcut undermines that gate. A `dentist_associate` can archive patients via PATCH.
+**File:** services/api-ts/src/handlers/dental-patient/identity/updateDentalPatient.ts:41-55
+**Spec Section:** §6 Permissions, §8 State Transitions
+**Confidence:** HIGH
+
+---
+
+### P1 Findings
+
+#### EM-PAT-005
+**Severity:** P1
+**Title:** DE-021 PatientRegistered domain event declared but never published
+**Description:** MODULE_SPEC §10b declares `DE-021 PatientRegistered` as a published event (trigger: Patient created; consumers: dental-audit, notifs). `createDentalPatient.ts` logs a Pino structured line but emits no domain event object. No `domain-events.ts` file exists in dental-patient (unlike dental-visit and dental-clinical). Consumers in dental-audit and notifs cannot react.
+**File:** services/api-ts/src/handlers/dental-patient/identity/createDentalPatient.ts:82
+**Spec Section:** §10b Domain Events (Published)
+**Confidence:** HIGH
+
+#### EM-PAT-006
+**Severity:** P1
+**Title:** DE-008 InvoicePaid event consumer absent — has_active_payment_plan never synced
+**Description:** MODULE_SPEC §10b declares `DE-008 InvoicePaid` as a consumed event (source: dental-billing; side effect: update `has_active_payment_plan` flag). No event handler, subscription, or listener for `InvoicePaid` exists anywhere in the dental-patient module. The flag is read-returned but never updated reactively — it will drift out of sync.
+**File:** services/api-ts/src/handlers/dental-patient/ (module-wide)
+**Spec Section:** §10b Domain Events (Consumed)
+**Confidence:** HIGH
+
+#### EM-PAT-007
+**Severity:** P1
+**Title:** BR-020 patient merge endpoint undeclared — spec says it must return 501
+**Description:** MODULE_SPEC §5 rule BR-020 states "Patient merge not implemented — Merge endpoint → 501 NOT IMPLEMENTED." No route for patient merge exists. While the feature is intentionally not implemented, the spec mandates a discoverable 501 stub endpoint. Feature flag `dental_patient_merge_enabled` (§18) references this endpoint but there is nothing to toggle.
+**File:** services/api-ts/src/app.ts (missing route)
+**Spec Section:** §5 Business Rules (BR-020), §18 Feature Flags
+**Confidence:** MEDIUM
+
+---
+
+### P2 Findings
+
+#### EM-PAT-008
+**Severity:** P2
+**Title:** BR-015c follow-up notes append-only: PATCH/DELETE not explicitly blocked with domain error
+**Description:** MODULE_SPEC §5 rule BR-015c states "405 on PATCH/DELETE" for follow-up notes. Only GET and POST routes are registered (routes.ts lines 930–942). PATCH/DELETE requests fall through to a generic 405 handler rather than a domain-specific 405 with descriptive error. The audit-log module has an explicit 405 blocker pattern (app.ts:201–209) that follow-up notes should mirror.
+**File:** services/api-ts/src/generated/openapi/routes.ts:930-942
+**Spec Section:** §5 Business Rules (BR-015c)
+**Confidence:** HIGH
+
+#### EM-PAT-009
+**Severity:** P2
+**Title:** Observability hook event names don't match spec §17 declared log event names
+**Description:** MODULE_SPEC §17 declares four named log events: `dental-patient.created` (INFO), `dental-patient.archived` (INFO), `dental-patient.consent.captured` (INFO), `dental-patient.safety-floor.empty` (WARN). None of these named events are emitted. Unstructured strings like `'Dental patient registered'` are used instead. The WARN `dental-patient.safety-floor.empty` is never emitted even when all safety floor arrays are empty.
+**File:** services/api-ts/src/handlers/dental-patient/identity/ (multiple files)
+**Spec Section:** §17 Observability Hooks
+**Confidence:** HIGH
+
+#### EM-PAT-010
+**Severity:** P2
+**Title:** Consent not written to person JSONB — only boolean gate enforced
+**Description:** MODULE_SPEC §20 AI Instructions item 5 states "Consent fields stored as JSONB on person (not on patient table)." `createDentalPatient.ts` checks `body.consentGiven` (boolean) and throws if false (AC-PAT-001 satisfied), but the consent value is never written to the `person` record's consent JSONB fields (marketing/data_sharing/SMS/email). Only the gate exists; no consent record is persisted.
+**File:** services/api-ts/src/handlers/dental-patient/identity/createDentalPatient.ts:37-84
+**Spec Section:** §5 BR-015, §20 AI Instructions (item 5), WF-044
+**Confidence:** HIGH
+
+#### EM-PAT-011
+**Severity:** P2
+**Title:** Safety floor aggregation may miss prescriptions stored outside medicalHistoryEntries
+**Description:** MODULE_SPEC §7 and AC-PAT-003 specify medications from "active prescriptions." `getDentalPatientSafetyFloor.ts` queries only `medicalHistoryEntries` table, filtering by `entryType`. If prescriptions use a separate schema in dental-clinical, they are omitted. AC-PAT-003 explicitly distinguishes "1 active prescription" from medical history entries.
+**File:** services/api-ts/src/handlers/dental-patient/identity/getDentalPatientSafetyFloor.ts:42-54
+**Spec Section:** §7 Data Requirements (Safety Floor), AC-PAT-003
+**Confidence:** MEDIUM
+
+---
+
+### P3 Findings
+
+#### EM-PAT-012
+**Severity:** P3
+**Title:** GDPR erasure tracking endpoint absent (WF-088)
+**Description:** MODULE_SPEC §3 declares WF-088 "GDPR patient erasure (WFG-006)" as a P2 workflow for admin actor. No endpoint exists for GDPR erasure request tracking or the anonymize-person-link operation described in §13.
+**File:** services/api-ts/src/handlers/dental-patient/ (missing handler)
+**Spec Section:** §3 Workflows (WF-088), §13 Edge Cases
+**Confidence:** HIGH
+
+#### EM-PAT-013
+**Severity:** P3
+**Title:** CSV import does not flag duplicate phone numbers per §13 edge case
+**Description:** MODULE_SPEC §13 states "CSV import with duplicate phone → flag duplicates, skip or merge based on config [VERIFY]." `importPatients.ts` validates required fields but performs no duplicate phone detection.
+**File:** services/api-ts/src/handlers/dental-patient/identity/importPatients.ts:107-121
+**Spec Section:** §13 Edge Cases
+**Confidence:** HIGH
+
+---
+
+## Public API Completeness (§10 — 10/10 Found)
+
+| Endpoint | Handler | Auth | Status |
+|----------|---------|------|--------|
+| POST /dental/patients | createDentalPatient.ts | authMiddleware ✅ | FOUND |
+| GET /dental/patients | listDentalPatients.ts | authMiddleware ✅ | FOUND |
+| GET /dental/patients/:id | getDentalPatient.ts | authMiddleware ✅ | FOUND |
+| PATCH /dental/patients/:id | updateDentalPatient.ts | authMiddleware ✅ | FOUND |
+| POST /dental/patients/:id/archive | archiveDentalPatient.ts | authMiddleware ✅ | FOUND |
+| GET /dental/patients/:id/statement | getDentalPatientStatement.ts | authMiddleware ✅ | FOUND |
+| POST /dental/patients/:id/follow-up | addFollowUpNote.ts | authMiddleware ✅ | FOUND |
+| POST /dental/patients/bulk-archive | bulkArchiveDentalPatients.ts | authMiddleware ✅ | FOUND |
+| POST /dental/patients/import | importPatients.ts | authMiddleware ✅ | FOUND |
+| GET /dental/patients/:id/export | exportDentalPatients.ts | authMiddleware ✅ | FOUND |
+
+Route discovery: 21 total dental/patients routes. All have authMiddleware. No unprotected routes.
+
+---
+
+## State Machines
+
+| FSM | Transitions Declared | Guarded | Notes |
+|-----|---------------------|---------|-------|
+| Patient Status | active→archived, archived→active | Partial | archiveDentalPatient ✅; updateDentalPatient bypass ❌ (EM-PAT-004) |
+| Recall | pending→sent/cancelled, sent→completed/cancelled | Yes (RECALL_FSM) | ✅ |
+| Task | open→in_progress/cancelled, in_progress→done/cancelled | Yes (TASK_FSM) | ✅ |
+| Claim Draft | draft→ready→submitted→accepted/rejected | Yes (CLAIM_DRAFT_FSM) | ✅ |
+
+---
+
+## Stabilization Plan
+
+**Fix Now (P0):**
+1. EM-PAT-001: `exportDentalPatients.ts:56` — use `assertBranchRole(['dentist_owner'])`
+2. EM-PAT-002: `bulkArchiveDentalPatients.ts:39` — use `assertBranchRole(['dentist_owner'])`
+3. EM-PAT-003: `restoreDentalPatient.ts:31` — use `assertBranchRole(['dentist_owner'])`
+4. EM-PAT-004: `updateDentalPatient.ts:41` — add role check when `body.status === 'archived'`
+
+**Fix Before New Work (P1):**
+5. EM-PAT-005: Create `domain-events.ts`; emit `PatientRegistered` from `createDentalPatient`
+6. EM-PAT-006: Implement DE-008 `InvoicePaid` consumer to update `hasActivePaymentPlan`
+7. EM-PAT-007: Add `POST /dental/patients/:id/merge` stub returning 501
+
+**Fix When Touching (P2):**
+8. EM-PAT-008: Add explicit 405 route blocks for follow-up notes PATCH/DELETE
+9. EM-PAT-009: Standardize log event names to §17 spec; add WARN when safety floor empty
+10. EM-PAT-010: Write consent JSONB to person record after boolean gate passes
+11. EM-PAT-011: Audit prescription storage; join separate table if needed in safety floor
+
+**Track (P3):**
+12. EM-PAT-012: Implement WF-088 GDPR erasure endpoint for admin
+13. EM-PAT-013: Add duplicate phone detection in CSV import
+
+---
+
+## Previous Run History
+
+| Run | Date | Score | P0s | Status |
+|-----|------|-------|-----|--------|
+| 6 | 2026-05-29 (Wave3) | (prev) | 56 claimed fixed | See prior entry |
+| **7** | **2026-05-29** | **72/100** | **4** | **PARTIAL** |
 
 ## Summary
 

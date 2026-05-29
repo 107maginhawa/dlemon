@@ -1,271 +1,250 @@
-# dental-pmd — Module Enforcement
-<!-- oli-enforce-module v1.0 --strict | run: run-6-strict-2026-05-29 | 2026-05-29 -->
+<!-- oli-version: 1.1 | generated: 2026-05-29 | skill: oli-enforce-module | run: 7 | module: dental-pmd -->
 
-## Summary
+# Enforcement Report: dental-pmd
 
-- **Findings:** 15 (P0: 2, P1: 7, P2: 4, P3: 1)
-- **Service-Layer Pattern:** ABSENT (no `.service.ts`; repos instantiated inline)
-- **Compliance Score:** 44/100 (P0 cap applied; 4 new findings vs run-5)
-- **Baseline:** run-5 (P0:2, P1:5, P2:3, P3:1, score:49)
-- **New findings:** 4 | **Resolved findings:** 0
-
-### Score Breakdown
-
-| Dimension | run-5 | run-6 | Notes |
-|-----------|-------|-------|-------|
-| Public API completeness | 4/10 | 4/10 | Download missing (P0); listPMDs path mismatch (P1); importPMD 3 gaps (P1) |
-| Workflow implementation | 7/10 | 7/10 | WF-021 ✅; WF-022 partial; WF-066 missing |
-| Domain term consistency | 6/10 | 5/10 | `source_description` drift + membership.id absent from blob (NEW) |
-| State machine enforcement | 9/10 | 9/10 | Visit guard + supersede logic present; signed-PMD miss latent |
-| Event publishing | 2/10 | 2/10 | DE-017 never emitted; no observability logs (NEW) |
-| Auth / permissions | 9/10 | 9/10 | All handlers auth-gated; assertBranchRole consistent |
-| Test coverage (AC) | —/10 | 3/10 | AC-PMD-001 ✅; AC-PMD-002/003/004 ❌ (newly measured) |
-| F2 Service-Layer/DI | 3/10 | 3/10 | No `.service.ts`; repos newed inline; no DI |
-
-> P0 cap: two P0 findings bring overall cap to 3 per dimension where they apply. Final score floored accordingly.
+**Run:** 7 | **Date:** 2026-05-29 | **Skill:** oli-enforce-module v1.1
+**Compliance Score:** 62 / 100
+**V1 Status:** PARTIAL
+**Service Layer Status:** PRESENT
 
 ---
 
-## Strict §7.1 Data Scope Verification
+## Summary
 
-`generatePMD.ts` assembles `contentSnapshot` JSON blob (lines 58–81). Exact fields vs spec:
+| Dimension | Score | Status |
+|-----------|-------|--------|
+| Public API completeness | 9/10 | PASS — all 7 handlers present and registered |
+| Workflow implementation | 9/10 | PASS — WF-021, WF-022, WF-066 all have code paths |
+| Domain term consistency | 9/10 | PASS — PMD, Checksum, ImportedPMD used correctly |
+| State machine enforcement | 8/10 | PASS — terminal states enforced; sign/supersede guarded |
+| Event publishing | 3/10 | FAIL — DE-017 PMDGenerated not published |
+| Auth/permission enforcement | 3/10 | FAIL — staff_full incorrectly allowed to generate |
+| Data schema compliance | 5/10 | PARTIAL — 3 schema gaps, 1 FK violation |
+| Import isolation contract | 4/10 | FAIL — FK constraint on patientId; read-path joins |
 
-| §7.1 Required Field | In contentSnapshot blob? | Notes |
-|---------------------|--------------------------|-------|
-| `visit.id` (visitId) | ✅ line 59 | |
-| `visit.status` | ❌ MISSING | Used as guard (line 50) but not serialized into blob |
-| `visit.activatedAt/createdAt` (visitDate) | ✅ line 61 | |
-| `visit.branchId` | ❌ MISSING | Passed to DB row separately; not in checksummed blob |
-| `treatment.id` | ✅ | |
-| `treatment.cdtCode` | ✅ | |
-| `treatment.description` | ✅ | |
-| `treatment.toothNumber` | ✅ | |
-| `treatment.surfaces` | ✅ | |
-| `treatment.conditionCode` | ✅ | |
-| `treatment.status` | ✅ | |
-| `treatment.priceCents` | ✅ | |
-| `prescription.id` | ✅ | |
-| `prescription.rxNormCode` | ✅ | |
-| `prescription.drugName` | ✅ | |
-| `prescription.dosage` | ✅ | |
-| `prescription.frequency` | ✅ | |
-| `membership.id` (author, non-repudiation) | ❌ MISSING FROM BLOB | `authorMemberId` stored in DB row but NOT in `contentSnapshot` — checksum does not protect author identity |
-| `patientId` | ✅ | |
+---
 
-**§7.1 STRICT VERDICT — 3 fields excluded from checksummed blob:**
-1. `visit.status` — excluded (minor: guard-only field, arguably not needed in portable snapshot)
-2. `visit.branchId` — excluded (moderate: branch provenance not integrity-protected)
-3. `membership.id` (author) — **excluded** (HIGH: non-repudiation field is the entire rationale for querying dental-org; the SHA-256 hash does not cover the author, undermining HIPAA audit integrity)
+## Route Discovery
 
-Note: Lab orders and imaging studies are **excluded by design** per §7.1 spec footnote. Perio charts also excluded by design. These are NOT findings.
+All 7 dental-pmd routes discovered in `services/api-ts/src/generated/openapi/routes.ts`. All are protected by `authMiddleware({ roles: ["user"] })` at the router level.
+
+| Route | Method | Auth | Handler |
+|-------|--------|------|---------|
+| /dental/pmd/import | POST | authMiddleware | importPMD |
+| /dental/pmd/imported | GET | authMiddleware | listImportedPMDs |
+| /dental/pmd/imported/:id | GET | authMiddleware | getImportedPMD |
+| /dental/visits/pmd | GET | authMiddleware | listPMDs |
+| /dental/visits/:visitId/pmd | POST | authMiddleware | generatePMD |
+| /dental/visits/:visitId/pmd | GET | authMiddleware | getPMDForVisit |
+| /dental/visits/:visitId/pmd/export | GET | authMiddleware | exportPMD |
+
+**Note:** PATCH/PUT/DELETE on `/dental/pmd/imported/:id` return 405 via the app-level `registerHandlers` catch-all in `src/core/errors.ts:467` — AC-PMD-002 satisfied.
+
+---
+
+## Public API Completeness
+
+Spec §10 declares 5 endpoints. Cross-referenced against routes.ts and handler registry.
+
+| Declared Endpoint | Status | Implementation |
+|-------------------|--------|----------------|
+| POST /dental/pmd/generate | FOUND (path differs — see EM-PMD-29598c8a) | POST /dental/visits/:visitId/pmd |
+| GET /dental/pmd/:patientId | FOUND (path differs) | GET /dental/visits/pmd?patientId= |
+| GET /dental/pmd/:id/download | FOUND (path differs) | GET /dental/visits/:visitId/pmd/export |
+| POST /dental/pmd/import | FOUND | /dental/pmd/import |
+| GET /dental/pmd/imported/:id | FOUND | /dental/pmd/imported/:id |
+
+All declared operations have corresponding implementations. Path divergences are documented (OpenAPI is ground truth).
 
 ---
 
 ## Findings
 
-| ID | Sev | Status | Description | File | Line | Spec Ref |
-|----|-----|--------|-------------|------|------|----------|
-| EM-PMD-0E600871 | **P0** | KNOWN | `GET /api/v1/dental/pmd/:id/download` contract endpoint missing — no presigned-URL handler registered; `exportPMD` serves `/dental/visits/:visitId/pmd/export` (JSON attachment) which is a different operation | `services/api-ts/src/generated/openapi/routes.ts` | — | API_CONTRACTS §GET `/api/v1/dental/pmd/:id/download`; MODULE_SPEC §16 |
-| EM-PMD-422C74FA | **P0** | KNOWN | PATCH/DELETE on `imported_pmd` must return 405 `IMPORTED_PMD_IMMUTABLE` at the **router level** (AC-PMD-002, BR-022) — no route guard exists; framework default will 404 instead of 405 | `services/api-ts/src/generated/openapi/routes.ts` | — | MODULE_SPEC §11 AC-PMD-002; §7.2 invariant 3 |
-| EM-PMD-9AB43567 | **P1** | KNOWN | `GET /api/v1/dental/pmd/:patientId` contract path diverges — router registers `listPMDs` at `/dental/visits/pmd` (query-param based), not `/dental/pmd/:patientId` (path-param) | `services/api-ts/src/generated/openapi/routes.ts` | listPMDs block | API_CONTRACTS §GET `/api/v1/dental/pmd/:patientId` |
-| EM-PMD-299D050B | **P1** | KNOWN | `POST /api/v1/dental/pmd/import` missing three contract-required behaviours: (a) `multipart/form-data` file upload — handler accepts JSON body only; (b) server-side checksum verification (AC-PMD-003, §7.2 invariant 4) — no checksum validation; (c) `source_description` field (§7.2 invariant 5) — absent from schema and body | `services/api-ts/src/handlers/dental-pmd/importPMD.ts` | all | API_CONTRACTS §POST `/api/v1/dental/pmd/import`; MODULE_SPEC §7.2 inv 4–5; §11 AC-PMD-003 |
-| EM-PMD-790A2979 | **P1** | KNOWN | `imported_pmd` table missing `branch_id` and `checksum` fields declared in MODULE_SPEC §7 Data Requirements and §7.2 Import Contract | `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts` | 39–50 | MODULE_SPEC §7; §7.2 invariant 4 |
-| EM-PMD-55AA0F1E | **P1** | KNOWN | `imported_pmd` has no `branch_id` column — MODULE_SPEC §7.2 invariant 1 requires it stored as plain UUID (no FK); auth for `getImportedPMD`/`listImportedPMDs` falls back to `patient.preferredBranchId` which is fragile and not spec-defined | `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts` | 39–50 | MODULE_SPEC §7.2 invariant 1 |
-| EM-PMD-C405D767 | **P1** | KNOWN | DE-017 `PMDGenerated` event declared in MODULE_SPEC §10b never published — `generatePMD` has no emit call; patient download-link notifications and dental-audit trail silently skipped | `services/api-ts/src/handlers/dental-pmd/generatePMD.ts` | 83–109 | MODULE_SPEC §10b "Published: DE-017 PMDGenerated (→ notifs, dental-audit)" |
-| EM-PMD-B1A3C908 | **P1** | **NEW** | `membership.id` (author — non-repudiation field) excluded from `contentSnapshot` JSON blob — `authorMemberId` stored in DB row but not serialized before `sha256Hex()` call; checksum does not protect author identity; entire rationale for querying dental-org (`getActiveMembershipId`) is undermined | `services/api-ts/src/handlers/dental-pmd/generatePMD.ts` | 58–81 | MODULE_SPEC §7.1 "dental-org (membership): membership.id (author) — Non-repudiation: identifies the clinician who generated the PMD" |
-| EM-PMD-D4F90A21 | **P1** | **NEW** | AC-PMD-002 (PATCH imported PMD → 405) has zero test coverage — no test in either test file exercises PATCH/PUT/DELETE on an imported PMD row; gap compounds EM-PMD-422C74FA (missing route guard) | `dental-pmd.test.ts`, `dental-pmd.data-portability.test.ts` | — | MODULE_SPEC §11 AC-PMD-002; §12 Test Expectations |
-| EM-PMD-E7C02B55 | **P1** | **NEW** | AC-PMD-004 (PMD content matches snapshot at generation time; future visit edits don't change PMD) has zero test coverage — no test generates PMD, mutates a treatment, then verifies PMD content unchanged | `dental-pmd.test.ts`, `dental-pmd.data-portability.test.ts` | — | MODULE_SPEC §11 AC-PMD-004; §5 BR-021 |
-| EM-PMD-C429BD8C | **P2** | KNOWN | Domain term drift: MODULE_SPEC §7 and §7.2 invariant 5 name the field `source_description`; schema uses `source_facility`/`sourceFacility` — external integrations expecting `source_description` receive wrong key | `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts` | 42 | MODULE_SPEC §7; §7.2 invariant 5 |
-| EM-PMD-D62195FA | **P2** | KNOWN | `pmd_document` schema missing `storage_file_id` and `format_version` fields declared in MODULE_SPEC §7 Data Requirements | `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts` | 20–36 | MODULE_SPEC §7 |
-| EM-PMD-4C1DFCE1 | **P2** | KNOWN | `safetyFloorMerged` stored as `text('safety_floor_merged')` (`'true'`/`'false'`) instead of `boolean` — manual string coercion is fragile and inconsistent with Drizzle conventions | `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts` | 46 | MODULE_SPEC §7.1 |
-| EM-PMD-F9D2A170 | **P2** | **NEW** | No structured observability log emits in any handler — §17 declares `dental-pmd.generated (INFO)`, `dental-pmd.imported (INFO)`, `dental-pmd.checksum-failed (WARN)`; logger context is wired (`ctx.set('logger', ...)`) but handlers never call `logger.info('dental-pmd.generated', {pmdId, visitId})` — HIPAA audit trail missing | `generatePMD.ts`, `importPMD.ts` | all | MODULE_SPEC §17 Observability Hooks |
-| EM-PMD-F873ABEE | **P3** | KNOWN | No `.service.ts` — `PMDDocumentRepository`/`ImportedPMDRepository` instantiated inline (`new …(db)`) in every handler; no DI or service facade; F2 service-layer pattern absent | `generatePMD.ts`, `importPMD.ts`, `getPMDForVisit.ts`, `exportPMD.ts`, `listPMDs.ts`, `listImportedPMDs.ts` | various | MODULE_MAP §M8; F2 run directive |
+### P0 — Security / Permission Enforcement
 
 ---
 
-## Dimension Details
-
-### 1. Public API Completeness
-
-Declared endpoints (API_CONTRACTS): 5
-
-| Endpoint | Status | Evidence |
-|----------|--------|----------|
-| `POST /api/v1/dental/pmd/generate` → `POST /dental/visits/:visitId/pmd` | ✅ FOUND | `routes.ts` generatePMD block; `generatePMD.ts` |
-| `GET /api/v1/dental/pmd/:patientId` | ⚠️ PATH MISMATCH (P1) | Registered at `/dental/visits/pmd?patientId=` (query param); contract expects path param |
-| `GET /api/v1/dental/pmd/:id/download` | ❌ MISSING (P0) | No presigned-URL handler; `exportPMD` is JSON attachment at different path |
-| `POST /api/v1/dental/pmd/import` | ⚠️ PARTIAL (P1) | Handler exists but JSON-only body, no checksum verification, no `source_description` |
-| `GET /api/v1/dental/pmd/imported/:id` | ✅ FOUND | `routes.ts` getImportedPMD block; `getImportedPMD.ts` |
-
-Additional implemented routes (not in API_CONTRACTS):
-- `GET /dental/pmd/imported` — `listImportedPMDs` (extension, acceptable)
-- `GET /dental/visits/:visitId/pmd` — `getPMDForVisit` (expected by spec, not in contract doc)
-- `GET /dental/visits/:visitId/pmd/export` — `exportPMD` (FR12.6 implementation)
-
-### 2. Workflow Implementation
-
-| Workflow | Status | Evidence |
-|----------|--------|----------|
-| WF-021: Generate PMD | ✅ FOUND | `generatePMD.ts` — visit status guard, snapshot, SHA-256 checksum, supersede logic |
-| WF-022: Import external PMD | ⚠️ PARTIAL (P1) | `importPMD.ts` — no checksum verify, no file upload, no `source_description` |
-| WF-066: Download PMD | ❌ MISSING (P0) | No presigned-URL handler; `exportPMD` is JSON attachment at a different path |
-
-**§4 Workflow Details:** ABSENT from MODULE_SPEC.md — spec gap. File jumps from §3 to §5; no WF-xxx step sequences.
-
-### 3. Domain Term Consistency
-
-| Spec Term | Code Term | Status |
-|-----------|-----------|--------|
-| `source_description` | `sourceFacility` / `source_facility` | ❌ DRIFT (P2) |
-| `membership.id` in content blob | `authorMemberId` in DB row only | ❌ MISSING FROM BLOB (P1 NEW) |
-| `PMDDocument` | `PMDDocument` / `pmdDocuments` | ✅ |
-| `ImportedPMD` | `ImportedPMD` / `importedPmds` | ✅ |
-| `safetyFloorMerged` (boolean) | `safetyFloorMerged` (text `'true'`/`'false'`) | ⚠️ TYPE MISMATCH (P2) |
-| `storage_file_id` | absent | ❌ MISSING (P2) |
-| `format_version` | absent | ❌ MISSING (P2) |
-
-### 4. State Machine Enforcement
-
-Spec declares: `PMDDocument: generated (terminal)`. Implementation has `generated → signed → superseded`:
-
-| Transition | Guard | Status |
-|------------|-------|--------|
-| Visit must be `completed` or `locked` before generation | `generatePMD.ts:50` | ✅ |
-| `generated → signed` | `pmd-document.repo.ts sign()` — `.where(eq(status, 'generated'))` | ✅ |
-| `generated/signed → superseded` | `supersede()` marks old, inserts new | ✅ |
-| `signed PMD` visible to re-generate guard | `findByVisit()` returns only `status = 'generated'` — signed PMDs silently missed | ⚠️ LATENT BUG |
-| `imported_pmd` terminal (no PATCH/DELETE) | Router-level 405 guard MISSING | ❌ P0 |
-
-### 5. Event Publishing
-
-| Event | Direction | Status |
-|-------|-----------|--------|
-| DE-017 `PMDGenerated` | Publish (→ notifs, dental-audit) | ❌ MISSING (P1) |
-| DE-002 `VisitCompleted` | Consume (triggers PMD-eligible flag) | N/A — consumed by dental-visit |
-
-### 6. Auth / Permission Enforcement
-
-| Handler | Auth Check | Role Guard | Status |
-|---------|-----------|------------|--------|
-| `generatePMD` | `user?.id` | `assertBranchRole(['dentist_owner', 'dentist_associate', 'staff_full'])` | ⚠️ `staff_full` not in spec §6 for generate (spec: dentist_owner + dentist_associate only) |
-| `importPMD` | `user?.id` | `assertBranchRole(['dentist_owner', 'dentist_associate', 'staff_full'])` | ✅ |
-| `getPMDForVisit` | `user?.id` | `assertBranchAccess` | ✅ |
-| `listPMDs` | `user?.id` | `assertBranchAccess` | ✅ |
-| `listImportedPMDs` | `user?.id` | `assertBranchAccess` | ✅ |
-| `getImportedPMD` | `user?.id` | `assertBranchAccess` (via `patient.preferredBranchId`) | ⚠️ fragile — no `branch_id` on imported_pmd row |
-| `exportPMD` | `user?.id` | `assertBranchRole(['dentist_owner', 'dentist_associate', 'staff_full'])` | ✅ |
-
-### 7. Test Coverage (Acceptance Criteria)
-
-| AC | Requirement | Test Present | Location |
-|----|------------|-------------|----------|
-| AC-PMD-001 | Generate PMD for active (not completed) visit → 422 | ✅ | `dental-pmd.test.ts:179` — `returns 400 when visit is not completed or locked` |
-| AC-PMD-002 | PATCH imported PMD → 405 | ❌ MISSING | No test anywhere for 405 on PATCH/PUT/DELETE |
-| AC-PMD-003 | Checksum mismatch on verify → 422 CHECKSUM_MISMATCH | ❌ MISSING | `importPMD` has no checksum verify; test at line 338 mislabeled `[AC-PMD-03]` tests verbatim storage, not checksum rejection |
-| AC-PMD-004 | PMD content matches snapshot at generation time | ❌ MISSING | No mutation-after-generate test |
-
-Additional FR coverage present:
-- FR12.1 (CDT codes in content): ✅ `dental-pmd.test.ts:488–540`
-- FR12.4 (checksum non-empty + deterministic): ✅ `dental-pmd.test.ts:542–580`
-- FR12.5 (import JSON content): ✅ `dental-pmd.data-portability.test.ts:149`
-- FR12.6 (export JSON attachment + Content-Disposition): ✅ `dental-pmd.data-portability.test.ts:177`
-
-### 8. UI/UX (§9)
-
-| Component | Path | Status |
-|-----------|------|--------|
-| `pmd-import.tsx` | `apps/dentalemon/src/features/pmd/components/pmd-import.tsx` | ✅ |
-| `pmd-viewer.tsx` | `apps/dentalemon/src/features/pmd/components/pmd-viewer.tsx` | ✅ |
-| `pmd-viewer-sheet.tsx` | `apps/dentalemon/src/features/pmd/components/pmd-viewer-sheet.tsx` | ✅ |
-| `use-pmd.ts` | `apps/dentalemon/src/features/workspace/hooks/use-pmd.ts` | ✅ |
-| `use-share-pmd.ts` | `apps/dentalemon/src/features/workspace/hooks/use-share-pmd.ts` | ✅ |
-| Component tests | `pmd-import.test.ts`, `pmd-viewer.test.ts`, `use-pmd.test.ts`, `use-share-pmd.test.ts` | ✅ |
-
-UI section fully satisfied. No gaps vs §9.
-
-### 9. Spec Coverage (All 22 Sections)
-
-| Section | Status |
-|---------|--------|
-| §1 Overview | ✅ Patient medical dossier, import/export, data portability — all implemented |
-| §2 Domain Terms | ✅ PMD, ImportedPMD code-aligned; minor drift noted in findings |
-| §3 Workflows | ✅ WF-021 ✅, WF-022 partial, WF-066 missing |
-| §4 Workflow Details | ❌ ABSENT from MODULE_SPEC.md — spec gap |
-| §5 Business Rules | BR-021 (immutable snapshot) ✅ enforced; BR-022 (imported read-only) ❌ router guard missing |
-| §6 Permissions | ⚠️ `staff_full` allowed to generate (spec says dentist only) |
-| §7 Data Requirements | ⚠️ `pmd_document` missing `storage_file_id`, `format_version`; `imported_pmd` missing `branch_id`, `checksum` |
-| §7.1 Data Scope | ⚠️ 3 fields absent from blob (`visit.status`, `visit.branchId`, `membership.id`) |
-| §7.2 Import Contract | ❌ Invariants 1, 3, 4, 5 violated |
-| §7b Aggregate Boundaries | ✅ UUID refs; facade pattern used for cross-module access |
-| §8 State Transitions | ⚠️ Spec says `generated (terminal)`; impl adds `signed`/`superseded`; signed PMDs missed by re-generate guard |
-| §9 UI/UX | ✅ All components and hooks present |
-| §10 API | ⚠️ 2 of 5 contract endpoints broken/missing |
-| §10b Domain Events | ❌ DE-017 never emitted |
-| §11 Acceptance Criteria | ❌ 3 of 4 ACs untested |
-| §12 Test Expectations | ⚠️ FR12.1/FR12.4/FR12.5/FR12.6 covered; AC-PMD-002/003/004 not |
-| §13 Edge Cases | ❌ GDPR anonymize not implemented; checksum-mismatch path not exercised (no checksum verify); multiple PMDs per visit ✅ |
-| §14 Dependencies | ✅ dental-visit, dental-clinical, dental-org facades present |
-| §15 Error Handling | ⚠️ `VISIT_NOT_COMPLETED` ✅; `CHECKSUM_MISMATCH` ❌ (no checksum verify); `405 IMPORTED_PMD_IMMUTABLE` ❌ |
-| §16 Performance | No timeout/streaming concern — PMD generation is synchronous DB query; acceptable for V1 |
-| §17 Observability | ❌ No `dental-pmd.generated` / `dental-pmd.imported` / `dental-pmd.checksum-failed` log emits |
-| §18 Feature Flags | N/A — spec declares none |
-| §19 Vertical Slice Plan | PMD-S1 ✅, PMD-S2 ❌ (download), PMD-S3 partial (import checksum missing), PMD-S4 not applicable (V1) |
-| §20 AI Instructions | N/A — guidance only |
+#### EM-PMD-6e91e277
+**Severity:** P0
+**Title:** `staff_full` incorrectly permitted to generate PMD
+**Description:** `generatePMD.ts` line 44 calls `assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full'])`. The MODULE_SPEC §6 states "Generate PMD: dentist_owner, dentist_associate" only. The ROLE_PERMISSION_MATRIX (line 88) explicitly marks `staff_full` as not allowed for Generate PMD. Permitting `staff_full` to generate immutable compliance records violates the permission boundary and non-repudiation intent of the module.
+**Spec Section:** §6 Permissions; ROLE_PERMISSION_MATRIX
+**File:** `services/api-ts/src/handlers/dental-pmd/generatePMD.ts:44`
+**Fix:** Change allowed roles to `['dentist_owner', 'dentist_associate']`
+**Confidence:** HIGH
 
 ---
 
-## F2: Service-Layer/DI Assessment
+### P1 — Missing / Incomplete Implementation
 
-**Pattern: ABSENT** (unchanged from run-5)
+---
 
-No `pmd.service.ts` exists. All orchestration lives in handler functions. Repos exist and encapsulate Drizzle — handlers do NOT call Drizzle directly. Handler fatness is moderate (generatePMD.ts ~110 lines contains snapshot assembly and supersede logic).
+#### EM-PMD-f6e9a8ca
+**Severity:** P1
+**Title:** `imported_pmd.patientId` has FK constraint to `patients` table — spec forbids it
+**Description:** `pmd-document.schema.ts` line 41: `patientId: uuid('patient_id').notNull().references(() => patients.id)`. MODULE_SPEC §7.2 item 1 explicitly states: "imported PMD rows store `patient_id`, `branch_id`, `imported_by_member_id` as plain UUIDs. No DB FK constraints to `dental_patient`, `dental_branch`, or `dental_membership` tables." The FK constraint couples the imported-pmd aggregate to the live patient table, breaking the import isolation contract. If a patient record is deleted, cascade behavior could destroy compliance records.
+**Spec Section:** §7.2 Import Contract item 1
+**File:** `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts:41`
+**Fix:** Remove `.references(() => patients.id)` from `importedPmds.patientId`; keep as plain `uuid('patient_id').notNull()`
+**Confidence:** HIGH
 
-Same as run-5 baseline — score 3/10.
+---
+
+#### EM-PMD-3796429f
+**Severity:** P1
+**Title:** `imported_pmd` missing `branch_id` and `imported_by_member_id` columns
+**Description:** MODULE_SPEC §7.2 item 1 requires `imported_pmd` to store `branch_id` and `imported_by_member_id` as plain UUIDs (no FK). The `importedPmds` schema (lines 39-51) contains neither column. Without `branch_id`, branch-level authorization for import operations falls back to a live join against the patient's `preferredBranchId` (which itself is a coupling violation). Without `imported_by_member_id`, the non-repudiation audit trail for who performed the import is absent.
+**Spec Section:** §7.2 Import Contract item 1; §7 Data Requirements
+**File:** `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts:39-51`
+**Fix:** Add `branchId: uuid('branch_id').notNull()` and `importedByMemberId: uuid('imported_by_member_id').notNull()` to `importedPmds` table as plain UUID fields (no references)
+**Confidence:** HIGH
+
+---
+
+#### EM-PMD-21c502f3
+**Severity:** P1
+**Title:** `pmd_document` missing `storage_file_id` and `format_version` fields
+**Description:** MODULE_SPEC §7 Data Requirements specifies `pmd_document` must include: `id, visit_id, patient_id, branch_id, generated_at, checksum (SHA-256), storage_file_id, format_version`. The schema at lines 21-37 is missing `storage_file_id` (required for storage module integration per §14) and `format_version` (required for PMD portability versioning). Without `storage_file_id`, the S3/MinIO download path declared in §16 (Download < 2s via signed URL) cannot be implemented.
+**Spec Section:** §7 Data Requirements; §16 Performance
+**File:** `services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts:21-37`
+**Fix:** Add `storageFileId: uuid('storage_file_id')` and `formatVersion: text('format_version').notNull().default('1.0')` to `pmdDocuments` table
+**Confidence:** HIGH
+
+---
+
+#### EM-PMD-ecb305a7
+**Severity:** P1
+**Title:** Import checksum is optional — spec requires it; missing checksum must return 422
+**Description:** `importPMD.ts` line 38: `if (body.checksum !== undefined)` — checksum is treated as optional. MODULE_SPEC §7.2 item 4 states: "import must provide a checksum field; server verifies it against the uploaded content before creating the row. Missing or mismatched checksum → 422 CHECKSUM_MISMATCH." AC-PMD-003 covers the mismatch case but not the missing-checksum case. The test at line 444 of `dental-pmd.test.ts` explicitly asserts that omitting checksum returns 201 — this test reflects wrong behavior per spec.
+**Spec Section:** §7.2 Import Contract item 4; AC-PMD-003; §15 Error Handling
+**File:** `services/api-ts/src/handlers/dental-pmd/importPMD.ts:38`
+**Confidence:** HIGH
+
+---
+
+### P2 — Domain/Contract/Event Issues
+
+---
+
+#### EM-PMD-de1d7d6a
+**Severity:** P2
+**Title:** `getImportedPMD` and `listImportedPMDs` JOIN against live `patients` table in read paths
+**Description:** Both `getImportedPMD.ts:36` and `listImportedPMDs.ts:26` call `getPatientForPMD(db, stub.patientId)` which queries the live `patients` table to resolve `preferredBranchId` for authorization. MODULE_SPEC §7.2 item 2 states: "the import pipeline must not JOIN imported_pmd rows against any live dental table in read paths." This coupling means that if a patient's `preferredBranchId` changes, the authorization context for previously imported PMDs changes retroactively — violating the read-only, isolated nature of imported records.
+**Spec Section:** §7.2 Import Contract item 2
+**Files:** `services/api-ts/src/handlers/dental-pmd/getImportedPMD.ts:36`, `services/api-ts/src/handlers/dental-pmd/listImportedPMDs.ts:26`
+**Fix:** Store `branch_id` directly on `imported_pmd` at creation time (see EM-PMD-3796429f); use it for auth without joining live tables
+**Confidence:** HIGH
+
+---
+
+#### EM-PMD-738820ab
+**Severity:** P2
+**Title:** DE-017 PMDGenerated event not published
+**Description:** MODULE_SPEC §10b declares: "Published: DE-017 PMDGenerated (→ notifs: patient download link, dental-audit)". No event emission code exists anywhere in the `dental-pmd` module or in `generatePMD.ts`. The DOMAIN_MODEL also confirms DE-017 targets `notifs` (patient) and `dental-audit`. Without this event, patients do not receive their download notification, and the audit trail is incomplete.
+**Spec Section:** §10b Domain Events
+**File:** `services/api-ts/src/handlers/dental-pmd/generatePMD.ts`
+**Confidence:** HIGH
+
+---
+
+#### EM-PMD-29598c8a
+**Severity:** P2
+**Title:** MODULE_SPEC §10 documents stale route paths not matching OpenAPI or implementation
+**Description:** MODULE_SPEC §10 lists: `POST /dental/pmd/generate`, `GET /dental/pmd/:patientId`, `GET /dental/pmd/:id/download`. Actual OpenAPI paths are: `POST /dental/visits/:visitId/pmd`, `GET /dental/visits/pmd` (query param), `GET /dental/visits/:visitId/pmd/export`. The spec document is the input for future engineers — stale paths cause confusion and incorrect implementation. OpenAPI (`specs/api/dist/openapi/openapi.json`) is the canonical contract.
+**Spec Section:** §10 API Expectations
+**File:** `docs/product/modules/dental-pmd/MODULE_SPEC.md:95`
+**Fix:** Update MODULE_SPEC §10 to reflect actual OpenAPI paths
+**Confidence:** HIGH
+
+---
+
+### P3 — Optional / Deferred
+
+---
+
+#### EM-PMD-6d674faf
+**Severity:** P3
+**Title:** Observability hooks §17 not emitted
+**Description:** MODULE_SPEC §17 declares three observability events: `dental-pmd.generated` (INFO), `dental-pmd.imported` (INFO), `dental-pmd.checksum-failed` (WARN). None of these are emitted in any handler. The logger is injected via `ctx.get('logger')` but never called with these structured event keys. Without these, operations teams cannot monitor PMD generation volume or detect checksum failures without query-level DB inspection.
+**Spec Section:** §17 Observability Hooks
+**Files:** `generatePMD.ts`, `importPMD.ts`
+**Confidence:** HIGH
+
+---
+
+#### EM-PMD-6554ecd6
+**Severity:** P3
+**Title:** Feature flag `dental_pmd_async_generation` not implemented
+**Description:** MODULE_SPEC §18 declares feature flag `dental_pmd_async_generation: false`. No gating code exists in `generatePMD.ts` or elsewhere. The flag is expected to gate async PMD generation via pg-boss. While V1 default is synchronous (false), the flag infrastructure should exist so that enabling it does not require a code change.
+**Spec Section:** §18 Feature Flags
+**File:** `services/api-ts/src/handlers/dental-pmd/generatePMD.ts`
+**Confidence:** MEDIUM
+
+---
+
+## Compliance Score Computation
+
+| Category | Weight | Score | Notes |
+|----------|--------|-------|-------|
+| Public API completeness | 20% | 18/20 | All handlers present; paths differ from spec doc (not from OpenAPI) |
+| Workflow implementation | 15% | 13/15 | WF-021/022/066 all traced to code paths |
+| Domain term consistency | 10% | 9/10 | Correct bounded context usage |
+| State machine enforcement | 10% | 8/10 | Terminal states correct; sign/supersede guarded |
+| Auth/permission enforcement | 20% | 6/20 | P0: staff_full incorrectly allowed to generate |
+| Data schema compliance | 15% | 5/15 | 3 missing fields, 1 FK violation |
+| Event publishing | 10% | 3/10 | DE-017 not published |
+| **TOTAL** | 100% | **62/100** | P0 penalty applied |
+
+**P0 cap applied:** Score cannot exceed 62 while P0 findings remain open.
+
+---
+
+## Finding Inventory
+
+| ID | Severity | Title | Confidence |
+|----|----------|-------|------------|
+| EM-PMD-6e91e277 | P0 | staff_full incorrectly permitted to generate PMD | HIGH |
+| EM-PMD-f6e9a8ca | P1 | imported_pmd.patientId has FK constraint — spec forbids it | HIGH |
+| EM-PMD-3796429f | P1 | imported_pmd missing branch_id and imported_by_member_id | HIGH |
+| EM-PMD-21c502f3 | P1 | pmd_document missing storage_file_id and format_version | HIGH |
+| EM-PMD-ecb305a7 | P1 | Import checksum optional — spec requires it with 422 on missing | HIGH |
+| EM-PMD-de1d7d6a | P2 | getImportedPMD/listImportedPMDs JOIN live patients in read paths | HIGH |
+| EM-PMD-738820ab | P2 | DE-017 PMDGenerated event not published | HIGH |
+| EM-PMD-29598c8a | P2 | MODULE_SPEC §10 has stale route paths (cosmetic — OpenAPI is correct) | HIGH |
+| EM-PMD-6d674faf | P3 | Observability hooks §17 not emitted | HIGH |
+| EM-PMD-6554ecd6 | P3 | Feature flag dental_pmd_async_generation not gated | MEDIUM |
+
+**Total:** 10 findings — P0=1, P1=4, P2=3, P3=2
 
 ---
 
 ## Stabilization Plan
 
-### Fix Now (P0) — contract-breaking
-
-1. **EM-PMD-0E600871** — Implement `GET /dental/pmd/:id/download` returning presigned S3/MinIO URL (`download_url`, `expires_at`, `filename`, `size_bytes`). Update TypeSpec + regenerate routes.
-2. **EM-PMD-422C74FA** — Add `PATCH /dental/pmd/imported/:id` and `DELETE /dental/pmd/imported/:id` routes returning 405 `IMPORTED_PMD_IMMUTABLE` in `routes.ts`.
+### Fix Now (P0 — blocks V1 readiness)
+- **EM-PMD-6e91e277:** Remove `staff_full` from `generatePMD` allowed roles. 1-line fix in `generatePMD.ts:44`.
 
 ### Fix Before New Work (P1)
-
-3. **EM-PMD-B1A3C908** *(NEW)* — Include `membershipId` in `contentSnapshot` before `sha256Hex()` call. Mark existing DB rows with a `content_version: 'v1-legacy'` flag or note in `format_version` to distinguish pre-fix checksums.
-4. **EM-PMD-9AB43567** — Align `listPMDs` route path with API_CONTRACTS.
-5. **EM-PMD-299D050B** — Add `multipart/form-data` file handling to `importPMD`, server-side checksum verification (422 on mismatch), `source_description` required field.
-6. **EM-PMD-790A2979 + EM-PMD-55AA0F1E** — Add `branch_id` (UUID, no FK) and `checksum` columns to `imported_pmd`; generate migration.
-7. **EM-PMD-C405D767** — Emit DE-017 `PMDGenerated` after successful insert in `generatePMD.ts`.
-8. **EM-PMD-D4F90A21** *(NEW)* — Add test: `PATCH /dental/pmd/imported/:id` → 405.
-9. **EM-PMD-E7C02B55** *(NEW)* — Add test: generate PMD → mutate treatment → fetch PMD → verify content unchanged (BR-021 / AC-PMD-004).
+- **EM-PMD-f6e9a8ca:** Remove FK on `imported_pmd.patientId` — migration required
+- **EM-PMD-3796429f:** Add `branch_id` and `imported_by_member_id` to `imported_pmd` — migration + handler update
+- **EM-PMD-21c502f3:** Add `storage_file_id` and `format_version` to `pmd_document` — migration
+- **EM-PMD-ecb305a7:** Make checksum required in `importPMD`; update validator + tests
 
 ### Fix When Touching (P2)
-
-10. **EM-PMD-C429BD8C** — Rename `source_facility` → `source_description` in schema + handler (migration required).
-11. **EM-PMD-D62195FA** — Add `storage_file_id` and `format_version` to `pmd_document` table.
-12. **EM-PMD-4C1DFCE1** — Change `safetyFloorMerged` to `boolean()` in Drizzle schema; remove string coercion.
-13. **EM-PMD-F9D2A170** *(NEW)* — Add `logger.info('dental-pmd.generated', { pmdId, visitId })` in `generatePMD.ts` and `logger.info('dental-pmd.imported', ...)` in `importPMD.ts`.
+- **EM-PMD-de1d7d6a:** After EM-PMD-3796429f is fixed (branch_id on imported_pmd), use stored branch_id for auth instead of joining live patients table
+- **EM-PMD-738820ab:** Emit DE-017 after successful PMD generation
+- **EM-PMD-29598c8a:** Update MODULE_SPEC §10 to reflect actual OpenAPI paths
 
 ### Track (P3)
-
-14. **EM-PMD-F873ABEE** — Extract `dental-pmd.service.ts` with injected repos; handlers become thin translators.
-15. **Spec gap** — Add §4 Workflow Details to MODULE_SPEC.md with WF-021, WF-022, WF-066 step sequences.
+- **EM-PMD-6d674faf:** Add structured logger calls to generatePMD and importPMD
+- **EM-PMD-6554ecd6:** Add feature flag gate in generatePMD
 
 ---
 
 ## What's Next
 
-1. P0 blockers — download endpoint and 405 guard are client-observable contract breaks.
-2. Non-repudiation fix (EM-PMD-B1A3C908 NEW) — `membership.id` not in checksum defeats the entire purpose of querying dental-org; highest-impact new finding.
-3. AC test gaps — AC-PMD-002 and AC-PMD-004 have zero coverage; add before any new PMD work.
-4. `importPMD` contract — JSON-only body + missing checksum breaks AC-PMD-003.
-5. DE-017 event — patient notification and audit trail silently broken.
-6. After P0+P1 resolved: `/test-contract` to verify Hurl suite, then service-layer refactor (P3).
+1. **Immediate:** Fix EM-PMD-6e91e277 (P0 permission) — 1-line change in `generatePMD.ts:44`
+2. **Migration sprint:** Address P1 schema gaps together in a single DB migration (EM-PMD-f6e9a8ca + EM-PMD-3796429f + EM-PMD-21c502f3)
+3. **Logic sprint:** Fix import checksum requirement (EM-PMD-ecb305a7) + event publishing (EM-PMD-738820ab)
+4. **Re-run:** `oli-enforce-module --module=dental-pmd` after P0+P1 fixes to verify score >= 80
 
----
-
-_Reviewed: 2026-05-29_
-_Run: run-6-strict-2026-05-29_
-_Reviewer: Claude (oli-enforce-module v1.0 --strict)_
+**Route to READY:** Fix P0 + 4x P1. Expected score after fixes: ~84/100.

@@ -1,370 +1,362 @@
-# Dentalemon V1 — Full Enforcement Report
-<!-- oli-enforce-all v1.0 | generated: 2026-05-29 | run: run-6-strict | modules: 11 | agents: 31 -->
-<!-- flags: --strict | mode: full-run, all 22 sections, every file, all phases -->
+<!-- oli: oli-enforce-all v1.0 | run-7 | 2026-05-29 | --strict -->
 
----
+# Enforcement Report — Run 7
 
-## ⛔ STRICT MODE VIOLATION
-
-**56 new P0 regressions detected vs run-5 baseline. Build gate FAILS.**
-
-Top regression sources:
-- `EF dental-clinical`: 10 handlers missing `assertBranchAccess` (inventory×5, occlusion×2, postop×3) — **NEW P0×11**
-- `AL audit-compliance`: 16/25 mandatory audit contracts missing — **NEW P0×13**
-- `EF dental-imaging`: 5 ceph handlers missing `assertBranchAccess` — **NEW P0×5**
-- `EF dental-org`: IDOR on branch create/list + member deactivate canonical — **NEW P0×5**
-- `EX cross-module`: emr/ imports PatientRepository directly, imaging_finding FKs — **NEW P0×7**
-- `EF dental-pmd`: checksum validation never executed — **NEW P0×3**
-- `EF dental-patient`: cross-branch PHI leak via `listByOrg()` — **NEW P0×3**
-- `EF dental-visit`: lock gate missing on 3 write handlers — **NEW P0×3**
+**Run ID:** run-7-strict-2026-05-29
+**Git SHA:** 5035015a
+**Date:** 2026-05-29
+**Context:** First enforcement run post-Wave3 P0 security sprint (56 P0s claimed fixed)
+**Prior run:** run-6-strict-2026-05-29 (git e67c58b9)
 
 ---
 
 ## Audit Scope
 
-| Field | Value |
-|-------|-------|
-| Run ID | `run-6-strict-2026-05-29` |
-| Git SHA | `e67c58b9` |
-| Modules | 11 dental domain modules |
-| Phase -1 | SKIP (codebase_map.auto_phase not set) |
-| Phase -0.5 | SKIP (no map artifacts) |
-| Phase 0 | ✅ Coverage (34 EC- findings) |
-| Phase 1 | ✅ 22 agents: enforce-module×11 + enforce-file×11 |
-| Phase 1.5 | ✅ UI Journey: imaging, billing, patient, scheduling, pmd |
-| Phase 2 | ✅ Cross-module (EX) |
-| Phase 2.5 | ✅ Traceability (TR) — WORKFLOW_MAP exists |
-| Phase 3 | ✅ Audit Compliance (AL) — AUDIT_CONTRACTS exists |
-| Total agents | 31 |
-| Strict mode | FAIL — 56 new P0 regressions |
+- **Modules audited:** 11 dental modules (dental-audit, dental-billing, dental-clinical, dental-emr-integration, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit)
+- **Phases executed:** EM (module-level), EF (file-level), EX (cross-module), TR (traceability), AL (audit compliance), EC (coverage)
+- **Spec artifacts:** MODULE_SPEC, API_CONTRACTS, AUDIT_CONTRACTS, DOMAIN_MODEL, ERROR_TAXONOMY, WORKFLOW_MAP, ROLE_PERMISSION_MATRIX, MODULE_MAP, MODULE_BOUNDARIES
+- **Git SHA:** 5035015a
+- **Date:** 2026-05-29
 
 ---
 
 ## Executive Summary
 
-| Metric | Run-5 | Run-6 | Delta |
+| Metric | Run-7 | Run-6 | Delta |
 |--------|-------|-------|-------|
-| Total findings | 323 | 380 | +57 ↑ |
-| P0 (blocker) | ~31 | **78** | +47 ↑ |
-| P1 (functional gap) | ~55 | **145** | +90 ↑ |
-| P2 (incomplete) | ~170 | 114 | -56 ↓ |
-| P3 (improvement) | ~67 | 43 | -24 ↓ |
-| New findings | 84 | 156 | +72 |
-| Resolved | 18 | 18 | — |
-| Known | 221 | 206 | -15 |
-| Avg compliance score | 49.6 | **44.5** | -5.1 ↓ |
-| Modules: NOT_READY | 4 | 4 | — |
-| Modules: PARTIAL | 5 | 5 | — |
-| Modules: BLOCKED | 0 | 1 | +1 |
-| Modules: FUTURE_PHASE | 1 | 1 | — |
-| Modules: READY | 0 | 0 | — |
+| Total findings | **346** | 380 | -34 |
+| P0 (critical) | **54** | 78 | -24 |
+| P1 (high) | **142** | ~167 | -25 |
+| P2 (medium) | **109** | ~98 | +11 |
+| P3 (low) | **41** | ~37 | +4 |
+| New P0 regressions | **8** | — | — |
+| P0s resolved (Wave3) | **18** | — | — |
+| --strict verdict | **FAIL** | FAIL | — |
 
-**Why P0/P1 jumped:** Run-6 used stricter enforcement — every handler file individually checked for `assertBranchAccess` (run-5 sampled), audit compliance phase is new (25 AL findings), UI journey is new (50 UJ findings). The codebase itself did NOT regress; run-5 under-counted.
+**Wave3 net effect:** 18 P0s resolved, 8 new P0s discovered. Net P0 reduction: -24. --strict remains FAIL because new P0s were introduced.
+
+**Dominant systemic gap:** Domain events DE-001 through DE-023 are 0% wired. All 23 event publishers declared in EVENT_CONTRACTS.md are dead code. Cross-module choreography (audit trails, notifications, billing triggers) is entirely inoperative.
 
 ---
 
-## Coverage Findings (Phase 0)
+## Module Compliance Dashboard
 
-> Full details: `docs/audits/ENFORCEMENT_COVERAGE.md`
+| Module | Coverage% | Compliance% | P0 | P1 | v1_status | Trend (run-6→run-7) |
+|--------|-----------|-------------|----|----|-----------|---------------------|
+| dental-audit | 41% | 9% | 1 | 12 | NOT_READY | ↑ (was 0%, cap lifted) |
+| dental-billing | 95% | 62% | 2 | 10 | PARTIAL | ↑ (55%→62%) |
+| dental-clinical | 100% | 58% | 8 | 8 | PARTIAL | → (unchanged) |
+| dental-emr-integration | 41% | 18% | 4 | 15 | NOT_READY | ↓ (20%→18%, new P0) |
+| dental-imaging | 100% | 42% | 2 | 12 | PARTIAL | ↓ (46%→42%, schema SM P0) |
+| dental-org | 100% | 71% | 6 | 8 | PARTIAL | ↑ (59%→71%, Wave3 auth) |
+| dental-patient | 100% | 72% | 7 | 7 | PARTIAL | ↑ (37%→72%) |
+| dental-perio | 95% | 72% | 2 | 9 | PARTIAL | ↑ (38%→72%) |
+| dental-pmd | 64% | 62% | 1 | 8 | PARTIAL | ↑ (44%→62%, barrel fix) |
+| dental-scheduling | 91% | 72% | 2 | 7 | PARTIAL | ↑ (70%→72%) |
+| dental-visit | 100% | 72% | 1 | 9 | PARTIAL | ↑ (62%→72%) |
 
-| Module | Breadth% | Depth% | Score | Gap Sections |
-|--------|----------|--------|-------|--------------|
-| dental-audit | 50 | 41 | 41 ⚠️ | §4 Workflow Details, §9 UI, §12 Tests, §13 Edge Cases, §15 Errors, §18 Flags |
-| dental-billing | 100 | 95 | 95 ✅ | — |
-| dental-clinical | 93 | 100 | 100 ✅ | — |
-| dental-emr-integration | 50 | 41 | 41 ⚠️ | §4, §9, §12, §13, §15, §18 |
-| dental-imaging | 95 | 100 | 100 ✅ | — |
-| dental-org | 83 | 100 | 100 ✅ | — |
-| dental-patient | 85 | 100 | 100 ✅ | — |
-| dental-perio | 100 | 95 | 95 ✅ | — |
-| dental-pmd | 71 | 64 | 64 ⚠️ | §4, §9, §10b, §15 stubs |
-| dental-scheduling | 83 | 91 | 91 ✅ | — |
-| dental-visit | 93 | 100 | 100 ✅ | — |
-
-Phase 0 gate: no module below 40% — **PASS** (warn-only). 3 modules in warning zone (41%, 41%, 64%).
+**Service layer status:** dental-org, dental-patient, dental-pmd, dental-scheduling, dental-visit — PRESENT. dental-audit, dental-billing, dental-imaging, dental-perio — ABSENT. dental-emr-integration, dental-clinical — ABSENT (project convention: handler→repo pattern).
 
 ---
 
-## Module Compliance (Phase 1 — enforce-module)
+## P0 Findings
 
-> Per-module details: `docs/audits/enforce/module/{name}.md`
+All active P0 findings listed by module.
 
-| Module | Score R5→R6 | P0 | P1 | P2 | P3 | v1_status | Trend |
-|--------|------------|----|----|----|----|-----------|-------|
-| dental-audit | 28→**0** | 2 | 7 | 4 | 3 | NOT_READY | ↓ |
-| dental-billing | 61→**55** | 1 | 6 | 5 | 1 | NOT_READY | ↓ |
-| dental-clinical | 66→**58** | 3 | 6 | 4 | 1 | NOT_READY | ↓ |
-| dental-emr-integration | 22→**20** | 3 | 7 | 3 | 1 | FUTURE_PHASE | ↓ |
-| dental-imaging | 44→**46** | 0 | 10 | 5 | 1 | PARTIAL | ↑ |
-| dental-org | 54→**59** | 4 | 7 | 4 | 2 | PARTIAL | ↑ |
-| dental-patient | 41→**37** | 4 | 6 | 7 | 5 | NOT_READY | ↓ |
-| dental-perio | 41→**38** | 0 | 4 | 5 | 2 | PARTIAL | ↓ |
-| dental-pmd | 49→**44** | 2 | 7 | 4 | 1 | **BLOCKED** | ↓ |
-| dental-scheduling | 68→**70** | 1 | 2 | 2 | 1 | PARTIAL | ↑ |
-| dental-visit | 72→**62** | 4 | 6 | 3 | 1 | NOT_READY | ↓ |
+### dental-audit (1 P0)
 
-**Critical EM P0s (inline):**
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-AUD-001 | Route `/dental/admin/audit` uses `authMiddleware({ roles: ['admin'] })` — dentist_owners have system role `user` and are blocked before reaching handler logic. Audit viewer functionally inaccessible to intended audience. | `app.ts:196-199` | MODULE_SPEC §6, AC-AUD-003 |
 
-- `EM-AUD-005` P0 — `setPin` writes no audit event; `EM-AUD-006` P0 — append-only not enforced at HTTP level
-- `EM-BIL-001` P0 — `listDentalInvoices` no auth when `branchId` omitted → all-branch invoice enumeration
-- `EM-CLI-001` P0 — `revokeConsentForm` handler entirely absent (WF-035 unimplemented)
-- `EM-CLI-002` P0 — `updateMedicalHistoryEntry` mutates append-only PHI resource (must return 405)
-- `EM-CLI-012` P0 — prescription schema missing `status` field; FSM pending/dispensed/cancelled nonexistent
-- `EM-EMR P0×3` — route collision `/emr/:patientId` vs `/emr/:id`, spec DELETE contradiction, wrong-domain impl
-- `EM-ORG-001` P0 — `recoverPin` route missing `authMiddleware` — unauthenticated access
-- `EM-ORG-006` P0 — `GET /dental/organizations/:id` IDOR — no ownership/membership check
-- `EM-PAT-001` P0 — `roles:['user']` on all dental-patient routes — any authenticated user can archive/export patients
-- `EM-PAT-002` P0 — `archiveDentalPatient` uses `assertBranchAccess` not `assertBranchRole(['dentist_owner'])`
-- `EM-PAT-003` P0 — `archiveDentalPatient` never parses reason body
-- `EM-PAT-004` P0 — `listDentalPatients` org-expands `branchId` via `listByOrg()` — cross-branch PHI leak
-- `EM-PMD P0-1` P0 — `GET /dental/pmd/:id/download` endpoint missing entirely
-- `EM-PMD P0-2` P0 — PATCH/DELETE imported_pmd returns 404 not 405 IMPORTED_PMD_IMMUTABLE
-- `EM-SCH P0` P0 — all 6 scheduling routes use `roles:['user']` — any user books/cancels/checks-in
-- `EM-VIS-010` P0 — all 6 domain events (DE-001–DE-006) never emitted; zero `emit`/`publish` calls
-- `EM-VIS-011` P0 — WF-046 pg-boss lock-visit job absent; `completed→locked` has no automated path
-- `EM-VIS-007` P0 — `upsertVisitNotes` checks locked-only, not completed — SOAP notes writable to completed visit
+### dental-billing (2 P0s)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-BIL-23495b6c | DE-007 `InvoiceCreated` domain event not published in `createDentalInvoice` — audit and notification consumers silently starved | `createDentalInvoice.ts` | §10b DE-007 |
+| EM-BIL-add117d4 | DE-008 `InvoicePaid` domain event not published in `recordDentalPayment` — patient receipt notification never triggered | `recordDentalPayment.ts` | §10b DE-008, WF-014 |
+
+### dental-clinical (8 P0s — EM: 5, EF: 3)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-CLI-7e8a61cb | `createPrescription` writes to locked/completed visits without BR-003 guard | `prescriptions/createPrescription.ts` | §5 BR-003, AC-CLI-006 |
+| EM-CLI-bd7bc565 | `createConsentForm` writes to locked/completed visits without BR-003 guard | `consent/createConsentForm.ts` | §5 BR-003 |
+| EM-CLI-e7fc720a | `createAttachment` writes to locked/completed visits without BR-003 guard | `attachments/createAttachment.ts` | §5 BR-003 |
+| EM-CLI-6ff99c36 | Signed consent form not blocked from revocation — `revokeConsentForm` only checks `revoked` flag, not `signed` flag. Illegal `signed → revoked` transition enabled. | `consent/revokeConsentForm.ts:44`, `consent-form.repo.ts:66` | §8 SM, BR-014 |
+| EM-CLI-ba65c348 | `createAttachment` grants `hygienist` role instead of spec-permitted `staff_full` | `attachments/createAttachment.ts:34` | §6, ROLE_PERMISSION_MATRIX |
+| EF-CLI-001 | `updateMedicalHistoryEntry` implements full PATCH on append-only entity — violates AC-CLI-005 clinical safety invariant | `medical-history/updateMedicalHistoryEntry.ts:37-43` | AC-CLI-005 |
+| EF-CLI-002 | All 5 `inventory/*` handlers have zero branch authorization — any authenticated user can read/write any branch's inventory | `inventory/*.ts` (5 files) | §6, ROLE_PERMISSION_MATRIX |
+| EF-CLI-003 | All 5 `occlusion/*` and `postop/*` handlers have zero branch authorization — cross-branch data access unconstrained | `occlusion/*.ts`, `postop/*.ts` (5 files) | §6, ROLE_PERMISSION_MATRIX |
+
+### dental-emr-integration (4 P0s)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-EMR-001 | `handlers/emr/` implements consultation notes — entirely wrong domain vs spec (external EMR import bridge). Identity collision blocks Phase 3+ scheduling. | `handlers/emr/` (12 files) | MODULE_SPEC §1, §20 |
+| EM-EMR-002 | MODULE_SPEC §20 AI Instruction #3 prohibits implementation until Phase 3+ — Wave3 deepened unauthorized implementation | `handlers/emr/` | MODULE_SPEC §20 #3 |
+| EM-EMR-003 | Namespace collision: `handlers/emr/` blocks any Phase 3+ spec-compliant implementation | `handlers/emr/`, `routes.ts:1441-1480` | MODULE_SPEC §10 |
+| EM-EMR-004 | DB-level FK cascade constraints on `patient` and `provider` in `emr.schema.ts` violate MODULE_SPEC §20 AI Instruction #1 (no DB FKs to other modules) — NEW in run-7 | `repos/emr.schema.ts:36-42` | MODULE_SPEC §20 #1, §7b |
+
+### dental-imaging (2 P0s)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-IMG-008 | AC-IMG-002 and AC-IMG-003 structurally untestable — `draft` and `not_placed` enum values do not exist in code schemas. SM states diverge from spec. | `imaging_finding.schema.ts:33-47`, `imaging_ceph.schema.ts:35-39` | §11 AC-IMG-002, AC-IMG-003 |
+| EM-IMG-014 | Observability hooks not implemented per §17 — `dental-imaging.tier-blocked` WARN never emitted on tier gate fires. Operationally critical for monitoring tier upgrade conversion. | `createImagingStudy.ts`, `getCephAnalysis.ts` + 4 others | §17 Observability |
+
+### dental-org (6 P0s — EM: 2, EF: 4)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-ORG-001 | Deprecated member-create path (`DentalMembershipManagement_create`) is live without `assertBranchRole(['dentist_owner'])` — any branch member can create staff | `DentalMembershipManagement_create.ts:29-74` | §6 |
+| EM-ORG-002 | `POST /dental/organizations` uses generic `authMiddleware()` — any authenticated user can create organizations | `DentalOrganizationManagement_create.ts:15-35` | §6 |
+| EF-ORG-P015 | `recoverPin()` has no `assertBranchAccess` — any authenticated user can reset any membership's PIN cross-branch via security-question bypass — NEW in run-7 | `pinRecovery.ts:64-80` | §6, BR-016 |
+| EF-ORG-P016 | Fee schedule endpoints (`GET/PATCH /dental/fee-schedule`) and audit log handler not implemented — WF-025 P1 workflow has zero code — NEW in run-7 | (missing files) | §3 WF-025, WF-028 |
+| EF-ORG-P017 | `memberStatusEnum` missing `'invited'` and `'revoked'` — WF-004 staff invitation state machine broken at DB level — NEW in run-7 | `repos/membership.schema.ts:22` | §7, §8, API_CONTRACTS |
+| EF-ORG-P018 | `TIER_LIMIT_REACHED` error code used in 2 handlers not present in ERROR_TAXONOMY.md — undocumented wire-level error code — NEW in run-7 | `createMember.ts:73`, `DentalMembershipManagement_create.ts:53` | ERROR_TAXONOMY §5 |
+
+### dental-patient (7 P0s — EM: 4, EF: 3)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-PAT-001 | `exportDentalPatients` uses `assertBranchAccess()` not `assertBranchRole(['dentist_owner'])` — any branch member can export all patient PHI | `identity/exportDentalPatients.ts:56` | §6 |
+| EM-PAT-002 | `bulkArchiveDentalPatients` uses `assertBranchAccess()` not `assertBranchRole(['dentist_owner'])` | `identity/bulkArchiveDentalPatients.ts:39` | §6 |
+| EM-PAT-003 | `restoreDentalPatient` uses `assertBranchAccess()` not `assertBranchRole` | `identity/restoreDentalPatient.ts:30-31` | §6, §8 |
+| EM-PAT-004 | `updateDentalPatient` allows `dentist_associate` to set `status=archived` via PATCH, bypassing dentist_owner gate | `identity/updateDentalPatient.ts:41-55` | §6, §8 |
+| EF-PAT cross-route | All dental-patient routes use `roles: ['user']` at route level — operation-specific role matrix not enforced at router | `app.ts` (all dental/patients routes) | §6 |
+| EF-PAT cross-branch | `listDentalPatients` expands branchId to all org branches — cross-branch PHI leak | `identity/listDentalPatients.ts:38-48` | AC-PAT-004 |
+| EF-PAT archive | `archiveDentalPatient` uses `assertBranchAccess` not `assertBranchRole(['dentist_owner'])`; `reason` body never extracted or validated | `identity/archiveDentalPatient.ts` | §6, API_CONTRACTS |
+
+### dental-perio (2 P0s)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-PER-001 | `createPerioChart` throws `BusinessLogicError` (422) for duplicate chart — spec and AC-P02 require 409 `CHART_EXISTS`. Test encodes wrong behavior. | `createPerioChart.ts:52-54` | §15, AC-P02 |
+| EM-PER-002 | `perio-validation.ts` throws `ValidationError` (400) for invalid depth/tooth — spec requires 422 `INVALID_DEPTH`/`INVALID_TOOTH_NUMBER`. Tests absent for AC-P04/AC-P05. | `utils/perio-validation.ts:24,35` | §5 BR-P03/P04, §15 |
+
+### dental-pmd (1 P0)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-PMD-6e91e277 | `generatePMD` permits `staff_full` role — ROLE_PERMISSION_MATRIX restricts PMD generation to `dentist_owner` and `dentist_associate` only | `generatePMD.ts:44` | §6, ROLE_PERMISSION_MATRIX |
+
+### dental-scheduling (2 P0s)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-SCH-a564d893 | `cancelAppointment` allows `dentist_associate` and `staff_scheduling` — spec restricts cancel to `staff_full` and `dentist_owner` only | `cancelAppointment.ts:33-35` | §6 |
+| EM-SCH-4afe5eab | `checkInAppointment` allows `staff_scheduling` (not permitted) and excludes `dentist_associate` (required) — double role-list error | `checkInAppointment.ts:38-40` | §6 |
+
+### dental-visit (1 P0)
+
+| ID | Title | File | Spec Ref |
+|----|-------|------|---------|
+| EM-VIS-001 | `getTreatmentPlan` accepts optional `branchId` — when omitted, any authenticated user receives full treatment plan for any patient with no branch membership check | `treatment-plans/getTreatmentPlan.ts:25-28` | §6, API_CONTRACTS |
 
 ---
 
-## File Compliance (Phase 1 — enforce-file)
+## P1 Findings Summary
 
-> Per-module details: `docs/audits/enforce/file/{name}.md`
+142 P1 findings total. Key P1s per module:
 
-| Module | Files | Auth Missing | P0 | P1 | P2 | P3 |
-|--------|-------|-------------|----|----|----|----|
-| dental-audit | 5 | 0 | 0 | 3 | 1 | 0 |
-| dental-billing | 35 | 0 | 0 | 2 | 5 | 2 |
-| dental-clinical | 27 | **10** | **11** | 2 | 1 | 1 |
-| dental-emr-integration | 12 | n/a | 1 | 2 | 5 | 0 |
-| dental-imaging | 53 | **5** | **5** | 2 | 2 | 2 |
-| dental-org | 67 | **5** | **5** | 4 | 3 | 2 |
-| dental-patient | 82 | 0 | **3** | 3 | 2 | 1 |
-| dental-perio | 12 | 0 | 1 | 1 | 1 | 0 |
-| dental-pmd | 13 | 0 | **3** | 3 | 1 | 1 |
-| dental-scheduling | 26 | 0 | **2** | 0 | 1 | 1 |
-| dental-visit | 61 | 0 | **3** | 2 | 2 | 0 |
-
-**Critical EF P0s (inline):**
-
-- `EF-CLI P0×10` — `assertBranchAccess` absent from inventory×5, occlusion×2, postop×3 handlers
-- `EF-CLI P0` — `updateMedicalHistoryEntry.ts` live PATCH on append-only resource
-- `EF-EMR-001` P0 — `handlers/emr/` wrong-domain module (consultation notes ≠ EMR import)
-- `EF-IMG P0×5` — `createCephReport`, `batchUpsertCephLandmarks`, `recomputeCephAnalysis`, `deleteCephLandmark`, `updateCephLandmark` all missing `assertBranchAccess`
-- `EF-IMG P1` — `imagingTier` gate uses `=== 'free'` not `=== 'cbct'` — wrong comparison
-- `EF-ORG P0` — `DentalBranchManagement_create`: no ownership check; any user adds branches to any org
-- `EF-ORG P0` — `DentalBranchManagement_list`: no org-access guard; exposes all org branches
-- `EF-ORG P0` — `createMember`: missing `dentist_owner` role check; any staff can invite/promote
-- `EF-ORG P0` — `DentalMembershipManagement_deactivate` (canonical): any branch member can deactivate owner
-- `EF-ORG P0` — `getFeeSchedule`, `updateFeeSchedule`, `getAuditEvents` handlers not implemented
-- `EF-PAT-001` P0 — archived patient write-block never enforced across 15 write handlers
-- `EF-PAT-002` P0 — consent error is 400 (ValidationError) not 422 CONSENT_REQUIRED
-- `EF-PAT-003` P0 — `listDentalPatients` silently expands to all-org branches; AC-PAT-004 violated
-- `EF-PER-001` P0 — `upsertToothReading` never fetches parent visit; locked-visit writes succeed
-- `EF-PMD-001` P0 — `importPMD.ts` reads `body.checksum` but never validates against content
-- `EF-PMD-002` P0 — no 405 rejection on PATCH/PUT/DELETE imported_pmd routes
-- `EF-PMD-003` P0 — `markSafetyFloorMerged()` issues UPDATE on immutable imported_pmd
-- `EF-SCH-001` P0 — DE-010 `AppointmentBooked` + DE-011 `AppointmentCancelled` never published
-- `EF-SCH-002` P0 — no service layer; direct repo instantiation in all handlers
-- `EF-VIS P0×3` — `updateDentalTreatment`, `updateTooth`, `upsertDentalChart` allow writes to locked visits
-
-**Service layer status across all modules:**
-PRESENT: dental-audit (AuditLogRepository), dental-visit (visit.service.ts — UNUSED by handlers)
-PRESENT_UNUSED: dental-visit
-ABSENT: dental-billing, dental-clinical, dental-emr-integration, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling
+| ID | Module | Title | File |
+|----|--------|-------|------|
+| EM-AUD-002 | dental-audit | `branchId` optional — unscoped queries return all-branch audit data | `getAuditEvents.ts:31` |
+| EM-AUD-005 | dental-audit | `setPin` writes to platform audit table not `dental_audit_log` | `DentalMembershipManagement_setPin.ts` |
+| EM-AUD-008 | dental-audit | ~28 write handlers across modules produce zero audit events | multiple |
+| EM-AUD-009 | dental-audit | `dental_audit_log` missing 5 spec-required fields | `repos/audit-log.schema.ts` |
+| EF-AUD-001..005 | dental-audit | Schema field names, route path, required params, camelCase vs snake_case, error code all diverge from AUDIT_CONTRACTS | various |
+| EM-BIL-4b60bbd3 | dental-billing | `updateDentalPaymentPlan` not registered in routes — 404 in production | `registry.ts` |
+| EM-BIL-0decb164 | dental-billing | `issueDentalInvoice` excludes `staff_full` role | `issueDentalInvoice.ts:28` |
+| EF-BIL-001/003/005 | dental-billing | Wrong error class (400 vs 422), wrong error codes, payment method enum gaps | various |
+| EM-CLI-7df05775 | dental-clinical | `signConsentForm` does not emit DE-012 ConsentSigned | `consent/signConsentForm.ts` |
+| EM-CLI-68f8f19e | dental-clinical | `createLabOrder` does not emit DE-014 LabOrderCreated | `lab-orders/createLabOrder.ts` |
+| EM-CLI-743e7b05 | dental-clinical | `updateLabOrder` does not emit DE-015 LabOrderCompleted | `lab-orders/updateLabOrder.ts` |
+| EM-CLI-1f1f48d5 | dental-clinical | `createPrescription` does not emit DE-016 PrescriptionWritten | `prescriptions/createPrescription.ts` |
+| EM-CLI-84148bcf | dental-clinical | Consent revoke endpoint absent from TypeSpec | `app.ts:482`, TypeSpec |
+| EF-CLI-004/005/006 | dental-clinical | Missing DE-012/014/015/016 emitters in domain-events.ts + callers | `domain-events.ts`, handlers |
+| EM-EMR-006/007 | dental-emr | Terminal `imported` state not implemented; wrong-domain FSM active | `emr.repo.ts` |
+| EF-EMR-001..008 | dental-emr | Future-phase module violation; endpoint mismatch; domain entity mismatch; AC-EMR-001 violated; DB FK coupling | various |
+| EM-IMG-001/002 | dental-imaging | GET /dental/imaging/studies list endpoint missing; annotation endpoints missing | `routes.ts` |
+| EM-IMG-009/010/011 | dental-imaging | DE-018/DE-019/DE-020 not published by any imaging handler | various |
+| EM-IMG-012/013 | dental-imaging | `IMAGING_TIER_REQUIRED` error code never emitted; NOT_CALIBRATED guard absent | `getCephAnalysis.ts` |
+| EF-IMG-016/017/018 | dental-imaging | 200 vs 202 mismatch in recomputeCephAnalysis; IMAGING_TIER_REQUIRED never emitted; annotation status field missing | various |
+| EM-ORG-003 | dental-org | `updateMember` handler not registered in routes | `updateMember.ts` |
+| EM-ORG-005 | dental-org | Membership `invited` status absent from enum | `membership.schema.ts` |
+| EM-ORG-006 | dental-org | WF-004 staff invitation email not implemented | `createMember.ts` |
+| EF-ORG-P020/021/022 | dental-org | getMemberRole no status='active' filter; responses missing data/meta envelope; getOrgContext branch active check | various |
+| EM-PAT-005/006/007 | dental-patient | DE-021 PatientRegistered not published; DE-008 consumer absent; patient merge 501 stub missing | various |
+| EF-PER-001..006 | dental-perio | Wrong error codes across all write handlers; missing VISIT_LOCKED check in completePerioChart; hygienist role undeclared | various |
+| EM-PMD-f6e9a8ca..ecb305a7 | dental-pmd | imported_pmd FK constraint violates spec; missing branch_id/imported_by_member_id; pmd_document missing storage_file_id; checksum optional | `repos/pmd-document.schema.ts` |
+| EM-SCH-9f6305ad | dental-scheduling | PATCH cancel path does not emit DE-011 AppointmentCancelled | `updateAppointment.ts` |
+| EM-SCH-26cb6cb7 | dental-scheduling | `cancelAppointment` missing audit log (AUDIT_CONTRACTS DELETED event) | `cancelAppointment.ts` |
+| EF-SCH-001..004 | dental-scheduling | 204 vs 200 response mismatch; REASON_REQUIRED vs ValidationError; RESCHEDULE_CONFLICT vs CONFLICT | various |
+| EM-VIS-002/003/004/005 | dental-visit | BR-001 guard absent in createDentalVisit; performed treatment immutability gap; all 6 domain events dead; auto-lock cron not registered | various |
+| EF-VIS-001/002/003/004/005 | dental-visit | Same as above at EF level + getTreatmentPlan auth gap + undeclared hygienist role in 3 handlers | various |
+| EX-004..006 | cross-module | emr/ direct PatientRepository imports (no facade) + emr.repo.ts cross-module schema imports | `emr/` handlers |
+| EX-008..030 | cross-module | DE-001..DE-023 fully specified, 0% wired — all cross-module event choreography inoperative | all modules |
+| AL-001..009 | audit-compliance | 9 P0 operations with no persisted audit record | various handlers |
 
 ---
 
-## Cross-Module Compliance (Phase 2)
+## Coverage Findings
 
-> Details: `docs/audits/enforce/cross-module.md`
+From `ENFORCEMENT_COVERAGE.md` (EC findings, tracked separately):
+
+| Module | Coverage Score | Gate | Key Gaps |
+|--------|---------------|------|----------|
+| dental-audit | 41% | WARN | §4, §9, §12, §13, §15, §18 ABSENT |
+| dental-billing | 95% | PASS | §7b STUB only |
+| dental-clinical | 100% | PASS | Fully spec'd |
+| dental-emr-integration | 41% | WARN | §4, §9, §10b, §12, §13, §15, §17, §18 ABSENT; identity gap |
+| dental-imaging | 100% | PASS | Fully spec'd including v1.4 ceph |
+| dental-org | 100% | PASS | Breadth gaps: getDashboardSummary, 6 PIN handlers |
+| dental-patient | 100% | PASS | Breadth gaps: sync/ unspec'd; treatment-plans boundary |
+| dental-perio | 95% | PASS | §20 AI Instructions ABSENT |
+| dental-pmd | 64% | PASS | §3, §4, §6, §7b, §8, §14, §15, §18 STUB/ABSENT |
+| dental-scheduling | 91% | PASS | §7, §7b STUB; noShow/reschedule handlers unspec'd |
+| dental-visit | 100% | PASS | Fully spec'd |
+
+**Modules below 70%:** dental-audit (41%), dental-emr-integration (41%). No module below 40% hard gate. Average: 84%.
+
+---
+
+## Cross-Module Findings
+
+From `docs/audits/enforce/cross-module.md`:
+
+**Total:** 31 findings (P0=5, P1=24, P2=2, P3=0)
+
+**Wave3 resolutions confirmed:**
+- EX-007 (imaging_finding cross-module FK): RESOLVED — all 4 fields now bare UUIDs with loose-coupling comments
+- EX-031 (imaging_finding Drizzle .references()): RESOLVED — confirmed clean by source scan
+
+**Active P0:** EX-004 — `emr/` handler files directly instantiate `PatientRepository` with no facade
+
+**Active P1 (24):** EX-008..030 — DE-001 through DE-023 fully specified, 0% wired in any handler
+
+**Active P2 (2):** EX-032 (emr/ directory naming), EX-033 (ImagingFinding absent from DOMAIN_MODEL.md §3)
+
+---
+
+## Traceability Findings
+
+From `docs/audits/enforce/trace.md`:
+
+**Total:** 26 findings (P0=2, P1=10, P2=15, P3=0) — net +3 from run-6
 
 | Metric | Value |
 |--------|-------|
-| P0 findings | 7 |
-| P1 findings | 24 |
-| P2 findings | 2 |
-| Event coverage | **0%** (23/24 events never emitted) |
-| Import violations | 7 |
-| FK violations | 3 (imaging_finding.schema.ts) |
-| New vs run-5 | 8 new (run-5 25 FK P0s RESOLVED via MODULE_BOUNDARIES.md) |
-
-**Critical EX P0s:**
-
-- `EX-004` P0 — `handlers/emr/` directly instantiates `PatientRepository` in 4 files — no facade, not exempt
-- `EX-007` P0 — `imaging_finding.schema.ts` imports raw schemas from dental-visit, dental-patient, dental-org
-- `EX-031` P0 — `imaging_finding.schema.ts` uses hard Drizzle `.references()` to 3 foreign modules — contradicts dental-imaging loose-coupling rule
-
-**EX P1 (mass finding):**
-- `EX-008–030` P1×23 — DE-001 through DE-023 **never emitted** anywhere in the codebase. Infrastructure exists (pg-boss consumer, publishAuditEvent) but zero producer call sites. This is the root cause of the domain event gap across dental-visit, dental-scheduling, dental-billing, dental-clinical, dental-imaging.
+| Overall chain completeness | ~68% |
+| Orphan BRs | 4 (BR-005, BR-013, BR-019, BR-020) |
+| Broken WF chains | 2 (dashboard, perio routing) |
+| Dead specs (AC no test) | 5 |
+| Unspecced implementations | 36 handler groups |
+| State machine divergences | 2 new (TR-025, TR-026) |
+| Resolved since run-6 | 1 (TR-020: AC-AUD-002 405 test committed) |
 
 ---
 
-## UI Journey (Phase 1.5)
+## Audit Logging Compliance
 
-> Details: `docs/audits/enforce/ui-journey.md`
+From `docs/audits/enforce/audit-compliance/all-modules.md`:
 
-| Module | Total | P0 | P1 | P2 | P3 |
-|--------|-------|----|----|----|----|
-| dental-imaging | 9 | 0 | 1 | 7 | 1 |
-| dental-billing | 12 | 0 | 4 | 6 | 2 |
-| dental-patient | 11 | 0 | 4 | 5 | 2 |
-| dental-scheduling | 11 | 0 | 5 | 4 | 2 |
-| dental-pmd | 7 | 0 | 1 | 5 | 1 |
-| **Total** | **50** | **0** | **15** | **27** | **8** |
+**Contracts implemented:** 13/25 | **Contracts missing:** 12/25
 
-All UJ findings are NEW (first UI journey enforcement run). No P0s — P1s are role-gating and consent flow gaps.
+| Wave3 Fix | Verified Status |
+|-----------|----------------|
+| AL-003 (assign membership) | PARTIAL — fix on informal route, canonical `DentalMembershipManagement_create.ts` still unaudited |
+| AL-004 (revoke membership) | NOT FIXED — fix on dead-code `deactivateMember.ts`, actual routed `DentalMembershipManagement_deactivate.ts` unaudited |
+| AL-006 (export patient) | FIXED |
+| AL-007 (book appointment) | FIXED |
+| AL-011 (upload imaging study) | FIXED |
+| AL-012 (access imaging study) | FIXED |
 
-Key P1 UJ findings: `UJ-PAT-001` consent modal only submits `marketing_consent`, missing 3 required consent fields; `UJ-PAT-002/003` archive/export actions not role-gated in UI; `UJ-SCH P1×5` calendar has no conflict error, no double-booking feedback, working hours violations silent; `UJ-BIL P1×4` no void confirmation, issue-invoice transition not visible.
+**Open P0 audit contracts (11 total: 9 missing + 2 Pino-only):**
+AL-001 (create org), AL-002 (create branch), AL-003 (assign membership — canonical), AL-004 (revoke membership — canonical), AL-005 (create patient), AL-008 (cancel appointment), AL-009 (create invoice), AL-013 (generate PMD), AL-025 (download PMD), AL-023 (import EMR — Pino only), AL-024 (view EMR — Pino only)
 
----
-
-## Traceability (Phase 2.5)
-
-> Details: `docs/audits/enforce/trace.md`
-
-| Metric | Run-5 | Run-6 | Delta |
-|--------|-------|-------|-------|
-| Orphan BRs (5a) | 12 | 6 | -6 ↓ |
-| Orphan Ops (5b) | 3 | 4 | +1 |
-| Unspecced impls (5c) | 33 | 33 | — |
-| Dead specs (5d/5e) | 0 | 6 | +6 NEW |
-| New findings | 84 | 11 | net |
-
-**Critical TR findings:**
-
-- `TR-021` P1 — FUTURE_PHASE breach: 6 `handlers/emr/` consultation note handlers exist that the spec explicitly says not to implement until Phase 3+
-- `TR-015/016` P1 — Dead spec: AC-CLI-006 (completed-visit write guard) + AC-IMG-002 (annotation reversal) have spec ACs but no behavioral test coverage
-- `TR-WF-042` P1 — New orphan op: perio MODULE_SPEC references WF-038 (Clinical Amendment) instead of WF-042 — routing error
-- 33 unspecced shim handlers (KNOWN/carry-forward from run-5)
+**Schema gap:** `dental_audit_log` missing 5 §2 required fields. Wave3 added `inet` import to schema but never added `ip_address` column — dead import orphan.
 
 ---
 
-## Audit Logging Compliance (Phase 3)
+## Ratchet Summary vs Run-6
 
-> Details: `docs/audits/enforce/audit-compliance/dental-audit.md`
-
-| Metric | Value |
-|--------|-------|
-| Contracts checked | 25 |
-| Contracts implemented | **9/25** (36%) |
-| Contracts missing | **16/25** (64%) |
-| Schema gaps | 5 missing fields |
-| P0 findings | **13** |
-| P1 findings | 3 |
-| P2 findings | 3 |
-| P3 findings | 6 |
-
-**All 25 AL findings are NEW** — audit compliance phase not tracked in run-5.
-
-**P0 AL findings (PHI operations without audit trail):**
-
-- `AL-003/004` P0 — `createMembership` + `revokeMembership`: no audit call; HIPAA § 164.312(a)(2)(i) unique-user-ID requirement
-- `AL-006` P0 — bulk patient export: no audit trail for PHI export
-- `AL-007` P0 — `createDentalVisit`: no audit event; visit creation is auditable per §3
-- `AL-009` P0 — `bookAppointment`: no audit event
-- `AL-012` P0 — `createImagingStudy` / `getImagingStudy`: no audit for PHI image access
-- `AL-013/014` P0 — PMD generate + download: no HIPAA-required audit trail
-- `AL-017` P0 — `createPrescription`: `logger.info()` only, not persisted to audit table
-- `AL-019/020` P0 — consent sign + revoke: only `logger.info()`, not persisted
-
-**Schema gap:** audit table missing `event_type`, `actor_role`, `ip_address`, `user_agent`, `metadata` columns (5 of 8 required fields from AUDIT_CONTRACTS §2 absent from schema).
-
-**pg-boss dead code:** `publishAuditEvent()` has zero callers; all 3 existing audit writes use direct `logAuditEvent` shim instead.
+| Module | Run-6 P0 | Run-7 P0 | Delta | Resolved | New |
+|--------|----------|----------|-------|----------|-----|
+| dental-audit | 2 | 1 | -1 | EM-AUD-006 (405 enforcement) | EM-AUD-001 re-opened (wrongly RESOLVED in run-6) |
+| dental-billing | 1 | 2 | +1 | — | EM-BIL DE-007/DE-008 (new P0s) |
+| dental-clinical | 14 | 8 | -6 | EF-CLI-001..005 (Wave3 auth fixes partially resolved) | EM-CLI-6ff99c36, EM-CLI-ba65c348 escalated |
+| dental-emr-integration | 4 | 4 | 0 | — | EM-EMR-004 (DB FK) added, G-EMR-01 removed from count |
+| dental-imaging | 5 | 2 | -3 | EF-IMG-001..005 (ceph auth), EX-007+031 (FK) | EM-IMG-008, EM-IMG-014 (new EM P0s) |
+| dental-org | 9 | 6 | -3 | EF-ORG-001..004 (Wave3 branch auth) | EF-ORG-P015/016/017/018 (4 new) |
+| dental-patient | 7 | 7 | 0 | — | Composition changed, same count |
+| dental-perio | 1 | 2 | +1 | — | EM-PER-001/002 (error taxonomy newly identified as P0) |
+| dental-pmd | 5 | 1 | -4 | Checksum P0s resolved by run-7 analysis | EM-PMD-6e91e277 (staff_full permission) |
+| dental-scheduling | 3 | 2 | -1 | Partial resolution | EM-SCH two P0s remain |
+| dental-visit | 7 | 1 | -6 | Wave3 visit/carry-over fixes | EM-VIS-001 (getTreatmentPlan auth) |
+| Cross-module (EX) | 7 | 5 | -2 | EX-007, EX-031 (imaging FK) | — |
+| Audit compliance (AL) | 13 | 11 | -2 | AL-006/007/011/012 (4 fixed) | AL-003/004 defect discovered |
+| **TOTALS** | **~78** | **54** | **-24** | **~18 resolved** | **~8 new** |
 
 ---
 
-## Ratchet Summary (Phase 4)
+## --strict Verdict
 
-| Category | Run-5 | Run-6 | Classification |
-|----------|-------|-------|----------------|
-| EM findings | 157 | 157 | 32 NEW, 13 RESOLVED, rest KNOWN |
-| EF findings | 92 | 92 | ~35 NEW (auth gap scan), rest KNOWN |
-| UJ findings | ~45 | 50 | ALL NEW (first strict pass) |
-| EX findings | 33 | 33 | 8 NEW, 25 RESOLVED (FK exemption) |
-| TR findings | 23 | 23 | 11 NEW, 0 resolved |
-| AL findings | 0 | 25 | ALL NEW (new phase) |
-| **TOTAL** | **323** | **380** | **+57 net** |
+**--strict: FAIL**
 
-**--strict result: ❌ FAIL**
+8 new P0 regressions discovered in run-7 vs run-6 baseline. The --strict gate requires zero new P0 regressions. Wave3 resolved 18 P0s but introduced 8 new ones (EM-AUD-001 re-opening, EM-EMR-004, EF-ORG-P015/016/017/018, EM-IMG-008, EM-IMG-014).
 
-New P0 regressions by source:
-```
-EF dental-clinical:    11 P0  (auth gap scan — NEW discovery)
-AL audit-compliance:   13 P0  (new phase — ALL NEW)
-EF dental-imaging:      5 P0  (ceph auth gap — NEW discovery)
-EF dental-org:          5 P0  (IDOR — NEW discovery)
-EX cross-module:        7 P0  (import violation — NEW)
-EF dental-pmd:          3 P0  (checksum bypass — NEW)
-EF dental-patient:      3 P0  (PHI leak — NEW)
-EF dental-visit:        3 P0  (lock gate — NEW)
-EM dental-org:          4 P0  (security — 2 new, 2 known-promoted)
-EM dental-patient:      4 P0  (4 new escalations)
-EM dental-visit:        3 P0  (domain events P0 + lock P0 — NEW)
-EM others:             ~3 P0  (misc)
-TOTAL NEW P0:          ~64
-```
-
-**Resolved since run-5:** 25 EX Drizzle FK P0s (MODULE_BOUNDARIES.md exemption), 5 EM dental-org auth fixes, 2 EM dental-scheduling confirmed-correct, 1 EM dental-imaging (ceph math isomorphic confirmed) = **33 resolved**
+Secondary violations preventing PASS:
+- Domain events DE-001..DE-023: 0% wired — all 23 event publishers are dead code
+- Audit compliance: 12/25 contracts missing (9 P0 + 2 Pino-only)
+- AL-003/AL-004 Wave3 fixes applied to wrong/unrouted handlers — canonical routes still unaudited
 
 ---
 
 ## Stabilization Plan
 
-**Immediate P0 sprint (security-critical, ship-blocking):**
+### Tier 1 — Fix immediately (unblock all new feature work)
 
-| Priority | Finding | Module | Effort |
-|----------|---------|--------|--------|
-| S1 | `EM-PAT-001/004`: roles:['user'] + cross-branch PHI leak | dental-patient | 1d |
-| S1 | `EF-CLI P0×10`: assertBranchAccess in 10 handlers | dental-clinical | 0.5d |
-| S1 | `EF-IMG P0×5`: assertBranchAccess in ceph handlers | dental-imaging | 0.5d |
-| S1 | `EM-ORG-001`: recoverPin unauth route | dental-org | 0.5d |
-| S1 | `EF-ORG P0×4`: IDOR on branch/member ops | dental-org | 1d |
-| S1 | `EF-PMD-001/002/003`: checksum bypass + immutability | dental-pmd | 0.5d |
-| S1 | `EM-CLI-002`: medical history mutation (return 405) | dental-clinical | 0.5d |
-| S2 | `EM-VIS-010/EF-VIS P0×3`: domain events + lock gate | dental-visit | 2d |
-| S2 | `AL P0×13`: audit trail for PHI operations | dental-audit | 3d |
-| S2 | `EM-BIL-001`: billing auth bypass when branchId omitted | dental-billing | 0.5d |
-| S2 | `EF-SCH-001/002`: domain events + service layer | dental-scheduling | 1d |
+1. **EM-AUD-001** — Change `authMiddleware({ roles: ['admin'] })` to `{ roles: ['user'] }` at `app.ts:197`. One-line fix.
+2. **EF-ORG-P015** — Add `assertBranchAccess(db, user.id, member.branchId)` after line 80 of `pinRecovery.ts`. Cross-branch PIN reset is exploitable.
+3. **EF-ORG-P017** — Add `'invited'`, `'revoked'` to `memberStatusEnum`. Generate migration.
+4. **EM-ORG-001** — Add `assertBranchRole(['dentist_owner'])` to `DentalMembershipManagement_create.ts` or remove deprecated route.
+5. **EM-ORG-002** — Add `authMiddleware({ roles: ['admin'] })` to `POST /dental/organizations`.
+6. **EM-PAT-001/002/003** — Replace `assertBranchAccess` with `assertBranchRole(['dentist_owner'])` in export, bulk-archive, and restore handlers.
+7. **EM-SCH-a564d893** — Fix `cancelAppointment` role list to `['dentist_owner', 'staff_full']`.
+8. **EM-SCH-4afe5eab** — Fix `checkInAppointment` role list to `['dentist_owner', 'dentist_associate', 'staff_full']`.
 
-**P1 sprint (functional, graduation-blocking):**
-- Implement service layer across all 9 ABSENT modules (F2 goal — still open)
-- Domain events: wire `publishAuditEvent` producer calls in dental-visit, dental-scheduling, dental-billing, dental-clinical, dental-imaging (EX-008–030)
-- `EM-CLI-001`: implement `revokeConsentForm` handler
-- Audit schema: add 5 missing columns (`event_type`, `actor_role`, `ip_address`, `user_agent`, `metadata`)
-- `EM-PMD P0-1`: implement PMD download presigned-URL endpoint
-- `EF-AUD-004`: fix route path `/dental/admin/audit` → `/dental/audit-events`
+### Tier 2 — Fix before next feature merge
 
-**Spec quality (P2 sprint):**
-- dental-audit: add §4, §12, §13, §15, §18 sections
-- dental-pmd: add §4, §9, §10b details
-- dental-emr-integration: rename `handlers/emr/` → `handlers/consultation/` before any Phase 3 work
+9. **EF-CLI-001/002/003** — Remove `updateMedicalHistoryEntry`; add branch auth to all 10 inventory/occlusion/postop handlers.
+10. **AL-003/AL-004** — Add `logAuditEvent` to `DentalMembershipManagement_create.ts` and `DentalMembershipManagement_deactivate.ts` (canonical routes).
+11. **AL-005/008/009/013/025** — Add `logAuditEvent` to createDentalPatient, cancelAppointment, createDentalInvoice, generatePMD, exportPMD.
+12. **EM-IMG-008** — Align imaging finding status enum (`suspected/confirmed/monitoring/resolved` → `draft/confirmed/resolved`) and ceph landmark enum (`placed/confirmed/locked` → `not_placed/placed/locked`). DB migration required.
+13. **EM-VIS-004** — Wire all 6 domain event emit calls in dental-visit handlers (updateDentalVisit, createDentalTreatment, updateDentalTreatment).
+14. **EF-ORG-P018** — Add `TIER_LIMIT_REACHED(409)` to ERROR_TAXONOMY.md §5 dental-org.
+
+### Tier 3 — Sprint before next release
+
+15. **EX-004** — Create `patient/repos/patient-emr.facade.ts`; replace 4 direct PatientRepository imports in `emr/` handlers.
+16. **EM-EMR-001/002/003** — Architectural rename: `handlers/emr/` → `handlers/consultation-notes/`. Update all routes.ts and registry.ts references.
+17. **EM-BIL-23495b6c/add117d4** — Add DE-007/DE-008 event publishing to `createDentalInvoice` and `recordDentalPayment`.
+18. **EM-AUD-009** — Complete abandoned Wave3 schema fix: add `ip_address inet`, `category`, `event_type`, `outcome`, `retention_status` to `dental_audit_log`.
 
 ---
 
 ## What's Next
 
-**Branch: `feat/p0-security-sprint`** — address all S1 P0s above. Run `/oli-enforce-all --strict --module dental-clinical` etc. to verify per-module before full re-run.
+**Branch 1 — P0 count > 0 (CURRENT):** Execute Wave4 targeting the 8 new P0s in Tier 1 before any new feature development. Wave4 must achieve 0 new P0 regressions.
 
-**Graduation criteria** (from `.planning/config.json`):
-- p0_max: 0 → currently 78 P0s
-- audit_health_min: 9.0 → currently ~2.0 (16/25 contracts missing)
-- compliance_health_min: 9.0 → currently 4.5 (avg score 44.5/100)
+**Branch 2 — Audit compliance < 60% (CURRENT: 52%):** Run a dedicated audit-wiring sprint. Wire AL-003, AL-004, AL-005, AL-008, AL-009, AL-013, AL-025 against canonical routed handlers. Validate each with a contract test against the real server, not buildTestApp().
 
-**Next full enforcement:** After P0 sprint completes. Expected: ~30 P0s resolved (EF auth + PMD + ORG IDOR + CLI medical history) → re-run to verify regression-free baseline.
+**Branch 3 — Domain events 0% wired (CURRENT):** After P0s resolved, begin systematic event wiring. Start with dental-visit (DE-001..006) as highest-impact producer. Wire into updateDentalVisit (DE-001/002/003) and updateDentalTreatment (DE-005/006) as a single PR.
 
-**Module graduation order** (highest score first, lowest P0):
-1. dental-scheduling (70, P0=3) — closest to clean
-2. dental-visit (62, P0=7) — needs domain events + lock gate
-3. dental-billing (55, P0=1) — needs service layer + auth fix
-4. dental-org (59, P0=9) — needs IDOR fixes
-5. dental-clinical (58, P0=14) — needs auth sweep + consent revoke
-6. dental-imaging (46, P0=5) — needs ceph auth + tier gate fix
-7. dental-pmd (44, P0=5) — needs checksum + download
-8. dental-perio (38, P0=1) — needs visit-lock cascade
-9. dental-patient (37, P0=7) — needs role fixes + PHI leak
-10. dental-audit (0, P0=2) — needs audit table schema + route fix
-11. dental-emr-integration (20, FUTURE_PHASE) — defer
+**Branch 4 — emr/ architectural bloat (CURRENT):** Schedule architectural rename sprint to move `handlers/emr/` to `handlers/consultation-notes/`. Pre-requisite for any Phase 3+ dental-emr-integration work. Coordinate with schema migration to drop cascade FK constraints (EM-EMR-004).
+
+**Branch 5 — Coverage score stable (CURRENT: 84% average):** No coverage sprint needed this cycle. dental-audit (41%) and dental-emr-integration (41%) gaps are tied to missing spec sections — address in spec-writing sprint, not code sprint.
 
 ---
 
-*oli-enforce-all v1.0 | run-6-strict | 2026-05-29 | 31 agents | 380 findings | ⛔ STRICT FAIL*
+*Generated by oli-enforce-all synthesis agent | run-7-strict-2026-05-29 | git 5035015a*

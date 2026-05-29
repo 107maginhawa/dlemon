@@ -1,5 +1,112 @@
+<!-- oli-version: 1.1 | generated: 2026-05-29 | skill: oli-enforce-file --module=dental-pmd -->
+
 # dental-pmd — File Enforcement
-<!-- oli-enforce-file --strict | run: run-6-strict-2026-05-29 | 2026-05-29 -->
+
+## Run-7 Spec-Routing Audit (2026-05-29)
+
+**Module:** dental-pmd | **Files Inspected:** 14 | **Finding ID Format:** EF-PMD-{hash8}  
+**Specs Loaded:** MODULE_SPEC.md, API_CONTRACTS.md, DOMAIN_MODEL.md, WORKFLOW_MAP.md, ROLE_PERMISSION_MATRIX.md, MODULE_MAP.md, ERROR_TAXONOMY.md
+
+### File Inventory & Classification (Run-7)
+
+| File | Type | Specs Loaded |
+|------|------|-------------|
+| `generatePMD.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `importPMD.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `listPMDs.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `getPMDForVisit.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `getImportedPMD.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `exportPMD.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `listImportedPMDs.ts` | Handler | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `index.ts` | Barrel | MODULE_SPEC |
+| `repos/pmd-document.schema.ts` | Schema | DOMAIN_MODEL + MODULE_SPEC |
+| `repos/pmd-document.repo.ts` | Repository | MODULE_SPEC + DOMAIN_MODEL |
+| `repos/imported-pmd.repo.ts` | Repository | MODULE_SPEC + DOMAIN_MODEL |
+| `dental-pmd.test.ts` | Test | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `dental-pmd.data-portability.test.ts` | Test | MODULE_SPEC + API_CONTRACTS + WORKFLOW_MAP |
+| `repos/pmd-document.test.ts` | Test (repo) | MODULE_SPEC + DOMAIN_MODEL |
+
+### Summary (Run-7)
+
+| Severity | Count |
+|----------|-------|
+| P0 | 0 |
+| P1 | 4 |
+| P2 | 3 |
+| P3 | 1 |
+| **Total** | **8** |
+
+Module traceability: 12/14 files clean (85.7%). EF-PMD-008 (barrel export) confirmed fixed.
+
+### P0 — Security (Run-7)
+
+_No P0 security violations. No middleware/guard files in this module._
+
+### P1 — Spec-Declared Method / Error / Schema Gaps (Run-7)
+
+#### EF-PMD-25AD9EA1 — `generatePMD.ts` line 51: Wrong error class for non-completed visit
+**Check:** error_taxonomy | **Confidence:** HIGH  
+**Spec:** ERROR_TAXONOMY.md §5 → dental-pmd: `VISIT_NOT_COMPLETED` (HTTP 422); API_CONTRACTS.md → generatePMD Errors  
+`ValidationError` (HTTP 400, code `VALIDATION_ERROR`) is thrown when visit is not completed. The ERROR_TAXONOMY defines `VISIT_NOT_COMPLETED` as HTTP 422 for this exact trigger (BR-021). The test at line 187 also asserts `toBe(400)` — both handler and test are wrong.  
+**Fix:** Replace with `throw new BusinessLogicError('Visit must be completed to generate a PMD', 'VISIT_NOT_COMPLETED')` and update test to `toBe(422)`.
+
+#### EF-PMD-D6A6DB0D — `pmd-document.schema.ts` line 23: DB-level FK to dental_visit violates loose coupling spec
+**Check:** import_boundaries | **Confidence:** HIGH  
+**Spec:** MODULE_SPEC.md §20 AI Instructions point 2  
+`visitId: uuid('visit_id').notNull().references(() => dentalVisits.id)` creates a hard DB FK to `dental_visit`. MODULE_SPEC AI Instructions §20 point 2 explicitly states "No DB-level FKs to dental-visit (loose coupling) — use UUID ref only."  
+**Fix:** Remove `.references(() => dentalVisits.id)`. Remove `dentalVisits` import. Generate migration.
+
+#### EF-PMD-76E6000C — `pmd-document.schema.ts` lines 39–50: importedPmds missing branch_id and imported_by_member_id
+**Check:** data_shapes | **Confidence:** HIGH  
+**Spec:** MODULE_SPEC.md §7, §7.2 invariant 1  
+MODULE_SPEC §7 declares `imported_pmd` requires `branch_id`. MODULE_SPEC §7.2 invariant 1 requires `imported_by_member_id` as a plain UUID. Neither column is present in the schema. `checksum` column is also absent (§7 data requirements).  
+**Fix:** Add `branchId: uuid('branch_id').notNull()`, `importedByMemberId: uuid('imported_by_member_id').notNull()`, `checksum: text('checksum')`. Generate migration.
+
+#### EF-PMD-3707DF48 — `pmd-document.schema.ts` line 41: importedPmds.patientId has FK constraint (forbidden by spec)
+**Check:** data_shapes | **Confidence:** HIGH  
+**Spec:** MODULE_SPEC.md §7.2 invariant 1  
+`patientId: uuid('patient_id').notNull().references(() => patients.id)` — MODULE_SPEC §7.2 invariant 1 explicitly forbids DB FK constraints to `dental_patient`, `dental_branch`, or `dental_membership` tables for imported PMD rows. Must be a plain UUID column.  
+**Fix:** Remove `.references(() => patients.id)`. Remove `patients` import from schema file. Generate migration.
+
+### P2 — Domain Drift / Data Shape / Role (Run-7)
+
+#### EF-PMD-4470666B — `generatePMD.ts` line 44: staff_full incorrectly granted PMD generation
+**Check:** import_boundaries (role check) | **Confidence:** HIGH  
+**Spec:** ROLE_PERMISSION_MATRIX.md §Administrative Operations, MODULE_SPEC.md §6  
+`assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full'])` — ROLE_PERMISSION_MATRIX lists Generate PMD as `dentist_owner ✅`, `dentist_associate ✅` only. `staff_full` is not permitted.  
+**Fix:** Change to `['dentist_owner', 'dentist_associate']`.
+
+#### EF-PMD-2731F09D — `generatePMD.ts` line 112: Response missing download_url and expires_at
+**Check:** data_shapes | **Confidence:** HIGH  
+**Spec:** API_CONTRACTS.md → POST /dental/pmd/generate Response 201  
+Raw repo row returned without `download_url` (presigned URL, 24h TTL) or `expires_at`. API_CONTRACTS Response 201 requires both fields.  
+**Fix:** After creating PMD, generate presigned URL via storage module and include `download_url` + `expires_at` in response (or stub with TODO if deferred).
+
+#### EF-PMD-C049B96C — `pmd-document.schema.ts` line 26: branchId is nullable
+**Check:** data_shapes | **Confidence:** HIGH  
+**Spec:** MODULE_SPEC.md §7  
+`branchId: uuid('branch_id').references(() => dentalBranches.id)` has no `.notNull()`. MODULE_SPEC §7 lists `branch_id` as required for `pmd_document`.  
+**Fix:** Add `.notNull()` constraint. Generate migration.
+
+### P3 — Advisory (Run-7)
+
+#### EF-PMD-8F3E8A38 — No WF-ID annotations in any handler file
+**Check:** workflow_annotations | **Confidence:** MEDIUM  
+**Spec:** WORKFLOW_MAP.md WF-021, WF-022  
+Zero `// WF-021` or `// WF-022` annotations across all 7 handler files. 0% adoption, below 5% activation gate. Advisory only.  
+**Fix:** Add `// WF-021` to `generatePMD.ts` and `// WF-022` to `importPMD.ts`.
+
+### EF-PMD-008 Fix Verification (Run-7)
+
+CONFIRMED FIXED. `index.ts` barrel re-exports all 7 handlers (`exportPMD`, `generatePMD`, `getImportedPMD`, `getPMDForVisit`, `importPMD`, `listImportedPMDs`, `listPMDs`).
+
+### What's Next (Run-7)
+
+P1 findings present. **Resolve spec-declared method gaps before merge.**
+
+Priority: EF-PMD-D6A6DB0D → EF-PMD-3707DF48 → EF-PMD-76E6000C → EF-PMD-25AD9EA1 → EF-PMD-4470666B → EF-PMD-2731F09D → EF-PMD-C049B96C → EF-PMD-8F3E8A38 (advisory)
+
+---
 
 ## Run-6 Strict Audit (2026-05-29)
 

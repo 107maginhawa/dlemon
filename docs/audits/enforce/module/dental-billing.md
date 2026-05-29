@@ -1,242 +1,427 @@
-# dental-billing — Module Enforcement
-<!-- oli-enforce-module --strict | run: run-6-strict-2026-05-29 | baseline: run-5-f2-service-layer-di-2026-05-28 -->
+<!-- oli-version: 1.1 | generated: 2026-05-29 | skill: oli-enforce-module | run: 7 -->
 
-## Summary
+# Enforcement Report: dental-billing
 
-| Field | Value |
-|-------|-------|
-| Module | dental-billing |
-| Run ID | run-6-strict-2026-05-29 |
-| Handler path | `services/api-ts/src/handlers/dental-billing/` |
-| Handler count | 15 handlers, 3 repos, 12 test files |
-| Score | **55 / 100** (run-5 baseline: 61) |
-| V1 Status | **PARTIAL** |
-| P0 findings | 1 (unchanged) |
-| P1 findings | 6 (+1 new vs run-5) |
-| P2 findings | 5 (+3 new vs run-5) |
-| P3 findings | 1 (unchanged) |
-| New findings | 4 (EM-BIL-010..013) |
-| Resolved findings | 0 |
+**Module:** `dental-billing`
+**Run:** 7 (Wave3 regression verification)
+**Generated:** 2026-05-29
+**Spec:** `docs/product/modules/dental-billing/MODULE_SPEC.md`
+**Handler root:** `services/api-ts/src/handlers/dental-billing/`
 
-**Score dropped 6 points** from run-5 (61→55): 4 new findings surfaced, 0 run-5 findings resolved.
+---
 
-### Score breakdown
+## Executive Summary
 
-| Dimension | Score | Notes |
-|-----------|-------|-------|
-| 1. Public API Completeness | 8/10 | 7/7 spec endpoints; WF-042 fee schedule missing |
-| 2. Workflow Implementation | 7/10 | WF-042 absent; WF-054 overdue cron unwired |
-| 3. Domain Term Consistency | 8/10 | `sent` (DOMAIN_MODEL) vs `issued` (code) divergence |
-| 4. State Machine Enforcement | 7/10 | paid→void unspecced; uncollectible absent |
-| 5. Event Publishing | 0/10 | DE-007/008/009 never published; no event bus found |
-| 6. Auth / Permission Enforcement | 3/10 | P0 cap: EM-BIL-001 auth bypass still open |
-| 7. Service Layer / DI (F2) | 2/10 | No .service.ts; repos instantiated inline |
-| 8. Test Coverage | 8/10 | 12 test files, strong FSM property tests; AC-BIL-005 uncovered |
-| **Overall** | **55/100** | |
+| Metric | Value |
+|--------|-------|
+| Compliance Score | 62 / 100 |
+| v1 Status | PARTIAL |
+| Service Layer | ABSENT (handler → repo pattern, no dedicated service class) |
+| Total Findings | 13 |
+| P0 | 2 |
+| P1 | 5 |
+| P2 | 4 |
+| P3 | 2 |
+
+---
+
+## Dimension Scores
+
+| Dimension | Score (0-10) | Notes |
+|-----------|:---:|-------|
+| 1. Public API Completeness | 6 | One handler unregistered; one missing role; error code drift |
+| 2. Workflow Implementation | 5 | WF-054 cron absent; WF-052 email absent; WF-042 absent |
+| 3. Domain Term Consistency | 7 | `balanceCents` vs `outstanding_cents`; notes absent; BR-011 mislabel |
+| 4. State Machine Enforcement | 8 | All major transitions guarded; minor error code mismatch |
+| 5. Event Publishing | 3 | DE-007 and DE-008 entirely unpublished; DE-009 partially (audit only) |
+| 6. Auth / Route Protection | 8 | All routes behind authMiddleware; two RBAC role gaps |
+
+> **P0 cap applies:** Score capped at 3 per P0 finding (2 P0s x -3 = -6 from dimensions 5 and 2)
 
 ---
 
 ## Findings
 
-| ID | Sev | Run | Section | Description | File | Line |
-|----|-----|-----|---------|-------------|------|------|
-| EM-BIL-001 | **P0** | KNOWN | §6 | `listDentalInvoices` no auth when `branchId` omitted — any authenticated user enumerates all-branch invoices | `listDentalInvoices.ts` | 14–17 |
-| EM-BIL-002 | P1 | KNOWN | §6 | `issueDentalInvoice` missing `staff_full` from allowed roles; spec declares staff_full, associate, owner | `issueDentalInvoice.ts` | 28 |
-| EM-BIL-003 | P1 | KNOWN | §20/F2 | No `.service.ts`; all BR guards and orchestration live in handler functions; repos instantiated with `new Repo(db)` inline in every handler body | all 15 handlers | — |
-| EM-BIL-004 | P1 | KNOWN | §10b | DE-007 `InvoiceCreated`, DE-008 `InvoicePaid`, DE-009 `InvoiceVoided` declared in MODULE_SPEC §10b — **never published**; zero emission calls across entire module; no event bus infrastructure found | `createDentalInvoice.ts`, `recordDentalPayment.ts`, `voidDentalInvoice.ts` | — |
-| EM-BIL-005 | P1 | KNOWN | §5/BR-009 | BR-009 throws `ValidationError` (→ HTTP 400) not spec-declared `422 NO_BILLABLE_TREATMENTS`; test at `dental-billing.test.ts:321` asserts 400, confirming wrong status propagates | `createDentalInvoice.ts` | 43 |
-| EM-BIL-006 | P1 | KNOWN | §3/WF-042 | WF-042 fee schedule lookup — no handler, no endpoint, no TypeSpec definition | — | — |
-| EM-BIL-010 | P1 | **NEW** | §11/AC-BIL-002 | MODULE_SPEC §11 AC-BIL-002 declares BR-011 void-with-active-plan → **409 Conflict**; code throws `BusinessLogicError` (422); both test files assert `expect(res.status).toBe(422)` — HTTP status contract violated | `voidDentalInvoice.ts` L48; `dental-billing.edge-cases.test.ts` L339; `acceptance.billing-payments.test.ts` L359 | — |
-| EM-BIL-007 | P2 | KNOWN | §8 | DOMAIN_MODEL §6 SM-INVOICE uses `sent`; implementation uses `issued` throughout schema/code — canonical state name divergence | `repos/dental-invoice.schema.ts` | 17 |
-| EM-BIL-008 | P2 | KNOWN | §3/WF-054 | `markOverdueInvoices()` repo method complete but no pg-boss job wires it; `issued/partial → overdue` transition is orphaned | `repos/dental-invoice.repo.ts` | 239 |
-| EM-BIL-011 | P2 | **NEW** | §8 | `voidDentalInvoice` allows voiding a `paid` invoice ("admin correction" comment L37); MODULE_SPEC §8 FSM only shows `draft/issued → void`; `paid` is terminal per spec — undocumented FSM extension | `voidDentalInvoice.ts` | 34–37 |
-| EM-BIL-012 | P2 | **NEW** | §5/BR-010 | `dental-billing.invoice-lifecycle.test.ts:440` seeds invoice with `taxCents: 1200` and asserts it persists (L449); BR-010 mandates `taxCents` always 0 — test contradicts the invariant (either test seeds DB directly bypassing handler, or invariant is leaking) | `dental-billing.invoice-lifecycle.test.ts` | 440, 449 |
-| EM-BIL-013 | P2 | **NEW** | §11/AC-BIL-005 | AC-BIL-005 (`markUncollectible → 501 NOT_IMPLEMENTED`) — no handler, no route, no test; zero grep hits for `markUncollectible` or `NOT_IMPLEMENTED` across billing module | — | — |
-| EM-BIL-009 | P3 | KNOWN | §5/BR-013 | `sent → uncollectible` transition (BR-013, explicitly deferred) entirely absent — no handler, no guard | — | — |
+### P0 — Critical (Fix Immediately)
 
 ---
 
-## Dimension Details
+#### EM-BIL-23495b6c
+**Severity:** P0
+**Title:** DE-007 `InvoiceCreated` domain event not published in `createDentalInvoice`
+**Spec Section:** §10b Domain Events, MODULE_SPEC §17 Observability Hooks, EVENT_CONTRACTS.md DE-007
+**Confidence:** HIGH
 
-### 1. Public API Completeness (8/10)
+**Description:**
+`createDentalInvoice.ts` successfully creates the invoice and returns 201, but does not publish the `InvoiceCreated` (DE-007) domain event. The EVENT_CONTRACTS declares `notifs` and `dental-audit` as consumers of this event. Downstream consumers (patient notification, audit trail) are silently starved. No `logAuditEvent` call exists in the create path.
 
-**Declared in API_CONTRACTS — 7 endpoints:**
+**Primary file:** `services/api-ts/src/handlers/dental-billing/createDentalInvoice.ts`
 
-| Endpoint | Handler | Status |
-|----------|---------|--------|
-| POST `/api/v1/dental/invoices` | `createDentalInvoice.ts` | FOUND |
-| GET `/api/v1/dental/invoices` | `listDentalInvoices.ts` | FOUND (auth gap — EM-BIL-001) |
-| GET `/api/v1/dental/invoices/:id` | `getDentalInvoice.ts` | FOUND |
-| PATCH `/api/v1/dental/invoices/:id/issue` | `issueDentalInvoice.ts` | FOUND (role gap — EM-BIL-002) |
-| POST `/api/v1/dental/invoices/:id/payments` | `recordDentalPayment.ts` | FOUND |
-| POST `/api/v1/dental/invoices/:id/void` | `voidDentalInvoice.ts` | FOUND |
-| POST `/api/v1/dental/invoices/:id/payment-plans` | `createDentalPaymentPlan.ts` | FOUND |
+**Evidence:**
+- Lines 18-106: entire handler has no `publishEvent`, `emitEvent`, `logAuditEvent`, or observability call
+- `services/api-ts/src/generated/openapi/registry.ts:58` — handler is imported
+- DOMAIN_MODEL SM-INVOICE row: `draft | sent | Staff/Dentist | — | DE-007`
 
-**Extra handlers (beyond spec minimum, no finding):** `applyDentalDiscount`, `getCollectionsSummary`, `getDentalPaymentPlan`, `getDentalPaymentReceipt`, `getPatientBalance`, `listDentalPayments`, `updateDentalPaymentPlan`, `voidDentalPayment`.
-
-**Missing:** WF-042 fee schedule lookup → EM-BIL-006 (P1).
+**Fix:** Add `logAuditEvent` call (and forward event to notifs module) after line 103 (markTreatmentsAsBilled). Follow the pattern in `voidDentalInvoice.ts` lines 57-64.
 
 ---
 
-### 2. Workflow Implementation (7/10)
+#### EM-BIL-add117d4
+**Severity:** P0
+**Title:** DE-008 `InvoicePaid` domain event not published in `recordDentalPayment`
+**Spec Section:** §10b Domain Events, WF-014 step 5, EVENT_CONTRACTS.md DE-008
+**Confidence:** HIGH
 
-| Workflow | Priority | Code Path | Status |
-|----------|----------|-----------|--------|
-| WF-013 Create invoice from visit | P0 | `createDentalInvoice.ts` | FOUND |
-| WF-014 Record payment | P0 | `recordDentalPayment.ts` | FOUND |
-| WF-051 View invoice | P0 | `getDentalInvoice.ts` | FOUND |
-| WF-052 Issue invoice | P0 | `issueDentalInvoice.ts` | FOUND (role gap — EM-BIL-002) |
-| WF-015 Create payment plan | P1 | `createDentalPaymentPlan.ts` | FOUND |
-| WF-041 Void invoice | P1 | `voidDentalInvoice.ts` | FOUND (paid-void unspecced — EM-BIL-011) |
-| WF-042 Fee schedule lookup | P1 | — | **MISSING → EM-BIL-006** |
-| WF-053 Mark partial (system) | P2 | `repos/dental-invoice.repo.ts` addPayment SQL CASE | FOUND |
-| WF-054 Mark overdue (cron) | P2 | `markOverdueInvoices()` in repo | PARTIAL → EM-BIL-008 (no scheduler) |
+**Description:**
+`recordDentalPayment.ts` records the payment and updates invoice totals but emits no `InvoicePaid` event. The spec (WF-014 §4.2) requires: "Audit event: `billing.payment.recorded` with actor, amount, method." The `notifs` module depends on DE-008 to send receipts to patients. The audit trail for payments is completely absent.
 
----
+**Primary file:** `services/api-ts/src/handlers/dental-billing/recordDentalPayment.ts`
 
-### 3. Domain Term Consistency (8/10)
+**Evidence:**
+- Lines 15-82: no `logAuditEvent` or publish call despite logger context being available
+- Compare: `voidDentalInvoice.ts:57` correctly calls `logAuditEvent`
+- EVENT_CONTRACTS.md: `DE-008 | InvoicePaid | Consumers: notifs, dental-audit`
 
-All five domain terms (Invoice, LineItem, Payment, PaymentPlan, Installment) correctly reflected in code. One known divergence: DOMAIN_MODEL §6 SM-INVOICE uses `sent`; implementation schema/enum uses `issued` throughout. MODULE_SPEC §8 itself uses `issued`, so implementation is self-consistent — divergence is DOMAIN_MODEL vs module-spec (EM-BIL-007, P2).
+**Fix:** After `addPayment` call (line 74), call `logAuditEvent` with `action: 'invoice.paid'` and emit the InvoicePaid event to notifs.
 
 ---
 
-### 4. State Machine Enforcement (7/10)
-
-| Transition | Guard in code | Notes |
-|------------|--------------|-------|
-| draft → issued | `issueDentalInvoice.ts` L32: `status !== 'draft'` → 422 | FOUND |
-| issued → paid | repo `addPayment` CASE | FOUND |
-| issued → partial | repo `addPayment` CASE | FOUND |
-| partial → paid | repo `addPayment` CASE | FOUND |
-| issued/partial → overdue | `markOverdueInvoices()` in repo | FOUND (no scheduler — EM-BIL-008) |
-| draft/issued → void | `voidDentalInvoice.ts` + BR-011 check | FOUND |
-| paid → void | `voidDentalInvoice.ts` L37 (comment: "admin correction") | **UNSPECCED → EM-BIL-011** |
-| issued → uncollectible | No handler or guard | MISSING → EM-BIL-009 (P3, deferred) |
+### P1 — Missing Method / Workflow / Guard
 
 ---
 
-### 5. Event Publishing (0/10)
+#### EM-BIL-4b60bbd3
+**Severity:** P1
+**Title:** `updateDentalPaymentPlan` handler implemented but not registered in routes
+**Spec Section:** §19 Vertical Slice Plan BIL-S3, §3 WF-015
+**Confidence:** HIGH
 
-**Declared in MODULE_SPEC §10b:**
-- DE-007 `InvoiceCreated` — on `createDentalInvoice`
-- DE-008 `InvoicePaid` — on `recordDentalPayment` (paid path)
-- DE-009 `InvoiceVoided` — on `voidDentalInvoice`
+**Description:**
+`updateDentalPaymentPlan.ts` exports a complete handler for `PATCH /dental/billing/plans/:planId/status` with FSM guard enforcement, but this handler is never imported in `registry.ts` and never bound in `routes.ts`. The route is unreachable at runtime. Tests in `dental-billing.payment-plan-fsm.test.ts` self-wire the route locally, so they pass in isolation but production traffic hits a 404.
 
-**Result:** Zero emission calls (`publishEvent`, `eventBus`, `InvoiceCreated`, `InvoicePaid`, `InvoiceVoided`) anywhere in the module. No event bus infrastructure detected in `services/api-ts/src/core/`. Handlers call `logAuditEvent` (structured log) — not domain event publishing.
+**Primary file:** `services/api-ts/src/generated/openapi/routes.ts`
 
-→ EM-BIL-004 (P1): All three declared domain events unimplemented.
+**Evidence:**
+- `services/api-ts/src/handlers/dental-billing/updateDentalPaymentPlan.ts:16` — handler defined
+- `grep updateDentalPaymentPlan registry.ts` → no output
+- `grep updateDentalPaymentPlan routes.ts` → no output
+- `dental-billing.payment-plan-fsm.test.ts:89` — test self-wires `/dental/billing/plans/:planId/status`
 
----
-
-### 6. Auth / Permission Enforcement (3/10 — P0 cap)
-
-| Operation | Spec Allowed | Impl Guard | Match |
-|-----------|-------------|-----------|-------|
-| Create invoice | owner, associate, staff_full | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | MATCH |
-| Record payment | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate extra (low risk) |
-| Void invoice | dentist_owner only | `assertBranchRole(['dentist_owner'])` | MATCH |
-| Create payment plan | staff_full, dentist_owner | `assertBranchRole(['dentist_owner','dentist_associate','staff_full'])` | PARTIAL — associate extra (low risk) |
-| View invoices (list) | all dental roles (branch-scoped) | `assertBranchAccess` only when `branchId` provided; **no check** when omitted | **GAP → EM-BIL-001 (P0)** |
-| Issue invoice | staff_full, associate, owner | `assertBranchRole(['dentist_owner','dentist_associate'])` | **MISSING staff_full → EM-BIL-002 (P1)** |
+**Fix:** Import `updateDentalPaymentPlan` in `registry.ts` and add `app.patch('/dental/billing/plans/:planId/status', authMiddleware({roles:['user']}), ..., registry.updateDentalPaymentPlan)` in `routes.ts`.
 
 ---
 
-### 7. Service Layer / DI Assessment (2/10)
+#### EM-BIL-0decb164
+**Severity:** P1
+**Title:** `issueDentalInvoice` excludes `staff_full` role — violates WF-052 and spec §6
+**Spec Section:** §6 Permissions, §4 WF-052 step 2
+**Confidence:** HIGH
 
-**Pattern: ABSENT (unchanged from run-5)**
+**Description:**
+WF-052 explicitly lists "Roles: `dentist_owner`, `dentist_associate`, `staff_full`" as authorized to issue invoices. MODULE_SPEC §6 also grants `staff_full` for invoice creation. The handler only permits `['dentist_owner', 'dentist_associate']`. This means `staff_full` users (primary payment processors in clinics) cannot issue invoices despite the spec granting access.
 
-3 repo files present (`dental-invoice.repo.ts`, `dental-payment.repo.ts`, `dental-payment-plan.repo.ts`) with constructor-injected `DatabaseInstance` — correct at repo layer.
+**Primary file:** `services/api-ts/src/handlers/dental-billing/issueDentalInvoice.ts`
 
-No `dental-billing.service.ts` exists. All orchestration (BR-009, BR-011, BR-012 guards, state checks, audit logging, cross-repo side-effects) lives in handler functions. Repos instantiated inline with `new Dental*Repository(db)` in every handler body — no DI, no singleton, no factory.
+**Evidence:**
+- Line 28: `assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate'])`
+- MODULE_SPEC §4 WF-052: "Roles: `dentist_owner`, `dentist_associate`, `staff_full`"
+- MODULE_SPEC §6: "Create invoice | dentist_owner, dentist_associate, staff_full"
 
-`createDentalInvoice.ts` (106 lines) most egregious: consent check → treatment fetch → billability filter → double-billing guard → subtotal compute → invoice create → `markTreatmentsAsBilled` side-effect — all service-layer logic in a handler.
+**Note:** ROLE_PERMISSION_MATRIX shows `staff_full` as denied for Issue invoice — a three-way inconsistency between MODULE_SPEC, ROLE_PERMISSION_MATRIX, and handler. Needs product owner decision before fix.
 
-**Recommended:** Extract `dental-billing.service.ts` with `createInvoiceFromVisit()`, `issueInvoice()`, `voidInvoice()`, `recordPayment()`. Each handler becomes thin auth + validate + delegate.
-
----
-
-### 8. Test Coverage (8/10)
-
-12 test files:
-- `dental-billing.test.ts` — happy-path CRUD
-- `dental-billing.invoice-lifecycle.test.ts` — FSM transitions
-- `dental-billing.edge-cases.test.ts` — error branches (BR-009, BR-011, BR-012)
-- `dental-billing.payment-plan-fsm.test.ts` — payment plan state machine
-- `invoice.fsm.property.test.ts` — property-based FSM invariants
-- `payment-plan.fsm.property.test.ts` — property-based plan invariants
-- `acceptance.billing-payments.test.ts` — AC-PAY-01..05
-- `billing-gate-http.test.ts` — HTTP-layer BR-009 enforcement
-- `repos/dental-invoice.test.ts`, `dental-payment.test.ts`, `dental-payment-plan.test.ts` — repo unit tests
-- `utils/rounding.test.ts` — rounding utilities
-
-**Gaps:**
-- AC-BIL-001 test exists but asserts 400 (wrong status per spec) — misaligned with spec 422 requirement
-- AC-BIL-005 (`markUncollectible → 501`) — no test anywhere (EM-BIL-013)
-- BR-010 invariant: `invoice-lifecycle.test.ts:440` seeds `taxCents:1200` — contradicts always-0 rule unless test bypasses handler (EM-BIL-012)
+**Fix:** Align with MODULE_SPEC §6 + WF-052 by adding `'staff_full'` to line 28, or document the restriction as intentional and update both spec and workflow.
 
 ---
 
-## F2: Service-Layer / DI Assessment
+#### EM-BIL-e9b51d27
+**Severity:** P1
+**Title:** WF-054 overdue invoice cron job not wired to pg-boss scheduler
+**Spec Section:** §3 WF-054, §4 WF-015 step 5, §14 Dependencies (pg-boss), §19 BIL-S6
+**Confidence:** HIGH
 
-### Pattern: ABSENT
+**Description:**
+`DentalInvoiceRepository.markOverdueInvoices()` exists and is unit-tested, but no pg-boss cron job registers and invokes it. Other modules (`booking`, `notifs`, `audit`, `email`) all have `jobs/` directories. `dental-billing` has none. Invoices past their `dueDate` will never auto-transition to `overdue` status in production.
 
-**Repos present:**
-```
-repos/dental-invoice.repo.ts          — DentalInvoiceRepository (constructor DI)
-repos/dental-payment.repo.ts          — DentalPaymentRepository (constructor DI)
-repos/dental-payment-plan.repo.ts     — DentalPaymentPlanRepository (constructor DI)
-```
+**Primary file:** `services/api-ts/src/core/jobs.ts`
 
-**Service layer: ABSENT.** No `dental-billing.service.ts`. All orchestration in handlers.
+**Evidence:**
+- `grep -r registerCron src/handlers/dental-billing` → no output
+- No `dental-billing/jobs/` directory exists
+- `dental-invoice.repo.ts:239` — `markOverdueInvoices()` defined but called nowhere in production
+- Compare: `src/handlers/booking/jobs/index.ts:18` — `registerCron('booking.slotGenerator', ...)`
 
-**Handler fatness (inline `new` in handler body):**
-```typescript
-// issueDentalInvoice.ts:22
-const repo = new DentalInvoiceRepository(db);
-// recordDentalPayment.ts:25-26
-const invoiceRepo = new DentalInvoiceRepository(db);
-const paymentRepo = new DentalPaymentRepository(db);
-// voidDentalInvoice.ts:25,43
-const repo = new DentalInvoiceRepository(db);
-const paymentPlanRepo = new DentalPaymentPlanRepository(db);
-// createDentalInvoice.ts:36
-const invoiceRepo = new DentalInvoiceRepository(db);
-```
+**Fix:** Create `services/api-ts/src/handlers/dental-billing/jobs/index.ts` with a daily cron job calling `invoiceRepo.markOverdueInvoices()`. Register it in `app.ts` alongside other module jobs.
 
-Identical pattern across all 15 handlers. Drizzle never called directly in handler (repo layer correctly interposed) — positive signal. DI pattern absent.
+---
+
+#### EM-BIL-a72998a6
+**Severity:** P1
+**Title:** WF-052 does not send patient email on invoice issue
+**Spec Section:** §4 WF-052 step 4, WF-013 step 5
+**Confidence:** HIGH
+
+**Description:**
+WF-052 step 4 states: "Email sent to patient with invoice PDF link via `email` module." WF-013 step 5 also states: "Patient notified via email (notifs module)." The `issueDentalInvoice` handler returns the issued invoice without calling email or notifs. No email is queued. The patient never receives an invoice notification.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/issueDentalInvoice.ts`
+
+**Evidence:**
+- Lines 14-42: imports include only repo and auth utilities — no email/notifs import
+- No `queueEmail`, `sendEmail`, or notifs call present in handler
+- `src/core/email.ts:384` exposes `queueEmail` used by other modules
+
+**Fix:** After `repo.issue(invoiceId)` (line 34), queue a transactional email to the patient with invoice details via the email module's `queueEmail` API.
+
+---
+
+### P2 — Domain Term / Consistency Issues
+
+---
+
+#### EM-BIL-08bcfc78
+**Severity:** P2
+**Title:** BR-009 guard returns HTTP 400 `VALIDATION_ERROR` instead of 422 `NO_BILLABLE_TREATMENTS`
+**Spec Section:** §5 BR-009, §15 Error Handling, AC-BIL-001
+**Confidence:** HIGH
+
+**Description:**
+Spec §15 declares: "No billable treatments | 422 | NO_BILLABLE_TREATMENTS". AC-BIL-001 tests for 422. The handler throws `new ValidationError(...)` which produces HTTP 400 with code `VALIDATION_ERROR`. Clients expecting 422 `NO_BILLABLE_TREATMENTS` will mishandle this as a generic validation error.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/createDentalInvoice.ts`
+
+**Evidence:**
+- Line 43: `throw new ValidationError('No billable treatments found for this visit')`
+- `src/core/errors.ts:37`: `ValidationError` produces HTTP 400, code `VALIDATION_ERROR`
+- Spec §15 + AC-BIL-001: HTTP 422, code `NO_BILLABLE_TREATMENTS`
+
+**Fix:** Replace with `throw new BusinessLogicError('No billable treatments found for this visit', 'NO_BILLABLE_TREATMENTS')` to produce HTTP 422.
+
+---
+
+#### EM-BIL-a2ef0f37
+**Severity:** P2
+**Title:** `notes` field declared in spec §7 for `dental_invoice` is absent from schema
+**Spec Section:** §7 Data Requirements
+**Confidence:** HIGH
+
+**Description:**
+Spec §7 lists `notes` as a field of `dental_invoice`. The `dental-invoice.schema.ts` table definition has no `notes` column. The `dental_payment` table correctly includes `notes`. Callers cannot attach free-text notes to an invoice.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts`
+
+**Evidence:**
+- Lines 20-47: `dental_invoice` table definition — no `notes` column
+- `dental-payment.schema.ts:28`: `notes: text('notes')` present on payment, absent on invoice
+- MODULE_SPEC §7: "dental_invoice: ... notes"
+
+**Fix:** Add `notes: text('notes')` to the `dentalInvoices` table and generate a migration.
+
+---
+
+#### EM-BIL-3e4f008a
+**Severity:** P2
+**Title:** Domain term drift — spec uses `outstanding_cents`; API returns `balanceCents`
+**Spec Section:** §7 Data Requirements ("computed response fields: ... outstanding_cents")
+**Confidence:** HIGH
+
+**Description:**
+MODULE_SPEC §7 names the computed field `outstanding_cents (total_cents - paid_cents)`. The schema and all API responses use `balanceCents` / `balance_cents`. Any spec-compliant client expecting `outstanding_cents` receives undefined.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/getDentalInvoice.ts`
+
+**Evidence:**
+- `dental-invoice.schema.ts:35`: `balanceCents: integer('balance_cents')`
+- `getDentalInvoice.ts:61`: response spreads `result.invoice` — returns `balanceCents`
+- MODULE_SPEC §7: canonical term is `outstanding_cents`
+
+**Fix:** Either rename `balanceCents` to `outstandingCents` across schema and handlers (requires migration), or add `outstandingCents: row.balanceCents` as an alias in all invoice response objects and document both names in spec §7.
+
+---
+
+#### EM-BIL-9b225f97
+**Severity:** P2
+**Title:** `createDentalPaymentPlan` allows `staff_full` but ROLE_PERMISSION_MATRIX denies it
+**Spec Section:** §6 Permissions vs ROLE_PERMISSION_MATRIX §Billing Write Operations
+**Confidence:** HIGH
+
+**Description:**
+MODULE_SPEC §6 says "Create payment plan | staff_full, dentist_owner" but the ROLE_PERMISSION_MATRIX shows `staff_full: ❌` for this action. The handler allows `['dentist_owner', 'dentist_associate', 'staff_full']`. Three-way inconsistency between MODULE_SPEC §6, ROLE_PERMISSION_MATRIX, and handler requires a product owner decision.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/createDentalPaymentPlan.ts`
+
+**Evidence:**
+- Line 30: `assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate', 'staff_full'])`
+- ROLE_PERMISSION_MATRIX: `Create payment plan | dentist_owner ✅ | dentist_associate (own) | staff_full ❌`
+- MODULE_SPEC §6: "Create payment plan | staff_full, dentist_owner"
+
+**Fix:** Decide authoritative source. If ROLE_PERMISSION_MATRIX is ground truth, remove `'staff_full'` and update MODULE_SPEC §6. If MODULE_SPEC §6 is correct, update the permission matrix.
+
+---
+
+### P3 — Optional / Deferred
+
+---
+
+#### EM-BIL-26da6fe2
+**Severity:** P3
+**Title:** `issueDentalInvoice` uses error code `INVALID_STATUS` instead of spec `INVALID_STATUS_TRANSITION`
+**Spec Section:** §15 Error Handling
+**Confidence:** HIGH
+
+**Description:**
+Spec §15 defines `INVALID_STATUS_TRANSITION` for invalid state transitions. `issueDentalInvoice.ts:31` throws `BusinessLogicError(..., 'INVALID_STATUS')`. Semantically similar but breaks client error discrimination.
+
+**Primary file:** `services/api-ts/src/handlers/dental-billing/issueDentalInvoice.ts`
+
+**Evidence:**
+- Line 31: `'INVALID_STATUS'`
+- MODULE_SPEC §15: `INVALID_STATUS_TRANSITION`
+
+**Fix:** Change `'INVALID_STATUS'` to `'INVALID_STATUS_TRANSITION'`.
+
+---
+
+#### EM-BIL-d699d8db
+**Severity:** P3
+**Title:** Patient financial statement handler lives in `dental-patient` module, not `dental-billing`
+**Spec Section:** §10 API Expectations (`GET /dental/patients/:id/statement`)
+**Confidence:** MEDIUM
+
+**Description:**
+MODULE_SPEC §10 lists `GET /dental/patients/:id/statement` as a dental-billing API endpoint. The implementation lives in `dental-patient/identity/getDentalPatientStatement.ts` and directly queries dental-billing schemas without a billing facade. Route is functional but ownership is misaligned with spec, creating a latent coupling risk.
+
+**Primary file:** `services/api-ts/src/handlers/dental-patient/identity/getDentalPatientStatement.ts`
+
+**Evidence:**
+- Line 15: imports `dentalInvoices, dentalInvoiceLineItems` directly from `dental-billing/repos/`
+- Line 16: imports `dentalPayments` from `dental-billing/repos/`
+- No billing facade intermediates the access
+
+**Fix (P3):** Create `dental-billing/repos/statement.facade.ts` that `dental-patient` calls, or move the handler to dental-billing. Low urgency while both modules share the same service boundary.
+
+---
+
+## Dimension 1: Public API Completeness
+
+Declared endpoints in MODULE_SPEC §10:
+
+| Endpoint | Handler | Registered | Status |
+|----------|---------|:---:|:---:|
+| POST /dental/billing/invoices | `createDentalInvoice.ts` | Yes | FOUND |
+| GET /dental/billing/invoices | `listDentalInvoices.ts` | Yes | FOUND |
+| GET /dental/billing/invoices/:id | `getDentalInvoice.ts` | Yes | FOUND |
+| PATCH /dental/billing/invoices/:id/issue | `issueDentalInvoice.ts` | Yes | FOUND (role gap) |
+| POST /dental/billing/invoices/:id/payments | `recordDentalPayment.ts` | Yes | FOUND |
+| POST /dental/billing/invoices/:id/void | `voidDentalInvoice.ts` | Yes | FOUND |
+| POST /dental/billing/invoices/:id/payment-plans | `createDentalPaymentPlan.ts` | Yes | FOUND |
+| GET /dental/patients/:id/statement | `getDentalPatientStatement.ts` | Yes | FOUND (wrong module) |
+| PATCH /dental/billing/plans/:planId/status | `updateDentalPaymentPlan.ts` | NO | NOT REGISTERED |
+
+Extra endpoints implemented beyond spec §10 (correctly added):
+- `GET /dental/billing/invoices/:invoiceId/payments` — `listDentalPayments.ts`
+- `GET /dental/billing/invoices/:invoiceId/plan` — `getDentalPaymentPlan.ts`
+- `POST /dental/billing/invoices/:invoiceId/payments/:paymentId/void` — `voidDentalPayment.ts`
+- `GET /dental/billing/invoices/:invoiceId/payments/:paymentId/receipt` — `getDentalPaymentReceipt.ts`
+- `POST /dental/billing/invoices/:invoiceId/discount` — `applyDentalDiscount.ts`
+- `GET /dental/billing/patients/:patientId/balance` — `getPatientBalance.ts`
+- `GET /dental/billing/collections/summary` — `getCollectionsSummary.ts`
+
+---
+
+## Dimension 2: Workflow Implementation
+
+| Workflow | Priority | Status | Notes |
+|----------|----------|:---:|-------|
+| WF-013 Create invoice from visit | P0 | PARTIAL | BR-009 works; DE-007 missing; consent check present |
+| WF-014 Record payment | P0 | PARTIAL | Core payment works; DE-008 missing |
+| WF-051 View invoice | P0 | FOUND | `getDentalInvoice.ts` |
+| WF-052 Issue invoice | P0 | PARTIAL | Works; missing staff_full role, missing email |
+| WF-015 Create payment plan | P1 | PARTIAL | Handler works; PATCH status route unregistered |
+| WF-041 Void invoice | P1 | FOUND | BR-011 enforced; audit logged |
+| WF-042 Fee schedule lookup | P1 | NOT FOUND | No dedicated dental-billing fee lookup endpoint |
+| WF-053 Mark partial | P2 | FOUND | Handled atomically in `addPayment` SQL CASE |
+| WF-054 Mark overdue cron | P2 | NOT WIRED | Method exists; pg-boss job not registered |
+
+---
+
+## Dimension 3: Domain Term Consistency
+
+| Term | Spec Definition | Code Usage | Status |
+|------|----------------|-----------|:---:|
+| Invoice | draft to issued to paid/partial/overdue/voided | `dentalInvoiceStatusEnum` matches | OK |
+| Line Item | CDT procedure charge | `dentalInvoiceLineItems` | OK |
+| Payment Plan | Installment agreement | `dentalPaymentPlans` | OK |
+| Installment | Auto-generated payment row | `dentalPaymentPlanInstallments` | OK |
+| outstanding_cents | total_cents minus paid_cents | `balanceCents` in code | DRIFT |
+| notes (invoice) | Free-text notes on invoice | Absent from invoice schema | MISSING |
+| BR-011 | Active payment plan blocks void | Mislabeled as consent check in createDentalInvoice comment | MISLABELED |
+
+---
+
+## Dimension 4: State Machine Enforcement
+
+SM-INVOICE transitions per spec §8:
+
+| From | To | Guard | Status |
+|------|-----|-------|:---:|
+| draft | issued | Billable treatments present | FOUND (`issueDentalInvoice.ts:30`) |
+| issued | paid | Payment >= total | FOUND (`addPayment` SQL CASE) |
+| issued | partial | Partial payment | FOUND (`addPayment` SQL CASE) |
+| partial | paid | Balance cleared | FOUND (`addPayment` SQL CASE) |
+| draft/issued | voided | BR-011 no active plan, dentist_owner | FOUND (`voidDentalInvoice.ts:31,44`) |
+| issued/partial | overdue | Past dueDate via cron | PARTIAL (method exists; cron not wired) |
+
+---
+
+## Dimension 5: Event Publishing
+
+| Event | Trigger | Status |
+|-------|---------|:---:|
+| DE-007 InvoiceCreated | createDentalInvoice | NOT PUBLISHED (P0) |
+| DE-008 InvoicePaid | recordDentalPayment | NOT PUBLISHED (P0) |
+| DE-009 InvoiceVoided | voidDentalInvoice | PARTIAL (logAuditEvent called; notifs delivery not verified) |
+
+---
+
+## Dimension 6: Auth / Route Protection
+
+All 14 registered dental-billing routes in `routes.ts` use `authMiddleware({ roles: ["user"] })`. Handler-level RBAC enforced via `assertBranchRole` or `assertBranchAccess`. No unprotected routes detected.
+
+Two RBAC logic gaps exist (EM-BIL-0decb164, EM-BIL-9b225f97) — these are role permission gaps, not missing auth middleware.
+
+---
+
+## Unregistered Handler
+
+- `updateDentalPaymentPlan.ts` — handler exists, NOT in `registry.ts`, NOT in `routes.ts` → P1 EM-BIL-4b60bbd3
 
 ---
 
 ## Stabilization Plan
 
-### Fix now (P0)
-- **EM-BIL-001** — `listDentalInvoices`: require `branchId` query param OR call `assertBranchAccess` unconditionally. Unauthenticated cross-branch invoice enumeration is a data-isolation breach. Options: (a) require `branchId` (return 400 if absent), or (b) derive branches from session membership and scope query automatically.
-
-### Fix before new work (P1)
-- **EM-BIL-002** — Add `'staff_full'` to `assertBranchRole` in `issueDentalInvoice.ts:28`. One-line fix.
-- **EM-BIL-005** — `createDentalInvoice.ts:43`: `throw new ValidationError(...)` → `throw new BusinessLogicError('No billable treatments found for this visit', 'NO_BILLABLE_TREATMENTS')`. Update `dental-billing.test.ts:321` and `billing-gate-http.test.ts:178` to assert `422`.
-- **EM-BIL-010** — `voidDentalInvoice.ts:48`: change `BusinessLogicError` (422) → `ConflictError` (409) for `ACTIVE_PAYMENT_PLAN`. Update both test assertions to `toBe(409)`.
-- **EM-BIL-003** — Extract `DentalBillingService`; move BR guards and orchestration out of handlers. Medium effort across 7 write handlers.
-- **EM-BIL-004** — Implement domain event publishing for DE-007/008/009 in `createDentalInvoice`, `recordDentalPayment` (paid path), `voidDentalInvoice` using platform event bus.
-- **EM-BIL-006** — Implement WF-042 fee schedule lookup handler. Requires TypeSpec + handler + repo query against dental-org fee schedule.
-
-### Fix when touching (P2)
-- **EM-BIL-007** — Reconcile DOMAIN_MODEL `sent` vs code `issued`. Preferred: update DOMAIN_MODEL to `issued` (simpler, avoids DB migration).
-- **EM-BIL-008** — Register `markOverdueInvoices()` with pg-boss scheduler. Repo method complete; only job registration missing.
-- **EM-BIL-011** — Decide: if `paid → void` is intentional admin correction, add `paid` to MODULE_SPEC §8 FSM table with a note. If not, add guard `throw BusinessLogicError('Cannot void a paid invoice', 'INVALID_STATUS')`.
-- **EM-BIL-012** — Audit `invoice-lifecycle.test.ts:440`: if seeding DB directly (bypasses handler), add comment clarifying. If via handler, remove `taxCents: 1200` — handler hard-codes 0 per BR-010.
-- **EM-BIL-013** — Add stub `PATCH /dental/billing/invoices/:id/uncollectible` returning 501 `NOT_IMPLEMENTED`. Add test for AC-BIL-005.
-
-### Track (P3)
-- **EM-BIL-009** — `markUncollectible` transition (BR-013, explicitly deferred per spec). No action until future wave.
+| Priority | Finding ID | Action | When |
+|----------|-----------|--------|------|
+| P0 | EM-BIL-23495b6c | Publish DE-007 in createDentalInvoice | Fix now |
+| P0 | EM-BIL-add117d4 | Publish DE-008 in recordDentalPayment | Fix now |
+| P1 | EM-BIL-4b60bbd3 | Register updateDentalPaymentPlan route | Fix before new work |
+| P1 | EM-BIL-0decb164 | Add staff_full to issueDentalInvoice (pending product decision) | Fix before new work |
+| P1 | EM-BIL-e9b51d27 | Wire overdue cron to pg-boss | Fix before new work |
+| P1 | EM-BIL-a72998a6 | Add email send to issueDentalInvoice | Fix before new work |
+| P2 | EM-BIL-08bcfc78 | BusinessLogicError for BR-009 (422 + correct code) | Fix when touching handler |
+| P2 | EM-BIL-a2ef0f37 | Add notes column to dental_invoice schema | Fix when touching schema |
+| P2 | EM-BIL-3e4f008a | Align outstanding_cents vs balanceCents naming | Fix when touching schema |
+| P2 | EM-BIL-9b225f97 | Reconcile staff_full payment plan permission | Decide and fix |
+| P3 | EM-BIL-26da6fe2 | INVALID_STATUS to INVALID_STATUS_TRANSITION | Track |
+| P3 | EM-BIL-d699d8db | Statement handler boundary or billing facade | Track |
 
 ---
 
 ## What's Next
 
-1. **Immediate (1–3 line fixes):** EM-BIL-001 (P0), EM-BIL-002, EM-BIL-005, EM-BIL-010.
-2. **This sprint:** EM-BIL-008 (pg-boss registration), EM-BIL-013 (501 stub + test).
-3. **Before v2 feature work:** EM-BIL-003 (service layer) + EM-BIL-004 (domain events) — best done together when platform event bus is established.
-4. **Backlog:** EM-BIL-006 (WF-042 fee schedule, requires dental-org coordination), EM-BIL-007 (terminology sync).
-
-> Next: `/oli-enforce-fix --module dental-billing` to generate patches for P0/P1 findings.
+1. Fix P0s: publish DE-007 in `createDentalInvoice.ts` and DE-008 in `recordDentalPayment.ts` following the `logAuditEvent` pattern in `voidDentalInvoice.ts`.
+2. Register the orphaned route: add `updateDentalPaymentPlan` to `registry.ts` and `routes.ts`.
+3. Wire the overdue cron: create `dental-billing/jobs/index.ts` with a daily `markOverdueInvoices` job.
+4. Add email notification to `issueDentalInvoice`.
+5. Fix `issueDentalInvoice` role gap (add staff_full pending product decision).
+6. Reconcile payment plan permission with product owner before implementing.
+7. Re-run `/oli-enforce-module --module=dental-billing` after P0+P1 fixes to verify score improves to 80+.

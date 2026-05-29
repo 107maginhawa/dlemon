@@ -1,238 +1,423 @@
-# dental-imaging — Module Enforcement
-<!-- oli-enforce-module v1.0 --strict | run: run-6-strict-2026-05-29 | baseline: run-5 -->
+<!-- oli-version: 1.1 | generated: 2026-05-29 | skill: oli-enforce-module | run: 7 | module: dental-imaging -->
 
-## Summary
+# Enforcement Report: dental-imaging
 
-- **Findings:** 16 (P0: 0, P1: 10, P2: 5, P3: 1)
-- **New findings vs run-5:** 3 (EM-IMG-FK-001, EM-IMG-FF-002, EM-IMG-DM-003 — all P2)
-- **Resolved findings vs run-5:** 1 (EM-IMG-6A13895D and EM-IMG-8CD0FA81 reclassified as P2 contract-drift per URL scheme note; ceph handler completeness confirmed)
-- **Service-Layer Pattern:** PARTIAL — repo classes exist (`ImagingRepository`, `ImagingCephRepository`, `ImagingFindingRepository`); `@monobase/ceph-math` isomorphic engine present; no service layer singletons or DI
-- **Compliance Score:** 46/100
-
-### Score Breakdown
-
-| Dimension | Score | Cap Applied | Notes |
-|-----------|-------|-------------|-------|
-| Public API completeness | 4/10 | P1 cap | GET list + annotation POST/PATCH still missing; ceph URL scheme diverges |
-| Workflow implementation | 7/10 | — | WF-019/020/040/030/031 all have code; study_date gap; annotation PATCH missing |
-| Domain term consistency | 9/10 | — | Terms used correctly; no ad-hoc synonyms |
-| State machine enforcement | 7/10 | — | SM-01 guarded for Finding; SM-02 (ceph landmark) fully guarded; Annotation SM-01 unguarded |
-| Event publishing | 0/10 | P1 cap | DE-018/019/020 declared, none emitted |
-| Auth / permissions | 6/10 | — | authMiddleware on all 21 routes; staff_full role gap on GET studies |
-| F2 Service-Layer / DI | 5/10 | — | Repos exist + ceph-math package clean; direct `new` in all handlers |
-
-**Overall:** 46/100 — P1 cap applied to API completeness and events dims.
-
-> Score delta vs run-5: +2 (SM-02 fully guarded confirmed; `@monobase/ceph-math` isomorphic confirmed)
+**Run:** 7 | **Date:** 2026-05-29 | **Skill:** oli-enforce-module v1.1
+**Spec:** docs/product/modules/dental-imaging/MODULE_SPEC.md (v1.0, 2026-05-24)
+**Handler path:** services/api-ts/src/handlers/dental-imaging/
+**Codebase-map artifacts:** ABSENT — fallback to source scanning (all dimensions)
+**Auth verification method:** Three-tier (handler → router → app level)
 
 ---
 
-## Strict Ceph-Specific Assessment (run-6 additions)
+## Executive Summary
 
-| Check | Result |
-|-------|--------|
-| 3 ceph tables present (`imaging_ceph_landmark`, `imaging_ceph_analysis`, `imaging_ceph_report`) | PASS |
-| `ceph_session` table | NOT REQUIRED — MODULE_SPEC §7 lists only 3 ceph tables; no `ceph_session` in spec |
-| getCephAnalysis handler | PASS — `getCephAnalysis.ts` + `CephMgmt_getCephAnalysis.ts` shim |
-| recomputeCephAnalysis handler | PASS — `recomputeCephAnalysis.ts` + `CephMgmt_recomputeCephAnalysis.ts` shim |
-| batchUpsertCephLandmarks handler | PASS — `batchUpsertCephLandmarks.ts` |
-| updateCephLandmark handler | PASS — `updateCephLandmark.ts` with SM-02 guard |
-| deleteCephLandmark handler | PASS — `deleteCephLandmark.ts` with tier gate |
-| listCephLandmarks handler | PASS — `listCephLandmarks.ts` |
-| createCephReport handler | PASS — `createCephReport.ts` with tier gate + D-L gate-landmark check |
-| getCephReport handler | PASS — `getCephReport.ts` |
-| Ceph math engine isomorphic (no DOM deps) | PASS — `@monobase/ceph-math` at `packages/ceph-math/`; `src/index.ts` is pure TS, no DOM imports; `DOMPoint` only in test oracle (`ceph-coords.test.ts`), not in production code |
-| Calibration gate before landmark placement | PARTIAL — `not_calibrated` state recorded correctly; `computeCephAnalysis` returns `uncalibrated: true`; but NO 422 thrown when `calibrationMethod = not_calibrated` — spec §13 edge case unenfored (see EM-IMG-DM-003) |
-| imagingTier gate on all ceph endpoints | PASS — all ceph handlers call `getImagingTierForBranch()` and throw 403 ForbiddenError on `'free'` tier |
-| SM-02 locked landmark rejection | PASS — `updateCephLandmark.ts` checks `CEPH_LANDMARK_TRANSITIONS`, rejects x/y changes on locked, rejects invalid status transitions with `INVALID_STATUS_TRANSITION` code |
-| D-I append-only report | PASS — `imaging_ceph_report` uses `versionedSnapshotFields()`, no update/delete handler exists |
+| Metric | Value |
+|--------|-------|
+| Total findings | 17 |
+| P0 (critical) | 2 |
+| P1 (missing spec-declared items) | 8 |
+| P2 (drift/inconsistency) | 5 |
+| P3 (optional/deferred) | 2 |
+| Compliance score | 42 / 100 |
+| v1 status | PARTIAL |
+| Service layer | ABSENT |
+
+Wave 3 claimed 56 P0 regressions fixed. This run-7 audit confirms auth middleware is consistently applied across all 21 registered routes (no auth P0s). Residual gaps: **2 new P0s** (schema divergence that breaks AC-IMG-002 and AC-IMG-003), **8 P1s** (missing endpoints, unpublished events, absent guards), **5 P2s** (domain term drift, schema field mismatches).
 
 ---
 
-## Findings
+## Dimension 1: Public API Completeness
 
-### Known Findings (carried from run-5, still open)
+**Spec §10 declares 9 endpoint shapes.** Checked against registered routes in `services/api-ts/src/generated/openapi/routes.ts`.
 
-| ID | Sev | Description | File | Line | Spec Ref |
-|----|-----|-------------|------|------|----------|
-| EM-IMG-144BE775 | P1 | `GET /dental/imaging/studies` list endpoint (patient_id filter, pagination) absent from registered routes — only `GET /studies/:studyId` exists | `services/api-ts/src/generated/openapi/routes.ts` | — | MODULE_SPEC §10 |
-| EM-IMG-152F9A95 | P1 | `POST /dental/imaging/images/:id/annotations` (create annotation) has no handler or route registration | `services/api-ts/src/handlers/dental-imaging/` | — | MODULE_SPEC §3 WF-020 |
-| EM-IMG-C40244A4 | P1 | `PATCH /dental/imaging/images/:id/annotations/:aid` (update annotation, status→confirmed) has no handler or route | `services/api-ts/src/handlers/dental-imaging/` | — | MODULE_SPEC §3 WF-020, §8 SM-01 |
-| EM-IMG-3B53ABB3 | P1 | `study_date` field absent from `createImagingStudy` body parsing and `imaging_study` schema (only `createdAt` exists) | `services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts` | 22–37 | MODULE_SPEC §4 WF-019, §7 |
-| EM-IMG-1973EF93 | P1 | `staff_full` role permitted for `GET /dental/imaging/studies` per spec; no handler includes `staff_full` in `assertBranchRole` | `services/api-ts/src/handlers/dental-imaging/getImagingStudy.ts` | 28 | MODULE_SPEC §6 |
-| EM-IMG-5A805E17 | P1 | `DE-018 ImagingStudyUploaded` declared in MODULE_SPEC §10b; zero event emit/publish calls in any imaging handler | `services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts` | — | MODULE_SPEC §10b |
-| EM-IMG-0435E807 | P1 | `DE-019 ImagingFindingConfirmed` declared in MODULE_SPEC §10b; never emitted in `updateFinding` or any annotation handler | `services/api-ts/src/handlers/dental-imaging/updateFinding.ts` | — | MODULE_SPEC §10b |
-| EM-IMG-8891E413 | P1 | `DE-020 CephAnalysisComputed` declared in MODULE_SPEC §10b; never emitted in `recomputeCephAnalysis` or `batchUpsertCephLandmarks` | `services/api-ts/src/handlers/dental-imaging/recomputeCephAnalysis.ts` | — | MODULE_SPEC §10b |
-| EM-IMG-2404E9CE | P2 | Impl URL scheme (`/images/:imageId/ceph/…`) diverges from legacy contract URLs (`/ceph-analyses/:id/…`) — API_CONTRACTS needs update to match TypeSpec-generated routes or aliases added | `services/api-ts/src/generated/openapi/routes.ts` | — | API_CONTRACTS §ceph-analyses paths |
-| EM-IMG-3796DC9D | P2 | All 20+ handlers instantiate repos directly via `new ImagingRepository(db)` etc. on every request — no singletons, no DI | `services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts` | 34–35 | MODULE_SPEC §20 |
-| EM-IMG-04E1D56A | P2 | WF-019 step 2 requires `study_date`; `imaging_study` schema has no `study_date` column, making retrospective date entry impossible | `services/api-ts/src/handlers/dental-imaging/repos/imaging.schema.ts` | — | MODULE_SPEC §4 WF-019, §7 |
-| EM-IMG-C37C4883 | P3 | Annotation SM-01 (draft→confirmed→resolved) not guarded for `ImagingAnnotation`; only `ImagingFinding` has `FINDING_TRANSITIONS` guard. Annotation status is free-form write. | `services/api-ts/src/handlers/dental-imaging/` | — | MODULE_SPEC §8, §5 BR-023-035 |
+### FOUND (7/9)
 
-### New Findings (run-6)
+| Endpoint | Route | Handler | Status |
+|----------|-------|---------|--------|
+| POST /dental/imaging/studies | routes.ts:733 | ImagingMgmt_createImagingStudy | FOUND |
+| GET /dental/imaging/studies/:studyId | routes.ts:740 | ImagingMgmt_getImagingStudy | FOUND |
+| POST /dental/imaging/images/:imageId/findings | routes.ts:688 | ImagingFindingsMgmt_createFinding | FOUND |
+| POST /dental/imaging/images/:imageId/ceph/landmarks | routes.ts:643 | CephMgmt_batchUpsertCephLandmarks | FOUND (path differs from spec) |
+| PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code | routes.ts:658 | CephMgmt_updateCephLandmark | FOUND (path differs from spec) |
+| POST /dental/imaging/images/:imageId/ceph/analysis/recompute | routes.ts:636 | CephMgmt_recomputeCephAnalysis | FOUND (path differs from spec) |
+| GET /dental/patients/:patientId/images | routes.ts:974 | PatientImageMgmt_listPatientImages | FOUND |
 
-| ID | Sev | Description | File | Line | Spec Ref |
-|----|-----|-------------|------|------|----------|
-| EM-IMG-FK-001 | P2 | `imaging_finding` schema has DB-level FKs to cross-module tables: `patientId.references(patients.id)`, `branchId.references(dentalBranches.id)`, `visitId.references(dentalVisits.id)` — violates §7b "no DB FKs to other modules". `treatmentId` (UUID-only) is the correct pattern. | `services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts` | 64–66 | MODULE_SPEC §7b, §5 Loose Coupling |
-| EM-IMG-FF-002 | P2 | Feature flags `dental_imaging_ceph_enabled` and `dental_imaging_auto_landmark` declared in MODULE_SPEC §18 are not wired anywhere — no flag check in handlers or config. The `imagingTier` runtime check exists but is a DB lookup, not a feature flag. | `services/api-ts/src/handlers/dental-imaging/` | — | MODULE_SPEC §18 |
-| EM-IMG-DM-003 | P2 | Edge case MODULE_SPEC §13: "Calibration not set before landmark placement → 422 NOT_CALIBRATED" not enforced. `batchUpsertCephLandmarks` and `updateCephLandmark` allow placement with `calibrationMethod = 'not_calibrated'`; they set `uncalibrated: true` in result but do not reject with 422. | `services/api-ts/src/handlers/dental-imaging/batchUpsertCephLandmarks.ts` | 54–73 | MODULE_SPEC §13, §15 |
+### MISSING (2/9)
 
 ---
 
-## F2: Service-Layer / DI Assessment
+### EM-IMG-001 — P1 — GET /dental/imaging/studies (patient-scoped list) Missing
 
-### Pattern Verdict: PARTIAL
+**Spec §10:** `GET /dental/imaging/studies (patient-scoped)` is a declared API requirement for WF-087 (View Imaging Study List).
 
-**What exists:**
+**Finding:** No route matching `GET /dental/imaging/studies` (with patientId query param) exists in `routes.ts`. The only study-level GET is `GET /dental/imaging/studies/:studyId` (single-study fetch). `PatientImageMgmt_listPatientImages` at `/dental/patients/:patientId/images` returns a cross-source image union but does NOT return study container objects.
 
-Three distinct repository classes are properly implemented:
+**File:** services/api-ts/src/generated/openapi/routes.ts (no `GET /dental/imaging/studies` entry)
+**Confidence:** HIGH
+**Spec section:** §10 API Expectations, §3 WF-087
 
-- `ImagingRepository` (`repos/imaging.repo.ts`) — studies, images, teeth, annotations, calibration
-- `ImagingCephRepository` (`repos/imaging_ceph.repo.ts`) — ceph landmarks, analyses, reports
-- `ImagingFindingRepository` (`repos/imaging_finding.repo.ts`) — imaging findings CRUD + FSM
+---
 
-All repo classes follow the standard pattern: constructor-injected `DatabaseInstance`, typed methods, Drizzle ORM only (no raw SQL), typed return shapes.
+### EM-IMG-002 — P1 — POST/PATCH Annotation Endpoints Missing
 
-**What's missing:**
+**Spec §10:** `POST /dental/imaging/studies/:id/annotations` and `PATCH /dental/imaging/studies/:id/annotations/:aid`
 
-No `.service.ts` files exist. No DI container. No singletons exported. Every handler instantiates repos directly on each request:
+**Finding:** No routes matching either pattern exist. Annotation storage is handled via `createMeasurement` / `deleteMeasurement` at `/dental/imaging/images/:imageId/measurements`. This diverges from the spec URL scheme and lacks a PATCH endpoint. WF-020 step 4 ("only creator may edit") has no enforcement path since no annotation update handler exists.
 
+**Files:** services/api-ts/src/generated/openapi/routes.ts (absent), services/api-ts/src/handlers/dental-imaging/createMeasurement.ts
+**Confidence:** HIGH
+**Spec section:** §10, §4 WF-020
+
+---
+
+## Dimension 2: Workflow Implementation
+
+**Workflows assigned to dental-imaging:** WF-019, WF-020, WF-030, WF-031, WF-040, WF-067, WF-087
+
+| WF | Name | Code Path | Status |
+|----|------|-----------|--------|
+| WF-019 | Upload Radiographic Study | createImagingStudy.ts — presigned URL, BR-034 MIME check, assertBranchRole | PARTIAL (step 5 pending_review→reviewed absent — EM-IMG-006) |
+| WF-020 | Annotate Radiograph | createMeasurement.ts handles geometry overlays | PARTIAL (no update path, creator ownership not enforced — EM-IMG-002) |
+| WF-040 | Record Imaging Finding | createFinding.ts, updateFinding.ts, listFindings.ts, deleteFinding.ts | PRESENT |
+| WF-067 | Add Images to Study | No dedicated add-image-to-existing-study handler found | PARTIAL |
+| WF-087 | View Imaging Study List | No list endpoint | ABSENT (EM-IMG-001) |
+| WF-030 | Run Ceph Analysis | batchUpsertCephLandmarks + getCephAnalysis + recomputeCephAnalysis | PRESENT |
+| WF-031 | Place/Adjust Ceph Landmarks | updateCephLandmark.ts with SM-02 guard | PRESENT (SM-02 states differ — EM-IMG-004) |
+
+---
+
+## Dimension 3: Domain Term Consistency
+
+### EM-IMG-003 — P2 — SM-01 Finding States Diverge from Spec
+
+**Spec §8 / DOMAIN_MODEL §6 SM-IMAGING-FINDING:**
+```
+draft → confirmed → resolved
+```
+AC-IMG-002: `confirmed → draft → 422 (SM-01)`.
+
+**Code (`imaging_finding.schema.ts:33–47`):**
 ```typescript
-// Repeated in createImagingStudy.ts, getCephAnalysis.ts, batchUpsertCephLandmarks.ts, etc.
-const db = ctx.get('database') as DatabaseInstance;
-const imagingRepo = new ImagingRepository(db);
-const cephRepo = new ImagingCephRepository(db);
+imagingFindingStatusEnum: ['suspected', 'confirmed', 'monitoring', 'resolved']
+FINDING_TRANSITIONS = {
+  suspected: ['confirmed', 'monitoring', 'resolved'],
+  confirmed: ['monitoring', 'resolved'],
+  monitoring: ['confirmed', 'resolved'],
+  resolved: [],
+}
 ```
 
-This pattern appears in **all 20+ handlers** (confirmed via grep across the module). Each HTTP request allocates fresh repo instances. No shared business logic layer beyond what each individual handler contains.
+4 states vs 3 in spec. Initial state is `suspected` (not `draft`). State `monitoring` is undeclared in spec. State `draft` does not exist in code — AC-IMG-002 is literally untestable.
 
-**Ceph math isolation:**
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:33–47
+**Confidence:** HIGH
+**Spec section:** §8, §11 AC-IMG-002
 
-`computeCephAnalysis` from `@monobase/ceph-math` (external package) is called directly in 4 handlers: `batchUpsertCephLandmarks`, `getCephAnalysis`, `recomputeCephAnalysis`, `createCephReport`. The math engine is correctly isolated as a package — not inlined in handlers. This is the right pattern.
+---
 
-**Handler fatness:**
+### EM-IMG-004 — P2 — SM-02 Ceph Landmark States Diverge from Spec
 
-Handlers are moderately fat: each one orchestrates the full pipeline (fetch image → fetch study → assert auth → check imaging tier → call repo(s) → call math engine → build response). No raw Drizzle queries inline. All DB access goes through repo methods. The `image→study→assertBranch→tierCheck` block (~15 lines) is duplicated verbatim in every ceph handler (~8 files).
+**Spec §8 / DOMAIN_MODEL §6 SM-CEPH-LANDMARK:**
+```
+not_placed → placed → locked
+```
+AC-IMG-003: `placed → not_placed → 422 (SM-02)`.
 
-**Recommended fix (P2):**
-
-Create `imaging.service.ts` exporting:
+**Code (`imaging_ceph.schema.ts:34–39`):**
 ```typescript
-// Singleton pattern (db injected at app startup)
-export const imagingService = new ImagingService(db);
-
-// Shared helper to DRY the repeated fetch-auth chain:
-async resolveImageWithAuth(ctx, imageId, roles?, requireCephTier?)
-  → { image, study, imagingRepo, cephRepo }
+cephLandmarkStatusEnum: ['placed', 'confirmed', 'locked']
+CEPH_LANDMARK_TRANSITIONS = { placed: ['confirmed'], confirmed: ['locked'], locked: [] }
 ```
 
-This would eliminate the ~120 lines of duplicated boilerplate across ceph handlers.
+State `not_placed` does not exist — AC-IMG-003 is untestable. Code adds undeclared `confirmed` intermediate state.
+
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging_ceph.schema.ts:34–39
+**Confidence:** HIGH
+**Spec section:** §8, §11 AC-IMG-003
 
 ---
 
-## Public API Completeness Inventory
+### EM-IMG-005 — P2 — imaging_annotation Has No status Field; Field Renamed
 
-Contract declares 9 endpoints. Registered routes cover 1 exactly; 8 are mismatched or absent.
+**Spec §7:** `imaging_annotation: id, study_id, image_id, type (enum), coordinates (JSONB), status (draft/confirmed/resolved)`
 
-| Contract Endpoint | Registered? | Notes |
-|-------------------|-------------|-------|
-| `POST /dental/imaging/studies` | FOUND | Exact match |
-| `GET /dental/imaging/studies` | MISSING | Only `GET /studies/:studyId` registered |
-| `POST /dental/imaging/studies/:id/images` | MISSING | No study-scoped image-add route |
-| `POST /dental/imaging/studies/:id/annotations` | MISSING | No annotation create handler exists |
-| `PATCH /dental/imaging/studies/:id/annotations/:aid` | MISSING | No annotation update handler exists |
-| `POST /dental/imaging/studies/:id/findings` | MISSING (remodeled) | Impl: `POST /images/:imageId/findings` |
-| `POST /dental/imaging/ceph-analyses` | MISSING (remodeled) | Impl: `GET /images/:imageId/ceph/analysis` |
-| `PUT /dental/imaging/ceph-analyses/:id/landmarks` | MISSING (remodeled) | Impl: `POST /images/:imageId/ceph/landmarks` (wrong verb) |
-| `POST /dental/imaging/ceph-analyses/:id/recompute` | MISSING (remodeled) | Impl: `POST /images/:imageId/ceph/analysis/recompute` |
+**Code (`imaging.schema.ts:95–111`):** The `imagingAnnotations` table has no `status` column. The JSONB payload column is named `geometry` (code) vs `coordinates` (spec). Both are schema-level divergences.
 
-**Note on "remodeled" items:** The implementation follows a more RESTful image-scoped design (`/images/:imageId/ceph/…`) that likely reflects TypeSpec evolution since `API_CONTRACTS.md` was written. If the TypeSpec-generated routes are the current source of truth, then `API_CONTRACTS.md` should be updated and these P1s downgraded to P2 (contract drift). The list-studies gap and annotation gaps remain genuine P1 missing features regardless.
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging.schema.ts:95–111
+**Confidence:** HIGH
+**Spec section:** §7 Data Requirements
 
 ---
 
-## Auth / Route Protection Inventory
+### EM-IMG-006 — P2 — imaging_study Missing study_type, capture_method, pending_review Status
 
-- All 20 registered imaging routes include `authMiddleware()` as first middleware — **no unprotected routes found (P0 clear)**
-- Branch access enforced in every handler via `assertBranchAccess` or `assertBranchRole`
-- Tenant isolation enforced via `image→study.branchId` chain — no direct branchId parameter trust
-- `staff_full` role omitted from all imaging handlers (P1 gap on GET studies)
+**Spec §7:** `imaging_study: id, patient_id, branch_id, dentist_member_id, study_type (enum), capture_method (enum), created_at`
+**Spec §4 WF-019 step 5:** Created in `pending_review` → transitions to `reviewed`.
 
----
+**Code:** `imagingStudies` table has `modality` but no `study_type` or `capture_method`. Status enum is `['active', 'archived']` — `pending_review` and `reviewed` absent.
 
-## Workflow Coverage
-
-| Workflow | Handler | Status |
-|----------|---------|--------|
-| WF-019 Upload Study | `createImagingStudy.ts` | PARTIAL — study created, presigned URL generated; `study_date` not captured |
-| WF-020 Annotate Radiograph | `createMeasurement.ts`, `ImagingRepository.createAnnotation` | PARTIAL — measurements work; annotation create/update endpoints missing |
-| WF-040 Record Imaging Finding | `createFinding.ts`, `updateFinding.ts`, `listFindings.ts` | IMPLEMENTED |
-| WF-030 Run Ceph Analysis | `getCephAnalysis.ts`, `recomputeCephAnalysis.ts` | IMPLEMENTED (tier-gated) |
-| WF-031 Place Ceph Landmarks | `batchUpsertCephLandmarks.ts`, `updateCephLandmark.ts` | IMPLEMENTED (tier-gated) |
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging.schema.ts
+**Confidence:** HIGH
+**Spec section:** §7, §4 WF-019
 
 ---
 
-## Section-by-Section Checklist
+### EM-IMG-007 — P2 — ceph_analysis Missing status; ceph_landmark FK to image_id not analysis_id
 
-| Section | Status | Notes |
-|---------|--------|-------|
-| §1 Overview | PASS | Study mgmt, annotations, ceph analysis, findings all implemented |
-| §2 Domain Terms | PASS | All 6 terms correctly named throughout codebase |
-| §3 Workflows | PARTIAL | WF-019/040/030/031 implemented; WF-020 PARTIAL (no annotation endpoints) |
-| §4 Workflow Details | PARTIAL | WF-019 missing study_date; WF-020 missing annotation PATCH; WF-030/031 fully implemented |
-| §5 Business Rules | PARTIAL | BR-016c (tier gate) enforced; loose coupling violated in finding schema (EM-IMG-FK-001) |
-| §6 Permissions | PARTIAL | authMiddleware on all routes; staff_full role gap (EM-IMG-1973EF93) |
-| §7 Data Requirements | PARTIAL | All 4 core + 3 ceph tables present; study_date missing |
-| §7b Aggregate Boundaries | FAIL | `imaging_finding` has DB FKs to patients, dental_branches, dental_visits (EM-IMG-FK-001) |
-| §8 State Transitions | PARTIAL | SM-01 guarded for Finding; SM-02 fully guarded; Annotation SM-01 unguarded |
-| §9 UI/UX | NOT AUDITED | Frontend out of scope for this run |
-| §10 API | PARTIAL | 21 routes registered; GET list missing; annotation endpoints missing |
-| §10b Domain Events | FAIL | DE-018/019/020 declared, none emitted |
-| §11 Acceptance Criteria | PARTIAL | AC-IMG-001 (403 free tier) tested; AC-IMG-004 (presigned URL) implemented; AC-IMG-002/003 not explicitly labeled |
-| §12 Test Expectations | PASS | `imaging.test.ts`, `ceph.test.ts`, `imaging-coverage.test.ts`, `imaging-finding.fsm.property.test.ts`, `ceph-landmark.fsm.property.test.ts` all present |
-| §13 Edge Cases | PARTIAL | MIME 422 implemented; wrong-branch 403 implemented; NOT_CALIBRATED 422 missing (EM-IMG-DM-003) |
-| §14 Dependencies | PARTIAL | Storage (presigned URL) integrated; dental-org (branch) integrated; loose coupling violated |
-| §15 Error Handling | PARTIAL | 403 tier + 404 missing implemented; 422 NOT_CALIBRATED missing |
-| §16 Performance | NOT AUDITED | Pagination not verified |
-| §17 Observability | PARTIAL | `logger.info` in ceph handlers; no structured event logging for DE-018/019/020 |
-| §18 Feature Flags | FAIL | Both flags declared, neither wired (EM-IMG-FF-002) |
-| §19 Vertical Slice Plan | PASS | v1.3 (core imaging) + v1.4 (ceph) both implemented |
-| §20 AI Instructions | PARTIAL | ceph-math isomorphic; repo pattern exists; DI/singleton not adopted |
+**Spec §7:** `ceph_analysis: id, study_id, analysis_type, status, calibration_method, mm_per_pixel`; `ceph_landmark: id, analysis_id, landmark_type, x, y, status, source`
+
+**Code:** `imagingCephAnalyses` has no `status` field. `imagingCephLandmarks` has `imageId` FK (not `analysisId`), uses `landmarkCode` text (not enum `landmark_type`), and has no connection to `ceph_analysis` via FK. This is an architectural divergence (image-centric vs analysis-centric).
+
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging_ceph.schema.ts:57–130
+**Confidence:** HIGH
+**Spec section:** §7 Data Requirements
+
+---
+
+## Dimension 4: State Machine Enforcement
+
+SM-01 guard is implemented in `updateFinding.ts` via `FINDING_TRANSITIONS`. SM-02 guard is implemented in `updateCephLandmark.ts` via `CEPH_LANDMARK_TRANSITIONS`. Both guards are structurally correct for the code's state set — they enforce the wrong state machines (see EM-IMG-003/004).
+
+### EM-IMG-008 — P0 — AC-IMG-002 and AC-IMG-003 Structurally Untestable
+
+AC-IMG-002: "confirmed → draft → 422 (SM-01)" — `draft` is not an enum value in `imagingFindingStatusEnum`. A consumer passing `status: "draft"` gets a Zod validation error, not a 422 INVALID_STATUS_TRANSITION as specified.
+
+AC-IMG-003: "placed → not_placed → 422 (SM-02)" — `not_placed` is not an enum value in `cephLandmarkStatusEnum`. Same outcome.
+
+Both acceptance criteria are **structurally unenforceable** with current schemas. This is a contract violation for any consumer depending on the error shape.
+
+**Files:**
+- services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts:33–47
+- services/api-ts/src/handlers/dental-imaging/repos/imaging_ceph.schema.ts:35–39
+**Confidence:** HIGH
+**Spec section:** §11 AC-IMG-002, AC-IMG-003
+
+---
+
+## Dimension 5: Event Publishing
+
+**Spec §10b declares 3 published events:** DE-018 `ImagingStudyUploaded`, DE-019 `ImagingFindingConfirmed`, DE-020 `CephAnalysisComputed`.
+
+Grep across all dental-imaging handler files for event bus / emit / publish patterns returned no results. Only `logAuditEvent` (audit trail, not domain events) is present.
+
+### EM-IMG-009 — P1 — DE-018 ImagingStudyUploaded Not Published
+
+`createImagingStudy.ts` writes an audit log but does not publish `ImagingStudyUploaded`.
+
+**File:** services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts
+**Confidence:** HIGH — **Spec section:** §10b
+
+---
+
+### EM-IMG-010 — P1 — DE-019 ImagingFindingConfirmed Not Published
+
+`updateFinding.ts` guards the `→ confirmed` transition but does not publish `ImagingFindingConfirmed`. DOMAIN_MODEL §5 lists dental-clinical and dental-audit as consumers.
+
+**File:** services/api-ts/src/handlers/dental-imaging/updateFinding.ts
+**Confidence:** HIGH — **Spec section:** §10b
+
+---
+
+### EM-IMG-011 — P1 — DE-020 CephAnalysisComputed Not Published
+
+`recomputeCephAnalysis.ts` and `batchUpsertCephLandmarks.ts` complete analysis computation but publish nothing.
+
+**Files:** services/api-ts/src/handlers/dental-imaging/recomputeCephAnalysis.ts, batchUpsertCephLandmarks.ts
+**Confidence:** HIGH — **Spec section:** §10b
+
+---
+
+## Dimension 6: Unprotected Route Detection
+
+All 21 dental-imaging routes checked for `authMiddleware()` in `routes.ts`:
+
+| Route | Auth | Status |
+|-------|------|--------|
+| PATCH /dental/imaging/findings/:findingId | authMiddleware() | PROTECTED |
+| DELETE /dental/imaging/findings/:findingId | authMiddleware() | PROTECTED |
+| DELETE /dental/imaging/images/:imageId | authMiddleware() | PROTECTED |
+| PATCH /dental/imaging/images/:imageId/calibration | authMiddleware() | PROTECTED |
+| GET /dental/imaging/images/:imageId/ceph/analysis | authMiddleware() | PROTECTED |
+| POST /dental/imaging/images/:imageId/ceph/analysis/recompute | authMiddleware() | PROTECTED |
+| POST /dental/imaging/images/:imageId/ceph/landmarks | authMiddleware() | PROTECTED |
+| GET /dental/imaging/images/:imageId/ceph/landmarks | authMiddleware() | PROTECTED |
+| PATCH /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode | authMiddleware() | PROTECTED |
+| DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode | authMiddleware() | PROTECTED |
+| POST /dental/imaging/images/:imageId/ceph/reports | authMiddleware() | PROTECTED |
+| GET /dental/imaging/images/:imageId/ceph/reports | authMiddleware() | PROTECTED |
+| POST /dental/imaging/images/:imageId/findings | authMiddleware() | PROTECTED |
+| GET /dental/imaging/images/:imageId/findings | authMiddleware() | PROTECTED |
+| POST /dental/imaging/images/:imageId/measurements | authMiddleware() | PROTECTED |
+| GET /dental/imaging/images/:imageId/measurements | authMiddleware() | PROTECTED |
+| PATCH /dental/imaging/images/:imageId/modality | authMiddleware() | PROTECTED |
+| DELETE /dental/imaging/measurements/:measurementId | authMiddleware() | PROTECTED |
+| POST /dental/imaging/studies | authMiddleware() | PROTECTED |
+| GET /dental/imaging/studies/:studyId | authMiddleware() | PROTECTED |
+| GET /dental/patients/:patientId/images | authMiddleware() | PROTECTED |
+
+**Result: 21/21 routes protected. No unprotected routes. Wave 3 auth fixes confirmed effective.**
+
+---
+
+## Additional Findings
+
+### EM-IMG-012 — P1 — Error Codes IMAGING_TIER_REQUIRED and NOT_CALIBRATED Not Used
+
+**Spec §15:**
+- `imagingTier insufficient → 403, IMAGING_TIER_REQUIRED`
+- `Not calibrated → 422, NOT_CALIBRATED`
+
+Code throws `ForbiddenError(message)` with no machine-readable code. Neither `IMAGING_TIER_REQUIRED` nor `NOT_CALIBRATED` appears in any handler source. Machine-readable error codes are required for contract compliance.
+
+**Files:** services/api-ts/src/handlers/dental-imaging/getCephAnalysis.ts:44, batchUpsertCephLandmarks.ts:56
+**Confidence:** HIGH — **Spec section:** §15
+
+---
+
+### EM-IMG-013 — P1 — NOT_CALIBRATED Guard Absent Before Landmark Placement
+
+**Spec §13 Edge Case:** "Calibration not set before landmark placement → 422 NOT_CALIBRATED"
+
+`batchUpsertCephLandmarks.ts` and `updateCephLandmark.ts` proceed regardless of whether `image.pixelSpacingMm` is null. No calibration pre-check exists.
+
+**Files:** services/api-ts/src/handlers/dental-imaging/batchUpsertCephLandmarks.ts, updateCephLandmark.ts
+**Confidence:** HIGH — **Spec section:** §13, §15
+
+---
+
+### EM-IMG-014 — P0 — Observability Hooks Not Implemented Per Spec §17
+
+**Spec §17 requires:**
+- `dental-imaging.study-uploaded` (INFO, studyId, branchId)
+- `dental-imaging.ceph-computed` (INFO)
+- `dental-imaging.tier-blocked` (WARN, tier, feature)
+
+Code: `createImagingStudy.ts` has no structured log with key `dental-imaging.study-uploaded`. Ceph handlers log generic messages (not spec-declared hook names). No `dental-imaging.tier-blocked` WARN is emitted on tier gate fires — all tier-block paths are silent `ForbiddenError` throws.
+
+The `dental-imaging.tier-blocked` WARN is operationally critical for monitoring upgrade conversion rates; its absence is rated P0.
+
+**Files:** services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts, getCephAnalysis.ts, batchUpsertCephLandmarks.ts, updateCephLandmark.ts, deleteCephLandmark.ts, recomputeCephAnalysis.ts
+**Confidence:** HIGH — **Spec section:** §17
+
+---
+
+### EM-IMG-015 — P3 — WF-019 Step 5 Study Review State Not Implemented
+
+**Spec §4 WF-019 step 5:** "Study created in `pending_review` state → dentist reviews → transitions to `reviewed`."
+
+The `imagingStudies.status` enum is `['active', 'archived']`. No review state or transition handler exists.
+
+**File:** services/api-ts/src/handlers/dental-imaging/repos/imaging.schema.ts:39
+**Confidence:** HIGH — **Spec section:** §4 WF-019
+
+---
+
+### EM-IMG-016 — P3 — Feature Flags Not Implemented
+
+**Spec §18:** `dental_imaging_ceph_enabled` (default: false) and `dental_imaging_auto_landmark` (default: false).
+
+No feature flag checks exist in any handler. imagingTier gate is the only runtime check but operates on subscription tier, not a deployable feature flag.
+
+**Confidence:** HIGH — **Spec section:** §18
+
+---
+
+### EM-IMG-017 — P1 — Service Layer Absent
+
+All business logic (BR-034, BR-016c, SM-01, SM-02, D-L gate) lives inline in handler functions. No `*.service.ts` or service class exists. Logic cannot be unit-tested without HTTP context and cannot be reused across handlers.
+
+**Files:** services/api-ts/src/handlers/dental-imaging/ (all handlers)
+**Confidence:** HIGH — **Spec section:** ARCHITECTURE.md Module Structure
+
+---
+
+## Compliance Score
+
+### Per-Dimension Scores
+
+| Dimension | Score (0–10) | Notes |
+|-----------|-------------|-------|
+| 1. API Completeness | 6/10 | 7/9 spec endpoints present; 2 missing |
+| 2. Workflow Implementation | 5/10 | 4/7 fully present; 2 partial; 1 absent |
+| 3. Domain Term Consistency | 3/10 | SM states wrong; 3+ schema fields missing/renamed |
+| 4. State Machine Enforcement | 4/10 | Guards exist but enforce wrong states; 2 ACs untestable |
+| 5. Event Publishing | 0/10 | 0/3 declared events published |
+| 6. Unprotected Routes | 10/10 | All 21 routes auth-protected |
+
+**Raw average:** (6+5+3+4+0+10)/6 = 4.67 → **47/100**
+**P0 cap applied (2 P0s):** capped at **42/100**
+
+**Final compliance score: 42 / 100**
+
+---
+
+## Finding Index
+
+| ID | Sev | Title | File |
+|----|-----|-------|------|
+| EM-IMG-001 | P1 | GET /dental/imaging/studies list Missing | routes.ts |
+| EM-IMG-002 | P1 | POST/PATCH annotation endpoints Missing | routes.ts |
+| EM-IMG-003 | P2 | SM-01 Finding States Diverge (suspected vs draft) | imaging_finding.schema.ts |
+| EM-IMG-004 | P2 | SM-02 Ceph Landmark States Diverge (confirmed vs not_placed) | imaging_ceph.schema.ts |
+| EM-IMG-005 | P2 | imaging_annotation missing status; coordinates→geometry rename | imaging.schema.ts |
+| EM-IMG-006 | P2 | imaging_study missing study_type, capture_method, pending_review | imaging.schema.ts |
+| EM-IMG-007 | P2 | ceph_analysis missing status; ceph_landmark FK to image not analysis | imaging_ceph.schema.ts |
+| EM-IMG-008 | P0 | AC-IMG-002 and AC-IMG-003 Structurally Untestable | imaging_finding.schema.ts, imaging_ceph.schema.ts |
+| EM-IMG-009 | P1 | DE-018 ImagingStudyUploaded Not Published | createImagingStudy.ts |
+| EM-IMG-010 | P1 | DE-019 ImagingFindingConfirmed Not Published | updateFinding.ts |
+| EM-IMG-011 | P1 | DE-020 CephAnalysisComputed Not Published | recomputeCephAnalysis.ts |
+| EM-IMG-012 | P1 | Error Codes IMAGING_TIER_REQUIRED / NOT_CALIBRATED Not Used | getCephAnalysis.ts + others |
+| EM-IMG-013 | P1 | NOT_CALIBRATED Guard Absent Before Landmark Placement | batchUpsertCephLandmarks.ts |
+| EM-IMG-014 | P0 | Observability Hooks Not Implemented (spec §17) | createImagingStudy.ts + others |
+| EM-IMG-015 | P3 | WF-019 Step 5 Study Review State Not Implemented | imaging.schema.ts |
+| EM-IMG-016 | P3 | Feature Flags Not Implemented | all handlers |
+| EM-IMG-017 | P1 | Service Layer Absent | all handlers |
 
 ---
 
 ## Stabilization Plan
 
-| Priority | Action |
-|----------|--------|
-| **Fix now (P1)** | Add `GET /dental/imaging/studies` list endpoint with `branch_id` + `patient_id` query params and pagination |
-| **Fix now (P1)** | Add annotation create (`POST`) and update (`PATCH`) handlers, or update API_CONTRACTS.md to formally drop them |
-| **Fix now (P1)** | Add `study_date` column to `imaging_study` schema + migration + update `createImagingStudy` body parsing |
-| **Fix now (P1)** | Emit `DE-018` after first image added to study; `DE-019` when finding status→confirmed; `DE-020` on ceph recompute |
-| **Fix now (P1)** | Add `staff_full` to allowed roles in imaging read handlers |
-| **Fix soon (P2)** | **NEW** Remove `.references()` on `patientId`, `branchId`, `visitId` in `imaging_finding.schema.ts`; use UUID-only like `treatmentId` (EM-IMG-FK-001) |
-| **Fix soon (P2)** | **NEW** Wire `dental_imaging_ceph_enabled` + `dental_imaging_auto_landmark` feature flags into config + handlers (EM-IMG-FF-002) |
-| **Fix soon (P2)** | **NEW** Add 422 NOT_CALIBRATED gate in `batchUpsertCephLandmarks` and `updateCephLandmark` (EM-IMG-DM-003) |
-| **Fix when touching (P2)** | Resolve URL scheme divergence: update API_CONTRACTS.md to match TypeSpec-generated `/images/:imageId/…` paths |
-| **Fix when touching (P2)** | Create `imaging.service.ts` singleton + `resolveImageWithAuth` shared helper to DRY 20+ handler boilerplates |
-| **Track (P3)** | Add status transition guard to `ImagingAnnotation` PATCH once annotation endpoints are built |
+### Fix Now (P0)
 
----
+1. **EM-IMG-008** — Schema alignment for SM-01 and SM-02. Requires DB migration + schema file + transition table update. Two options: (A) align code to spec (`suspected→draft`, remove `monitoring`; `confirmed→placed`, add `not_placed` to ceph) — preferred; (B) update spec with domain expert sign-off.
 
-## What's New Since run-5
+2. **EM-IMG-014** — Add structured log emissions with spec-declared hook names. Add WARN log in all tier-gate throws.
 
-| Change | Detail |
-|--------|--------|
-| SM-02 (ceph landmark) fully guarded — CONFIRMED | `updateCephLandmark.ts` uses `CEPH_LANDMARK_TRANSITIONS`; locked-coordinate rejection implemented |
-| `@monobase/ceph-math` isomorphic — CONFIRMED | Pure TS, no DOM runtime deps; `DOMPoint` only in test oracle file |
-| `ceph_session` table — NOT A GAP | MODULE_SPEC §7 lists 3 ceph tables only; `ceph_session` was not in spec |
-| EM-IMG-FK-001 (NEW P2) | `imaging_finding` schema has DB FK violations to cross-module tables |
-| EM-IMG-FF-002 (NEW P2) | Feature flags declared in §18 not wired anywhere in implementation |
-| EM-IMG-DM-003 (NEW P2) | NOT_CALIBRATED 422 gate missing from landmark placement handlers |
+### Fix Before New Work (P1)
+
+3. **EM-IMG-001** — Add `GET /dental/imaging/studies` handler with patientId + branchId query, TypeSpec definition, route registration.
+
+4. **EM-IMG-002** — Add annotation CRUD endpoints or reconcile spec URL scheme to use measurements pattern (requires spec amendment).
+
+5. **EM-IMG-009 / EM-IMG-010 / EM-IMG-011** — Implement DE-018, DE-019, DE-020 event publishing via project event bus.
+
+6. **EM-IMG-012** — Add `IMAGING_TIER_REQUIRED` and `NOT_CALIBRATED` machine-readable error codes to respective throws.
+
+7. **EM-IMG-013** — Add calibration pre-check in `batchUpsertCephLandmarks` and `updateCephLandmark`: if `image.pixelSpacingMm` is null, throw 422 `NOT_CALIBRATED`.
+
+8. **EM-IMG-017** — Extract business logic to a service class (start with tier-gate and state-machine logic).
+
+### Fix When Touching (P2)
+
+9. **EM-IMG-003 / EM-IMG-004** — Resolved automatically by EM-IMG-008 fix.
+
+10. **EM-IMG-005** — Add `status` column to `imaging_annotation`; resolve coordinates vs geometry naming.
+
+11. **EM-IMG-006** — Add `study_type`, `capture_method` columns; extend status enum.
+
+12. **EM-IMG-007** — Architectural decision: keep image-centric landmark model (update spec) or migrate to analysis-centric.
+
+### Track (P3)
+
+13. **EM-IMG-015** — Study review state: defer to review-workflow sprint.
+14. **EM-IMG-016** — Feature flags: defer to feature-flag infrastructure sprint.
 
 ---
 
 ## What's Next
 
-1. **3 new P2s** — EM-IMG-FK-001 (FK violations), EM-IMG-FF-002 (feature flags), EM-IMG-DM-003 (calibration gate) are net-new and actionable without prerequisites.
-2. **List studies + annotations** — Genuine P1 gaps. Build `GET /studies` list handler and annotation CRUD.
-3. **Event publishing** — Wire DE-018/019/020. Required for audit compliance and score improvement.
-4. **Re-run** after events + annotations + new P2s resolved — expected score 68–74/100.
+- **Immediate:** Fix EM-IMG-008 (P0 schema/SM mismatch) before any new imaging features land. This is a DB migration — coordinate with any existing data.
+- **Sprint:** Run `/oli-enforce-fix --module=dental-imaging --severity=P1` after P0 resolution.
+- **Spec reconciliation:** SM-01 `suspected` + `monitoring` states may be clinically correct for the dental domain. Requires dentist domain expert sign-off. If accepted, update MODULE_SPEC to match code and close EM-IMG-003/004 as spec amendments rather than code fixes.
+- **Run 8 target:** Resolve 2 P0s + 8 P1s → expected score 72–78 / 100.

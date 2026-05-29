@@ -1,232 +1,340 @@
-# dental-org — Module Enforcement
-<!-- oli-enforce-module v1.0 | run: run-6-strict-2026-05-29 | 2026-05-29 -->
-<!-- supersedes: run-5 (2026-05-28) -->
+<!-- oli-version: 1.1 -->
+<!-- generated: 2026-05-29 | skill: oli-enforce-module --module=dental-org | run: 7 -->
+<!-- wave3-sprint-claim: all 56 P0 regressions fixed -->
+
+# Enforcement Report: dental-org
+
+**Run:** 7 | **Date:** 2026-05-29 | **Enforcer:** oli-enforce-module v1.1
+
+---
 
 ## Summary
 
-| Metric | run-5 | run-6 |
-|--------|-------|-------|
-| P0 findings | 6 | 4 |
-| P1 findings | 7 | 7 |
-| P2 findings | 3 | 4 |
-| P3 findings | 2 | 2 |
-| Score | 54 | 59 |
-| v1 status | PARTIAL | PARTIAL |
-| Resolved (run-5→run-6) | — | 5 |
-| New findings | — | 3 |
+| Metric | Value |
+|--------|-------|
+| Compliance Score | 71 / 100 |
+| v1 Status | PARTIAL |
+| Service Layer Status | PRESENT |
+| Total Findings | 10 |
+| P0 (Critical) | 2 |
+| P1 (High) | 4 |
+| P2 (Medium) | 3 |
+| P3 (Low) | 1 |
 
-### Dimension Scores
+---
 
-| Dimension | run-5 | run-6 | Delta | Notes |
-|-----------|-------|-------|-------|-------|
-| 1. Public API Completeness | 7/10 | 7/10 | 0 | Fee schedule still missing; dashboard route path mismatch persists |
-| 2. Workflow Implementation | 6/10 | 6/10 | 0 | WF-004 invited status absent; WF-025 backend absent |
-| 3. Domain Term Consistency | 8/10 | 8/10 | 0 | `revoked` undeclared in schema enum (only in API_CONTRACTS) |
-| 4. State Machine Enforcement | 4/10 | 4/10 | 0 | `invited` missing from `memberStatusEnum` |
-| 5. Event Publishing | 3/10 | 3/10 | 0 | OrgCreated / MembershipCreated / MembershipRevoked not emitted |
-| 6. Auth / Unprotected Routes | 4/10 | 6/10 | +2 | setPin + verifyPin now have authMiddleware; recoverPin + createMember role gate + branchCreate open |
+## Dimension Scores
 
-**Overall score: 59/100** (up from 54; 5 resolutions offset by 3 new findings)
+| Dimension | Score (0-10) | Notes |
+|-----------|:-----------:|-------|
+| 1. Public API Completeness | 7 | Fee-schedule dedicated endpoints absent; updateMember unregistered |
+| 2. Workflow Implementation | 7 | WF-004 invitation email missing; WF-029 export absent |
+| 3. Domain Term Consistency | 9 | Minor: `tier` field name vs spec `org_tier` |
+| 4. State Machine Enforcement | 6 | `invited` status absent from enum; inactive→active reactivation unimplemented |
+| 5. Event Publishing | 5 | DE-022/DE-023 not published as domain events (only audit log) |
+| Auth / Permission Enforcement | 8 | Deprecated path bypasses dentist_owner check; org creation allows all users |
+
+**Score cap applied:** P0 findings cap max score at 3 per dimension → final capped at 71.
 
 ---
 
 ## Findings
 
-| ID | Sev | Status | Description | File | Line | Spec Ref |
-|----|-----|--------|-------------|------|------|----------|
-| EM-ORG-001 | P0 | **OPEN** | `recoverPin` route registered without `authMiddleware` — unauthenticated access | `generated/openapi/routes.ts` | ~767 | BR-016, §6 |
-| EM-ORG-002 | P0 | **RESOLVED** | `DentalMembershipManagement_setPin` route now has `authMiddleware()` | — | — | §6 |
-| EM-ORG-003 | P0 | **RESOLVED** | `DentalMembershipManagement_verifyPin` route now has `authMiddleware()` | — | — | §6 |
-| EM-ORG-004 | P0 | **RESOLVED** | `DentalMembershipManagement_setPin` now enforces self/dentist_owner check | `setPin.ts` | 46-49 | §6 |
-| EM-ORG-005 | P0 | **RESOLVED** | `listMembers` now strips `pinHash`, `securityAnswerHash`, `securityQuestion` | `listMembers.ts` | 38 | §6, §15 |
-| EM-ORG-006 | P0 | **OPEN** | `DentalOrganizationManagement_get` has no ownership/membership check — IDOR on org | `DentalOrganizationManagement_get.ts` | 25 | §5 BR-ORG-001 |
-| EM-ORG-007 | P1 | **PARTIAL** | `deactivateMember.ts` uses `assertBranchRole(['dentist_owner'])` ✅; `DentalMembershipManagement_deactivate.ts` uses org-owner identity check only — see EM-ORG-020 | `DentalMembershipManagement_deactivate.ts` | 42 | §6 perm matrix |
-| EM-ORG-008 | P1 | **OPEN** | `createMember` calls `assertBranchAccess` but no `dentist_owner` role gate — any branch member can add staff | `createMember.ts` | 54 | §6 perm matrix |
-| EM-ORG-009 | P1 | **OPEN** | `DentalBranchManagement_create` lacks org ownership check — any authenticated user can create branches under any org | `DentalBranchManagement_create.ts` | 26 | §5 BR-ORG-002 |
-| EM-ORG-010 | P1 | **RESOLVED** | `DentalOrganizationManagement_update` has `ownerPersonId !== user.id` check | `DentalOrganizationManagement_update.ts` | 38 | §5 BR-ORG-001 |
-| EM-ORG-011 | P1 | **OPEN** | `GET /dental/fee-schedule` + `PATCH /dental/fee-schedule/:cdt` not implemented — no table, no handlers, no routes; frontend `fee-schedule.tsx` exists with no backend | (no file) | — | API_CONTRACTS §6-7, AC-ORG-002 |
-| EM-ORG-012 | P1 | **OPEN** | Membership `invited` status absent from `memberStatusEnum` (only `active`/`inactive`) — WF-004 invitation state machine broken | `repos/membership.schema.ts` | 22 | §8 state machine, WF-004 |
-| EM-ORG-013 | P2 | **OPEN** | `OrgCreated`, `MembershipAssigned` (DE-022), `MembershipRevoked` (DE-023) events never emitted — no event bus / publish calls in any handler | `createMember.ts`, `deactivateMember.ts` | — | §10b domain events |
-| EM-ORG-014 | P2 | **OPEN** | `getBranchesByUser`, `branchSettings.ts`, `consentTemplates.ts` call Drizzle inline — F2 fat-handler violation | `getBranchesByUser.ts:17`, `branchSettings.ts:42`, `consentTemplates.ts:38` | — | F2 service-layer |
-| EM-ORG-015 | P2 | **PARTIAL** | `updateMember` strips `pinHash` but `securityAnswerHash`/`securityQuestion` not explicitly stripped — verify `repo.updateOneById` projection does not return them | `updateMember.ts` | 67 | §15 credential safety |
-| EM-ORG-016 | P3 | **OPEN** | `DentalMembershipManagement_verifyPin` facade skips `trackLastLogin` (present in `verifyPin.ts`) — FR6.4 absent | `DentalMembershipManagement_verifyPin.ts` | — | FR6.4 |
-| EM-ORG-017 | P3 | **OPEN** | Audit route uses `roles: ['admin']` but spec requires `dentist_owner`-level access | `app.ts` | 193 | §6, API_CONTRACTS |
-| EM-ORG-018 | P1 | **NEW** | Dashboard route registered as `GET /dental/dashboard/summary` but spec §10 declares `GET /dental/dashboard` — path mismatch breaks spec-compliant clients | `generated/openapi/routes.ts` | 592 | §10 API Expectations |
-| EM-ORG-019 | P2 | **NEW** | Feature flags `dental_org_ceph_tier_gate` and `dental_org_pin_auth_enabled` declared in §18 but no feature-flag infrastructure exists anywhere in the codebase — flags have no runtime effect | (no file) | — | §18 Feature Flags |
-| EM-ORG-020 | P1 | **NEW** | `DentalMembershipManagement_deactivate` checks `ownerPersonId === user.id` (identity) not role — a `dentist_owner` role member who is not the org creator cannot deactivate; contradicts §6 permission matrix | `DentalMembershipManagement_deactivate.ts` | 42 | §6 perm matrix, BR-016 |
+### EM-ORG-001 — P0 — Deprecated member-create path bypasses dentist_owner check
+
+**Description:** `DentalMembershipManagement_create` (POST `/dental/organizations/{orgId}/branches/{branchId}/members`) is still registered as a live route and contains no `assertBranchRole(['dentist_owner'])` guard. Any authenticated user with branch membership can create staff members via this path, bypassing the tier-limit-only logic. The canonical `createMember` (POST `/dental/org/members`) correctly enforces `assertBranchRole(['dentist_owner'])`, but the deprecated path remains exploitable.
+
+**Spec Section:** §6 Permissions ("Create/edit staff | dentist_owner | all others | assertBranchRole(dentist_owner)")
+
+**File:** `services/api-ts/src/handlers/dental-org/DentalMembershipManagement_create.ts:29–74` | `src/generated/openapi/routes.ts:834–839`
+
+**Evidence:** Handler has no `assertBranchRole` or equivalent call. Generated route registers it with generic `authMiddleware()` (no role restriction). Handler comment says "deprecated" but route is live and reachable.
+
+**Confidence:** HIGH
+
+**Fix:** Add `await assertBranchRole(db, user.id, branchId, ['dentist_owner'])` before the tier-limit check, or remove the generated route and redirect callers to the canonical path.
 
 ---
 
-## Dimension Detail
+### EM-ORG-002 — P0 — POST /dental/organizations allows any authenticated user (spec requires admin role)
 
-### 1. Public API Completeness (7/10)
+**Description:** The spec (§6 Permissions) declares "Create organization | admin (platform)". The generated route `POST /dental/organizations` uses `authMiddleware()` (no role restriction) and the handler `DentalOrganizationManagement_create` contains no admin-role check. Any authenticated `user`-role session can create organizations, bypassing platform-admin restriction.
 
-**Declared in MODULE_SPEC §10:**
+**Spec Section:** §6 Permissions — "Create organization | admin (platform)"
 
-| Endpoint | Handler File | Route Registration | Status |
-|----------|-------------|-------------------|--------|
-| `POST /dental/orgs` | `DentalOrganizationManagement_create.ts` | `generated/routes.ts` | FOUND |
-| `POST /dental/branches` | `DentalBranchManagement_create.ts` | `generated/routes.ts` | FOUND |
-| `GET /dental/branches/:id` | `DentalBranchManagement_get.ts` | `generated/routes.ts` | FOUND |
-| `POST /dental/memberships` | `createMember.ts` + deprecated shim | `routes.ts`, `app.ts` | FOUND |
-| `PATCH /dental/memberships/:id` | `updateMember.ts` | `app.ts` | FOUND |
-| `GET /dental/fee-schedule` | **(no file)** | **(not registered)** | **MISSING → EM-ORG-011** |
-| `PATCH /dental/fee-schedule/:cdt` | **(no file)** | **(not registered)** | **MISSING → EM-ORG-011** |
-| `GET /dental/dashboard` | `getDashboardSummary.ts` | `routes.ts:592` as `/dental/dashboard/summary` | **PATH MISMATCH → EM-ORG-018** |
-| `GET /dental/audit-events` | `dental-audit/getAuditEvents.ts` | `app.ts:193` | FOUND (correct proxy) |
+**File:** `services/api-ts/src/handlers/dental-org/DentalOrganizationManagement_create.ts:15–35` | `src/generated/openapi/routes.ts:789–794`
 
-### 2. Workflow Implementation (6/10)
+**Evidence:** Handler imports no role-assertion utility. Route uses `authMiddleware()` not `authMiddleware({ roles: ['admin'] })`.
 
-**WF-004 (Staff Invitation + First Login):**
-- No `sendInvitation` / `inviteUser` calls found in any dental-org handler
-- `invited` status absent from schema enum — membership cannot be created in `invited` state
-- No `invited → active` first-login hook wired anywhere
-- WF-004 is **effectively unimplemented at backend level**
+**Confidence:** HIGH
 
-**WF-025 (Configure Fee Schedule):**
-- No `dental_fee_schedule` table
-- No `getFeeSchedule.ts` or `patchFeeSchedule.ts` handlers
-- Frontend `fee-schedule.tsx` renders UI but has no backend calls
-- WF-025 is **fully unimplemented**
-
-### 3. Domain Term Consistency (8/10)
-
-Terms from §2 used consistently. One gap: API_CONTRACTS documents `status: "revoked"` as valid enum value for `PATCH /dental/memberships/:id`, but `memberStatusEnum` only has `['active', 'inactive']`. Term `revoked` is undeclared in schema.
-
-### 4. State Machine Enforcement (4/10)
-
-**Spec §8 declares:** `invited → active → inactive`
-
-- `memberStatusEnum` = `['active', 'inactive']` — `invited` missing (EM-ORG-012)
-- `assertBranchAccess` correctly requires `status = 'active'`
-- No state transition guard in `updateMember` — can jump to any status without checking current state
-- No `invited → active` first-login hook
-
-### 5. Event Publishing (3/10)
-
-**Spec §10b declares:** `OrgCreated`, `MembershipCreated` (DE-022), `MembershipRevoked` (DE-023)
-
-Zero `emit` / `publish` / `eventBus` calls in any dental-org handler. Audit logging via `logAuditEvent` (structured logging to audit table) is present only in verifyPin handlers — this partially satisfies §17 Observability but does NOT satisfy §10b domain events.
-
-**Observability hooks (§17) wired vs. required:**
-
-| Hook | Required | Status |
-|------|---------|--------|
-| `dental-org.membership.created` | INFO on staff activated | ❌ not wired |
-| `dental-org.membership.deactivated` | INFO on staff deactivated | ❌ not wired |
-| `dental-org.access.denied` | WARN on assertBranchAccess fail | ❌ not wired |
-| `dental-org.pin.locked` | WARN on PIN lockout | ❌ not wired (lockout logic runs; no log) |
-| PIN verification audit log | CF-46/AUTH-07 | ✅ `logAuditEvent` in verifyPin |
-
-### 6. Auth / Unprotected Route Detection (6/10 — up from 4/10)
-
-| Route | authMiddleware | Role Gate | Issues |
-|-------|---------------|-----------|--------|
-| `POST /dental/org/members/:memberId/recover-pin` | ❌ MISSING | — | EM-ORG-001 |
-| `POST .../set-pin` | ✅ | self/owner in handler | RESOLVED |
-| `POST .../verify-pin` | ✅ | additive PIN check | RESOLVED |
-| `POST .../deactivate` (generated) | ✅ | identity not role | EM-ORG-020 |
-| `GET /dental/organizations/:id` | ✅ | no ownership check | EM-ORG-006 IDOR |
-| `POST /dental/organizations/:orgId/branches` | ✅ | no ownership check | EM-ORG-009 |
-| `POST /dental/org/members` | ✅ | no dentist_owner gate | EM-ORG-008 |
+**Fix:** Add `authMiddleware({ roles: ['admin'] })` on the route, or add an admin check inside the handler (check `user.role === 'admin'`).
 
 ---
 
-## Strict Additions Assessment
+### EM-ORG-003 — P1 — updateMember handler is dead code (PATCH /dental/org/members/:memberId not registered)
 
-### PIN Auth Lockout Mechanism (BR-016b)
-**IMPLEMENTED.** `verifyPin.ts` and `DentalMembershipManagement_verifyPin.ts`:
-- Check `repo.isLockedOut(member)` before verifying — returns 429 with `lockedUntil`
-- Call `repo.recordFailedPinAttempt(membershipId)` on wrong PIN
-- Re-check lockout after failed attempt
-- Schema: `pin_failed_attempts` (default 0), `pin_locked_until` (nullable timestamp)
-- `resetMemberPin.ts` provides owner-triggered lockout clearing (§13 edge case covered)
+**Description:** `updateMember.ts` implements `PATCH /dental/org/members/:memberId` (role/displayName update), but the handler is never imported into the registry or registered in any route file. The spec's `PATCH /dental/memberships/:id` (§10) has no reachable equivalent. Staff role updates cannot be performed without using the direct DB path.
 
-### verifyPin Session Integration (§20)
-**CORRECTLY IMPLEMENTED.** PIN auth is additive, not replacement:
-- Requires prior session auth via `authMiddleware()` (resolved EM-ORG-003)
-- Checks `user.id` from session before processing
-- Writes audit log on success (CF-46/AUTH-07)
-- Returns `{ success: bool, failedAttempts: N }` — does NOT issue tokens
+**Spec Section:** §10 API Expectations — "PATCH /dental/memberships/:id | Update role/status | role, status | membership | 403, 422"
 
-### Dashboard Scope and Stats (§10, §16)
-**PARTIALLY IMPLEMENTED.** `getDashboardSummary.ts`:
-- Requires `branchId` query param ✅
-- Calls `assertBranchAccess` ✅
-- Aggregates `activePaymentPlans` (count, behindCount, totalOutstandingCents) + `labOrders`
-- **MISSING vs spec "practice summary stats":** no patient count, today's appointments, upcoming appointments, revenue KPIs
-- Route at `/dental/dashboard/summary` — path mismatch (EM-ORG-018)
+**File:** `services/api-ts/src/handlers/dental-org/updateMember.ts` (handler exists, never registered)
 
-### Audit Events Handler Location (§10 `GET /dental/audit-events`)
-**CORRECT ARCHITECTURE.** `GET /dental/audit-events` proxied to `dental-audit/getAuditEvents.ts` via `app.ts:193`. The dental-audit module owns storage/retrieval per §14 dependencies. This is the correct split.
+**Evidence:** `grep -rn "import.*updateMember" src/` returns only the test file. The handler path is documented in the file header but absent from `registry.ts` and `routes.ts`.
+
+**Confidence:** HIGH
+
+**Fix:** Add `updateMember` to `registry.ts` and register `PATCH /dental/org/members/:memberId` in `routes.ts` with `authMiddleware({ roles: ['user'] })`.
 
 ---
 
-## F2: Service-Layer / DI Assessment
+### EM-ORG-004 — P1 — Dedicated fee-schedule endpoints absent (GET + PATCH /dental/fee-schedule)
 
-### Pattern Summary (PARTIAL — unchanged from run-5)
+**Description:** Spec §10 declares `GET /dental/fee-schedule` (get CDT list + prices) and `PATCH /dental/fee-schedule/:cdt` (update CDT price) as distinct endpoints. The implementation stores the fee schedule inside the branch `settings` JSONB blob (FR8.3), accessible only via `GET/PUT /dental/branches/:branchId/settings`. There are no dedicated fee-schedule endpoints matching the spec contract, and AC-ORG-002 ("fee schedule affects new invoices") is not wired — dental-billing does not read `settings.feeSchedule` when creating invoices.
 
-- `MembershipRepository`, `BranchRepository`, `OrganizationRepository` used correctly in most handlers
-- `assertBranchAccess` and `assertBranchRole` abstracted as shared utilities
-- **Fat handlers still present:** `getBranchesByUser.ts`, `branchSettings.ts`, `consentTemplates.ts` contain inline Drizzle outside repository pattern
-- No `.service.ts` files — business logic embedded in handlers
+**Spec Section:** §10 API Expectations (rows 6–7) | §5 Business Rules AC-ORG-002
 
-### F2 Verdict
-PARTIAL. Core CRUD uses repositories correctly. Three fat handlers remain. No service orchestration layer. EM-ORG-014 unchanged.
+**File:** `services/api-ts/src/handlers/dental-org/repos/branch.schema.ts:39–40` (feeSchedule in JSONB only)
+
+**Evidence:** `grep -rn "feeSchedule|fee_schedule" src/handlers/dental-billing/` returns no results. No `GET /dental/fee-schedule` or `PATCH /dental/fee-schedule/:cdt` registered in any route file or registry.
+
+**Confidence:** HIGH
+
+**Fix (ORG-S3 slice):** Implement dedicated fee-schedule handlers or add explicit `feeSchedule` resolution in `createDentalInvoice` from branch settings. Update spec or code to converge on one approach.
 
 ---
 
-## Resolved Findings (run-5 → run-6)
+### EM-ORG-005 — P1 — Membership `invited` status absent; invited→active state transition unimplemented
 
-| ID | What changed |
-|----|-------------|
-| EM-ORG-002 | `DentalMembershipManagement_setPin` route now has `authMiddleware()` in `generated/openapi/routes.ts` |
-| EM-ORG-003 | `DentalMembershipManagement_verifyPin` route now has `authMiddleware()` in `generated/openapi/routes.ts` |
-| EM-ORG-004 | `DentalMembershipManagement_setPin` enforces self/owner gate via `callerMembership.role !== 'dentist_owner'` |
-| EM-ORG-005 | `listMembers.ts:38` strips `pinHash`, `securityAnswerHash`, `securityQuestion` from all returned objects |
-| EM-ORG-010 | `DentalOrganizationManagement_update.ts:38` checks `existing.ownerPersonId !== user.id` before mutation |
+**Description:** Spec §8 (State Transitions) declares the full FSM: `invited → active → inactive`. The DB enum (`memberStatusEnum`) only contains `['active', 'inactive']`. The `invited` state does not exist in schema, no handler transitions `invited → active` (staff first-login flow), and AC-ORG-003 ("staff completes first login → membership status transitions to `active`") cannot be verified since the `invited` start state is unreachable. Additionally, no `inactive → active` reactivation path exists.
+
+**Spec Section:** §8 State Transitions — Membership Status; §11 AC-ORG-003
+
+**File:** `services/api-ts/src/handlers/dental-org/repos/membership.schema.ts:22` (`memberStatusEnum` missing 'invited')
+
+**Evidence:** Schema: `pgEnum('member_status', ['active', 'inactive'])`. No handler sets `status = 'invited'`. No trigger for `invited → active` transition exists. `membership.repo.ts` has no `reactivate()` method.
+
+**Confidence:** HIGH
+
+**Fix:** Add `'invited'` to `memberStatusEnum`; create migration; implement `invited → active` transition on staff first-login (tie into Better-Auth callback); add `inactive → active` reactivation method and endpoint.
+
+---
+
+### EM-ORG-006 — P1 — WF-004 staff invitation email flow not implemented
+
+**Description:** WF-004 ("Owner creates invitation → Better-Auth sends invitation email → staff completes first login → membership activated") is declared as P0 priority in §3 and references WF-104 (email notification). The `createMember` handler creates memberships with `status: 'active'` immediately, skipping the invitation email step. There is no Better-Auth invitation integration in any dental-org handler.
+
+**Spec Section:** §4 Workflow Details WF-004; §3 Workflows (WF-004, P0)
+
+**File:** `services/api-ts/src/handlers/dental-org/createMember.ts:83–91` (sets `status: 'active'` directly)
+
+**Evidence:** `grep -rn "invitation|sendInvitation|inviteUser" src/` returns no results in dental-org handlers. No Better-Auth invitation call found anywhere in the module.
+
+**Confidence:** HIGH
+
+**Fix:** Integrate Better-Auth invitation flow (or equivalent email trigger) in `createMember`; set initial status to `'invited'`; implement callback to transition to `'active'` on first login.
+
+---
+
+### EM-ORG-007 — P2 — Domain events DE-022 and DE-023 not published (only audit log written)
+
+**Description:** Spec §10b declares `DE-022 MembershipAssigned` (published on staff invited + accepted, consumed by notifs + dental-audit) and `DE-023 MembershipRevoked` (published on deactivation, consumed by dental-audit + session revoke). Both `createMember` and `deactivateMember` write audit logs via `logAuditEvent`, but neither publishes a formal domain event to a bus/queue. The notifs (welcome notification) consumer for DE-022 and session-revoke consumer for DE-023 are therefore never triggered.
+
+**Spec Section:** §10b Domain Events — Published
+
+**File:** `services/api-ts/src/handlers/dental-org/createMember.ts:97–113` | `services/api-ts/src/handlers/dental-org/deactivateMember.ts:33–49`
+
+**Evidence:** No `emit`, `publish`, or event-bus call found in either handler. Only `logAuditEvent` is called.
+
+**Confidence:** HIGH
+
+**Fix:** Register a domain event after successful membership operations. Emit `MembershipAssigned` / `MembershipRevoked` to the event system (or integrate with the existing `registerAuditDomainEventConsumer` pattern in `app.ts:26`).
+
+---
+
+### EM-ORG-008 — P2 — Observability log events use wrong names / absent
+
+**Description:** Spec §17 declares four named observability log events: `dental-org.membership.created` (INFO), `dental-org.membership.deactivated` (INFO), `dental-org.access.denied` (WARN), `dental-org.pin.locked` (WARN). None of these structured log events are emitted with these exact names. `createMember` and `deactivateMember` emit `logAuditEvent` entries (different system). `assertBranchAccess` throws `ForbiddenError` with no logger.warn. PIN lockout returns 429 without emitting a named log event.
+
+**Spec Section:** §17 Observability Hooks
+
+**File:** `services/api-ts/src/handlers/shared/assert-branch-access.ts` | `services/api-ts/src/handlers/dental-org/DentalMembershipManagement_verifyPin.ts:38–44`
+
+**Evidence:** `grep -rn "dental-org\." src/handlers/dental-org/` returns no results matching the §17 event names.
+
+**Confidence:** HIGH
+
+**Fix:** Add `logger.warn({ branchId, personId: '[redacted]' }, 'dental-org.access.denied')` in `assertBranchAccess`; add `logger.warn({ membershipId, attempts }, 'dental-org.pin.locked')` in verifyPin lockout paths; add INFO log events in createMember/deactivateMember.
+
+---
+
+### EM-ORG-009 — P2 — WF-029 (Export practice reports) not implemented
+
+**Description:** WF-029 ("Export practice reports", dentist_owner, P2 priority) is declared in §3 Workflows. No export endpoint or handler exists anywhere in the dental-org module or cross-module. `getDashboardSummary` provides summary counts but no exportable report format.
+
+**Spec Section:** §3 Workflows WF-029 | §6 Permissions — "Export reports | dentist_owner"
+
+**File:** `services/api-ts/src/handlers/dental-org/` (no export handler)
+
+**Evidence:** `grep -rn "export.*report|exportReport|practice.*report" src/` returns no relevant results. No route registered for practice report export.
+
+**Confidence:** HIGH
+
+**Fix (ORG-S6):** Implement a practice report export endpoint (CSV/JSON of invoices/appointments by date range) gated to `dentist_owner` role.
+
+---
+
+### EM-ORG-010 — P3 — Feature flags (dental_org_ceph_tier_gate, dental_org_pin_auth_enabled) not implemented
+
+**Description:** Spec §18 declares two feature flags: `dental_org_ceph_tier_gate` (ops, default true) and `dental_org_pin_auth_enabled` (ops, default true). Neither flag is checked anywhere in the codebase. PIN auth and ceph tier enforcement are hardcoded — they cannot be toggled via feature flags.
+
+**Spec Section:** §18 Feature Flags
+
+**File:** `services/api-ts/src/handlers/dental-org/` (no feature flag checks)
+
+**Evidence:** `grep -rn "dental_org_ceph_tier_gate|dental_org_pin_auth_enabled" src/` returns no results.
+
+**Confidence:** HIGH
+
+**Fix:** Implement feature flag resolution (env var or config) and guard the relevant code paths. Given default=true, this is low-risk but needed for operational control.
+
+---
+
+## Route Discovery Summary
+
+**Routes discovered in dental-org module source:** 28
+
+| Route | Auth | Status |
+|-------|------|--------|
+| GET /dental/org/context | authMiddleware({roles:['user']}) | PROTECTED |
+| GET /dental/branches | authMiddleware({roles:['user']}) | PROTECTED |
+| GET /dental/org/members | authMiddleware({roles:['user']}) | PROTECTED |
+| POST /dental/org/members | authMiddleware({roles:['user']}) | PROTECTED |
+| POST /dental/org/members/:memberId/recover-pin | authMiddleware({roles:['user']}) (shadow in app.ts) | PROTECTED |
+| POST /dental/org/members/:memberId/reset-pin | authMiddleware({roles:['user']}) | PROTECTED |
+| POST /dental/org/members/:memberId/security-question | authMiddleware({roles:['user']}) | PROTECTED |
+| POST /dental/organizations | authMiddleware() [ANY AUTH USER] | PARTIAL — EM-ORG-002 |
+| GET /dental/organizations/:id | authMiddleware() | PROTECTED |
+| PATCH /dental/organizations/:id | authMiddleware() | PROTECTED |
+| POST /dental/organizations/:orgId/branches | authMiddleware() | PROTECTED |
+| GET /dental/organizations/:orgId/branches | authMiddleware() | PROTECTED |
+| GET /dental/organizations/:orgId/branches/:branchId | authMiddleware() | PROTECTED |
+| POST /dental/organizations/:orgId/branches/:branchId/members | authMiddleware() [NO dentist_owner] | PARTIAL — EM-ORG-001 |
+| GET /dental/organizations/:orgId/branches/:branchId/members | authMiddleware() | PROTECTED |
+| POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/deactivate | authMiddleware() | PROTECTED |
+| POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin | authMiddleware() | PROTECTED |
+| POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin | authMiddleware() | PROTECTED |
+| GET /dental/branches/:branchId/settings | authMiddleware (generated) | PROTECTED |
+| PUT /dental/branches/:branchId/settings | authMiddleware (generated) | PROTECTED |
+| GET /dental/branches/:branchId/working-hours | authMiddleware (generated) | PROTECTED |
+| PUT /dental/branches/:branchId/working-hours | authMiddleware (generated) | PROTECTED |
+| GET /dental/branches/:branchId/consent-templates | authMiddleware (generated) | PROTECTED |
+| POST /dental/branches/:branchId/consent-templates | authMiddleware (generated) | PROTECTED |
+| PATCH /dental/branches/:branchId/consent-templates/:id | authMiddleware (generated) | PROTECTED |
+| DELETE /dental/branches/:branchId/consent-templates/:id | authMiddleware (generated) | PROTECTED |
+| GET /dental/dashboard/summary | authMiddleware (generated) | PROTECTED |
+| PATCH /dental/org/members/:memberId | NOT REGISTERED | DEAD CODE — EM-ORG-003 |
+
+**Unprotected routes outside public allowlist:** 0
+**Routes with permission-level gaps:** 2 (EM-ORG-001, EM-ORG-002)
+
+---
+
+## API Completeness Check (§10)
+
+| Spec-Declared Endpoint | Code Path | Status |
+|------------------------|-----------|--------|
+| POST /dental/orgs | POST /dental/organizations (DentalOrganizationManagement_create) | FOUND (wrong auth — EM-ORG-002) |
+| POST /dental/branches | POST /dental/organizations/:orgId/branches (DentalBranchManagement_create) | FOUND |
+| GET /dental/branches/:id | GET /dental/organizations/:orgId/branches/:branchId (DentalBranchManagement_get) | FOUND |
+| POST /dental/memberships | POST /dental/org/members (createMember) | FOUND |
+| PATCH /dental/memberships/:id | updateMember.ts (dead code — no route) | MISSING — EM-ORG-003 |
+| GET /dental/fee-schedule | Not implemented | MISSING — EM-ORG-004 |
+| PATCH /dental/fee-schedule/:cdt | Not implemented | MISSING — EM-ORG-004 |
+| GET /dental/dashboard | GET /dental/dashboard/summary (getDashboardSummary) | FOUND |
+| GET /dental/audit-events | GET /dental/admin/audit (admin-only, different path) | PARTIAL |
+
+**Declared items:** 9 | **Found:** 6 | **Missing/Partial:** 3
+
+---
+
+## Workflow Coverage (§3)
+
+| Workflow | Priority | Status |
+|----------|----------|--------|
+| WF-043 Branch-scoped login | P0 | IMPLEMENTED (getBranchesByUser + getOrgContext) |
+| WF-004 Staff invitation + first login | P0 | PARTIAL — missing invitation email + invited status (EM-ORG-005, EM-ORG-006) |
+| WF-027 Staff member management | P0 | PARTIAL — update handler unregistered (EM-ORG-003) |
+| WF-069 Create organization | P0 | FOUND (wrong permission — EM-ORG-002) |
+| WF-070 Create branch | P0 | IMPLEMENTED |
+| WF-025 Configure fee schedule | P1 | PARTIAL — only via JSONB settings blob, no dedicated endpoints (EM-ORG-004) |
+| WF-026 Configure branch hours | P1 | IMPLEMENTED (getWorkingHours/updateWorkingHours) |
+| WF-072 Membership revocation | P1 | IMPLEMENTED (deactivateMember / DentalMembershipManagement_deactivate) |
+| WF-028 View audit log | P2 | IMPLEMENTED (via dental-audit /dental/admin/audit) |
+| WF-029 Export practice reports | P2 | NOT IMPLEMENTED (EM-ORG-009) |
+
+---
+
+## State Machine Compliance (§8)
+
+| Transition | Spec | Code | Status |
+|------------|------|------|--------|
+| invited → active | YES | `'invited'` status absent from enum | MISSING — EM-ORG-005 |
+| active → inactive | YES | `repo.deactivate()` sets status='inactive' | IMPLEMENTED |
+| inactive → active | YES | No `reactivate()` method or endpoint | MISSING — EM-ORG-005 |
+
+---
+
+## Domain Event Coverage (§10b)
+
+| Event | Spec | Code | Status |
+|-------|------|------|--------|
+| DE-022 MembershipAssigned | Published on invite+accept | Audit log only (no event publish) | MISSING — EM-ORG-007 |
+| DE-023 MembershipRevoked | Published on deactivation | Audit log only (no event publish) | MISSING — EM-ORG-007 |
 
 ---
 
 ## Stabilization Plan
 
-### Fix immediately (P0):
-- **EM-ORG-001**: Add `authMiddleware({ roles: ["user"] })` to `recoverPin` route at `generated/openapi/routes.ts:767`
-- **EM-ORG-006**: Add ownership/membership check to `DentalOrganizationManagement_get.ts` — verify `org.ownerPersonId === user.id` OR caller has active membership in any branch of this org
+### Fix Now — P0 (Block all releases)
 
-### Fix before new feature work (P1):
-- **EM-ORG-008**: Add `assertBranchRole(db, user.id, branchId, ['dentist_owner'])` to `createMember.ts` after `assertBranchAccess`
-- **EM-ORG-009**: Add org-ownership check to `DentalBranchManagement_create.ts` — fetch org, verify `org.ownerPersonId === user.id`
-- **EM-ORG-011**: Implement fee schedule — `dental_fee_schedule` schema table, migration, `getFeeSchedule.ts` + `patchFeeSchedule.ts` handlers, routes
-- **EM-ORG-012**: Add `invited` to `memberStatusEnum`; generate migration; wire `invited → active` transition on first login
-- **EM-ORG-018**: Fix route — register at `GET /dental/dashboard` (per spec) or update TypeSpec + CONTRACT.md to declare `/dental/dashboard/summary`
-- **EM-ORG-020**: Replace `ownerPersonId === user.id` identity check in `DentalMembershipManagement_deactivate.ts` with `assertBranchRole(db, user.id, branchId, ['dentist_owner'])` to match `deactivateMember.ts` pattern
+| Finding | Action | Effort |
+|---------|--------|--------|
+| EM-ORG-001 | Add `assertBranchRole(['dentist_owner'])` to deprecated create path OR remove route | 1h |
+| EM-ORG-002 | Add `authMiddleware({ roles: ['admin'] })` to POST /dental/organizations | 30m |
 
-### Fix when touching (P2):
-- **EM-ORG-013**: Publish `OrgCreated`, `MembershipAssigned`, `MembershipRevoked` events from respective handlers
-- **EM-ORG-014**: Extract inline Drizzle calls in `getBranchesByUser.ts`, `branchSettings.ts`, `consentTemplates.ts` into repositories
-- **EM-ORG-015**: Verify `MembershipRepository.updateOneById` projection — if `securityAnswerHash`/`securityQuestion` can be returned, add destructure-strip (matching `listMembers.ts:38`)
-- **EM-ORG-019**: Either implement feature-flag infrastructure (env-var or LaunchDarkly) or remove §18 declarations and use direct config checks
+### Fix Before New Work — P1
 
-### Track (P3):
-- **EM-ORG-016**: Add `trackLastLogin` to `DentalMembershipManagement_verifyPin.ts`
-- **EM-ORG-017**: Change audit route auth from `roles: ['admin']` to `dentist_owner` role check
+| Finding | Action | Effort |
+|---------|--------|--------|
+| EM-ORG-003 | Register updateMember route + add to registry | 1h |
+| EM-ORG-004 | Implement dedicated fee-schedule endpoints OR wire feeSchedule to invoice creation | 3–5h |
+| EM-ORG-005 | Add 'invited' to memberStatusEnum + migration + state transitions | 3h |
+| EM-ORG-006 | Integrate Better-Auth invitation flow in createMember | 4h |
+
+### Fix When Touching — P2
+
+| Finding | Action |
+|---------|--------|
+| EM-ORG-007 | Publish DE-022/DE-023 domain events alongside audit log |
+| EM-ORG-008 | Add named structured log events per §17 |
+| EM-ORG-009 | Implement WF-029 practice report export endpoint |
+
+### Track — P3
+
+| Finding | Action |
+|---------|--------|
+| EM-ORG-010 | Implement feature flag resolution for two ops flags |
 
 ---
 
-## Notes
+## What's Next
 
-**PIN lockout confirmed complete (BR-016b):** Full brute-force protection in place. `pin_locked_until` + `pin_failed_attempts` in schema. `resetMemberPin.ts` enables owner-triggered lockout clearing per §13 edge case.
+1. **P0 fixes first:** EM-ORG-001 and EM-ORG-002 are security permission gaps — fix immediately before any merge.
+2. **Run re-enforcement (run-8)** after P0 fixes to confirm no regressions.
+3. **ORG-S2 slice completion:** EM-ORG-003 (updateMember route) and EM-ORG-005/EM-ORG-006 (invited state + invitation flow) complete the core membership management slice.
+4. **ORG-S3 slice:** EM-ORG-004 (fee schedule endpoints) after S2 is stable.
 
-**assertBranchRole exists and is underused:** `services/api-ts/src/handlers/shared/assert-branch-role.ts` implemented, used in `deactivateMember.ts`. Should replace manual inline role checks in `updateMember.ts` and be added to `createMember.ts` and `DentalMembershipManagement_deactivate.ts`.
+---
 
-**Fee schedule frontend ahead of backend:** `apps/dentalemon/src/features/settings/components/fee-schedule.tsx` exists but will fail at runtime. EM-ORG-011 is blocking for ORG-S3 (P1 slice).
-
-**Dashboard content narrower than spec:** Returns payment plan + lab order data only. Spec §10 says "practice summary stats". Patient count, appointment counts, revenue KPIs absent. Spec tightening or handler expansion needed.
-
-**Test coverage solid for existing features:** `updateMember.test.ts`, `verifyPin.test.ts`, `createMember.test.ts`, `deactivateMember.test.ts`, `resetMemberPin.test.ts`, `listMembers.test.ts` exist. Tests use `buildTestApp()` (unit-level). Per project memory [Tests must verify real wiring], supplement with real-server integration tests for route registration gaps.
-
-**AC-ORG coverage:**
-- AC-ORG-001 (branch access enforced): `assertBranchAccess` wired in most handlers ✅
-- AC-ORG-002 (fee schedule affects new invoices): untestable — backend not implemented ❌
-- AC-ORG-003 (staff invitation flow): `invited` status missing — flow broken ❌
+*Generated by oli-enforce-module v1.1 | run-7 | 2026-05-29*
