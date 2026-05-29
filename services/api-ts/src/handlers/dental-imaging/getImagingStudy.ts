@@ -13,6 +13,7 @@ import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { ImagingRepository } from './repos/imaging.repo';
+import { logAuditEvent } from '@/core/audit-logger';
 
 export async function getImagingStudy(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -38,6 +39,16 @@ export async function getImagingStudy(ctx: BaseContext): Promise<Response> {
       return { ...image, toothNumbers };
     }),
   );
+
+  const logger = ctx.get('logger');
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: study.branchId,
+    action: 'imaging_study.read',
+    resourceType: 'imaging_study',
+    resourceId: study.id,
+    metadata: { patientId: study.patientId, branchId: study.branchId },
+  });
 
   return ctx.json({ ...study, images: imagesWithTeeth }, 200);
 }

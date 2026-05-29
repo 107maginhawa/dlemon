@@ -1636,3 +1636,148 @@ describe('imaging findings', () => {
     expect(res.status).toBe(204);
   });
 });
+
+// ---------------------------------------------------------------------------
+// AL-012 — HIPAA audit trail for imaging study create/access
+// @AL-012 createImagingStudy emits imaging_study.create audit event (PHI access)
+// @AL-012 getImagingStudy emits imaging_study.read audit event (PHI access)
+// ---------------------------------------------------------------------------
+
+/**
+ * makeAuditCapturingDb builds a db mock that also captures audit INSERT calls.
+ * logAuditEvent writes to dental_audit (DentalAuditRepository) and dental_audit_log
+ * (AuditLogRepository). Both repos call db.insert(...).values(...).returning().
+ * We detect audit table inserts by the absence of known imaging columns and absorb them.
+ */
+function makeAuditDb(opts: Parameters<typeof makeDb>[0] = {}) {
+  const base = makeDb(opts);
+  const auditEvents: any[] = [];
+  const origInsert = base.insert.bind(base);
+
+  (base as any).insert = (table: any) => {
+    // Imaging tables have studyId or patientId columns; audit tables do not
+    const isImagingTable = table?.studyId !== undefined || (table?.patientId !== undefined && table?.studyId === undefined);
+    if (isImagingTable) {
+      return origInsert(table);
+    }
+    // Audit table insert — capture values and return a no-op
+    return {
+      values: (data: any) => {
+        auditEvents.push(data);
+        return {
+          returning: () => Promise.resolve([data]),
+          // some repos don't call .returning() — support thenable too
+          then: (resolve: any, reject: any) => Promise.resolve(undefined).then(resolve, reject),
+        };
+      },
+    };
+  };
+
+  return { db: base as ReturnType<typeof makeDb>, auditEvents };
+}
+
+/** Build logger that captures audit info calls from logAuditEvent */
+function makeAuditLogger() {
+  const auditInfoCalls: any[] = [];
+  const logger = {
+    debug: () => {},
+    info: (meta: any, msg: string) => {
+      if (meta?.audit) auditInfoCalls.push(meta.audit);
+    },
+    warn: () => {},
+    error: () => {},
+  };
+  return { logger, auditInfoCalls };
+}
+
+function buildAuditApp(
+  handler: (ctx: any) => Promise<Response>,
+  opts: {
+    user?: typeof DENTIST_USER;
+    role?: string;
+    storage?: ReturnType<typeof makeStorage>;
+    db?: ReturnType<typeof makeDb>;
+    method?: string;
+    path?: string;
+    logger?: any;
+  },
+) {
+  const app = new Hono();
+  app.onError((err, c) => {
+    if (err instanceof AppError) {
+      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    }
+    return c.json({ error: String(err.message) }, 500);
+  });
+  app.use('*', async (c, next) => {
+    c.set('database' as any, opts.db ?? makeDb());
+    c.set('storage' as any, opts.storage ?? makeStorage());
+    c.set('logger' as any, opts.logger ?? { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
+    if (opts.user) {
+      c.set('user' as any, opts.user);
+      c.set('session' as any, { id: 'test-session' });
+    }
+    if (opts.role) c.set('memberRole' as any, opts.role);
+    await next();
+  });
+  const method = (opts.method ?? 'POST').toLowerCase();
+  (app as any)[method](opts.path ?? '/', handler);
+  return app;
+}
+
+describe('AL-012 audit trail for imaging study create/access', () => {
+  test('createImagingStudy emits imaging_study.create audit event', async () => {
+    const { logger, auditInfoCalls } = makeAuditLogger();
+    const { db } = makeAuditDb();
+
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildAuditApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+      db,
+      logger,
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        filename: 'audit-test.jpg',
+        mimeType: 'image/jpeg',
+        size: 204800,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const auditEvent = auditInfoCalls.find(e => e?.action === 'imaging_study.create');
+    expect(auditEvent).not.toBeUndefined();
+    expect(auditEvent.resourceType).toBe('imaging_study');
+    expect(auditEvent.personId).toBe(DENTIST_USER.id);
+  });
+
+  test('getImagingStudy emits imaging_study.read audit event', async () => {
+    const { logger, auditInfoCalls } = makeAuditLogger();
+    const { db } = makeAuditDb({ study: MOCK_STUDY, image: MOCK_IMAGE, hasMembership: true });
+
+    const { getImagingStudy } = await import('./getImagingStudy');
+    const app = buildAuditApp(getImagingStudy as any, {
+      user: DENTIST_USER,
+      db,
+      method: 'GET',
+      path: '/:studyId',
+      logger,
+    });
+
+    const res = await app.request(`/${STUDY_ID}`);
+
+    expect(res.status).toBe(200);
+    const auditEvent = auditInfoCalls.find(e => e?.action === 'imaging_study.read');
+    expect(auditEvent).not.toBeUndefined();
+    expect(auditEvent.resourceType).toBe('imaging_study');
+    expect(auditEvent.personId).toBe(DENTIST_USER.id);
+  });
+});

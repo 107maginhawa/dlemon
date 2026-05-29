@@ -18,6 +18,7 @@ import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ALLOWED_IMAGING_MIME_TYPES } from './repos/imaging.schema';
+import { logAuditEvent } from '@/core/audit-logger';
 
 export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -80,6 +81,16 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
       await repo.addToothLink(image.id, toothNumber);
     }
   }
+
+  const logger = ctx.get('logger');
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: body.branchId,
+    action: 'imaging_study.create',
+    resourceType: 'imaging_study',
+    resourceId: study.id,
+    metadata: { patientId: body.patientId, branchId: body.branchId, modality: body.modality ?? 'other' },
+  });
 
   return ctx.json(
     {
