@@ -35,14 +35,15 @@ export async function getOrgContext(ctx: Context): Promise<Response> {
 
   // EF-ORG-P022: Only consider active branches when picking the default
   // context branch. An inactive/soft-deleted branch must not be auto-selected.
-  const branches = await branchRepo.listByOrg(org.id);
-  const branch = branches.find((b) => b.active) ?? null;
+  // V-ORG-004: scoped WHERE active=true LIMIT 1 instead of load-all-then-filter.
+  const branch = await branchRepo.findFirstActiveByOrg(org.id);
 
-  // Find this user's membership in the branch
+  // Find this user's active membership in the branch.
+  // V-ORG-004: scoped WHERE personId=? AND branchId=? LIMIT 1 instead of
+  // loading the full branch roster and filtering in JS.
   let member = null;
   if (branch) {
-    const members = await memberRepo.listByBranch(branch.id);
-    member = members.find(m => m.personId === user.id) ?? null;
+    member = await memberRepo.findActiveByPersonAndBranch(user.id, branch.id);
   }
 
   return ctx.json({

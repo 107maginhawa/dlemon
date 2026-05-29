@@ -2,7 +2,7 @@
  * MembershipRepository — data access for dental staff memberships
  */
 
-import { eq, and, ne, isNotNull } from 'drizzle-orm';
+import { eq, and, ne, isNotNull, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { BusinessLogicError } from '@/core/errors';
@@ -75,6 +75,57 @@ export class MembershipRepository extends DatabaseRepository<
       .select()
       .from(dentalMemberships)
       .where(and(...conditions));
+  }
+
+  /**
+   * V-ORG-004 (perf §16): paginated branch member listing. Pushes the
+   * active-status filter + LIMIT/OFFSET into the SQL query so the DB read is
+   * bounded rather than loading every member and slicing in JS.
+   */
+  async listByBranchPaginated(
+    branchId: string,
+    opts: ListByBranchOptions & { limit: number; offset: number },
+  ): Promise<DentalMembership[]> {
+    const conditions = [eq(dentalMemberships.branchId, branchId)];
+    if (!opts.includeInactive) {
+      conditions.push(eq(dentalMemberships.status, 'active'));
+    }
+    return this.db
+      .select()
+      .from(dentalMemberships)
+      .where(and(...conditions))
+      .limit(opts.limit)
+      .offset(opts.offset);
+  }
+
+  /**
+   * V-ORG-004 (perf §16): total member count for a branch, computed with
+   * count(*) rather than materializing every row, so pagination `total` does
+   * not require a full load.
+   */
+  async countByBranch(branchId: string, opts: ListByBranchOptions = {}): Promise<number> {
+    const conditions = [eq(dentalMemberships.branchId, branchId)];
+    if (!opts.includeInactive) {
+      conditions.push(eq(dentalMemberships.status, 'active'));
+    }
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(dentalMemberships)
+      .where(and(...conditions));
+    return row?.count ? Number(row.count) : 0;
+  }
+
+  /**
+   * V-ORG-004 (perf §16): resolve a person's active membership in a branch with
+   * a scoped WHERE + LIMIT 1, rather than loading the whole branch roster and
+   * filtering in app code. Identical semantics to `findByPersonAndBranch` —
+   * kept distinct so call sites read intentionally.
+   */
+  async findActiveByPersonAndBranch(
+    personId: string,
+    branchId: string,
+  ): Promise<DentalMembership | null> {
+    return this.findByPersonAndBranch(personId, branchId);
   }
 
   /**

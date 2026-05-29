@@ -44,4 +44,21 @@ export class BranchRepository extends DatabaseRepository<DentalBranch, NewDental
       .from(dentalBranches)
       .where(eq(dentalBranches.organizationId, organizationId));
   }
+
+  /**
+   * V-ORG-004 (perf §16): resolve the org's default (first active) branch with
+   * a scoped `WHERE active=true LIMIT 1` instead of loading every branch and
+   * filtering in app code (EF-ORG-P022: never auto-select an inactive branch).
+   */
+  async findFirstActiveByOrg(organizationId: string): Promise<DentalBranch | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalBranches)
+      .where(and(
+        eq(dentalBranches.organizationId, organizationId),
+        eq(dentalBranches.active, true),
+      ))
+      .limit(1);
+    return row ?? null;
+  }
 }

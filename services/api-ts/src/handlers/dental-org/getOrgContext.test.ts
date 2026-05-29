@@ -199,6 +199,50 @@ describe('getOrgContext handler', () => {
   // Edge cases
   // --------------------------------------------------------------------------
 
+  // --------------------------------------------------------------------------
+  // V-ORG-004: default-branch resolved via scoped WHERE active=true LIMIT 1
+  // (EF-ORG-P022 — an inactive branch must never be auto-selected).
+  // --------------------------------------------------------------------------
+
+  test('skips inactive branches and selects the active one', async () => {
+    const org = await orgRepo.createOne({
+      name: 'Test Clinic',
+      tier: 'clinic',
+      ownerPersonId: OWNER_ID,
+      countryCode: 'US',
+      active: true,
+    });
+    // Inactive branch must NOT be auto-selected.
+    await branchRepo.createOne({
+      organizationId: org.id,
+      name: 'Closed Branch',
+      timezone: 'America/New_York',
+      active: false,
+    });
+    const activeBranch = await branchRepo.createOne({
+      organizationId: org.id,
+      name: 'Open Branch',
+      timezone: 'America/New_York',
+      active: true,
+    });
+    await memberRepo.createOne({
+      branchId: activeBranch.id,
+      personId: OWNER_ID,
+      displayName: 'Dr. Owner',
+      role: 'dentist_owner',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+
+    const app = buildTestApp(ownerUser);
+    const res = await app.request('/dental/org/context');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.branch.id).toBe(activeBranch.id);
+    expect(body.branch.name).toBe('Open Branch');
+    expect(body.member.role).toBe('dentist_owner');
+  });
+
   test('returns branch: null when org has no branches', async () => {
     await orgRepo.createOne({
       name: 'Test Clinic',

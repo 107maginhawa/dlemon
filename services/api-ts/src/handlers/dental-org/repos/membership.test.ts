@@ -292,6 +292,57 @@ describe('MembershipRepository', () => {
   });
 
   // --------------------------------------------------------------------------
+  // PAGINATION & COUNT — V-ORG-004 (perf §16): scoped LIMIT/OFFSET + count(*)
+  // --------------------------------------------------------------------------
+
+  describe('listByBranchPaginated / countByBranch', () => {
+    async function seedN(n: number, status: 'active' | 'inactive' = 'active') {
+      for (let i = 0; i < n; i++) {
+        await repo.createOne({ branchId: BRANCH_ID, displayName: `Member ${status} ${i}`, role: 'staff_full', status, pinFailedAttempts: 0 });
+      }
+    }
+
+    test('bounds the result set by limit/offset', async () => {
+      await seedN(5);
+      const firstPage = await repo.listByBranchPaginated(BRANCH_ID, { limit: 2, offset: 0 });
+      const secondPage = await repo.listByBranchPaginated(BRANCH_ID, { limit: 2, offset: 2 });
+      expect(firstPage.length).toBe(2);
+      expect(secondPage.length).toBe(2);
+      // No overlap between pages
+      const ids = new Set(firstPage.map((m) => m.id));
+      expect(secondPage.every((m) => !ids.has(m.id))).toBe(true);
+    });
+
+    test('countByBranch returns active count by default and total with includeInactive', async () => {
+      await seedN(3, 'active');
+      await seedN(2, 'inactive');
+      expect(await repo.countByBranch(BRANCH_ID)).toBe(3);
+      expect(await repo.countByBranch(BRANCH_ID, { includeInactive: true })).toBe(5);
+    });
+
+    test('paginated listing excludes inactive by default', async () => {
+      await seedN(2, 'active');
+      await seedN(2, 'inactive');
+      const page = await repo.listByBranchPaginated(BRANCH_ID, { limit: 50, offset: 0 });
+      expect(page.every((m) => m.status === 'active')).toBe(true);
+      expect(page.length).toBe(2);
+    });
+  });
+
+  describe('findActiveByPersonAndBranch', () => {
+    test('returns the active membership for a person in a branch', async () => {
+      const m = await repo.createOne({ branchId: BRANCH_ID, personId: PERSON_ID, displayName: 'Linked', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0 });
+      const found = await repo.findActiveByPersonAndBranch(PERSON_ID, BRANCH_ID);
+      expect(found!.id).toBe(m.id);
+    });
+
+    test('returns null for a non-member', async () => {
+      const found = await repo.findActiveByPersonAndBranch('00000000-0000-0000-0000-0000000000aa', BRANCH_ID);
+      expect(found).toBeNull();
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // PIN FAILED ATTEMPT TRACKING
   // --------------------------------------------------------------------------
 

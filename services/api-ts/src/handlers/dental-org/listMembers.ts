@@ -31,14 +31,18 @@ export async function listMembers(ctx: Context): Promise<Response> {
   const { limit, offset } = parsePagination(ctx.req.query());
 
   const repo = new MembershipRepository(db, logger);
-  const allItems = await repo.listByBranch(branchId, { includeInactive });
+  // V-ORG-004 (perf §16): push the status filter + LIMIT/OFFSET into the query
+  // and compute `total` via count(*), so the DB read is bounded by the page
+  // size rather than loading every member and slicing in JS.
+  const [items, total] = await Promise.all([
+    repo.listByBranchPaginated(branchId, { includeInactive, limit, offset }),
+    repo.countByBranch(branchId, { includeInactive }),
+  ]);
 
   // Strip sensitive credential fields from each member
-  const safeItems = allItems.map(
+  const page = items.map(
     ({ pinHash, securityAnswerHash, securityQuestion, ...rest }) => rest,
   );
-  const total = safeItems.length;
-  const page = safeItems.slice(offset, offset + limit);
 
   return ctx.json({ data: page, pagination: buildPaginationMeta(page, total, limit, offset) });
 }
