@@ -428,6 +428,73 @@ describe('EM-ORG-001 recoverPin — authMiddleware required', () => {
 });
 
 // ===========================================================================
+// EF-ORG-P015: recoverPin — cross-branch PIN reset must be rejected
+// ===========================================================================
+
+describe('EF-ORG-P015 recoverPin — caller must belong to target member branch', () => {
+  // Second org/branch for the cross-branch attacker
+  const ORG_B_ID = 'e0050000-0000-1000-8000-000000000010';
+  const BRANCH_B_ID = 'e0050000-0000-1000-8000-000000000020';
+  const MEMBER_ATTACKER_ID = 'e0050000-0000-1000-8000-000000000040';
+
+  function makeApp(user: { id: string; email: string } | null) {
+    const app = new Hono();
+    app.onError(makeErrorHandler());
+    app.use('*', injectDeps(user));
+    app.post('/dental/org/members/:memberId/recover-pin', recoverPin as any);
+    return app;
+  }
+
+  test('attacker in branch B cannot reset PIN of member in branch A → 403 [EF-ORG-P015]', async () => {
+    // Target member lives in Branch A
+    await seedOrg(ORG_A_ID, OWNER_A.id);
+    await seedBranch(BRANCH_A_ID, ORG_A_ID, OWNER_A.id);
+    await seedMembership(MEMBER_OWNER_ID, BRANCH_A_ID, OWNER_A.id, 'dentist_owner');
+
+    // Attacker only has membership in Branch B (a different org)
+    await seedOrg(ORG_B_ID, ATTACKER.id);
+    await seedBranch(BRANCH_B_ID, ORG_B_ID, ATTACKER.id);
+    await seedMembership(MEMBER_ATTACKER_ID, BRANCH_B_ID, ATTACKER.id, 'dentist_owner');
+
+    // Target has a known security answer — attacker even knows the answer
+    const answerHash = await Bun.password.hash('test', { algorithm: 'bcrypt', cost: 4 });
+    await db.update(dentalMemberships)
+      .set({ securityQuestion: 'What?', securityAnswerHash: answerHash })
+      .where(sql`id = ${MEMBER_OWNER_ID}`);
+
+    const app = makeApp(ATTACKER);
+    const res = await app.request(`/dental/org/members/${MEMBER_OWNER_ID}/recover-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer: 'test', newPin: '9999' }),
+    });
+
+    // assertBranchAccess must reject before the answer is ever checked
+    expect(res.status).toBe(403);
+  });
+
+  test('member in same branch can reset PIN → 200 [EF-ORG-P015 baseline]', async () => {
+    await seedOrg(ORG_A_ID, OWNER_A.id);
+    await seedBranch(BRANCH_A_ID, ORG_A_ID, OWNER_A.id);
+    await seedMembership(MEMBER_OWNER_ID, BRANCH_A_ID, OWNER_A.id, 'dentist_owner');
+
+    const answerHash = await Bun.password.hash('test', { algorithm: 'bcrypt', cost: 4 });
+    await db.update(dentalMemberships)
+      .set({ securityQuestion: 'What?', securityAnswerHash: answerHash })
+      .where(sql`id = ${MEMBER_OWNER_ID}`);
+
+    const app = makeApp(OWNER_A);
+    const res = await app.request(`/dental/org/members/${MEMBER_OWNER_ID}/recover-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer: 'test', newPin: '9999' }),
+    });
+
+    expect(res.status).toBe(200);
+  });
+});
+
+// ===========================================================================
 // EM-ORG-006: DentalOrganizationManagement_get — IDOR check
 // ===========================================================================
 
