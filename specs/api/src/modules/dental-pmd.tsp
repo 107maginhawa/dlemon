@@ -86,6 +86,9 @@ model ImportedPMD {
   patientId: UUID;
   sourceFacility: string;
   sourceReference?: string;
+  /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
+   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5. */
+  sourceDescription: string;
   /** Raw JSON content of the imported PMD */
   content: string;
   importedAt: utcDateTime;
@@ -97,7 +100,13 @@ model ImportPMDRequest {
   patientId: UUID;
   sourceFacility: string;
   sourceReference?: string;
+  /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
+   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5. */
+  sourceDescription: string;
   content: string;
+  /** Optional SHA-256 checksum (format: sha256-<hex>). When provided the server
+   *  verifies the digest of `content` matches before persisting. Mismatch → 422. */
+  checksum?: string;
 }
 
 // ---------------------------------------------------------------------------

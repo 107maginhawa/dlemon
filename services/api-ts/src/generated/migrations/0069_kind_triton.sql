@@ -1,0 +1,1 @@
+ALTER TABLE "imported_pmd" ADD COLUMN "source_description" text NOT NULL;

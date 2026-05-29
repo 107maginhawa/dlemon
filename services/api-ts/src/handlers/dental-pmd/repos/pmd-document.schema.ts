@@ -41,6 +41,9 @@ export const importedPmds = pgTable('imported_pmd', {
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   sourceFacility: text('source_facility').notNull(),
   sourceReference: text('source_reference'),
+  /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
+   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5. */
+  sourceDescription: text('source_description').notNull(),
   content: text('content').notNull(),
   importedAt: timestamp('imported_at').notNull().defaultNow(),
   safetyFloorMerged: text('safety_floor_merged').notNull().default('false'),

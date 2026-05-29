@@ -1552,6 +1552,7 @@ describe('BR-022: imported PMD records are read-only', () => {
       patientId: PATIENT_ID,
       sourceFacility: 'External Clinic',
       sourceReference: 'REF-001',
+      sourceDescription: 'External Clinic PMD export',
       content: JSON.stringify({ teeth: [], notes: 'imported' }),
     });
     return record.id;

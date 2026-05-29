@@ -101,6 +101,7 @@ describe('GET /dental/pmd/imported/:id (FR12.2)', () => {
     const record = await repo.createOne({
       patientId: PATIENT_ID,
       sourceFacility: 'General Hospital',
+      sourceDescription: 'Open Dental v21.1',
       content: JSON.stringify(content),
     });
 
@@ -118,6 +119,7 @@ describe('GET /dental/pmd/imported/:id (FR12.2)', () => {
     const record = await repo.createOne({
       patientId: PATIENT_ID,
       sourceFacility: 'Regional Clinic',
+      sourceDescription: 'Legacy System v1.0',
       content: 'Plain text PMD content — allergies: penicillin',
     });
 
@@ -160,6 +162,7 @@ describe('POST /dental/pmd/import with structured content (FR12.5)', () => {
       body: JSON.stringify({
         patientId: PATIENT_ID,
         sourceFacility: 'External Clinic',
+        sourceDescription: 'Open Dental v21.1',
         content: JSON.stringify(structuredContent),
       }),
     });

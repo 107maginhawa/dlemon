@@ -56,9 +56,12 @@ export async function generatePMD(
   const treatments = await getTreatmentsForPMD(db, visitId);
   const prescriptions = await getPrescriptionsForPMD(db, visitId);
 
+  // EF-PMD-004: authorMemberId must be included in the snapshot before hashing
+  // so that the checksum binds the author identity to the content (non-repudiation).
   const contentSnapshot = JSON.stringify({
     visitId,
     patientId: body.patientId,
+    authorMemberId: membership.id,
     visitDate: visit.activatedAt ?? visit.createdAt,
     treatments: treatments.map(t => ({
       id: t.id,

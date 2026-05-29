@@ -279,6 +279,7 @@ describe('importPMD handler', () => {
       body: JSON.stringify({
         patientId: PATIENT_ID,
         sourceFacility: 'City Dental Clinic',
+        sourceDescription: 'Open Dental v21.1',
         content: '{"teeth":[]}',
       }),
     });
@@ -290,7 +291,7 @@ describe('importPMD handler', () => {
     const res = await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourceFacility: 'City Dental Clinic', content: '{}' }),
+      body: JSON.stringify({ sourceFacility: 'City Dental Clinic', sourceDescription: 'Open Dental v21.1', content: '{}' }),
     });
     expect(res.status).toBe(400);
   });
@@ -300,7 +301,7 @@ describe('importPMD handler', () => {
     const res = await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, content: '{}' }),
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceDescription: 'Open Dental v21.1', content: '{}' }),
     });
     expect(res.status).toBe(400);
   });
@@ -310,7 +311,23 @@ describe('importPMD handler', () => {
     const res = await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'City Dental Clinic' }),
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'City Dental Clinic', sourceDescription: 'Open Dental v21.1' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  // EF-PMD-005: sourceDescription is required
+  test('returns 400 when sourceDescription is missing', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'City Dental Clinic',
+        content: '{}',
+        // sourceDescription intentionally omitted
+      }),
     });
     expect(res.status).toBe(400);
   });
@@ -324,6 +341,7 @@ describe('importPMD handler', () => {
         patientId: PATIENT_ID,
         sourceFacility: 'Metro Dental Partners',
         sourceReference: 'PMD-2025-001',
+        sourceDescription: 'Open Dental v21.1',
         content: JSON.stringify({ teeth: [], prescriptions: [] }),
       }),
     });
@@ -333,6 +351,23 @@ describe('importPMD handler', () => {
     expect(body.patientId).toBe(PATIENT_ID);
     expect(body.sourceFacility).toBe('Metro Dental Partners');
     expect(body.sourceReference).toBe('PMD-2025-001');
+  });
+
+  test('sourceDescription is stored and returned [EF-PMD-005]', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'Metro Dental Partners',
+        sourceDescription: 'Dentrix G7',
+        content: '{}',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.sourceDescription).toBe('Dentrix G7');
   });
 
   test('imported PMD content is stored verbatim and retrievable as-is [AC-PMD-03]', async () => {
@@ -347,6 +382,7 @@ describe('importPMD handler', () => {
         patientId: PATIENT_ID,
         sourceFacility: 'External Clinic',
         sourceReference: 'EXT-001',
+        sourceDescription: 'Dentrix G7',
         content: JSON.stringify(originalContent),
       }),
     });
@@ -361,6 +397,64 @@ describe('importPMD handler', () => {
     expect(retrieved.content).toEqual(originalContent);
     expect(retrieved.sourceFacility).toBe('External Clinic');
     expect(retrieved.sourceReference).toBe('EXT-001');
+  });
+
+  // EF-PMD-006: Checksum mismatch test cases
+  test('returns 422 CHECKSUM_MISMATCH when provided checksum does not match content [EF-PMD-006]', async () => {
+    const app = buildTestApp(TEST_USER);
+    const content = JSON.stringify({ teeth: [], prescriptions: [] });
+    const wrongChecksum = 'sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'External Clinic',
+        sourceDescription: 'Open Dental v21.1',
+        content,
+        checksum: wrongChecksum,
+      }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CHECKSUM_MISMATCH');
+  });
+
+  test('returns 201 when provided checksum matches content [EF-PMD-006]', async () => {
+    const { createHash } = await import('node:crypto');
+    const app = buildTestApp(TEST_USER);
+    const content = JSON.stringify({ teeth: [], prescriptions: [] });
+    const correctChecksum = `sha256-${createHash('sha256').update(content).digest('hex')}`;
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'External Clinic',
+        sourceDescription: 'Open Dental v21.1',
+        content,
+        checksum: correctChecksum,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.id).toBeTruthy();
+  });
+
+  test('returns 201 when no checksum is provided (checksum is optional) [EF-PMD-006]', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        sourceFacility: 'External Clinic',
+        sourceDescription: 'Open Dental v21.1',
+        content: JSON.stringify({ teeth: [] }),
+        // checksum intentionally omitted — should pass without verification
+      }),
+    });
+    expect(res.status).toBe(201);
   });
 });
 
@@ -397,12 +491,12 @@ describe('listImportedPMDs handler', () => {
     await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic A', content: '{}' }),
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic A', sourceDescription: 'Open Dental v21.1', content: '{}' }),
     });
     await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic B', content: '{}' }),
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic B', sourceDescription: 'Dentrix G7', content: '{}' }),
     });
 
     const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
@@ -419,12 +513,12 @@ describe('listImportedPMDs handler', () => {
     await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic A', content: '{}' }),
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'Clinic A', sourceDescription: 'Open Dental v21.1', content: '{}' }),
     });
     await app.request('/dental/pmd/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId: OTHER_PATIENT, sourceFacility: 'Clinic B', content: '{}' }),
+      body: JSON.stringify({ patientId: OTHER_PATIENT, sourceFacility: 'Clinic B', sourceDescription: 'Dentrix G7', content: '{}' }),
     });
 
     const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
@@ -517,6 +611,25 @@ describe('FR12.1: PMD content includes coded clinical data', () => {
     const content = JSON.parse(body.content);
     expect(content.patientId).toBe(PATIENT_ID);
     expect(content.visitId).toBe(visit!.id);
+  });
+
+  // EF-PMD-004: authorMemberId must be in the snapshot so checksum binds author identity
+  test('PMD content snapshot includes authorMemberId for non-repudiation [EF-PMD-004]', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // EF-PMD-004: authorMemberId must be in content so the checksum binds it
+    const content = JSON.parse(body.content);
+    expect(typeof content.authorMemberId).toBe('string');
+    expect(content.authorMemberId).toBeTruthy();
+    // The authorMemberId in the snapshot must match the stored authorMemberId
+    expect(content.authorMemberId).toBe(body.authorMemberId);
   });
 
   test('PMD content includes prescriptions array (may be empty)', async () => {

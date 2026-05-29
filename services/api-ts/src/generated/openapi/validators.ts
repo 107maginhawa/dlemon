@@ -16037,7 +16037,9 @@ export const ImportPMDRequestSchema = z.object({
   patientId: UUIDSchema,
   sourceFacility: z.string(),
   sourceReference: z.string().optional(),
-  content: z.string()
+  sourceDescription: z.string(),
+  content: z.string(),
+  checksum: z.string().optional()
 });
 
 export const ImportedPMDSchema = z.object({
@@ -16048,6 +16050,7 @@ export const ImportedPMDSchema = z.object({
   patientId: UUIDSchema,
   sourceFacility: z.string(),
   sourceReference: z.string().optional(),
+  sourceDescription: z.string(),
   content: z.string(),
   importedAt: z.string().datetime().transform((str) => new Date(str)),
   safetyFloorMerged: z.boolean()

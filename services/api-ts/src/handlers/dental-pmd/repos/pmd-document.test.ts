@@ -151,9 +151,11 @@ describe('ImportedPMDRepository', () => {
 
   afterEach(() => teardown());
 
+  // EF-PMD-005: sourceDescription is now required
   const baseImport = {
     patientId: PATIENT_1,
     sourceFacility: 'City Dental Clinic',
+    sourceDescription: 'Open Dental v21.1',
     content: JSON.stringify({ conditions: ['I10'], medications: ['Amoxicillin'] }),
   };
 
@@ -169,6 +171,12 @@ describe('ImportedPMDRepository', () => {
     test('stores optional sourceReference', async () => {
       const rec = await repo.createOne({ ...baseImport, sourceReference: 'REF-2025-001' });
       expect(rec.sourceReference).toBe('REF-2025-001');
+    });
+
+    // EF-PMD-005: sourceDescription is persisted and returned
+    test('stores sourceDescription for audit trail provenance [EF-PMD-005]', async () => {
+      const rec = await repo.createOne({ ...baseImport, sourceDescription: 'Dentrix G7' });
+      expect(rec.sourceDescription).toBe('Dentrix G7');
     });
   });
 
