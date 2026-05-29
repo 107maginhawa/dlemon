@@ -14,6 +14,7 @@ import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import type { User } from '@/types/auth';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getPatientForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
 
 export async function exportPMD(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -24,10 +25,8 @@ export async function exportPMD(ctx: Context): Promise<Response> {
 
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   const repo = new PMDDocumentRepository(db);
-
   const pmds = await repo.findMany({ visitId });
   if (pmds.length === 0) throw new NotFoundError('No PMD found for this visit');
 
@@ -36,6 +35,15 @@ export async function exportPMD(ctx: Context): Promise<Response> {
     .filter(p => p.status !== 'superseded')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
     ?? pmds[0]!;
+
+  // EF-PMD-007: allow patient to download their own PMD.
+  // If the requesting user is the patient's linked person, skip staff role check.
+  const patient = await getPatientForPMD(db, pmd.patientId);
+  const isPatientSelf = patient?.person === user.id;
+
+  if (!isPatientSelf) {
+    await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  }
 
   const ts = new Date(pmd.createdAt).toISOString().slice(0, 10);
   const filename = `pmd-${visitId.slice(0, 8)}-${ts}.json`;
