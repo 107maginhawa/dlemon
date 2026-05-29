@@ -11,6 +11,7 @@ import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CancelAppointmentParams } from '@/generated/openapi/validators';
 import type { JobScheduler } from '@/core/jobs';
@@ -31,7 +32,7 @@ export async function cancelAppointment(
 
   // Authorization: user must have a scheduling-capable role in the target branch (EM-SCH-001)
   await assertBranchRole(db, user.id, existing.branchId, [
-    'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
+    'dentist_owner', 'staff_full',
   ]);
 
   if (!APPOINTMENT_TRANSITIONS[existing.status].includes('cancelled')) {
@@ -54,6 +55,22 @@ export async function cancelAppointment(
 
   const result = await repo.cancel(appointmentId, cancellationReason, user.id);
   if (!result) throw new NotFoundError('Appointment');
+
+  // AL-008: appointment cancellation audit trail — persisted to dental_audit + dental_audit_log
+  const logger = ctx.get('logger') as any | undefined;
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: result.branchId,
+    branchId: result.branchId,
+    action: 'appointment.cancel',
+    resourceType: 'dental_appointment',
+    resourceId: result.id,
+    reason: cancellationReason,
+    metadata: {
+      patientId: result.patientId,
+      dentistMemberId: result.dentistMemberId,
+    },
+  });
 
   // DE-011: emit AppointmentCancelled domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;
