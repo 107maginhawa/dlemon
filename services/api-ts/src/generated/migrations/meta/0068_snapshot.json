@@ -1,6 +1,6 @@
 {
-  "id": "2aaa168c-bf27-4446-a89d-bb2bb245c6cd",
-  "prevId": "fd6fd618-7d39-48e1-8ab0-6cbcfbe0a3b5",
+  "id": "e2802a3c-d723-470a-b85b-c03b41ba98d7",
+  "prevId": "2aaa168c-bf27-4446-a89d-bb2bb245c6cd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12359,34 +12359,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "consultation_note_patient_id_patient_id_fk": {
-          "name": "consultation_note_patient_id_patient_id_fk",
-          "tableFrom": "consultation_note",
-          "tableTo": "patient",
-          "columnsFrom": [
-            "patient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "consultation_note_provider_id_provider_id_fk": {
-          "name": "consultation_note_provider_id_provider_id_fk",
-          "tableFrom": "consultation_note",
-          "tableTo": "provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "consultation_notes_context_unique": {
@@ -14102,6 +14075,7 @@
       "name": "ceph_landmark_status",
       "schema": "public",
       "values": [
+        "not_placed",
         "placed",
         "confirmed",
         "locked"
@@ -14111,6 +14085,7 @@
       "name": "imaging_finding_status",
       "schema": "public",
       "values": [
+        "draft",
         "suspected",
         "confirmed",
         "monitoring",
