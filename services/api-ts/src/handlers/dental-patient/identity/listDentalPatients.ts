@@ -10,7 +10,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { buildPaginationMeta } from '@/utils/query';
 import { sql, inArray } from 'drizzle-orm';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
@@ -30,7 +30,7 @@ export async function listDentalPatients(
   if (!q['branchId']) {
     return ctx.json({ error: 'branchId is required' } as any, 400);
   }
-  await assertBranchAccess(db, user.id, q['branchId']);
+  await assertBranchRole(db, user.id, q['branchId'], ['dentist_owner', 'dentist_associate', 'staff_full', 'hygienist']);
 
   const filters: Record<string, any> = {};
 

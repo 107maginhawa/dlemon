@@ -39,6 +39,11 @@ export async function updateDentalPatient(
   // Branch-level authorization
   if (patient.preferredBranchId) {
     await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
+
+    // EM-PAT-004: archiving via PATCH is restricted to dentist_owner
+    if (body['status'] === 'archived') {
+      await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
+    }
   }
 
   const updates: Record<string, any> = {};
