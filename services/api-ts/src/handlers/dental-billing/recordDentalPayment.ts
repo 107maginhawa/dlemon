@@ -48,6 +48,16 @@ export async function recordDentalPayment(
     throw new BusinessLogicError('Cannot record payment on a fully paid invoice', 'INVOICE_IMMUTABLE');
   }
 
+  // V-BIL-105 / BR-012: a `draft` invoice has not been issued. Per MODULE_SPEC §8
+  // (SM-INVOICE) payments are valid only on issued/partial/overdue invoices, so
+  // recording a payment on a draft is an out-of-FSM transition → 422.
+  if (invoice.status === 'draft') {
+    throw new BusinessLogicError(
+      'Cannot record payment on a draft invoice; issue it first',
+      'INVALID_STATUS_TRANSITION',
+    );
+  }
+
   // V-BIL-004: overpayment → PAYMENT_EXCEEDS_BALANCE (canonical taxonomy code).
   if (body.amountCents > invoice.balanceCents) {
     throw new BusinessLogicError(

@@ -276,6 +276,23 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     expect(body.code).toBe('INVOICE_IMMUTABLE');
   });
 
+  // V-BIL-105 / CONF-BILL-L1-01: recording a payment on a `draft` invoice is an
+  // out-of-FSM transition. Per MODULE_SPEC §8 (SM-INVOICE), payments are valid
+  // only on issued/partial/overdue invoices. A draft has not been issued, so it
+  // must be rejected with 422 INVALID_STATUS_TRANSITION (BR-012).
+  test('returns 422 INVALID_STATUS_TRANSITION when recording payment on a draft invoice (V-BIL-105)', async () => {
+    const invoice = await seedInvoice({ status: 'draft', totalCents: 5000, balanceCents: 5000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amountCents: 1000, method: 'cash', receiptNumber: 'RCT-DRAFT-M3', recordedByMemberId: MEMBER_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_STATUS_TRANSITION');
+  });
+
   test('returns 422 PAYMENT_EXCEEDS_BALANCE when amount exceeds remaining balance (V-BIL-004)', async () => {
     const invoice = await seedInvoice({ totalCents: 5000, paidCents: 2000, balanceCents: 3000 });
     const app = buildTestApp(TEST_USER);
