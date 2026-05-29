@@ -14,6 +14,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalBranches, type BranchSettings } from './repos/branch.schema';
 import { dentalMemberships } from './repos/membership.schema';
+import { logAuditEvent } from '@/core/audit-logger';
 import { eq, and } from 'drizzle-orm';
 
 const updateBranchSettingsSchema = z.object({
@@ -85,6 +86,25 @@ export async function updateBranchSettings(ctx: BaseContext) {
   await db.update(dentalBranches)
     .set({ settings: merged, updatedAt: new Date(), updatedBy: user.id })
     .where(eq(dentalBranches.id, branchId));
+
+  // V-ORG-002 / §10b (AL-*): branch-settings edits are owner-only config
+  // changes and must leave an audit trail. metadata carries only the changed
+  // top-level keys (non-PHI settings keys), never the values.
+  const logger = ctx.get('logger');
+  try {
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: branch.organizationId,
+      branchId,
+      eventType: 'data-modification',
+      action: 'branch_settings.update',
+      resourceType: 'dental_branch',
+      resourceId: branchId,
+      metadata: { changedKeys: Object.keys(updates ?? {}) },
+    });
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write branch_settings.update audit log');
+  }
 
   return ctx.json({ branchId, settings: merged }, 200);
 }

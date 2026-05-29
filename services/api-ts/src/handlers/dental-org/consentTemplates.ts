@@ -16,7 +16,22 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { dentalConsentTemplates } from './repos/consent-template.schema';
 import { dentalMemberships } from './repos/membership.schema';
+import { dentalBranches } from './repos/branch.schema';
+import { logAuditEvent } from '@/core/audit-logger';
 import { eq, and } from 'drizzle-orm';
+
+/**
+ * V-ORG-002: Resolve the owning org id for a branch (audit tenantId). Returns
+ * the branchId as a safe fallback if the branch row is somehow missing so the
+ * audit write still succeeds.
+ */
+async function resolveTenantId(db: DatabaseInstance, branchId: string): Promise<string> {
+  const [branch] = await db
+    .select({ organizationId: dentalBranches.organizationId })
+    .from(dentalBranches)
+    .where(eq(dentalBranches.id, branchId));
+  return branch?.organizationId ?? branchId;
+}
 
 const createConsentTemplateSchema = z.object({
   name: z.string().min(1, 'name is required'),
@@ -97,6 +112,24 @@ export async function createConsentTemplate(ctx: BaseContext): Promise<Response>
     })
     .returning();
 
+  // V-ORG-002 / §10b (AL-*): consent-template lifecycle is owner-only and must
+  // be audited. Template name is config text (non-PHI); the body is not logged.
+  const logger = ctx.get('logger');
+  try {
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: await resolveTenantId(db, branchId),
+      branchId,
+      eventType: 'data-modification',
+      action: 'consent_template.create',
+      resourceType: 'dental_consent_template',
+      resourceId: created!.id,
+      metadata: { templateName: body.name },
+    });
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.create audit log');
+  }
+
   return ctx.json({ template: created }, 201);
 }
 
@@ -137,6 +170,23 @@ export async function updateConsentTemplate(ctx: BaseContext): Promise<Response>
     .where(eq(dentalConsentTemplates.id, templateId))
     .returning();
 
+  // V-ORG-002 / §10b (AL-*): audit consent-template updates.
+  const logger = ctx.get('logger');
+  try {
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: await resolveTenantId(db, branchId),
+      branchId,
+      eventType: 'data-modification',
+      action: 'consent_template.update',
+      resourceType: 'dental_consent_template',
+      resourceId: templateId,
+      metadata: { changedKeys: Object.keys(body) },
+    });
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.update audit log');
+  }
+
   return ctx.json({ template: updated }, 200);
 }
 
@@ -167,6 +217,23 @@ export async function deleteConsentTemplate(ctx: BaseContext): Promise<Response>
     .update(dentalConsentTemplates)
     .set({ active: false, updatedAt: new Date(), updatedBy: user.id })
     .where(eq(dentalConsentTemplates.id, templateId));
+
+  // V-ORG-002 / §10b (AL-*): audit consent-template soft-deletes.
+  const logger = ctx.get('logger');
+  try {
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: await resolveTenantId(db, branchId),
+      branchId,
+      eventType: 'data-modification',
+      action: 'consent_template.delete',
+      resourceType: 'dental_consent_template',
+      resourceId: templateId,
+      metadata: { softDelete: true },
+    });
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.delete audit log');
+  }
 
   return ctx.json({ deleted: true }, 200);
 }

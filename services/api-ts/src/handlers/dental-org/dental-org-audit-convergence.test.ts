@@ -30,11 +30,15 @@ import { createMember } from './createMember';
 import { DentalMembershipManagement_setPin } from './DentalMembershipManagement_setPin';
 import { DentalBranchManagement_create } from './DentalBranchManagement_create';
 import { DentalOrganizationManagement_create } from './DentalOrganizationManagement_create';
+import { updateFeeScheduleEntry } from './feeSchedule';
+import { updateBranchSettings } from './branchSettings';
+import { createConsentTemplate, updateConsentTemplate, deleteConsentTemplate } from './consentTemplates';
 import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
+import { dentalProcedureCodes } from '@/handlers/dental-visit/repos/procedure-code.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -80,9 +84,16 @@ function buildApp(user?: { id: string; email?: string; role?: string }) {
     zValidator('json', validators.DentalOrganizationManagement_createBody, validationErrorHandler),
     DentalOrganizationManagement_create as any,
   );
+  app.patch('/dental/fee-schedule/:cdt', updateFeeScheduleEntry as any);
+  app.put('/dental/branches/:branchId/settings', updateBranchSettings as any);
+  app.post('/dental/branches/:branchId/consent-templates', createConsentTemplate as any);
+  app.patch('/dental/branches/:branchId/consent-templates/:id', updateConsentTemplate as any);
+  app.delete('/dental/branches/:branchId/consent-templates/:id', deleteConsentTemplate as any);
   app.get('/dental/audit-events', getAuditEvents);
   return app;
 }
+
+const CDT_CODE = 'D9901';
 
 async function seedOrgBranchOwner() {
   const orgRepo = new OrganizationRepository(db);
@@ -100,11 +111,17 @@ async function seedOrgBranchOwner() {
     branchId: BRANCH_ID, personId: OWNER_ID, displayName: 'Owner',
     role: 'dentist_owner', status: 'active', pinFailedAttempts: 0,
   });
+  // V-ORG-002: a CDT code is required for the fee-schedule audit test.
+  await db.insert(dentalProcedureCodes).values({
+    cdtCode: CDT_CODE, description: 'Audit Test Procedure', category: 'diagnostic',
+    defaultFeePhp: 5000, active: true, createdBy: OWNER_ID, updatedBy: OWNER_ID,
+  }).onConflictDoNothing();
 }
 
 describe('dental-org audit convergence (dental_audit_log + viewer)', () => {
   afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_audit_log, dental_membership, dental_branch, dental_organization CASCADE`);
+    await db.execute(sql`DELETE FROM dental_procedure_code WHERE cdt_code = ${CDT_CODE}`);
+    await db.execute(sql`TRUNCATE TABLE dental_audit_log, dental_consent_template, dental_membership, dental_branch, dental_organization CASCADE`);
   });
 
   // --------------------------------------------------------------------------
@@ -223,5 +240,91 @@ describe('dental-org audit convergence (dental_audit_log + viewer)', () => {
 
     const branchRows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, branch.id));
     expect(branchRows.some((r) => r.action === 'branch.create' && r.targetType === 'dental_branch')).toBe(true);
+  });
+
+  // --------------------------------------------------------------------------
+  // V-ORG-002: fee-schedule mutation writes a dental_audit_log row
+  // --------------------------------------------------------------------------
+  test('updateFeeScheduleEntry writes a fee_schedule.update audit row', async () => {
+    await seedOrgBranchOwner();
+    const app = buildApp(owner);
+
+    const res = await app.request(`/dental/fee-schedule/${CDT_CODE}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 12345 }),
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, BRANCH_ID));
+    const row = rows.find((r) => r.action === 'fee_schedule.update');
+    expect(row).toBeDefined();
+    expect(row!.targetType).toBe('dental_branch');
+    expect(row!.actorId).toBe(OWNER_ID);
+    expect(row!.branchId).toBe(BRANCH_ID);
+    expect((row!.metadata as any).cdtCode).toBe(CDT_CODE);
+    expect((row!.metadata as any).priceCents).toBe(12345);
+  });
+
+  // --------------------------------------------------------------------------
+  // V-ORG-002: branch-settings mutation writes a dental_audit_log row
+  // --------------------------------------------------------------------------
+  test('updateBranchSettings writes a branch_settings.update audit row', async () => {
+    await seedOrgBranchOwner();
+    const app = buildApp(owner);
+
+    const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings: { clinicName: 'Renamed Clinic' } }),
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, BRANCH_ID));
+    const row = rows.find((r) => r.action === 'branch_settings.update');
+    expect(row).toBeDefined();
+    expect(row!.targetType).toBe('dental_branch');
+    expect(row!.actorId).toBe(OWNER_ID);
+    expect((row!.metadata as any).changedKeys).toContain('clinicName');
+  });
+
+  // --------------------------------------------------------------------------
+  // V-ORG-002: consent-template lifecycle writes dental_audit_log rows
+  // --------------------------------------------------------------------------
+  test('consent-template create/update/delete each write an audit row', async () => {
+    await seedOrgBranchOwner();
+    const app = buildApp(owner);
+
+    // CREATE
+    const createRes = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Extraction Consent', body: 'I consent.' }),
+    });
+    expect(createRes.status).toBe(201);
+    const template = ((await createRes.json()) as any).template;
+
+    const createRows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, template.id));
+    expect(createRows.some((r) => r.action === 'consent_template.create' && r.targetType === 'dental_consent_template')).toBe(true);
+
+    // UPDATE
+    const updateRes = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates/${template.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated Consent' }),
+    });
+    expect(updateRes.status).toBe(200);
+
+    // DELETE (soft)
+    const deleteRes = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates/${template.id}`, {
+      method: 'DELETE',
+    });
+    expect(deleteRes.status).toBe(200);
+
+    const allRows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, template.id));
+    const actions = allRows.map((r) => r.action);
+    expect(actions).toContain('consent_template.create');
+    expect(actions).toContain('consent_template.update');
+    expect(actions).toContain('consent_template.delete');
   });
 });

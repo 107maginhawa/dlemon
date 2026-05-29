@@ -30,6 +30,7 @@ import {
   listActiveProcedureCodes,
   getActiveProcedureCode,
 } from '@/handlers/dental-visit/repos/visit-org.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 
 const DEFAULT_CURRENCY = 'PHP';
 
@@ -114,6 +115,25 @@ export async function updateFeeScheduleEntry(ctx: BaseContext) {
   await db.update(dentalBranches)
     .set({ settings: merged, updatedAt: new Date(), updatedBy: user.id })
     .where(eq(dentalBranches.id, branchId));
+
+  // V-ORG-002 / §10b (AL-*): fee-schedule price changes are financially material
+  // (WF-025) and must leave an audit trail. targetId is the branch (CDT code is
+  // a string, not a uuid); the CDT code + new price live in non-PHI metadata.
+  const logger = ctx.get('logger');
+  try {
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: branch.organizationId,
+      branchId,
+      eventType: 'data-modification',
+      action: 'fee_schedule.update',
+      resourceType: 'dental_branch',
+      resourceId: branchId,
+      metadata: { cdtCode: cdt, priceCents },
+    });
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write fee_schedule.update audit log');
+  }
 
   const entry: FeeScheduleEntry = {
     cdtCode: procedure.cdtCode,
