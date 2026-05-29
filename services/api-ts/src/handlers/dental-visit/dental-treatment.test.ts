@@ -510,6 +510,103 @@ describe('BR-008: carry-over treatments', () => {
 });
 
 // ---------------------------------------------------------------------------
+// EM-VIS-002: carry-over with explicit source_visit_id
+// API_CONTRACTS §POST /carry-over requires source_visit_id in body
+// ---------------------------------------------------------------------------
+
+describe('EM-VIS-002: carry-over with explicit sourceVisitId', () => {
+  test('uses only treatments from the specified source visit when sourceVisitId provided', async () => {
+    const visitRepo = new VisitRepository(db);
+    const treatmentRepo = new TreatmentRepository(db);
+
+    // Two prior visits — only source visit has the treatment we want
+    const sourceVisit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+    const otherVisit  = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+
+    // Treatment in the source visit
+    const sourceTreatment = await treatmentRepo.createOne({ visitId: sourceVisit.id, patientId: PATIENT_ID, cdtCode: 'D1110', description: 'Adult prophylaxis', priceCents: 8500, carriedOver: false });
+    // Treatment in the other visit — must NOT be carried over
+    const _otherTreatment = await treatmentRepo.createOne({ visitId: otherVisit.id, patientId: PATIENT_ID, cdtCode: 'D0330', description: 'Panoramic image', priceCents: 15000, carriedOver: false });
+
+    const newVisit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${newVisit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceVisitId: sourceVisit.id }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.carriedOver)).toBe(true);
+    // Exactly the one treatment from sourceVisit
+    expect(body.carriedOver.length).toBe(1);
+    expect(body.carriedOver[0].cdtCode).toBe(sourceTreatment.cdtCode);
+    expect(body.carriedOver[0].carriedOver).toBe(true);
+    expect(body.carriedOver[0].sourceVisitId).toBe(sourceVisit.id);
+    // Suppress unused warning
+    void _otherTreatment;
+  });
+
+  test('returns 404 when sourceVisitId does not exist', async () => {
+    const visit = await seedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceVisitId: NONEXISTENT_ID }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 422 when sourceVisitId belongs to a different patient', async () => {
+    const visitRepo = new VisitRepository(db);
+
+    // Create a second patient visit (reuse PATIENT_2_ID seeded in beforeAll via shared person seed)
+    // We need PATIENT_2_ID to exist — seed it inline
+    const { persons: personsTable } = await import('@/handlers/person/repos/person.schema');
+    const { patients: patientsTable } = await import('@/handlers/patient/repos/patient.schema');
+    const PERSON_2_ID_LOCAL = 'e0000000-0000-1000-8000-000000000a02';
+    const PATIENT_2_ID_LOCAL = 'a0000000-0000-1000-8000-000000000a02';
+    await db.insert(personsTable).values({ id: PERSON_2_ID_LOCAL, firstName: 'Other', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+    await db.insert(patientsTable).values({ id: PATIENT_2_ID_LOCAL, person: PERSON_2_ID_LOCAL, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+
+    const patient2Visit = await visitRepo.createOne({ patientId: PATIENT_2_ID_LOCAL, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+    const patient1NewVisit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${patient1NewVisit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceVisitId: patient2Visit.id }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_SOURCE_VISIT');
+  });
+
+  test('sourceVisitId returns empty carriedOver when source visit has no pending treatments', async () => {
+    const visitRepo = new VisitRepository(db);
+
+    // Source visit exists but has no treatments
+    const sourceVisit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+    const newVisit    = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${newVisit.id}/carry-over`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceVisitId: sourceVisit.id }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.carriedOver.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Role gate — createDentalTreatment (CIMG note: tests assertBranchRole)
 // staff_full is blocked; dentist_owner is allowed through the gate
 // ---------------------------------------------------------------------------

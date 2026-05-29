@@ -1,13 +1,17 @@
 /**
  * carryOverTreatments — POST /dental/visits/:visitId/carry-over
  *
- * FR1.11: Auto carry-over — copy undismissed pending treatments from the patient's
- *          previous visit into the current visit.
+ * FR1.11: Carry over undismissed pending treatments from a specific previous visit
+ *          (identified by source_visit_id in the request body) into the current visit.
+ *
+ * When source_visit_id is provided, only treatments from that exact visit are
+ * carried over (contract-compliant path). When omitted, falls back to
+ * auto-discovery from the most recent prior visits (legacy behaviour).
  *
  * Also supports restore-from-dismissed: include dismissedIds in body to restore
  * specific dismissed treatments into the new visit.
  *
- * Body: { restoreDismissedIds?: string[] }
+ * Body: { sourceVisitId?: string; restoreDismissedIds?: string[] }
  */
 
 import type { BaseContext } from '@/types/app';
@@ -16,12 +20,16 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from '../repos/visit.repo';
 import { TreatmentRepository } from '../repos/treatment.repo';
+import type { DentalTreatment } from '../repos/treatment.schema';
 import { dentalTreatments } from '../repos/treatment.schema';
 import { dentalVisits } from '../repos/visit.schema';
 import { eq, and, inArray, ne, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
 const carryOverBodySchema = z.object({
+  /** EM-VIS-002: explicit source visit; when provided only treatments from this
+   *  visit are carried over (API_CONTRACTS §POST /carry-over). */
+  sourceVisitId: z.string().uuid().optional(),
   restoreDismissedIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -49,26 +57,39 @@ export async function carryOverTreatments(ctx: BaseContext) {
     throw new BusinessLogicError('Cannot carry over treatments into a completed/locked visit', 'VISIT_IMMUTABLE');
   }
 
-  // Find the most recent previous visit for this patient
-  const previousVisits = await db
-    .select()
-    .from(dentalVisits)
-    .where(
-      and(
-        eq(dentalVisits.patientId, currentVisit.patientId),
-        ne(dentalVisits.id, visitId)
-      )
-    )
-    .orderBy(desc(dentalVisits.createdAt))
-    .limit(5);
+  // EM-VIS-002: When source_visit_id is supplied, use it directly; otherwise
+  // fall back to auto-discovery across the most recent prior visits.
+  let previousVisitIds: string[];
 
-  if (previousVisits.length === 0) {
-    return ctx.json({ carriedOver: [], restoredDismissed: [], message: 'No previous visits to carry over from' }, 200);
+  if (body.sourceVisitId) {
+    // Validate the source visit belongs to the same patient
+    const sourceVisit = await visitRepo.findOneById(body.sourceVisitId);
+    if (!sourceVisit) throw new NotFoundError('Source visit not found');
+    if (sourceVisit.patientId !== currentVisit.patientId) {
+      throw new BusinessLogicError('Source visit does not belong to the same patient', 'INVALID_SOURCE_VISIT');
+    }
+    previousVisitIds = [body.sourceVisitId];
+  } else {
+    // Legacy auto-discovery: most recent prior visits for this patient
+    const previousVisits = await db
+      .select()
+      .from(dentalVisits)
+      .where(
+        and(
+          eq(dentalVisits.patientId, currentVisit.patientId),
+          ne(dentalVisits.id, visitId)
+        )
+      )
+      .orderBy(desc(dentalVisits.createdAt))
+      .limit(5);
+
+    if (previousVisits.length === 0) {
+      return ctx.json({ carriedOver: [], restoredDismissed: [], message: 'No previous visits to carry over from' }, 200);
+    }
+    previousVisitIds = previousVisits.map(v => v.id);
   }
 
-  const previousVisitIds = previousVisits.map(v => v.id);
-
-  // Find pending (diagnosed/planned) non-dismissed treatments from previous visits
+  // Find pending (diagnosed/planned) treatments from the resolved previous visit(s)
   const pendingTreatments = await db
     .select()
     .from(dentalTreatments)
@@ -99,7 +120,7 @@ export async function carryOverTreatments(ctx: BaseContext) {
   );
 
   // FR1.11: Restore from dismissed if requested
-  const restoredDismissed: any[] = [];
+  const restoredDismissed: DentalTreatment[] = [];
   if (Array.isArray(body?.restoreDismissedIds) && body.restoreDismissedIds.length > 0) {
     const dismissedTreatments = await db
       .select()
@@ -131,7 +152,7 @@ export async function carryOverTreatments(ctx: BaseContext) {
   }
 
   logger?.info(
-    { action: 'carryOverTreatments', visitId, carriedCount: carriedOver.length, restoredCount: restoredDismissed.length },
+    { action: 'carryOverTreatments', visitId, sourceVisitId: body.sourceVisitId ?? null, carriedCount: carriedOver.length, restoredCount: restoredDismissed.length },
     'Treatments carried over'
   );
 
