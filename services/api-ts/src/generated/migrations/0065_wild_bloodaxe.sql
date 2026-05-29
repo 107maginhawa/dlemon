@@ -1,0 +1,2 @@
+CREATE TYPE "public"."prescription_status" AS ENUM('pending', 'dispensed', 'cancelled');--> statement-breakpoint
+ALTER TABLE "prescription" ADD COLUMN "status" "prescription_status" DEFAULT 'pending' NOT NULL;
