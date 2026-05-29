@@ -31,7 +31,8 @@
     "bun": ">=1.2.21"
   },
   "overrides": {
-    "esbuild": "0.27.7"
+    "esbuild": "0.27.7",
+    "axios": ">=1.16.0"
   },
   "devDependencies": {
     "@esbuild/darwin-arm64": "0.27.7",
