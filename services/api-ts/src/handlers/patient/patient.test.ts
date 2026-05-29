@@ -512,7 +512,7 @@ describe('mergePatients handler', () => {
     expect(res.status).not.toBe(201);
   });
 
-  test('returns 500 (not implemented) for valid request body', async () => {
+  test('returns 501 (not implemented) for valid request body', async () => {
     const app = buildTestApp(authedUser);
 
     const res = await app.request('/patients/merge', {
@@ -525,8 +525,10 @@ describe('mergePatients handler', () => {
       }),
     });
 
-    // Handler throws Error('Not implemented: mergePatients')
-    expect(res.status).toBe(500);
+    // EM-PAT-007: unimplemented stub returns a clean 501, not a 500.
+    expect(res.status).toBe(501);
+    const body = await res.json() as any;
+    expect(body.code).toBe('NOT_IMPLEMENTED');
   });
 });
 
