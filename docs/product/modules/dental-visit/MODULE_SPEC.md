@@ -31,6 +31,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | Carry-over | Planned/diagnosed treatments from prior visits shown as indicators |
 | Focal Card | Active card in the Timeline Carousel; left/right are preview-only |
 | Baseline | Chart snapshot captured at a specific visit |
+| Declined | Terminal treatment state meaning the patient explicitly declined the recommended procedure (not the same as dismissed — dismissed is clinician-initiated, declined is patient-initiated). Reachable from `diagnosed` or `planned`. |
 
 ---
 
@@ -70,7 +71,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | BR-002 | Visit transitions linear: draft→active→completed→locked | All status changes | 422 on invalid |
 | BR-003 | Visit immutable after completed/locked | All write handlers | 422 + isReadOnly flag |
 | BR-005 | Auto-discard empty draft visit (deferred ADR-010) | Draft visits | NOT IMPLEMENTED |
-| BR-006 | Treatment state forward-only: diagnosed→planned→performed→verified; any→dismissed | updateTreatment | 422 on reversal |
+| BR-006 | Treatment state forward-only: diagnosed→planned→performed→verified; any non-terminal→dismissed or declined (patient refusal). `declined` is a terminal state reachable from `diagnosed` or `planned` only (not from `performed`/`verified`). | updateTreatment | 422 on reversal |
 | BR-007 | Completed treatment immutable (code, tooth, surface, price) | updateTreatment | 422 |
 | BR-008 | Carry-over creates new `dental_treatment` rows on the next visit with `carriedOver=true, sourceVisitId=<prior visit id>`, status=`diagnosed`; not billed until status moves to `performed` | `carryOverTreatments.ts` | Enforced |
 
@@ -93,7 +94,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 
 **`dental_visit`:** id, patient_id, branch_id, dentist_member_id, status (enum), chief_complaint, check_in_time, completed_at, locked_at, version, notes_count (computed — count of visit_notes rows)
 
-**`dental_treatment`:** id, visit_id, tooth_fdi, surface, cdt_code, icd10_code, status (enum: diagnosed/planned/performed/verified/dismissed), price_cents, notes, created_by, carried_over, source_visit_id
+**`dental_treatment`:** id, visit_id, tooth_fdi, surface, cdt_code, icd10_code, status (enum: diagnosed/planned/performed/verified/dismissed/declined), price_cents, notes, created_by, carried_over, source_visit_id, refusal_reason (text — populated when status=declined)
 
 **`dental_chart`:** id, visit_id, patient_id, teeth (JSONB per-tooth conditions/treatments)
 
@@ -116,8 +117,23 @@ External refs by ID: Invoice (dental-billing), PMDDocument (dental-pmd), Imaging
 See DOMAIN_MODEL.md §6 SM-VISIT and SM-TREATMENT (source of truth).
 ```
 Visit:  draft → active → completed → locked   (+discarded, BR-005 deferred)
-Treatment: diagnosed → planned → performed → verified  (+dismissed from any)
+
+Treatment (forward-only):
+  diagnosed → planned → performed → verified
+  diagnosed → dismissed  (clinician-initiated)
+  diagnosed → declined   (patient refusal — terminal)
+  planned   → performed → verified
+  planned   → dismissed
+  planned   → declined   (terminal)
+  performed → verified
+  performed → dismissed
+  verified  → dismissed
+  dismissed: []  (terminal)
+  declined:  []  (terminal — patient explicitly declined recommended treatment)
 ```
+Note: `declined` differs from `dismissed` in intent — `dismissed` is clinician-initiated
+(e.g. "treatment no longer applicable"), `declined` records a patient refusal and
+populates `refusal_reason`. Both are terminal and reachable from pre-performed states.
 
 ---
 
