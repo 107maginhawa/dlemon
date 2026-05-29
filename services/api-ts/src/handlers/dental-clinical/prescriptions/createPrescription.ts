@@ -6,7 +6,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PrescriptionRepository } from '../repos/prescription.repo';
 import { medicalHistoryEntries } from '../repos/medical-history.schema';
@@ -30,6 +30,11 @@ export async function createPrescription(
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // BR-003: writes to locked or completed visits are blocked
+  if (visit.status === 'locked' || visit.status === 'completed') {
+    throw new BusinessLogicError('Cannot add prescriptions to a locked or completed visit', 'VISIT_LOCKED');
+  }
 
   // EM-CLI-005: Validate that prescriberMemberId refers to an active membership in this branch.
   // Prevents callers from specifying a member ID from a different branch or an inactive member.

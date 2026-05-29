@@ -6,7 +6,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { ConsentFormRepository } from '../repos/consent-form.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -27,6 +27,11 @@ export async function createConsentForm(
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
+
+  // BR-003: writes to locked or completed visits are blocked
+  if (visit.status === 'locked' || visit.status === 'completed') {
+    throw new BusinessLogicError('Cannot add consent forms to a locked or completed visit', 'VISIT_LOCKED');
+  }
 
   const repo = new ConsentFormRepository(db);
 

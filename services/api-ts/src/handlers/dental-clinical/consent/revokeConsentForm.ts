@@ -9,7 +9,7 @@
 
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
-import { ConflictError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { ConflictError, UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { ConsentFormRepository } from '../repos/consent-form.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -40,6 +40,11 @@ export async function revokeConsentForm(ctx: Context): Promise<Response> {
   // Branch-level authorization via consent form's parent visit
   const visit = await getVisitOrThrow(db, existing.visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // A signed consent form cannot be revoked (illegal signed → revoked transition)
+  if (existing.signed) {
+    throw new BusinessLogicError('Cannot revoke a signed consent form', 'CONSENT_ALREADY_SIGNED');
+  }
 
   if (existing.revoked) {
     throw new ConflictError('Consent form has already been revoked');
