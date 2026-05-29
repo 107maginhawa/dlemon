@@ -33,6 +33,11 @@ const ORG_ID     = 'a6000000-0000-1000-8000-000000000006';
 const MEMBER_ID  = '7c600000-0000-4000-8000-000000000006';
 const VISIT_ID   = 'f6000000-0000-1000-8000-000000000003';
 
+// Archived patient fixture — b601 namespace
+const ARCHIVED_PATIENT_ID = 'f6010000-0000-1000-8000-000000000001';
+const ARCHIVED_PERSON_ID  = 'f6010000-0000-1000-8000-000000000002';
+const ARCHIVED_VISIT_ID   = 'f6010000-0000-1000-8000-000000000003';
+
 beforeAll(async () => {
   const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
   const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
@@ -65,6 +70,22 @@ beforeAll(async () => {
   }).onConflictDoNothing();
   await db.insert(dentalVisits).values({
     id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
+    dentistMemberId: MEMBER_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // Seed archived patient
+  await db.insert(persons).values({
+    id: ARCHIVED_PERSON_ID, firstName: 'Archived', lastName: 'Patient',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(patients).values({
+    id: ARCHIVED_PATIENT_ID, person: ARCHIVED_PERSON_ID, preferredBranchId: BRANCH_ID,
+    status: 'archived',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalVisits).values({
+    id: ARCHIVED_VISIT_ID, patientId: ARCHIVED_PATIENT_ID, branchId: BRANCH_ID,
     dentistMemberId: MEMBER_ID,
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
@@ -127,6 +148,9 @@ afterEach(async () => {
   const { treatmentPlanVersions } = await import('./repos/treatment-plan-version.schema');
   await db.delete(treatmentPlanVersions).where(
     sql`patient_id = ${PATIENT_ID}::uuid`
+  );
+  await db.delete(treatmentPlanVersions).where(
+    sql`patient_id = ${ARCHIVED_PATIENT_ID}::uuid`
   );
 });
 
@@ -210,6 +234,26 @@ describe('acceptTreatmentPlan', () => {
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
     );
     expect(res.status).toBe(400);
+  });
+
+  test('returns 422 PATIENT_ARCHIVED when patient is archived and writes no snapshot', async () => {
+    const app = buildTestApp();
+    const { treatmentPlanVersions } = await import('./repos/treatment-plan-version.schema');
+
+    const res = await app.request(
+      `/dental/patients/${ARCHIVED_PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('PATIENT_ARCHIVED');
+
+    // Guard must fire BEFORE the snapshot insert — no version row written
+    const versions = await db
+      .select({ id: treatmentPlanVersions.id })
+      .from(treatmentPlanVersions)
+      .where(sql`patient_id = ${ARCHIVED_PATIENT_ID}::uuid`);
+    expect(versions).toHaveLength(0);
   });
 });
 

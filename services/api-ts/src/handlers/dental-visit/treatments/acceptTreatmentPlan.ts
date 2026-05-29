@@ -13,8 +13,9 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createSnapshotVersion } from '@/core/database.schema';
 import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
 import { dentalTreatments } from '../repos/treatment.schema';
@@ -82,6 +83,13 @@ export async function acceptTreatmentPlan(ctx: BaseContext) {
 
   const db = ctx.get('database') as DatabaseInstance;
   await assertBranchAccess(db, user.id, branchId);
+
+  // EF-PAT-001: block writes on archived patients
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const body = await ctx.req.json().catch(() => ({})) as { consentFormId?: string };
 
