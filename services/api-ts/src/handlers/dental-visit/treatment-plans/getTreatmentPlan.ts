@@ -23,9 +23,10 @@ export async function getTreatmentPlan(ctx: BaseContext) {
   const patientId = ctx.req.param('patientId');
   if (!patientId) throw new ValidationError('patientId is required');
   const branchId = ctx.req.query('branchId');
+  if (!branchId) throw new ValidationError('branchId is required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  if (branchId) await assertBranchAccess(db, user.id, branchId);
+  await assertBranchAccess(db, user.id, branchId);
 
   const logger = ctx.get('logger');
 
