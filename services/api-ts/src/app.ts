@@ -48,6 +48,7 @@ import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
+import { getFeeSchedule, updateFeeScheduleEntry } from '@/handlers/dental-org/feeSchedule';
 import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
 import { listPatientContacts } from '@/handlers/dental-patient/contacts/listPatientContacts';
 import { updatePatientContact } from '@/handlers/dental-patient/contacts/updatePatientContact';
@@ -196,6 +197,15 @@ export function createApp(config: Config): App {
   (app as any).get('/dental/admin/audit',
     authMiddleware({ roles: ['user'] }),
     getAuditEvents
+  );
+  // Fee schedule (EF-ORG-P016 / WF-025, FR6.3) — CDT catalog with per-branch price overrides.
+  (app as any).get('/dental/fee-schedule',
+    authMiddleware({ roles: ['user'] }),
+    getFeeSchedule
+  );
+  (app as any).patch('/dental/fee-schedule/:cdt',
+    authMiddleware({ roles: ['user'] }),
+    updateFeeScheduleEntry
   );
   // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
   (app as any).delete('/dental/audit-events/:id', (c: any) =>

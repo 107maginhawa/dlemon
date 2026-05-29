@@ -145,21 +145,26 @@ Update membership role or status.
 
 ### GET /api/v1/dental/fee-schedule
 
-Get CDT fee schedule for a branch.
+Get CDT fee schedule for a branch. The fee schedule is the active CDT
+procedure-code catalog with per-branch price overrides; entries without an
+override use the procedure code's default fee.
 
 **Auth:** `dentist_owner`, `dentist_associate`
-**Query params:** `branch_id` (uuid, required)
+**Query params:** `branchId` (uuid, required)
 
 **Response 200:** `{ data: FeeScheduleEntry[] }`
 
 | Field | Type | Nullable | Notes |
 |-------|------|----------|-------|
-| `cdt_code` | string | NO | e.g., `"D0150"` |
-| `description` | string | NO | |
-| `price_cents` | integer | NO | Amount in cents |
-| `currency` | string | NO | ISO 4217, e.g., `"AUD"` |
+| `cdtCode` | string | NO | e.g., `"D0150"` |
+| `description` | string | NO | From the CDT procedure-code catalog |
+| `priceCents` | integer | NO | Effective price for this branch, in cents |
+| `currency` | string | NO | ISO 4217 (from branch settings; defaults to `"PHP"`) |
 
-**Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`
+**Errors:** `VALIDATION_ERROR(400)` (missing `branchId`), `NOT_FOUND(404)`, `FORBIDDEN(403)`
+
+> Field/param names are camelCase to match the platform wire convention and the
+> generated SDK (see sibling endpoints e.g. `GET /api/v1/dental/dashboard`).
 
 ---
 
@@ -174,12 +179,16 @@ Update price for a CDT code.
 
 | Field | Type | Nullable | Required | Constraints | Example |
 |-------|------|----------|----------|-------------|---------|
-| `branch_id` | string | NO | YES | uuid | `"01JX..."` |
-| `price_cents` | integer | NO | YES | min:0, max:999999 | `15000` |
+| `branchId` | string | NO | YES | uuid | `"01JX..."` |
+| `priceCents` | integer | NO | YES | min:0, max:999999 | `15000` |
 
-**Response 200:** `{ data: FeeScheduleEntry }`
+**Response 200:** `{ data: FeeScheduleEntry }` (the updated entry)
 
-**Errors:** `INVALID_CDT_CODE(422)`, `VALIDATION_ERROR(400)`, `FORBIDDEN(403)`
+**Errors:** `VALIDATION_ERROR(400)`, `FORBIDDEN(403)`, `INVALID_CDT_CODE(422)` (unknown/inactive CDT code)
+
+Sets a per-branch price override on `dental_branch.settings.feeSchedule`
+(`Record<cdtCode, priceCents>`). The owner-only role check runs before the CDT
+existence check so CDT validity is never leaked to under-privileged callers.
 
 ---
 
