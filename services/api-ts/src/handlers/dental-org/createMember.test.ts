@@ -176,6 +176,43 @@ describe('createMember handler', () => {
   });
 
   // --------------------------------------------------------------------------
+  // EF-ORG-011: dentist_owner role enforcement
+  // --------------------------------------------------------------------------
+
+  test('returns 403 when caller is not dentist_owner (staff_full role)', async () => {
+    await seedOrgAndBranch();
+    // Override the membership seeded in seedOrgAndBranch: re-seed as staff_full
+    const membershipRepo = new MembershipRepository(db);
+    // Deactivate the dentist_owner seed membership and re-add as staff_full
+    await db.execute(sql`UPDATE dental_membership SET role = 'staff_full' WHERE person_id = ${PERSON_ID}`);
+
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'New Staff', role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('returns 403 when caller is dentist_associate (not owner)', async () => {
+    await seedOrgAndBranch();
+    await db.execute(sql`UPDATE dental_membership SET role = 'dentist_associate' WHERE person_id = ${PERSON_ID}`);
+
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'New Staff', role: 'staff_full' }),
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  // --------------------------------------------------------------------------
   // AL-003: HIPAA audit trail
   // --------------------------------------------------------------------------
 
