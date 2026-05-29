@@ -25,6 +25,11 @@ export async function updateTask(ctx: any): Promise<Response> {
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
+
   const taskRepo = new TaskRepository(db, logger);
   const existing = await taskRepo.findOneById(taskId, patientId);
   if (!existing) throw new NotFoundError('Task not found');

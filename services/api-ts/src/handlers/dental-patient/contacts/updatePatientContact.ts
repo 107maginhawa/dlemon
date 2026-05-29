@@ -4,7 +4,7 @@
  * AC-003 / AC-010: Update contact fields. Returns 404 when contact not found.
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -23,6 +23,11 @@ export async function updatePatientContact(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const contactRepo = new PatientContactRepository(db, logger);
   const updated = await contactRepo.update(contactId, body);

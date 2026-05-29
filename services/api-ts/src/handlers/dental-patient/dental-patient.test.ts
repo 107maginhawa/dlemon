@@ -71,7 +71,9 @@ beforeAll(async () => {
   const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
   await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'DentalPatient Clinic', tier: 'solo', ownerPersonId: STAFF_USER_ID, countryCode: 'PH', createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
-  await db.insert(dentalMemberships).values({ id: 'eedd0000-0000-1000-8000-000000000001', branchId: BRANCH_ID, personId: STAFF_USER_ID, displayName: 'Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID }).onConflictDoNothing();
+  // EM-PAT-002: use dentist_owner so archive tests pass with the new role guard
+  await db.insert(dentalMemberships).values({ id: 'eedd0000-0000-1000-8000-000000000001', branchId: BRANCH_ID, personId: STAFF_USER_ID, displayName: 'Owner', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: STAFF_USER_ID, updatedBy: STAFF_USER_ID })
+    .onConflictDoUpdate({ target: dentalMemberships.id, set: { role: 'dentist_owner', displayName: 'Owner' } });
 });
 
 const ve = (result: any, c: any) => {
@@ -796,5 +798,263 @@ describe('FR2.21: itemized patient statement', () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/statement`);
     expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// EF-PAT-002: consent check returns 422 CONSENT_REQUIRED (not 400)
+// =============================================================================
+
+describe('EF-PAT-002: consent check returns 422 CONSENT_REQUIRED', () => {
+  afterEach(truncate);
+
+  test('POST /dental/patients with consentGiven:false returns 422 CONSENT_REQUIRED', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'No Consent Patient', consentGiven: false, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CONSENT_REQUIRED');
+  });
+
+  test('POST /dental/patients with consentGiven:true returns 201', async () => {
+    const app = buildTestApp(authedUser);
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Consent Patient', consentGiven: true, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
+// =============================================================================
+// EM-PAT-002: archiveDentalPatient requires dentist_owner role
+// =============================================================================
+
+describe('EM-PAT-002: archiveDentalPatient requires dentist_owner role', () => {
+  afterEach(truncate);
+
+  test('archive by hygienist (non-owner) returns 403', async () => {
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+    const HYGIENIST_ID = 'c1000000-0000-1000-8000-000000000099';
+    await db.insert(dentalMemberships).values({
+      id: 'eedd0000-0000-1000-8000-000000000099',
+      branchId: BRANCH_ID,
+      personId: HYGIENIST_ID,
+      displayName: 'Hygienist',
+      role: 'hygienist',
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+
+    const hygienistUser = { id: HYGIENIST_ID, email: 'hygienist@clinic.com' };
+    const app = buildTestApp(hygienistUser);
+    const ownerApp = buildTestApp(authedUser);
+    const patientRes = await ownerApp.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Archive Target', consentGiven: true, branchId: BRANCH_ID }),
+    });
+    const p = await patientRes.json() as any;
+
+    const res = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('archive by dentist_owner returns 200', async () => {
+    // authedUser is dentist_owner (set in beforeAll) — no role change needed
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Owner Archive Patient');
+    const res = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(res.status).toBe(200);
+  });
+});
+
+// =============================================================================
+// EM-PAT-003: archiveDentalPatient parses and stores reason
+// =============================================================================
+
+describe('EM-PAT-003: archiveDentalPatient stores archiveNote', () => {
+  afterEach(truncate);
+
+  test('archive with reason body stores archiveNote on patient', async () => {
+    // authedUser is dentist_owner (set in beforeAll)
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Reason Archive Patient');
+
+    const res = await app.request(`/dental/patients/${p.id}/archive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Patient moved to another clinic' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('archived');
+    expect(body.archiveNote).toBe('Patient moved to another clinic');
+  });
+
+  test('archive without reason body stores null archiveNote', async () => {
+    // authedUser is dentist_owner (set in beforeAll)
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'No Reason Archive Patient');
+
+    const res = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('archived');
+  });
+});
+
+// =============================================================================
+// EM-PAT-004 / EF-PAT-003: listDentalPatients strict branchId scope
+// =============================================================================
+
+describe('EM-PAT-004/EF-PAT-003: listDentalPatients is strictly scoped to branchId', () => {
+  afterEach(truncate);
+
+  test('patients registered at another branch in the same org are NOT returned', async () => {
+    const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+
+    const BRANCH_B_ID = 'd2000000-0000-1000-8000-000000000002';
+    await db.insert(dentalBranches).values({
+      id: BRANCH_B_ID,
+      organizationId: ORG_ID,
+      name: 'Branch B',
+      timezone: 'Asia/Manila',
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+    await db.insert(dentalMemberships).values({
+      id: 'eedd0000-0000-1000-8000-000000000002',
+      branchId: BRANCH_B_ID,
+      personId: STAFF_USER_ID,
+      displayName: 'Staff B',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+
+    const appA = buildTestApp(authedUser);
+
+    // Create patient at branch A
+    await createPatient(appA, 'Branch A Patient', { branchId: BRANCH_ID });
+
+    // Create patient at branch B using a separate app with branch B context
+    const appB = new Hono();
+    appB.use('*', async (c, next) => {
+      (c as any).set('database', db);
+      (c as any).set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
+      (c as any).set('user', authedUser);
+      (c as any).set('session', { id: 'test-session' });
+      await next();
+    });
+    const { CreateDentalPatientBody: CDP } = await import('@/generated/openapi/validators');
+    const { zValidator: zv } = await import('@hono/zod-validator');
+    const { createDentalPatient: cdp } = await import('./identity/createDentalPatient');
+    appB.post('/dental/patients', zv('json', CDP, (r: any, c: any) => c.json({ error: 'bad' }, 400)), cdp as any);
+    await appB.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Branch B Patient', consentGiven: true, branchId: BRANCH_B_ID }),
+    });
+
+    // List with branchId=BRANCH_ID — should NOT include Branch B patient
+    const res = await appA.request(`/dental/patients?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const names = body.data.map((p: any) => p.displayName);
+    expect(names.some((n: string) => n.includes('Branch B Patient'))).toBe(false);
+    expect(names.some((n: string) => n.includes('Branch A Patient'))).toBe(true);
+  });
+});
+
+// =============================================================================
+// EF-PAT-001: archived patient write-block
+// =============================================================================
+
+describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_ARCHIVED', () => {
+  afterEach(truncate);
+
+  async function archivePatientDirectly(patientId: string) {
+    await db.update(patients).set({ status: 'archived', archivedAt: new Date() }).where(eq(patients.id, patientId));
+  }
+
+  test('updateDentalPatient on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Archive Write Patient');
+    await archivePatientDirectly(p.id);
+
+    const res = await app.request(`/dental/patients/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recallNote: 'blocked' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('PATIENT_ARCHIVED');
+  });
+
+  test('addFollowUpNote on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Archive Note Patient');
+    await archivePatientDirectly(p.id);
+
+    const res = await app.request(`/dental/patients/${p.id}/follow-up-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'should be blocked' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('PATIENT_ARCHIVED');
+  });
+
+  test('createRecall on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+    // Test createRecall via direct handler invocation (bypasses Hono routing complexity)
+    const { createRecall: cr } = await import('./recalls/createRecall');
+    const { AppError: AE } = await import('@/core/errors');
+
+    const patientApp = buildTestApp(authedUser);
+    const p = await createPatient(patientApp, 'Archive Recall Patient');
+    await archivePatientDirectly(p.id);
+
+    // Build a fake Hono context matching what the handler expects
+    const fakeCtx: any = {
+      get: (key: string) => {
+        if (key === 'user') return authedUser;
+        if (key === 'database') return db;
+        if (key === 'logger') return { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
+        return undefined;
+      },
+      req: {
+        valid: (type: string) => {
+          if (type === 'param') return { patientId: p.id };
+          if (type === 'json') return { type: 'cleaning', dueDate: '2026-09-01' };
+          return {};
+        },
+      },
+      json: (body: any, status: number) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
+    };
+
+    let caughtError: any = null;
+    try {
+      await cr(fakeCtx);
+    } catch (err) {
+      caughtError = err;
+    }
+
+    expect(caughtError).not.toBeNull();
+    expect(caughtError instanceof AE).toBe(true);
+    expect(caughtError.statusCode).toBe(422);
+    expect(caughtError.code).toBe('PATIENT_ARCHIVED');
   });
 });

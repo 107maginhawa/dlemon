@@ -22,6 +22,11 @@ export async function createClaimDraft(ctx: any): Promise<Response> {
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
+
   // Verify insuranceProfileId belongs to this patient
   const profileRepo = new InsuranceProfileRepository(db, logger);
   const profile = await profileRepo.findOneById(body.insuranceProfileId, patientId);

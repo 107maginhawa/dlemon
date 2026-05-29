@@ -9,7 +9,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
@@ -30,6 +30,11 @@ export async function updateDentalPatient(
   const repo = new PatientRepository(db, logger);
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   // Branch-level authorization
   if (patient.preferredBranchId) {

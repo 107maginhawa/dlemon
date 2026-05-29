@@ -4,7 +4,7 @@
  * P2-003: Create a patient-level task (status defaults to 'open').
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { TaskRepository } from '../repos/task.repo';
 import type { DatabaseInstance } from '@/core/database';
@@ -22,6 +22,11 @@ export async function createTask(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const taskRepo = new TaskRepository(db, logger);
   const task = await taskRepo.create({

@@ -10,7 +10,6 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { BranchRepository } from '../../dental-org/repos/branch.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { buildPaginationMeta } from '@/utils/query';
 import { sql, inArray } from 'drizzle-orm';
@@ -35,17 +34,9 @@ export async function listDentalPatients(
 
   const filters: Record<string, any> = {};
 
-  // When a branchId is provided, expand it to all branches in the same org
-  // so patients from any branch in the org are visible (not just one branch)
+  // EM-PAT-004/EF-PAT-003: strict per-branch scope — never expand to the whole org
   if (q['branchId']) {
-    const branchRepo = new BranchRepository(db, logger);
-    const branch = await branchRepo.findOneById(q['branchId']);
-    if (branch?.organizationId) {
-      const orgBranches = await branchRepo.listByOrg(branch.organizationId);
-      filters['branchIds'] = orgBranches.map(b => b.id);
-    } else {
-      filters['branchId'] = q['branchId'];
-    }
+    filters['branchId'] = q['branchId'];
   }
 
   if (q['q']) filters['q'] = q['q'];

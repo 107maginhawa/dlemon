@@ -279,7 +279,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Archive a patient (soft-archive: sets status='archived').
    * EC1: blocks if the patient has an active payment plan.
    */
-  async archivePatient(id: string): Promise<ArchiveResult> {
+  async archivePatient(id: string, note?: string): Promise<ArchiveResult> {
     const patient = await this.findOneById(id);
     if (!patient) {
       return { success: false, reason: 'Patient not found' };
@@ -299,7 +299,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
     // Atomic WHERE guard prevents TOCTOU: concurrent calls both reading status='active'
     const [updated] = await this.db
       .update(patients)
-      .set({ status: 'archived', archivedAt: new Date(), needsFollowUp: false, updatedAt: new Date() })
+      .set({ status: 'archived', archivedAt: new Date(), needsFollowUp: false, updatedAt: new Date(), archiveNote: note ?? null })
       .where(and(eq(patients.id, id), eq(patients.status, 'active')))
       .returning();
 

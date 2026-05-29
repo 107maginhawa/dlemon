@@ -18,7 +18,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, ValidationError, BusinessLogicError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { findDuplicateDentalPatients, createPatientForRegistration } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
@@ -34,7 +34,7 @@ export async function createDentalPatient(
   const body = ctx.req.valid('json');
 
   if (!body.displayName?.trim()) throw new ValidationError('displayName cannot be empty or whitespace');
-  if (!body.consentGiven) throw new ValidationError('Patient consent is required');
+  if (!body.consentGiven) throw new BusinessLogicError('Patient consent is required', 'CONSENT_REQUIRED');
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

@@ -5,7 +5,7 @@
  * BR-003: completed and cancelled are terminal states.
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors'; // BusinessLogicError used for FSM + PATIENT_ARCHIVED
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { RecallRepository } from '../repos/recall.repo';
 import { RECALL_FSM, type RecallStatus } from '../repos/recall.schema';
@@ -24,6 +24,11 @@ export async function updateRecall(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const recallRepo = new RecallRepository(db, logger);
   const existing = await recallRepo.findOneById(recallId, patientId);

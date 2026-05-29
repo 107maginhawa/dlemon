@@ -2,7 +2,7 @@
  * createInsuranceProfile — POST /dental/patients/:patientId/insurance-profiles
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
@@ -20,6 +20,11 @@ export async function createInsuranceProfile(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const repo = new InsuranceProfileRepository(db, logger);
   const profile = await repo.create({

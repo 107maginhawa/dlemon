@@ -4,7 +4,7 @@
  * AC-001: Create a recall entry for a patient (status defaults to 'pending').
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { RecallRepository } from '../repos/recall.repo';
 import type { DatabaseInstance } from '@/core/database';
@@ -22,6 +22,11 @@ export async function createRecall(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-001: block writes on archived patients
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const recallRepo = new RecallRepository(db, logger);
   const recall = await recallRepo.create({

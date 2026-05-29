@@ -34,6 +34,7 @@ export const patients = pgTable('patient', {
   // FR2.9: Patient status management
   status: text('status').default('active').notNull(), // 'active' | 'archived'
   archivedAt: timestamp('archived_at'),
+  archiveNote: text('archive_note'), // EM-PAT-003: reason stored at archive time
 
   // FR2.16: Emergency contact
   emergencyContact: jsonb('emergency_contact').$type<EmergencyContact>(),

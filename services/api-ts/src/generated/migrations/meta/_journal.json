@@ -435,6 +435,13 @@
       "when": 1779888960281,
       "tag": "0061_normal_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1780015560037,
+      "tag": "0062_odd_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

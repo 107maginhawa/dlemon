@@ -2,8 +2,9 @@
  * updateInsuranceProfile — PATCH /dental/patients/:patientId/insurance-profiles/:profileId
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateInsuranceProfile(ctx: any): Promise<Response> {
@@ -15,6 +16,13 @@ export async function updateInsuranceProfile(ctx: any): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // EF-PAT-001: block writes on archived patients
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const repo = new InsuranceProfileRepository(db, logger);
   const existing = await repo.findOneById(profileId, patientId);

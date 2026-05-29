@@ -2,13 +2,15 @@
  * archiveDentalPatient — POST /dental/patients/:id/archive
  *
  * FR2.7: Archive patient with EC1 guard (block if active payment plan).
+ * EM-PAT-002: dentist_owner role required (not just any branch member).
+ * EM-PAT-003: Optional reason body is parsed and stored as archiveNote.
  */
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators';
 
 export async function archiveDentalPatient(
@@ -24,14 +26,25 @@ export async function archiveDentalPatient(
 
   const repo = new PatientRepository(db, logger);
 
-  // Branch-level authorization
+  // Branch-level authorization — dentist_owner only (EM-PAT-002)
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
   if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
   }
 
-  const result = await repo.archivePatient(patientId);
+  // EM-PAT-003: parse optional reason from body
+  let reason: string | undefined;
+  try {
+    const rawBody = await ctx.req.json();
+    if (rawBody && typeof rawBody['reason'] === 'string' && rawBody['reason'].trim()) {
+      reason = rawBody['reason'].trim();
+    }
+  } catch {
+    // no body or invalid JSON — reason remains undefined
+  }
+
+  const result = await repo.archivePatient(patientId, reason);
 
   if (!result.success) {
     if (result.reason === 'Patient not found') {
@@ -40,7 +53,7 @@ export async function archiveDentalPatient(
     throw new BusinessLogicError(result.reason ?? 'Cannot archive patient', 'ARCHIVE_BLOCKED');
   }
 
-  logger?.info({ action: 'archiveDentalPatient', patientId, actorId: user.id }, 'Patient archived');
+  logger?.info({ action: 'archiveDentalPatient', patientId, actorId: user.id, reason }, 'Patient archived');
 
   const updated = await repo.findOneById(patientId);
   return ctx.json(updated, 200);

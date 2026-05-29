@@ -10,13 +10,13 @@ import type { DatabaseInstance } from '@/core/database';
 import { patients } from './patient.schema';
 import { PatientRepository } from './patient.repo';
 
-/** Lookup patient for branch authorization. Returns { id, preferredBranchId } or null. */
+/** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
 export async function getPatientForDentalPatient(
   db: DatabaseInstance,
   patientId: string,
-): Promise<{ id: string; preferredBranchId: string | null } | null> {
+): Promise<{ id: string; preferredBranchId: string | null; status: string } | null> {
   const [row] = await db
-    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId })
+    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId, status: patients.status })
     .from(patients)
     .where(eq(patients.id, patientId))
     .limit(1);

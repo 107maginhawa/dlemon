@@ -4,8 +4,9 @@
  * alt01: Update severity, description, or active status of a dental alert.
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalAlertRepository } from '../repos/dental-alert.repo';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateDentalAlert(ctx: any): Promise<Response> {
@@ -17,6 +18,13 @@ export async function updateDentalAlert(ctx: any): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // EF-PAT-001: block writes on archived patients
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  if (patient.status === 'archived') {
+    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+  }
 
   const alertRepo = new DentalAlertRepository(db, logger);
   const existing = await alertRepo.findOneById(alertId, patientId);
