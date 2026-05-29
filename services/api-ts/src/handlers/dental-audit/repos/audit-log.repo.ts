@@ -17,7 +17,14 @@ export class AuditLogRepository {
   constructor(private db: DatabaseInstance) {}
 
   async insert(entry: NewDentalAuditLog): Promise<DentalAuditLog> {
-    const [row] = await this.db.insert(dentalAuditLog).values(entry).returning();
+    // EM-AUD-008: generate the id explicitly. The id column has no reliable
+    // DB-level default in migrated databases (schema drift), so relying on it
+    // makes audit writes fail the NOT NULL constraint — and audit-logger swallows
+    // the error, leaving the dental audit viewer blind. See [[project_run7_enforcement]].
+    const [row] = await this.db
+      .insert(dentalAuditLog)
+      .values({ ...entry, id: entry.id ?? crypto.randomUUID() })
+      .returning();
     return row!;
   }
 

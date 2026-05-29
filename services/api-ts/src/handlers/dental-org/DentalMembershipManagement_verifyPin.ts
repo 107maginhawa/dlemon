@@ -4,7 +4,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { DentalMembershipManagement_verifyPinBody, DentalMembershipManagement_verifyPinParams } from '@/generated/openapi/validators';
 
 /**
@@ -53,20 +53,20 @@ export async function DentalMembershipManagement_verifyPin(
     // FR6.4 / EM-ORG-020: Track last login for activity visibility (parity with legacy verifyPin).
     await repo.trackLastLogin(membershipId);
 
-    // CF-46/AUTH-07: Write audit log entry on successful PIN verification.
+    // CF-46/AUTH-07 / EM-AUD-008: Write audit entry on successful PIN verification.
+    // Routed through @/core/audit-logger so the login event is visible in the
+    // dental audit viewer (dental_audit_log), branch-scoped.
     try {
       await logAuditEvent(db, logger, {
+        personId: user.id,
+        tenantId: member.branchId,
+        branchId: member.branchId,
         eventType: 'authentication',
-        category: 'security',
-        action: 'login',
-        outcome: 'success',
-        user: user.id,
-        userType: 'host',
+        action: 'membership.verify_pin',
         resourceType: 'dental_membership',
-        resource: membershipId,
-        description: `PIN verified successfully for membership ${membershipId}`,
-        details: { memberId: membershipId },
-      }, user.id);
+        resourceId: membershipId,
+        metadata: { memberId: membershipId },
+      });
     } catch (auditErr) {
       // Audit failure must not block login — log and continue.
       logger?.warn?.({ auditErr }, 'Failed to write PIN_VERIFIED audit log');

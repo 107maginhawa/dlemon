@@ -498,6 +498,13 @@
       "when": 1780031469841,
       "tag": "0059_little_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1780051989033,
+      "tag": "0071_famous_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

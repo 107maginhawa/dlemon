@@ -4,7 +4,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import type { DatabaseInstance } from '@/core/database';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { DentalMembershipManagement_setPinBody, DentalMembershipManagement_setPinParams } from '@/generated/openapi/validators';
 
 /**
@@ -49,17 +49,15 @@ export async function DentalMembershipManagement_setPin(
   // EM-AUD-005: Audit security-sensitive PIN mutation.
   try {
     await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: member.branchId,
+      branchId: member.branchId,
       eventType: 'security',
-      category: 'security',
-      action: 'update',
-      outcome: 'success',
-      user: user.id,
-      userType: 'host',
+      action: 'membership.set_pin',
       resourceType: 'dental_membership',
-      resource: membershipId,
-      description: `PIN set for membership ${membershipId}`,
-      details: { memberId: membershipId, setBy: user.id },
-    }, user.id);
+      resourceId: membershipId,
+      metadata: { setBy: user.id },
+    });
   } catch (auditErr) {
     // Audit failure must not block the request — log and continue.
     logger?.warn?.({ auditErr }, 'Failed to write SET_PIN audit log');

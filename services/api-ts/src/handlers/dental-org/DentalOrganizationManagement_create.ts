@@ -4,7 +4,7 @@ import { UnauthorizedError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import type { OrgTier } from '@/handlers/dental-org/repos/organization.schema';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { DentalOrganizationManagement_createBody } from '@/generated/openapi/validators';
 
 /**
@@ -37,20 +37,20 @@ export async function DentalOrganizationManagement_create(
     active: true,
   });
 
-  // AL-001: HIPAA §164.312 — audit organization creation
+  // AL-001 / EM-AUD-008: HIPAA §164.312 — audit organization creation.
+  // Routed through @/core/audit-logger so the event lands in dental_audit_log
+  // (the table the dental audit viewer reads), not only the platform audit_log_entry.
   try {
     await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: org.id,
       eventType: 'data-modification',
-      category: 'administrative',
-      action: 'create',
-      outcome: 'success',
-      user: user.id,
-      userType: 'host',
+      actorRole: 'admin',
+      action: 'org.create',
       resourceType: 'dental_organization',
-      resource: org.id,
-      description: `Organization created: ${body.name}`,
-      details: { name: body.name, tier: body.tier },
-    }, user.id);
+      resourceId: org.id,
+      metadata: { name: body.name, tier: body.tier },
+    });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-001: failed to write createOrganization audit log');
   }

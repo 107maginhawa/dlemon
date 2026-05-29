@@ -4,7 +4,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import type { User } from '@/types/auth';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { DentalBranchManagement_createBody, DentalBranchManagement_createParams } from '@/generated/openapi/validators';
 
 /**
@@ -49,17 +49,15 @@ export async function DentalBranchManagement_create(
   // AL-002: HIPAA §164.312 — audit branch creation
   try {
     await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: orgId,
+      branchId: branch.id,
       eventType: 'data-modification',
-      category: 'administrative',
-      action: 'create',
-      outcome: 'success',
-      user: user.id,
-      userType: 'host',
+      action: 'branch.create',
       resourceType: 'dental_branch',
-      resource: branch.id,
-      description: `Branch created: ${body.name}`,
-      details: { branchId: branch.id, organizationId: orgId, name: body.name },
-    }, user.id);
+      resourceId: branch.id,
+      metadata: { organizationId: orgId, name: body.name },
+    });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-002: failed to write createBranch audit log');
   }

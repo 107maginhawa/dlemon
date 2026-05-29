@@ -17,7 +17,7 @@ import { MembershipRepository } from '@/handlers/dental-org/repos/membership.rep
 import { VALID_MEMBER_ROLES } from '@/handlers/dental-org/repos/membership.schema';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 
 /** FR6.3: Deactivated members do NOT count toward the limit. */
 const TIER_MEMBER_LIMITS: Record<string, number> = {
@@ -95,17 +95,16 @@ export async function createMember(ctx: Context): Promise<Response> {
   // AL-003: HIPAA §164.312 — audit membership creation
   try {
     await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: org.id,
+      branchId: resolvedBranchId,
       eventType: 'data-modification',
-      category: 'administrative',
-      action: 'create',
-      outcome: 'success',
-      user: user.id,
-      userType: 'host',
+      actorRole: 'dentist_owner',
+      action: 'membership.create',
       resourceType: 'dental_membership',
-      resource: membership.id,
-      description: `Membership created for branch ${resolvedBranchId}`,
-      details: { branchId: resolvedBranchId, role: body.role, displayName: body.displayName.trim() },
-    }, user.id);
+      resourceId: membership.id,
+      metadata: { role: body.role, displayName: body.displayName.trim() },
+    });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-003: failed to write createMembership audit log');
   }

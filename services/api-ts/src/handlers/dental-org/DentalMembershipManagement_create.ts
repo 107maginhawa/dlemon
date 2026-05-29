@@ -18,7 +18,7 @@ import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { DentalMembershipManagement_createBody, DentalMembershipManagement_createParams } from '@/generated/openapi/validators';
 
 const TIER_MEMBER_LIMITS: Record<string, number> = {
@@ -72,17 +72,15 @@ export async function DentalMembershipManagement_create(
   // AL-003: HIPAA §164.312 — audit membership creation
   try {
     await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: org.id,
+      branchId,
       eventType: 'data-modification',
-      category: 'administrative',
-      action: 'create',
-      outcome: 'success',
-      user: user.id,
-      userType: 'host',
+      action: 'membership.create',
       resourceType: 'dental_membership',
-      resource: membership.id,
-      description: `Membership created for branch ${branchId}`,
-      details: { branchId: membership.branchId, role: body.role, displayName: body.displayName },
-    }, user.id);
+      resourceId: membership.id,
+      metadata: { role: body.role, displayName: body.displayName },
+    });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-003: failed to write createMembership audit log');
   }

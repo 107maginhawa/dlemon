@@ -12,7 +12,8 @@
  *
  * Per [[feedback_test_verification]]: tests must exercise the REAL routed handler. We
  * register the routed handlers with the SAME validators/middleware shape as routes.ts and
- * assert audit rows land in audit_log_entry after a successful create + deactivate.
+ * assert audit rows land in dental_audit_log (the table the dental audit viewer reads)
+ * after a successful create + deactivate.
  *
  * RED-proof: temporarily removing the logAuditEvent call from either routed handler turns
  * the corresponding test RED (verified manually during authoring, then restored).
@@ -32,7 +33,7 @@ import { DentalMembershipManagement_deactivate } from './DentalMembershipManagem
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
-import { auditLogEntries } from '@/handlers/audit/repos/audit.schema';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -124,8 +125,7 @@ async function seedOrgAndBranch() {
 
 describe('routed membership handlers — audit regression locks', () => {
   afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
-    await db.execute(sql`DELETE FROM audit_log_entry WHERE resource_type = 'dental_membership'`);
+    await db.execute(sql`TRUNCATE TABLE dental_audit_log, dental_membership, dental_branch, dental_organization CASCADE`);
   });
 
   // --------------------------------------------------------------------------
@@ -150,15 +150,15 @@ describe('routed membership handlers — audit regression locks', () => {
 
     const rows = await db
       .select()
-      .from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, body.id));
+      .from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, body.id));
 
     expect(rows.length).toBeGreaterThanOrEqual(1);
     const row = rows[0]!;
-    expect(row.action).toBe('create');
-    expect(row.resourceType).toBe('dental_membership');
-    expect(row.user).toBe(PERSON_ID);
-    expect(row.outcome).toBe('success');
+    expect(row.action).toBe('membership.create');
+    expect(row.targetType).toBe('dental_membership');
+    expect(row.actorId).toBe(PERSON_ID);
+    expect(row.eventType).toBe('data-modification');
   });
 
   // --------------------------------------------------------------------------
@@ -189,14 +189,14 @@ describe('routed membership handlers — audit regression locks', () => {
 
     const rows = await db
       .select()
-      .from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, target.id));
+      .from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, target.id));
 
     expect(rows.length).toBeGreaterThanOrEqual(1);
     const row = rows[0]!;
-    expect(row.action).toBe('update');
-    expect(row.resourceType).toBe('dental_membership');
-    expect(row.user).toBe(PERSON_ID);
-    expect(row.outcome).toBe('success');
+    expect(row.action).toBe('membership.deactivate');
+    expect(row.targetType).toBe('dental_membership');
+    expect(row.actorId).toBe(PERSON_ID);
+    expect(row.eventType).toBe('data-modification');
   });
 });

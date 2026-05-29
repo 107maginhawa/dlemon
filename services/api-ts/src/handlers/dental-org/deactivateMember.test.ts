@@ -14,7 +14,7 @@ import { deactivateMember } from './deactivateMember';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
-import { auditLogEntries } from '@/handlers/audit/repos/audit.schema';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -84,8 +84,7 @@ async function seedAll() {
 
 describe('deactivateMember handler', () => {
   afterEach(async () => {
-    await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
-    await db.execute(sql`DELETE FROM audit_log_entry WHERE resource_type = 'dental_membership'`);
+    await db.execute(sql`TRUNCATE TABLE dental_audit_log, dental_membership, dental_branch, dental_organization CASCADE`);
   });
 
   // --------------------------------------------------------------------------
@@ -192,7 +191,8 @@ describe('deactivateMember handler', () => {
   // AL-004: HIPAA audit trail
   // --------------------------------------------------------------------------
 
-  test('AL-004: revokeMembership persists audit record to DB', async () => {
+  // EM-AUD-008: audit row must land in dental_audit_log (viewer source of truth).
+  test('AL-004: revokeMembership persists audit record to dental_audit_log', async () => {
     const membershipRepo = await seedAll();
     const member = await membershipRepo.createOne({
       branchId: BRANCH_ID,
@@ -209,17 +209,17 @@ describe('deactivateMember handler', () => {
 
     expect(res.status).toBe(204);
 
-    // Verify audit record persisted to DB (not just logger.info)
+    // Verify audit record persisted to the viewer table (not just logger.info)
     const rows = await db
       .select()
-      .from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, member.id));
+      .from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, member.id));
 
     expect(rows.length).toBeGreaterThanOrEqual(1);
     const row = rows[0]!;
-    expect(row.action).toBe('delete');
-    expect(row.resourceType).toBe('dental_membership');
-    expect(row.user).toBe(PERSON_ID);
-    expect(row.outcome).toBe('success');
+    expect(row.action).toBe('membership.deactivate');
+    expect(row.targetType).toBe('dental_membership');
+    expect(row.actorId).toBe(PERSON_ID);
+    expect(row.branchId).toBe(BRANCH_ID);
   });
 });

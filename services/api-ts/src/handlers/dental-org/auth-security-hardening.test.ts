@@ -19,7 +19,7 @@ import { createDatabase } from '@/core/database';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { auditLogEntries } from '@/handlers/audit/repos/audit.schema';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 import { DentalMembershipManagement_verifyPin } from './DentalMembershipManagement_verifyPin';
 import { DentalMembershipManagement_setPin } from './DentalMembershipManagement_setPin';
 import { recoverPin } from './pinRecovery';
@@ -154,7 +154,7 @@ afterEach(async () => {
     RESTART IDENTITY CASCADE
   `);
   // Clean up any audit log entries created during tests
-  await db.delete(auditLogEntries).execute();
+  await db.delete(dentalAuditLog).execute();
 });
 
 // ---------------------------------------------------------------------------
@@ -324,14 +324,14 @@ describe('EM-AUD-005 — setPin creates audit log entry on success', () => {
     );
     expect(res.status).toBe(200);
 
-    // Audit log entry must exist for this member with action=update
-    const entries = await db.select().from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, MEMBER_A));
-    const pinEntries = entries.filter((e: any) => e.action === 'update' && e.resourceType === 'dental_membership');
+    // EM-AUD-008: audit entry must exist in dental_audit_log (viewer source of truth)
+    const entries = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, MEMBER_A));
+    const pinEntries = entries.filter((e: any) => e.action === 'membership.set_pin' && e.targetType === 'dental_membership');
     expect(pinEntries.length).toBeGreaterThan(0);
     const entry = pinEntries[0]!;
-    expect(entry.outcome).toBe('success');
-    expect(entry.category).toBe('security');
+    expect(entry.eventType).toBe('security');
+    expect(entry.actorId).toBe(USER_A.id);
   });
 
   test('failed setPin (cross-org) does NOT write success audit entry [EM-AUD-005 negative]', async () => {
@@ -348,9 +348,9 @@ describe('EM-AUD-005 — setPin creates audit log entry on success', () => {
       }
     );
 
-    const entries = await db.select().from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, MEMBER_A));
-    const successEntries = entries.filter((e: any) => e.outcome === 'success' && e.action === 'update');
+    const entries = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, MEMBER_A));
+    const successEntries = entries.filter((e: any) => e.action === 'membership.set_pin');
     expect(successEntries.length).toBe(0);
   });
 });
@@ -376,13 +376,13 @@ describe('CF-46 / AUTH-07 — verifyPin creates audit log entry on success', () 
     const body = await res.json() as any;
     expect(body.success).toBe(true);
 
-    // Audit log entry must exist for this member
-    const entries = await db.select().from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, MEMBER_A));
+    // EM-AUD-008: audit entry must exist in dental_audit_log (viewer source of truth)
+    const entries = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, MEMBER_A));
     expect(entries.length).toBeGreaterThan(0);
     const entry = entries[0]!;
-    expect(entry.action).toBe('login');
-    expect(entry.outcome).toBe('success');
+    expect(entry.action).toBe('membership.verify_pin');
+    expect(entry.eventType).toBe('authentication');
   });
 
   test('failed verifyPin does NOT write a success audit log entry [CF-46 negative]', async () => {
@@ -398,9 +398,9 @@ describe('CF-46 / AUTH-07 — verifyPin creates audit log entry on success', () 
       }
     );
 
-    const entries = await db.select().from(auditLogEntries)
-      .where(eq(auditLogEntries.resource, MEMBER_A));
-    const successEntries = entries.filter(e => e.outcome === 'success');
+    const entries = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, MEMBER_A));
+    const successEntries = entries.filter(e => e.action === 'membership.verify_pin');
     expect(successEntries.length).toBe(0);
   });
 });
