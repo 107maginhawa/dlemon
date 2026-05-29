@@ -26,10 +26,14 @@ export async function listDentalInvoices(
   const query = ctx.req.valid('query');
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Branch-level authorization — optional filter; if provided, verify access
-  if (query.branchId) {
-    await assertBranchAccess(db, session.userId, query.branchId);
+  // EM-BIL-001: branchId is required to prevent cross-branch invoice enumeration.
+  // Matches the pattern in listDentalVisits, listDentalPatients, listPatientImages.
+  if (!query.branchId) {
+    return ctx.json({ error: 'branchId is required' }, 400);
   }
+
+  // Branch-level authorization — verify the caller is an active member of the branch
+  await assertBranchAccess(db, session.userId, query.branchId);
 
   const conditions = [];
   if (query.patientId) conditions.push(eq(dentalInvoices.patientId, query.patientId));

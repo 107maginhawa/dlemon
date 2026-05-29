@@ -465,20 +465,46 @@ describe('listDentalInvoices handler', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 200 with empty array when no invoices', async () => {
+  // EM-BIL-001: branchId is required — omitting it must return 400, not 200
+  test('[EM-BIL-001] returns 400 when branchId is omitted', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/billing/invoices');
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toMatch(/branchId/i);
+  });
+
+  // EM-BIL-001: omitting branchId must NOT leak invoices from all branches
+  test('[EM-BIL-001] omitting branchId does not return other-branch invoices', async () => {
+    await seedInvoice(); // seeds invoice in BRANCH_ID
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/billing/invoices');
+    // Must be blocked before returning any data
+    expect(res.status).toBe(400);
+  });
+
+  // EM-BIL-001: user without branch membership is forbidden even when branchId is provided
+  test('[EM-BIL-001] returns 403 when branchId is provided but user has no membership', async () => {
+    const outsider = { id: '00000000-0000-0000-0000-000000000050', email: 'outsider@other.com' };
+    const app = buildTestApp(outsider);
+    const res = await app.request(`/dental/billing/invoices?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('returns 200 with empty array when no invoices for branch', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data.length).toBe(0);
   });
 
-  test('returns 200 with invoice list', async () => {
+  test('returns 200 with invoice list when branchId is provided', async () => {
     await seedInvoice();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request('/dental/billing/invoices');
+    const res = await app.request(`/dental/billing/invoices?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
@@ -489,7 +515,7 @@ describe('listDentalInvoices handler', () => {
     await seedInvoice();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request(`/dental/billing/invoices?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/billing/invoices?branchId=${BRANCH_ID}&patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
@@ -500,7 +526,7 @@ describe('listDentalInvoices handler', () => {
     await seedInvoice();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request('/dental/billing/invoices?status=draft');
+    const res = await app.request(`/dental/billing/invoices?branchId=${BRANCH_ID}&status=draft`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data.every((inv: any) => inv.status === 'draft')).toBe(true);
