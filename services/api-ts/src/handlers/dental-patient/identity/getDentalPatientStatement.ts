@@ -10,6 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import { dentalInvoices, dentalInvoiceLineItems } from '../../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../../dental-billing/repos/dental-payment.schema';
@@ -81,6 +82,15 @@ export async function getDentalPatientStatement(
   const person = patient.person;
 
   logger?.info({ action: 'getDentalPatientStatement', patientId }, 'Patient statement generated');
+
+  // EF-PAT-005: audit READ of financial statement (PHI)
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.statement.read',
+    resourceType: 'dental_patient_statement',
+    resourceId: patientId,
+  });
 
   return ctx.json({
     patientId,

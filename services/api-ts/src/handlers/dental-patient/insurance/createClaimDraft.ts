@@ -4,6 +4,7 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import type { DatabaseInstance } from '@/core/database';
@@ -21,6 +22,11 @@ export async function createClaimDraft(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-004: branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {

@@ -5,6 +5,7 @@
  */
 
 import { UnauthorizedError } from '@/core/errors';
+import { logAuditEvent } from '@/core/audit-logger';
 import { SyncLogRepository } from '../repos/sync-log.repo';
 import type { DatabaseInstance } from '@/core/database';
 
@@ -17,6 +18,14 @@ export async function listSyncLogs(ctx: any): Promise<Response> {
 
   const repo = new SyncLogRepository(db, logger);
   const logs = await repo.findAll();
+
+  // EF-PAT-005: audit READ access to sync logs
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: user.id,
+    action: 'patient.sync_logs.read',
+    resourceType: 'dental_sync_logs',
+  });
 
   return ctx.json(logs, 200);
 }

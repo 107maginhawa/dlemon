@@ -6,6 +6,7 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { DatabaseInstance } from '@/core/database';
@@ -22,6 +23,11 @@ export async function deletePatientContact(ctx: any): Promise<Response> {
   // patient lookup via facade
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-004: branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {

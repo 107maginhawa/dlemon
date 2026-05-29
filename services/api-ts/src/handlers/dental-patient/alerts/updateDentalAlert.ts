@@ -7,6 +7,7 @@
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalAlertRepository } from '../repos/dental-alert.repo';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateDentalAlert(ctx: any): Promise<Response> {
@@ -22,6 +23,12 @@ export async function updateDentalAlert(ctx: any): Promise<Response> {
   // EF-PAT-001: block writes on archived patients
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+
+  // EF-PAT-004: branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
+
   if (patient.status === 'archived') {
     throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }

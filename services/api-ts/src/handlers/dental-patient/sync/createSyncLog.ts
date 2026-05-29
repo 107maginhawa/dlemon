@@ -5,6 +5,7 @@
  */
 
 import { UnauthorizedError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { SyncLogRepository } from '../repos/sync-log.repo';
 import type { DatabaseInstance } from '@/core/database';
 
@@ -15,6 +16,11 @@ export async function createSyncLog(ctx: any): Promise<Response> {
   const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // EF-PAT-004: branch-level authorization when branchId is provided
+  if (body.branchId) {
+    await assertBranchAccess(db, user.id, body.branchId);
+  }
 
   const repo = new SyncLogRepository(db, logger);
   const log = await repo.create({

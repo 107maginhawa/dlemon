@@ -66,7 +66,11 @@ beforeAll(async () => {
   }).onConflictDoNothing();
 
   await db.insert(dentalMemberships).values({
-    id: 'a1000000-0000-1000-8000-000000000033',
+    // Unique pkey: this file's TEST_USER is person ...033, distinct from the
+    // person ...001 used by dental-patient-alerts/treatment-plan which share
+    // branch ...033. Sharing the membership pkey caused a beforeAll race that
+    // starved branch-access for whichever files lost it (EF-PAT-004).
+    id: 'a1000000-0000-1000-8000-00000000a033',
     branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Staff Member', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,

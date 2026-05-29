@@ -13,6 +13,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
 import { eq, and } from 'drizzle-orm';
 import type { GetDentalPatientSafetyFloorParams } from '@/generated/openapi/validators';
@@ -55,6 +56,15 @@ export async function getDentalPatientSafetyFloor(
   const hasAlerts = allergies.length > 0;
 
   logger?.info({ action: 'getDentalPatientSafetyFloor', patientId, allergiesCount: allergies.length }, 'Safety floor retrieved');
+
+  // EF-PAT-005: audit READ of safety-critical PHI
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.safety_floor.read',
+    resourceType: 'dental_patient_safety_floor',
+    resourceId: patientId,
+  });
 
   return ctx.json({
     patientId,

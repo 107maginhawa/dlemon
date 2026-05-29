@@ -5,6 +5,7 @@
  */
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { SyncLogRepository } from '../repos/sync-log.repo';
 import { SYNC_FSM, type SyncStatus } from '../repos/sync-log.schema';
 import type { DatabaseInstance } from '@/core/database';
@@ -22,6 +23,11 @@ export async function updateSyncLog(ctx: any): Promise<Response> {
   const repo = new SyncLogRepository(db, logger);
   const existing = await repo.findOneById(logId);
   if (!existing) throw new NotFoundError('Sync log not found');
+
+  // EF-PAT-004: branch-level authorization when branchId is present
+  if (existing.branchId) {
+    await assertBranchAccess(db, user.id, existing.branchId);
+  }
 
   // LF-BR-004: stale-write conflict detection
   if (body['version'] !== undefined && body['version'] !== existing.version) {

@@ -4,6 +4,8 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import type { DatabaseInstance } from '@/core/database';
 
@@ -20,8 +22,22 @@ export async function listPatientClaims(ctx: any): Promise<Response> {
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
+  // EF-PAT-004: branch-level authorization
+  if (patient.preferredBranchId) {
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
+
   const repo = new ClaimDraftRepository(db, logger);
   const claims = await repo.findByPatientId(patientId);
+
+  // EF-PAT-005: audit READ access to patient claims
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: patient.preferredBranchId ?? patientId,
+    action: 'patient.claims.read',
+    resourceType: 'dental_patient_claims',
+    resourceId: patientId,
+  });
 
   return ctx.json(claims, 200);
 }
