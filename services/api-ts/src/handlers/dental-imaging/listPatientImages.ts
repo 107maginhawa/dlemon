@@ -81,14 +81,14 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
 
   // Map imaging rows
   const imagingItems: PatientImageItem[] = imagingRows.map((row) => {
-    const meta = row.dicomMetadata as { fileName?: string } | null;
+    const meta = row.dicomMetadata as { fileName?: string; mimeType?: string } | null;
     return {
       id: row.id,
       source: 'imaging',
       modality: row.modality,
       fileName: meta?.fileName ?? (row.fileId ?? ''),
-      mimeType: '',
-      fileSizeBytes: 0,
+      mimeType: meta?.mimeType ?? '',
+      fileSizeBytes: row.fileSizeBytes,
       studyId: row.studyId,
       visitId: null,
       toothNumbers: [],

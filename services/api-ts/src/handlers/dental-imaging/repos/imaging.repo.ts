@@ -17,6 +17,7 @@ import {
   type NewImagingAnnotation,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
+import { storedFiles } from '@/handlers/storage/repos/file.schema';
 
 export class ImagingRepository {
   constructor(private readonly db: DatabaseInstance) {}
@@ -77,7 +78,7 @@ export class ImagingRepository {
       );
   }
 
-  async listImagingImagesForPatient(patientId: string, branchId: string): Promise<(ImagingStudyImage & { studyBranchId: string })[]> {
+  async listImagingImagesForPatient(patientId: string, branchId: string): Promise<(ImagingStudyImage & { studyBranchId: string; fileSizeBytes: number })[]> {
     const rows = await this.db
       .select({
         id: imagingStudyImages.id,
@@ -94,9 +95,11 @@ export class ImagingRepository {
         createdBy: imagingStudyImages.createdBy,
         updatedBy: imagingStudyImages.updatedBy,
         studyBranchId: imagingStudies.branchId,
+        fileSizeBytes: storedFiles.size,
       })
       .from(imagingStudyImages)
       .innerJoin(imagingStudies, eq(imagingStudyImages.studyId, imagingStudies.id))
+      .leftJoin(storedFiles, eq(imagingStudyImages.fileId, storedFiles.id))
       .where(
         and(
           eq(imagingStudies.patientId, patientId),
@@ -104,7 +107,7 @@ export class ImagingRepository {
           eq(imagingStudyImages.status, 'active'),
         ),
       );
-    return rows as (ImagingStudyImage & { studyBranchId: string })[];
+    return rows.map((r) => ({ ...r, fileSizeBytes: r.fileSizeBytes ?? 0 })) as (ImagingStudyImage & { studyBranchId: string; fileSizeBytes: number })[];
   }
 
   async archiveImage(id: string): Promise<void> {
