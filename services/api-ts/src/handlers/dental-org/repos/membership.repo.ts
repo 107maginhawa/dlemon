@@ -5,11 +5,37 @@
 import { eq, and, ne, isNotNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import { BusinessLogicError } from '@/core/errors';
 import {
   dentalMemberships,
   type DentalMembership,
   type NewDentalMembership,
 } from './membership.schema';
+
+/**
+ * V-ORG-001 / MODULE_SPEC §8 — Membership status state machine.
+ * The ONLY legal transitions are:
+ *   invited  → active    (staff completes first login)
+ *   active   → inactive  (owner deactivates)
+ *   inactive → active    (owner reactivates)
+ * Any other jump (incl. no-op self-transitions and the unreconciled `revoked`
+ * value) is illegal and must be rejected with 422. All status writes route
+ * through `transitionStatus` so the guard cannot be bypassed.
+ */
+export type MembershipLifecycleStatus = 'invited' | 'active' | 'inactive';
+
+const LEGAL_STATUS_TRANSITIONS: Record<MembershipLifecycleStatus, MembershipLifecycleStatus[]> = {
+  invited: ['active'],
+  active: ['inactive'],
+  inactive: ['active'],
+};
+
+export function isLegalStatusTransition(
+  from: MembershipLifecycleStatus,
+  to: MembershipLifecycleStatus,
+): boolean {
+  return LEGAL_STATUS_TRANSITIONS[from]?.includes(to) ?? false;
+}
 
 export interface MembershipFilters {
   branchId?: string;
@@ -94,15 +120,49 @@ export class MembershipRepository extends DatabaseRepository<
   }
 
   /**
-   * Deactivate a membership
+   * V-ORG-001: Guarded membership status transition (MODULE_SPEC §8).
+   *
+   * Whitelists {invited→active, active→inactive, inactive→active}. Rejects any
+   * illegal jump with a 422 BusinessLogicError. Verifies the row's *actual*
+   * current status equals `from` before writing (guards against a stale-read /
+   * concurrent change). Returns null when the member does not exist.
    */
-  async deactivate(id: string): Promise<DentalMembership | null> {
+  async transitionStatus(
+    id: string,
+    from: MembershipLifecycleStatus,
+    to: MembershipLifecycleStatus,
+  ): Promise<DentalMembership | null> {
+    const member = await this.findOneById(id);
+    if (!member) return null;
+
+    if (!isLegalStatusTransition(from, to)) {
+      throw new BusinessLogicError(
+        `Illegal membership status transition: ${from} → ${to}`,
+        'ILLEGAL_STATUS_TRANSITION',
+      );
+    }
+
+    if (member.status !== from) {
+      throw new BusinessLogicError(
+        `Illegal membership status transition: current status is "${member.status}", not "${from}"`,
+        'ILLEGAL_STATUS_TRANSITION',
+      );
+    }
+
     const [updated] = await this.db
       .update(dentalMemberships)
-      .set({ status: 'inactive', updatedAt: new Date() })
+      .set({ status: to, updatedAt: new Date() })
       .where(eq(dentalMemberships.id, id))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * Deactivate a membership (active → inactive). Routes through the guarded
+   * `transitionStatus` so the §8 state machine cannot be bypassed.
+   */
+  async deactivate(id: string): Promise<DentalMembership | null> {
+    return this.transitionStatus(id, 'active', 'inactive');
   }
 
   /**

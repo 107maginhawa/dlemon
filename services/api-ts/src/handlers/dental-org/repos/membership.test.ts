@@ -184,6 +184,80 @@ describe('MembershipRepository', () => {
   });
 
   // --------------------------------------------------------------------------
+  // STATE MACHINE — transitionStatus (V-ORG-001, MODULE_SPEC §8)
+  //   Legal: invited→active, active→inactive, inactive→active
+  //   Illegal jumps throw an IllegalStateTransitionError (handler maps to 422).
+  // --------------------------------------------------------------------------
+
+  describe('transitionStatus', () => {
+    async function seedMember(status: 'invited' | 'active' | 'inactive') {
+      return repo.createOne({
+        branchId: BRANCH_ID,
+        displayName: `Member ${status}`,
+        role: 'staff_full',
+        status,
+        pinFailedAttempts: 0,
+      });
+    }
+
+    test('invited → active (first login) is allowed', async () => {
+      const m = await seedMember('invited');
+      const updated = await repo.transitionStatus(m.id, 'invited', 'active');
+      expect(updated!.status).toBe('active');
+    });
+
+    test('active → inactive (owner deactivates) is allowed', async () => {
+      const m = await seedMember('active');
+      const updated = await repo.transitionStatus(m.id, 'active', 'inactive');
+      expect(updated!.status).toBe('inactive');
+    });
+
+    test('inactive → active (owner reactivates) is allowed', async () => {
+      const m = await seedMember('inactive');
+      const updated = await repo.transitionStatus(m.id, 'inactive', 'active');
+      expect(updated!.status).toBe('active');
+    });
+
+    test('rejects invited → inactive (illegal jump)', async () => {
+      const m = await seedMember('invited');
+      await expect(repo.transitionStatus(m.id, 'invited', 'inactive')).rejects.toThrow(
+        /illegal|transition/i,
+      );
+    });
+
+    test('rejects active → invited (illegal backward jump)', async () => {
+      const m = await seedMember('active');
+      await expect(repo.transitionStatus(m.id, 'active', 'invited')).rejects.toThrow(
+        /illegal|transition/i,
+      );
+    });
+
+    test('rejects inactive → inactive (no-op illegal)', async () => {
+      const m = await seedMember('inactive');
+      await expect(repo.transitionStatus(m.id, 'inactive', 'inactive')).rejects.toThrow(
+        /illegal|transition/i,
+      );
+    });
+
+    test('rejects when the actual current status does not match `from` (concurrent change)', async () => {
+      const m = await seedMember('active');
+      // Claiming to transition from `invited` but the row is actually `active`.
+      await expect(repo.transitionStatus(m.id, 'invited', 'active')).rejects.toThrow(
+        /illegal|transition|current/i,
+      );
+    });
+
+    test('returns null when member not found', async () => {
+      const result = await repo.transitionStatus(
+        '00000000-0000-0000-0000-000000000099',
+        'active',
+        'inactive',
+      );
+      expect(result).toBeNull();
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // LIST
   // --------------------------------------------------------------------------
 
@@ -198,8 +272,10 @@ describe('MembershipRepository', () => {
 
     test('excludes inactive members by default', async () => {
       await repo.createOne({ branchId: BRANCH_ID, displayName: 'Active Member', role: 'staff_full', status: 'active', pinFailedAttempts: 0 });
-      const inactive = await repo.createOne({ branchId: BRANCH_ID, displayName: 'Inactive Member', role: 'staff_scheduling', status: 'inactive', pinFailedAttempts: 0 });
-      await repo.deactivate(inactive.id);
+      // V-ORG-001: deactivate now guards the §8 state machine, so transition an
+      // active member to inactive rather than seeding+re-deactivating inactive.
+      const toDeactivate = await repo.createOne({ branchId: BRANCH_ID, displayName: 'Inactive Member', role: 'staff_scheduling', status: 'active', pinFailedAttempts: 0 });
+      await repo.deactivate(toDeactivate.id);
 
       const members = await repo.listByBranch(BRANCH_ID);
       expect(members.every(m => m.status === 'active')).toBe(true);
