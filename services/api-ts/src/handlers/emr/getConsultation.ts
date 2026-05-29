@@ -6,7 +6,7 @@ import {
   NotFoundError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { getPatientByPersonIdForEMR } from '../patient/repos/patient-emr.facade';
 import { ProviderRepository } from '../provider/repos/provider.repo';
 import { shouldExpand } from '@/utils/query';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -44,7 +44,6 @@ export async function getConsultation(ctx: HandlerContext) {
   
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
-  const patientRepo = new PatientRepository(db, logger);
   const providerRepo = new ProviderRepository(db, logger);
   
   // Find consultation note
@@ -68,7 +67,7 @@ export async function getConsultation(ctx: HandlerContext) {
 
   // If not the provider, check if user is the patient for this consultation
   if (!hasAccess) {
-    const patient = await patientRepo.findByPersonId(user.id);
+    const patient = await getPatientByPersonIdForEMR(db, user.id, logger);
     if (patient && consultation.patient === patient.id) {
       hasAccess = true;
     }
