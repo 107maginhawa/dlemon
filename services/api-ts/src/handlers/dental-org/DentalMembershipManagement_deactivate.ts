@@ -6,6 +6,7 @@ import { MembershipRepository } from '@/handlers/dental-org/repos/membership.rep
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
 import type { DentalMembershipManagement_deactivateBody, DentalMembershipManagement_deactivateParams } from '@/generated/openapi/validators';
 
 /**
@@ -47,6 +48,24 @@ export async function DentalMembershipManagement_deactivate(
 
   const membership = await repo.deactivate(membershipId);
   if (!membership) throw new NotFoundError('Membership');
+
+  // AL-004: HIPAA §164.312 — audit membership deactivation
+  try {
+    await logAuditEvent(db, logger, {
+      eventType: 'data-modification',
+      category: 'administrative',
+      action: 'update',
+      outcome: 'success',
+      user: user.id,
+      userType: 'host',
+      resourceType: 'dental_membership',
+      resource: membershipId,
+      description: `Membership deactivated for branch ${existing.branchId}`,
+      details: { branchId: existing.branchId, membershipId },
+    }, user.id);
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'AL-004: failed to write deactivateMembership audit log');
+  }
 
   // G7-S2: Strip credential fields from response
   const { pinHash: _ph, securityAnswerHash: _sah, securityQuestion: _sq, ...safeResponse } = membership;

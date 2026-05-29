@@ -79,6 +79,9 @@ export async function recoverPin(ctx: Context): Promise<Response> {
   const member = await repo.findOneById(memberId);
   if (!member) throw new NotFoundError('Membership');
 
+  // EF-ORG-P015: caller must belong to the target member's branch
+  await assertBranchAccess(db, user.id, member.branchId);
+
   // Check if currently locked out (same pattern as verifyPin)
   if (repo.isLockedOut(member)) {
     return ctx.json(
