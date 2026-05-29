@@ -362,6 +362,40 @@ describe('FR2.7: archive and restore patient (EC1 guard)', () => {
 });
 
 // =============================================================================
+// AL: Archive Patient Audit Trail
+// =============================================================================
+
+describe('AL: archiveDentalPatient writes audit record to DB', () => {
+  afterEach(truncate);
+
+  test('persists patient.archive audit record after successful archive', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Archive Audit Patient');
+
+    const before = new Date();
+    const res = await app.request(`/dental/patients/${p.id}/archive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'duplicate record' }),
+    });
+    expect(res.status).toBe(200);
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: STAFF_USER_ID, action: 'patient.archive', branchId: BRANCH_ID },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+    const entry = entries[0]!;
+    expect(entry.action).toBe('patient.archive');
+    expect(entry.resourceType).toBe('dental_patient');
+    expect(entry.resourceId).toBe(p.id);
+    expect(entry.personId).toBe(STAFF_USER_ID);
+    expect(entry.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
+  });
+});
+
+// =============================================================================
 // FR2.8: Data Export
 // =============================================================================
 

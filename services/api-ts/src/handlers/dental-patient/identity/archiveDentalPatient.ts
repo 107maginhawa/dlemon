@@ -11,6 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators';
 
 export async function archiveDentalPatient(
@@ -54,6 +55,19 @@ export async function archiveDentalPatient(
   }
 
   logger?.info({ action: 'archiveDentalPatient', patientId, actorId: user.id, reason }, 'Patient archived');
+
+  // AL: archive audit trail (never throws — see audit-logger)
+  const branchId = patient.preferredBranchId as string | undefined;
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchId ?? patientId,
+    branchId,
+    action: 'patient.archive',
+    resourceType: 'dental_patient',
+    resourceId: patientId,
+    reason,
+    metadata: { reason: reason ?? null },
+  });
 
   const updated = await repo.findOneById(patientId);
   return ctx.json(updated, 200);
