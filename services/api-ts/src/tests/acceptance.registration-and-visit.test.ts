@@ -54,33 +54,33 @@ import {
 } from '@/generated/openapi/validators';
 
 // Handlers — dental-patient
-import { createDentalPatient } from './dental-patient/identity/createDentalPatient';
-import { getDentalPatient } from './dental-patient/identity/getDentalPatient';
-import { listDentalPatients } from './dental-patient/identity/listDentalPatients';
+import { createDentalPatient } from '@/handlers/dental-patient/identity/createDentalPatient';
+import { getDentalPatient } from '@/handlers/dental-patient/identity/getDentalPatient';
+import { listDentalPatients } from '@/handlers/dental-patient/identity/listDentalPatients';
 
 // Handlers — dental-visit
-import { createDentalVisit } from './dental-visit/visits/createDentalVisit';
-import { listDentalVisits } from './dental-visit/visits/listDentalVisits';
-import { updateDentalVisit } from './dental-visit/visits/updateDentalVisit';
-import { getDentalChart } from './dental-visit/chart/getDentalChart';
-import { upsertDentalChart } from './dental-visit/chart/upsertDentalChart';
-import { getToothHistory } from './dental-visit/chart/getToothHistory';
-import { getTreatmentPlan } from './dental-visit/treatment-plans/getTreatmentPlan';
+import { createDentalVisit } from '@/handlers/dental-visit/visits/createDentalVisit';
+import { listDentalVisits } from '@/handlers/dental-visit/visits/listDentalVisits';
+import { updateDentalVisit } from '@/handlers/dental-visit/visits/updateDentalVisit';
+import { getDentalChart } from '@/handlers/dental-visit/chart/getDentalChart';
+import { upsertDentalChart } from '@/handlers/dental-visit/chart/upsertDentalChart';
+import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
+import { getTreatmentPlan } from '@/handlers/dental-visit/treatment-plans/getTreatmentPlan';
 
 // Handlers — dental-clinical
-import { createAttachment } from './dental-clinical/attachments/createAttachment';
-import { listAttachments } from './dental-clinical/attachments/listAttachments';
-import { createPrescription } from './dental-clinical/prescriptions/createPrescription';
-import { createLabOrder } from './dental-clinical/lab-orders/createLabOrder';
-import { updateLabOrder } from './dental-clinical/lab-orders/updateLabOrder';
+import { createAttachment } from '@/handlers/dental-clinical/attachments/createAttachment';
+import { listAttachments } from '@/handlers/dental-clinical/attachments/listAttachments';
+import { createPrescription } from '@/handlers/dental-clinical/prescriptions/createPrescription';
+import { createLabOrder } from '@/handlers/dental-clinical/lab-orders/createLabOrder';
+import { updateLabOrder } from '@/handlers/dental-clinical/lab-orders/updateLabOrder';
 
 // Handlers — dental-billing
-import { createDentalInvoice } from './dental-billing/createDentalInvoice';
+import { createDentalInvoice } from '@/handlers/dental-billing/createDentalInvoice';
 
 // Repos for seeding
-import { VisitRepository } from './dental-visit/repos/visit.repo';
-import { persons } from './person/repos/person.schema';
-import { patients } from './patient/repos/patient.schema';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -102,9 +102,9 @@ const USER = { id: USER_ID, email: 'g2s1@clinic.com' };
 // ──────────────────────────────────────────────────────────────────────────────
 
 beforeAll(async () => {
-  const { dentalOrganizations } = await import('./dental-org/repos/organization.schema');
-  const { dentalBranches }      = await import('./dental-org/repos/branch.schema');
-  const { dentalMemberships }   = await import('./dental-org/repos/membership.schema');
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches }      = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships }   = await import('@/handlers/dental-org/repos/membership.schema');
 
   await db.insert(dentalOrganizations).values({
     id: ORG_ID, name: 'G2S1 Clinic', tier: 'solo',
@@ -240,7 +240,7 @@ async function seedCompletedVisit() {
 }
 
 async function seedPlannedTreatment(visitId: string) {
-  const { dentalTreatments } = await import('./dental-visit/repos/treatment.schema');
+  const { dentalTreatments } = await import('@/handlers/dental-visit/repos/treatment.schema');
   const [t] = await db.insert(dentalTreatments).values({
     id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
     cdtCode: 'D0120', description: 'Periodic eval',
@@ -251,7 +251,7 @@ async function seedPlannedTreatment(visitId: string) {
 }
 
 async function seedPerformedTreatment(visitId: string) {
-  const { dentalTreatments } = await import('./dental-visit/repos/treatment.schema');
+  const { dentalTreatments } = await import('@/handlers/dental-visit/repos/treatment.schema');
   const [t] = await db.insert(dentalTreatments).values({
     id: crypto.randomUUID(), visitId, patientId: PATIENT_ID,
     cdtCode: 'D0120', description: 'Periodic eval',
@@ -291,7 +291,7 @@ describe('AC-REG-01: register new patient with consent', () => {
     const res = await app.request('/dental/patients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: 'Ana G2S1 Reyes', consentGiven: true }),
+      body: JSON.stringify({ displayName: 'Ana G2S1 Reyes', consentGiven: true, branchId: BRANCH_ID }),
     });
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -308,14 +308,15 @@ describe('AC-REG-01: register new patient with consent', () => {
 describe('AC-REG-02: registration blocked without consent', () => {
   afterEach(truncateDynamicPatients);
 
-  test('consentGiven=false → 400 with consent error [AC-REG-02]', async () => {
+  test('consentGiven=false → 422 with consent error [AC-REG-02]', async () => {
     const app = buildApp(USER);
     const res = await app.request('/dental/patients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ displayName: 'No Consent G2S1', consentGiven: false }),
     });
-    expect(res.status).toBe(400);
+    // BusinessLogicError (CONSENT_REQUIRED) maps to 422, not 400
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.error).toMatch(/consent/i);
   });
@@ -549,7 +550,7 @@ describe('AC-CHART-04: getToothHistory returns history entries', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         patientId: PATIENT_ID,
-        teeth: [{ toothNumber: 13, state: 'filling' }],
+        teeth: [{ toothNumber: 13, state: 'filled' }],
       }),
     });
 
@@ -594,7 +595,7 @@ describe('AC-TXPLAN-02: carried-over treatments are included in treatment plan',
   afterEach(truncateVisits);
 
   test('treatment with carriedOver=true appears in treatment plan response [AC-TXPLAN-02]', async () => {
-    const { dentalTreatments } = await import('./dental-visit/repos/treatment.schema');
+    const { dentalTreatments } = await import('@/handlers/dental-visit/repos/treatment.schema');
     const visit = await seedActiveVisit();
     // Seed a carried-over treatment
     await db.insert(dentalTreatments).values({
@@ -778,6 +779,7 @@ describe('AC-ATTACH-01: createAttachment saves attachment and returns 201', () =
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        visitId: visit.id,
         patientId: PATIENT_ID,
         imageType: 'xray',
         fileName: 'xray-11.jpg',
@@ -813,6 +815,7 @@ describe('AC-ATTACH-02: listAttachments returns attachments for visit', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        visitId: visit.id,
         patientId: PATIENT_ID,
         imageType: 'photo',
         fileName: 'photo-before.jpg',
@@ -848,6 +851,14 @@ describe('AC-INV-01: createDentalInvoice creates invoice in draft state', () => 
   test('createDentalInvoice returns 201 with status draft [AC-INV-01]', async () => {
     const visit = await seedActiveVisit();
     await seedPerformedTreatment(visit.id);
+    // BR-011: a signed consent form is required before invoicing
+    const { consentForms } = await import('@/handlers/dental-clinical/repos/consent-form.schema');
+    await db.insert(consentForms).values({
+      id: crypto.randomUUID(), visitId: visit.id, patientId: PATIENT_ID,
+      templateId: 'tmpl-g2s1', templateName: 'Treatment Consent',
+      signed: true, signedAt: new Date(),
+      createdBy: USER_ID, updatedBy: USER_ID,
+    });
     const app = buildApp(USER);
 
     const res = await app.request('/dental/billing/invoices', {

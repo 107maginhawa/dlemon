@@ -395,7 +395,7 @@ describe('GAP-006: LF-BR-004 — stale-write conflict returns 409', () => {
       body: JSON.stringify({ localId: 'conflict-test-001', entityType: 'dental_visit', entityId: 'visit-001' }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = await createRes.json() as any;
     const logId = created.id;
     expect(created.version).toBe(1);
 
@@ -414,7 +414,7 @@ describe('GAP-006: LF-BR-004 — stale-write conflict returns 409', () => {
       body: JSON.stringify({ syncStatus: 'synced', version: 1 }),
     });
     expect(conflictRes.status).toBe(409);
-    const body = await conflictRes.json();
+    const body = await conflictRes.json() as any;
     expect(body.code).toBe('CONFLICT');
     expect(body.conflictPayload.current.version).toBe(2);
     expect(body.conflictPayload.incoming.version).toBe(1);

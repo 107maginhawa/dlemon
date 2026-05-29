@@ -111,7 +111,7 @@ describe('Error Envelope Conformance', () => {
     });
   });
 
-  describe('400 ValidationError — bad request body', () => {
+  describe('422 BusinessLogicError — consent required', () => {
     test('POST /dental/patients with consentGiven=false returns { code, message }', async () => {
       const app = buildConformanceApp(STAFF_USER);
       const res = await app.request('/dental/patients', {
@@ -119,12 +119,16 @@ describe('Error Envelope Conformance', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: 'Test Patient', consentGiven: false }),
       });
-      expect(res.status).toBe(400);
+      // Consent rejection is a BusinessLogicError (422 / CONSENT_REQUIRED),
+      // not a 400 ValidationError — the 400 envelope is covered by the cases below.
+      expect(res.status).toBe(422);
       const body = await res.json();
       assertEnvelope(body);
-      expect((body as Record<string, unknown>)['code']).toBe('VALIDATION_ERROR');
+      expect((body as Record<string, unknown>)['code']).toBe('CONSENT_REQUIRED');
     });
+  });
 
+  describe('400 ValidationError — bad request body', () => {
     test('POST /dental/patients with blank displayName returns { code, message }', async () => {
       const app = buildConformanceApp(STAFF_USER);
       const res = await app.request('/dental/patients', {

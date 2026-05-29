@@ -33,9 +33,9 @@ import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.sc
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 
-import { updateDentalTreatment } from './dental-visit/treatments/updateDentalTreatment';
-import { createDentalTreatment } from './dental-visit/treatments/createDentalTreatment';
-import { voidDentalInvoice } from './dental-billing/voidDentalInvoice';
+import { updateDentalTreatment } from '@/handlers/dental-visit/treatments/updateDentalTreatment';
+import { createDentalTreatment } from '@/handlers/dental-visit/treatments/createDentalTreatment';
+import { voidDentalInvoice } from '@/handlers/dental-billing/voidDentalInvoice';
 import {
   UpdateDentalTreatmentParams,
   UpdateDentalTreatmentBody,

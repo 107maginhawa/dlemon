@@ -221,7 +221,7 @@ describe('DentalInvoiceRepository', () => {
         taxRate: '0',
       });
 
-      const updated = await repo.applyDiscount(invoice.id, 2000, 0);
+      const updated = await repo.applyDiscount(invoice.id, 2000, 0, 'Test discount', DENTIST_1);
       expect(updated!.discountCents).toBe(2000);
       expect(updated!.totalCents).toBe(8000);
       expect(updated!.balanceCents).toBe(8000);
@@ -238,7 +238,7 @@ describe('DentalInvoiceRepository', () => {
       // Discount 2000 off 10000 subtotal = 8000 after discount
       // Tax: 8000 * 0.12 = 960
       // Total: 8000 + 960 = 8960
-      const updated = await repo.applyDiscount(invoice.id, 2000, 0.12);
+      const updated = await repo.applyDiscount(invoice.id, 2000, 0.12, 'Test discount', DENTIST_1);
       expect(updated!.discountCents).toBe(2000);
       expect(updated!.taxCents).toBe(960);
       expect(updated!.totalCents).toBe(8960);

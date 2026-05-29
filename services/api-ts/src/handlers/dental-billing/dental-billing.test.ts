@@ -1295,7 +1295,7 @@ describe('GAP-009: discount reason and actor persistence', () => {
       body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.discountReason).toBe('Senior citizen discount');
     expect(body.discountedBy).toBe(TEST_USER.id);
   });
@@ -1310,7 +1310,7 @@ describe('GAP-009: discount reason and actor persistence', () => {
       body: JSON.stringify({ reason: '   ', percentageRate: 10 }),
     });
     expect(res.status).toBe(422);
-    const body = await res.json();
+    const body = await res.json() as any;
     expect(body.code).toBe('DISCOUNT_REASON_REQUIRED');
   });
 });

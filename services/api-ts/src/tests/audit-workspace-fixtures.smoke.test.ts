@@ -6,7 +6,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
-import { seedAuditWorkspace, AUDIT_IDS } from './audit-workspace-fixtures';
+import { seedAuditWorkspace, AUDIT_IDS } from './fixtures/audit-workspace-fixtures';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { dentalTreatments } from '@/handlers/dental-visit/repos/treatment.schema';
 import { dentalCharts } from '@/handlers/dental-visit/repos/dental-chart.schema';
