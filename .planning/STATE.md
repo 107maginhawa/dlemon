@@ -81,3 +81,8 @@ Next: Phase 11 (module template + bloated module split) — now unblocked by Pha
 - dental-pmd (2026-05-28): 7 → 0 via `visit-pmd.facade.ts`, `clinical-pmd.facade.ts`, `patient-pmd.facade.ts`
 - dental-patient (2026-05-28): 26 → 0 via `patient-dental-patient.facade.ts`, `person-dental-patient.facade.ts`, `visit-dental-patient.facade.ts`
 - dental-imaging (2026-05-28): 30 → 0 via `org-imaging.facade.ts`, `clinical-imaging.facade.ts`
+- regression re-fix (2026-05-29): 4 violations had crept back in after Phase 10
+  (`check:boundaries:error` was exiting 1, not 0 as previously recorded). Re-closed via:
+  `visit-perio.facade.ts` (dental-perio→dental-visit), `storage-imaging.facade.ts`
+  (dental-imaging→storage), `org-clinical.facade.ts` (dental-clinical→dental-org ×2).
+  `check:boundaries:error` exits 0 again; full typecheck 0 errors.
