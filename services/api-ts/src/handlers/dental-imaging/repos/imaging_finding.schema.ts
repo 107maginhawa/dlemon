@@ -8,9 +8,6 @@
 import { pgEnum, pgTable, uuid, text, integer, jsonb, index } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
 import { imagingStudyImages, imagingAnnotations } from './imaging.schema';
-import { dentalVisits } from '../../dental-visit/repos/visit.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { dentalBranches } from '../../dental-org/repos/branch.schema';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -60,10 +57,10 @@ export const imagingFindings = pgTable(
     ...baseEntityFields,
     imageId: uuid('image_id').notNull().references(() => imagingStudyImages.id),
     annotationId: uuid('annotation_id').references(() => imagingAnnotations.id),
-    treatmentId: uuid('treatment_id'),                                    // cross-module FK — no .references()
-    visitId: uuid('visit_id').references(() => dentalVisits.id),         // denormalized; nullable
-    patientId: uuid('patient_id').notNull().references(() => patients.id),
-    branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
+    treatmentId: uuid('treatment_id'),                                    // loose-coupling: cross-module UUID ref, no DB-level FK
+    visitId: uuid('visit_id'),                                            // loose-coupling: cross-module UUID ref, no DB-level FK
+    patientId: uuid('patient_id').notNull(),                              // loose-coupling: cross-module UUID ref, no DB-level FK
+    branchId: uuid('branch_id').notNull(),                                // loose-coupling: cross-module UUID ref, no DB-level FK
     type: imagingFindingTypeEnum('type').notNull(),
     status: imagingFindingStatusEnum('status').notNull().default('suspected'),
     toothNumber: integer('tooth_number'),
