@@ -18,6 +18,7 @@ import {
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
+import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { assertValidDepths, assertValidToothNumber } from './utils/perio-validation';
 import type { User } from '@/types/auth';
@@ -48,6 +49,14 @@ export async function upsertToothReading(
   // BR-P02: chart must be writable.
   if (chart.status !== 'draft') {
     throw new BusinessLogicError(`Cannot modify ${chart.status} perio chart`, 'PERIO_CHART_LOCKED');
+  }
+
+  // EF-PER-001: parent visit must not be completed or locked.
+  const visitRepo = new VisitRepository(db);
+  const visit = await visitRepo.findOneById(chart.visitId);
+  if (!visit) throw new NotFoundError('Dental visit');
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
   }
 
   // BR-P05: dentist or hygienist role required.

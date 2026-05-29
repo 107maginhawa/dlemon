@@ -31,6 +31,7 @@ import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
+import { dentalPerioCharts } from './repos/perio-chart.schema';
 import { createPerioChart } from './createPerioChart';
 import { upsertToothReading } from './upsertToothReading';
 import { completePerioChart } from './completePerioChart';
@@ -50,7 +51,11 @@ const MEMBER_ID    = 'ee000000-0000-1000-8000-000000000020';
 const STAFF_MEM_ID = 'ee000000-0000-1000-8000-000000000021';
 const PERSON_ID    = 'ee000000-0000-1000-8000-000000000030';
 const PATIENT_ID   = 'ee000000-0000-1000-8000-000000000040';
-const VISIT_ID     = 'ee000000-0000-1000-8000-000000000050';
+const VISIT_ID          = 'ee000000-0000-1000-8000-000000000050';
+const COMPLETED_VISIT_ID      = 'ee000000-0000-1000-8000-000000000060';
+const LOCKED_VISIT_ID         = 'ee000000-0000-1000-8000-000000000061';
+const COMPLETED_CHART_ID      = 'ee000000-0000-1000-8000-000000000070';
+const LOCKED_CHART_ID         = 'ee000000-0000-1000-8000-000000000071';
 
 // ─── App builders ──────────────────────────────────────────────────────────────
 
@@ -129,11 +134,37 @@ beforeAll(async () => {
     dentistMemberId: MEMBER_ID, status: 'active',
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
+
+  // EF-PER-001 fixtures: visits in completed/locked states with draft perio charts
+  await db.insert(dentalVisits).values({
+    id: COMPLETED_VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
+    dentistMemberId: MEMBER_ID, status: 'completed',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalVisits).values({
+    id: LOCKED_VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
+    dentistMemberId: MEMBER_ID, status: 'locked',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // Seed draft perio charts for the sealed visits directly — createPerioChart
+  // blocks on completed/locked visits so we insert via DB to set up EF-PER-001 tests.
+  await db.insert(dentalPerioCharts).values({
+    id: COMPLETED_CHART_ID, visitId: COMPLETED_VISIT_ID, patientId: PATIENT_ID,
+    branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(dentalPerioCharts).values({
+    id: LOCKED_CHART_ID, visitId: LOCKED_VISIT_ID, patientId: PATIENT_ID,
+    branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
 });
 
 afterAll(async () => {
   // Clean up in dependency order — charts cascade to readings
-  const { dentalPerioCharts } = await import('./repos/perio-chart.schema');
   await db.delete(dentalPerioCharts).execute().catch(() => {});
   await db.delete(dentalVisits).execute().catch(() => {});
   // Leave org/branch/membership/person/patient — created with onConflictDoNothing so idempotent
@@ -228,6 +259,31 @@ describe('upsertToothReading', () => {
       body: JSON.stringify({ depthBM: 2 }),
     });
     expect(res.status).toBe(403);
+  });
+
+  // EF-PER-001: parent visit lock propagation
+  test('returns 422 VISIT_IMMUTABLE when parent visit is completed', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${COMPLETED_CHART_ID}/readings/11`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('returns 422 VISIT_IMMUTABLE when parent visit is locked', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${LOCKED_CHART_ID}/readings/11`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 
