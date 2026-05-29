@@ -7,7 +7,7 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '@/core/errors';
 import { AuditLogRepository } from './repos/audit-log.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
@@ -30,10 +30,16 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   const tenantId    = ctx.req.query('tenantId')     ?? undefined;
   const branchId    = ctx.req.query('branchId')     ?? undefined;
 
-  // Branch-level isolation: dentist_owner must have active membership in the queried branch
-  if (branchId) {
-    await assertBranchAccess(db, user.id, branchId);
+  // EM-AUD-002 / AC-AUD-003: branchId is REQUIRED (AUDIT_CONTRACTS.md §5).
+  // Without it, AuditLogRepository.list applies no branch/tenant condition and
+  // returns audit rows across ALL tenants — a cross-tenant PHI-adjacent leak.
+  // The endpoint must always be branch-scoped.
+  if (!branchId) {
+    throw new ValidationError('branchId query parameter is required');
   }
+
+  // Branch-level isolation: dentist_owner must have active membership in the queried branch
+  await assertBranchAccess(db, user.id, branchId);
   const targetType  = ctx.req.query('targetType')   ?? ctx.req.query('resourceType') ?? undefined;
   const targetId    = ctx.req.query('targetId')     ?? ctx.req.query('resourceId')   ?? undefined;
   const action      = ctx.req.query('action')       ?? undefined;
