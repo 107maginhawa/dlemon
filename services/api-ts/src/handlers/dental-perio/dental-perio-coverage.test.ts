@@ -192,17 +192,22 @@ describe('createPerioChart', () => {
     expect(Array.isArray(body.readings)).toBe(true);
   });
 
-  test('returns 422 on duplicate chart for same visit', async () => {
+  test('returns 409 CHART_EXISTS on duplicate chart for same visit', async () => {
     const app = buildApp(TEST_USER);
-    // First chart was created in the previous test
-    const res = await app.request('/dental/perio-charts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitId: VISIT_ID, patientId: PATIENT_ID }),
-    });
-    expect(res.status).toBe(422);
+    const post = () =>
+      app.request('/dental/perio-charts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitId: VISIT_ID, patientId: PATIENT_ID }),
+      });
+    // Self-contained: ensure a chart exists for VISIT_ID (201 if first, 409 if a
+    // prior test already created it), then assert the next POST conflicts.
+    // BR-P01 (AC-P02): one chart per visit → 409 CHART_EXISTS, not 422.
+    await post();
+    const res = await post();
+    expect(res.status).toBe(409);
     const body = await res.json() as any;
-    expect(body.code).toBe('PERIO_CHART_DUPLICATE');
+    expect(body.code).toBe('CHART_EXISTS');
   });
 
   test('returns 403 when user has no membership', async () => {
@@ -334,6 +339,23 @@ describe('completePerioChart', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('PERIO_CHART_ALREADY_COMPLETE');
+  });
+
+  // BR-P02 / AC-P08: cannot complete a draft chart whose parent visit is locked/completed
+  test('returns 422 VISIT_LOCKED when parent visit is completed', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${COMPLETED_CHART_ID}/complete`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
+  });
+
+  test('returns 422 VISIT_LOCKED when parent visit is locked', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${LOCKED_CHART_ID}/complete`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
   });
 });
 

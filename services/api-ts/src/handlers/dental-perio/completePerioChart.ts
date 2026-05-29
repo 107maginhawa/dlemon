@@ -17,6 +17,7 @@ import {
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
+import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CompletePerioChartParams } from '@/generated/openapi/validators';
@@ -41,6 +42,13 @@ export async function completePerioChart(
 
   if (chart.status === 'completed' || chart.status === 'locked') {
     throw new BusinessLogicError(`Perio chart is already ${chart.status}`, 'PERIO_CHART_ALREADY_COMPLETE');
+  }
+
+  // BR-P02 / AC-P08: parent visit must not be locked or completed.
+  const visit = await getVisitForPerio(db, chart.visitId);
+  if (!visit) throw new NotFoundError('Dental visit');
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError('Cannot complete chart on a locked visit', 'VISIT_LOCKED');
   }
 
   await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
