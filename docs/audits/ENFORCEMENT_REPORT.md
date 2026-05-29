@@ -69,11 +69,16 @@ All 54 run-7 P0s confirmed fixed against current source. Highlights:
 
 These are real but NOT auto-fixable in an enforcement-fix wave:
 
-1. **EMR namespace re-scope** (EM-EMR-001/002/003/006/007, EF-EMR-*, EX-005/006) — P1 architectural. `handlers/emr/` ships consultation-notes while MODULE_SPEC declares a Phase-3+ EMR-import bridge. **Needs a product decision** (re-spec vs rename). Not a runtime risk.
-2. **Audit-table divergence** (EM-AUD-005/008/009, EF-AUD-001..005) — P1. dental-org membership/PIN events write to platform `audit_log_entry`, not `dental_audit_log` (what the dental audit viewer reads), so they're invisible there; `dental_audit_log` schema also missing ~5 AUDIT_CONTRACTS §2 fields. **Schema migration + handler convergence — dedicated effort.**
-3. **Domain events** (visit DE-001..006 dead publishers; clinical/imaging/patient unimplemented; PATCH-cancel) — P1. Publish mechanism exists (pg-boss), 5/23 wired, **no consumers yet** → low functional value. Dedicated event-wiring sprint when the consumer story is defined.
-4. **Imaging features** (study-list + annotation endpoints, `IMAGING_TIER_REQUIRED` code, `NOT_CALIBRATED` guard, annotation status column) — P1/P2 feature work.
-5. **dental-org misc** (EM-ORG-003 `updateMember` unrouted; EM-ORG-006 invitation email; EF-ORG-P021 envelope inconsistency) — P1/P2.
+1. **Audit-table divergence** (EM-AUD-005/008/009, EF-AUD-001..005) — P1. dental-org membership/PIN events write to platform `audit_log_entry`, not `dental_audit_log` (what the dental audit viewer reads), so they're invisible there; `dental_audit_log` schema also missing ~5 AUDIT_CONTRACTS §2 fields. **Schema migration + handler convergence — dedicated effort.**
+2. **Domain events** (visit DE-001..006 dead publishers; clinical/imaging/patient unimplemented; PATCH-cancel) — P1. Publish mechanism exists (pg-boss), 5/23 wired, **no consumers yet** → low functional value. Dedicated event-wiring sprint when the consumer story is defined.
+3. **Imaging features** (study-list + annotation endpoints, `IMAGING_TIER_REQUIRED` code, `NOT_CALIBRATED` guard, annotation status column) — P1/P2 feature work.
+4. **dental-org misc** (EM-ORG-003 `updateMember` unrouted; EM-ORG-006 invitation email; EF-ORG-P021 envelope inconsistency) — P1/P2.
+
+---
+
+## Resolved Post-Run-8
+
+- **EMR namespace re-scope** (EM-EMR-001/002/003/006/007, EF-EMR-001..008, EX-005/006) — **RESOLVED 2026-05-29** (remaining-work matrix Item #3). Product decision: **Option A — re-spec in place**. The live `handlers/emr/` module is telemedicine **consultation-notes** (`consultation_note`, namespace `/emr`) and is now documented as the `emr-consultation` MODULE_SPEC. The future external-EMR/EHR **import** bridge was renamed `dental-emr-integration → external-records-import` and re-namespaced `/dental/emr → /dental/emr-import` (the two never shared a route prefix). **EX-005/006 decoupled**: `emr.repo.ts` no longer imports `patient`/`provider`/`person` schemas (the `findOneWithDetails`/`findManyWithDetails` joins were removed; expansion is composed in `getConsultation` via `patient-emr.facade` + a new `provider-emr.facade`); all 6 EMR handlers now use facades instead of `ProviderRepository`. TDD RED→GREEN (`provider-emr.facade.test.ts`) plus a `getConsultation.expand.test.ts` characterization lock. Gates: `typecheck` 0, `check:boundaries:error` exit 0, EMR+facade suite green.
 
 ---
 

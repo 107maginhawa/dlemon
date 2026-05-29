@@ -6,8 +6,17 @@ import {
   NotFoundError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
-import { getPatientByPersonIdForEMR } from '../patient/repos/patient-emr.facade';
-import { ProviderRepository } from '../provider/repos/provider.repo';
+import type { ConsultationNoteWithDetails } from './repos/emr.schema';
+import {
+  getPatientByPersonIdForEMR,
+  getPatientForEMR,
+  getPatientWithPersonForEMR,
+} from '../patient/repos/patient-emr.facade';
+import {
+  getProviderByPersonIdForEMR,
+  getProviderForEMR,
+  getProviderWithPersonForEMR,
+} from '../provider/repos/provider-emr.facade';
 import { shouldExpand } from '@/utils/query';
 import { logAuditEvent } from '@/core/audit-logger';
 
@@ -44,8 +53,7 @@ export async function getConsultation(ctx: HandlerContext) {
   
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
-  const providerRepo = new ProviderRepository(db, logger);
-  
+
   // Find consultation note
   const consultation = await consultationRepo.findOneById(consultationId);
   if (!consultation) {
@@ -60,7 +68,7 @@ export async function getConsultation(ctx: HandlerContext) {
   let hasAccess = false;
 
   // Check if user is the provider for this consultation
-  const provider = await providerRepo.findByPersonId(user.id);
+  const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
   if (provider && consultation.provider === provider.id) {
     hasAccess = true;
   }
@@ -106,24 +114,28 @@ export async function getConsultation(ctx: HandlerContext) {
     return ctx.json(consultation, 200);
   }
   
-  // Get consultation with expanded details
-  const consultationWithDetails = await consultationRepo.findOneWithDetails(
-    consultationId,
-    {
-      patient: expandPatient,
-      provider: expandProvider,
-      person: expandPerson
+  // Compose expanded details via owning-module facades — the EMR module never
+  // reaches into patient/provider/person schemas directly (EX-005/EX-006).
+  const consultationWithDetails: ConsultationNoteWithDetails = { ...consultation };
+
+  if (expandPatient) {
+    const patientData = expandPerson
+      ? await getPatientWithPersonForEMR(db, consultation.patient, logger)
+      : await getPatientForEMR(db, consultation.patient, logger);
+    if (patientData) {
+      consultationWithDetails.patient = patientData;
     }
-  );
-  
-  if (!consultationWithDetails) {
-    throw new NotFoundError(`Consultation ${consultationId} not found`, {
-      resourceType: 'consultation',
-      resource: consultationId,
-      suggestions: ['Check consultation ID', 'Verify consultation exists', 'Check consultation status']
-    });
   }
-  
+
+  if (expandProvider) {
+    const providerData = expandPerson
+      ? await getProviderWithPersonForEMR(db, consultation.provider, logger)
+      : await getProviderForEMR(db, consultation.provider, logger);
+    if (providerData) {
+      consultationWithDetails.provider = providerData;
+    }
+  }
+
   // Log audit trail
   logger?.info({
     consultationId,

@@ -274,10 +274,15 @@ model UpdateConsultationRequest {
 }
 
 /**
- * EMR Module for Telemedicine Minor Ailments
- * 
- * Simplified documentation system focused on quick consultations
- * for minor ailments with flexibility for future integrations.
+ * EMR Module — Telemedicine Consultation Notes (minor ailments)
+ *
+ * Simplified consultation-note documentation system (draft→finalized→amended)
+ * for quick minor-ailment encounters. Spec: docs/product/modules/emr-consultation/.
+ *
+ * NOTE: This is the live "EMR" — telemedicine consultation notes at /emr. It is
+ * NOT the external-EMR/EHR import bridge (Open Dental / Dentrix / HL7-FHIR), which
+ * is the separate, future-phase `external-records-import` module on /dental/emr-import
+ * (docs/product/modules/external-records-import/).
  */
 @route("/emr")
 @tag("EMR")

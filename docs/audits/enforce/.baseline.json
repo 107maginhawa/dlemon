@@ -42,12 +42,15 @@
     "dental-visit: EM-VIS-001 (getTreatmentPlan branch check), EM-VIS-003 (treatment immutability)",
     "audit-compliance: AL-001..025 all audited on routed handlers (the run-7 'Wave3 defect' on AL-003/004 is fixed; both routed membership handlers emit logAuditEvent)"
   ],
-  "deferred_open_findings": {
+  "resolved_post_run8": {
     "EMR-namespace-rescope": {
       "ids": ["EM-EMR-001", "EM-EMR-002", "EM-EMR-003", "EM-EMR-006", "EM-EMR-007", "EF-EMR-001..008", "EX-005", "EX-006"],
-      "severity": "P1 (architectural)",
-      "reason": "handlers/emr/ implements consultation-notes but MODULE_SPEC declares an external-EMR-import bridge gated until Phase 3+. Needs a PRODUCT DECISION (re-spec to consultation-notes vs rename code + reserve namespace). Not a runtime security/data risk. emr.repo.ts also has direct cross-module schema imports (EX-005/006) — fix alongside the rescope. NOT auto-fixable."
-    },
+      "resolved_at": "2026-05-29",
+      "decision": "Option A — re-spec in place (product decision via AskUserQuestion).",
+      "resolution": "The live handlers/emr/ module is telemedicine CONSULTATION-NOTES (table consultation_note, namespace /emr) — documented as the new emr-consultation MODULE_SPEC. The future external-EMR/EHR IMPORT bridge was renamed dental-emr-integration → external-records-import and re-namespaced /dental/emr → /dental/emr-import, removing the name collision (the two never shared a route prefix). EX-005/006 decoupled: emr.repo.ts no longer imports patient/provider/person schemas (findOneWithDetails/findManyWithDetails removed; expansion composed in getConsultation via patient-emr.facade + new provider-emr.facade); all 6 emr handlers use facades instead of ProviderRepository. TDD: provider-emr.facade.test.ts (RED→GREEN) + getConsultation.expand.test.ts characterization lock. Gates: typecheck 0, check:boundaries:error exit 0, emr+facade suite green."
+    }
+  },
+  "deferred_open_findings": {
     "audit-table-divergence": {
       "ids": ["EM-AUD-005", "EM-AUD-008", "EM-AUD-009", "EF-AUD-001..005"],
       "severity": "P1",

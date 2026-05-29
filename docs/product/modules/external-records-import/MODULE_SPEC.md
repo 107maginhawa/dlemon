@@ -1,16 +1,25 @@
-<!-- oli-version: 1.1 | generated: 2026-05-24 | skill: oli-module-specs --all | updated: 2026-05-25 SBT-010 -->
+<!-- oli-version: 1.1 | generated: 2026-05-24 | updated: 2026-05-29 (renamed from dental-emr → external-records-import; namespace /dental/emr → /dental/emr-import — EMR namespace re-scope Item #3) -->
 
-# Module Specification: dental-emr
+# Module Specification: external-records-import
 
 ---
-Spec Version: 1.1 | Last Updated: 2026-05-25
+Spec Version: 1.2 | Last Updated: 2026-05-29
 implementation_status: future_phase (Phase 3+)
+namespace: /dental/emr-import
 ---
+
+## 0. Naming Note (renamed 2026-05-29)
+
+Formerly specced as "dental-emr" on `/dental/emr`. Renamed to
+**external-records-import** on **`/dental/emr-import`** to resolve a name collision:
+the live `emr` handler directory ships telemedicine consultation notes
+(see **[emr-consultation](../emr-consultation/MODULE_SPEC.md)**, namespace `/emr`).
+This module does **not** claim the `emr` handler name or the `/emr` namespace.
 
 ## 1. Module Overview
-**Purpose:** External EMR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR sources). Allows dentists to pull historical patient records from external practices into a patient's cabinet for clinical reference. Imported records are read-only; data is NOT auto-merged into editable dental records.
+**Purpose:** External EMR/EHR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR sources). Allows dentists to pull historical patient records from external practices into a patient's cabinet for clinical reference. Imported records are read-only; data is NOT auto-merged into editable dental records.
 
-**NOT an alias for dental-visit.** The active EMR for visit records, charts, and treatments is `dental-visit`. This module handles external practice data portability only.
+**NOT an alias for dental-visit.** The active EMR for visit records, charts, and treatments is `dental-visit`. The live consultation-notes module is `emr-consultation` (`/emr`). This module handles external practice data portability only.
 
 **Implementation status:** Future phase (Phase 3+). No handler directory exists. Spec defines the planned boundary.
 
@@ -61,7 +70,7 @@ imported (terminal — read-only, no transitions)
 ---
 
 ## 10. API Expectations
-POST /dental/emr/import (patient_id, source_system, file/data), GET /dental/emr/:patientId (list), GET /dental/emr/:id (detail)
+POST /dental/emr-import (patient_id, source_system, file/data), GET /dental/emr-import/:patientId (list), GET /dental/emr-import/:id (detail)
 
 ---
 

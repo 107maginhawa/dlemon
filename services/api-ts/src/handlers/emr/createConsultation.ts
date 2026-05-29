@@ -8,7 +8,10 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
-import { ProviderRepository } from '../provider/repos/provider.repo';
+import {
+  getProviderForEMR,
+  getProviderByPersonIdForEMR,
+} from '../provider/repos/provider-emr.facade';
 import { getPatientForEMR } from '../patient/repos/patient-emr.facade';
 import { type CreateConsultationRequest } from './repos/emr.schema';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -35,10 +38,9 @@ export async function createConsultation(ctx: HandlerContext) {
 
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
-  const providerRepo = new ProviderRepository(db, logger);
 
   // Validate provider exists and user has access
-  const provider = await providerRepo.findOneById(body.provider);
+  const provider = await getProviderForEMR(db, body.provider, logger);
   if (!provider) {
     throw new NotFoundError(`Provider ${body.provider} not found`, {
       resourceType: 'provider',
@@ -48,7 +50,7 @@ export async function createConsultation(ctx: HandlerContext) {
   }
 
   // Verify user is the provider (role-based authorization)
-  const userProvider = await providerRepo.findByPersonId(user.id);
+  const userProvider = await getProviderByPersonIdForEMR(db, user.id, logger);
   if (!userProvider) {
     throw new BusinessLogicError('Provider profile not found for authenticated user', 'PROVIDER_NOT_FOUND');
   }

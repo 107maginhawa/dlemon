@@ -1,9 +1,9 @@
 /**
  * patient-emr.facade.ts — narrow EMR access to the patient module
  *
- * Exposes only the patient-data operations the EMR (dental-emr-integration)
+ * Exposes only the patient-data operations the EMR (consultation-notes)
  * module needs, so EMR handlers do not cross-import the concrete
- * PatientRepository class (MODULE_BOUNDARIES.md EX-004).
+ * PatientRepository class (MODULE_BOUNDARIES.md EX-004/EX-005).
  */
 
 import type { DatabaseInstance } from '@/core/database';
@@ -23,6 +23,18 @@ export async function getPatientForEMR(
 ): Promise<Patient | null> {
   const repo = new PatientRepository(db, logger);
   return repo.findOneById(patientId);
+}
+
+/**
+ * Fetch a single patient with joined person data for EMR field expansion.
+ */
+export async function getPatientWithPersonForEMR(
+  db: DatabaseInstance,
+  patientId: string,
+  logger?: any
+): Promise<PatientWithPerson | null> {
+  const repo = new PatientRepository(db, logger);
+  return repo.findOneByIdWithPerson(patientId);
 }
 
 /**

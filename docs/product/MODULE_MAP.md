@@ -83,20 +83,30 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 **Dependencies**: `dental-visit`, `dental-clinical`, `dental-org`
 **Rules**: BR-021 (requires completed visit), BR-022 (import creates records)
 
-### M9: dental-emr-integration
-**Responsibility**: External EMR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR). Stores imported records read-only for clinical reference.
+### M9: external-records-import (formerly "dental-emr-integration")
+**Responsibility**: External EMR/EHR data import bridge from third-party practice management systems (Open Dental, Dentrix, Eaglesoft, HL7/FHIR). Stores imported records read-only for clinical reference.
 **Handler**: No handler directory — future phase (Phase 3+). Do not implement until scheduled.
-**Spec**: `docs/product/modules/dental-emr-integration/`
+**Spec**: `docs/product/modules/external-records-import/`
+**Namespace**: `/dental/emr-import` (renamed 2026-05-29 to free the "EMR" name for the live consultation-notes module below)
 **Key tables**: `emr_record` (planned)
 **PRD Section**: Phase 3+ (not in current roadmap)
 **Dependencies**: `dental-org`, `dental-patient`
-**Note**: NOT an alias for dental-visit. **`dental-visit` is the active dental EMR** for native visit, chart, and treatment records. This module handles external practice data portability only.
+**Note**: NOT an alias for dental-visit, and NOT the live `emr` handler. **`dental-visit` is the active dental EMR** for native visit/chart/treatment records; the live `emr` handler (see P-EMR below) ships telemedicine consultation notes. This module handles external practice data portability only.
 
 ### M10: dental-audit (dental-org module)
 **Responsibility**: Dental-specific audit trail and compliance event log.
 **Handler**: `services/api-ts/src/handlers/dental-org/getAuditEvents.ts` + base `audit` module
 **PRD Section**: §8 NFR Security (audit logging requirement)
 **Dependencies**: `audit` (base), `dental-org`
+
+### P-EMR: emr-consultation (platform-level module)
+**Responsibility**: Telemedicine / minor-ailment **consultation notes** (chief complaint, assessment, plan, vitals, symptoms, prescriptions, follow-up) with a `draft→finalized→amended` lifecycle. Ported from the `monobase-mycure` upstream template.
+**Handler**: `services/api-ts/src/handlers/emr/` (6 handlers) — **implemented**.
+**Spec**: `docs/product/modules/emr-consultation/`
+**Namespace**: `/emr` (distinct from M9's `/dental/emr-import`)
+**Key tables**: `consultation_note`
+**Dependencies (facade-only, loose-coupling, no DB FKs)**: `patient` (`patient-emr.facade`), `provider` (`provider-emr.facade`), `person` (surfaced via the `*WithPerson` facade variants on `expand=person`).
+**Note**: This is a platform-level module (consumes generic `patient`/`provider`/`person`), **not** a `dental-*` domain module, and is **not** the external-records-import bridge (M9).
 
 ---
 
@@ -132,7 +142,8 @@ dental-org (M1) ─────────────────────�
         │                   └──→ dental-pmd (M8)
         │                   └──→ dental-imaging (M7) [loose coupling]
         ├──→ dental-scheduling (M4)
-        └──→ dental-emr-integration (M9) [future phase]
+        └──→ external-records-import (M9) [future phase, /dental/emr-import]
+emr-consultation (P-EMR) ─→ patient/provider/person facades [platform, /emr]
 storage ──────────────────────────────────────→ dental-imaging, dental-clinical
 shared (assertBranchAccess/Role) ─────────────→ ALL clinical handlers
 ```

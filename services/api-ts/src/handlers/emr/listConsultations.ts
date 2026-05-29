@@ -6,7 +6,7 @@ import {
   ForbiddenError
 } from '@/core/errors';
 import { ConsultationNoteRepository, type ConsultationNoteFilters } from './repos/emr.repo';
-import { ProviderRepository } from '../provider/repos/provider.repo';
+import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 import { getPatientByPersonIdForEMR } from '../patient/repos/patient-emr.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 
@@ -67,8 +67,7 @@ export async function listConsultations(ctx: HandlerContext) {
   if (!isAdmin) {
     if (isProvider) {
       // For providers, find their provider profile and filter by it
-      const providerRepo = new ProviderRepository(db, logger);
-      const provider = await providerRepo.findByPersonId(user.id);
+      const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
       if (!provider) {
         throw new ForbiddenError('Provider profile not found for authenticated user');
       }

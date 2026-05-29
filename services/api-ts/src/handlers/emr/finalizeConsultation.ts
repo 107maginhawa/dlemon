@@ -7,7 +7,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
-import { ProviderRepository } from '../provider/repos/provider.repo';
+import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 
 /**
  * finalizeConsultation
@@ -39,8 +39,7 @@ export async function finalizeConsultation(ctx: HandlerContext) {
   
   // Instantiate repositories
   const consultationRepo = new ConsultationNoteRepository(db, logger);
-  const providerRepo = new ProviderRepository(db, logger);
-  
+
   // Find consultation note
   const consultation = await consultationRepo.findOneById(consultationId);
   if (!consultation) {
@@ -52,7 +51,7 @@ export async function finalizeConsultation(ctx: HandlerContext) {
   }
   
   // Verify provider owns this consultation
-  const provider = await providerRepo.findByPersonId(user.id);
+  const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
   if (!provider) {
     throw new BusinessLogicError('Provider profile not found for authenticated user', 'PROVIDER_NOT_FOUND');
   }

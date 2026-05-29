@@ -1,9 +1,9 @@
 <!-- oli-version: 1.0 -->
 <!-- generated: 2026-05-24 -->
 <!-- skill: oli-api-contracts --all -->
-<!-- based-on: MODULE_SPEC dental-emr, API_CONVENTIONS.md, ERROR_TAXONOMY.md -->
+<!-- based-on: MODULE_SPEC external-records-import, API_CONVENTIONS.md, ERROR_TAXONOMY.md -->
 
-# API Contracts — dental-emr
+# API Contracts — external-records-import (/dental/emr-import)
 
 > All responses wrap in `{ data, meta }`.
 > Imported EMR records are read-only after import — no PATCH/DELETE.
@@ -13,7 +13,7 @@
 
 ## Endpoints
 
-### POST /api/v1/dental/emr/import
+### POST /api/v1/dental/emr-import
 
 Import an external EMR/EHR record for a patient.
 
@@ -49,7 +49,7 @@ Import an external EMR/EHR record for a patient.
 
 ---
 
-### GET /api/v1/dental/emr/:patientId
+### GET /api/v1/dental/emr-import/:patientId
 
 List imported EMR records for a patient.
 
@@ -72,7 +72,7 @@ List imported EMR records for a patient.
 
 ---
 
-### GET /api/v1/dental/emr/:id
+### GET /api/v1/dental/emr-import/:id
 
 Get full detail of an imported EMR record.
 

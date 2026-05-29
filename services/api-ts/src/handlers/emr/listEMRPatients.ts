@@ -11,7 +11,7 @@ import {
   listPatientsWithPersonForEMR,
   type PatientFilters
 } from '../patient/repos/patient-emr.facade';
-import { ProviderRepository } from '../provider/repos/provider.repo';
+import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 import { parsePagination, parseFilters, buildPaginationMeta, shouldExpand } from '@/utils/query';
 import { subDays } from 'date-fns';
 
@@ -61,8 +61,7 @@ export async function listEMRPatients(ctx: HandlerContext) {
   const expandPerson = shouldExpand(query, 'person');
 
   // Resolve provider entity ID from person ID
-  const providerRepo = new ProviderRepository(db, logger);
-  const provider = await providerRepo.findByPersonId(user.id);
+  const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
   if (!provider) {
     throw new ForbiddenError('Provider profile not found for authenticated user');
   }

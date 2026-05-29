@@ -7,16 +7,17 @@ import { eq, and, or, desc, inArray, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import { shouldExpand } from '@/utils/query';
-import { 
+import {
   consultationNotes,
   type ConsultationNote,
   type NewConsultationNote,
-  type ConsultationStatus,
-  type ConsultationNoteWithDetails
+  type ConsultationStatus
 } from './emr.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { providers } from '../../provider/repos/provider.schema';
-import { persons } from '../../person/repos/person.schema';
+
+// NOTE: Patient/provider/person field expansion is intentionally NOT done here.
+// Each owning module exposes its own join via a facade (patient-emr.facade /
+// provider-emr.facade); EMR handlers compose those results. This keeps the EMR
+// repo free of cross-module schema imports (MODULE_BOUNDARIES.md EX-005/EX-006).
 
 export interface ConsultationNoteFilters {
   context?: string;         // Context filter per TypeSpec
@@ -25,12 +26,6 @@ export interface ConsultationNoteFilters {
   status?: ConsultationStatus; // Status filter per TypeSpec
   dateRange?: { start: string; end: string };
   q?: string; // General search query
-}
-
-export interface ExpansionOptions {
-  patient?: boolean;
-  provider?: boolean;
-  person?: boolean; // For patient/provider person expansion
 }
 
 export class ConsultationNoteRepository extends DatabaseRepository<
@@ -133,128 +128,6 @@ export class ConsultationNoteRepository extends DatabaseRepository<
     }, 'Consultation notes by provider retrieved');
     
     return notes;
-  }
-
-  /**
-   * Find consultation note with expanded details (patient, provider)
-   */
-  async findOneWithDetails(
-    noteId: string, 
-    expand?: ExpansionOptions
-  ): Promise<ConsultationNoteWithDetails | null> {
-    this.logger?.debug({ noteId, expand }, 'Finding consultation note with details');
-    
-    // Base query for consultation note
-    const baseResult = await this.findOneById(noteId);
-    if (!baseResult) {
-      return null;
-    }
-    
-    const result: ConsultationNoteWithDetails = { ...baseResult };
-    
-    // Conditional expansion using ternary pattern from existing repos
-    const [patientData, providerData] = await Promise.all([
-      expand?.patient 
-        ? (expand?.person
-            ? this.db
-                .select({
-                  patient: patients,
-                  person: persons
-                })
-                .from(patients)
-                .innerJoin(persons, eq(patients.person, persons.id))
-                .where(eq(patients.id, baseResult.patient))
-                .limit(1)
-            : this.db
-                .select()
-                .from(patients)
-                .where(eq(patients.id, baseResult.patient))
-                .limit(1))
-        : null,
-        
-      expand?.provider 
-        ? (expand?.person
-            ? this.db
-                .select({
-                  provider: providers,
-                  person: persons
-                })
-                .from(providers)
-                .innerJoin(persons, eq(providers.person, persons.id))
-                .where(eq(providers.id, baseResult.provider))
-                .limit(1)
-            : this.db
-                .select()
-                .from(providers)
-                .where(eq(providers.id, baseResult.provider))
-                .limit(1))
-        : null
-    ]);
-    
-    // Attach expanded data
-    const firstPatient = patientData?.[0];
-    if (firstPatient) {
-      if (expand?.person && 'patient' in firstPatient) {
-        // Include person data in patient object
-        result.patient = {
-          ...(firstPatient as { patient: Record<string, unknown>; person: Record<string, unknown> }).patient,
-          person: (firstPatient as { patient: Record<string, unknown>; person: Record<string, unknown> }).person
-        };
-      } else {
-        result.patient = firstPatient;
-      }
-    }
-
-    const firstProvider = providerData?.[0];
-    if (firstProvider) {
-      if (expand?.person && 'provider' in firstProvider) {
-        // Include person data in provider object
-        result.provider = {
-          ...(firstProvider as { provider: Record<string, unknown>; person: Record<string, unknown> }).provider,
-          person: (firstProvider as { provider: Record<string, unknown>; person: Record<string, unknown> }).person
-        };
-      } else {
-        result.provider = firstProvider;
-      }
-    }
-    
-    this.logger?.debug({ 
-      noteId, 
-      found: true,
-      expandedFields: Object.keys(expand || {}).filter(key => expand?.[key as keyof ExpansionOptions])
-    }, 'Consultation note with details retrieved');
-    
-    return result;
-  }
-
-  /**
-   * Find consultation notes with expanded details (supports multiple records)
-   */
-  async findManyWithDetails(
-    filters?: ConsultationNoteFilters,
-    expand?: ExpansionOptions,
-    options?: { pagination?: PaginationOptions }
-  ): Promise<ConsultationNoteWithDetails[]> {
-    this.logger?.debug({ filters, expand, options }, 'Finding consultation notes with details');
-    
-    // Get base consultation notes
-    const notes = await this.findMany(filters, {
-      ...options,
-      orderBy: desc(consultationNotes.createdAt)
-    });
-    
-    if (notes.length === 0) {
-      return [];
-    }
-    
-    // For now, return notes without full expansion for multiple records
-    // This would need proper implementation of IN queries for full expansion support
-    this.logger?.debug({ 
-      noteCount: notes.length,
-      message: 'Returning consultation notes without full expansion (IN query support needed)'
-    }, 'Consultation notes with details retrieved');
-    
-    return notes.map(note => ({ ...note }));
   }
 
   /**
