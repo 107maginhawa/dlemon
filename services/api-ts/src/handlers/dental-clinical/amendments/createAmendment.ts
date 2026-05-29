@@ -6,10 +6,12 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { AmendmentRepository } from '../repos/amendment.repo';
-import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
 
@@ -24,13 +26,28 @@ export async function createAmendment(
 
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Branch-level authorization via parent visit
+  // Branch-level authorization via parent visit.
+  // EM-CLI-011: use assertBranchRole (role-aware) instead of getActiveMembershipId
+  // (which only checks membership existence, not role). Amendments are restricted to
+  // dentist_owner and dentist_associate per MODULE_SPEC §6.
   const visit = await getVisitOrThrow(db, visitId);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
-  const membership = await getActiveMembershipId(db, user.id, visit.branchId);
-  if (!membership) throw new ForbiddenError('You do not have access to this branch');
+  // Resolve caller's membership id for the audit trail (authorMemberId).
+  // assertBranchRole above already guarantees this row exists; the cast is safe.
+  const [callerMembership] = await db
+    .select({ id: dentalMemberships.id })
+    .from(dentalMemberships)
+    .where(
+      and(
+        eq(dentalMemberships.personId, user.id),
+        eq(dentalMemberships.branchId, visit.branchId),
+        eq(dentalMemberships.status, 'active'),
+      ),
+    )
+    .limit(1);
 
-  const authorMemberId = membership.id;
+  const authorMemberId = callerMembership!.id;
 
   const repo = new AmendmentRepository(db);
 
