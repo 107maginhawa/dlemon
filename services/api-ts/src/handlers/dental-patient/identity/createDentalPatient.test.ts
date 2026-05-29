@@ -86,6 +86,7 @@ describe('createDentalPatient handler', () => {
         dateOfBirth: '1990-05-15',
         gender: 'female',
         consentGiven: true,
+        branchId: BRANCH_ID, // branchId is required (assertBranchAccess)
       }),
     });
 
@@ -109,6 +110,7 @@ describe('createDentalPatient handler', () => {
       body: JSON.stringify({
         displayName: 'Madonna',
         consentGiven: true,
+        branchId: BRANCH_ID, // branchId is required (assertBranchAccess)
       }),
     });
 
@@ -165,7 +167,7 @@ describe('createDentalPatient handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('FR2.20: returns 400 when consentGiven is false', async () => {
+  test('FR2.20: returns 422 when consentGiven is false', async () => {
     const app = buildTestApp(authedUser);
 
     const res = await app.request('/dental/patients', {
@@ -177,7 +179,8 @@ describe('createDentalPatient handler', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    // Consent rejection is a BusinessLogicError (CONSENT_REQUIRED) → 422, not 400
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.error).toMatch(/consent/i);
   });
