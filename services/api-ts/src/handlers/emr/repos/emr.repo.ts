@@ -178,15 +178,21 @@ export class ConsultationNoteRepository extends DatabaseRepository<
   }
 
   /**
-   * Validate status transition logic
+   * Validate status transition logic.
+   *
+   * MODULE_SPEC §8 (V-EMR-001 / V-EMR-C-001): `draft → finalized` is **terminal**.
+   * `finalized` and `amended` have NO outgoing transitions — the earlier
+   * `finalized → amended → finalized` re-finalizable machine was struck and must
+   * not be re-encoded here (the live finalize path uses `finalizeNote`, not this
+   * table). `amended` is a reserved/unreachable enum value with no producer.
    */
-  private validateStatusTransition(currentStatus: ConsultationStatus, newStatus: ConsultationStatus): void {
+  validateStatusTransition(currentStatus: ConsultationStatus, newStatus: ConsultationStatus): void {
     const validTransitions: Record<ConsultationStatus, ConsultationStatus[]> = {
       draft: ['finalized'],
-      finalized: ['amended'],
-      amended: ['finalized'] // Can be re-finalized after amendments
+      finalized: [], // terminal
+      amended: []    // reserved/unreachable — no outgoing transitions
     };
-    
+
     const allowedStatuses = validTransitions[currentStatus] || [];
     
     if (!allowedStatuses.includes(newStatus)) {

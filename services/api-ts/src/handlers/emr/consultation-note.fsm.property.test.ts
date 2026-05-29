@@ -1,62 +1,69 @@
 /**
- * Property-based tests for the Consultation Note FSM
+ * Property-based tests for the Consultation Note FSM.
  *
- * Consultation lifecycle:
- *   draft → finalized → amended → finalized (can cycle)
- *   There is no true terminal — amended can be re-finalized.
+ * MODULE_SPEC §8 (V-EMR-001 / V-EMR-C-001): the consultation lifecycle is
+ *   draft → finalized   (**terminal**)
+ * There is NO amend-after-finalize workflow. `finalized` and `amended` have no
+ * outgoing transitions; `amended` is a reserved/unreachable enum value.
  *
- * Transition map mirrors the inline validTransitions in emr.repo.ts.
+ * This file exercises the REAL `validateStatusTransition` on
+ * `ConsultationNoteRepository` (no DB needed — the method is pure) so the test is
+ * coupled to production code, not a self-referential local copy. Previously this
+ * file declared its own legacy transition map and asserted it against itself
+ * (a tautology that affirmed the struck finalized↔amended cycle); it is now
+ * rewritten to pin the spec-terminal machine.
  *
- * G6-S2: property tests via fast-check
+ * G6-S2: property tests via fast-check.
  */
 import { describe, test, expect } from 'bun:test';
 import * as fc from 'fast-check';
+import { ConsultationNoteRepository } from './repos/emr.repo';
+import type { ConsultationStatus } from './repos/emr.schema';
 
-// Matches consultationStatusEnum in emr.schema.ts
 const CONSULTATION_STATES = ['draft', 'finalized', 'amended'] as const;
-type ConsultationStatus = typeof CONSULTATION_STATES[number];
+
+// The repo is constructed with a stub db/logger; validateStatusTransition never
+// touches the db (it is a pure guard), so this is safe.
+const repo = new ConsultationNoteRepository({} as any, undefined);
 
 /**
- * Mirrors the inline validTransitions in emr.repo.ts:
- *   draft: ['finalized']
- *   finalized: ['amended']
- *   amended: ['finalized']
+ * Wrap the REAL guard as a boolean predicate: it throws on an invalid transition.
  */
-const CONSULTATION_TRANSITIONS: Record<ConsultationStatus, ConsultationStatus[]> = {
-  draft:     ['finalized'],
-  finalized: ['amended'],
-  amended:   ['finalized'],
-};
-
 function isValidTransition(from: ConsultationStatus, to: ConsultationStatus): boolean {
-  return CONSULTATION_TRANSITIONS[from].includes(to);
+  try {
+    (repo as any).validateStatusTransition(from, to);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-describe('ConsultationNote FSM property tests', () => {
-  test('declared transitions are bidirectionally consistent', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom(...CONSULTATION_STATES),
-        fc.constantFrom(...CONSULTATION_STATES),
-        (from, to) => {
-          const declared = CONSULTATION_TRANSITIONS[from].includes(to);
-          const computed = isValidTransition(from, to);
-          expect(declared).toBe(computed);
-        },
-      ),
-      { numRuns: 200 },
-    );
+describe('ConsultationNote FSM property tests (real validateStatusTransition)', () => {
+  test('draft → finalized is the ONLY allowed transition', () => {
+    expect(isValidTransition('draft', 'finalized')).toBe(true);
+    expect(isValidTransition('draft', 'amended')).toBe(false);
+    expect(isValidTransition('draft', 'draft')).toBe(false);
   });
 
-  test('every declared target is a known state', () => {
-    for (const from of CONSULTATION_STATES) {
-      for (const to of CONSULTATION_TRANSITIONS[from]) {
-        expect(CONSULTATION_STATES).toContain(to);
-      }
+  test('finalized is terminal — no outgoing transitions', () => {
+    for (const to of CONSULTATION_STATES) {
+      expect(isValidTransition('finalized', to)).toBe(false);
     }
   });
 
-  test('no self-loops are declared', () => {
+  test('amended is terminal/unreachable — no outgoing transitions', () => {
+    for (const to of CONSULTATION_STATES) {
+      expect(isValidTransition('amended', to)).toBe(false);
+    }
+  });
+
+  test('the struck finalized↔amended cycle is REJECTED', () => {
+    // Regression guard for V-EMR-C-001: these must never be valid again.
+    expect(isValidTransition('finalized', 'amended')).toBe(false);
+    expect(isValidTransition('amended', 'finalized')).toBe(false);
+  });
+
+  test('no self-loops are valid', () => {
     fc.assert(
       fc.property(fc.constantFrom(...CONSULTATION_STATES), (state) => {
         expect(isValidTransition(state, state)).toBe(false);
@@ -65,35 +72,24 @@ describe('ConsultationNote FSM property tests', () => {
     );
   });
 
-  test('draft can only move to finalized', () => {
-    expect(CONSULTATION_TRANSITIONS['draft']).toEqual(['finalized']);
-    expect(isValidTransition('draft', 'amended')).toBe(false);
+  test('property: the ONLY valid (from,to) pair is (draft,finalized)', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...CONSULTATION_STATES),
+        fc.constantFrom(...CONSULTATION_STATES),
+        (from, to) => {
+          const valid = isValidTransition(from, to);
+          const expected = from === 'draft' && to === 'finalized';
+          expect(valid).toBe(expected);
+        },
+      ),
+      { numRuns: 200 },
+    );
   });
 
-  test('finalized can only move to amended', () => {
-    expect(CONSULTATION_TRANSITIONS['finalized']).toEqual(['amended']);
-    expect(isValidTransition('finalized', 'draft')).toBe(false);
-  });
-
-  test('amended can only move back to finalized', () => {
-    expect(CONSULTATION_TRANSITIONS['amended']).toEqual(['finalized']);
-    expect(isValidTransition('amended', 'draft')).toBe(false);
-  });
-
-  test('finalized↔amended cycle is valid (clinical amendment workflow)', () => {
-    // Can go finalized→amended→finalized→amended...
-    expect(isValidTransition('finalized', 'amended')).toBe(true);
-    expect(isValidTransition('amended', 'finalized')).toBe(true);
-  });
-
-  test('draft cannot be re-entered from finalized or amended', () => {
-    expect(isValidTransition('finalized', 'draft')).toBe(false);
-    expect(isValidTransition('amended', 'draft')).toBe(false);
-  });
-
-  test('all states covered in transition map', () => {
-    for (const state of CONSULTATION_STATES) {
-      expect(Object.keys(CONSULTATION_TRANSITIONS)).toContain(state);
+  test('draft cannot be re-entered from any state', () => {
+    for (const from of CONSULTATION_STATES) {
+      expect(isValidTransition(from, 'draft')).toBe(false);
     }
   });
 });

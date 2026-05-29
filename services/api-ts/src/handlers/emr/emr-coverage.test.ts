@@ -574,11 +574,11 @@ describe('finalizeConsultation handler', () => {
 });
 
 // ---------------------------------------------------------------------------
-// FSM chain: draft → finalized → amended → finalized
+// FSM: draft → finalized is TERMINAL (V-EMR-001 / V-EMR-C-001)
 // ---------------------------------------------------------------------------
 
-describe('FSM state machine chain', () => {
-  test('draft → finalized → amended → finalized (full chain)', async () => {
+describe('FSM state machine — terminal draft→finalized', () => {
+  test('repo REJECTS the struck finalized→amended transition', async () => {
     const repo = new ConsultationNoteRepository(db, logger as any);
     const consultation = await seedDraftConsultation();
     expect(consultation.status).toBe('draft');
@@ -592,15 +592,17 @@ describe('FSM state machine chain', () => {
     const finalized = await finalizeRes.json() as any;
     expect(finalized.status).toBe('finalized');
 
-    // Step 2: finalized → amended via direct repo update (PATCH handler blocks non-draft)
-    const amended = await repo.updateOneById(consultation.id, { status: 'amended' });
-    expect(amended.status).toBe('amended');
+    // Step 2: the repo's transition guard must REJECT finalized→amended — the
+    // struck re-finalizable machine (V-EMR-C-001) is no longer encoded. The spec
+    // machine is terminal at `finalized`, so updateStatus must throw.
+    await expect(repo.updateStatus(consultation.id, 'amended')).rejects.toThrow(
+      /Invalid status transition from finalized to amended/,
+    );
 
-    // Step 3: amended → finalized via handler (re-finalization)
+    // Step 3: and re-finalizing a non-draft note via the handler is rejected too.
     const refinalized = await app.request(`/emr/consultations/${consultation.id}/finalize`, {
       method: 'POST',
     });
-    // amended is not draft — handler should reject (BR-EMR-001)
     expect(refinalized.status).toBeGreaterThanOrEqual(400);
   });
 
