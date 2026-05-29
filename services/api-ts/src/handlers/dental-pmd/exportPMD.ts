@@ -15,6 +15,8 @@ import type { User } from '@/types/auth';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getPatientForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 
 export async function exportPMD(ctx: Context): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -60,6 +62,17 @@ export async function exportPMD(ctx: Context): Promise<Response> {
     signedAt: pmd.signedAt,
     content: JSON.parse(pmd.content),
   };
+
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'pmd.export',
+    resourceType: 'pmd',
+    resourceId: pmd.id,
+  });
 
   return new Response(JSON.stringify(exportData, null, 2), {
     status: 200,

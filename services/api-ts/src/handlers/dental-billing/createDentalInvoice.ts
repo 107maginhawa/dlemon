@@ -13,6 +13,8 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { getTreatmentsForInvoice, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/consent-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
 export async function createDentalInvoice(
@@ -101,6 +103,17 @@ export async function createDentalInvoice(
 
   // Mark treatments as billed to prevent double-billing (S1-T7)
   await markTreatmentsAsBilled(db, billable.map(t => t.id), invoice.id);
+
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, body.branchId);
+  await logAuditEvent(db, logger, {
+    personId: session.userId,
+    tenantId: branchForAudit?.organizationId ?? body.branchId,
+    branchId: body.branchId,
+    action: 'invoice.create',
+    resourceType: 'dental_invoice',
+    resourceId: invoice.id,
+  });
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

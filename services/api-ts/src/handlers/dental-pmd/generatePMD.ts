@@ -15,7 +15,8 @@ import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getTreatmentsForPMD } from '@/handlers/dental-visit/repos/visit-pmd.facade';
 import { getPrescriptionsForPMD } from '@/handlers/dental-clinical/repos/clinical-pmd.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
 
@@ -41,7 +42,7 @@ export async function generatePMD(
 
   const db = ctx.get('database') as DatabaseInstance;
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   // Resolve membership ID from personId + branchId
   const membership = await getActiveMembershipId(db, user.id, visit.branchId);
@@ -105,6 +106,17 @@ export async function generatePMD(
       checksum,
     });
   }
+
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'pmd.generate',
+    resourceType: 'pmd',
+    resourceId: pmd.id,
+  });
 
   return ctx.json(pmd, 201);
 }
