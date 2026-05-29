@@ -118,6 +118,51 @@ describe('deactivateMember handler', () => {
   });
 
   // --------------------------------------------------------------------------
+  // EF-ORG-013: Non-owner deactivation must be rejected
+  // --------------------------------------------------------------------------
+
+  test('returns 403 when caller is not dentist_owner (staff_full role)', async () => {
+    const membershipRepo = await seedAll();
+    // Create target member
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Target Member',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    // Downgrade caller to staff_full
+    await db.execute(sql`UPDATE dental_membership SET role = 'staff_full' WHERE person_id = ${PERSON_ID}`);
+
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/org/members/${target.id}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('returns 403 when caller has no membership in the branch', async () => {
+    const membershipRepo = await seedAll();
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Target Member',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+
+    // Use a user with no membership at all
+    const strangerUser = { id: 'd2000000-0000-1000-8000-000000000010', email: 'stranger@clinic.com' };
+    const app = buildTestApp(strangerUser);
+    const res = await app.request(`/dental/org/members/${target.id}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  // --------------------------------------------------------------------------
   // Success
   // --------------------------------------------------------------------------
 
