@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
@@ -14,6 +14,7 @@ import { deactivateMember } from './deactivateMember';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+import { auditLogEntries } from '@/handlers/audit/repos/audit.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -84,6 +85,7 @@ async function seedAll() {
 describe('deactivateMember handler', () => {
   afterEach(async () => {
     await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
+    await db.execute(sql`DELETE FROM audit_log_entry WHERE resource_type = 'dental_membership'`);
   });
 
   // --------------------------------------------------------------------------
@@ -139,5 +141,40 @@ describe('deactivateMember handler', () => {
     // Verify member is now inactive
     const updated = await membershipRepo.findOneById(member.id);
     expect(updated?.status).toBe('inactive');
+  });
+
+  // --------------------------------------------------------------------------
+  // AL-004: HIPAA audit trail
+  // --------------------------------------------------------------------------
+
+  test('AL-004: revokeMembership persists audit record to DB', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Staff Eve',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members/${member.id}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(204);
+
+    // Verify audit record persisted to DB (not just logger.info)
+    const rows = await db
+      .select()
+      .from(auditLogEntries)
+      .where(eq(auditLogEntries.resource, member.id));
+
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const row = rows[0]!;
+    expect(row.action).toBe('delete');
+    expect(row.resourceType).toBe('dental_membership');
+    expect(row.user).toBe(PERSON_ID);
+    expect(row.outcome).toBe('success');
   });
 });
