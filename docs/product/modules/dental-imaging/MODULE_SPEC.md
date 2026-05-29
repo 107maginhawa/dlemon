@@ -86,7 +86,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 | Rule ID | Rule | Expected Behavior |
 |---------|------|-------------------|
-| BR-016c | imagingTier gates ceph features | 403 if tier insufficient |
+| BR-016c | imagingTier gates ceph features | 403 if `imagingTier !== 'addon'`; `addon` IS the cbct tier — DB enum `['free','basic','addon']` maps to `free` (no ceph), `basic` (2D only), `addon` (ceph/CBCT). Gate: `!== 'addon'` blocks both `free` and `basic`. |
 | BR-023–035 | Annotation/finding rules (see BUSINESS_RULES.md §Imaging) | Per SM-01 |
 | BR-036–047 | Ceph landmark + analysis rules (see BUSINESS_RULES.md §Ceph) | Per SM-02 |
 | Loose coupling | No DB-level FKs to other modules | UUID refs only; no JOIN to other module tables |

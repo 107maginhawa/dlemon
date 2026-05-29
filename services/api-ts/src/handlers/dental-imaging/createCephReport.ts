@@ -46,7 +46,7 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
   }
 
   const orgData = await getOrgDataForBranch(db, study.branchId);
-  if (orgData.imagingTier === 'free') {
+  if (orgData.imagingTier !== 'addon') {
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 

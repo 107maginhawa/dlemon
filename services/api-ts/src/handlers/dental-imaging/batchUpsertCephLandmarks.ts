@@ -52,7 +52,7 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
   }
 
   const imagingTier = await getImagingTierForBranch(db, study.branchId);
-  if (imagingTier === 'free') {
+  if (imagingTier !== 'addon') {
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 
