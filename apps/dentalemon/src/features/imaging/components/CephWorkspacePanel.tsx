@@ -49,7 +49,7 @@ export function CephWorkspacePanel({
 
   const createReport = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/report`, {
+      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

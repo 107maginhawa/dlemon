@@ -32,8 +32,8 @@ function CephReportPage() {
   const { version } = Route.useSearch()
 
   const url = version != null
-    ? `/dental/imaging/images/${imageId}/ceph/report?version=${version}`
-    : `/dental/imaging/images/${imageId}/ceph/report`
+    ? `/dental/imaging/images/${imageId}/ceph/reports?version=${version}`
+    : `/dental/imaging/images/${imageId}/ceph/reports`
 
   const { data, isLoading, isError, error } = useQuery<CephReportResponse>({
     queryKey: ['ceph-report', imageId, version ?? 'latest'],
