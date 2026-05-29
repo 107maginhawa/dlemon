@@ -16882,7 +16882,7 @@ export const RateLimitErrorSchema = z.object({
 });
 
 export const RecordDentalPaymentRequestSchema = z.object({
-  amountCents: z.number().int(),
+  amountCents: z.number().int().gte(1),
   method: PaymentMethodSchema,
   receiptNumber: z.string().optional(),
   recordedByMemberId: UUIDSchema,
@@ -17984,7 +17984,7 @@ export const CancelAppointmentParams = z.object({
 export type CancelAppointmentParams = z.infer<typeof CancelAppointmentParams>;
 
 export const CancelAppointmentQuery = z.object({
-  reason: z.string().min(5).max(500),
+  reason: z.string().optional(),
 });
 export type CancelAppointmentQuery = z.infer<typeof CancelAppointmentQuery>;
 

@@ -69,9 +69,13 @@ Get the current (non-superseded) generated PMD for a visit.
 
 ---
 
-### GET /dental/pmd?patientId={patientId}
+### GET /dental/visits/pmd?patientId={patientId}
 
 List generated PMD documents for a patient.
+
+> **V-PMD-006 reconciliation:** canonical path is `/dental/visits/pmd` (matches the TypeSpec
+> interface, generated server routes, and SDK). An earlier draft of this doc listed it as
+> `GET /dental/pmd` — corrected here.
 
 **Auth:** branch membership **or** patient-self (V-PMD-008)
 **Query params:** `patientId` (uuid, required), `limit`, `offset`

@@ -18,13 +18,18 @@ import {
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
+import { isPrimaryToothNumber } from './utils/perio-validation';
 import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CompletePerioChartParams } from '@/generated/openapi/validators';
 
-const MIN_READINGS_FOR_COMPLETE = 16;
+// BR-P07: minimum tooth readings required to complete a chart. Adult dentition
+// (32 teeth) requires 16; primary dentition (20 teeth, FDI 51–85) requires 8.
+// MODULE_SPEC §13 / API_CONTRACTS "complete" error table.
+const MIN_READINGS_ADULT = 16;
+const MIN_READINGS_PRIMARY = 8;
 const DEEP_POCKET_THRESHOLD_MM = 5;
 const DEPTH_FIELDS = ['depthBM', 'depthBC', 'depthBD', 'depthLM', 'depthLC', 'depthLD'] as const;
 const BOP_FIELDS = ['bopBM', 'bopBC', 'bopBD', 'bopLM', 'bopLC', 'bopLD'] as const;
@@ -60,10 +65,17 @@ export async function completePerioChart(
   const readingRepo = new PerioReadingRepository(db);
   const readings = await readingRepo.findMany({ chartId });
 
-  // BR-P07
-  if (readings.length < MIN_READINGS_FOR_COMPLETE) {
+  // BR-P07: the chart has no dentition-type column, so infer it from the charted
+  // tooth numbers. A chart is treated as primary dentition only when it has at
+  // least one reading and every reading is a primary tooth (FDI 51–85); any adult
+  // (or mixed) tooth keeps the stricter adult minimum.
+  const isPrimaryDentition =
+    readings.length > 0 && readings.every((r) => isPrimaryToothNumber(r.toothNumber));
+  const minReadings = isPrimaryDentition ? MIN_READINGS_PRIMARY : MIN_READINGS_ADULT;
+
+  if (readings.length < minReadings) {
     throw new BusinessLogicError(
-      `At least ${MIN_READINGS_FOR_COMPLETE} tooth readings required to complete chart (have ${readings.length})`,
+      `At least ${minReadings} tooth readings required to complete chart (have ${readings.length})`,
       'INSUFFICIENT_READINGS',
     );
   }

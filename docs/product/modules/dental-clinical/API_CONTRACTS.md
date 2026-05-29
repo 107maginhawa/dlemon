@@ -182,8 +182,8 @@ Revoke a consent form.
 
 **Response 200:** `{ data: { ok: true } }`
 
-**Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`
-**Events emitted:** DE-013 ConsentRevoked
+**Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`, `CONSENT_ALREADY_SIGNED(422)` (a signed consent form cannot be revoked — illegal signed→revoked transition), `CONFLICT(409)` (consent form has already been revoked; also covers the read-then-update revoke race) — NEW-P1-B reconciliation: codes documented to match `revokeConsentForm.ts`.
+**Events emitted:** DE-013 ConsentRevoked (ADR-006: audit-log-only marker, no event bus)
 
 ---
 

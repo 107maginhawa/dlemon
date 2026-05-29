@@ -24,6 +24,7 @@ import {
 import { AuditLogRepository } from './repos/audit-log.repo';
 import type { DentalAuditLog } from './repos/audit-log.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 
 /**
@@ -148,6 +149,36 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
     },
     { limit, offset },
   );
+
+  // V-AUD-NEW-B / WF-028 / AUDIT_CONTRACTS §3: viewing the audit log is itself a
+  // privileged READ that MUST be self-audited (ACCESSED). Record scope/counts only —
+  // never PHI. This is a single insert, so it cannot recurse (logAuditEvent does not
+  // re-invoke getAuditEvents); logAuditEvent never throws, so it cannot break the read.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const logger = ctx.get('logger') as any;
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: tenantId ?? branchId,
+    branchId,
+    eventType: 'security',
+    actorRole: 'dentist_owner',
+    action: 'audit_log.accessed',
+    resourceType: 'dental_audit_log',
+    metadata: {
+      // Filter scope only — IDs/flags/counts, no PHI.
+      filteredActorId: actorId ?? null,
+      eventType: eventType ?? null,
+      targetType: targetType ?? null,
+      targetId: targetId ?? null,
+      action: action ?? null,
+      from: from ?? null,
+      to: to ?? null,
+      limit,
+      offset,
+      resultCount: entries.length,
+      total,
+    },
+  });
 
   // V-AUD-003: map raw DB rows to the contract DTO and drop snapshot columns.
   return ctx.json({ data: entries.map(toDTO), meta: { total, limit, offset } });

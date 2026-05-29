@@ -10,7 +10,7 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getActivePaymentPlanSummaryForBranch } from '@/handlers/dental-billing/repos/billing-dashboard.facade';
 import { getPendingLabOrderSummaryForBranch } from '@/handlers/dental-clinical/repos/clinical-dashboard.facade';
 
@@ -24,7 +24,12 @@ export async function getDashboardSummary(ctx: BaseContext) {
   if (!branchId) {
     throw new ValidationError('branchId query parameter is required');
   }
-  await assertBranchAccess(db, user.id, branchId);
+  // N-ORG-01: this endpoint returns practice-wide FINANCIALS (outstanding
+  // balances, active payment plans, lab orders). ROLE_PERMISSION_MATRIX Dashboard
+  // row gates these to the owner (staff_scheduling = No access; staff_full =
+  // "no financials"), and API_CONTRACTS GET /dental/dashboard says Auth:
+  // dentist_owner. So restrict to dentist_owner — not any active branch member.
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
 
   const [planSummary, labOrderSummary] = await Promise.all([
     getActivePaymentPlanSummaryForBranch(db, branchId),

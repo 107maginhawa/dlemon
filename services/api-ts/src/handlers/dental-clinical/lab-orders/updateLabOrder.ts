@@ -11,6 +11,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { LabOrderRepository } from '../repos/lab-order.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { UpdateLabOrderBody, UpdateLabOrderParams } from '@/generated/openapi/validators';
 
@@ -43,6 +45,24 @@ export async function updateLabOrder(
     // V-CLN-008: an illegal lab-order FSM transition is a business-rule violation,
     // not an input-validation failure → 422 INVALID_STATUS_TRANSITION.
     if (error) throw new BusinessLogicError(error, 'INVALID_STATUS_TRANSITION');
+
+    // V-CLN-004 / DE-015 LabOrderCompleted: per ADR-006, satisfy the published
+    // domain-event marker with a synchronous dental_audit_log write. The lab marking
+    // the order complete is the `delivered` transition (fabrication finished and handed
+    // back); emit ONLY on that transition, and only when it actually changed.
+    if (body.status === 'delivered' && existing.status !== 'delivered') {
+      const branchForAudit = await getBranchOrgId(db, visit.branchId);
+      await logAuditEvent(db, ctx.get('logger'), {
+        personId: user.id,
+        tenantId: branchForAudit?.organizationId ?? visit.branchId,
+        branchId: visit.branchId,
+        action: 'lab_order.completed',
+        resourceType: 'dental_lab_order',
+        resourceId: orderId,
+        metadata: { visitId: existing.visitId, patientId: existing.patientId },
+      });
+    }
+
     return ctx.json(order);
   }
 

@@ -46,6 +46,14 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 | Clinical Workspace | Full R/W | Full R/W | View-only + process payments | No access |
 | Patient Records | Full CRUD | Read + Register | Read + Register | Read only |
 | Scheduling | Full | Full | Full | Full |
+<!-- V-PAT-008: see "Patient Records read access" note below — list/search READ is clinic-wide. -->
+
+> **V-PAT-008 reconciliation (Patient Records read access):** patient **list/search READ**
+> (`GET /dental/patients`, `listDentalPatients.ts`) is the **clinic-wide floor** — it is granted to
+> all four PRD personas **plus the extended staff roles** `dental_assistant`, `front_desk`,
+> `billing_staff`, and `read_only` (9 context roles total), scoped to the caller's branch. Read
+> access being broad is intentional; write/register operations remain restricted as in the tables
+> below. The PRD "Read only / Read + Register" cells describe the four core personas only.
 | Billing | Full | Own patients + record payments | Record payments only | No access |
 | Reports | Full | No access | No access | No access |
 | Staff & Roles | Full | No access | No access | No access |
@@ -102,6 +110,23 @@ The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **5 add
 | Record payment | ✅ | ✅ | ✅ | ❌ |
 | Void invoice | ✅ | ❌ | ❌ | ❌ |
 | Create payment plan | ✅ | Own patients only | ❌ | ❌ |
+
+### Scheduling Write Operations
+
+> **N-SCH-03 amendment (2026-05-30):** The PRD-level "Scheduling | Full | Full | Full | Full" row
+> above is a coarse module-access grant. Two scheduling **state-change** operations are restricted
+> per dental-scheduling **MODULE_SPEC §6**, which is authoritative for these endpoints. In
+> particular, `staff_scheduling` is **EXCLUDED** from both cancel and check-in (it may still book,
+> reschedule, and view the calendar). The handlers (`cancelAppointment.ts`, `checkInAppointment.ts`)
+> implement exactly this — the broader PRD row and prior contract drafts are reconciled to MODULE_SPEC §6 here.
+
+| Operation | dentist_owner | dentist_associate | staff_full | staff_scheduling |
+|-----------|:---:|:---:|:---:|:---:|
+| Book appointment | ✅ | ✅ | ✅ | ✅ |
+| Reschedule appointment | ✅ | ✅ | ✅ | ✅ |
+| View calendar | ✅ | ✅ | ✅ | ✅ |
+| Cancel appointment | ✅ | ❌ | ✅ | ❌ |
+| Check-in (creates visit) | ✅ | ✅ | ✅ | ❌ |
 
 ### Administrative Operations
 

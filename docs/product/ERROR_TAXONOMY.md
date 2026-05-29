@@ -165,6 +165,8 @@ interface ErrorResponse {
 | `INVALID_STATUS_TRANSITION` | 422 | Lab order FSM violation |
 | `CONSENT_FORM_NOT_FOUND` | 404 | Consent form ID not found |
 | `CONSENT_FORM_SIGNED` | 422 | PATCH on already-signed form |
+| `CONSENT_ALREADY_SIGNED` | 422 | Revoke attempt on a signed consent form — illegal signed→revoked transition (revokeConsentForm.ts; NEW-P1-B) |
+| `CONFLICT` | 409 | Revoke attempt on an already-revoked consent form, incl. the read-then-update revoke race (revokeConsentForm.ts → ConflictError default code; NEW-P1-B) |
 | `CONSENT_FORM_IMMUTABLE` | 405 | DELETE/replace on signed form |
 | `MEDICAL_HISTORY_IMMUTABLE` | 405 | PATCH/DELETE on medical history entry |
 | `VISIT_IMMUTABLE` | 422 | Clinical write to locked visit (BR-003) |

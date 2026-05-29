@@ -4,7 +4,7 @@
 
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
 
@@ -23,9 +23,7 @@ export async function createInsuranceProfile(ctx: any): Promise<Response> {
   if (!patient) throw new NotFoundError('Patient not found');
 
   // EF-PAT-004: branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId);
-  }
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {

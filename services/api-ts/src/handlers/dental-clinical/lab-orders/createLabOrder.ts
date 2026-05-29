@@ -10,6 +10,8 @@ import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { LabOrderRepository } from '../repos/lab-order.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CreateLabOrderBody, CreateLabOrderParams } from '@/generated/openapi/validators';
 
@@ -43,6 +45,19 @@ export async function createLabOrder(
     labName: body.labName,
     description: body.description,
     expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,
+  });
+
+  // V-CLN-004 / DE-014 LabOrderCreated: per ADR-006, satisfy the published domain-event
+  // marker with a synchronous dental_audit_log write.
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'lab_order.created',
+    resourceType: 'dental_lab_order',
+    resourceId: order.id,
+    metadata: { visitId, patientId: body.patientId, labName: body.labName },
   });
 
   return ctx.json(order, 201);

@@ -12,7 +12,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
 import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
 import { eq, and } from 'drizzle-orm';
@@ -34,9 +34,7 @@ export async function getDentalPatientSafetyFloor(
   if (!patient) throw new NotFoundError('Patient not found');
 
   // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
-  }
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // Fetch all active medical history entries for this patient
   const entries = await db

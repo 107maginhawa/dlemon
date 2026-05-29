@@ -21,22 +21,28 @@ Query the audit log for a branch.
 **Auth:** `dentist_owner` only
 **Rate limit:** Default
 
-**Query params:**
+**Query params (V-AUD-004 reconciliation — these are the ACTUAL implemented params per `getAuditEvents.ts`; the previously documented `aggregate_type`/`aggregate_id`/`page`/`per_page` are NOT implemented):**
 
 | Param | Type | Required | Format | Constraints | Notes |
 |-------|------|----------|--------|-------------|-------|
-| `branch_id` | string | YES | uuid | — | Scope guard — only events for caller's branch |
-| `actor_id` | string | NO | uuid | — | Filter by staff member |
-| `event_type` | string | NO | — | e.g., `VisitCompleted`, `InvoicePaid` | Matches `event_type` field |
-| `aggregate_type` | string | NO | — | `Visit`, `Invoice`, `Patient`, etc. | |
-| `aggregate_id` | string | NO | uuid | — | Filter by specific entity |
+| `branchId` | string | YES | uuid | — | Scope guard — only events for caller's branch; missing → `VALIDATION_ERROR(400)` |
+| `actorId` | string | NO | uuid | — | Filter by staff member (alias: `personId`) |
+| `tenantId` | string | NO | uuid | — | Optional tenant override; defaults to `branchId` |
+| `eventType` | string | NO | — | e.g., `security`, `VisitCompleted` | Matches `event_type` field |
+| `resourceType` | string | NO | — | `Visit`, `Invoice`, `Patient`, etc. | Canonical param is `targetType`; `resourceType` accepted as alias |
+| `targetType` | string | NO | — | as above | Maps to DB `targetType` column |
+| `resourceId` | string | NO | uuid | — | Canonical param is `targetId`; `resourceId` accepted as alias |
+| `targetId` | string | NO | uuid | — | Filter by specific entity |
 | `action` | string | NO | — | `CREATED`, `READ`, `UPDATED`, `DELETED`, `ACCESSED`, `GENERATED` | |
-| `date_from` | string | NO | date (YYYY-MM-DD) | — | Inclusive |
-| `date_to` | string | NO | date (YYYY-MM-DD) | ≥ date_from | Inclusive |
-| `page` | integer | NO | — | Default: 1 | |
-| `per_page` | integer | NO | — | Default: 20, max: 100 | |
+| `from` | string | NO | date-time | — | Inclusive lower bound; unparseable → `VALIDATION_ERROR(400)` |
+| `to` | string | NO | date-time | ≥ `from` | Inclusive upper bound; `from > to` → `INVALID_DATE_RANGE(422)` |
+| `limit` | integer | NO | — | Default: 50, max: 200 | Offset-based pagination (NOT `per_page`) |
+| `offset` | integer | NO | — | Default: 0 | Offset-based pagination (NOT `page`) |
 
-**Response 200:** Standard paginated collection
+> `page`/`per_page` are **not implemented** — pagination is `limit`/`offset`. `date_from`/`date_to`
+> are **not implemented** — the date filters are `from`/`to`. (V-AUD-004)
+
+**Response 200:** `{ data: AuditEvent[], meta: { total, limit, offset } }`
 
 | Field | Type | Nullable | Notes |
 |-------|------|----------|-------|

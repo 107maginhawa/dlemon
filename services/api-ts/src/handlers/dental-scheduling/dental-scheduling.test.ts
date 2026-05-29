@@ -28,6 +28,7 @@ import {
   UpdateAppointmentBody,
   UpdateAppointmentParams,
   CancelAppointmentParams,
+  CancelAppointmentQuery,
   CheckInAppointmentParams,
 } from '@/generated/openapi/validators';
 
@@ -137,7 +138,9 @@ function buildTestApp(user?: typeof TEST_USER) {
     zValidator('json', UpdateAppointmentBody),
     updateAppointment as any,
   );
-  app.delete('/dental/appointments/:appointmentId', zValidator('param', CancelAppointmentParams), cancelAppointment as any);
+  // V-SCH-003: mirror the real route — the generated query validator is wired so the
+  // handler's 422 REASON_REQUIRED governs a missing/short reason (not a generic 400).
+  app.delete('/dental/appointments/:appointmentId', zValidator('param', CancelAppointmentParams), zValidator('query', CancelAppointmentQuery), cancelAppointment as any);
   app.post('/dental/appointments/:appointmentId/check-in', zValidator('param', CheckInAppointmentParams), checkInAppointment as any);
 
   return app;

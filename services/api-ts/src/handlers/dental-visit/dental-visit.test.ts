@@ -470,6 +470,37 @@ describe('updateDentalVisit handler', () => {
 });
 
 // ---------------------------------------------------------------------------
+// V-VIS-001 / DE-001 VisitCheckedIn — activate writes dental_audit_log row
+// ---------------------------------------------------------------------------
+
+describe('V-VIS-001 / DE-001: updateDentalVisit activate (draft→active) writes audit record', () => {
+  test('persists visit.checked_in audit record after activating a draft visit', async () => {
+    const visit = await seedVisit(); // draft
+    const app = buildTestApp(TEST_USER);
+    const before = new Date();
+
+    const res = await app.request(`/dental/visits/${visit!.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active' }),
+    });
+    expect(res.status).toBe(200);
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: TEST_USER.id, action: 'visit.checked_in', resourceType: 'dental_visit' },
+      { limit: 10, offset: 0 },
+    );
+    const entry = entries.find(e => e.resourceId === visit!.id);
+    expect(entry).toBeDefined();
+    expect(entry!.action).toBe('visit.checked_in');
+    expect(entry!.resourceType).toBe('dental_visit');
+    expect(entry!.resourceId).toBe(visit!.id);
+    expect(entry!.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getDentalChart
 // ---------------------------------------------------------------------------
 

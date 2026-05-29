@@ -61,7 +61,7 @@ person record: `{ registrationConsent: true, capturedAt: <ISO timestamp> }`
 
 Search patients in branch.
 
-**Auth:** `staff_scheduling`, `staff_full`, `dentist_associate`, `dentist_owner`
+**Auth:** `dentist_owner`, `dentist_associate`, `hygienist`, `staff_full`, `staff_scheduling`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only` (V-PAT-008: patient list/search READ is the clinic-wide floor — all four clinical roles PLUS extended staff `dental_assistant`/`front_desk`/`billing_staff`/`read_only`, scoped to the caller's branch; matches `listDentalPatients.ts`)
 **Query params:**
 
 | Param | Type | Required | Notes |

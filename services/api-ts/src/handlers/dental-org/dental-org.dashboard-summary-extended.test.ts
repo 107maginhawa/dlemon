@@ -38,6 +38,11 @@ const INVOICE_ID = 'ffffffff-0000-1000-8000-000000000077';
 const VISIT_ID = 'cccccccc-0000-1000-8000-000000000077';
 const MEMBER_ID = 'dddddddd-0000-1000-8000-000000000077';
 
+// N-ORG-01: a non-owner branch member used to assert the dashboard's
+// practice-wide financials are gated to dentist_owner only.
+const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
+const STAFF_MEMBER_ID = 'dddddddd-0000-1000-8000-000000000099';
+
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
   app.onError((err, c) => {
@@ -96,6 +101,25 @@ async function seedBaseData() {
 
 }
 
+/**
+ * N-ORG-01: seed a staff_scheduling member of the same branch. Membership exists
+ * and is active (so assertBranchAccess would pass), but the role is NOT
+ * dentist_owner — so the financials gate must reject it.
+ */
+async function seedStaffMember(role: 'staff_scheduling' | 'staff_full' | 'hygienist' | 'read_only') {
+  await db.insert(persons).values({
+    id: STAFF_USER.id, firstName: 'Front', lastName: 'Desk',
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: STAFF_MEMBER_ID,
+    branchId: BRANCH_ID, personId: STAFF_USER.id,
+    displayName: 'Front Desk', role, status: 'active',
+    pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+}
+
 afterEach(async () => {
   await db.execute(sql`DELETE FROM lab_order`);
   await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
@@ -107,7 +131,7 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_membership`);
   await db.execute(sql`DELETE FROM dental_branch`);
   await db.execute(sql`DELETE FROM dental_organization`);
-  await db.execute(sql`DELETE FROM person WHERE id = ${PERSON_ID}`);
+  await db.execute(sql`DELETE FROM person WHERE id IN (${PERSON_ID}, ${STAFF_USER.id})`);
 });
 
 // ---------------------------------------------------------------------------
@@ -252,5 +276,53 @@ describe('GET /dental/dashboard/summary', () => {
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.overdueDelivery).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // N-ORG-01 (P1): practice financials must be gated to dentist_owner.
+  // ROLE_PERMISSION_MATRIX Dashboard row: staff_scheduling = No access,
+  // staff_full = no financials. API_CONTRACTS GET /dental/dashboard = dentist_owner.
+  // -------------------------------------------------------------------------
+  test('N-ORG-01: dentist_owner gets 200 with financials', async () => {
+    await seedBaseData();
+    await db.insert(dentalPaymentPlans).values({
+      id: crypto.randomUUID(),
+      invoiceId: INVOICE_ID, patientId: PATIENT_ID,
+      totalCents: 30000, numberOfInstallments: 3, amountPerInstallmentCents: 10000,
+      frequency: 'monthly', startDate: new Date(),
+      status: 'on_track',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.activePaymentPlans.count).toBe(1);
+    expect(body.activePaymentPlans.totalOutstandingCents).toBeDefined();
+    expect(body.labOrders).toBeDefined();
+  });
+
+  test('N-ORG-01: staff_scheduling branch member is denied financials (403)', async () => {
+    await seedBaseData();
+    await seedStaffMember('staff_scheduling');
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('N-ORG-01: staff_full branch member is denied financials (403)', async () => {
+    await seedBaseData();
+    await seedStaffMember('staff_full');
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('N-ORG-01: read_only branch member is denied financials (403)', async () => {
+    await seedBaseData();
+    await seedStaffMember('read_only');
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
   });
 });

@@ -152,8 +152,19 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_treatment WHERE visit_id IN ${visitIds}`);
   await db.execute(sql`DELETE FROM medical_history_entry WHERE patient_id = ${PATIENT_ID}`);
   await db.execute(sql`DELETE FROM dental_visit     WHERE patient_id = ${PATIENT_ID}`);
+  await db.execute(sql`DELETE FROM dental_audit_log WHERE target_type = 'dental_lab_order'`);
   // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT cleaned here
 });
+
+// V-CLN-004: helper to read audit rows written for a lab-order domain event (DE-014 / DE-015).
+async function labOrderAuditRows(orderId: string, action: string) {
+  const { dentalAuditLog } = await import('@/handlers/dental-audit/repos/audit-log.schema');
+  const { eq, and } = await import('drizzle-orm');
+  return db
+    .select()
+    .from(dentalAuditLog)
+    .where(and(eq(dentalAuditLog.targetId, orderId), eq(dentalAuditLog.action, action)));
+}
 
 // ---------------------------------------------------------------------------
 // createConsentForm
@@ -527,6 +538,30 @@ describe('createLabOrder handler', () => {
     expect(body.labName).toBe('Elite Ceramics Lab');
     expect(body.status).toBe('ordered');
   });
+
+  // DE-014 LabOrderCreated — ADR-006: producer satisfies the marker via a synchronous
+  // dental_audit_log write.
+  test('writes a dental_audit_log row (lab_order.created) on create', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const res = await app.request(`/dental/visits/${visit.id}/lab-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        labName: 'Audit Trail Lab',
+        description: 'Crown for audit test',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const created = await res.json() as any;
+
+    const rows = await labOrderAuditRows(created.id, 'lab_order.created');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.targetType).toBe('dental_lab_order');
+    expect(rows[0]?.actorId).toBe(TEST_USER.id);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -730,6 +765,72 @@ describe('updateLabOrder handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.isDefective).toBe(true);
+  });
+
+  // DE-015 LabOrderCompleted — the lab marking the order complete is the
+  // `delivered` transition (lab's fabrication work is finished and handed back).
+  // ADR-006: emit a synchronous dental_audit_log row only on that transition.
+  test('writes a dental_audit_log row (lab_order.completed) when transitioning to delivered', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/lab-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        labName: 'Completion Lab',
+        description: 'Bridge unit',
+      }),
+    });
+    const created = await createRes.json() as any;
+
+    // ordered → in_fabrication (not a completion: no completed audit row yet)
+    await app.request(`/dental/visits/${visit.id}/lab-orders/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'in_fabrication' }),
+    });
+    expect(await labOrderAuditRows(created.id, 'lab_order.completed')).toHaveLength(0);
+
+    // in_fabrication → delivered (the completion event)
+    const deliverRes = await app.request(`/dental/visits/${visit.id}/lab-orders/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'delivered' }),
+    });
+    expect(deliverRes.status).toBe(200);
+
+    const rows = await labOrderAuditRows(created.id, 'lab_order.completed');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.targetType).toBe('dental_lab_order');
+    expect(rows[0]?.actorId).toBe(TEST_USER.id);
+  });
+
+  test('does NOT write a lab_order.completed row for a non-completing transition', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/lab-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        labName: 'NoComplete Lab',
+        description: 'Inlay',
+      }),
+    });
+    const created = await createRes.json() as any;
+
+    // ordered → in_fabrication should not emit a completion marker
+    const res = await app.request(`/dental/visits/${visit.id}/lab-orders/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'in_fabrication' }),
+    });
+    expect(res.status).toBe(200);
+
+    expect(await labOrderAuditRows(created.id, 'lab_order.completed')).toHaveLength(0);
   });
 });
 

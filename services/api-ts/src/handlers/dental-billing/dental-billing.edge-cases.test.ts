@@ -235,7 +235,11 @@ describe('getCollectionsSummary — period and branchId branches', () => {
 describe('recordDentalPayment — error branches and idempotency', () => {
   afterEach(truncate);
 
-  test('returns 400 INVALID_AMOUNT when amountCents is zero', async () => {
+  test('rejects amountCents of zero at the schema layer (400, V-BIL-010 .gte(1))', async () => {
+    // V-BIL-010: the contract min:1 bound is now enforced at the validator layer,
+    // so a zero/negative amount is caught as 400 VALIDATION_ERROR before the handler.
+    // MODULE_SPEC BR-015 accepts 400 for amount bounds; the handler's 422 INVALID_AMOUNT
+    // remains as defense-in-depth for non-HTTP callers.
     const invoice = await seedInvoice({ totalCents: 5000, balanceCents: 5000 });
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -243,9 +247,7 @@ describe('recordDentalPayment — error branches and idempotency', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amountCents: 0, method: 'cash', receiptNumber: 'RCT-ZERO-M3', recordedByMemberId: MEMBER_ID }),
     });
-    expect(res.status).toBe(422);
-    const body = await res.json() as any;
-    expect(body.code).toBe('INVALID_AMOUNT');
+    expect(res.status).toBe(400);
   });
 
   test('returns 422 INVOICE_IMMUTABLE when invoice is fully paid (V-BIL-005)', async () => {
@@ -309,6 +311,64 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     const secondBody = await second.json() as any;
     expect(secondBody.id).toBe(firstBody.id);
     expect(secondBody.receiptNumber).toBe('RCT-IDEM-M3');
+  });
+
+  // N-BIL-01: idempotency replay must be scoped to the CURRENT invoice.
+  // A receipt number reused from invoice A against invoice B must NOT echo
+  // back invoice A's payment (money-integrity + cross-resource data exposure).
+  test('N-BIL-01: reusing a receiptNumber from invoice A on invoice B does NOT return A\'s payment', async () => {
+    const invoiceA = await seedInvoice({ totalCents: 5000, balanceCents: 5000 });
+    const invoiceB = await seedInvoice({ totalCents: 8000, balanceCents: 8000 });
+    const app = buildTestApp(TEST_USER);
+    const receipt = 'RCT-XINV-M3';
+
+    // Record a payment with receipt R on invoice A (amount 2000).
+    const onA = await app.request(`/dental/billing/invoices/${invoiceA.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amountCents: 2000, method: 'cash', receiptNumber: receipt, recordedByMemberId: MEMBER_ID }),
+    });
+    expect(onA.status).toBe(201);
+    const onABody = await onA.json() as any;
+
+    // POST same receipt R to invoice B with a DIFFERENT amount (3500).
+    const onB = await app.request(`/dental/billing/invoices/${invoiceB.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amountCents: 3500, method: 'cash', receiptNumber: receipt, recordedByMemberId: MEMBER_ID }),
+    });
+
+    // Must NOT be a 200 echo of invoice A's payment.
+    expect(onB.status).toBe(409);
+    const onBBody = await onB.json() as any;
+    expect(onBBody.code).toBe('CONFLICT');
+    // Crucially, A's payment (id/amount/invoice) must never be exposed via B.
+    expect(JSON.stringify(onBBody)).not.toContain(onABody.id);
+    expect(JSON.stringify(onBBody)).not.toContain(invoiceA.id);
+  });
+
+  // N-BIL-01: same invoice + same receipt + DIFFERENT amount → conflict, not a
+  // silent 200 echo of the prior (different-amount) payment.
+  test('N-BIL-01: same invoice + same receiptNumber + different amount returns 409 CONFLICT', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const receipt = 'RCT-AMTM-M3';
+
+    const first = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amountCents: 2000, method: 'cash', receiptNumber: receipt, recordedByMemberId: MEMBER_ID }),
+    });
+    expect(first.status).toBe(201);
+
+    const second = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amountCents: 4000, method: 'cash', receiptNumber: receipt, recordedByMemberId: MEMBER_ID }),
+    });
+    expect(second.status).toBe(409);
+    const secondBody = await second.json() as any;
+    expect(secondBody.code).toBe('CONFLICT');
   });
 });
 

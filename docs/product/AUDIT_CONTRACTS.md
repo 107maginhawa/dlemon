@@ -94,21 +94,27 @@ interface AuditEvent {
 
 **Auth:** `dentist_owner` only
 
-**Query params:**
+**Query params (V-AUD-004 — ACTUAL implemented params per `getAuditEvents.ts`; canonical names are camelCase):**
 
 | Param | Type | Required | Notes |
 |-------|------|----------|-------|
-| `branch_id` | uuid | YES | Branch scope — guards cross-branch access |
-| `actor_id` | uuid | NO | Filter by specific staff member |
-| `event_type` | string | NO | Filter by DE-code or ACCESS_* |
-| `aggregate_type` | string | NO | Filter by entity (Visit, Invoice, etc.) |
-| `aggregate_id` | uuid | NO | Filter by specific entity |
-| `date_from` | date | NO | ISO 8601 date (YYYY-MM-DD) |
-| `date_to` | date | NO | ISO 8601 date (YYYY-MM-DD) |
-| `page` | integer | NO | Default: 1 |
-| `per_page` | integer | NO | Default: 20, max: 100 |
+| `branchId` | uuid | YES | Branch scope — guards cross-branch access; missing → `VALIDATION_ERROR(400)` |
+| `actorId` | uuid | NO | Filter by specific staff member (alias: `personId`) |
+| `tenantId` | uuid | NO | Optional tenant override; defaults to `branchId` |
+| `eventType` | string | NO | Filter by DE-code or ACCESS_* / `security` |
+| `targetType` | string | NO | Filter by entity (Visit, Invoice, etc.); alias `resourceType` |
+| `targetId` | uuid | NO | Filter by specific entity; alias `resourceId` |
+| `action` | string | NO | Filter by action verb (CREATED/READ/UPDATED/…) |
+| `from` | date-time | NO | Inclusive lower bound; unparseable → `VALIDATION_ERROR(400)` |
+| `to` | date-time | NO | Inclusive upper bound; `from > to` → `INVALID_DATE_RANGE(422)` |
+| `limit` | integer | NO | Default: 50, max: 200 |
+| `offset` | integer | NO | Default: 0 |
 
-**Response:** Standard paginated collection envelope (API_CONVENTIONS.md §2.2)
+> **V-AUD-004:** `aggregate_type`/`aggregate_id`/`page`/`per_page`/`date_from`/`date_to` from the
+> original spec are **NOT implemented**. Pagination is `limit`/`offset`; date filters are `from`/`to`;
+> the entity filters are `targetType`/`targetId` (with `resourceType`/`resourceId` accepted as aliases).
+
+**Response:** `{ data: AuditEvent[], meta: { total, limit, offset } }`
 
 **Rules:**
 - Returns only events for requesting user's branch (`AC-AUD-003`)

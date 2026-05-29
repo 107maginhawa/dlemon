@@ -196,8 +196,11 @@ namespace DentalSchedulingModule {
     @operationId("cancelAppointment")
     cancel(
       @path appointmentId: UUID,
-      // V-SCH-003: cancellation reason is a required query param, min:5/max:500.
-      @query @minLength(5) @maxLength(500) reason: string
+      // V-SCH-003: cancellation reason (min:5/max:500) is validated IN THE HANDLER
+      // so a missing/short reason yields the contract's 422 REASON_REQUIRED
+      // (AC-SCH-004), not a generic 400 from the query validator. Kept optional at
+      // the schema layer for that reason — do not re-add @minLength here.
+      @query reason?: string
     ): ApiNoContentResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;

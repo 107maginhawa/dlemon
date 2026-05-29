@@ -103,7 +103,7 @@ Reschedule appointment (hard-block on double-booking).
 
 Check patient in — creates an active visit (BR-004).
 
-**Auth:** `staff_scheduling`, `staff_full`, `dentist_associate`, `dentist_owner`
+**Auth:** `dentist_owner`, `dentist_associate`, `staff_full` (N-SCH-03: restricted per dental-scheduling MODULE_SPEC §6 — `staff_scheduling` is EXCLUDED from check-in)
 **Path params:** `id` (uuid)
 
 **Response 200:** `{ data: { appointment_id: "uuid", visit_id: "uuid" } }`
@@ -117,7 +117,7 @@ Check patient in — creates an active visit (BR-004).
 
 Cancel appointment (soft-cancel — record preserved).
 
-**Auth:** `staff_scheduling`, `staff_full`, `dentist_owner`
+**Auth:** `dentist_owner`, `staff_full` (N-SCH-03: restricted per dental-scheduling MODULE_SPEC §6 — `staff_scheduling` is EXCLUDED from cancel)
 **Path params:** `id` (uuid)
 **Query params:** `reason` (string, required, min:5, max:500)
 

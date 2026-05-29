@@ -86,7 +86,7 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.post('/dental/pmd/import', zValidator('json', ImportPMDBody, ve), importPMD as any);
   app.get('/dental/pmd/imported/:id', zValidator('param', GetImportedPMDParams, ve), getImportedPMD as any);
   app.get('/dental/pmd/imported', zValidator('query', ListImportedPMDsQuery, ve), listImportedPMDs as any);
-  app.get('/dental/pmd', zValidator('query', ListPMDsQuery, ve), listPMDs as any);
+  app.get('/dental/visits/pmd', zValidator('query', ListPMDsQuery, ve), listPMDs as any);
 
   return app;
 }
@@ -207,6 +207,41 @@ describe('generatePMD handler [AC-PMD-01]', () => {
     expect(body.status).toBe('generated');
     expect(body.checksum).not.toBeNull();
     expect(body.content).not.toBeNull();
+  });
+
+  // N-PMD-02 (immutable-record integrity): the PMD's patientId is derived from the
+  // visit (single source of truth). A body.patientId that disagrees with the visit's
+  // patientId must be rejected — a caller must not be able to bind an arbitrary patient
+  // into a checksum-sealed, non-repudiation PMD record.
+  test('returns 422 PATIENT_VISIT_MISMATCH when body.patientId does not match the visit patient', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const OTHER_PATIENT = 'a0000000-0000-1000-8000-000000000099';
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: OTHER_PATIENT }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('PATIENT_VISIT_MISMATCH');
+  });
+
+  test('immutable PMD record binds the visit patientId (not an attacker-supplied one)', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    // Matching patientId → happy path; record + snapshot must carry the visit patient.
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.patientId).toBe(visit!.patientId);
+    expect(body.patientId).toBe(PATIENT_ID);
+    const content = JSON.parse(body.content);
+    expect(content.patientId).toBe(visit!.patientId);
   });
 
   test('supersedes previous PMD on second generation', async () => {
@@ -540,19 +575,19 @@ describe('listImportedPMDs handler', () => {
 describe('listPMDs handler', () => {
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
-    const res = await app.request(`/dental/pmd?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(401);
   });
 
   test('returns 400 when patientId query param is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/pmd');
+    const res = await app.request('/dental/visits/pmd');
     expect(res.status).toBe(400);
   });
 
   test('returns 200 with empty list when no PMDs exist for patient', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/pmd?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data).toEqual([]);
@@ -570,7 +605,7 @@ describe('listPMDs handler', () => {
       body: JSON.stringify({ patientId: PATIENT_ID }),
     });
 
-    const res = await app.request(`/dental/pmd?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     // At least one PMD returned (generated status only — superseded excluded by repo)

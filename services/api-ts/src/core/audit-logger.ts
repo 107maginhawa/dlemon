@@ -56,14 +56,22 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * V-AUD-001 (PHI guard): The audit log is append-only and never deleted, so any PHI
- * written into `metadata` is unremediable (AC-AUD-004 / HIPAA breach). Strip obvious
- * PII keys from metadata before it is persisted to EITHER audit table. Matching is
- * case-insensitive and applied at the top level of the metadata object (the only place
- * handlers currently stash free-form fields). Never throws — sanitization must never
- * break the audit write or the originating request.
+ * V-AUD-001 / V-AUD-NEW-A (PHI guard): The audit log is append-only and never deleted,
+ * so any PHI written into `metadata` OR the before/after row snapshots is unremediable
+ * (AC-AUD-004 / "No PHI in log body" / HIPAA breach). Strip obvious PII keys before
+ * persisting to EITHER audit table.
+ *
+ * Matching is case-insensitive against a blocklist. The sanitizer is RECURSIVE so that
+ * PHI nested inside row snapshots (objects + arrays) is stripped too — full row
+ * snapshots routinely contain nested clinical/demographic objects. It is conservative:
+ * only blocklisted keys are removed; structural keys (`id`, `status`, timestamps,
+ * counts, codes, flags) are preserved.
+ *
+ * Never throws — sanitization must never break the audit write or the originating
+ * request (best-effort, like the original metadata-only implementation).
  */
 const PHI_METADATA_KEYS = new Set([
+  // Identity / demographics
   'displayname',
   'firstname',
   'lastname',
@@ -72,9 +80,74 @@ const PHI_METADATA_KEYS = new Set([
   'email',
   'phone',
   'ssn',
+  'address',
+  'mrn',
+  // Date of birth (multiple spellings)
   'dateofbirth',
   'dob',
+  'birthdate',
+  // Clinical free-text / sensitive
+  'diagnosis',
+  'medication',
+  'medications',
+  'notes',
+  'chiefcomplaint',
 ]);
+
+/**
+ * Recursively strip blocklisted PHI keys from an arbitrary JSON-ish value. Returns a
+ * cloned, sanitized value; mutates nothing. Collects stripped key names (deduped, by
+ * leaf key) for best-effort warn logging. Never throws — callers guard with try/catch.
+ */
+function sanitizeValueDeep(value: unknown, stripped: Set<string>): unknown {
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitizeValueDeep(v, stripped));
+  }
+  if (value != null && typeof value === 'object') {
+    const clean: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      if (PHI_METADATA_KEYS.has(key.toLowerCase())) {
+        stripped.add(key);
+        continue;
+      }
+      clean[key] = sanitizeValueDeep(v, stripped);
+    }
+    return clean;
+  }
+  return value;
+}
+
+function sanitizeAuditObject(
+  obj: Record<string, unknown> | null | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  logger: any,
+  event: AuditEvent,
+  field: string,
+): Record<string, unknown> | null {
+  if (obj == null || typeof obj !== 'object') {
+    return (obj as Record<string, unknown> | null) ?? null;
+  }
+  try {
+    const stripped = new Set<string>();
+    const clean = sanitizeValueDeep(obj, stripped) as Record<string, unknown>;
+    if (stripped.size > 0) {
+      logger?.warn(
+        {
+          strippedKeys: [...stripped],
+          field,
+          action: event.action,
+          resourceType: event.resourceType,
+        },
+        `dental.audit: stripped PHI keys from audit ${field} before persisting (V-AUD-001/V-AUD-NEW-A)`,
+      );
+    }
+    return clean;
+  } catch {
+    // Sanitization must never throw — fall back to dropping the field rather than risk
+    // leaking PHI or breaking the audit write.
+    return null;
+  }
+}
 
 function sanitizeAuditMetadata(
   metadata: Record<string, unknown> | null | undefined,
@@ -82,31 +155,7 @@ function sanitizeAuditMetadata(
   logger: any,
   event: AuditEvent,
 ): Record<string, unknown> | null {
-  if (metadata == null || typeof metadata !== 'object') {
-    return (metadata as Record<string, unknown> | null) ?? null;
-  }
-  try {
-    const stripped: string[] = [];
-    const clean: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(metadata)) {
-      if (PHI_METADATA_KEYS.has(key.toLowerCase())) {
-        stripped.push(key);
-        continue;
-      }
-      clean[key] = value;
-    }
-    if (stripped.length > 0) {
-      logger?.warn(
-        { strippedKeys: stripped, action: event.action, resourceType: event.resourceType },
-        'dental.audit: stripped PHI keys from audit metadata before persisting (V-AUD-001)',
-      );
-    }
-    return clean;
-  } catch {
-    // Sanitization must never throw — fall back to no metadata rather than risk
-    // leaking PHI or breaking the audit write.
-    return null;
-  }
+  return sanitizeAuditObject(metadata, logger, event, 'metadata');
 }
 
 export async function logAuditEvent(
@@ -120,6 +169,13 @@ export async function logAuditEvent(
 
   // V-AUD-001: strip PHI keys from metadata once, before either persisted write.
   const safeMetadata = sanitizeAuditMetadata(event.metadata, logger, event);
+
+  // V-AUD-NEW-A: row snapshots routinely contain PHI (names, DOB, clinical text)
+  // nested at any depth. The audit log is append-only/never-deleted, so PHI baked into
+  // before_snapshot/after_snapshot is unremediable. Recursively sanitize both before
+  // they are persisted to EITHER audit table.
+  const safeBefore = sanitizeAuditObject(event.before, logger, event, 'before_snapshot');
+  const safeAfter = sanitizeAuditObject(event.after, logger, event, 'after_snapshot');
 
   // V-AUD-007 (fail-closed): per ADR-005, security-class events must NOT be silently
   // lost — a swallowed failure on a security audit (PIN set, role change, cross-tenant
@@ -147,8 +203,8 @@ export async function logAuditEvent(
         userAgent: event.userAgent,
         reason: event.reason,
         metadata: safeMetadata,
-        beforeSnapshot: event.before ?? null,
-        afterSnapshot: event.after ?? null,
+        beforeSnapshot: safeBefore,
+        afterSnapshot: safeAfter,
       }),
     );
   } catch (err) {
@@ -171,8 +227,8 @@ export async function logAuditEvent(
         resourceType: event.resourceType,
         resourceId: event.resourceId,
         metadata: safeMetadata,
-        before: event.before ?? null,
-        after: event.after ?? null,
+        before: safeBefore,
+        after: safeAfter,
       }),
     );
   } catch (err) {

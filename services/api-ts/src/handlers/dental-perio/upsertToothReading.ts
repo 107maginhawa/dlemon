@@ -15,6 +15,7 @@ import {
   UnauthorizedError,
   NotFoundError,
   BusinessLogicError,
+  ConflictError,
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
@@ -49,9 +50,11 @@ export async function upsertToothReading(
   if (!chart) throw new NotFoundError('Perio chart');
 
   // BR-P02: chart must be writable. A completed/locked chart is immutable —
-  // V-PER-002: canonical code CHART_COMPLETED (was PERIO_CHART_LOCKED).
+  // N-PER-01 / V-PER-002: CHART_COMPLETED is a state conflict (409), not a 422
+  // business-rule failure. ERROR_TAXONOMY.md mandates 409 and the create/complete
+  // handlers already use ConflictError — keep the wire contract consistent.
   if (chart.status !== 'draft') {
-    throw new BusinessLogicError(`Cannot modify ${chart.status} perio chart`, 'CHART_COMPLETED');
+    throw new ConflictError(`Cannot modify ${chart.status} perio chart`, 'CHART_COMPLETED');
   }
 
   // EF-PER-001: parent visit must not be completed or locked.

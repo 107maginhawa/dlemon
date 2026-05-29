@@ -26,6 +26,20 @@ export function isValidFdiToothNumber(n: number): boolean {
   return false;
 }
 
+/**
+ * BR-P07 dentition detection. Primary (deciduous) teeth occupy FDI quadrants
+ * 5–8 (tooth numbers 51–85); adult teeth occupy quadrants 1–4 (11–48). There is
+ * no dentition-type column on the chart, so dentition is inferred from the
+ * tooth numbers actually charted.
+ */
+export function isPrimaryToothNumber(n: number): boolean {
+  if (!Number.isInteger(n)) return false;
+  for (const [lo, hi] of PRIMARY_QUADRANTS) {
+    if (n >= lo && n <= hi) return true;
+  }
+  return false;
+}
+
 export function assertValidToothNumber(n: number): void {
   if (!isValidFdiToothNumber(n)) {
     throw new BusinessLogicError(`Invalid tooth number: ${n}`, 'INVALID_TOOTH_NUMBER');

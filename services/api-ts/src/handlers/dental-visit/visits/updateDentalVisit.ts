@@ -85,6 +85,19 @@ export async function updateDentalVisit(
     if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
     const updated = patch.chiefComplaint ? await repo.findOneById(visitId) ?? activated : activated;
     log?.info({ requestId, action: 'dental_visit_activate', visitId, by: user.id }, 'Visit activated');
+    // V-VIS-001 / DE-001 VisitCheckedIn: per ADR-006 this is an audit-log-only marker
+    // (no event bus) — satisfy it by writing the dental_audit_log row synchronously.
+    // Note: createVisit / VisitRepository.createOne writes NO audit row, so the
+    // check-in lifecycle event is recorded here at the draft→active transition.
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
+    await logAuditEvent(db, log, {
+      personId: user.id,
+      tenantId: branchForAudit?.organizationId ?? visit.branchId,
+      branchId: visit.branchId,
+      action: 'visit.checked_in',
+      resourceType: 'dental_visit',
+      resourceId: visitId,
+    });
     return ctx.json(updated);
   }
 

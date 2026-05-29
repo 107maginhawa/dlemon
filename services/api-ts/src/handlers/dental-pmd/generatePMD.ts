@@ -57,6 +57,20 @@ export async function generatePMD(
     );
   }
 
+  // N-PMD-02 (immutable-record integrity): the PMD's patient identity is derived from
+  // the visit, the single source of truth (same rule as branch_id; see API_CONTRACTS.md).
+  // The request body must not be able to bind an arbitrary patient into a checksum-sealed,
+  // non-repudiation PMD record. A body.patientId that disagrees with the visit is rejected;
+  // the immutable record below uses `visit.patientId` exclusively so the body cannot
+  // influence the sealed content.
+  if (body.patientId !== visit.patientId) {
+    throw new BusinessLogicError(
+      'patientId does not match the visit patient',
+      'PATIENT_VISIT_MISMATCH',
+    );
+  }
+  const patientId = visit.patientId;
+
   // Collect visit data snapshot
   const treatments = await getTreatmentsForPMD(db, visitId);
   const prescriptions = await getPrescriptionsForPMD(db, visitId);
@@ -65,7 +79,7 @@ export async function generatePMD(
   // so that the checksum binds the author identity to the content (non-repudiation).
   const contentSnapshot = JSON.stringify({
     visitId,
-    patientId: body.patientId,
+    patientId,
     authorMemberId: membership.id,
     visitDate: visit.activatedAt ?? visit.createdAt,
     treatments: treatments.map(t => ({
@@ -98,7 +112,7 @@ export async function generatePMD(
   if (existing) {
     pmd = await pmdRepo.supersede(existing.id, {
       visitId,
-      patientId: body.patientId,
+      patientId,
       authorMemberId: membership.id,
       branchId: visit.branchId,
       content: contentSnapshot,
@@ -107,7 +121,7 @@ export async function generatePMD(
   } else {
     pmd = await pmdRepo.createOne({
       visitId,
-      patientId: body.patientId,
+      patientId,
       authorMemberId: membership.id,
       branchId: visit.branchId,
       content: contentSnapshot,

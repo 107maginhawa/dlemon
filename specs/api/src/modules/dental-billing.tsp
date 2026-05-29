@@ -186,8 +186,10 @@ model CreateDentalInvoiceRequest {
 }
 
 model RecordDentalPaymentRequest {
-  // V-BIL-010: payments must be for at least 1 cent (enforced in handler → 422 INVALID_AMOUNT).
-  amountCents: int32;
+  // V-BIL-010: payments must be for at least 1 cent. Enforced at the schema layer
+  // (contract min:1) AND in the handler (422 INVALID_AMOUNT defense-in-depth for
+  // direct callers). MODULE_SPEC BR-015 accepts 400 VALIDATION_ERROR for amount bounds.
+  @minValue(1) amountCents: int32;
 
   method: PaymentMethod;
 

@@ -185,3 +185,110 @@ describe('IDEAL-GAP-P1-001: AUD-BR-004 — required fields via logAuditEvent', (
     expect(entries[0]?.branchId).toBe(BRANCH_A);
   });
 });
+
+// ----------------------------------------------------------------------------
+// V-AUD-NEW-A (P1): snapshots must be PHI-sanitized at rest.
+// before/after JSONB are persisted into an append-only, never-deleted table, so
+// any PHI baked in is unremediable (AC-AUD-004 / "No PHI in log body"). Sanitize
+// recursively before persisting.
+// ----------------------------------------------------------------------------
+describe('V-AUD-NEW-A: PHI sanitization of before/after snapshots', () => {
+  test('strips top-level PHI keys from before/after snapshots', async () => {
+    await logAuditEvent(db, null, {
+      personId: ACTOR_A,
+      tenantId: TENANT_A,
+      action: 'patient.update',
+      resourceType: 'dental_patient',
+      resourceId: TARGET_A,
+      before: {
+        id: TARGET_A,
+        status: 'active',
+        displayName: 'Jane Doe',
+        dateOfBirth: '1990-01-01',
+        email: 'jane@example.com',
+        diagnosis: 'caries',
+      },
+      after: {
+        id: TARGET_A,
+        status: 'archived',
+        displayName: 'Jane Doe',
+      },
+    });
+
+    const { entries } = await repo.list(
+      { action: 'patient.update', tenantId: TENANT_A },
+      { limit: 10, offset: 0 },
+    );
+    const entry = entries[0]!;
+    const before = entry.beforeSnapshot as Record<string, unknown>;
+    const after = entry.afterSnapshot as Record<string, unknown>;
+
+    // Non-PHI keys preserved.
+    expect(before['id']).toBe(TARGET_A);
+    expect(before['status']).toBe('active');
+    // PHI keys stripped.
+    expect(before).not.toHaveProperty('displayName');
+    expect(before).not.toHaveProperty('dateOfBirth');
+    expect(before).not.toHaveProperty('email');
+    expect(before).not.toHaveProperty('diagnosis');
+
+    expect(after['status']).toBe('archived');
+    expect(after).not.toHaveProperty('displayName');
+
+    // No PHI value anywhere in the persisted row.
+    expect(JSON.stringify(entry)).not.toContain('Jane Doe');
+    expect(JSON.stringify(entry)).not.toContain('jane@example.com');
+    expect(JSON.stringify(entry)).not.toContain('caries');
+  });
+
+  test('strips PHI keys nested in objects and arrays', async () => {
+    const UNIQUE_TENANT = 'da010001-0000-0000-0000-000000000013';
+    await logAuditEvent(db, null, {
+      personId: ACTOR_A,
+      tenantId: UNIQUE_TENANT,
+      action: 'patient.update',
+      resourceType: 'dental_patient',
+      resourceId: TARGET_A,
+      before: {
+        status: 'active',
+        nested: { firstName: 'Jane', lastName: 'Doe', count: 3 },
+        contacts: [{ phone: '555-1234', label: 'home' }],
+      },
+    });
+
+    const { entries } = await repo.list(
+      { action: 'patient.update', tenantId: UNIQUE_TENANT },
+      { limit: 10, offset: 0 },
+    );
+    const before = entries[0]!.beforeSnapshot as Record<string, unknown>;
+    const nested = before['nested'] as Record<string, unknown>;
+    const contacts = before['contacts'] as Array<Record<string, unknown>>;
+
+    expect(before['status']).toBe('active');
+    expect(nested['count']).toBe(3);
+    expect(nested).not.toHaveProperty('firstName');
+    expect(nested).not.toHaveProperty('lastName');
+    expect(contacts[0]).not.toHaveProperty('phone');
+    expect(contacts[0]?.['label']).toBe('home');
+
+    expect(JSON.stringify(entries[0]!)).not.toContain('Jane');
+    expect(JSON.stringify(entries[0]!)).not.toContain('555-1234');
+  });
+
+  test('null/undefined snapshots remain null (backward compatible)', async () => {
+    const UNIQUE_TENANT = 'da010001-0000-0000-0000-000000000014';
+    await logAuditEvent(db, null, {
+      personId: ACTOR_A,
+      tenantId: UNIQUE_TENANT,
+      action: 'visit.complete',
+      resourceType: 'dental_visit',
+      resourceId: TARGET_A,
+    });
+    const { entries } = await repo.list(
+      { action: 'visit.complete', tenantId: UNIQUE_TENANT },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries[0]!.beforeSnapshot).toBeNull();
+    expect(entries[0]!.afterSnapshot).toBeNull();
+  });
+});

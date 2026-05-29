@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import { dentalInvoices, dentalInvoiceLineItems } from '../../dental-billing/repos/dental-invoice.schema';
@@ -33,9 +33,7 @@ export async function getDentalPatientStatement(
   if (!patient) throw new NotFoundError('Patient not found');
 
   // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
-  }
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // All visits
   const visits = await db

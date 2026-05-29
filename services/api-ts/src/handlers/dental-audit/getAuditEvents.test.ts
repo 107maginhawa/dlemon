@@ -160,6 +160,40 @@ describe('V-AUD-003: contract DTO mapping', () => {
     expect(JSON.stringify(body)).not.toContain('SHOULD NOT LEAK');
   });
 
+  test('V-AUD-NEW-B: records an ACCESSED self-audit event when the audit log is viewed', async () => {
+    await seedOwnerBranch();
+    // Seed one unrelated data-modification event so the viewer returns something.
+    await new AuditLogRepository(db).insert({
+      tenantId: TENANT_ID, branchId: BRANCH_ID, actorId: OWNER_ID,
+      eventType: 'data-modification', action: 'invoice.voided', targetType: 'dental_invoice',
+    });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(
+      `/dental/audit-events?branchId=${BRANCH_ID}&eventType=data-modification`,
+    );
+    expect(res.status).toBe(200);
+
+    // A self-audit ACCESSED event must have been written for the viewing action.
+    const { entries } = await new AuditLogRepository(db).list(
+      { branchId: BRANCH_ID, targetType: 'dental_audit_log', actorId: OWNER_ID },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries.length).toBe(1);
+    const access = entries[0]!;
+    expect(access.action).toBe('audit_log.accessed');
+    expect(access.eventType).toBe('security');
+    expect(access.actorId).toBe(OWNER_ID);
+    expect(access.branchId).toBe(BRANCH_ID);
+    // Metadata captures filter scope / counts only — never PHI.
+    const md = access.metadata as Record<string, unknown>;
+    expect(md['eventType']).toBe('data-modification');
+    expect(typeof md['resultCount']).toBe('number');
+    // No before/after snapshots on a read event.
+    expect(access.beforeSnapshot).toBeNull();
+    expect(access.afterSnapshot).toBeNull();
+  });
+
   test('V-AUD-004: filters by event_type (eventType query param)', async () => {
     await seedOwnerBranch();
     const repo = new AuditLogRepository(db);

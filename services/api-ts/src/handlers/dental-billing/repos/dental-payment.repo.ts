@@ -32,6 +32,28 @@ export class DentalPaymentRepository {
     return row ?? null;
   }
 
+  /**
+   * Find a payment by receipt number scoped to a single invoice.
+   *
+   * N-BIL-01: idempotency replay MUST be scoped to the current invoice.
+   * `receiptNumber` carries a GLOBAL unique index, so a bare
+   * `findByReceiptNumber` lookup can surface a payment belonging to a
+   * different invoice/patient — never use it as the idempotency key.
+   */
+  async findByInvoiceAndReceiptNumber(
+    invoiceId: string,
+    receiptNumber: string,
+  ): Promise<DentalPayment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalPayments)
+      .where(and(
+        eq(dentalPayments.invoiceId, invoiceId),
+        eq(dentalPayments.receiptNumber, receiptNumber),
+      ));
+    return row ?? null;
+  }
+
   async findOneById(id: string): Promise<DentalPayment | null> {
     const [row] = await this.db
       .select()

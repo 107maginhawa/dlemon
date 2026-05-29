@@ -337,8 +337,10 @@ describe('upsertToothReading', () => {
   });
 });
 
-// V-PER-002: writing to a COMPLETED chart (whose visit is still active) → CHART_COMPLETED.
-describe('upsertToothReading on a completed chart (V-PER-002)', () => {
+// N-PER-01 / V-PER-002: writing to a COMPLETED chart (whose visit is still active)
+// → CHART_COMPLETED. ERROR_TAXONOMY.md mandates 409 (state conflict), matching the
+// create/complete handlers — not a 422 business-rule failure.
+describe('upsertToothReading on a completed chart (N-PER-01 / V-PER-002)', () => {
   const ACTIVE_VISIT_2 = 'ee000000-0000-1000-8000-000000000052';
   const COMPLETED_CHART_2 = 'ee000000-0000-1000-8000-000000000072';
 
@@ -357,14 +359,14 @@ describe('upsertToothReading on a completed chart (V-PER-002)', () => {
     }).onConflictDoNothing();
   });
 
-  test('returns 422 CHART_COMPLETED writing to a completed (not visit-locked) chart', async () => {
+  test('returns 409 CHART_COMPLETED writing to a completed (not visit-locked) chart', async () => {
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/perio-charts/${COMPLETED_CHART_2}/readings/11`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ depthBM: 3 }),
     });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
     const body = await res.json() as any;
     expect(body.code).toBe('CHART_COMPLETED');
   });
@@ -464,6 +466,76 @@ describe('completePerioChart', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('VISIT_LOCKED');
+  });
+});
+
+// N-PER-02: primary-dentition charts (FDI 51–85, 20 teeth) complete at min 8/20,
+// while adult charts keep the 16 minimum. Dentition is inferred from the charted
+// tooth numbers since the schema has no dentition-type column.
+describe('completePerioChart — primary dentition minimum (N-PER-02)', () => {
+  const PRIMARY_VISIT = 'ee000000-0000-1000-8000-000000000053';
+  const PRIMARY_CHART = 'ee000000-0000-1000-8000-000000000074';
+  const PRIMARY_VISIT_2 = 'ee000000-0000-1000-8000-000000000054';
+  const PRIMARY_CHART_2 = 'ee000000-0000-1000-8000-000000000075';
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values([
+      {
+        id: PRIMARY_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID,
+        dentistMemberId: MEMBER_ID, status: 'draft',
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      },
+      {
+        id: PRIMARY_VISIT_2, patientId: PATIENT_ID, branchId: BRANCH_ID,
+        dentistMemberId: MEMBER_ID, status: 'draft',
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      },
+    ]).onConflictDoNothing();
+
+    await db.insert(dentalPerioCharts).values([
+      {
+        id: PRIMARY_CHART, visitId: PRIMARY_VISIT, patientId: PATIENT_ID,
+        branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      },
+      {
+        id: PRIMARY_CHART_2, visitId: PRIMARY_VISIT_2, patientId: PATIENT_ID,
+        branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      },
+    ]).onConflictDoNothing();
+  });
+
+  async function seedReadings(chartId: string, teeth: number[]) {
+    const app = buildApp(TEST_USER);
+    for (const tooth of teeth) {
+      const r = await app.request(`/dental/perio-charts/${chartId}/readings/${tooth}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depthBM: 3, bopBM: false }),
+      });
+      expect(r.status).toBe(200);
+    }
+  }
+
+  test('returns 422 INSUFFICIENT_READINGS for a primary chart below the 8-reading minimum', async () => {
+    // 7 primary teeth (FDI 51-55, 61-62) — below the primary minimum of 8.
+    await seedReadings(PRIMARY_CHART_2, [51, 52, 53, 54, 55, 61, 62]);
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${PRIMARY_CHART_2}/complete`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INSUFFICIENT_READINGS');
+  });
+
+  test('returns 200 completing a primary chart with exactly 8 readings', async () => {
+    // 8 primary teeth (FDI 51-55, 61-63) — meets the primary minimum.
+    await seedReadings(PRIMARY_CHART, [51, 52, 53, 54, 55, 61, 62, 63]);
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${PRIMARY_CHART}/complete`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
   });
 });
 

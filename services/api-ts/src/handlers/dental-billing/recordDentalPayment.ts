@@ -8,7 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -58,10 +58,37 @@ export async function recordDentalPayment(
 
   // V-BIL-009: receiptNumber (the contract `reference`) is optional. When
   // supplied it doubles as the idempotency key; when omitted we generate one.
+  //
+  // N-BIL-01: the idempotency replay MUST be scoped to THIS invoice.
+  // `receiptNumber` has a GLOBAL unique index, so a global lookup would let a
+  // client replay a receipt number from invoice A against invoice B and
+  // receive A's payment (a different invoice/patient/amount) as a 200 success.
+  //   - Same invoice + same receipt + same amount  → idempotent replay (200).
+  //   - Same invoice + same receipt + diff amount   → CONFLICT (409); the
+  //     receipt is already bound to a different amount on this invoice.
+  //   - Receipt already used on a DIFFERENT invoice  → CONFLICT (409); never
+  //     echo back another invoice's payment.
   if (body.receiptNumber) {
-    const existing = await paymentRepo.findByReceiptNumber(body.receiptNumber);
-    if (existing) {
-      return ctx.json(existing, 200);
+    const sameInvoiceMatch = await paymentRepo.findByInvoiceAndReceiptNumber(
+      invoiceId,
+      body.receiptNumber,
+    );
+    if (sameInvoiceMatch) {
+      if (sameInvoiceMatch.amountCents !== body.amountCents) {
+        throw new ConflictError(
+          `Receipt number ${body.receiptNumber} already recorded on this invoice with a different amount`,
+        );
+      }
+      return ctx.json(sameInvoiceMatch, 200);
+    }
+
+    // Not on this invoice — guard against cross-invoice receipt reuse, which
+    // the global unique index would otherwise reject with an opaque 500.
+    const globalMatch = await paymentRepo.findByReceiptNumber(body.receiptNumber);
+    if (globalMatch) {
+      throw new ConflictError(
+        `Receipt number ${body.receiptNumber} is already in use on another invoice`,
+      );
     }
   }
 

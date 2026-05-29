@@ -1678,9 +1678,11 @@ describe('P1-VAL-01: negative and zero amount validation', () => {
         recordedByMemberId: MEMBER_ID,
       }),
     });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    // V-BIL-010: amount bounds (min:1) now enforced at the schema layer → 400.
+    // MODULE_SPEC BR-015 accepts 400 VALIDATION_ERROR for amount bounds.
+    expect(res.status).toBe(400);
     const body = await res.json() as any;
-    expect(body.code).toBe('INVALID_AMOUNT');
+    expect(body.issues ?? body.error).toBeDefined();
   });
 
   test('zero payment amount rejected [P1-VAL-01]', async () => {
@@ -1699,8 +1701,9 @@ describe('P1-VAL-01: negative and zero amount validation', () => {
         recordedByMemberId: MEMBER_ID,
       }),
     });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    // V-BIL-010: amount bounds (min:1) now enforced at the schema layer → 400.
+    expect(res.status).toBe(400);
     const body = await res.json() as any;
-    expect(body.code).toBe('INVALID_AMOUNT');
+    expect(body.issues ?? body.error).toBeDefined();
   });
 });
