@@ -27,7 +27,9 @@ export async function createMedicalHistoryEntry(
   const patient = await getPatientForClinical(db, body.patientId);
   if (!patient) throw new NotFoundError('Patient');
   if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
+  // MODULE_SPEC §6: medical history write allowed for dentist_owner,
+  // dentist_associate, staff_full only — hygienist is NOT in the matrix.
+  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   const repo = new MedicalHistoryRepository(db);
 
