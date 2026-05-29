@@ -11,7 +11,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { ImagingRepository } from './repos/imaging.repo';
 
 export async function updateImageCalibration(ctx: BaseContext): Promise<Response> {
@@ -35,8 +35,8 @@ export async function updateImageCalibration(ctx: BaseContext): Promise<Response
   const study = await repo.findStudyById(image.studyId);
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
-  // Branch-level authorization (T-08-01)
-  await assertBranchAccess(db, user.id, study.branchId);
+  // Role-aware branch authorization — calibration is a clinical write (T-08-01)
+  await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
   const updated = await repo.updateImageCalibration(imageId, body.pixelSpacingMm);
 
