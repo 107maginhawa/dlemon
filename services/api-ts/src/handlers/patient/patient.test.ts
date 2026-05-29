@@ -51,6 +51,8 @@ const OTHER_USER_ID   = 'a0000000-0000-1000-8000-000000000002';
 const NONEXISTENT_ID  = 'f0000000-0000-1000-8000-000000000099';
 
 const authedUser = { id: TEST_USER_ID, email: 'patient@test.com', name: 'Test Patient' };
+// Admin caller — merge/unmerge require x-security-required-roles: ["admin"]
+const adminUser = { ...authedUser, role: 'admin' };
 
 // Validation error passthrough handler
 const validationErrorHandler = (result: any, c: any) => {
@@ -61,7 +63,7 @@ const validationErrorHandler = (result: any, c: any) => {
 
 // ─── App builders ────────────────────────────────────────────────────────────
 
-function buildTestApp(user?: typeof authedUser) {
+function buildTestApp(user?: typeof authedUser & { role?: string }) {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -513,7 +515,7 @@ describe('mergePatients handler', () => {
   });
 
   test('returns 501 (not implemented) for valid request body', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp(adminUser);
 
     const res = await app.request('/patients/merge', {
       method: 'POST',
@@ -557,7 +559,7 @@ describe('unmergePatients handler', () => {
   });
 
   test('returns 500 (not implemented) for valid request body', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp(adminUser);
 
     const res = await app.request('/patients/unmerge', {
       method: 'POST',

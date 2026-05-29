@@ -1,5 +1,6 @@
 import type { ValidatedContext } from '@/types/app';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError } from '@/core/errors';
+import type { User } from '@/types/auth';
 import type { MergePatientsBody } from '@/generated/openapi/validators';
 
 /**
@@ -11,11 +12,14 @@ import type { MergePatientsBody } from '@/generated/openapi/validators';
 export async function mergePatients(
   ctx: ValidatedContext<MergePatientsBody, never, never>
 ): Promise<Response> {
-  const user = ctx.get('user');
+  const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError();
-  
-  
-  
+
+  // x-security-required-roles: ["admin"] — patient merge is an admin-only operation
+  if (user.role !== 'admin') {
+    throw new ForbiddenError('Only administrators can merge patients');
+  }
+
   // Extract validated request body (reserved for future implementation)
   ctx.req.valid('json');
 

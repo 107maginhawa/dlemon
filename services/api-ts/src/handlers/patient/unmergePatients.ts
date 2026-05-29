@@ -6,6 +6,7 @@ import {
   ValidationError,
   BusinessLogicError,
 } from '@/core/errors';
+import type { User } from '@/types/auth';
 import type { UnmergePatientsBody } from '@/generated/openapi/validators';
 
 /**
@@ -17,11 +18,14 @@ import type { UnmergePatientsBody } from '@/generated/openapi/validators';
 export async function unmergePatients(
   ctx: ValidatedContext<UnmergePatientsBody, never, never>
 ): Promise<Response> {
-  const user = ctx.get('user');
+  const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError();
-  
-  
-  
+
+  // x-security-required-roles: ["admin"] — patient unmerge is an admin-only operation
+  if (user.role !== 'admin') {
+    throw new ForbiddenError('Only administrators can unmerge patients');
+  }
+
   // Extract validated request body
   const body = ctx.req.valid('json');
   
