@@ -62,15 +62,26 @@ export async function listEMRPatients(ctx: HandlerContext) {
   // Check field expansion options
   const expandPerson = shouldExpand(query, 'person');
 
-  // Resolve provider entity ID from person ID
-  const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
-  if (!provider) {
-    throw new ForbiddenError('Provider profile not found for authenticated user');
+  // MODULE_SPEC §6 (List EMR patients): roles = provider (own), admin (all) (V-EMR-C-002).
+  // Admins list patients across all providers; providers are scoped to their own.
+  const userRoles = user.role ? user.role.split(',').map((r) => r.trim()) : [];
+  const isAdmin = userRoles.includes('admin');
+
+  // Resolve provider entity ID from person ID. Required for the non-admin provider
+  // path; an admin without a provider profile is still allowed (lists all).
+  let providerId: string | undefined;
+  if (!isAdmin) {
+    const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
+    if (!provider) {
+      throw new ForbiddenError('Provider profile not found for authenticated user');
+    }
+    providerId = provider.id;
   }
 
-  // Get consultations by this provider first to find their patients
+  // Get consultations to find the relevant patients. Providers are scoped to their
+  // own consultations; admins see all (no provider filter).
   const consultationFilters = {
-    provider: provider.id, // Only show patients this provider has treated
+    ...(providerId && { provider: providerId }),
     ...(query.dateStart && query.dateEnd && {
       dateRange: {
         start: query.dateStart,
@@ -102,7 +113,7 @@ export async function listEMRPatients(ctx: HandlerContext) {
       action: 'emr.patients.list',
       resourceType: 'patient',
       metadata: {
-        providerFilter: provider.id,
+        providerFilter: providerId,
         resultCount: 0,
         totalConsultations: 0
       }
@@ -205,7 +216,7 @@ export async function listEMRPatients(ctx: HandlerContext) {
     action: 'emr.patients.list',
     resourceType: 'patient',
     metadata: {
-      providerFilter: provider.id,
+      providerFilter: providerId,
       resultCount: finalPatients.length,
       uniquePatientCount: uniquePatientIds.length,
       totalConsultations: providerConsultations.length

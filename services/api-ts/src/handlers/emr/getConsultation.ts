@@ -65,13 +65,22 @@ export async function getConsultation(ctx: HandlerContext) {
     });
   }
   
-  // Check ownership - user must be either the provider or patient for this consultation
+  // Check ownership - user must be admin, or the provider/patient for this consultation.
+  // MODULE_SPEC §6 (Read one): roles = admin, provider:owner, patient:owner (V-EMR-C-003).
   let hasAccess = false;
 
-  // Check if user is the provider for this consultation
-  const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
-  if (provider && consultation.provider === provider.id) {
+  // Admins may read any consultation (no ownership constraint).
+  const userRoles = user.role ? user.role.split(',').map((r) => r.trim()) : [];
+  if (userRoles.includes('admin')) {
     hasAccess = true;
+  }
+
+  // Check if user is the provider for this consultation
+  if (!hasAccess) {
+    const provider = await getProviderByPersonIdForEMR(db, user.id, logger);
+    if (provider && consultation.provider === provider.id) {
+      hasAccess = true;
+    }
   }
 
   // If not the provider, check if user is the patient for this consultation

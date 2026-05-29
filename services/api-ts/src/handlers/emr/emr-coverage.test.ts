@@ -285,12 +285,23 @@ describe('getConsultation handler', () => {
     expect(res.status).toBe(404);
   });
 
-  test('wrong user (no provider/patient profile) → 403', async () => {
+  test('wrong user (non-admin, no provider/patient profile) → 403', async () => {
     const consultation = await seedDraftConsultation();
-    // ADMIN_USER has no provider or patient profile → ForbiddenError
-    const app = buildTestApp({ user: ADMIN_USER });
+    // A user with a non-owning role and no provider/patient profile → ForbiddenError.
+    const stranger = { id: OTHER_PERSON_ID, email: 'stranger@clinic.com', role: 'provider' };
+    const app = buildTestApp({ user: stranger as any });
     const res = await app.request(`/emr/consultations/${consultation.id}`);
     expect(res.status).toBe(403);
+  });
+
+  test('admin → 200 reads any consultation (MODULE_SPEC §6 admin grant, V-EMR-C-003)', async () => {
+    const consultation = await seedDraftConsultation();
+    // ADMIN_USER is neither the owning provider nor patient, but §6 grants admin read-one.
+    const app = buildTestApp({ user: ADMIN_USER });
+    const res = await app.request(`/emr/consultations/${consultation.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.id).toBe(consultation.id);
   });
 
   test('owning provider → 200', async () => {
@@ -422,6 +433,19 @@ describe('listEMRPatients handler', () => {
     expect(body.data.length).toBeGreaterThanOrEqual(1);
     expect(body.data[0].consultationStats).toBeDefined();
     expect(body.pagination).toBeDefined();
+  });
+
+  test('admin (no provider profile) → 200 lists EMR patients across providers (MODULE_SPEC §6 admin grant, V-EMR-C-002)', async () => {
+    await seedDraftConsultation();
+    // ADMIN_USER has no provider profile; §6 grants admin "List EMR patients".
+    const app = buildTestApp({ user: ADMIN_USER });
+    const res = await app.request('/emr/patients');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body.data)).toBe(true);
+    // The seeded patient appears regardless of which provider authored the note.
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].consultationStats).toBeDefined();
   });
 });
 
