@@ -13,10 +13,12 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, AppError } from '@/core/errors';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { logAuditEvent } from '@/handlers/audit/repos/audit.facade';
 import type { DentalMembershipManagement_createBody, DentalMembershipManagement_createParams } from '@/generated/openapi/validators';
 
 const TIER_MEMBER_LIMITS: Record<string, number> = {
@@ -36,6 +38,9 @@ export async function DentalMembershipManagement_create(
   const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // EM-ORG-001: Only dentist_owner may create staff members on the branch
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
 
   const orgRepo = new OrganizationRepository(db, logger);
   const org = await orgRepo.findOneById(orgId);
@@ -63,6 +68,24 @@ export async function DentalMembershipManagement_create(
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
   });
+
+  // AL-003: HIPAA §164.312 — audit membership creation
+  try {
+    await logAuditEvent(db, logger, {
+      eventType: 'data-modification',
+      category: 'administrative',
+      action: 'create',
+      outcome: 'success',
+      user: user.id,
+      userType: 'host',
+      resourceType: 'dental_membership',
+      resource: membership.id,
+      description: `Membership created for branch ${branchId}`,
+      details: { branchId: membership.branchId, role: body.role, displayName: body.displayName },
+    }, user.id);
+  } catch (auditErr) {
+    logger?.warn?.({ auditErr }, 'AL-003: failed to write createMembership audit log');
+  }
 
   // Add deprecation headers per RFC 8594
   const response = ctx.json(membership, 201) as Response;

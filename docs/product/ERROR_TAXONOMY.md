@@ -96,6 +96,7 @@ interface ErrorResponse {
 | `ORG_NOT_FOUND` | 404 | Org ID doesn't exist |
 | `MEMBERSHIP_NOT_FOUND` | 404 | Membership record not found |
 | `MEMBERSHIP_CONFLICT` | 409 | Staff already a member of branch |
+| `TIER_LIMIT_REACHED` | 409 | Org tier active-staff limit reached (FR6.3) |
 | `BRANCH_ROLE_REQUIRED` | 403 | Operation needs specific role |
 | `INVALID_CDT_CODE` | 422 | CDT code not in catalog |
 | `CONSENT_TEMPLATE_NOT_FOUND` | 404 | Template ID doesn't exist |
