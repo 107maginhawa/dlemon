@@ -20,13 +20,13 @@ import { MembershipRepository } from './repos/membership.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
-// UUID namespace: gh-prefix — no collision with other test files
-const OWNER_ID   = 'gh000000-0000-1000-8000-000000000001';
-const MEMBER_ID  = 'gh000000-0000-1000-8000-000000000002';
-const STRANGER_ID = 'gh000000-0000-1000-8000-000000000003';
-const ORG_ID     = 'gh000000-0000-1000-8000-000000000010';
-const ORG2_ID    = 'gh000000-0000-1000-8000-000000000011';
-const BRANCH_ID  = 'gh000000-0000-1000-8000-000000000020';
+// UUID namespace: e4-prefix — no collision with other test files
+const OWNER_ID   = 'e4000000-0000-1000-8000-000000000001';
+const MEMBER_ID  = 'e4000000-0000-1000-8000-000000000002';
+const STRANGER_ID = 'e4000000-0000-1000-8000-000000000003';
+const ORG_ID     = 'e4000000-0000-1000-8000-000000000010';
+const ORG2_ID    = 'e4000000-0000-1000-8000-000000000011';
+const BRANCH_ID  = 'e4000000-0000-1000-8000-000000000020';
 
 const ownerUser   = { id: OWNER_ID,    email: 'owner@clinic.com' };
 const memberUser  = { id: MEMBER_ID,   email: 'member@clinic.com' };
@@ -120,7 +120,7 @@ describe('DentalBranchManagement_list handler', () => {
 
   test('returns 404 when org does not exist', async () => {
     const app = buildTestApp(ownerUser);
-    const nonexistentOrgId = 'gh000000-0000-1000-8000-000000000099';
+    const nonexistentOrgId = 'e4000000-0000-1000-8000-000000000099';
 
     const res = await app.request(`/dental/organizations/${nonexistentOrgId}/branches`);
     expect(res.status).toBe(404);

@@ -22,10 +22,10 @@ import { BranchRepository } from './repos/branch.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
-// UUID namespace: gg-prefix — no collision with other test files
-const OWNER_ID  = 'gg000000-0000-1000-8000-000000000001';
-const OTHER_ID  = 'gg000000-0000-1000-8000-000000000002';
-const ORG_ID    = 'gg000000-0000-1000-8000-000000000010';
+// UUID namespace: e3-prefix — no collision with other test files
+const OWNER_ID  = 'e3000000-0000-1000-8000-000000000001';
+const OTHER_ID  = 'e3000000-0000-1000-8000-000000000002';
+const ORG_ID    = 'e3000000-0000-1000-8000-000000000010';
 
 const ownerUser = { id: OWNER_ID, email: 'owner@clinic.com' };
 const otherUser = { id: OTHER_ID, email: 'other@clinic.com' };
@@ -122,7 +122,7 @@ describe('DentalBranchManagement_create handler', () => {
 
   test('returns 404 when org does not exist', async () => {
     const app = buildTestApp(ownerUser);
-    const nonexistentOrgId = 'gg000000-0000-1000-8000-000000000099';
+    const nonexistentOrgId = 'e3000000-0000-1000-8000-000000000099';
 
     const res = await app.request(`/dental/organizations/${nonexistentOrgId}/branches`, {
       method: 'POST',
@@ -191,7 +191,7 @@ describe('DentalBranchManagement_create handler', () => {
     await seedOrg();
     // Seed a second org
     const orgRepo = new OrganizationRepository(db);
-    const OTHER_ORG_ID = 'gg000000-0000-1000-8000-000000000011';
+    const OTHER_ORG_ID = 'e3000000-0000-1000-8000-000000000011';
     await orgRepo.createOne({
       id: OTHER_ORG_ID,
       name: 'Other Clinic',
