@@ -14,6 +14,7 @@ import {
   UnauthorizedError,
   NotFoundError,
   BusinessLogicError,
+  ConflictError,
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
@@ -50,7 +51,7 @@ export async function createPerioChart(
   // BR-P01: enforce one chart per visit.
   const existing = await repo.findByVisitId(body.visitId);
   if (existing) {
-    throw new BusinessLogicError('A periodontal chart already exists for this visit', 'PERIO_CHART_DUPLICATE');
+    throw new ConflictError('Perio chart already exists for this visit', 'CHART_EXISTS');
   }
 
   const chart = await repo.createOne({
