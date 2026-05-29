@@ -1,27 +1,31 @@
 # Spec Consistency Report — Dentalemon
-<!-- oli: v3-dentalemon | cross-module | consistency-gate -->
-_Generated: 2026-05-24_
+<!-- oli: v3-dentalemon | cross-module | consistency-gate | oli-version: 1.3 -->
+<!-- based-on: 12 MODULE_SPEC.md + DOMAIN_GLOSSARY / DOMAIN_MODEL / ROLE_PERMISSION_MATRIX / EVENT_CONTRACTS / ERROR_TAXONOMY / API_CONVENTIONS / WORKFLOW_MAP / AUDIT_CONTRACTS -->
+_Generated: 2026-05-24 · Re-validated: 2026-05-30 (12-module corpus)_
 
 ## Gate Result
-**PASS**
+**PASS** — 0 HIGH conflicts. Stage 1 (consistency) clear; MEDIUM/LOW are wave-addressable warnings.
 
-_Updated 2026-05-24 — all 6 original HIGH findings resolved (5 fixed in spec artifacts, 1 reclassified). F-021 (state string `sent`→`issued`) also fixed. Gate cleared._
+_2026-05-30 re-validation (`--auto`, consistency dimension):_ scope widened from 10 → **12 modules** (added **dental-perio** and **emr-consultation**, both NEW since the 2026-05-24 run). All 6 original HIGH findings remain RESOLVED and were re-confirmed against current artifacts (F-016/17/18 billing+scheduling auth, F-019/F-034 cross-module coupling, F-035 dental-pmd roles). F-021 (`sent`→`issued`) confirmed fixed — dental-billing API_CONTRACTS now states `status → issued` and `V-BIL-015` explicitly retired the legacy `sent` token. The 8 new findings (F-036–F-043) are all MEDIUM/LOW, concentrated in the two newly-added modules (glossary/domain-model/error-catalog gaps + one perio API-vs-spec permission mismatch). No new HIGH; gate stays PASS. (Stage 2 human review = DEFERRED headless — see end.)
 
 ---
 
 ## Checks Run
 
+**Scope:** 12 MODULE_SPECs (the 10 original + dental-perio + emr-consultation) × 7 cross-cutting specs. All 9 checks + NFR (C10b) ran. No SYNC_ARCHITECTURE.md present → sync-consistency check skipped (N/A).
+
 | # | Check | Status | Notes |
 |---|-------|--------|-------|
-| C1 | Naming — glossary alignment | WARN | 4 terms in MODULE_SPECs absent from DOMAIN_GLOSSARY |
-| C2 | Entity attributes — field name alignment | WARN | 5 field gaps/mismatches across visit, billing, patient |
-| C3 | Workflow coverage — WF→screen→MODULE_SPEC | WARN | 3 modules missing §4 Workflow Details; 1 duplicate UI route |
-| C4 | Permission closure — ROLE_PERMISSION_MATRIX vs §6 | PASS | All 3 HIGH (F-016/F-017/F-018) + F-035 + F-020 resolved; doc-reconciled & code-verified 2026-05-30 |
-| C5 | API surface — §10 endpoints vs API_CONTRACTS | WARN | 2 discrepancies (status value, cancel semantics) |
-| C6 | UI data binding — screens.md fields vs §7 | WARN | 2 fields referenced in screens not in §7 |
-| C7 | Cross-module traces | PASS | G-003 resolved — dental-clinical now depends on the `VisitService` interface (dental-visit/utils/visit.service.ts); no direct `VisitRepository` import remains. Naming conflict (F-019) previously resolved. |
-| C8 | State machines — §8 vs screens.md badges | WARN | 1 state name conflict (`sent` vs `issued`) |
-| C9 | Event coverage — §10b vs EVENT_CONTRACTS | PASS | All 24 events accounted for; DE-001 emitter ambiguity noted |
+| C1 | Naming — glossary alignment | WARN | 4 original terms + 9 dental-perio terms (F-036) absent from DOMAIN_GLOSSARY |
+| C2 | Entity attributes — field name alignment | WARN | 5 original field gaps + PerioChart/PerioToothReading absent from DOMAIN_MODEL §3 (F-037) |
+| C3 | Workflow coverage — WF→screen→MODULE_SPEC | WARN | 3 modules missing §4 Workflow Details; 1 duplicate UI route. dental-perio §4 present (WF-P01..P05); WF-P* IDs not catalogued in WORKFLOW_MAP (F-040); WF-EMRC-* not in WORKFLOW_MAP (F-043) |
+| C4 | Permission closure — ROLE_PERMISSION_MATRIX vs §6 | WARN | All HIGH (F-016/17/18) + F-035 + F-020 RESOLVED & code-verified. NEW: dental-perio §6 grants `hygienist` write but API_CONTRACTS Auth omits it (F-038) |
+| C5 | API surface — §10 endpoints vs API_CONTRACTS / ERROR_TAXONOMY | WARN | 2 original discrepancies + perio error codes (CHART_EXISTS/INVALID_DEPTH/INVALID_TOOTH_NUMBER/VISIT_LOCKED) used but absent from ERROR_TAXONOMY perio catalog (F-039); emr `CONSULTATION_NOT_DRAFT` absent from ERROR_TAXONOMY (F-042) |
+| C6 | UI data binding — screens.md fields vs §7 | WARN | 2 fields referenced in screens not in §7 (perio UI deferred per V-PER-011 — no binding to validate) |
+| C7 | Cross-module traces | PASS | G-003 resolved — dental-clinical depends on `VisitService` interface; no direct `VisitRepository` import. emr-consultation facade-only coupling (patient/provider/person) confirmed clean — no dental-* dependency. |
+| C8 | State machines — §8 vs API/screens | PASS | `sent`→`issued` (F-021) FIXED & retired (V-BIL-015). perio FSM (draft→completed→locked) consistent across §8 + API_CONTRACTS PerioStatus enum. emr FSM (draft→finalized terminal) consistent; `amended` enum value documented as reserved/unreachable (V-EMR-001). |
+| C9 | Event coverage — §10b vs EVENT_CONTRACTS | PASS | All 24 DE events accounted for. perio (`perio.chart.*`) + emr (`emr.consultation.*`) events are dotted-lowercase audit-markers per ADR-006, intentionally outside the DE-catalog (F-041 LOW note). |
+| C10b | NFR conflict detection | PASS | No new NFR contradictions. Audit-async-vs-perf reconciled by AUDIT_CONTRACTS §4 (fire-and-forget after commit). |
 
 ---
 
@@ -87,6 +91,18 @@ table; only `dentist_owner` passes `assertBranchRole(['dentist_owner'])` admin g
 | F-025 | C9 | dental-scheduling | MODULE_SPEC §10b lists `DE-010 AppointmentBooked` as the event published on appointment creation. EVENT_CONTRACTS names it `AppointmentBooked@1` with trigger "Appointment created or rescheduled". The name in the spec is `AppointmentBooked` — naming is consistent. However, there is no dedicated `AppointmentRescheduled` event; the WORKFLOW_MAP WF-059/WF-060 (reschedule) has no event coverage documented. Minor gap. | EVENT_CONTRACTS | Add a note to MODULE_SPEC §10b and EVENT_CONTRACTS clarifying that DE-010 covers both book and reschedule, or add DE-025 AppointmentRescheduled. |
 | F-026 | C9 | dental-visit | DE-001 `VisitCheckedIn@1` is listed as **Published** in dental-visit MODULE_SPEC §10b, but it is emitted by the check-in endpoint in dental-scheduling/API_CONTRACTS (`POST /appointments/:id/check-in` → Events emitted: DE-001). Two modules claim to emit the same event. | EVENT_CONTRACTS (emitter = dental-scheduling triggers the visit creation which emits DE-001) | Clarify: the check-in endpoint in dental-scheduling calls dental-visit's createVisit, and dental-visit emits DE-001. Update dental-scheduling API_CONTRACTS to say "Triggers: DE-001 (via dental-visit)" rather than "Events emitted: DE-001". |
 
+#### New findings (2026-05-30) — dental-perio + emr-consultation onboarding
+
+| ID | Check | Module(s) | Description | Source of Truth | Resolution |
+|----|-------|-----------|-------------|-----------------|------------|
+| F-036 | C1 | dental-perio | 9 perio domain terms in MODULE_SPEC §2 — `Perio Chart`, `Probing Depth`, `BOP`, `Recession`, `Mobility`, `Furcation`, `Probing Site`, `CEJ`, `PSR`, `Perio Staging` — are absent from DOMAIN_GLOSSARY. dental-perio was added after the glossary's last generation. | DOMAIN_GLOSSARY | Add a "Periodontal Terms" subsection to DOMAIN_GLOSSARY with these entries (definitions already exist verbatim in dental-perio §2). |
+| F-037 | C3 | dental-perio | Aggregate root `PerioChart` and child entity `PerioToothReading` (MODULE_SPEC §7/§7b) are absent from DOMAIN_MODEL §3 entity classification (still 13 roots / 19 entities — predates perio). | DOMAIN_MODEL | Add `PerioChart` to §3 Aggregate Roots (context: Clinical Encounter; invariant: one chart per visit, BR-P01) and `PerioToothReading` to non-root Entities (owned by PerioChart). |
+| F-038 | C4 | dental-perio | **Permission surface mismatch.** MODULE_SPEC §6 grants `hygienist` write+read (Create/Record/Complete ✅) — consistent with ROLE_PERMISSION_MATRIX extended-roles. But API_CONTRACTS Auth lines list only `dentist_owner \| dentist_associate` for POST chart / PUT readings / POST complete (hygienist omitted), and `dentist_owner \| dentist_associate \| staff_full` for GET. The contract under-grants hygienist relative to §6. | MODULE_SPEC §6 > API_CONTRACTS (per source-of-truth hierarchy: permissions) | Update dental-perio API_CONTRACTS Auth lines to include `hygienist` on POST chart, PUT readings, POST complete, GET chart (matching §6 and the handler `assertBranchRole` allowlist). MEDIUM — doc drift, not an enforcement gap (verify handler allowlist already includes hygienist per §6 note). |
+| F-039 | C5 | dental-perio | Error codes used by dental-perio (`CHART_EXISTS` 409, `INVALID_DEPTH` 422, `INVALID_TOOTH_NUMBER` 422, `VISIT_LOCKED` 422, `FORBIDDEN` 403) appear in MODULE_SPEC §15 + API_CONTRACTS but the ERROR_TAXONOMY §5 dental-perio catalog lists only `CHART_COMPLETED` + `INSUFFICIENT_READINGS`. Catalog is incomplete for this module. | ERROR_TAXONOMY | Add `CHART_EXISTS`, `INVALID_DEPTH`, `INVALID_TOOTH_NUMBER` (and note `VISIT_LOCKED`/`FORBIDDEN` are shared platform codes) to the dental-perio block in ERROR_TAXONOMY §5. |
+| F-040 | C3 | dental-perio | WORKFLOW_MAP §1 header says "10 dental domain modules" and catalogs WF-001..WF-104; dental-perio's WF-P01..WF-P05 (MODULE_SPEC §3/§4) are not registered in WORKFLOW_MAP. | WORKFLOW_MAP | Add WF-P01..WF-P05 to WORKFLOW_MAP §2 (or a perio sub-section) and bump the module count to 11. |
+| F-042 | C5 | emr-consultation | Error code `CONSULTATION_NOT_DRAFT` (422, used by finalizeConsultation per MODULE_SPEC §5/§8/§11) has no entry in ERROR_TAXONOMY. The taxonomy's `EMR-*` block belongs to external-records-import (`emr_record`), not this platform-level consultation module. | ERROR_TAXONOMY | Add an `emr-consultation` (or `EMRC-`) block to ERROR_TAXONOMY with `CONSULTATION_NOT_DRAFT` (422); explicitly note it is the platform `/emr` module, distinct from the dental `EMR-*` external-import range. |
+| F-043 | C3/C6 | emr-consultation | emr-consultation workflows WF-EMRC-001..006 (MODULE_SPEC §3) are not in WORKFLOW_MAP, and the module uses a non-dental role vocabulary (`provider`/`patient`/`admin`/`provider:owner`) absent from ROLE_PERMISSION_MATRIX. Both are **by design** (§0 + §14: platform-level module, not dental-*), but neither cross-cutting doc records that exclusion, so it reads as a gap on audit. | DOMAIN_GLOSSARY / ROLE_PERMISSION_MATRIX | Add a one-line note in ROLE_PERMISSION_MATRIX and WORKFLOW_MAP that emr-consultation is a platform module governed by Better-Auth `provider`/`patient`/`admin` + `:owner` access-control statements (auth.ts), intentionally outside the dental membership matrix. No spec change to emr-consultation itself. |
+
 ---
 
 ### LOW Severity
@@ -100,6 +116,7 @@ table; only `dentist_owner` passes `assertBranchRole(['dentist_owner'])` admin g
 | F-031 | C5 | dental-clinical | API_CONTRACTS lists `POST /visits/:id/amendments` but it does not appear in MODULE_SPEC §10 API Expectations list. The endpoint exists in dental-clinical/API_CONTRACTS but is omitted from the §10 summary. | API_CONTRACTS | Add `POST /dental/visits/:id/amendments` to dental-clinical MODULE_SPEC §10. |
 | F-032 | C8 | dental-scheduling | screens.md Appointment Detail Popover lists state `no_show` in the state machine diagram (from prior session) but screens.md itself does not show a `no_show` badge state or UI treatment. The FSM has the transition but the screen spec doesn't handle it visually. | MODULE_SPEC §8 | Add a `no_show` visual state to the Appointment Detail Popover screen spec (grayed-out with "No-show" label). |
 | F-033 | C8 | dental-visit | screens.md Visit Workspace references a `"locked"` badge state ("fully locked, no actions") consistent with MODULE_SPEC §8. Consistent — confirmed. Note only: the trigger for `locked` (time-based auto-lock or manual) is not specified in either screens.md or MODULE_SPEC §8. | DOMAIN_MODEL SM-VISIT | Add a note to MODULE_SPEC §8 documenting the `completed → locked` trigger condition (e.g., 24h auto-lock or manual owner action). |
+| F-041 | C9 | dental-perio + emr-consultation | Both new modules emit dotted-lowercase events (`perio.chart.created/completed/locked`, `emr.consultation.create/read/update/finalize/list`) rather than the `Name@version` DE-catalog convention. Both MODULE_SPECs explicitly justify this via ADR-006 (events are audit-log-only markers, no bus) and emr V-EMR-006 (platform verb convention). Consistent-by-documentation — note only. | EVENT_CONTRACTS / ADR-006 | No change required. Optionally add a sentence to EVENT_CONTRACTS noting that perio + emr audit-markers live in AUDIT_CONTRACTS/MODULE_SPEC, not the DE-catalog, so a reader doesn't expect DE-numbers for them. |
 
 ---
 
@@ -114,7 +131,12 @@ table; only `dentist_owner` passes `assertBranchRole(['dentist_owner'])` admin g
 - **All 24 domain events** (DE-001–DE-024): every event declared in EVENT_CONTRACTS has a matching `§10b Published` entry in at least one MODULE_SPEC.
 - **Consent form state** (pending → signed / revoked): consistent across DOMAIN_MODEL SM-CONSENT, dental-clinical MODULE_SPEC §8, API_CONTRACTS sign/revoke endpoints.
 - **Lab order state machine**: consistent across DOMAIN_MODEL SM-LABORDER and dental-clinical MODULE_SPEC §8.
-- **Role name tokens** (`dentist_owner`, `dentist_associate`, `staff_full`, `staff_scheduling`): consistent across ROLE_PERMISSION_MATRIX, dental-org MODULE_SPEC §6, dental-visit §6, dental-billing §6, dental-scheduling §6 — except dental-pmd (F-035).
+- **Role name tokens** (`dentist_owner`, `dentist_associate`, `staff_full`, `staff_scheduling`): consistent across ROLE_PERMISSION_MATRIX, dental-org MODULE_SPEC §6, dental-visit §6, dental-billing §6, dental-scheduling §6, dental-perio §6 — F-035 (dental-pmd) RESOLVED.
+- **Perio chart state machine** (draft → completed → locked; auto-lock on visit lock): consistent across dental-perio MODULE_SPEC §8, API_CONTRACTS PerioStatus enum, and BR-P02 (visit-lock cascade).
+- **Perio FDI tooth-number validity** (adult 11–18/21–28/31–38/41–48; primary 51–55/61–65/71–75/81–85): consistent across dental-perio MODULE_SPEC §5 BR-P04, §13 edge cases, and API_CONTRACTS "FDI Valid Tooth Numbers".
+- **emr-consultation finalize-is-terminal** (draft → finalized, no amend-after-finalize; `amended` enum reserved/unreachable): consistent across MODULE_SPEC §1/§5/§8/§11 (V-EMR-001) — internally coherent.
+- **emr-consultation facade-only coupling** (patient/provider/person via facades, UUID refs, no DB FKs): consistent across MODULE_SPEC §1/§7/§14/§20 and DOMAIN_MODEL "platform layer = generic, consume via API only".
+- **emr-consultation audit verb convention** (`emr.<resource>.<verb>` dotted-lowercase): documented intentional divergence (V-EMR-006) from the dental `CREATED|READ|UPDATED` verbs in AUDIT_CONTRACTS — not drift.
 
 ---
 
@@ -145,11 +167,27 @@ dental-org ──(proxies)──► dental-audit [CONFLICT F-019]
 **Gate cleared — all HIGHs resolved. Remaining MEDIUM/LOW items are wave-addressable.**
 
 Priority MEDIUM items to track in execution waves:
-- **F-021** ✅ Fixed — state string `sent`→`issued` in dental-billing API_CONTRACTS
+- **F-021** ✅ Fixed — state string `sent`→`issued` in dental-billing API_CONTRACTS (V-BIL-015)
 - **F-034** ✅ Resolved — `VisitService` interface introduced (G-003 coupling closed)
 - **F-012** Wave G2 — consolidate audit-log UI to single route `/audit/log`
 - **F-023** Wave G1 — remove `"Reopen"` from visit workspace screens.md (terminal state violation)
 - **F-013/F-014/F-015** — add MODULE_SPEC §4 Workflow Details for clinical, billing, imaging
-- **F-001/F-002/F-005/F-006/F-027** — batch-add 5 missing DOMAIN_GLOSSARY terms
+- **F-001/F-002/F-005/F-006/F-027/F-036** — batch-add missing DOMAIN_GLOSSARY terms (now incl. 9 perio terms)
+- **F-037** — register PerioChart/PerioToothReading in DOMAIN_MODEL §3
+- **F-038** — align dental-perio API_CONTRACTS Auth with §6 (add `hygienist`)
+- **F-039/F-042** — complete ERROR_TAXONOMY for perio + emr-consultation codes
+- **F-040/F-043** — register WF-P*/WF-EMRC-* in WORKFLOW_MAP; note emr platform-role exclusion
 
-Proceed to `/oli-magic` for classification and ROADMAP.md generation.
+All 8 new findings (F-036–F-043) are pure-documentation reconciliations — no enforcement gaps, no HIGH. They are catalog/glossary lag from onboarding two modules after the cross-cutting specs were last generated.
+
+---
+
+## Stage 2 — Human Review (status)
+
+This run executed **Stage 1 only** (consistency dimension, `--auto`). Project is **regulated=YES** (HIPAA/GDPR/RA-10173 per DOMAIN_MODEL + PRD_AUDIT_REPORT), so a full headless auto-approval is NOT permitted. With **0 HIGH conflicts**, Stage 1 does not BLOCK; the human review gate (sign-off matrix, [INFERRED]/[VERIFY] resolution) is **DEFERRED** to an interactive `/oli-spec-gate` run. The MEDIUM/LOW findings above are wave-addressable and do not gate planning.
+
+## What's Next
+
+- Stage 1 PASS → proceed to **`/oli-plan-slices`** (consistency clear).
+- Also run **`/oli-check --traceability --phase B`** to confirm spec→code trace for the 12-module corpus.
+- For sign-offs on regulated areas (Security, Performance, Data governance), run **`/oli-spec-gate`** interactively (not `--auto`) to complete Stage 2.

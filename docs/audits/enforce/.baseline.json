@@ -1,75 +1,37 @@
 {
   "version": 2,
-  "run_id": "run-8-verify-2026-05-29",
-  "generated_at": "2026-05-29",
-  "generated_by": "oli-enforce-all (run-8, verification-driven re-baseline)",
-  "method": "Verification-driven re-baseline: rather than regenerate findings from specs, the run-7 finding set (54 P0 + key P1 clusters) was verified against current source (HEAD before this session: 032468d0) by 7 parallel read-only agents, then the confirmed-real findings were fixed this session. This avoids re-surfacing the many stale findings run-7 contained (its top finding, the AL-003/004 'Wave3 defect', was already fixed).",
-  "git_sha_baseline_in": "032468d0",
-  "git_sha_after_fixes": "9d1e5c5f",
-  "ratchet_summary": {
-    "run_7_p0": 54,
-    "run_8_p0_verified_real_before_session": 1,
-    "run_8_p0_after_session": 0,
-    "note": "ALL 54 run-7 P0s verified RESOLVED against current source. The prior sessions (typecheck restore, Wave4, fee-schedule, membership audit, PIN guard, boundary re-fixes, acceptTreatmentPlan guard) had cleared the entire P0 backlog without re-running enforcement, so run-7 was badly stale. The single genuinely-open P0 found during verification — EM-AUD-002 (getAuditEvents returned audit rows across ALL tenants when branchId omitted) — was fixed this session.",
+  "run_id": "enforcement-2026-05-30",
+  "generated_at": "2026-05-30",
+  "generated_by": "oli-check --enforcement (graph-grounded, file-by-file manifest scan + bun audit)",
+  "method": "Knowledge-graph-grounded enforcement: CODE_MODULE_MAP/CODE_IMPORT_GRAPH/CODE_API_SURFACE used as structural ground truth. Pattern scans run file-by-file over git ls-files manifest (454 dental handler + 301 web files) because sandbox recursive grep returns false zeros. bun audit --json succeeded. Prior run-8 baseline code-level P0/P1 set (all RESOLVED) preserved by reference.",
+  "git_sha_baseline_prev": "9d1e5c5f",
+  "predecessor_baseline": "run-8-verify-2026-05-29",
+  "coverage_completeness": "FULL",
+  "summary": {
+    "P0": 0,
+    "P1": 3,
+    "P2": 3,
+    "P3": 1,
+    "code_level_P0": 0,
+    "code_level_P1": 0,
     "regressions_p0": 0,
     "regressions_p1": 0,
+    "circular_deps": 0,
+    "forbidden_tech_imports": 0,
+    "trend": "STABLE",
     "strict_violation": false
   },
-  "fixed_this_session": {
-    "EF-ORG-P020": "getMemberRole (branchSettings.ts + consentTemplates.ts) now filters status='active' — revoked members no longer retain role access.",
-    "EF-ORG-P022": "getOrgContext selects the active branch instead of branches[0].",
-    "EM-AUD-002": "getAuditEvents requires branchId (400) — closes cross-tenant audit-row leak; AUDIT_CONTRACTS §5 requires it; no frontend caller.",
-    "EF-BIL-001/003": "createDentalInvoice no-billable-treatments → 422 NO_BILLABLE_TREATMENTS (was 400 VALIDATION_ERROR).",
-    "EF-SCH": "cancelAppointment missing reason → 422 REASON_REQUIRED (was 400).",
-    "EF-PER": "completePerioChart blocks completion on locked/completed parent visit (422 VISIT_LOCKED) via getVisitForPerio facade.",
-    "EM-PAT-007": "mergePatients stub returns 501 NOT_IMPLEMENTED (was bare Error → 500).",
-    "AL-010": "recordDentalPayment now persists audit (action payment.record).",
-    "AL-patient-archive": "archiveDentalPatient now persists audit (action patient.archive).",
-    "AL-003/004-tests": "Added audit-persistence regression locks against the ROUTED DentalMembershipManagement_create/_deactivate handlers (prior tests only covered the non-routed duplicates).",
-    "EM-PER-001-test": "Aligned stale duplicate-chart test to spec-correct 409 CHART_EXISTS, made self-contained."
-  },
-  "verified_resolved_no_action_needed": [
-    "dental-clinical: EM-CLI-7e8a61cb/bd7bc565/e7fc720a (BR-003 visit-lock guards), EM-CLI-6ff99c36 (signed-consent revoke block, double-layer), EM-CLI-ba65c348 (staff_full not hygienist), EF-CLI-001 (updateMedicalHistoryEntry append-only reject), EF-CLI-002/003 (inventory/occlusion/postop branch auth)",
-    "dental-patient: EM-PAT-001/002/003/004 (assertBranchRole owner gates), EF-PAT cross-route/cross-branch/archive, EF-PAT-001 (acceptTreatmentPlan archived guard), EM-PAT-009 (addFollowUpNote routed-handler guard)",
-    "dental-org: EM-ORG-001/002 (membership+org create auth), EF-ORG-P015 (recoverPin branch access), EF-ORG-P016 (fee schedule endpoints), EF-ORG-P017/EM-ORG-005 (memberStatusEnum invited/revoked), EF-ORG-P018 (TIER_LIMIT_REACHED in taxonomy)",
-    "dental-audit: EM-AUD-001 (audit viewer reachable by dentist_owner)",
-    "dental-imaging: EM-IMG-008 (draft/not_placed enum states), EM-IMG-014 (tier-blocked WARN emitted)",
-    "dental-emr-integration: EM-EMR-004 (no cross-module DB FKs — bare UUIDs), EX-004 (patient access via patient-emr.facade)",
-    "dental-billing: EM-BIL invoice/payment domain events wired (DE-020/021), EF-BIL-005 (payment method enum)",
-    "dental-perio: EM-PER-001 (409 CHART_EXISTS), EM-PER-002 (422 INVALID_DEPTH/TOOTH)",
-    "dental-pmd: EM-PMD-6e91e277 (generatePMD role matrix)",
-    "dental-scheduling: EM-SCH-a564d893 (cancel role list), EM-SCH-4afe5eab (checkIn role list), EM-SCH-26cb6cb7 (cancel audit)",
-    "dental-visit: EM-VIS-001 (getTreatmentPlan branch check), EM-VIS-003 (treatment immutability)",
-    "audit-compliance: AL-001..025 all audited on routed handlers (the run-7 'Wave3 defect' on AL-003/004 is fixed; both routed membership handlers emit logAuditEvent)"
-  ],
-  "resolved_post_run8": {
-    "EMR-namespace-rescope": {
-      "ids": ["EM-EMR-001", "EM-EMR-002", "EM-EMR-003", "EM-EMR-006", "EM-EMR-007", "EF-EMR-001..008", "EX-005", "EX-006"],
-      "resolved_at": "2026-05-29",
-      "decision": "Option A — re-spec in place (product decision via AskUserQuestion).",
-      "resolution": "The live handlers/emr/ module is telemedicine CONSULTATION-NOTES (table consultation_note, namespace /emr) — documented as the new emr-consultation MODULE_SPEC. The future external-EMR/EHR IMPORT bridge was renamed dental-emr-integration → external-records-import and re-namespaced /dental/emr → /dental/emr-import, removing the name collision (the two never shared a route prefix). EX-005/006 decoupled: emr.repo.ts no longer imports patient/provider/person schemas (findOneWithDetails/findManyWithDetails removed; expansion composed in getConsultation via patient-emr.facade + new provider-emr.facade); all 6 emr handlers use facades instead of ProviderRepository. TDD: provider-emr.facade.test.ts (RED→GREEN) + getConsultation.expand.test.ts characterization lock. Gates: typecheck 0, check:boundaries:error exit 0, emr+facade suite green."
-    }
-  },
-  "deferred_open_findings": {
-    "audit-table-divergence": {
-      "ids": ["EM-AUD-005", "EM-AUD-008", "EM-AUD-009", "EF-AUD-001..005"],
-      "severity": "P1",
-      "reason": "Two audit stores exist: @/core/audit-logger writes BOTH dental_audit + dental_audit_log (used by patient/scheduling/billing/pmd/emr); @/handlers/audit/repos/audit.facade writes platform audit_log_entry (used by dental-org membership/PIN/org/branch). So dental-org membership audit events are persisted but do NOT appear in the dental audit viewer (reads dental_audit_log). dental_audit_log schema also missing ~5 AUDIT_CONTRACTS §2 fields (event_type/ip_address/actor_role/outcome/retention_status) and field-name/route/casing/error-code divergences. Needs a schema migration + handler convergence — a dedicated effort."
-    },
-    "domain-events": {
-      "ids": ["EM-VIS-004 (DE-001..006)", "EM-CLI DE-012/014/015/016", "EM-IMG DE-018/019/020", "EM-PAT-005/006", "EM-SCH-9f6305ad (PATCH-cancel)"],
-      "severity": "P1",
-      "reason": "Publish mechanism EXISTS (pg-boss JobScheduler). Of DE-001..023: 5 wired (DE-010/011/013/020/021), 6 dead-code publishers (dental-visit DE-001..006 — emit fns defined, never called), ~12 unimplemented. No CONSUMERS exist yet, so wiring publishers is spec-compliance with low functional value. Visit set is cheap (emit fns exist). Defer until consumer story is defined or treat as a dedicated event-wiring sprint."
-    },
-    "imaging-features": {
-      "ids": ["EM-IMG-001/002", "EM-IMG-012/013", "EF-IMG-016/017/018"],
-      "severity": "P1/P2",
-      "reason": "Missing study-list + annotation endpoints; IMAGING_TIER_REQUIRED error code never emitted (tier gates throw bare ForbiddenError default code); NOT_CALIBRATED guard absent; annotation table has no status column. Feature work, not security."
-    },
-    "dental-org-misc": {
-      "ids": ["EM-ORG-003", "EM-ORG-006", "EF-ORG-P021"],
-      "severity": "P1/P2",
-      "reason": "updateMember handler exists but is not routed (dead code — needs a TypeSpec op + regen); WF-004 staff invitation email not implemented (needs notifs/email integration); response-envelope inconsistency across dental-org handlers."
-    }
+  "cross_module": { "P0": 0, "P1": 0, "P2": 0, "P3": 0 },
+  "audit_compliance": { "P0": 0, "P1": 0, "P2": 0, "P3": 0 },
+  "traceability": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "note": "deferred to dedicated dimension" },
+  "dependency_scanning": { "P0": 0, "P1": 3, "P2": 3, "P3": 0, "status": "COMPLETE" },
+  "findings": {
+    "ED-GLOBAL-drizzle1": { "first_seen": "2026-05-30", "severity": "P1", "description": "drizzle-orm ^0.44.2 (<0.45.2) GHSA-gpj5-g38j-94v9 SQL injection via improperly escaped identifiers, CVSS 7.5, DIRECT core ORM. Upgrade to >=0.45.2." },
+    "ED-GLOBAL-happydom1": { "first_seen": "2026-05-30", "severity": "P1", "description": "happy-dom ^20.0.0 (<=20.8.7) GHSA-6q6h-j7hj-3r64 RCE via VM context escape, CVSS 8.8, DIRECT test/dev. Upgrade to >=20.8.9." },
+    "ED-GLOBAL-axios1": { "first_seen": "2026-05-30", "severity": "P1", "description": "axios <1.16.0 GHSA-35jp-ww65-95wh MITM via prototype-pollution config.proxy, CVSS 8.7, TRANSITIVE (not imported by our code). Also 8.6 GHSA-pjwm-pj3p-43mv." },
+    "ED-GLOBAL-swiper1": { "first_seen": "2026-05-30", "severity": "P2", "description": "swiper ^11.2.10 (<12.1.2) GHSA-hmx5-qpq5-p643 prototype pollution (critical/unscored), DIRECT web carousel. Upgrade to >=12.1.2." },
+    "ED-GLOBAL-dompurify1": { "first_seen": "2026-05-30", "severity": "P2", "description": "dompurify <3.4.0 GHSA-crv5-9vww-q3g8 +7 more moderate XSS/prototype-pollution, DIRECT web sanitizer. Upgrade to >=3.4.0." },
+    "ED-GLOBAL-misc1": { "first_seen": "2026-05-30", "severity": "P2", "description": "Transitive/framework advisory cluster: hono <4.12.18 (5 moderate), uuid, ws, qs, fast-uri, fast-xml-builder, brace-expansion, nodemailer. Bump on dependency-maintenance pass." },
+    "EF-DENTAL-IMG-naming01": { "first_seen": "2026-05-30", "severity": "P3", "description": "dental-imaging carries both *Mgmt_-prefixed (route-wired) and short-named handler files; short-named appear superseded. Verify dead and remove." }
   }
 }
