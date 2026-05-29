@@ -491,8 +491,12 @@ describe('upsertVisitNotes', () => {
     expect(body.subjective).toBe('Patient reports pain');
   });
 
-  // B2 — visit-lock guard in notes upsert
-  test('locked visit → 422 VISIT_LOCKED', async () => {
+  // B2 — visit-lock guard in notes upsert.
+  // upsertVisitNotes (EM-VIS-007) returns VISIT_IMMUTABLE for both completed
+  // and locked visits — see the authoritative "upsertVisitNotes — EM-VIS-007
+  // lock gate" block in dental-visit.test.ts. (VISIT_LOCKED is updateDentalVisit's
+  // code for the locked-visit PATCH guard, a different endpoint.)
+  test('locked visit → 422 VISIT_IMMUTABLE', async () => {
     const app = buildTestApp(TEST_USER);
     const visit = await seedVisit('locked');
 
@@ -508,7 +512,7 @@ describe('upsertVisitNotes', () => {
 
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 

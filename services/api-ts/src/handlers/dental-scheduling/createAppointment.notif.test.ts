@@ -16,6 +16,11 @@ mock.module('@/handlers/dental-scheduling/utils/assert-branch-access', () => ({
   assertBranchAccess: mock(() => Promise.resolve()),
 }));
 
+// ── Stub assertBranchRole (no-op — role auth is not under test here) ─────────
+mock.module('@/handlers/shared/assert-branch-role', () => ({
+  assertBranchRole: mock(() => Promise.resolve()),
+}));
+
 // ── Stub DentalAppointmentRepository ─────────────────────────────────────────
 const mockFindOverlapping = mock(() => Promise.resolve([]));
 const mockCreateOne = mock(() =>

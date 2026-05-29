@@ -22,6 +22,8 @@ import { createDatabase } from '@/core/database';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { patients } from '@/handlers/patient/repos/patient.schema';
 import { createAppointment } from './createAppointment';
 import { getWorkingHours, updateWorkingHours } from './workingHours';
 import { CreateAppointmentBody } from '@/generated/openapi/validators';
@@ -29,10 +31,11 @@ import { CreateAppointmentBody } from '@/generated/openapi/validators';
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const TEST_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'test@clinic.com' };
+const PERSON_ID  = 'e9000000-0000-1000-8000-000000000099';
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000099';
-const MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
-const ORG_ID = 'eeeeeeee-0000-1000-8000-000000000099';
-const BRANCH_ID = 'bbbbbbbb-0000-1000-8000-000000000099';
+const MEMBER_ID  = 'c0000000-0000-1000-8000-000000000099';
+const ORG_ID     = 'eeeeeeee-0000-1000-8000-000000000099';
+const BRANCH_ID  = 'bbbbbbbb-0000-1000-8000-000000000099';
 
 function buildTestApp(user?: typeof TEST_USER) {
   const app = new Hono();
@@ -81,13 +84,34 @@ async function seedBranch(workingHoursJson?: string | null) {
     set: { workingHours: workingHoursJson ?? null, updatedBy: TEST_USER.id },
   }).returning();
 
-  // Seed membership so assertBranchAccess passes for createAppointment
+  // Seed membership with explicit MEMBER_ID so the appointment FK (dentistMemberId)
+  // resolves. personId = TEST_USER.id so assertBranchAccess still passes.
   await db.insert(dentalMemberships).values({
+    id: MEMBER_ID,
     branchId: BRANCH_ID,
     personId: TEST_USER.id,
     displayName: 'Test Dentist',
     role: 'dentist_owner',
     status: 'active',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // Seed person + patient so the appointment FK (patientId) resolves.
+  // patient/person rows are NOT included in afterEach TRUNCATE, so
+  // onConflictDoNothing keeps them alive across tests in this file.
+  await db.insert(persons).values({
+    id: PERSON_ID,
+    firstName: 'Working',
+    lastName: 'HoursPatient',
+    createdBy: TEST_USER.id,
+    updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  await db.insert(patients).values({
+    id: PATIENT_ID,
+    person: PERSON_ID,
+    preferredBranchId: BRANCH_ID,
     createdBy: TEST_USER.id,
     updatedBy: TEST_USER.id,
   }).onConflictDoNothing();

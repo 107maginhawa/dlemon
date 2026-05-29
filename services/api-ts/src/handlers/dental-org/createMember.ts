@@ -64,7 +64,7 @@ export async function createMember(ctx: Context): Promise<Response> {
   if (!org) throw new AppError('Organization not found', 'NOT_FOUND', 404);
 
   const memberRepo = new MembershipRepository(db, logger);
-  const activeCount = await memberRepo.countActiveByBranch(resolvedBranchId);
+  const activeCount = await memberRepo.countActiveStaffByBranch(resolvedBranchId);
   const limit = TIER_MEMBER_LIMITS[org.tier] ?? Infinity;
 
   if (activeCount >= limit) {

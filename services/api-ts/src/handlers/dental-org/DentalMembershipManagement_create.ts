@@ -49,7 +49,7 @@ export async function DentalMembershipManagement_create(
   }
 
   const memberRepo = new MembershipRepository(db, logger);
-  const activeCount = await memberRepo.countActiveByBranch(branchId);
+  const activeCount = await memberRepo.countActiveStaffByBranch(branchId);
   const limit = TIER_MEMBER_LIMITS[org.tier] ?? Infinity;
 
   if (activeCount >= limit) {

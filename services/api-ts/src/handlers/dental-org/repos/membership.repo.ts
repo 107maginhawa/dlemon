@@ -2,7 +2,7 @@
  * MembershipRepository — data access for dental staff memberships
  */
 
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq, and, ne, isNotNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -59,6 +59,25 @@ export class MembershipRepository extends DatabaseRepository<
       .select()
       .from(dentalMemberships)
       .where(and(eq(dentalMemberships.branchId, branchId), eq(dentalMemberships.status, 'active')));
+    return rows.length;
+  }
+
+  /**
+   * Count active *staff* members in a branch (FR6.3 tier limit). The practice
+   * owner (role `dentist_owner`) authorizes via ownership and is not counted
+   * against the "maximum active staff members" tier limit.
+   */
+  async countActiveStaffByBranch(branchId: string): Promise<number> {
+    const rows = await this.db
+      .select()
+      .from(dentalMemberships)
+      .where(
+        and(
+          eq(dentalMemberships.branchId, branchId),
+          eq(dentalMemberships.status, 'active'),
+          ne(dentalMemberships.role, 'dentist_owner'),
+        ),
+      );
     return rows.length;
   }
 

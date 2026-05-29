@@ -37,6 +37,8 @@ const PATIENT_ID = 'a0000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b0000000-0000-1000-8000-000000000002';
 const ORG_ID = 'd2000000-0000-1000-8000-000000000002';
 const MEMBER_ID = 'c0000000-0000-1000-8000-000000000003';
+// personId used exclusively for the MEMBER_ID dentist seat (no person row needed — no DB FK from membership.person_id to persons)
+const DENTIST_PERSON_ID = '00000000-0000-0000-0000-000000000003';
 const STAFF_MEMBER_ID = 'c0000000-0000-1000-8000-000000000099';
 const SCHEDULING_USER = { id: '00000000-0000-0000-0000-000000000098', email: 'scheduling@clinic.com' };
 const SCHEDULING_MEMBER_ID = 'c0000000-0000-1000-8000-000000000098';
@@ -74,6 +76,14 @@ beforeAll(async () => {
   await db.insert(dentalMemberships).values({
     id: SCHEDULING_MEMBER_ID, branchId: BRANCH_ID,
     personId: SCHEDULING_USER.id, displayName: 'Scheduling Staff', role: 'staff_scheduling',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  // MEMBER_ID: dentist seat used as dentistMemberId in seedVisit() and prescriberMemberId in prescription tests.
+  // Uses DENTIST_PERSON_ID (distinct from TEST_USER) to satisfy the (personId, branchId) unique constraint.
+  await db.insert(dentalMemberships).values({
+    id: MEMBER_ID, branchId: BRANCH_ID,
+    personId: DENTIST_PERSON_ID, displayName: 'Test Dentist Associate', role: 'dentist_associate',
     status: 'active', pinFailedAttempts: 0,
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();

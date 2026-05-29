@@ -75,6 +75,11 @@ async function seedSoloOrgAndBranch(orgId: string, branchId: string) {
   await orgRepo.createOne({ id: orgId, name: 'Solo Clinic', tier: 'solo', ownerPersonId: PERSON_ID, countryCode: 'PH', active: true });
   const branchRepo = new BranchRepository(db);
   await branchRepo.createOne({ id: branchId, organizationId: orgId, name: 'Main Branch', timezone: 'Asia/Manila', active: true });
+  // EF-ORG-011: the acting owner must hold an active dentist_owner branch
+  // membership to pass assertBranchRole. dentist_owner is excluded from the
+  // FR6.3 "active staff members" tier count, so it does not consume a slot.
+  const memberRepo = new MembershipRepository(db);
+  await memberRepo.createOne({ branchId, personId: PERSON_ID, displayName: 'Owner', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0 });
 }
 
 async function seedClinicOrgAndBranch(orgId: string, branchId: string) {
@@ -82,6 +87,10 @@ async function seedClinicOrgAndBranch(orgId: string, branchId: string) {
   await orgRepo.createOne({ id: orgId, name: 'Clinic Practice', tier: 'clinic', ownerPersonId: PERSON_ID, countryCode: 'PH', active: true });
   const branchRepo = new BranchRepository(db);
   await branchRepo.createOne({ id: branchId, organizationId: orgId, name: 'Main Branch', timezone: 'Asia/Manila', active: true });
+  // EF-ORG-011: owner needs an active dentist_owner membership; excluded from
+  // the FR6.3 tier count (see seedSoloOrgAndBranch).
+  const memberRepo = new MembershipRepository(db);
+  await memberRepo.createOne({ branchId, personId: PERSON_ID, displayName: 'Owner', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0 });
 }
 
 async function createMember(app: Hono, orgId: string, branchId: string, displayName: string, role = 'staff_full') {

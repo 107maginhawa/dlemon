@@ -137,7 +137,13 @@ function makeDb(opts: {
           });
         }
 
-        return { limit: resolveLimit };
+        // Fallback: unknown table (e.g. stored_file queried by getFileSizesByIds).
+        // Must be thenable so `await db.select().from(unknownTable).where(...)` resolves to []
+        // rather than the plain `{ limit }` object (which causes rows.map is not a function → 500).
+        const fallbackRows = Promise.resolve([] as any[]);
+        return Object.assign({ limit: resolveLimit }, {
+          then: (resolve: any, reject: any) => fallbackRows.then(resolve, reject),
+        });
       },
       // innerJoin is used by listImagingImagesForPatient (imaging_study_image table),
       // createMeasurement tier gate (dental_branch → dental_organization),

@@ -2,7 +2,10 @@ name: API Unit Tests (Postgres)
 
 # Phase D CI gate: runs api-ts unit/repo tests with a real Postgres instance.
 # Mirrors the services block from contract.yml (postgres:16-alpine, no Valkey).
-# Uses bun run test (src/**/*.test.ts glob) so tests/quarantine/ is auto-excluded.
+# `bun run test` → scripts/test-with-db.ts, which discovers every src/**/*.test.ts
+# itself (bun's shell can't expand `**`) and runs each file in its own database
+# cloned from the migrated `monobase_test` template, so files can't contaminate
+# each other. tests/quarantine/ lives outside src/ and is excluded.
 
 on:
   push:
@@ -37,6 +40,8 @@ jobs:
       STORAGE_ACCESS_KEY_ID: minioadmin
       STORAGE_SECRET_ACCESS_KEY: minioadmin
       BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
+      # Per-file DB clones: parallel test execution. GitHub runners have ~4 CPUs.
+      TEST_CONCURRENCY: '4'
 
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +68,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase_test
 
       - name: Run unit + repo tests
-        # Uses bun run test → "bun test src/**/*.test.ts"
-        # tests/quarantine/ is outside src/ and auto-excluded.
+        # bun run test → scripts/test-with-db.ts (recursive discovery + per-file
+        # DB clones). tests/quarantine/ is outside src/ and auto-excluded.
         # .allowed-failures lists known pre-existing failures; they are logged
         # but do not block CI. When a failure exits the allowed list, remove it here.
         run: |

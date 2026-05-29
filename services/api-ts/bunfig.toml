@@ -1,4 +1,8 @@
+# Coverage is OFF by default. The CI gate runs each test file in its own
+# template-cloned database (scripts/test-with-db.ts) — coverage cannot be
+# meaningfully thresholded across ~175 isolated bun processes, and per-process
+# instrumentation only adds noise/overhead to the gate. The coverage artifact
+# is produced on demand via `bun run test:coverage`, which passes `--coverage`.
 [test]
-coverage = true
-coverageThreshold = { line = 70 }
+coverage = false
 preload = ["./tests/db-guard.ts"]

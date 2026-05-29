@@ -1,1 +1,1 @@
-ALTER TABLE "dental_inventory_item" ADD COLUMN "status" text DEFAULT 'active' NOT NULL;
+ALTER TABLE "dental_inventory_item" ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'active' NOT NULL;

@@ -54,6 +54,14 @@ beforeAll(async () => {
     status: 'active', pinFailedAttempts: 0,
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
+  // MEMBER_ID is used as dentistMemberId in seedVisit() and prescriberMemberId in seedPrescription();
+  // it must exist as an active membership. Use PERSON_ID as personId to avoid the unique (personId, branchId) conflict.
+  await db.insert(dentalMemberships).values({
+    id: MEMBER_ID, branchId: BRANCH_ID,
+    personId: PERSON_ID, displayName: 'Prescribing Dentist', role: 'dentist_associate',
+    status: 'active', pinFailedAttempts: 0,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
   await db.insert(persons).values({
     id: PERSON_ID, firstName: 'Test', lastName: 'Patient',
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,

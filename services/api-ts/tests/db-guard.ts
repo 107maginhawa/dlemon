@@ -4,7 +4,10 @@
 // against the dev DB nukes the demo seed. This preload (bunfig.toml [test].preload)
 // aborts the run early unless the URL clearly points at a test DB.
 const url = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
-const isTestDb = /\/monobase_test(\?|$)/.test(url) || process.env.ALLOW_NON_TEST_DB === '1';
+// Allow the canonical test DB (`monobase_test`) and per-file template clones
+// (`monobase_test_<tag>`) minted by scripts/test-with-db.ts for isolation.
+// Still refuses the dev DB (`monobase`) and anything else.
+const isTestDb = /\/monobase_test(_[a-z0-9_]+)?(\?|$)/.test(url) || process.env.ALLOW_NON_TEST_DB === '1';
 if (!isTestDb) {
   console.error('[db-guard] REFUSING to run tests against:', url);
   console.error('[db-guard] Tests TRUNCATE dental_membership/branch/organization in afterEach.');
