@@ -4,6 +4,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PostopTemplateRepository } from '../repos/postop-template.repo';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updatePostopTemplate(ctx: any): Promise<Response> {
@@ -15,6 +16,9 @@ export async function updatePostopTemplate(ctx: any): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization (mutation)
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new PostopTemplateRepository(db, logger);
   const updated = await repo.update(templateId, branchId, body);

@@ -220,8 +220,12 @@ describe('AC-MED-01: creating medical history entry stores condition and ICD-10 
 // AC-MED-02
 // ===========================================================================
 
-describe('AC-MED-02: updating medical history entry to resolved sets resolvedDate and active=false', () => {
-  test('PATCH medical-history entry with resolvedDate and active=false reflects in response [AC-MED-02]', async () => {
+describe('AC-MED-02: medical history entries are append-only (AC-CLI-005 supersedes in-place resolve)', () => {
+  // EF-CLI-001 / AC-CLI-005: medical history is an append-only clinical record.
+  // The earlier "resolve via PATCH" behavior is rejected — resolving a condition
+  // is recorded by appending a new entry, never by mutating the original. A PATCH
+  // returns 422 APPEND_ONLY_VIOLATION.
+  test('PATCH medical-history entry is rejected 422 APPEND_ONLY_VIOLATION [AC-MED-02]', async () => {
     const app = buildTestApp(TEST_USER);
 
     // Create entry first
@@ -239,7 +243,7 @@ describe('AC-MED-02: updating medical history entry to resolved sets resolvedDat
     expect(createRes.status).toBe(201);
     const entry = await createRes.json() as any;
 
-    // Resolve it
+    // Attempt to resolve in place — must be rejected (append-only)
     const updateRes = await app.request(`/dental/clinical/medical-history/${entry.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -249,10 +253,9 @@ describe('AC-MED-02: updating medical history entry to resolved sets resolvedDat
       }),
     });
 
-    expect(updateRes.status).toBe(200);
+    expect(updateRes.status).toBe(422);
     const updated = await updateRes.json() as any;
-    expect(updated.resolvedDate).toBe('2026-01-15');
-    expect(updated.active).toBe(false);
+    expect(updated.error?.code ?? updated.code).toBe('APPEND_ONLY_VIOLATION');
   });
 });
 
