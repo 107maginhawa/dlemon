@@ -115,6 +115,18 @@ export function PreCompletionChecklist({
       onCompleted?.();
       onClose();
     },
+    onError: (err) => {
+      // Surface backend guards (e.g. VISIT_HAS_OPEN_TREATMENTS) instead of failing
+      // silently — the dialog stays open so the clinician can resolve and retry.
+      const e = err as { code?: string; message?: string; body?: { code?: string; message?: string } };
+      const code = e?.code ?? e?.body?.code;
+      const msg = e?.body?.message ?? e?.message;
+      setError(
+        code === 'VISIT_HAS_OPEN_TREATMENTS'
+          ? 'This visit still has open treatments. Mark them performed or dismiss them before completing.'
+          : (msg || 'Could not complete the visit. Please try again.'),
+      );
+    },
   });
 
   // Run all 4 checks in parallel when dialog opens
@@ -141,6 +153,7 @@ export function PreCompletionChecklist({
   }, [open, visitId]);
 
   function handleComplete() {
+    setError('');
     completeMutation.mutate({
       path: { visitId },
       body: { status: 'completed' },
