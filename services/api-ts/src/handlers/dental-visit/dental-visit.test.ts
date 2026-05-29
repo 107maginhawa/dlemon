@@ -41,6 +41,7 @@ import { getToothHistory } from './chart/getToothHistory';
 import { updateDentalTreatment } from './treatments/updateDentalTreatment';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { DentalAuditRepository } from '@/db/audit.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -1206,5 +1207,41 @@ describe('updateDentalTreatment handler', () => {
     expect(body.performedAt).not.toBeNull();
     expect(typeof body.performedAt).toBe('string');
     expect(new Date(body.performedAt).getTime()).not.toBeNaN();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AL-007: createDentalVisit audit trail
+// ---------------------------------------------------------------------------
+
+describe('AL-007: createDentalVisit writes audit record to DB', () => {
+  test('persists visit.create audit record after successful visit creation', async () => {
+    const app = buildTestApp(TEST_USER);
+    const before = new Date();
+
+    const res = await app.request('/dental/visits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        dentistMemberId: DENTIST_MEMBER_ID,
+        chiefComplaint: 'Audit trail test',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const visit = await res.json() as any;
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: TEST_USER.id, action: 'visit.create', resourceType: 'dental_visit' },
+      { limit: 10, offset: 0 },
+    );
+    const entry = entries.find(e => e.resourceId === visit.id);
+    expect(entry).toBeDefined();
+    expect(entry!.action).toBe('visit.create');
+    expect(entry!.resourceType).toBe('dental_visit');
+    expect(entry!.resourceId).toBe(visit.id);
+    expect(entry!.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
   });
 });

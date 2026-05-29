@@ -11,6 +11,7 @@ import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import type { PatientWithPerson } from '../../patient/repos/patient.schema';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';
 
 function toCSV(patients: PatientWithPerson[]): string {
@@ -68,6 +69,16 @@ export async function exportDentalPatients(
     : patients;
 
   logger?.info({ action: 'exportDentalPatients', format, count: filtered.length }, 'Patient export requested');
+
+  // AL-006: PHI export audit trail — persisted to dental_audit + dental_audit_log
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: q['branchId'],
+    branchId: q['branchId'],
+    action: 'patient.export',
+    resourceType: 'dental_patient',
+    metadata: { format, count: filtered.length, statusFilter: statusFilter ?? null },
+  });
 
   if (format === 'csv') {
     const csv = toCSV(filtered);

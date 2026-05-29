@@ -55,6 +55,7 @@ import { patients } from '../patient/repos/patient.schema';
 import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
+import { DentalAuditRepository } from '@/db/audit.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -1056,5 +1057,52 @@ describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_AR
     expect(caughtError instanceof AE).toBe(true);
     expect(caughtError.statusCode).toBe(422);
     expect(caughtError.code).toBe('PATIENT_ARCHIVED');
+  });
+});
+
+// =============================================================================
+// AL-006: PHI Export Audit Trail
+// =============================================================================
+
+describe('AL-006: exportDentalPatients writes audit record to DB', () => {
+  afterEach(truncate);
+
+  test('persists patient.export audit record after successful JSON export', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Audit Export Patient');
+
+    const before = new Date();
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: STAFF_USER_ID, action: 'patient.export', branchId: BRANCH_ID },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+    const entry = entries[0]!;
+    expect(entry.action).toBe('patient.export');
+    expect(entry.resourceType).toBe('dental_patient');
+    expect(entry.personId).toBe(STAFF_USER_ID);
+    expect(entry.branchId).toBe(BRANCH_ID);
+    expect(entry.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
+  });
+
+  test('persists patient.export audit record after successful CSV export', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'CSV Audit Patient');
+
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}&format=csv`);
+    expect(res.status).toBe(200);
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: STAFF_USER_ID, action: 'patient.export', branchId: BRANCH_ID },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+    const meta = entries[0]!.metadata as Record<string, unknown> | null;
+    expect(meta?.['format']).toBe('csv');
   });
 });

@@ -13,6 +13,7 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
+import { DentalAuditRepository } from '@/db/audit.repo';
 import { createDatabase } from '@/core/database';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
@@ -1036,5 +1037,44 @@ describe('reschedule validation on updateAppointment', () => {
     // Verify the appointment hasn't moved
     const current = await repo.findOneById(toMove.id);
     expect(current!.scheduledAt.toISOString()).not.toBe(INSIDE_HOURS_UTC);
+  });
+});
+
+// ===========================================================================
+// AL-009: createAppointment audit trail
+// ===========================================================================
+
+describe('AL-009: createAppointment writes audit record to DB', () => {
+  afterEach(async () => {
+    await db.execute(sql`DELETE FROM dental_appointment`);
+  });
+
+  test('persists appointment.book audit record after successful booking', async () => {
+    const app = buildTestApp(TEST_USER);
+    const before = new Date();
+
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    expect(res.status).toBe(201);
+    const appt = await res.json() as any;
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: TEST_USER.id, action: 'appointment.book', resourceType: 'dental_appointment' },
+      { limit: 10, offset: 0 },
+    );
+    const entry = entries.find(e => e.resourceId === appt.id);
+    expect(entry).toBeDefined();
+    expect(entry!.action).toBe('appointment.book');
+    expect(entry!.resourceType).toBe('dental_appointment');
+    expect(entry!.resourceId).toBe(appt.id);
+    expect(entry!.branchId).toBe(BRANCH_ID);
+    expect(entry!.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
+    const meta = entry!.metadata as Record<string, unknown> | null;
+    expect(meta?.['patientId']).toBe(PATIENT_ID);
+    expect(meta?.['serviceType']).toBe('Cleaning');
   });
 });

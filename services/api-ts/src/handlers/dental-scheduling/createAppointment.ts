@@ -12,6 +12,7 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 import type { NotificationService } from '@/core/notifs';
@@ -70,6 +71,26 @@ export async function createAppointment(ctx: HandlerContext) {
     notes: body.notes,
     createdBy: user.id,
     updatedBy: user.id,
+  });
+
+  const logger = ctx.get('logger') as any | undefined;
+
+  // AL-009: appointment booking audit trail — persisted to dental_audit + dental_audit_log
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchId,
+    branchId,
+    action: 'appointment.book',
+    resourceType: 'dental_appointment',
+    resourceId: appt.id,
+    metadata: {
+      patientId: appt.patientId,
+      dentistMemberId: appt.dentistMemberId,
+      scheduledAt: scheduledAt.toISOString(),
+      durationMinutes,
+      serviceType: appt.serviceType,
+      walkIn: appt.walkIn ?? false,
+    },
   });
 
   // AC-NOTIF-01: fire booking.created notification to patient (best-effort, non-blocking)
