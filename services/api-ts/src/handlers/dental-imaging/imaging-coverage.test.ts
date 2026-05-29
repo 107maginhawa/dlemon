@@ -1435,9 +1435,19 @@ describe('CephMgmt_getCephAnalysis wrapper', () => {
 describe('CephMgmt_recomputeCephAnalysis wrapper', () => {
   test('delegates to recomputeCephAnalysis — returns 200', async () => {
     const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    // V-IMG-004: recompute now enforces NOT_CALIBRATED / INSUFFICIENT_LANDMARKS.
+    // Seed S+N reference landmarks on a calibrated image so the happy path reaches 200.
+    const calibratedImage = { ...MOCK_CEPH_IMAGE, pixelSpacingMm: 0.1 } as unknown as typeof MOCK_CEPH_IMAGE;
+    const snLandmarks = (['S', 'N'] as const).map((code, i) => ({
+      ...MOCK_LANDMARK,
+      id: `cov-sn-${i}`,
+      landmarkCode: code,
+      x: 300 + i * 50,
+      y: 200 + i * 10,
+    }));
     const app = buildApp(CephMgmt_recomputeCephAnalysis as any, {
       user:   DENTIST_USER,
-      db:     makeCephCoverageDb(),
+      db:     makeCephCoverageDb({ image: calibratedImage, landmarks: snLandmarks }),
       method: 'POST',
       path:   '/:imageId/analysis/recompute',
     });

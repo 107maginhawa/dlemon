@@ -7,6 +7,7 @@
 
 import type { DatabaseInstance } from '@/core/database';
 import { persons } from './person.schema';
+import type { PersonConsent } from './person.schema';
 
 export async function createPersonForDentalPatient(
   db: DatabaseInstance,
@@ -16,6 +17,8 @@ export async function createPersonForDentalPatient(
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+    // V-PAT-005: persisted registration consent captured at creation.
+    consent?: PersonConsent;
   },
   actorId: string,
 ) {
@@ -27,6 +30,7 @@ export async function createPersonForDentalPatient(
       ...(data.lastName ? { lastName: data.lastName } : {}),
       ...(data.dateOfBirth ? { dateOfBirth: data.dateOfBirth } : {}),
       ...(data.gender ? { gender: data.gender as typeof persons.gender._.data } : {}),
+      ...(data.consent ? { consent: data.consent } : {}),
       createdBy: actorId,
       updatedBy: actorId,
     })

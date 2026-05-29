@@ -15,6 +15,7 @@ import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
+import { BRAND_GOLD } from '@/constants/brand'
 import {
   processToolClick,
   buildLabelMeasurement,
@@ -353,7 +354,7 @@ export function ImagingWorkspace({
           >
             <defs>
               <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#FFE97D" />
+                <polygon points="0 0, 8 3, 0 6" fill={BRAND_GOLD} />
               </marker>
             </defs>
 

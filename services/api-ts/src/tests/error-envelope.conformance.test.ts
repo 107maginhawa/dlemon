@@ -37,6 +37,10 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 
 const STAFF_USER = { id: 'c1000000-0000-1000-8000-000000000001', email: 'staff@clinic.com' };
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+// branchId is a schema-required field on CreateDentalPatientBody. The 401 (auth)
+// and 422 (consent) checks both fire BEFORE assertBranchAccess, so this id only
+// needs to satisfy Zod validation — no seeded membership is required.
+const BRANCH_ID = 'b1000000-0000-1000-8000-000000000001';
 
 // ─── Helper: assert envelope fields ─────────────────────────────────────────
 
@@ -102,7 +106,7 @@ describe('Error Envelope Conformance', () => {
       const res = await app.request('/dental/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: 'Test Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Test Patient', consentGiven: true, branchId: BRANCH_ID }),
       });
       expect(res.status).toBe(401);
       const body = await res.json();
@@ -117,7 +121,7 @@ describe('Error Envelope Conformance', () => {
       const res = await app.request('/dental/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: 'Test Patient', consentGiven: false }),
+        body: JSON.stringify({ displayName: 'Test Patient', consentGiven: false, branchId: BRANCH_ID }),
       });
       // Consent rejection is a BusinessLogicError (422 / CONSENT_REQUIRED),
       // not a 400 ValidationError — the 400 envelope is covered by the cases below.

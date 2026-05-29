@@ -194,7 +194,9 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['user'] }),
     getToothHistory
   );
-  (app as any).get('/dental/admin/audit',
+  // G8-S4: canonical audit viewer path is /dental/audit-events (matches MODULE_SPEC §10
+  // + AUDIT_CONTRACTS §5 + the append-only /dental/audit-events/:id guards below).
+  (app as any).get('/dental/audit-events',
     authMiddleware({ roles: ['user'] }),
     getAuditEvents
   );
@@ -208,14 +210,29 @@ export function createApp(config: Config): App {
     updateFeeScheduleEntry
   );
   // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
+  // V-AUD-005: code is AUDIT_EVENT_IMMUTABLE (matches ERROR_TAXONOMY §5 dental-audit).
   (app as any).delete('/dental/audit-events/:id', (c: any) =>
-    c.json({ error: 'Audit log is append-only. Records cannot be deleted.', code: 'AUDIT_APPEND_ONLY' }, 405)
+    c.json({ error: 'Audit log is append-only. Records cannot be deleted.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
   );
   (app as any).put('/dental/audit-events/:id', (c: any) =>
-    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_APPEND_ONLY' }, 405)
+    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
   );
   (app as any).patch('/dental/audit-events/:id', (c: any) =>
-    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_APPEND_ONLY' }, 405)
+    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
+  );
+
+  // V-PMD-001: Imported PMDs are immutable (BR-022 / AC-PMD-002). PATCH/PUT/DELETE on
+  // /dental/pmd/imported/:id must return 405 IMPORTED_PMD_IMMUTABLE. The generated routes
+  // only expose GET; these guards shadow any mutating verb so it never falls through to a
+  // default 404. Mirrors the append-only audit-event guard style above.
+  (app as any).patch('/dental/pmd/imported/:id', (c: any) =>
+    c.json({ error: 'Imported PMDs are immutable and cannot be modified.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
+  );
+  (app as any).put('/dental/pmd/imported/:id', (c: any) =>
+    c.json({ error: 'Imported PMDs are immutable and cannot be modified.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
+  );
+  (app as any).delete('/dental/pmd/imported/:id', (c: any) =>
+    c.json({ error: 'Imported PMDs are immutable and cannot be deleted.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
   // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
   (app as any).post('/dental/patients/:patientId/contacts',

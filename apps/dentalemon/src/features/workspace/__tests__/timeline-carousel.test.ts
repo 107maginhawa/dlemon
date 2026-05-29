@@ -237,6 +237,34 @@ describe('TimelineCarousel (Swiper)', () => {
     });
   });
 
+  describe('chart loading / error states', () => {
+    test('shows a loading skeleton while the chart query is pending', async () => {
+      // Never-resolving fetch keeps the chart query in the isLoading state.
+      global.fetch = () => new Promise<Response>(() => {});
+      renderCarousel({
+          visits: [VISIT_NEW],
+          patientId: 'test-patient',
+          onSelectVisit: () => {},
+          onNewVisit: () => {},
+        });
+      expect(await screen.findByTestId('visit-chart-loading')).not.toBeNull();
+    });
+
+    test('shows an inline error with a Retry button when the chart query fails', async () => {
+      global.fetch = () => Promise.reject(new Error('network down'));
+      renderCarousel({
+          visits: [VISIT_NEW],
+          patientId: 'test-patient',
+          onSelectVisit: () => {},
+          onNewVisit: () => {},
+        });
+      const errorEl = await screen.findByTestId('visit-chart-error');
+      expect(errorEl).not.toBeNull();
+      expect(errorEl.textContent).toMatch(/Failed to load chart/i);
+      expect(screen.getAllByText(/Retry/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   describe('new-visit button', () => {
     test('renders data-testid="new-visit-btn"', () => {
       renderCarousel({

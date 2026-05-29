@@ -48,12 +48,12 @@ mock.module('@/handlers/dental-scheduling/repos/dental-appointment.repo', () => 
 const { createAppointment } = await import('./createAppointment');
 
 const VALID_BODY = {
-  patientId:       'a0000000-0000-1000-8000-000000000001',
-  dentistMemberId: 'b0000000-0000-1000-8000-000000000001',
-  branchId:        'c0000000-0000-1000-8000-000000000001',
-  scheduledAt: '2026-06-01T09:00:00.000Z',
-  durationMinutes: 30,
-  serviceType: 'cleaning',
+  patientId:  'a0000000-0000-1000-8000-000000000001',
+  providerId: 'b0000000-0000-1000-8000-000000000001',
+  branchId:   'c0000000-0000-1000-8000-000000000001',
+  startAt: '2026-06-01T09:00:00.000Z',
+  endAt:   '2026-06-01T09:30:00.000Z',
+  visitType: 'checkup',
 };
 
 function buildApp(notifs?: object) {

@@ -62,7 +62,7 @@ describe('useAppointments', () => {
     expect(result.current.appointments).toHaveLength(0);
   });
 
-  test('uses date query param for day view', async () => {
+  test('V-SCH-004: uses date_from/date_to window for day view', async () => {
     const { getUrl, fetchMock } = captureUrl([]);
     global.fetch = fetchMock;
     const qc = freshClient();
@@ -71,21 +71,24 @@ describe('useAppointments', () => {
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getUrl()).toContain('date=2026-05-04');
+    // Day view: date_from === date_to === the requested date.
+    expect(getUrl()).toContain('date_from=2026-05-04');
+    expect(getUrl()).toContain('date_to=2026-05-04');
     expect(getUrl()).not.toContain('weekStart');
   });
 
-  test('uses date query param for week view (Monday of the week)', async () => {
+  test('V-SCH-004: uses date_from/date_to window for week view (Monday → Sunday)', async () => {
     const { getUrl, fetchMock } = captureUrl([]);
     global.fetch = fetchMock;
     const qc = freshClient();
-    // 2026-05-04 is a Monday — getMondayOfWeek returns same date
+    // 2026-05-04 is a Monday — getMondayOfWeek returns same date; window spans 7 days.
     const { result } = renderHook(
       () => useAppointments({ date: '2026-05-04', view: 'week' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getUrl()).toContain('date=2026-05-04');
+    expect(getUrl()).toContain('date_from=2026-05-04');
+    expect(getUrl()).toContain('date_to=2026-05-10');
   });
 
   test('sets error when fetch fails', async () => {

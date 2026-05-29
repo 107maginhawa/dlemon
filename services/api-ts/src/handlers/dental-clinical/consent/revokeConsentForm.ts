@@ -4,7 +4,11 @@
  * PATCH /dental/visits/{visitId}/consents/{cid}/revoke
  *
  * EM-CLI-001 — implements the missing revoke endpoint (WF-035).
- * Emits DE-013 ConsentRevoked domain event on success (best-effort).
+ *
+ * V-CLN-003 / ADR-006: DE-013 ConsentRevoked is an audit-log-only semantic marker —
+ * there is NO event bus. The revocation is recorded synchronously in dental_audit_log
+ * via logAuditEvent(); no publisher/queue scaffolding is used (the prior emit went to
+ * a queue with no consumer, so no audit row was ever written).
  */
 
 import type { Context } from 'hono';
@@ -13,9 +17,9 @@ import { ConflictError, UnauthorizedError, NotFoundError, BusinessLogicError } f
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { ConsentFormRepository } from '../repos/consent-form.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { emitConsentRevoked } from '../domain-events';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
-import type { JobScheduler } from '@/core/jobs';
 import { z } from 'zod';
 
 const RevokeConsentFormParams = z.object({
@@ -56,16 +60,6 @@ export async function revokeConsentForm(ctx: Context): Promise<Response> {
     throw new ConflictError('Consent form has already been revoked');
   }
 
-  const scheduler = ctx.get('jobs') as JobScheduler | undefined;
-
-  // DE-013: emit ConsentRevoked domain event (best-effort, non-blocking)
-  scheduler && emitConsentRevoked(scheduler, {
-    consentId: revoked.id,
-    visitId: revoked.visitId,
-    patientId: revoked.patientId,
-    revokedBy: user.id,
-  }).catch(() => {/* non-blocking */});
-
   ctx.get('logger')?.info(
     {
       requestId: ctx.get('requestId'),
@@ -76,6 +70,19 @@ export async function revokeConsentForm(ctx: Context): Promise<Response> {
     },
     'Consent form revoked',
   );
+
+  // V-CLN-003 / DE-013 (ADR-006): record the revocation synchronously in the audit
+  // log. No event bus — this audit row IS the ConsentRevoked semantic marker.
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'consent.revoked',
+    resourceType: 'dental_consent_form',
+    resourceId: revoked.id,
+    metadata: { visitId: revoked.visitId, patientId: revoked.patientId },
+  });
 
   return ctx.json(revoked);
 }

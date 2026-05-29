@@ -79,7 +79,8 @@ export async function DentalMembershipManagement_create(
       action: 'membership.create',
       resourceType: 'dental_membership',
       resourceId: membership.id,
-      metadata: { role: body.role, displayName: body.displayName },
+      // V-AUD-001: NEVER put person PII into append-only audit metadata (HIPAA).
+      metadata: { role: body.role },
     });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-003: failed to write createMembership audit log');

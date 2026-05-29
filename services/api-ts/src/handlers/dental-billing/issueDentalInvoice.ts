@@ -1,8 +1,13 @@
 /**
  * issueDentalInvoice handler
  *
- * POST /dental/billing/invoices/:invoiceId/issue
+ * PATCH /dental/billing/invoices/:invoiceId/issue
  * Transitions invoice from draft to issued.
+ *
+ * V-BIL-008: this is a state transition on an existing resource, so the
+ * canonical method is PATCH (MODULE_SPEC §10 + dental-billing.tsp). The route
+ * registration follows the TypeSpec on the next `bun run generate`; the handler
+ * body is method-agnostic.
  */
 
 import type { ValidatedContext } from '@/types/app';

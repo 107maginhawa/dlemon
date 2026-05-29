@@ -53,7 +53,10 @@ export async function updateCephLandmark(ctx: BaseContext): Promise<Response> {
       { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_landmark_update', currentTier: imagingTier },
       'Tier gate blocked access',
     );
-    throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
+    throw new ForbiddenError(
+      'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
+      'IMAGING_TIER_REQUIRED',
+    );
   }
 
   const landmark = await cephRepo.findByCode(imageId, landmarkCode);

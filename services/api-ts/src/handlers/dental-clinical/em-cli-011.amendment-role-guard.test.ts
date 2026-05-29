@@ -150,9 +150,11 @@ function buildTestApp(user?: { id: string; email: string }) {
 }
 
 function amendmentBody() {
+  // Use a non-in-module record type so V-CLN-011 FK validation passes through —
+  // this suite asserts the role guard, not original-record resolution.
   return JSON.stringify({
     patientId: PATIENT_ID,
-    originalRecordType: 'prescription',
+    originalRecordType: 'treatment',
     originalRecordId: NONEXISTENT_ID,
     reason: 'Role guard test correction',
     content: 'Corrected content',

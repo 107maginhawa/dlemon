@@ -3,7 +3,7 @@
  *
  * EM-AUD-005/008/009, EF-AUD-001..005 — Audit-table convergence.
  *
- * The dental audit VIEWER (getAuditEvents → GET /dental/admin/audit) reads the
+ * The dental audit VIEWER (getAuditEvents → GET /dental/audit-events) reads the
  * `dental_audit_log` table. Before this fix the dental-org handlers wrote audit
  * rows ONLY to the platform `audit_log_entry` table (via @/handlers/audit/repos/
  * audit.facade), so membership/PIN/org/branch changes were INVISIBLE in the
@@ -80,7 +80,7 @@ function buildApp(user?: { id: string; email?: string; role?: string }) {
     zValidator('json', validators.DentalOrganizationManagement_createBody, validationErrorHandler),
     DentalOrganizationManagement_create as any,
   );
-  app.get('/dental/admin/audit', getAuditEvents);
+  app.get('/dental/audit-events', getAuditEvents);
   return app;
 }
 
@@ -147,15 +147,17 @@ describe('dental-org audit convergence (dental_audit_log + viewer)', () => {
     expect(createRes.status).toBe(201);
     const member = (await createRes.json()) as any;
 
-    const viewRes = await app.request(`/dental/admin/audit?branchId=${BRANCH_ID}`);
+    const viewRes = await app.request(`/dental/audit-events?branchId=${BRANCH_ID}`);
     expect(viewRes.status).toBe(200);
     const body = (await viewRes.json()) as any;
     const events = body.data as any[];
+    // V-AUD-003: getAuditEvents now maps DB rows to the contract DTO —
+    // targetId→resourceId, targetType→resourceType (snapshots dropped).
     const membershipEvent = events.find(
-      (e) => e.targetId === member.id && e.action === 'membership.create',
+      (e) => e.resourceId === member.id && e.action === 'membership.create',
     );
     expect(membershipEvent).toBeDefined();
-    expect(membershipEvent.targetType).toBe('dental_membership');
+    expect(membershipEvent.resourceType).toBe('dental_membership');
   });
 
   // --------------------------------------------------------------------------
@@ -186,7 +188,7 @@ describe('dental-org audit convergence (dental_audit_log + viewer)', () => {
     expect(pinRow!.branchId).toBe(BRANCH_ID);
 
     // Visible in viewer too
-    const viewRes = await app.request(`/dental/admin/audit?branchId=${BRANCH_ID}&action=membership.set_pin`);
+    const viewRes = await app.request(`/dental/audit-events?branchId=${BRANCH_ID}&action=membership.set_pin`);
     expect(viewRes.status).toBe(200);
     const body = (await viewRes.json()) as any;
     expect((body.data as any[]).some((e) => e.action === 'membership.set_pin')).toBe(true);

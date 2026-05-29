@@ -136,11 +136,11 @@ const FUTURE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
 const VALID_APPOINTMENT_BODY = {
   patientId: PATIENT_ID,
-  dentistMemberId: MEMBER_ID,
+  providerId: MEMBER_ID,
   branchId: BRANCH_ID,
-  scheduledAt: FUTURE_DATE,
-  durationMinutes: 30,
-  serviceType: 'Cleaning',
+  startAt: FUTURE_DATE,
+  endAt: new Date(new Date(FUTURE_DATE).getTime() + 30 * 60 * 1000).toISOString(),
+  visitType: 'checkup',
 };
 
 function buildTestApp(scheduler?: MockScheduler) {
@@ -275,10 +275,8 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     const app = buildTestApp(scheduler);
     const appt = await seedAppointment();
 
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient request')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Patient request' }),
     });
 
     expect(res.status).toBe(204);
@@ -293,10 +291,8 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     const app = buildTestApp(scheduler);
     const appt = await seedAppointment();
 
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Rescheduling')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Rescheduling' }),
     });
 
     expect(res.status).toBe(204);
@@ -320,10 +316,8 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     const app = buildTestApp(scheduler);
     const NONEXISTENT = 'ffffffff-ffff-1000-8000-ffffffffffff';
 
-    const res = await app.request(`/dental/appointments/${NONEXISTENT}`, {
+    const res = await app.request(`/dental/appointments/${NONEXISTENT}?reason=${encodeURIComponent('Test cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Test' }),
     });
 
     expect(res.status).toBe(404);
@@ -339,10 +333,8 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     const app = buildTestApp(undefined);
     const appt = await seedAppointment();
 
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient request')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Patient request' }),
     });
 
     // Should still return 204 — event emission is non-blocking

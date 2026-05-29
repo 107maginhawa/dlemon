@@ -13,6 +13,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
 
@@ -46,7 +47,10 @@ export async function getCephReport(ctx: BaseContext): Promise<Response> {
       { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_report_read', currentTier: imagingTier },
       'Tier gate blocked access',
     );
-    throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
+    throw new ForbiddenError(
+      'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
+      'IMAGING_TIER_REQUIRED',
+    );
   }
 
   const report =
@@ -55,6 +59,18 @@ export async function getCephReport(ctx: BaseContext): Promise<Response> {
       : await cephRepo.getLatestReport(imageId);
 
   if (!report) throw new NotFoundError('Ceph report not found');
+
+  // V-IMG-006: ceph reports are a frozen PHI snapshot — audit the read.
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: study.branchId,
+    branchId: study.branchId,
+    action: 'imaging_ceph_report.read',
+    eventType: 'data-access',
+    resourceType: 'imaging_ceph_report',
+    resourceId: report.id,
+    metadata: { patientId: study.patientId, imageId, version: report.version },
+  });
 
   return ctx.json(
     {

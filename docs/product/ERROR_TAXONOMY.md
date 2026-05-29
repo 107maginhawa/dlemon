@@ -79,6 +79,7 @@ interface ErrorResponse {
 | dental-scheduling | SCH-001 – SCH-099 | `SCH_` |
 | dental-billing | BIL-001 – BIL-099 | `BIL_` |
 | dental-clinical | CLI-001 – CLI-099 | `CLI_` |
+| dental-perio | PER-001 – PER-099 | `PER_` |
 | dental-imaging | IMG-001 – IMG-099 | `IMG_` |
 | dental-pmd | PMD-001 – PMD-099 | `PMD_` |
 | dental-emr | EMR-001 – EMR-099 | `EMR_` |
@@ -108,6 +109,7 @@ interface ErrorResponse {
 | Code | HTTP | Trigger |
 |------|------|---------|
 | `PATIENT_NOT_FOUND` | 404 | Patient ID not found in branch |
+| `PATIENT_ARCHIVED` | 403 | Write attempt on an archived patient |
 | `PATIENT_ALREADY_ARCHIVED` | 409 | Archive on already-archived patient |
 | `DUPLICATE_PATIENT` | 409 | Same person already a patient in branch |
 | `CONSENT_REQUIRED` | 422 | Missing marketing/data consent on create (BR-015) |
@@ -123,6 +125,7 @@ interface ErrorResponse {
 | `VISIT_NOT_FOUND` | 404 | Visit ID not found |
 | `ACTIVE_VISIT_EXISTS` | 409 | Patient already has active visit (BR-001) |
 | `VISIT_IMMUTABLE` | 422 | Write to locked/completed visit (BR-003) |
+| `VISIT_LOCKED` | 422 | Write to a visit locked post-completion (BR-003) |
 | `INVALID_STATUS_TRANSITION` | 422 | Visit FSM violation |
 | `TREATMENT_NOT_FOUND` | 404 | Treatment ID not on visit |
 | `TREATMENT_IMMUTABLE` | 422 | Modify performed treatment (BR-007) |
@@ -166,6 +169,13 @@ interface ErrorResponse {
 | `MEDICAL_HISTORY_IMMUTABLE` | 405 | PATCH/DELETE on medical history entry |
 | `VISIT_IMMUTABLE` | 422 | Clinical write to locked visit (BR-003) |
 | `AMENDMENT_REQUIRES_REASON` | 422 | Amendment without reason field |
+
+### dental-perio
+
+| Code | HTTP | Trigger |
+|------|------|---------|
+| `CHART_COMPLETED` | 409 | Write/edit attempt on a completed perio chart |
+| `INSUFFICIENT_READINGS` | 422 | Chart complete with fewer than the required readings |
 
 ### dental-imaging
 

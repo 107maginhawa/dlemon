@@ -186,6 +186,38 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
     const updated = await invoiceRepo.findOneById(inv.id);
     expect(updated!.status).toBe('issued'); // unchanged
   });
+
+  // V-BIL-014: voided invoices are terminal — never marked overdue (§13).
+  test('does NOT transition voided invoices', async () => {
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
+    const inv = await seedInvoice({ status: 'voided', balanceCents: 10000, dueDate: pastDate });
+
+    await invoiceRepo.markOverdueInvoices();
+
+    const updated = await invoiceRepo.findOneById(inv.id);
+    expect(updated!.status).toBe('voided'); // unchanged
+  });
+
+  // V-BIL-014: §13 idempotency — running the overdue sweep twice is a no-op the
+  // second time (the status filter excludes already-overdue rows), and
+  // paid/voided invoices are never touched on any run.
+  test('is idempotent: second sweep transitions nothing further', async () => {
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
+    await seedInvoice({ status: 'issued', dueDate: pastDate });
+    const paid = await seedInvoice({ status: 'paid', paidCents: 10000, balanceCents: 0, dueDate: pastDate });
+    const voided = await seedInvoice({ status: 'voided', balanceCents: 10000, dueDate: pastDate });
+
+    const firstCount = await invoiceRepo.markOverdueInvoices();
+    expect(firstCount).toBeGreaterThanOrEqual(1);
+
+    const secondCount = await invoiceRepo.markOverdueInvoices();
+    expect(secondCount).toBe(0); // no further transitions
+
+    expect((await invoiceRepo.findOneById(paid.id))!.status).toBe('paid');
+    expect((await invoiceRepo.findOneById(voided.id))!.status).toBe('voided');
+  });
 });
 
 // =============================================================================

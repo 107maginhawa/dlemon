@@ -1,5 +1,5 @@
 /**
- * Dental PMD (Patient Medical Data) Module
+ * Dental PMD (Portable Medical Document) Module
  *
  * Covers FR12.x:
  * - PMDDocument: immutable record generated from a completed visit, digitally signed
@@ -87,7 +87,9 @@ model ImportedPMD {
   sourceFacility: string;
   sourceReference?: string;
   /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
-   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5. */
+   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5.
+   *  V-PMD-010: capped at 200 chars (API_CONTRACTS §import). */
+  @maxLength(200)
   sourceDescription: string;
   /** Raw JSON content of the imported PMD */
   content: string;
@@ -101,7 +103,9 @@ model ImportPMDRequest {
   sourceFacility: string;
   sourceReference?: string;
   /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
-   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5. */
+   *  Required for audit trail data provenance per MODULE_SPEC §7.2 item 5.
+   *  V-PMD-010: capped at 200 chars (API_CONTRACTS §import). */
+  @maxLength(200)
   sourceDescription: string;
   content: string;
   /** Optional SHA-256 checksum (format: sha256-<hex>). When provided the server

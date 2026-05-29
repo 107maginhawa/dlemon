@@ -14,8 +14,9 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import type { StorageProvider } from '@/core/storage';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ALLOWED_IMAGING_MIME_TYPES } from './repos/imaging.schema';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -36,10 +37,12 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     sequenceNumber?: number;
   };
 
+  // V-IMG-003 / §15: unsupported MIME → 422 UNSUPPORTED_MIME_TYPE (not 400 VALIDATION_ERROR).
   // BR-034: MIME type allowlist check (before any other work)
   if (!ALLOWED_IMAGING_MIME_TYPES.includes(body.mimeType as any)) {
-    throw new ValidationError(
+    throw new BusinessLogicError(
       `Unsupported image format. Allowed: ${ALLOWED_IMAGING_MIME_TYPES.join(', ')}`,
+      'UNSUPPORTED_MIME_TYPE',
     );
   }
 
@@ -48,6 +51,25 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
 
   // Branch-level authorization + role gate (CLINICAL_WRITE)
   await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // V-IMG-001 / AC-IMG-001 / BR-016c: cephalometric studies are addon-tier only.
+  // Gate at study create — not just on downstream ceph endpoints — so a free/basic
+  // org cannot create the ceph study record at all. Uses the same tier helper the
+  // ceph handlers use; throws the dedicated IMAGING_TIER_REQUIRED code (§9 upgrade UI).
+  if ((body.modality ?? 'other') === 'cephalometric') {
+    const logger = ctx.get('logger');
+    const imagingTier = await getImagingTierForBranch(db, body.branchId);
+    if (imagingTier !== 'addon') {
+      logger?.warn(
+        { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'cephalometric_study_create', currentTier: imagingTier },
+        'Tier gate blocked access',
+      );
+      throw new ForbiddenError(
+        'Cephalometric imaging requires an imaging add-on. Upgrade your plan.',
+        'IMAGING_TIER_REQUIRED',
+      );
+    }
+  }
 
   const storage = ctx.get('storage') as StorageProvider;
 
@@ -82,11 +104,15 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     }
   }
 
+  // V-IMG-005 / DE-018 ImagingStudyUploaded: per ADR-006 there is no event bus —
+  // this audit row IS the domain-event semantic marker (see MODULE_SPEC §10b).
   const logger = ctx.get('logger');
   await logAuditEvent(db, logger, {
     personId: user.id,
     tenantId: body.branchId,
+    branchId: body.branchId,
     action: 'imaging_study.create',
+    eventType: 'data-modification',
     resourceType: 'imaging_study',
     resourceId: study.id,
     metadata: { patientId: body.patientId, branchId: body.branchId, modality: body.modality ?? 'other' },

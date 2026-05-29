@@ -8,6 +8,7 @@ import {
 } from '@monobase/ui'
 import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 import { ImageUpload } from './image-upload'
+import { BRAND_GOLD_SOFT, BRAND_GOLD_TEXT } from '@/constants/brand'
 
 interface PatientImageListProps {
   patientId: string
@@ -108,7 +109,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
             {item.source === 'legacy' && (
               <span
                 className="text-xs px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(255,233,125,0.15)', color: '#4A4018' }}
+                style={{ background: BRAND_GOLD_SOFT, color: BRAND_GOLD_TEXT }}
               >
                 Legacy
               </span>

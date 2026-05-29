@@ -58,6 +58,12 @@ export function emitInvoiceCreated(
 
 /**
  * Enqueue a DE-021 InvoicePaid event.
+ *
+ * @deprecated V-BIL-011 / ADR-006: there is no event bus. The InvoicePaid (DE-008)
+ * marker is now satisfied by a synchronous `invoice.paid` audit-log row written
+ * in `recordDentalPayment` only on the transition to fully `paid`. This helper is
+ * retained for the type definitions but is no longer called from the payment path.
+ *
  * Best-effort: never throws — failure is logged via the scheduler but does not
  * roll back the payment.
  */

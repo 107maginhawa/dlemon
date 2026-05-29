@@ -1,4 +1,4 @@
-<!-- oli-magic v2 | cycle: 1 | updated: 2026-05-26 (G7+G8 planned — security + spec/UI) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
+<!-- oli-magic v2 | cycle: 2 | updated: 2026-05-30 (G7 reconciled ✅ 7/8 via enforce-fix track; G7-S5 + G8 remaining) | generated: 2026-05-20 | replaces: GSD milestone roadmap v1.2–v1.5 -->
 
 # Dentalemon — Brownfield Execution Roadmap
 
@@ -20,8 +20,8 @@
 | G4 | Feature Delivery | Sequential (dependency) | new-feature | ✅ COMPLETE (merged 2026-05-18, commit 5f246e3) |
 | G5 | Future Features | Parallel safe | new-feature | ✅ COMPLETE (2026-05-24) |
 | G6 | Excellence — Reach 9.0 | Parallel safe | P2–P3 | ✅ COMPLETE (2026-05-24) |
-| G7 | Security Stabilization | Sequential (P0 safety) | P0–P1 | 🔴 not-started |
-| G8 | Spec & UI Completeness | Parallel safe | P1–P2 | 🔴 not-started |
+| G7 | Security Stabilization | Sequential (P0 safety) | P0–P1 | ✅ COMPLETE (2026-05-30) — 7/8 via enforce-fix track; G7-S5 TypeSpec PIN `@pattern` landed 2026-05-30 |
+| G8 | Spec & UI Completeness | Parallel safe | P1–P2 | ✅ COMPLETE (2026-05-30) — S1/S3/S4/S8 specs + ADR-005; S2 pre-satisfied; S5/S6/S7 UI |
 
 **Module dependency order (informs wave sequencing):**
 ```
@@ -267,12 +267,30 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G7: Security Stabilization
 
 **Mode:** tdd
-**Status:** 🔴 not-started
+**Status:** ✅ COMPLETE (2026-05-30) — 7/8 via parallel enforce-fix track; G7-S5 landed 2026-05-30 (8/8)
 **Parallel:** NO — sequential (P0 security fixes must not conflict)
 **Depends on:** G1–G6 (all complete)
 **Source:** `docs/audits/mapping-audit/security-audit-findings.md` (2026-05-26)
 
 **Goal:** Close all P0 IDOR, hash-leak, and privilege-escalation gaps in dental-org before any new feature work.
+
+> **Reconciliation note (2026-05-30):** The G7 P0/P1 work was independently delivered under the
+> `enforce-fix`/Wave3–4 P0 security sprints (commits `267db942`, `c6af4266`, `e7b3e8b6`, `712b2d76`,
+> EF-ORG-P015/P020, EM-ORG-001/002) — not via this ROADMAP wave. Verified 2026-05-30 against code:
+> 7/8 slices CLOSED, `auth-security-hardening.test.ts` passes 12/12.
+>
+> | Slice | Verdict | Evidence |
+> |-------|---------|----------|
+> | G7-S1 branch-access guards | ✅ CLOSED | `assertBranchRole`/`assertBranchAccess` on create/update/deactivate member + branch/org mutations |
+> | G7-S2 strip hash fields | ✅ CLOSED | `_list.ts:41`, `_deactivate.ts:69`, `listMembers.ts:37`, `createMember.ts:93`, `updateMember.ts:67` |
+> | G7-S3 role-change guard | ✅ CLOSED | `updateMember.ts:44–56` requires caller `dentist_owner` for role change |
+> | G7-S4 recoverPin auth+schema | ✅ CLOSED | `pinRecovery.ts:70` auth guard; schema matches generated validator; EF-ORG-P015 regression lock |
+> | G7-S5 PIN digit @pattern | ✅ CLOSED (2026-05-30) | `dental-org.tsp` `@pattern` on SetPin/VerifyPin (`^\d{4,8}$`) + ResetMemberPin (`^\d{6}$`); regenerated validators; `pin-digit-pattern.test.ts` 8/8 (RED→GREEN) |
+> | G7-S6 cross-membership lockout | ✅ CLOSED | `membership.repo.ts:114–153` per-membership lockout (5/30s, 10/5min) |
+> | G7-S7 commit security test | ✅ CLOSED | `auth-security-hardening.test.ts` tracked + 12/12 pass |
+> | G7-S8 remove dup setPin.ts | ✅ CLOSED | only `DentalMembershipManagement_setPin.ts` remains |
+>
+> **G7-S5 (the sole remaining item) was completed 2026-05-30** in the same execution batch. G7 is now 8/8.
 
 ### Requirements
 
@@ -309,12 +327,24 @@ G4: dental-imaging features (ceph, findings — depend on imaging base)
 ## Wave G8: Spec & UI Completeness
 
 **Mode:** tdd
-**Status:** 🔴 not-started
+**Status:** ✅ COMPLETE (2026-05-30)
 **Parallel:** YES — frontend slices (G8-S5/S6/S7) and spec slices (G8-S1/S2/S3/S4/S8) are independent
 **Depends on:** G7 (security must be clean first)
 **Source:** `docs/audits/mapping-audit/spec-compliance-audit.md` + `ui-compliance-audit.md` (2026-05-26)
 
 **Goal:** Close spec documentation gaps and reduce UI compliance debt (5.5→7.0 target).
+
+> **Completion note (2026-05-30):**
+> - **G8-S1** ✅ PIN endpoints added to dental-org MODULE_SPEC §10 (set/verify/reset/recover-pin + security-question, with real paths).
+> - **G8-S2** ✅ pre-satisfied — `emr-consultation/MODULE_SPEC.md` already exists with 12 sections (≥10 criterion met; from the `/emr` re-spec, commit `7ee24c36`).
+> - **G8-S3** ✅ 5 undocumented `member_role` values catalogued in dental-org §6 Member Role Catalog + ROLE_PERMISSION_MATRIX Extended Staff Roles.
+> - **G8-S4** ✅ audit viewer route standardized `/dental/admin/audit` → `/dental/audit-events` (app.ts + handler JSDoc + 2 tests); matches spec + append-only guards. Param-casing/pagination mismatch (EM-AUD-013) documented as a tracked follow-up.
+> - **G8-S5** ✅ 41 raw HTML form elements → `@monobase/ui` across 7 files (soap-notes, appointment-modal, onboarding wizard + steps); 0 bare tags remain.
+> - **G8-S6** ✅ 37 hardcoded brand-color literals → `BRAND_GOLD*` constants across 7 files (imaging canvas/ceph/export + workspace top bar). Tailwind class-string literals noted out-of-scope.
+> - **G8-S7** ✅ loading/error states added to `timeline-carousel` (VisitChartCard) + `pin-select`, with tests.
+> - **ADR-005** written: audit write path is inline-synchronous, superseding AC-AUD-001's pg-boss requirement (G8-S8).
+>
+> **Gate:** api-ts typecheck clean; dental-org 273/0 + dental-audit 18/0; frontend typecheck clean; touched-area frontend tests 740/0 (5 skip).
 
 ### Requirements
 

@@ -4,7 +4,7 @@
  * AC-004: Soft-deletes a contact. Returns 204 on success, 404 if not found.
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { PatientContactRepository } from '../repos/patient-contact.repo';
@@ -31,7 +31,7 @@ export async function deletePatientContact(ctx: any): Promise<Response> {
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
   const contactRepo = new PatientContactRepository(db, logger);

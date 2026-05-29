@@ -15,6 +15,7 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
 import { getLegacyAttachmentImages, type LegacyAttachmentImage } from '@/handlers/dental-clinical/repos/clinical-imaging.facade';
 
@@ -104,6 +105,18 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   const allItems: PatientImageItem[] = [...imagingItems, ...legacyItems].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
+
+  // V-IMG-006: patient image list exposes radiograph PHI — audit the read.
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchId,
+    branchId,
+    action: 'imaging_patient_images.read',
+    eventType: 'data-access',
+    resourceType: 'imaging_patient_images',
+    resourceId: patientId,
+    metadata: { patientId, branchId, count: allItems.length },
+  });
 
   return ctx.json({ items: allItems, total: allItems.length }, 200);
 }

@@ -190,9 +190,37 @@ describe('BR-005 — auto-discard empty visit on session end', () => {
 
   // ── RED tests (fail before implementation) ──
 
-  test('BR-005: active→completed with no treatments/notes/attachments → status becomes discarded', async () => {
+  test('BR-005: active→completed with no treatments/notes/attachments → status becomes discarded (flag ON)', async () => {
     // createDentalVisit always seeds an empty notes row; mirror that here so
     // the test is realistic. BR-005 must still auto-discard (empty SOAP = empty).
+    // V-VIS-004: auto-discard is gated behind the default-false flag — enable it here.
+    const prev = process.env['DENTAL_VISIT_AUTO_DISCARD'];
+    process.env['DENTAL_VISIT_AUTO_DISCARD'] = 'true';
+    try {
+      const app = buildTestApp(TEST_USER);
+      const visit = await seedVisit('active');
+      await seedEmptyNotes(visit.id);
+
+      const res = await app.request(`/dental/visits/${visit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+
+      // Server MUST auto-discard — response is 200 with status='discarded'
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.status).toBe('discarded');
+    } finally {
+      if (prev === undefined) delete process.env['DENTAL_VISIT_AUTO_DISCARD'];
+      else process.env['DENTAL_VISIT_AUTO_DISCARD'] = prev;
+    }
+  });
+
+  test('V-VIS-004: empty visit completes normally when auto-discard flag is OFF (default)', async () => {
+    // With the flag disabled (default), an empty visit follows the normal completion
+    // path: no treatments + no consent → 422 VISIT_CONSENT_REQUIRED (NOT discarded).
+    delete process.env['DENTAL_VISIT_AUTO_DISCARD'];
     const app = buildTestApp(TEST_USER);
     const visit = await seedVisit('active');
     await seedEmptyNotes(visit.id);
@@ -203,10 +231,14 @@ describe('BR-005 — auto-discard empty visit on session end', () => {
       body: JSON.stringify({ status: 'completed' }),
     });
 
-    // Server MUST auto-discard — response is 200 with status='discarded'
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.status).toBe('discarded');
+    expect(body.code).toBe('VISIT_CONSENT_REQUIRED');
+
+    // Confirm DB state is unchanged (still active, NOT discarded)
+    const repo = new VisitRepository(db);
+    const after = await repo.findOneById(visit.id);
+    expect(after?.status).toBe('active');
   });
 
   test('BR-005: active→completed with notes only (no treatments/attachments) → NOT discarded (notes = clinical content)', async () => {
@@ -266,19 +298,27 @@ describe('BR-005 — auto-discard empty visit on session end', () => {
     expect(body.status).toBe('completed');
   });
 
-  test('BR-005: discarded visit is persisted (DB check via VisitRepository)', async () => {
-    const app = buildTestApp(TEST_USER);
-    const visit = await seedVisit('active');
+  test('BR-005: discarded visit is persisted (DB check via VisitRepository, flag ON)', async () => {
+    // V-VIS-004: auto-discard gated behind the default-false flag — enable it here.
+    const prev = process.env['DENTAL_VISIT_AUTO_DISCARD'];
+    process.env['DENTAL_VISIT_AUTO_DISCARD'] = 'true';
+    try {
+      const app = buildTestApp(TEST_USER);
+      const visit = await seedVisit('active');
 
-    await app.request(`/dental/visits/${visit.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'completed' }),
-    });
+      await app.request(`/dental/visits/${visit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
 
-    // Confirm DB state
-    const repo = new VisitRepository(db);
-    const updated = await repo.findOneById(visit.id);
-    expect(updated?.status).toBe('discarded');
+      // Confirm DB state
+      const repo = new VisitRepository(db);
+      const updated = await repo.findOneById(visit.id);
+      expect(updated?.status).toBe('discarded');
+    } finally {
+      if (prev === undefined) delete process.env['DENTAL_VISIT_AUTO_DISCARD'];
+      else process.env['DENTAL_VISIT_AUTO_DISCARD'] = prev;
+    }
   });
 });

@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Button, Checkbox, Input, Textarea } from '@monobase/ui';
 import { createAppointment, updateAppointment } from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
@@ -39,6 +40,21 @@ export function validateAppointmentForm(form: {
   return errors;
 }
 
+export const VISIT_TYPE_OPTIONS = [
+  { value: 'checkup', label: 'Checkup' },
+  { value: 'treatment', label: 'Treatment' },
+  { value: 'emergency', label: 'Emergency' },
+  { value: 'recall', label: 'Recall' },
+] as const;
+
+/** Build start/end ISO timestamps from a date + time + duration (minutes). */
+export function buildTimeRange(date: string, time: string, durationMinutes: number) {
+  const startAt = `${date}T${time}:00`;
+  const start = new Date(startAt);
+  const end = new Date(start.getTime() + (durationMinutes || 30) * 60_000);
+  return { startAt, endAt: end.toISOString() };
+}
+
 export function buildAppointmentPayload(form: {
   patientId: string;
   dentistMemberId: string;
@@ -50,17 +66,24 @@ export function buildAppointmentPayload(form: {
   notes: string;
   walkIn: boolean;
 }) {
-  const scheduledAt = `${form.date}T${form.time}:00`;
+  // Canonical wire shape: providerId / startAt / endAt / visitType (V-SCH-006/007).
+  const { startAt, endAt } = buildTimeRange(form.date, form.time, form.durationMinutes);
   return {
     patientId: form.patientId.trim(),
-    dentistMemberId: form.dentistMemberId.trim() || undefined,
+    providerId: form.dentistMemberId.trim() || undefined,
     branchId: form.branchId.trim() || useOrgContextStore.getState().branchId || '',
-    scheduledAt,
-    durationMinutes: form.durationMinutes || 30,
-    serviceType: form.serviceType.trim(),
+    startAt,
+    endAt,
+    visitType: form.serviceType.trim(),
     notes: form.notes.trim() || undefined,
     walkIn: form.walkIn,
   };
+}
+
+/** Extract DOUBLE_BOOKING warning marker from a create response, if present. */
+export function extractDoubleBookingWarning(appointment: unknown): boolean {
+  const warnings = (appointment as { warnings?: unknown })?.warnings;
+  return Array.isArray(warnings) && warnings.includes('DOUBLE_BOOKING');
 }
 
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
@@ -76,6 +99,8 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   const [walkIn, setWalkIn] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  // V-SCH-005: surface the backend DOUBLE_BOOKING warning to the scheduler.
+  const [doubleBookingWarning, setDoubleBookingWarning] = useState(false);
 
   useEffect(() => {
     if (initialDate) setDate(initialDate);
@@ -98,6 +123,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
     setNotes('');
     setWalkIn(false);
     setErrors([]);
+    setDoubleBookingWarning(false);
     onClose();
   }
 
@@ -108,18 +134,20 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
       return;
     }
     setErrors([]);
+    setDoubleBookingWarning(false);
     setSaving(true);
     try {
       let appointment: unknown;
       if (appointmentId) {
+        const { startAt, endAt } = buildTimeRange(date, time, durationMinutes);
         const { data } = await updateAppointment({
           path: { appointmentId },
           body: {
-            scheduledAt: new Date(`${date}T${time}:00`),
-            durationMinutes,
-            serviceType: serviceType.trim(),
+            startAt: new Date(startAt),
+            endAt: new Date(endAt),
+            visitType: serviceType.trim(),
             notes: notes.trim() || undefined,
-          },
+          } as unknown as Parameters<typeof updateAppointment>[0]['body'],
         });
         appointment = data;
       } else {
@@ -139,6 +167,14 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
       }
       if (!appointment) {
         setErrors([appointmentId ? 'Failed to update appointment' : 'Failed to create appointment']);
+        return;
+      }
+      // V-SCH-005 / AC-SCH-001: appointment was created, but the backend flagged a
+      // double-booking. Keep the modal open and show the warning rather than silently
+      // closing — the scheduler stays informed but the booking still succeeded.
+      if (!appointmentId && extractDoubleBookingWarning(appointment)) {
+        setDoubleBookingWarning(true);
+        onSaved?.(appointment);
         return;
       }
       onSaved?.(appointment);
@@ -162,14 +198,15 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
         {/* Header */}
         <div className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0">
           <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={handleClose}
             aria-label="Close modal"
-            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
+            className="w-8 h-8 p-0 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         {/* Body */}
@@ -180,12 +217,30 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             </div>
           )}
 
+          {/* V-SCH-005 / AC-SCH-001 / §9: double-booking warning (soft — booking succeeded) */}
+          {doubleBookingWarning && (
+            <div
+              data-testid="double-booking-warning"
+              role="alert"
+              className="rounded-lg bg-amber-100 border border-amber-300 px-3 py-2.5 text-sm text-amber-900 flex items-start gap-2"
+            >
+              <span aria-hidden className="text-base leading-none">⚠️</span>
+              <div>
+                <p className="font-semibold">Double-booking warning</p>
+                <p className="text-amber-800">
+                  This provider already has an appointment in the selected time window. The
+                  appointment was still booked — review the schedule to avoid conflicts.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Patient ID */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-patient-id">
               Patient ID *
             </label>
-            <input
+            <Input
               id="appt-patient-id"
               type="text"
               value={patientId}
@@ -200,7 +255,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-dentist-id">
               Dentist Member ID
             </label>
-            <input
+            <Input
               id="appt-dentist-id"
               type="text"
               value={dentistMemberId}
@@ -215,7 +270,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-branch-id">
               Branch ID
             </label>
-            <input
+            <Input
               id="appt-branch-id"
               type="text"
               value={branchId}
@@ -232,7 +287,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-date">
                 Date *
               </label>
-              <input
+              <Input
                 id="appt-date"
                 type="date"
                 value={date}
@@ -244,7 +299,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-time">
                 Time *
               </label>
-              <input
+              <Input
                 id="appt-time"
                 type="time"
                 value={time}
@@ -261,19 +316,20 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             </label>
             <div className="flex border border-border rounded-xl overflow-hidden bg-secondary/30 p-0.5 gap-0.5" role="group" aria-label="Appointment duration">
               {DURATION_OPTIONS.map(opt => (
-                <button
+                <Button
                   key={opt.value}
                   type="button"
+                  variant="ghost"
                   onClick={() => setDurationMinutes(opt.value)}
                   aria-pressed={durationMinutes === opt.value}
-                  className={`flex-1 h-9 text-[13px] font-medium rounded-lg transition-colors ${
+                  className={`flex-1 h-9 px-0 text-[13px] font-medium rounded-lg transition-colors ${
                     durationMinutes === opt.value
-                      ? 'bg-[#FFE97D] text-[#4A4018] font-semibold'
+                      ? 'bg-[#FFE97D] text-[#4A4018] font-semibold hover:bg-[#FFE97D]'
                       : 'text-muted-foreground hover:bg-background'
                   }`}
                 >
                   {opt.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -283,7 +339,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-procedure">
               Service Type *
             </label>
-            <input
+            <Input
               id="appt-procedure"
               type="text"
               value={serviceType}
@@ -298,7 +354,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-notes">
               Notes (optional)
             </label>
-            <textarea
+            <Textarea
               id="appt-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -310,10 +366,9 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
 
           {/* Walk-in toggle */}
           <label className="flex items-center gap-2.5 cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={walkIn}
-              onChange={e => setWalkIn(e.target.checked)}
+              onCheckedChange={checked => setWalkIn(checked === true)}
               className="w-4 h-4 rounded"
             />
             <span className="text-sm">Walk-in appointment</span>
@@ -322,21 +377,34 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 h-16 border-t flex-shrink-0">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={handleClose}
             className="h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Appointment'}
-          </button>
+          </Button>
+          {doubleBookingWarning ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleClose}
+              className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
+            >
+              Done
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleSave}
+              disabled={saving}
+              className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Appointment'}
+            </Button>
+          )}
         </div>
       </div>
     </div>

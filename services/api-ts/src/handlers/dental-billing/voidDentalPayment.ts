@@ -11,7 +11,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 
 export async function voidDentalPayment(
   ctx: ValidatedContext<any, never, any>
@@ -50,6 +51,19 @@ export async function voidDentalPayment(
   // Reverse the amount on the invoice
   const invoiceRepo = new DentalInvoiceRepository(db);
   await invoiceRepo.removePayment(invoiceId, payment.amountCents);
+
+  // V-BIL-013: financial reversal must leave an audit trail.
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, payment.branchId);
+  await logAuditEvent(db, logger, {
+    personId: session.userId,
+    tenantId: branchForAudit?.organizationId ?? payment.branchId,
+    branchId: payment.branchId,
+    action: 'payment.void',
+    resourceType: 'dental_payment',
+    resourceId: paymentId,
+    metadata: { invoiceId, amountCents: payment.amountCents, voidReason: body.voidReason },
+  });
 
   return ctx.json(voided);
 }

@@ -6,6 +6,8 @@
 Spec Version: 1.0 | Last Updated: 2026-05-24
 ---
 
+> **⚠️ Architecture correction (G8-S8 / [ADR-005](../../../decisions/ADR-005-audit-write-path.md)):** This spec was authored assuming **pg-boss async** audit writes. The implementation writes audit events **inline and synchronously** (`core/audit-logger.ts#logAuditEvent` → `await auditLogRepo.insert`, dual-writing `dental_audit_log` + `audit_log_entry`). AC-AUD-001's pg-boss/5s-async requirement is **superseded by ADR-005**. The viewer endpoint is `GET /dental/audit-events` (G8-S4). Treat every "pg-boss"/"async" mention below as historical; the durable, read-after-write inline path is authoritative.
+
 ## 1. Module Overview
 **Purpose:** Dental-specific audit trail and compliance event log. Extends the base `audit` platform module with dental domain events. Append-only; no record is ever deleted. Consumed by dentist_owner via the audit log viewer (WF-028).
 

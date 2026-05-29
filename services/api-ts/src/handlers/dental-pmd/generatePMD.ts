@@ -9,7 +9,7 @@
 import { createHash } from 'node:crypto';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, ForbiddenError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getTreatmentsForPMD } from '@/handlers/dental-visit/repos/visit-pmd.facade';
@@ -48,8 +48,13 @@ export async function generatePMD(
   const membership = await getActiveMembershipId(db, user.id, visit.branchId);
   if (!membership) throw new ForbiddenError('No active membership at this branch');
 
+  // V-PMD-003 (AC-PMD-001): generating from a non-completed/non-locked visit is a
+  // business-rule violation (BR-021), not a malformed request → 422 VISIT_NOT_COMPLETED.
   if (visit.status !== 'completed' && visit.status !== 'locked') {
-    throw new ValidationError('PMD can only be generated from a completed or locked visit');
+    throw new BusinessLogicError(
+      'PMD can only be generated from a completed or locked visit',
+      'VISIT_NOT_COMPLETED',
+    );
   }
 
   // Collect visit data snapshot
@@ -112,13 +117,28 @@ export async function generatePMD(
 
   const logger = ctx.get('logger');
   const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  const tenantId = branchForAudit?.organizationId ?? visit.branchId;
   await logAuditEvent(db, logger, {
     personId: user.id,
-    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    tenantId,
     branchId: visit.branchId,
     action: 'pmd.generate',
     resourceType: 'pmd',
     resourceId: pmd.id,
+  });
+
+  // V-PMD-004 / DE-017 PMDGenerated: per ADR-006 (domain-events-descope) there is NO
+  // event bus — the domain event is satisfied by writing the corresponding audit-log
+  // row synchronously. Reactive consumers (notifs download-link, dental-audit) are
+  // deferred to a future phase. No publisher/emit scaffolding is required.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId,
+    branchId: visit.branchId,
+    action: 'pmd.generated',
+    resourceType: 'pmd',
+    resourceId: pmd.id,
+    metadata: { event: 'DE-017', visitId },
   });
 
   return ctx.json(pmd, 201);

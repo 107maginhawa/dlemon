@@ -78,6 +78,8 @@ Actor: staff_full | Steps: 1. Select date/time/dentist 2. System checks for over
 ## 7. Data Requirements
 **`dental_appointment`:** id, patient_id, branch_id, dentist_member_id, scheduled_at, duration_minutes, status (enum: scheduled/checked_in/completed/cancelled/no_show), walk_in (bool), cancellation_reason, cancelled_at, checked_in_at, visit_id (nullable, set on check-in)
 
+**Wire vs storage field mapping (V-SCH-006/007):** The canonical wire contract (API_CONTRACTS.md) exposes `providerId` / `startAt` / `endAt` / `visitType`. The DB columns retain their historical names `dentist_member_id` / `scheduled_at` / `duration_minutes` / `service_type` to avoid a destructive migration; handlers translate via `appointment-wire.ts` (duration = endAt − startAt). `visitType` is a constrained enum — `checkup` | `treatment` | `emergency` | `recall`.
+
 ---
 
 ## 7b. Aggregate Boundaries
@@ -87,10 +89,14 @@ Appointment is an aggregate root. Visit referenced by visit_id (UUID only) after
 
 ## 8. State Transitions
 ```
-scheduled ──► checked_in ──► completed
-scheduled ──► cancelled
-scheduled ──► no_show
+scheduled  ──► checked_in | cancelled | no_show
+checked_in ──► completed   | cancelled | no_show
+no_show    ──► completed   (reversible revert)
+completed  ──► (terminal)
+cancelled  ──► (terminal)
 ```
+**FSM clarification (V-SCH-009):** `checked_in → cancelled`, `checked_in → no_show`, and `no_show → completed` are intentional transitions backed by `APPOINTMENT_TRANSITIONS` in `repos/dental-appointment.schema.ts`. `no_show → completed` is the documented "revert no-show" path (a patient who was marked no-show but actually attended). All other transitions are rejected with a 422/validation error.
+
 No DB unique constraint on dentist+time (see FR3.7 — intentional).
 
 **QueueItem state naming deviation (IDEAL-GAP-P2-011):** The IDEAL §3.3 standard names queue states as `waiting → with_provider → ready_for_checkout → checked_out`. The implementation uses `with_provider` and `ready_for_checkout` as the enum values (matching the standard for those two), but the overall QueueItem lifecycle in this codebase follows the appointment/visit flow rather than a separate queue entity. This is a deliberate structural deviation — no standalone `dental_queue_item` table exists; queue state is derived from appointment + visit status.
@@ -110,6 +116,10 @@ POST /dental/appointments (FR3.7 double-booking), GET /dental/appointments (cale
 ## 10b. Domain Events
 **Published:** DE-010 AppointmentBooked, DE-011 AppointmentCancelled
 **Consumed:** (none)
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
+
+**DE-001 VisitCheckedIn ownership (V-SCH-010):** VisitCheckedIn is OWNED by dental-visit — the visit lifecycle begins at check-in, and `createVisit` writes the audit-log marker. dental-scheduling's check-in handler only delegates visit creation; it does not own or emit VisitCheckedIn.
 
 ---
 
@@ -146,10 +156,12 @@ Integration: check-in creates visit in dental-visit module.
 
 | Scenario | HTTP | Code |
 |----------|------|------|
-| Reschedule conflict | 409 | DOUBLE_BOOKING |
-| Check-in: active visit exists | 409 | ACTIVE_VISIT_EXISTS |
-| Cancel without reason | 422 | REASON_REQUIRED |
+| Reschedule conflict | 409 | RESCHEDULE_CONFLICT (V-SCH-001) |
+| Check-in: active visit exists | 409 | CHECKIN_ACTIVE_VISIT (V-SCH-002) |
+| Cancel without reason (query `reason` min:5/max:500) | 422 | REASON_REQUIRED |
 | Outside working hours | 422 | OUTSIDE_WORKING_HOURS |
+| endAt not after startAt | 400 | VALIDATION_ERROR (V-SCH-008) |
+| visitType not in enum | 400 | VALIDATION_ERROR (V-SCH-007) |
 
 ---
 

@@ -6,7 +6,19 @@
 # API Contracts — dental-billing
 
 > All responses wrap in `{ data, meta }`.
-> Invoice FSM: `draft` → `sent` → `partial` → `paid` | `overdue` | `voided`
+> Invoice FSM: `draft` → `issued` → `partial` → `paid` | `overdue` | `voided`
+> <!-- V-BIL-015: FSM uses `issued` (matches MODULE_SPEC §8 and the DentalInvoiceStatus enum / code). The legacy `sent` term has been retired. -->
+> <!-- V-BIL-015: payment_method enum is `cash`, `card`, `bank_transfer` (matches PaymentMethod enum / dental_payment_method DB type). -->
+> <!-- V-BIL-008: issue is `PATCH /dental/invoices/:id/issue` (state transition). -->
+> <!-- V-BIL-009: payment `reference` (receipt number) is OPTIONAL; server generates one when omitted. Optional `payment_date` supported. -->
+> <!-- V-BIL-005/004: payment on paid/voided invoice → 422 INVOICE_IMMUTABLE; overpayment → 422 PAYMENT_EXCEEDS_BALANCE. -->
+> <!-- V-BIL-001/002/010: discount rate bounded 0–100; installment count bounded 2–24; payment amount_cents min 1. -->
+> <!-- V-BIL-012: invoice responses expose `outstanding_cents` (alias of internal balanceCents). -->
+> <!-- V-BIL-003: create-invoice / create-plan / issue restricted to dentist_owner + dentist_associate (own patients); staff_full NOT permitted (record-payment is). -->
+> <!-- V-BIL-006: POST /dental/invoices/:id/uncollectible → 501 NOT_IMPLEMENTED (BR-013 deferred). -->
+> <!-- V-BIL-011: DE-008 InvoicePaid fires only on transition to fully `paid`; per ADR-006 it is an audit-log marker, not a bus event. -->
+> <!-- V-BIL-007: signed-consent-before-invoice gate is BR-014 (was mislabeled BR-011). -->
+
 > Key rules: BR-009 (billable treatments required), BR-011 (void conditions), BR-012 (payment <= balance).
 
 ---
@@ -76,7 +88,7 @@ List invoices for branch.
 |-------|------|----------|-------|
 | `branch_id` | uuid | YES | Branch scope |
 | `patient_id` | uuid | NO | Filter by patient |
-| `status` | string | NO | `draft`, `sent`, `partial`, `paid`, `overdue`, `voided` |
+| `status` | string | NO | `draft`, `issued`, `partial`, `paid`, `overdue`, `voided` |
 | `date_from` | date | NO | Invoice created date |
 | `date_to` | date | NO | |
 | `page` | integer | NO | Default: 1 |
@@ -128,7 +140,7 @@ Record a payment against invoice.
 | Field | Type | Nullable | Required | Format | Constraints | Example |
 |-------|------|----------|----------|--------|-------------|---------|
 | `amount_cents` | integer | NO | YES | — | min:1, ≤ outstanding balance | `15000` |
-| `payment_method` | string | NO | YES | — | enum: `cash`, `card`, `transfer`, `health_fund`, `plan` | `"card"` |
+| `payment_method` | string | NO | YES | — | enum: `cash`, `card`, `bank_transfer` | `"card"` |
 | `payment_date` | string | NO | YES | date (YYYY-MM-DD) | — | `"2026-06-01"` |
 | `reference` | string | YES | NO | — | max:100 | `"TXN-12345"` |
 | `notes` | string | YES | NO | — | max:500 | |

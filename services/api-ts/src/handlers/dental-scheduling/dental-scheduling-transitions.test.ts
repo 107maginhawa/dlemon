@@ -203,10 +203,8 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
   test('valid: scheduled → cancelled returns 204', async () => {
     const appt = await seedAppointment();
     const app = buildApp(TEST_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient requested cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Patient requested cancellation' }),
     });
     expect(res.status).toBe(204);
   });
@@ -215,10 +213,8 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
     const appt = await seedAppointment();
     await forceStatus(appt.id, 'checked_in');
     const app = buildApp(TEST_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient requested cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Patient requested cancellation' }),
     });
     expect(res.status).toBe(204);
   });
@@ -262,10 +258,8 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
   test('invalid: scheduled → cancelled with blank reason rejected (422 REASON_REQUIRED)', async () => {
     const appt = await seedAppointment();
     const app = buildApp(TEST_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('   ')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: '   ' }),
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;

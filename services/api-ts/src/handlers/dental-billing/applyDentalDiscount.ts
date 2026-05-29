@@ -43,6 +43,21 @@ export async function applyDentalDiscount(
     throw new BusinessLogicError('Discount reason is required', 'DISCOUNT_REASON_REQUIRED');
   }
 
+  // V-BIL-001: bound discount rate 0–100. An unbounded rate >100 produces a
+  // negative totalCents/balanceCents (money-integrity breach); a negative rate
+  // inflates the total. Defended here even if the schema validator is bypassed.
+  if (
+    typeof body.percentageRate !== 'number' ||
+    !Number.isFinite(body.percentageRate) ||
+    body.percentageRate < 0 ||
+    body.percentageRate > 100
+  ) {
+    throw new BusinessLogicError(
+      'Discount percentage rate must be between 0 and 100',
+      'INVALID_DISCOUNT_RATE',
+    );
+  }
+
   const discountCents = applyDiscountRate(invoice.subtotalCents, body.percentageRate);
   const taxRate = Number(invoice.taxRate);
 

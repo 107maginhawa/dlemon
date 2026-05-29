@@ -15,6 +15,7 @@ import {
 import { getPatientForEMR } from '../patient/repos/patient-emr.facade';
 import { type CreateConsultationRequest } from './repos/emr.schema';
 import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * createConsultation
@@ -88,7 +89,9 @@ export async function createConsultation(ctx: HandlerContext) {
     vitals: body.vitals,
     symptoms: body.symptoms,
     prescriptions: body.prescriptions,
-    followUp: body.followUp
+    followUp: body.followUp,
+    // V-EMR-008: externalDocumentation is now settable at create (parity with update).
+    externalDocumentation: body.externalDocumentation ?? undefined
   });
 
   // Log audit trail
@@ -106,7 +109,8 @@ export async function createConsultation(ctx: HandlerContext) {
   // Persisted audit trail (AL-023)
   await logAuditEvent(db, logger, {
     personId: user.id,
-    tenantId: consultation.tenantId ?? consultation.patient,
+    // V-EMR-005: never fall back to the patient UUID (PHI id in the tenant slot).
+    tenantId: consultation.tenantId ?? EMR_AUDIT_TENANT_SENTINEL,
     action: 'emr.consultation.create',
     resourceType: 'consultation',
     resourceId: consultation.id,

@@ -18,9 +18,10 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ## 2. Domain Terms
 | Term | Definition |
 |------|-----------|
-| PMD | Portable Medical Document — open signed document for portable health records |
+| PMD | Portable Medical Document — open signed document for portable health records. (Canonical expansion; supersedes any "Patient Medical Data"/"Patient Medical Dossier" usage — V-PMD-009.) |
 | Checksum | SHA-256 of serialized visit snapshot; verified on import (BR-021) |
 | ImportedPMD | External PMD stored as-is; never merged into editable records (BR-022) |
+| Safety Floor merge | V-PMD-012: the act of surfacing an imported PMD's safety-critical items (allergies, conditions, medications) into the patient's **Safety Floor** — the dental-patient aggregate's minimum set of safety-critical info a dentist must always see (owned by dental-patient, see `getDentalPatientSafetyFloor`). Merge is **add-only**: it never mutates the imported PMD content and never overwrites existing Safety Floor entries. The `imported_pmd.safety_floor_merged` flag records whether this has occurred. |
 
 ---
 
@@ -82,7 +83,9 @@ PMDDocument: immutable after creation. ImportedPMD: read-only aggregate root. Bo
 ---
 
 ## 8. State Transitions
-PMDDocument: generated (terminal — no transitions). ImportedPMD: imported (terminal — read-only).
+PMDDocument: `generated` → `signed` (digital signature applied) | `generated` → `superseded` (a re-generation for the same visit creates a new `generated` document and marks the prior one `superseded`). A `superseded` document is otherwise immutable and retained for the audit trail (never deleted). `signed` and `superseded` are terminal. ImportedPMD: `imported` (terminal — read-only).
+
+> V-PMD-011: `generated` is the entry state, not strictly terminal. Re-generation (BR/§13 "multiple PMDs per visit") is the only path that mutates an existing row's status, transitioning the older row `generated → superseded` via `PMDDocumentRepository.supersede()`. Content/checksum of a superseded row are never altered.
 
 ---
 
@@ -99,6 +102,10 @@ POST /dental/pmd/generate (visitId, BR-021 — visit must be completed), GET /de
 ## 10b. Domain Events
 Published: DE-017 PMDGenerated (→ notifs: patient download link, dental-audit)
 Consumed: DE-002 VisitCompleted (triggers PMD-eligible flag)
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
+
+DE-017 PMDGenerated is satisfied by the `pmd.generated` audit row written synchronously in `generatePMD.ts`.
 
 ---
 

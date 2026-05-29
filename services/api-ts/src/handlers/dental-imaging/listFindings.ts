@@ -12,6 +12,7 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import { buildPaginationMeta } from '@/utils/query';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingFindingRepository } from './repos/imaging_finding.repo';
@@ -41,6 +42,18 @@ export async function listFindings(ctx: BaseContext): Promise<Response> {
 
   const items = await findingRepo.listByImage(imageId, study.branchId);
   const total = items.length;
+
+  // V-IMG-006: findings are clinical PHI — audit the read.
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: study.branchId,
+    branchId: study.branchId,
+    action: 'imaging_finding.read',
+    eventType: 'data-access',
+    resourceType: 'imaging_finding',
+    resourceId: imageId,
+    metadata: { patientId: study.patientId, imageId, count: total },
+  });
 
   return ctx.json({ data: items, pagination: buildPaginationMeta(items, total, total || 1, 0) }, 200);
 }

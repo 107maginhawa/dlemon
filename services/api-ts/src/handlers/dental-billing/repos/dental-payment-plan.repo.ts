@@ -60,13 +60,20 @@ export class DentalPaymentPlanRepository {
     plan: DentalPaymentPlan;
     installments: DentalPaymentPlanInstallment[];
   }> {
+    // V-BIL-002: defense in depth — never divide by an out-of-range installment
+    // count (0 → Infinity). The handler is the primary guard (422); this guards
+    // any other caller.
+    const n = data.numberOfInstallments;
+    if (!Number.isInteger(n) || n < 2 || n > 24) {
+      throw new Error(`Invalid numberOfInstallments: ${n} (must be an integer 2–24)`);
+    }
+
     // Create the plan
     const [plan] = await this.db
       .insert(dentalPaymentPlans)
       .values(data)
       .returning();
 
-    const n = data.numberOfInstallments;
     const baseAmount = Math.floor(data.totalCents / n);
     const remainder = data.totalCents - baseAmount * n;
 

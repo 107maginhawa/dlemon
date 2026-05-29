@@ -313,7 +313,7 @@ describe('AC-REG-02: registration blocked without consent', () => {
     const res = await app.request('/dental/patients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: 'No Consent G2S1', consentGiven: false }),
+      body: JSON.stringify({ displayName: 'No Consent G2S1', consentGiven: false, branchId: BRANCH_ID }),
     });
     // BusinessLogicError (CONSENT_REQUIRED) maps to 422, not 400
     expect(res.status).toBe(422);

@@ -27,7 +27,7 @@ export function PMDViewerSheet({ pmd, open, onClose, onImportClick }: Props) {
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent side="right" className="w-full max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Patient Medical Data</SheetTitle>
+          <SheetTitle>Portable Medical Document</SheetTitle>
         </SheetHeader>
         <div className="mt-4 flex flex-col gap-4">
           {pmd ? (

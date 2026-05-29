@@ -11,6 +11,8 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { TreatmentRepository } from '../repos/treatment.repo';
 import { VisitRepository } from '../repos/visit.repo';
 import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CreateDentalTreatmentBody, CreateDentalTreatmentParams } from '@/generated/openapi/validators';
 
@@ -66,6 +68,19 @@ export async function createDentalTreatment(
     priceCents: body.priceCents,
     carriedOver: false,
     clinicalNotes: body.clinicalNotes,
+  });
+
+  // V-VIS-001 / DE-004 TreatmentDiagnosed: per ADR-006 this is an audit-log-only
+  // marker (no event bus) — satisfy it by writing the dental_audit_log row.
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'treatment.diagnosed',
+    resourceType: 'dental_treatment',
+    resourceId: treatment.id,
+    metadata: { visitId, cdtCode: treatment.cdtCode },
   });
 
   return ctx.json(treatment, 201);

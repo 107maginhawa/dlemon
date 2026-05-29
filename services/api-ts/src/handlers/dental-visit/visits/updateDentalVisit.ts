@@ -7,7 +7,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from '../repos/visit.repo';
 import { VISIT_TRANSITIONS, type DentalVisitStatus } from '../repos/visit.schema';
@@ -71,6 +71,15 @@ export async function updateDentalVisit(
 
   // Apply lifecycle timestamps on status transitions
   if (patch.status === 'active') {
+    // V-VIS-003 / BR-001: app-level guard — return 409 instead of a raw 500 from
+    // the partial unique index when another active visit exists for this patient.
+    const existingActive = await repo.findActiveByPatient(visit.patientId);
+    if (existingActive && existingActive.id !== visitId) {
+      throw new ConflictError(
+        'Active visit already exists for this patient. Complete or discard it first.',
+        'ACTIVE_VISIT_EXISTS',
+      );
+    }
     const activated = await repo.activate(visitId);
     if (!activated) throw new NotFoundError('Dental visit');
     if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
@@ -92,11 +101,16 @@ export async function updateDentalVisit(
     // When the session ends with nothing recorded, discard instead of completing.
     // createDentalVisit always seeds an empty notes row, so check for meaningful
     // SOAP content rather than mere existence of the row.
+    //
+    // V-VIS-004: per MODULE_SPEC §5 (BR-005) + §18, auto-discard is DEFERRED behind
+    // a default-false feature flag (dental_visit_auto_discard, ADR-010). It only runs
+    // when the flag is explicitly enabled; otherwise empty visits complete normally.
+    const autoDiscardEnabled = process.env['DENTAL_VISIT_AUTO_DISCARD'] === 'true';
     const hasNoTreatments = treatments.length === 0;
     const hasNoNotes = !notes || (!notes.subjective && !notes.objective && !notes.assessment && !notes.plan);
     const hasNoAttachments = attachmentCount === 0;
 
-    if (hasNoTreatments && hasNoNotes && hasNoAttachments) {
+    if (autoDiscardEnabled && hasNoTreatments && hasNoNotes && hasNoAttachments) {
       const discardedRaw = await repo.discard(visitId);
       if (!discardedRaw) throw new NotFoundError('Dental visit');
       if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
@@ -139,6 +153,17 @@ export async function updateDentalVisit(
     const locked = await repo.lock(visitId);
     if (!locked) throw new NotFoundError('Dental visit');
     log?.info({ requestId, action: 'dental_visit_lock', visitId, by: user.id }, 'Visit locked');
+    // V-VIS-001 / DE-003 VisitLocked: per ADR-006 this is an audit-log-only marker
+    // (no event bus) — satisfy it by writing the dental_audit_log row synchronously.
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
+    await logAuditEvent(db, log, {
+      personId: user.id,
+      tenantId: branchForAudit?.organizationId ?? visit.branchId,
+      branchId: visit.branchId,
+      action: 'visit.locked',
+      resourceType: 'dental_visit',
+      resourceId: visitId,
+    });
     return ctx.json(locked);
   }
 

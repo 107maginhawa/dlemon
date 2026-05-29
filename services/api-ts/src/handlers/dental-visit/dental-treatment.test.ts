@@ -120,7 +120,18 @@ afterEach(async () => {
   await db.execute(
     sql`TRUNCATE TABLE dental_treatment, dental_chart, visit_notes, dental_visit CASCADE`,
   );
+  await db.execute(sql`DELETE FROM dental_audit_log WHERE target_type = 'dental_treatment'`);
 });
+
+// V-VIS-006: helper to read audit rows written for a treatment transition.
+async function auditRowsFor(treatmentId: string, action: string) {
+  const { dentalAuditLog } = await import('@/handlers/dental-audit/repos/audit-log.schema');
+  const { eq, and } = await import('drizzle-orm');
+  return db
+    .select()
+    .from(dentalAuditLog)
+    .where(and(eq(dentalAuditLog.targetId, treatmentId), eq(dentalAuditLog.action, action)));
+}
 
 // ---------------------------------------------------------------------------
 // createDentalTreatment
@@ -350,6 +361,41 @@ describe('updateDentalTreatment handler', () => {
     const body = await res.json() as any;
     expect(body.status).toBe('dismissed');
     expect(body.dismissReason).toBe('Patient refused');
+  });
+
+  test('V-VIS-006: dismiss writes a treatment.dismissed audit row', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'dismissed', dismissReason: 'Patient refused' }),
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await auditRowsFor(treatment.id, 'treatment.dismissed');
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.targetType).toBe('dental_treatment');
+    expect((rows[0]!.metadata as any).reason).toBe('Patient refused');
+  });
+
+  test('V-VIS-006: decline (patient refusal) writes a treatment.declined audit row', async () => {
+    const visit = await seedVisit();
+    const treatment = await seedTreatment(visit.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'declined', refusalReason: 'Cannot afford treatment' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('declined');
+
+    const rows = await auditRowsFor(treatment.id, 'treatment.declined');
+    expect(rows.length).toBe(1);
+    expect((rows[0]!.metadata as any).refusalReason).toBe('Cannot afford treatment');
   });
 
   test('returns 200 and updates tooth and CDT fields', async () => {

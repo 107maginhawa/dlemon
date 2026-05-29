@@ -19,6 +19,7 @@ import {
 } from '../provider/repos/provider-emr.facade';
 import { shouldExpand } from '@/utils/query';
 import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * getConsultation
@@ -88,7 +89,8 @@ export async function getConsultation(ctx: HandlerContext) {
   // Persisted audit trail (AL-024) — PHI read
   await logAuditEvent(db, logger, {
     personId: user.id,
-    tenantId: consultation.tenantId ?? consultation.patient,
+    // V-EMR-005: never fall back to the patient UUID (PHI id in the tenant slot).
+    tenantId: consultation.tenantId ?? EMR_AUDIT_TENANT_SENTINEL,
     action: 'emr.consultation.read',
     resourceType: 'consultation',
     resourceId: consultation.id,

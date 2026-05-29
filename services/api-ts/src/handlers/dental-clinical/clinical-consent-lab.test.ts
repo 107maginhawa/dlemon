@@ -395,7 +395,7 @@ describe('signConsentForm handler', () => {
     expect(body.signedAt).not.toBeNull();
   });
 
-  test('returns 400 when trying to sign an already-signed consent form', async () => {
+  test('returns 422 CONSENT_FORM_SIGNED when trying to sign an already-signed consent form', async () => {
     const app = buildTestApp(TEST_USER);
     const visit = await seedVisit();
 
@@ -430,7 +430,9 @@ describe('signConsentForm handler', () => {
       },
     );
 
-    expect(secondSign.status).toBe(400);
+    expect(secondSign.status).toBe(422);
+    const secondBody = await secondSign.json() as any;
+    expect(secondBody.error?.code ?? secondBody.code).toBe('CONSENT_FORM_SIGNED');
   });
 });
 
@@ -613,7 +615,7 @@ describe('updateLabOrder handler', () => {
     expect(res.status).toBe(404);
   });
 
-  test('returns 400 when status transition is invalid', async () => {
+  test('returns 422 INVALID_STATUS_TRANSITION when status transition is invalid', async () => {
     const app = buildTestApp(TEST_USER);
     const visit = await seedVisit();
 
@@ -639,7 +641,9 @@ describe('updateLabOrder handler', () => {
       },
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.error?.code ?? body.code).toBe('INVALID_STATUS_TRANSITION');
   });
 
   test('returns 400 when status value is unknown', async () => {

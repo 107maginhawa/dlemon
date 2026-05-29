@@ -51,7 +51,10 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
       { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_report_create', currentTier: orgData.imagingTier },
       'Tier gate blocked access',
     );
-    throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
+    throw new ForbiddenError(
+      'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
+      'IMAGING_TIER_REQUIRED',
+    );
   }
 
   const allLandmarks = await cephRepo.listByImage(imageId);

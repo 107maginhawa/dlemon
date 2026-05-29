@@ -1,6 +1,6 @@
 # Dentalemon — Brownfield Status Dashboard
 
-<!-- oli-magic v2 | generated: 2026-05-26 | cycle: 2 | 4-agent parallel audit -->
+<!-- oli-magic v2 | generated: 2026-05-26 | updated: 2026-05-30 (G7+G8 complete; reconciled) | cycle: 2 | 4-agent parallel audit -->
 
 ---
 
@@ -8,14 +8,16 @@
 
 | Field | Value |
 |---|---|
-| **Brownfield state** | `cycle_2` — new security findings since graduation |
+| **Brownfield state** | `executed` — cycle-2 waves G7+G8 COMPLETE 2026-05-30; awaiting post-execution re-audit |
 | **Score at graduation** | 9.0 / 10 (2026-05-21) |
 | **Graduation threshold** | P0 = 0, audit/compliance/confidence ≥ 9.0 |
-| **2026-05-26 audit** | 3x P0 security findings (IDOR, hash-leak, privilege-escalation) |
-| **Current branch** | `main` — G7 (security) + G8 (spec/UI) waves planned |
-| **Typecheck** | ✅ PASSING — 0 errors (2026-05-25) |
-| **Tests** | 964 pass / 2508 fail (DB offline in test env — not logic bugs) |
-| **NEXT ACTION** | Execute G7 (sequential, P0 security) → then G8 (parallel, spec/UI) |
+| **2026-05-26 audit** | 3x P0 security findings (IDOR, hash-leak, privilege-escalation) — ✅ ALL RESOLVED (see below) |
+| **G7 Security** | ✅ COMPLETE — 7/8 via enforce-fix track; G7-S5 (PIN `@pattern`) landed 2026-05-30 = 8/8 |
+| **G8 Spec & UI** | ✅ COMPLETE — S1/S3/S4/S8 specs + ADR-005; S2 pre-satisfied; S5/S6/S7 UI |
+| **Current branch** | `main` |
+| **Typecheck** | ✅ PASSING — api-ts + dentalemon both clean (2026-05-30) |
+| **Tests** | ✅ dental-org 273/0, dental-audit 18/0; frontend touched-area 740/0 (5 skip) (2026-05-30) |
+| **NEXT ACTION** | **Mandatory re-audit:** `/oli-check --compliance --all` → `--confidence` → `--traceability` → `/oli-magic --update` for cycle-2 graduation check |
 
 ---
 
@@ -32,37 +34,37 @@
 | Test confidence | 4/10 | `test-confidence-audit.md` |
 | UI compliance | 5.5/10 | `ui-compliance-audit.md` |
 
-### P0 Security Findings (block all feature work)
+### P0 Security Findings — ✅ ALL RESOLVED (verified 2026-05-30)
 
-| ID | Finding | File |
-|----|---------|------|
-| SEC-P0-1 | IDOR — `DentalMembershipManagement_*` skip `assertBranchAccess` → cross-tenant writes | dental-org handlers |
-| SEC-P0-2 | Hash leak — `pinHash`, `securityAnswerHash` returned in list/deactivate responses | DentalMembershipManagement_list |
-| SEC-P0-3 | Privilege escalation — `updateMember` accepts `role` with only `assertBranchAccess` gate | updateMember handler |
+| ID | Finding | Resolution |
+|----|---------|-----------|
+| SEC-P0-1 | IDOR — membership/branch handlers skip `assertBranchAccess` → cross-tenant writes | ✅ `assertBranchRole`/`assertBranchAccess` on all mutations (EM-ORG-001, enforce-fix track) |
+| SEC-P0-2 | Hash leak — `pinHash`, `securityAnswerHash` returned in list/deactivate | ✅ stripped in `_list`/`_deactivate`/`listMembers`/`createMember`/`updateMember` (G7-S2) |
+| SEC-P0-3 | Privilege escalation — `updateMember` role change with only branch-access gate | ✅ `updateMember.ts:44–56` requires caller `dentist_owner` (G7-S3) |
 
-### P1 Findings
+### P1 Findings — ✅ ALL RESOLVED (2026-05-30)
 
-| ID | Finding |
-|----|---------|
-| SEC-P1-1 | `recoverPin` missing `authMiddleware` + schema mismatch |
-| SEC-P1-2 | PIN validators allow non-digit strings (no `/^\d{4,6}$/`) |
-| SEC-P1-3 | Rate limiting per-membership only (parallel brute possible) |
-| TEST-P1-1 | `auth-security-hardening.test.ts` untracked — NOT in CI |
-| SPEC-P1-1 | `handlers/emr/` live + tested with zero MODULE_SPEC |
-| UI-P1-1 | `timeline-carousel` + `pin-select` missing `isLoading`/`isError` |
+| ID | Finding | Resolution |
+|----|---------|-----------|
+| SEC-P1-1 | `recoverPin` missing `authMiddleware` + schema mismatch | ✅ `pinRecovery.ts:70` auth guard; EF-ORG-P015 regression lock (G7-S4) |
+| SEC-P1-2 | PIN validators allow non-digit strings (no `/^\d{4,6}$/`) | ✅ TypeSpec `@pattern` on SetPin/VerifyPin (`^\d{4,8}$`) + ResetMemberPin (`^\d{6}$`); 8/8 tests (G7-S5) |
+| SEC-P1-3 | Rate limiting per-membership only | ✅ `membership.repo.ts:114–153` lockout (5/30s, 10/5min) (G7-S6) |
+| TEST-P1-1 | `auth-security-hardening.test.ts` untracked — NOT in CI | ✅ tracked + 12/12 pass (G7-S7) |
+| SPEC-P1-1 | `handlers/emr/` live + tested with zero MODULE_SPEC | ✅ `emr-consultation/MODULE_SPEC.md` (12 sections) — pre-satisfied (G8-S2) |
+| UI-P1-1 | `timeline-carousel` + `pin-select` missing `isLoading`/`isError` | ✅ loading/error states + tests added (G8-S7) |
 
-### New Waves Planned
+### Cycle-2 Waves — ✅ COMPLETE
 
 | Wave | Goal | Parallel? | Status |
 |------|------|-----------|--------|
-| G7 | Close P0 security + P1 auth gaps (8 slices) | NO — sequential | 🔴 not-started |
-| G8 | Spec docs + UI compliance (8 slices) | YES | 🔴 not-started |
+| G7 | Close P0 security + P1 auth gaps (8 slices) | NO — sequential | ✅ COMPLETE 2026-05-30 (8/8) |
+| G8 | Spec docs + UI compliance (8 slices) | YES | ✅ COMPLETE 2026-05-30 |
 
 ---
 
 ## Wave Execution Progress
 
-All 6 brownfield waves complete.
+All 8 brownfield waves complete.
 
 | Wave | Name | Status | Date |
 |------|------|--------|------|
@@ -72,6 +74,8 @@ All 6 brownfield waves complete.
 | G4 | Feature Delivery | ✅ COMPLETE | 2026-05-18 |
 | G5 | Future Features (periodontal) | ✅ COMPLETE | 2026-05-24 |
 | G6 | Excellence — Reach 9.0 | ✅ COMPLETE | 2026-05-24 |
+| G7 | Security Stabilization | ✅ COMPLETE | 2026-05-30 (7/8 enforce-fix + G7-S5) |
+| G8 | Spec & UI Completeness | ✅ COMPLETE | 2026-05-30 |
 
 **Post-graduation work (feat/v1.5-g1-foundation):**
 
@@ -278,6 +282,7 @@ GAP-013 (HMAC tamper-evidence), GAP-014 through GAP-018 (minor polish), GAP-025 
 | 2026-05-24 | v1.5 spec pipeline | 9.0 | 70 UI blueprints; spec-consistency PASS |
 | 2026-05-25 | Domain audit (P1 fixes) | **8.5*** | 4 P1 gaps resolved; domain rubric 58/100 |
 | 2026-05-25 | feat/v1.5-g1-foundation | In progress | P0-A/C/D GREEN; P0-B RED; typecheck failing |
+| 2026-05-30 | G7+G8 complete (cycle 2) | Pending re-audit | 3 P0 + 6 P1 security/spec/UI findings RESOLVED; gate green; compliance/confidence/trace not yet re-run |
 
 *Domain audit (58/100) uses a different rubric than the oli graduation audit (9.0/10). The domain audit penalizes missing TDD_PROOF artifacts (which exist but weren't detected), weak spec-traceability, and V1 domain gaps not in scope of the original brownfield assessment.
 
@@ -299,13 +304,13 @@ Review before acting — suggestions only.
 
 | Threshold | Required | Current | Status |
 |-----------|----------|---------|--------|
-| P0 open gaps | 0 | 0 | ✅ |
-| Audit health | ≥ 9.0 | ~8.5 (post-domain-audit) | ⚠️ Regressed |
-| Compliance health | ≥ 9.0 | ~8.0 (C4 FAIL, C7 FAIL) | ❌ Below threshold |
-| Confidence | ≥ 9.0 | ~6.0 (58/100 domain rubric) | ❌ Below threshold |
-| Typecheck | PASS | ❌ FAILING | ❌ |
+| P0 open gaps | 0 | 0 (3 cycle-2 P0s resolved 2026-05-30) | ✅ |
+| Audit health | ≥ 9.0 | ~8.5 (pre-G7/G8) | ⏳ Re-audit pending |
+| Compliance health | ≥ 9.0 | not re-run since G8 | ⏳ Run `/oli-check --compliance --all` |
+| Confidence | ≥ 9.0 | not re-run since G8 | ⏳ Run `/oli-check --confidence` |
+| Typecheck | PASS | ✅ PASS (api-ts + dentalemon, 2026-05-30) | ✅ |
 
-> **Status: Post-graduation with regression.** The original graduation at 9.0 stands. The domain audit (2026-05-25) using a new rubric found gaps not measured by the oli pipeline. These represent the next execution wave, not a graduation reversal. Fix typecheck + complete P0-B first, then plan G7 wave for domain gaps.
+> **Status: cycle-2 waves executed; graduation check pending post-execution audits.** All 3 cycle-2 P0 security findings + 6 P1s are resolved and the gate is green, but `COMPLIANCE_REPORT.md` / `CONFIDENCE_REPORT.md` / `TRACE_REPORT.md` were never generated for this cycle. They must be regenerated before a graduation verdict. Run the mandatory re-audit sequence (see Execution State → NEXT ACTION), then `/oli-magic --update` resolves `executed` → `graduated` / `cycle_3`.
 
 ---
 

@@ -9,6 +9,7 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { Skeleton } from '@monobase/ui';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { composeGuards, requireAuth } from '@/lib/guards';
@@ -38,6 +39,12 @@ export interface PinSelectMember {
 interface PinSelectProps {
   members: PinSelectMember[];
   onSelect: (member: PinSelectMember) => void;
+  /** Shows a skeleton placeholder while the member list is being fetched. */
+  isLoading?: boolean;
+  /** Shows an inline error with a retry affordance when the fetch fails. */
+  isError?: boolean;
+  /** Retry callback wired to the error state's Retry button. */
+  onRetry?: () => void;
 }
 
 const ROLE_LABELS: Record<PinSelectMember['role'], string> = {
@@ -56,12 +63,38 @@ function initials(displayName: string): string {
   return (words[0] ?? '?').slice(0, 2).toUpperCase();
 }
 
-export function PinSelect({ members, onSelect }: PinSelectProps) {
+export function PinSelect({ members, onSelect, isLoading = false, isError = false, onRetry }: PinSelectProps) {
   return (
     <div className="flex flex-col items-center gap-8 py-12 px-4">
       <h1 className="text-2xl font-semibold">Choose your profile</h1>
 
-      {members.length === 0 ? (
+      {isLoading ? (
+        <div data-testid="pin-select-loading" className="flex flex-wrap justify-center gap-4">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center gap-2 p-5 rounded-2xl bg-card border border-border w-36"
+            >
+              <Skeleton className="w-14 h-14 rounded-full" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <div data-testid="pin-select-error" className="flex flex-col items-center gap-3">
+          <p className="text-sm text-destructive">Failed to load staff members.</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="h-9 px-4 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      ) : members.length === 0 ? (
         <p data-testid="pin-select-empty" className="text-muted-foreground text-sm">
           No staff members found.
         </p>
@@ -92,7 +125,9 @@ export function PinSelect({ members, onSelect }: PinSelectProps) {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mt-4">Tap your name to sign in</p>
+      {!isLoading && !isError && (
+        <p className="text-xs text-muted-foreground mt-4">Tap your name to sign in</p>
+      )}
     </div>
   );
 }
@@ -104,30 +139,49 @@ export function PinSelect({ members, onSelect }: PinSelectProps) {
 function PinSelectRoute() {
   const navigate = useNavigate();
   const [members, setMembers] = useState<PinSelectMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  // Bumping this re-runs the fetch effect (Retry affordance).
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const { branchId: storeBranchId } = useOrgContextStore.getState();
     const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
-    if (!branchId) return;
+    if (!branchId) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setIsError(false);
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
     })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(data => {
         const items: PinSelectMember[] = data.data ?? data.items ?? [];
         setMembers(items);
+        setIsLoading(false);
         // FR9.2: Single user = auto-select (navigate directly to PIN entry)
         if (items.length === 1) {
           navigate({ to: '/auth/pin-entry/$memberId', params: { memberId: items[0]!.id } });
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        setIsError(true);
+        setIsLoading(false);
+      });
+  }, [reloadKey]);
 
   return (
     <div className="min-h-screen bg-background">
       <PinSelect
         members={members}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => setReloadKey((k) => k + 1)}
         onSelect={(member) => {
           // UJ-ORG-004: Persist org context to localStorage so pin-entry
           // (and any deep-link reload) can reconstruct the correct context.

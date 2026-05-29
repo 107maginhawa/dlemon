@@ -7,11 +7,14 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { FollowUpNote } from '../../patient/repos/patient.schema';
 import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
+
+// V-PAT-003: follow-up notes are restricted to clinical/full-staff roles.
+const FOLLOW_UP_ROLES = ['staff_full', 'dentist_associate', 'dentist_owner'] as const;
 
 export async function listFollowUpNotes(
   ctx: ValidatedContext<never, never, ListFollowUpNotesParams>
@@ -28,10 +31,11 @@ export async function listFollowUpNotes(
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
-  // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  // V-PAT-002/003: branch+role guard; a missing branch DENIES (never bypasses).
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
   }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, [...FOLLOW_UP_ROLES]);
 
   const notes: FollowUpNote[] = patient.followUpNotes ?? [];
 

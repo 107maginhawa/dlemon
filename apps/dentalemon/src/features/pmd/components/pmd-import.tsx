@@ -39,6 +39,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   const [step, setStep] = useState<Step>('form');
   const [sourceFacility, setSourceFacility] = useState('');
   const [sourceReference, setSourceReference] = useState('');
+  const [sourceDescription, setSourceDescription] = useState('');
   const [content, setContent] = useState('');
   const [preview, setPreview] = useState<SafetyFloorPreview | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -49,6 +50,8 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   function validate(): string[] {
     const errs: string[] = [];
     if (!sourceFacility.trim()) errs.push('Source facility is required');
+    if (!sourceDescription.trim()) errs.push('Source software/system is required');
+    if (sourceDescription.trim().length > 200) errs.push('Source software/system must be 200 characters or fewer');
     if (!content.trim()) errs.push('PMD content is required');
     if (content.trim()) {
       try { JSON.parse(content); } catch { errs.push('PMD content must be valid JSON'); }
@@ -75,6 +78,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
           patientId,
           sourceFacility: sourceFacility.trim(),
           sourceReference: sourceReference.trim() || undefined,
+          sourceDescription: sourceDescription.trim(),
           content: content.trim(),
         }),
       });
@@ -90,6 +94,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
     setStep('form');
     setSourceFacility('');
     setSourceReference('');
+    setSourceDescription('');
     setContent('');
     setPreview(null);
     setErrors([]);
@@ -157,6 +162,21 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   placeholder="e.g. REF-2025-001"
                   className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
                 />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pmd-source-description">
+                  Source Software / System *
+                </label>
+                <input
+                  id="pmd-source-description"
+                  type="text"
+                  value={sourceDescription}
+                  onChange={e => setSourceDescription(e.target.value)}
+                  maxLength={200}
+                  placeholder="e.g. Open Dental v21.1, Dentrix G7"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Originating system — required for data-provenance audit trail.</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pmd-content">

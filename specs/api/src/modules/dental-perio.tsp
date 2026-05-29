@@ -56,21 +56,50 @@ model PerioToothReading {
   id: UUID;
   chartId: UUID;
   toothNumber: int32;
+
+  @doc("Buccal probing depth (mm), 0-20. BR-P03.")
+  @minValue(0)
+  @maxValue(20)
   depthBM?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthBC?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthBD?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLM?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLC?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLD?: int32;
+
   bopBM?: boolean;
   bopBC?: boolean;
   bopBD?: boolean;
   bopLM?: boolean;
   bopLC?: boolean;
   bopLD?: boolean;
+
+  @doc("Gingival recession (mm). -5..20; negative = coronal overgrowth above CEJ. V-PER-009.")
+  @minValue(-5)
+  @maxValue(20)
   recession?: int32;
+
+  @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility: int32;
+
+  @doc("Furcation involvement class F0-F3 (0-3). V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   furcation: int32;
+
   plaque: boolean;
   suppuration: boolean;
   notes?: string;
@@ -79,21 +108,48 @@ model PerioToothReading {
 }
 
 model UpsertToothReadingRequest {
+  @minValue(0)
+  @maxValue(20)
   depthBM?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthBC?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthBD?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLM?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLC?: int32;
+
+  @minValue(0)
+  @maxValue(20)
   depthLD?: int32;
+
   bopBM?: boolean;
   bopBC?: boolean;
   bopBD?: boolean;
   bopLM?: boolean;
   bopLC?: boolean;
   bopLD?: boolean;
+
+  @doc("Gingival recession (mm). -5..20. V-PER-009.")
+  @minValue(-5)
+  @maxValue(20)
   recession?: int32;
+
+  @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility?: int32;
+
+  @doc("Furcation involvement class 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   furcation?: int32;
+
   plaque?: boolean;
   suppuration?: boolean;
   notes?: string;
@@ -185,7 +241,11 @@ namespace DentalPerioModule {
     @operationId("upsertToothReading")
     upsertReading(
       @path chartId: UUID,
-      @path toothNumber: int32,
+      @doc("FDI tooth number. Outer bound 11-85 enforced here; the handler applies the precise FDI quadrant check (adult 11-18,21-28,31-38,41-48; primary 51-55,61-65,71-75,81-85) — disjoint ranges are not expressible in a single validator. V-PER-010 / BR-P04.")
+      @path
+      @minValue(11)
+      @maxValue(85)
+      toothNumber: int32,
       @body body: UpsertToothReadingRequest
     ): ApiOkResponse<PerioToothReading>
       | ApiBadRequestResponse

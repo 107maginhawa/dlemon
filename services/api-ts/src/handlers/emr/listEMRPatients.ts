@@ -14,6 +14,8 @@ import {
 import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 import { parsePagination, parseFilters, buildPaginationMeta, shouldExpand } from '@/utils/query';
 import { subDays } from 'date-fns';
+import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * listEMRPatients
@@ -92,6 +94,19 @@ export async function listEMRPatients(ctx: HandlerContext) {
       action: 'list_emr_patients',
       message: 'No patients found for provider'
     }, 'EMR patients listed (empty result)');
+
+    // Persisted audit trail (V-EMR-004) — PHI read (patient roster).
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: EMR_AUDIT_TENANT_SENTINEL,
+      action: 'emr.patients.list',
+      resourceType: 'patient',
+      metadata: {
+        providerFilter: provider.id,
+        resultCount: 0,
+        totalConsultations: 0
+      }
+    });
 
     return ctx.json({
       data: [],
@@ -181,6 +196,21 @@ export async function listEMRPatients(ctx: HandlerContext) {
     totalConsultations: providerConsultations.length,
     action: 'list_emr_patients'
   }, 'EMR patients listed');
+
+  // Persisted audit trail (V-EMR-004) — this returns PHI (patient roster), so
+  // the bulk read must leave a durable audit row. Only counts/scope recorded.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: EMR_AUDIT_TENANT_SENTINEL,
+    action: 'emr.patients.list',
+    resourceType: 'patient',
+    metadata: {
+      providerFilter: provider.id,
+      resultCount: finalPatients.length,
+      uniquePatientCount: uniquePatientIds.length,
+      totalConsultations: providerConsultations.length
+    }
+  });
 
   return ctx.json({
     data: finalPatients,

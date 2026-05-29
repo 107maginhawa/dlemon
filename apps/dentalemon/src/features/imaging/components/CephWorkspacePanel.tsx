@@ -25,7 +25,8 @@ const GATE_CODES: CephLandmarkCode[] = ['A', 'B', 'Go', 'Po']
 function isAddonError(err: unknown): boolean {
   if (!err) return false
   const msg = err instanceof Error ? err.message : String(err)
-  return /403|forbidden|addon/i.test(msg)
+  // V-IMG-002: tier blocks now carry the dedicated IMAGING_TIER_REQUIRED code (§9 upgrade UI).
+  return /403|forbidden|add-?on|imaging_tier_required/i.test(msg)
 }
 
 export function CephWorkspacePanel({

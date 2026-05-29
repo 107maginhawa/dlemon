@@ -60,6 +60,10 @@ export async function getDentalInvoice(
 
   return ctx.json({
     ...result.invoice,
+    // V-BIL-012: expose the contract's `outstanding_cents` name alongside the
+    // internal `balanceCents` field (MODULE_SPEC §6 / §7). Both carry the same
+    // value (total_cents − paid_cents) so existing callers are unaffected.
+    outstandingCents: result.invoice.balanceCents,
     patientName,
     visitDate: visitDate ? visitDate.toISOString().split('T')[0] : undefined,
     lineItems,

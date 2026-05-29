@@ -12,6 +12,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature } from 'lucide-react';
 import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
+import { BRAND_GOLD_TEXT } from '@/constants/brand';
 
 interface WorkspaceTopBarProps {
   patientId: string;
@@ -122,7 +123,7 @@ export function WorkspaceTopBar({
       <div className="flex items-center gap-2 shrink-0">
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-          style={{ backgroundColor: 'rgba(255,233,125,0.3)', color: '#4A4018' }}
+          style={{ backgroundColor: 'rgba(255,233,125,0.3)', color: BRAND_GOLD_TEXT }}
           aria-label={`Patient avatar: ${displayName}`}
         >
           {initials}

@@ -226,6 +226,7 @@ export interface CreateConsultationRequest {
   symptoms?: SymptomsData;
   prescriptions?: PrescriptionData[];
   followUp?: FollowUpData;
+  externalDocumentation?: Record<string, any>; // V-EMR-008: settable at create (parity with update)
 }
 
 export interface UpdateConsultationRequest {

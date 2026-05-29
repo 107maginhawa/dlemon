@@ -70,7 +70,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | BR-001 | No concurrent active visits per patient per branch | createVisit | 409 |
 | BR-002 | Visit transitions linear: draft→active→completed→locked | All status changes | 422 on invalid |
 | BR-003 | Visit immutable after completed/locked | All write handlers | 422 + isReadOnly flag |
-| BR-005 | Auto-discard empty draft visit (deferred ADR-010) | Draft visits | NOT IMPLEMENTED |
+| BR-005 | Auto-discard empty visit (deferred ADR-010) | Empty visit on complete | Gated behind default-false flag `dental_visit_auto_discard` (V-VIS-004). When OFF (default), empty visits complete via the normal path; when ON, a complete with no treatments/notes/attachments redirects to `discarded`. |
 | BR-006 | Treatment state forward-only: diagnosed→planned→performed→verified; any non-terminal→dismissed or declined (patient refusal). `declined` is a terminal state reachable from `diagnosed` or `planned` only (not from `performed`/`verified`). | updateTreatment | 422 on reversal |
 | BR-007 | Completed treatment immutable (code, tooth, surface, price) | updateTreatment | 422 |
 | BR-008 | Carry-over creates new `dental_treatment` rows on the next visit with `carriedOver=true, sourceVisitId=<prior visit id>`, status=`diagnosed`; not billed until status moves to `performed` | `carryOverTreatments.ts` | Enforced |
@@ -98,7 +98,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 
 **`dental_chart`:** id, visit_id, patient_id, teeth (JSONB per-tooth conditions/treatments)
 
-**`visit_notes`:** id, visit_id, content (SOAP), version, signed_at, signed_by
+**`visit_notes`:** id, visit_id, author_member_id, subjective, objective, assessment, plan, notes (four structured SOAP columns + free-text `notes` — single record per visit, NOT a collection; V-VIS-009), signed, signed_at, signed_by, locked_at (append-only history in `visit_note_version`)
 
 ---
 
@@ -157,6 +157,8 @@ POST /dental/visits (BR-001), GET /dental/visits/:id, PATCH /dental/visits/:id (
 **Published:** DE-001 VisitCheckedIn, DE-002 VisitCompleted, DE-003 VisitLocked, DE-004 TreatmentDiagnosed, DE-005 TreatmentPerformed, DE-006 TreatmentDismissed
 
 **Consumed:** (none directly — check-in is triggered by dental-scheduling via WF-089)
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
 
 ---
 

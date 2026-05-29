@@ -2,7 +2,7 @@
  * updateClaimStatus — PATCH /dental/patients/:patientId/claims/:claimId/status
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import { CLAIM_DRAFT_FSM, type ClaimDraftStatus } from '../repos/claim-draft.schema';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
@@ -29,7 +29,7 @@ export async function updateClaimStatus(ctx: any): Promise<Response> {
   }
 
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
   const repo = new ClaimDraftRepository(db, logger);

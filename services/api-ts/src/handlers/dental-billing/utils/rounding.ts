@@ -30,12 +30,21 @@ export function centsToDisplay(cents: number): string {
 
 /**
  * Apply a percentage discount to a subtotal in cents.
+ *
+ * V-BIL-001: the rate is clamped to 0–100 here as a final defense so the
+ * resulting discount can never be negative nor exceed the subtotal — i.e. the
+ * after-discount total can never go negative regardless of caller input.
+ *
  * @param subtotalCents - amount before discount, in cents
  * @param percentageRate - discount percentage 0-100 (e.g., 20 for 20%)
- * @returns discount amount in cents
+ * @returns discount amount in cents (0 ≤ result ≤ subtotalCents)
  */
 export function applyDiscountRate(subtotalCents: number, percentageRate: number): number {
-  return Math.round(bankersRound(subtotalCents * percentageRate / 100, 0));
+  const safeRate = Number.isFinite(percentageRate)
+    ? Math.min(100, Math.max(0, percentageRate))
+    : 0;
+  const discount = Math.round(bankersRound(subtotalCents * safeRate / 100, 0));
+  return Math.min(Math.max(0, discount), Math.max(0, subtotalCents));
 }
 
 /**

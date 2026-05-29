@@ -394,6 +394,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.delete('/dental/appointments/:appointmentId',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.CancelAppointmentParams, validationErrorHandler),
+    zValidator('query', validators.CancelAppointmentQuery, validationErrorHandler),
     registry.cancelAppointment as unknown as Handler
   );
 
@@ -441,7 +442,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   );
 
   // issueDentalInvoice
-  app.post('/dental/billing/invoices/:invoiceId/issue',
+  app.patch('/dental/billing/invoices/:invoiceId/issue',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.IssueDentalInvoiceParams, validationErrorHandler),
     registry.issueDentalInvoice as unknown as Handler
@@ -490,6 +491,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetDentalPaymentPlanParams, validationErrorHandler),
     registry.getDentalPaymentPlan as unknown as Handler
+  );
+
+  // markUncollectible
+  app.post('/dental/billing/invoices/:invoiceId/uncollectible',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.MarkUncollectibleParams, validationErrorHandler),
+    registry.markUncollectible as unknown as Handler
   );
 
   // voidDentalInvoice

@@ -294,6 +294,113 @@ describe('upsertToothReading', () => {
     const body = await res.json() as any;
     expect(body.code).toBe('VISIT_IMMUTABLE');
   });
+
+  // V-PER-004: mobility / furcation must be grade 0-3.
+  test('returns 422 INVALID_GRADE when mobility is out of 0-3 range', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/13`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobility: 5 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_GRADE');
+  });
+
+  test('returns 422 INVALID_GRADE when furcation is negative', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/13`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ furcation: -1 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_GRADE');
+  });
+
+  test('accepts mobility/furcation at the boundary grade 3', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/14`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobility: 3, furcation: 3 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.mobility).toBe(3);
+    expect(body.furcation).toBe(3);
+  });
+});
+
+// V-PER-002: writing to a COMPLETED chart (whose visit is still active) → CHART_COMPLETED.
+describe('upsertToothReading on a completed chart (V-PER-002)', () => {
+  const ACTIVE_VISIT_2 = 'ee000000-0000-1000-8000-000000000052';
+  const COMPLETED_CHART_2 = 'ee000000-0000-1000-8000-000000000072';
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values({
+      id: ACTIVE_VISIT_2, patientId: PATIENT_ID, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+
+    await db.insert(dentalPerioCharts).values({
+      id: COMPLETED_CHART_2, visitId: ACTIVE_VISIT_2, patientId: PATIENT_ID,
+      branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'completed',
+      completedAt: new Date(),
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+  });
+
+  test('returns 422 CHART_COMPLETED writing to a completed (not visit-locked) chart', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${COMPLETED_CHART_2}/readings/11`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CHART_COMPLETED');
+  });
+});
+
+// V-PER-007: visit-lock → chart-lock cascade is materialized on read.
+describe('visit-lock cascade (V-PER-007)', () => {
+  const CASCADE_LOCKED_VISIT = 'ee000000-0000-1000-8000-000000000062';
+  const CASCADE_DRAFT_CHART = 'ee000000-0000-1000-8000-000000000073';
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values({
+      id: CASCADE_LOCKED_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID, status: 'locked',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+
+    await db.insert(dentalPerioCharts).values({
+      id: CASCADE_DRAFT_CHART, visitId: CASCADE_LOCKED_VISIT, patientId: PATIENT_ID,
+      branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+  });
+
+  test('reading a draft chart whose parent visit is locked transitions chart to locked', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${CASCADE_DRAFT_CHART}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('locked');
+
+    // Persisted + idempotent: a second read still returns locked.
+    const res2 = await app.request(`/dental/perio-charts/${CASCADE_DRAFT_CHART}`);
+    const body2 = await res2.json() as any;
+    expect(body2.status).toBe('locked');
+  });
 });
 
 describe('completePerioChart', () => {
@@ -304,7 +411,7 @@ describe('completePerioChart', () => {
     const res = await app.request(`/dental/perio-charts/${chartId}/complete`, { method: 'POST' });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('PERIO_INSUFFICIENT_READINGS');
+    expect(body.code).toBe('INSUFFICIENT_READINGS');
   });
 
   test('returns 200 with summary stats after 16+ readings', async () => {
@@ -332,13 +439,14 @@ describe('completePerioChart', () => {
     expect(typeof body.summaryDeepPocketCount).toBe('number');
   });
 
-  test('returns 422 attempting to complete an already-completed chart', async () => {
+  // V-PER-001: re-completing a completed/locked chart is a 409 state conflict, code CHART_COMPLETED.
+  test('returns 409 CHART_COMPLETED attempting to complete an already-completed chart', async () => {
     const chartId = await getChartId();
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/perio-charts/${chartId}/complete`, { method: 'POST' });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
     const body = await res.json() as any;
-    expect(body.code).toBe('PERIO_CHART_ALREADY_COMPLETE');
+    expect(body.code).toBe('CHART_COMPLETED');
   });
 
   // BR-P02 / AC-P08: cannot complete a draft chart whose parent visit is locked/completed

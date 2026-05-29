@@ -12,6 +12,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
+import { cascadeChartLockFromVisit } from './utils/perio-lock-cascade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { GetVisitPerioChartParams } from '@/generated/openapi/validators';
@@ -35,11 +36,15 @@ export async function getVisitPerioChart(
   ]);
 
   const chartRepo = new PerioChartRepository(db);
-  const chart = await chartRepo.findByVisitId(visitId);
+  let chart = await chartRepo.findByVisitId(visitId);
 
   if (!chart) {
     return new Response(null, { status: 204 });
   }
+
+  // V-PER-007: reconcile chart lock against authoritative visit state. If the
+  // parent visit is sealed, the chart transitions to `locked` (audit-logged).
+  chart = await cascadeChartLockFromVisit(db, ctx.get('logger'), chart, visit.status, user.id);
 
   const readingRepo = new PerioReadingRepository(db);
   const readings = await readingRepo.findMany({ chartId: chart.id });

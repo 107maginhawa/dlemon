@@ -6,6 +6,7 @@ export interface AuditLogFilters {
   actorId?: string;
   tenantId?: string;
   branchId?: string;
+  eventType?: string;
   targetType?: string;
   targetId?: string;
   action?: string;
@@ -36,6 +37,7 @@ export class AuditLogRepository {
     if (filters.actorId)    conditions.push(eq(dentalAuditLog.actorId, filters.actorId));
     if (filters.tenantId)   conditions.push(eq(dentalAuditLog.tenantId, filters.tenantId));
     if (filters.branchId)   conditions.push(eq(dentalAuditLog.branchId, filters.branchId));
+    if (filters.eventType)  conditions.push(eq(dentalAuditLog.eventType, filters.eventType));
     if (filters.targetType) conditions.push(eq(dentalAuditLog.targetType, filters.targetType));
     if (filters.targetId)   conditions.push(eq(dentalAuditLog.targetId, filters.targetId));
     if (filters.action)     conditions.push(eq(dentalAuditLog.action, filters.action));

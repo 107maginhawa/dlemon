@@ -7,7 +7,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ConflictError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from '../repos/visit.repo';
 import { VisitNotesRepository } from '../repos/treatment.repo';
@@ -24,9 +24,20 @@ export async function createDentalVisit(
   const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
+  // V-VIS-002: ROLE_PERMISSION_MATRIX restricts visit creation to owner + associate.
+  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
 
   const repo = new VisitRepository(db);
+
+  // V-VIS-003 / BR-001: app-level guard — return 409 (not a raw 500 from the
+  // partial unique index) when an active visit already exists for this patient.
+  const existingActive = await repo.findActiveByPatient(body.patientId);
+  if (existingActive) {
+    throw new ConflictError(
+      'Active visit already exists for this patient. Complete or discard it first.',
+      'ACTIVE_VISIT_EXISTS',
+    );
+  }
 
   const visit = await repo.createOne({
     patientId: body.patientId,

@@ -113,6 +113,24 @@ Patient records, clinical data, billing invoices, appointment scheduling (those 
 | Read own membership | all roles | — | — |
 | Create organization | admin (platform) | — | — |
 
+### Member Role Catalog (G8-S3)
+
+The `member_role` enum (`membership.schema.ts`) defines **9** context roles scoped to a branch. Only `dentist_owner` holds admin authority; all others are scoped staff. The four marked ✦ are also enumerated in `ROLE_PERMISSION_MATRIX.md`; the five below them (previously undocumented) are catalogued here as the source of truth.
+
+| Role | Clinical? | Summary | Typical capabilities |
+|------|-----------|---------|----------------------|
+| `dentist_owner` ✦ | Yes | Practice owner / admin | Full access: staff, roles, fees, hours, audit, exports, clinical |
+| `dentist_associate` ✦ | Yes | Treating dentist (non-owner) | Clinical read/write; no org admin |
+| `staff_full` ✦ | No | Full front-office staff | Scheduling, patient/billing ops; no org admin |
+| `staff_scheduling` ✦ | No | Scheduler | Appointments/calendar only |
+| `hygienist` | Yes | Dental hygienist | Clinical read/write for hygiene workflows (perio, prophy notes); no org admin, no fee config |
+| `dental_assistant` | Yes (assist) | Chairside assistant | Clinical assist — chart updates under a dentist, imaging capture; no role/fee admin |
+| `front_desk` | No | Reception | Check-in, scheduling, patient demographics; no clinical write, no billing edits |
+| `billing_staff` | No | Billing / claims | Invoices, payments, fee-schedule **read**; no clinical, no role admin |
+| `read_only` | No | Auditor / observer | Read access to permitted records; no writes anywhere |
+
+> All non-`dentist_owner` roles fail `assertBranchRole(['dentist_owner'])` guards (staff/role/fee/audit-config writes). Clinical write authority for `hygienist`/`dental_assistant` is gated per clinical-module rules, not org-admin rules.
+
 ---
 
 ## 7. Data Requirements
@@ -212,9 +230,25 @@ invited ──► active ──► inactive
 | GET /dental/dashboard | Practice summary | branch_id | summary stats | 403 |
 | GET /dental/audit-events | Audit log | branch_id, filters | events[] | 403 |
 
+### PIN-based local auth (G8-S1)
+
+Local "device PIN" auth for fast member switching at a shared operatory workstation. PINs are digit-only (validator: `^\d{4,8}$` for set/verify, `^\d{6}$` for reset) and stored bcrypt-hashed; hash fields are never returned in responses (G7-S2). Lockout per BR-016b.
+
+| API Need | Purpose | Inputs | Outputs | Errors |
+|----------|---------|--------|---------|--------|
+| POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin | Set/replace a member's PIN (caller must be `dentist_owner`) | pin (4–8 digits) | membership (no hash fields) | 403, 422 |
+| POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin | Verify a PIN to unlock a session | pin (4–8 digits) | { verified, sessionToken? } | 401, 404, 422, 429 (lockout) |
+| POST /dental/org/members/:memberId/security-question | Set the member's PIN-recovery security question + answer | securityQuestion, answer | ok | 403, 422 |
+| POST /dental/org/members/:memberId/reset-pin | Owner resets a member's PIN | newPin (exactly 6 digits) | membership (no hash fields) | 403, 422 |
+| POST /dental/org/members/:memberId/recover-pin | Self-service PIN recovery via security answer | answer, newPin | ok | 401, 422, 429 |
+
+> **Known contract gaps (EM-AUD-013, tracked):** the audit viewer query params use camelCase (`branchId`, `actorId`) and `limit`/`offset` pagination, vs the spec's snake_case + `page`. PIN endpoints are absent from `sdk-ts` because no frontend consumes them yet (PIN UI is local-only). Folded into a future normalization pass, not G8.
+
 ---
 
 ## 10b. Domain Events
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
 
 ### Published
 | Event | Trigger | Consumers |

@@ -24,6 +24,7 @@ namespace DentalImagingModule {
     bitewing,
     panoramic,
     cephalometric,
+    cbct, // V-IMG-010: cone-beam CT (WF-019 / §7)
     intraoral_photo,
     extraoral_photo,
     other,
@@ -217,10 +218,11 @@ namespace DentalImagingModule {
     implant_needed,
   }
 
+  // V-IMG-007: SM-01 finding lifecycle is draft → confirmed → resolved (spec §8 / §11).
+  // Legacy `suspected`/`monitoring` states are no longer part of the API surface.
   enum ImagingFindingStatus {
-    suspected,
+    draft,
     confirmed,
-    monitoring,
     resolved,
   }
 

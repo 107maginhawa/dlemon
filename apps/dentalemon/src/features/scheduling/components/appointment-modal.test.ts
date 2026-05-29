@@ -9,6 +9,7 @@ import { describe, test, expect } from 'bun:test';
 import {
   validateAppointmentForm,
   buildAppointmentPayload,
+  extractDoubleBookingWarning,
   DURATION_OPTIONS,
 } from './appointment-modal';
 
@@ -25,12 +26,15 @@ describe('AppointmentModal — form validation', () => {
     walkIn: false,
   };
 
-  test('valid form builds correct payload', () => {
+  test('valid form builds correct canonical-wire payload', () => {
     const payload = buildAppointmentPayload(valid);
     expect(payload.patientId).toBe('p-1');
-    expect(payload.scheduledAt).toBe('2026-06-01T09:00:00');
-    expect(payload.durationMinutes).toBe(30);
-    expect(payload.serviceType).toBe('Cleaning');
+    // V-SCH-006/007: canonical wire shape.
+    expect(payload.providerId).toBe('m-1');
+    expect(payload.startAt).toBe('2026-06-01T09:00:00');
+    // endAt = startAt + 30 min.
+    expect(new Date(payload.endAt).getTime() - new Date(payload.startAt).getTime()).toBe(30 * 60 * 1000);
+    expect(payload.visitType).toBe('Cleaning');
     expect(payload.walkIn).toBe(false);
   });
 
@@ -49,9 +53,21 @@ describe('AppointmentModal — form validation', () => {
     expect(errors).toContain('Scheduled date and time are required');
   });
 
-  test('durationMinutes defaults to 30 if not provided', () => {
+  test('duration defaults to 30 min when not provided (endAt = startAt + 30m)', () => {
     const payload = buildAppointmentPayload({ ...valid, durationMinutes: 0 });
-    expect(payload.durationMinutes).toBe(30);
+    expect(new Date(payload.endAt).getTime() - new Date(payload.startAt).getTime()).toBe(30 * 60 * 1000);
+  });
+});
+
+describe('V-SCH-005 — extractDoubleBookingWarning', () => {
+  test('returns true when warnings include DOUBLE_BOOKING', () => {
+    expect(extractDoubleBookingWarning({ warnings: ['DOUBLE_BOOKING'] })).toBe(true);
+  });
+
+  test('returns false when warnings absent or empty', () => {
+    expect(extractDoubleBookingWarning({ warnings: [] })).toBe(false);
+    expect(extractDoubleBookingWarning({})).toBe(false);
+    expect(extractDoubleBookingWarning(null)).toBe(false);
   });
 });
 

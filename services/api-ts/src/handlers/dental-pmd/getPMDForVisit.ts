@@ -10,6 +10,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
 import type { User } from '@/types/auth';
 
 export async function getPMDForVisit(ctx: HandlerContext) {
@@ -19,14 +20,21 @@ export async function getPMDForVisit(ctx: HandlerContext) {
   const visitId = ctx.req.param('visitId')!;
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchAccess(db, user.id, visit.branchId);
 
   const repo = new PMDDocumentRepository(db);
 
   const pmd = await repo.findByVisit(visitId);
   if (!pmd) throw new NotFoundError('PMD document');
+
+  // V-PMD-008 (§6 "Download: patient own PMDs"): a patient may read their own PMD.
+  // If the requester is the patient's linked person, skip the staff branch check;
+  // otherwise require branch membership.
+  const patient = await getPatientForPMD(db, pmd.patientId);
+  const isPatientSelf = patient?.person === user.id;
+  if (!isPatientSelf) {
+    await assertBranchAccess(db, user.id, visit.branchId);
+  }
 
   return ctx.json(pmd);
 }

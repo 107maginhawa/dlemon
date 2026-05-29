@@ -205,11 +205,11 @@ describe('RBAC — POST appointment: read_only blocked [EM-SCH-001]', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: PATIENT_ID,
-          dentistMemberId: MEMBER_OWNER,
+          providerId: MEMBER_OWNER,
           branchId: BRANCH_ID,
-          scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
-          durationMinutes: 30,
-          serviceType: 'checkup',
+          startAt: new Date(Date.now() + 86_400_000).toISOString(),
+          endAt: new Date(Date.now() + 86_400_000 + 30 * 60 * 1000).toISOString(),
+          visitType: 'checkup',
           walkIn: false,
         }),
       },
@@ -229,11 +229,11 @@ describe('RBAC — POST appointment: read_only blocked [EM-SCH-001]', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: PATIENT_ID,
-          dentistMemberId: MEMBER_OWNER,
+          providerId: MEMBER_OWNER,
           branchId: BRANCH_ID,
-          scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
-          durationMinutes: 30,
-          serviceType: 'checkup',
+          startAt: new Date(Date.now() + 86_400_000).toISOString(),
+          endAt: new Date(Date.now() + 86_400_000 + 30 * 60 * 1000).toISOString(),
+          visitType: 'checkup',
           walkIn: false,
         }),
       },
@@ -252,11 +252,9 @@ describe('RBAC — DELETE appointment: read_only blocked [EM-SCH-001]', () => {
     const appt = await seedScheduledAppointment();
     const app = makeApp(USER_READONLY);
     const res = await app.request(
-      `/dental/appointments/${appt.id}`,
+      `/dental/appointments/${appt.id}?reason=${encodeURIComponent('test cancel')}`,
       {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cancellationReason: 'test cancel' }),
       },
     );
     expect(res.status).toBe(403);
@@ -314,11 +312,11 @@ describe('RBAC — POST appointment: user with no branch membership blocked [EM-
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: PATIENT_ID,
-          dentistMemberId: MEMBER_OWNER,
+          providerId: MEMBER_OWNER,
           branchId: BRANCH_ID,
-          scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
-          durationMinutes: 30,
-          serviceType: 'checkup',
+          startAt: new Date(Date.now() + 86_400_000).toISOString(),
+          endAt: new Date(Date.now() + 86_400_000 + 30 * 60 * 1000).toISOString(),
+          visitType: 'checkup',
           walkIn: false,
         }),
       },

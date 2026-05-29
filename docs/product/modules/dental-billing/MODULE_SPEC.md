@@ -76,7 +76,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ### WF-052 — Issue Invoice (Draft → Issued)
 1. Triggered by "Issue Invoice" button (WF-013 step 5) or standalone from invoice detail.
-2. Roles: `dentist_owner`, `dentist_associate`, `staff_full`.
+2. Roles: `dentist_owner`, `dentist_associate` (own patients). staff_full NOT permitted (V-BIL-003).
 3. Server validates BR-009 (billable treatments present) before transition.
 4. Email sent to patient with invoice PDF link via `email` module.
 5. Invoice becomes visible in patient billing history.
@@ -92,17 +92,23 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | BR-011 | Active payment plan blocks void | 409 ACTIVE_PAYMENT_PLAN |
 | BR-012 | Invoice state machine (see §8) | 422 on invalid transition |
 | BR-013 | markUncollectible not implemented | 501 NOT_IMPLEMENTED |
+| BR-014 | Signed consent form required before invoicing (V-BIL-007 — previously mislabeled BR-011 in code) | 422 CONSENT_REQUIRED |
+| BR-015 | Discount rate must be 0–100; installment count 2–24; payment amount ≥ 1 cent (V-BIL-001/002/010) | 422 INVALID_DISCOUNT_RATE / INVALID_INSTALLMENT_COUNT / VALIDATION_ERROR |
 
 ---
 
 ## 6. Permissions
 
+> V-BIL-003: this table is reconciled with `ROLE_PERMISSION_MATRIX.md` (authoritative). `staff_full` may **record payments only** — it may NOT create invoices, issue invoices, or create payment plans. dentist_associate is scoped to its own patients.
+
 | Action | Allowed | Notes |
 |--------|---------|-------|
-| Create invoice | dentist_owner, dentist_associate, staff_full | — |
-| Record payment | staff_full, dentist_owner | — |
+| Create invoice | dentist_owner, dentist_associate (own patients) | staff_full NOT permitted (V-BIL-003) |
+| Issue invoice | dentist_owner, dentist_associate (own patients) | staff_full NOT permitted (V-BIL-003) |
+| Record payment | dentist_owner, dentist_associate, staff_full | — |
 | Void invoice | dentist_owner | owner-only |
-| Create payment plan | staff_full, dentist_owner | — |
+| Create payment plan | dentist_owner, dentist_associate (own patients) | staff_full NOT permitted (V-BIL-003) |
+| Mark uncollectible | dentist_owner | 501 NOT_IMPLEMENTED (BR-013 deferred) |
 | View invoices | all dental roles | — |
 
 ---
@@ -146,6 +152,10 @@ POST /dental/invoices (BR-009), GET /dental/invoices, GET /dental/invoices/:id, 
 **Published:** DE-007 InvoiceCreated, DE-008 InvoicePaid, DE-009 InvoiceVoided
 **Consumed:** DE-005 TreatmentPerformed (triggers eligible-for-invoice flag on visit)
 
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
+
+> V-BIL-011: DE-008 InvoicePaid fires **only** on the transition to fully `paid` (not on partial payments), realized as a synchronous `invoice.paid` audit-log row in `recordDentalPayment`.
+
 ---
 
 ## 11. Acceptance Criteria
@@ -186,6 +196,11 @@ Integration: treatment performed → invoice creation → payment recording → 
 | Active payment plan blocks void | 409 | ACTIVE_PAYMENT_PLAN |
 | Invalid status transition | 422 | INVALID_STATUS_TRANSITION |
 | Void already-voided | 422 | ALREADY_VOIDED |
+| Payment on paid/voided invoice | 422 | INVOICE_IMMUTABLE (V-BIL-005) |
+| Payment exceeds remaining balance | 422 | PAYMENT_EXCEEDS_BALANCE (V-BIL-004) |
+| Signed consent missing before invoicing | 422 | CONSENT_REQUIRED (BR-014, V-BIL-007) |
+| Discount rate outside 0–100 | 422 | INVALID_DISCOUNT_RATE (V-BIL-001) |
+| Installment count outside 2–24 | 422 | INVALID_INSTALLMENT_COUNT (V-BIL-002) |
 | Mark uncollectible | 501 | NOT_IMPLEMENTED |
 
 ---

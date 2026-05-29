@@ -13,6 +13,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
@@ -45,13 +46,28 @@ export async function listCephLandmarks(ctx: BaseContext): Promise<Response> {
       { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_landmarks_list', currentTier: imagingTier },
       'Tier gate blocked access',
     );
-    throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
+    throw new ForbiddenError(
+      'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
+      'IMAGING_TIER_REQUIRED',
+    );
   }
 
   const allLandmarks = await cephRepo.listByImage(imageId);
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));
   const result = computeCephAnalysis(landmarkMap, image.pixelSpacingMm ?? null);
   const analysisRow = await cephRepo.findAnalysis(imageId);
+
+  // V-IMG-006: ceph landmark coordinates are radiograph PHI — audit the read.
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: study.branchId,
+    branchId: study.branchId,
+    action: 'imaging_ceph_landmark.read',
+    eventType: 'data-access',
+    resourceType: 'imaging_ceph_landmark',
+    resourceId: imageId,
+    metadata: { patientId: study.patientId, imageId, count: allLandmarks.length },
+  });
 
   return ctx.json(
     {

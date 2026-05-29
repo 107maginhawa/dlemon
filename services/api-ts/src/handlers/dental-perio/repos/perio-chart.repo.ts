@@ -2,7 +2,7 @@
  * PerioChartRepository — data access for periodontal charts.
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalPerioCharts, type DentalPerioChart, type NewDentalPerioChart } from './perio-chart.schema';
@@ -52,6 +52,21 @@ export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, N
         updatedAt: new Date(),
       })
       .where(eq(dentalPerioCharts.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
+   * V-PER-007: visit-lock → chart-lock cascade. Transition a not-yet-locked
+   * chart for `visitId` into the terminal `locked` state. Idempotent — returns
+   * null when there is no chart or it is already locked (so callers know whether
+   * a state change actually happened and an audit marker should be written).
+   */
+  async lockByVisitId(visitId: string): Promise<DentalPerioChart | null> {
+    const [updated] = await this.db
+      .update(dentalPerioCharts)
+      .set({ status: 'locked', updatedAt: new Date() })
+      .where(and(eq(dentalPerioCharts.visitId, visitId), ne(dentalPerioCharts.status, 'locked')))
       .returning();
     return updated ?? null;
   }

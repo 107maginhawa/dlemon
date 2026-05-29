@@ -33,7 +33,6 @@ import {
   UpdateDentalPatientBody, UpdateDentalPatientParams,
   ArchiveDentalPatientParams,
   RestoreDentalPatientParams,
-  BulkArchiveDentalPatientsBody,
   ExportDentalPatientsQuery,
   AddFollowUpNoteBody, AddFollowUpNoteParams,
   GetDentalPatientSafetyFloorParams,
@@ -110,7 +109,10 @@ function buildTestApp(user?: typeof authedUser) {
 
   // Routes — export + bulk-archive must be before /:id
   app.get('/dental/patients/export', zValidator('query', ExportDentalPatientsQuery, ve), exportDentalPatients as any);
-  app.post('/dental/patients/bulk-archive', zValidator('json', BulkArchiveDentalPatientsBody, ve), bulkArchiveDentalPatients as any);
+  // V-PAT-012: bulk-archive body is { ids, reason } now; the handler self-validates.
+  // The generated zValidator is intentionally omitted here until central regen
+  // updates BulkArchiveDentalPatientsBody to the new shape.
+  app.post('/dental/patients/bulk-archive', bulkArchiveDentalPatients as any);
   app.post('/dental/patients', zValidator('json', CreateDentalPatientBody, ve), createDentalPatient as any);
   app.get('/dental/patients', zValidator('query', ListDentalPatientsQuery, ve), listDentalPatients as any);
   app.get('/dental/patients/:id', zValidator('param', GetDentalPatientParams, ve), getDentalPatient as any);
@@ -338,6 +340,21 @@ describe('FR2.7: archive and restore patient (EC1 guard)', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('ARCHIVE_BLOCKED');
+  });
+
+  // V-PAT-009: archiving an already-archived patient is a state conflict (409),
+  // not a business-rule rejection (422).
+  test('archiving an already-archived patient returns 409 PATIENT_ALREADY_ARCHIVED', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Already Archived Patient');
+
+    const first = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(first.status).toBe(200);
+
+    const second = await app.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+    expect(second.status).toBe(409);
+    const body = await second.json() as any;
+    expect(body.code).toBe('PATIENT_ALREADY_ARCHIVED');
   });
 
   test('restore brings patient back to active status', async () => {
@@ -583,7 +600,7 @@ describe('FR2.12: follow-up notes CRUD', () => {
     const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/follow-up-notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Test' }),
+      body: JSON.stringify({ text: 'Test note for nonexistent patient' }),
     });
     expect(res.status).toBe(404);
   });
@@ -604,7 +621,7 @@ describe('FR2.13: bulk archive with EC1 guard', () => {
     const res = await app.request('/dental/patients/bulk-archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientIds: [p1.id, p2.id] }),
+      body: JSON.stringify({ ids: [p1.id, p2.id], reason: 'Inactive for over 2 years' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -624,7 +641,7 @@ describe('FR2.13: bulk archive with EC1 guard', () => {
     const res = await app.request('/dental/patients/bulk-archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientIds: [p1.id, p2.id] }),
+      body: JSON.stringify({ ids: [p1.id, p2.id], reason: 'Inactive for over 2 years' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -635,12 +652,47 @@ describe('FR2.13: bulk archive with EC1 guard', () => {
     expect(p2Result?.reason).toMatch(/payment plan/i);
   });
 
-  test('returns 400 when patientIds is empty', async () => {
+  test('returns 400 when ids is empty', async () => {
     const app = buildTestApp(authedUser);
     const res = await app.request('/dental/patients/bulk-archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientIds: [] }),
+      body: JSON.stringify({ ids: [], reason: 'Cleanup batch' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  // V-PAT-012: reason is now required (5–500 chars).
+  test('returns 400 when reason is missing', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Bulk No Reason');
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [p.id] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 when reason is too short', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Bulk Short Reason');
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [p.id], reason: 'no' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  // V-PAT-012: ids capped at 50.
+  test('returns 400 when more than 50 ids provided', async () => {
+    const app = buildTestApp(authedUser);
+    const ids = Array.from({ length: 51 }, () => crypto.randomUUID());
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, reason: 'Bulk cleanup of over fifty records' }),
     });
     expect(res.status).toBe(400);
   });
@@ -650,7 +702,7 @@ describe('FR2.13: bulk archive with EC1 guard', () => {
     const res = await app.request('/dental/patients/bulk-archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientIds: [NONEXISTENT_ID] }),
+      body: JSON.stringify({ ids: [NONEXISTENT_ID], reason: 'Cleanup batch' }),
     });
     expect(res.status).toBe(401);
   });
@@ -956,7 +1008,7 @@ describe('EM-PAT-001/002/003: export, bulk-archive, restore require dentist_owne
     const res = await app.request('/dental/patients/bulk-archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientIds: [p.id] }),
+      body: JSON.stringify({ ids: [p.id], reason: 'Guard test cleanup' }),
     });
     expect(res.status).toBe(403);
   });
@@ -1072,20 +1124,69 @@ describe('EM-PAT-004/EF-PAT-003: listDentalPatients is strictly scoped to branch
     expect(names.some((n: string) => n.includes('Branch B Patient'))).toBe(false);
     expect(names.some((n: string) => n.includes('Branch A Patient'))).toBe(true);
   });
+
+  // V-PAT-010 / AC-PAT-004: two branches with patients of the SAME NAME — a
+  // search from branch A must return only branch A's patient.
+  test('AC-PAT-004: same-name patients in two branches are isolated by branchId', async () => {
+    const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+
+    const BRANCH_B_ID = 'd2000000-0000-1000-8000-000000000003';
+    await db.insert(dentalBranches).values({
+      id: BRANCH_B_ID,
+      organizationId: ORG_ID,
+      name: 'Branch B (isolation)',
+      timezone: 'Asia/Manila',
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+    await db.insert(dentalMemberships).values({
+      id: 'eedd0000-0000-1000-8000-000000000003',
+      branchId: BRANCH_B_ID,
+      personId: STAFF_USER_ID,
+      displayName: 'Owner B',
+      role: 'dentist_owner',
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+
+    const app = buildTestApp(authedUser);
+    const SAME_NAME = 'Juan Reyes';
+
+    // Same-name patient in each branch.
+    const aPatient = await createPatient(app, SAME_NAME, { branchId: BRANCH_ID });
+    await createPatient(app, SAME_NAME, { branchId: BRANCH_B_ID });
+
+    // Search from branch A by the shared name.
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=Juan`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].id).toBe(aPatient.id);
+    expect(body.data.every((p: any) => p.preferredBranchId === BRANCH_ID)).toBe(true);
+
+    // And from branch B returns only branch B's record.
+    const resB = await app.request(`/dental/patients?branchId=${BRANCH_B_ID}&q=Juan`);
+    const bodyB = await resB.json() as any;
+    expect(bodyB.data.length).toBe(1);
+    expect(bodyB.data[0].id).not.toBe(aPatient.id);
+  });
 });
 
 // =============================================================================
 // EF-PAT-001: archived patient write-block
 // =============================================================================
 
-describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_ARCHIVED', () => {
+describe('EF-PAT-001 / V-PAT-001: write operations on archived patient return 403 PATIENT_ARCHIVED', () => {
   afterEach(truncate);
 
   async function archivePatientDirectly(patientId: string) {
     await db.update(patients).set({ status: 'archived', archivedAt: new Date() }).where(eq(patients.id, patientId));
   }
 
-  test('updateDentalPatient on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+  test('updateDentalPatient on archived patient returns 403 PATIENT_ARCHIVED', async () => {
     const app = buildTestApp(authedUser);
     const p = await createPatient(app, 'Archive Write Patient');
     await archivePatientDirectly(p.id);
@@ -1095,12 +1196,12 @@ describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_AR
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recallNote: 'blocked' }),
     });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(403);
     const body = await res.json() as any;
     expect(body.code).toBe('PATIENT_ARCHIVED');
   });
 
-  test('addFollowUpNote on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+  test('addFollowUpNote on archived patient returns 403 PATIENT_ARCHIVED', async () => {
     const app = buildTestApp(authedUser);
     const p = await createPatient(app, 'Archive Note Patient');
     await archivePatientDirectly(p.id);
@@ -1110,12 +1211,12 @@ describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_AR
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: 'should be blocked' }),
     });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(403);
     const body = await res.json() as any;
     expect(body.code).toBe('PATIENT_ARCHIVED');
   });
 
-  test('createRecall on archived patient returns 422 PATIENT_ARCHIVED', async () => {
+  test('createRecall on archived patient returns 403 PATIENT_ARCHIVED', async () => {
     // Test createRecall via direct handler invocation (bypasses Hono routing complexity)
     const { createRecall: cr } = await import('./recalls/createRecall');
     const { AppError: AE } = await import('@/core/errors');
@@ -1151,7 +1252,7 @@ describe('EF-PAT-001: write operations on archived patient return 422 PATIENT_AR
 
     expect(caughtError).not.toBeNull();
     expect(caughtError instanceof AE).toBe(true);
-    expect(caughtError.statusCode).toBe(422);
+    expect(caughtError.statusCode).toBe(403);
     expect(caughtError.code).toBe('PATIENT_ARCHIVED');
   });
 });

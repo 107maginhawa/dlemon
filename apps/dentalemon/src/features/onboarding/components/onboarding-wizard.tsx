@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '@monobase/ui';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { ClinicStep } from './wizard-step-clinic';
@@ -230,14 +231,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
         <div className="flex items-center gap-3 mt-8">
           {stepIndex > 0 && (
-            <button type="button" onClick={handleBack} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Back</button>
+            <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Back</Button>
           )}
           {step === 'patient' && (
-            <button type="button" onClick={handleSkipPatient} disabled={saving} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50">Skip for now</button>
+            <Button type="button" variant="ghost" onClick={handleSkipPatient} disabled={saving} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50">Skip for now</Button>
           )}
-          <button type="button" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
             {saving ? 'Setting up...' : isLast ? 'Get Started' : 'Next'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

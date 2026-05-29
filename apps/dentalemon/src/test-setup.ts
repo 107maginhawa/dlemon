@@ -139,6 +139,9 @@ mock.module('@tanstack/react-router', () => ({
   useRouter: () => ({ navigate: () => {} }),
   createFileRoute: () => () => ({}),
   Outlet: () => null,
+  // Used by route guards (src/lib/guards.ts). Mirror the real signature so
+  // importing a guarded route module doesn't throw a missing-export error.
+  redirect: (opts?: unknown) => opts,
 }))
 
 // ─── Swiper (timeline-carousel) ───────────────────────────────────────────

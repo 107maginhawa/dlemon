@@ -274,7 +274,8 @@ namespace DentalOrgModule {
 
   @doc("Verify a staff member's PIN")
   model VerifyPinRequest {
-    @doc("6-digit PIN entered by the staff member")
+    @doc("Digit-only PIN entered by the staff member (4-8 digits)")
+    @pattern("^\\d{4,8}$")
     @minLength(4)
     @maxLength(8)
     pin: string;
@@ -294,7 +295,8 @@ namespace DentalOrgModule {
 
   @doc("Set or change a staff member's PIN")
   model SetPinRequest {
-    @doc("New 4-8 digit PIN")
+    @doc("New digit-only PIN (4-8 digits)")
+    @pattern("^\\d{4,8}$")
     @minLength(4)
     @maxLength(8)
     pin: string;
@@ -358,9 +360,10 @@ namespace DentalOrgModule {
 
   @doc("Reset a member's PIN")
   model ResetMemberPinRequest {
-    @doc("New 4-8 digit PIN")
-    @minLength(4)
-    @maxLength(8)
+    @doc("New PIN — exactly 6 digits")
+    @pattern("^\\d{6}$")
+    @minLength(6)
+    @maxLength(6)
     newPin: string;
   }
 

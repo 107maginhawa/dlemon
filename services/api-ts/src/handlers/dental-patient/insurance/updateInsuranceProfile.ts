@@ -2,7 +2,7 @@
  * updateInsuranceProfile — PATCH /dental/patients/:patientId/insurance-profiles/:profileId
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -28,7 +28,7 @@ export async function updateInsuranceProfile(ctx: any): Promise<Response> {
   }
 
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
   const repo = new InsuranceProfileRepository(db, logger);

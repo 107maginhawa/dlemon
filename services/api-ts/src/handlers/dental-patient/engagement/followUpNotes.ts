@@ -8,16 +8,19 @@
 import { z } from 'zod';
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { FollowUpNote } from '../../patient/repos/patient.schema';
-import { sql } from 'drizzle-orm';
 import { patients } from '../../patient/repos/patient.schema';
 import { eq } from 'drizzle-orm';
 
+// V-PAT-003: follow-up notes are restricted to clinical/full-staff roles.
+const FOLLOW_UP_ROLES = ['staff_full', 'dentist_associate', 'dentist_owner'] as const;
+
+// V-PAT-013: note text must be 5–2000 characters.
 const addFollowUpNoteSchema = z.object({
-  text: z.string().min(1, 'text is required'),
+  text: z.string().min(5, 'text must be at least 5 characters').max(2000, 'text must be at most 2000 characters'),
 });
 
 export async function listFollowUpNotes(ctx: BaseContext) {
@@ -33,10 +36,11 @@ export async function listFollowUpNotes(ctx: BaseContext) {
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
-  // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  // V-PAT-002/003: branch+role guard; a missing branch DENIES (never bypasses).
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
   }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, [...FOLLOW_UP_ROLES]);
 
   const notes: FollowUpNote[] = patient.followUpNotes ?? [];
 
@@ -61,13 +65,14 @@ export async function addFollowUpNote(ctx: BaseContext) {
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
-  // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+  // V-PAT-002/003: branch+role guard; a missing branch DENIES (never bypasses).
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
   }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, [...FOLLOW_UP_ROLES]);
 
   const newNote: FollowUpNote = {
     id: crypto.randomUUID(),

@@ -176,6 +176,7 @@ describe('createDentalPatient handler', () => {
       body: JSON.stringify({
         displayName: 'Maria Santos',
         consentGiven: false,
+        branchId: BRANCH_ID, // branchId is required; consent check fires after validation
       }),
     });
 
@@ -198,6 +199,7 @@ describe('createDentalPatient handler', () => {
       body: JSON.stringify({
         displayName: 'Maria Santos',
         consentGiven: true,
+        branchId: BRANCH_ID, // branchId is required; auth check fires after validation
       }),
     });
 

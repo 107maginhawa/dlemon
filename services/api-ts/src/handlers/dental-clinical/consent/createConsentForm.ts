@@ -26,11 +26,13 @@ export async function createConsentForm(
 
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
+  // V-CLN-006: ROLE_PERMISSION_MATRIX grants consent-form creation to dentist roles
+  // only — hygienist is NOT permitted. Tighten to dentist_owner / dentist_associate.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   // BR-003: writes to locked or completed visits are blocked
   if (visit.status === 'locked' || visit.status === 'completed') {
-    throw new BusinessLogicError('Cannot add consent forms to a locked or completed visit', 'VISIT_LOCKED');
+    throw new BusinessLogicError('Cannot add consent forms to a locked or completed visit', 'VISIT_IMMUTABLE');
   }
 
   const repo = new ConsentFormRepository(db);

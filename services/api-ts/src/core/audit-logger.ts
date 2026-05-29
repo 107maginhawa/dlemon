@@ -55,6 +55,60 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * V-AUD-001 (PHI guard): The audit log is append-only and never deleted, so any PHI
+ * written into `metadata` is unremediable (AC-AUD-004 / HIPAA breach). Strip obvious
+ * PII keys from metadata before it is persisted to EITHER audit table. Matching is
+ * case-insensitive and applied at the top level of the metadata object (the only place
+ * handlers currently stash free-form fields). Never throws — sanitization must never
+ * break the audit write or the originating request.
+ */
+const PHI_METADATA_KEYS = new Set([
+  'displayname',
+  'firstname',
+  'lastname',
+  'fullname',
+  'name',
+  'email',
+  'phone',
+  'ssn',
+  'dateofbirth',
+  'dob',
+]);
+
+function sanitizeAuditMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  logger: any,
+  event: AuditEvent,
+): Record<string, unknown> | null {
+  if (metadata == null || typeof metadata !== 'object') {
+    return (metadata as Record<string, unknown> | null) ?? null;
+  }
+  try {
+    const stripped: string[] = [];
+    const clean: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(metadata)) {
+      if (PHI_METADATA_KEYS.has(key.toLowerCase())) {
+        stripped.push(key);
+        continue;
+      }
+      clean[key] = value;
+    }
+    if (stripped.length > 0) {
+      logger?.warn(
+        { strippedKeys: stripped, action: event.action, resourceType: event.resourceType },
+        'dental.audit: stripped PHI keys from audit metadata before persisting (V-AUD-001)',
+      );
+    }
+    return clean;
+  } catch {
+    // Sanitization must never throw — fall back to no metadata rather than risk
+    // leaking PHI or breaking the audit write.
+    return null;
+  }
+}
+
 export async function logAuditEvent(
   db: DatabaseInstance,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +117,16 @@ export async function logAuditEvent(
 ): Promise<void> {
   // Pino log (existing behaviour)
   logger?.info({ audit: event }, `dental.audit: ${event.action}`);
+
+  // V-AUD-001: strip PHI keys from metadata once, before either persisted write.
+  const safeMetadata = sanitizeAuditMetadata(event.metadata, logger, event);
+
+  // V-AUD-007 (fail-closed): per ADR-005, security-class events must NOT be silently
+  // lost — a swallowed failure on a security audit (PIN set, role change, cross-tenant
+  // access) is a compliance hole. For these events we RETHROW on the authoritative
+  // dental_audit_log write so the failure surfaces to the caller. Non-security events
+  // keep the existing fire-and-forget behaviour.
+  const isSecurityEvent = event.eventType === 'security';
 
   // Write to dental_audit_log FIRST — this is the spec-compliant table the dental
   // audit VIEWER (getAuditEvents) reads, so it is the authoritative sink and must
@@ -82,13 +146,17 @@ export async function logAuditEvent(
         ipAddress: event.ipAddress,
         userAgent: event.userAgent,
         reason: event.reason,
-        metadata: event.metadata ?? null,
+        metadata: safeMetadata,
         beforeSnapshot: event.before ?? null,
         afterSnapshot: event.after ?? null,
       }),
     );
   } catch (err) {
     logger?.error({ err, event }, 'dental.audit: failed to write to dental_audit_log');
+    if (isSecurityEvent) {
+      // Fail-closed (ADR-005): surface security audit failures rather than swallow them.
+      throw err;
+    }
   }
 
   // Write to dental_audit (legacy table — kept for existing wiring tests).
@@ -102,7 +170,7 @@ export async function logAuditEvent(
         action: event.action,
         resourceType: event.resourceType,
         resourceId: event.resourceId,
-        metadata: event.metadata ?? null,
+        metadata: safeMetadata,
         before: event.before ?? null,
         after: event.after ?? null,
       }),

@@ -187,10 +187,12 @@ archived ──► active  (reactivation by dentist_owner)
 
 ## 10b. Domain Events
 
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
+
 ### Published
 | Event | Trigger | Consumers |
 |-------|---------|-----------|
-| DE-021 PatientRegistered | Patient created | dental-audit, notifs |
+| DE-021 PatientRegistered | Patient created (written as `patient.registered` audit row) | dental-audit, notifs (deferred) |
 
 ### Consumed
 | Event | Source | Side Effect |

@@ -9,6 +9,8 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
+import { cascadeChartLockFromVisit } from './utils/perio-lock-cascade';
+import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { GetPerioChartParams } from '@/generated/openapi/validators';
@@ -23,7 +25,7 @@ export async function getPerioChart(
   const db = ctx.get('database') as DatabaseInstance;
 
   const chartRepo = new PerioChartRepository(db);
-  const chart = await chartRepo.findOneById(chartId);
+  let chart = await chartRepo.findOneById(chartId);
   if (!chart) throw new NotFoundError('Perio chart');
 
   // BR-P06: any branch member with clinical access can read.
@@ -34,6 +36,12 @@ export async function getPerioChart(
     'hygienist',
     'staff_full',
   ]);
+
+  // V-PER-007: reconcile chart lock against authoritative parent-visit state.
+  const visit = await getVisitForPerio(db, chart.visitId);
+  if (visit) {
+    chart = await cascadeChartLockFromVisit(db, ctx.get('logger'), chart, visit.status, user.id);
+  }
 
   const readingRepo = new PerioReadingRepository(db);
   const readings = await readingRepo.findMany({ chartId });

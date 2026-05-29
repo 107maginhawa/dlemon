@@ -124,6 +124,21 @@ async function seedVisit() {
   return visit;
 }
 
+// V-CLN-011: amendments referencing an in-module record type (e.g. 'prescription')
+// must point at a record that resolves — seed a real prescription for those tests.
+async function seedPrescription(visitId: string) {
+  const { PrescriptionRepository } = await import('./repos/prescription.repo');
+  const repo = new PrescriptionRepository(db);
+  return repo.createOne({
+    visitId,
+    patientId: PATIENT_ID,
+    prescriberMemberId: MEMBER_ID,
+    drugName: 'Amoxicillin',
+    dosage: '500mg',
+    frequency: 'TID',
+  });
+}
+
 afterEach(async () => {
   // Clean visit-scoped records first (FK order), then infrastructure
   await db.execute(
@@ -455,6 +470,7 @@ describe('createAmendment handler', () => {
   test('returns 201 with created amendment on valid input', async () => {
     const app = buildTestApp(TEST_USER);
     const visit = await seedVisit();
+    const rx = await seedPrescription(visit.id);
 
     const res = await app.request(`/dental/visits/${visit.id}/amendments`, {
       method: 'POST',
@@ -462,7 +478,7 @@ describe('createAmendment handler', () => {
       body: JSON.stringify({
         patientId: PATIENT_ID,
         originalRecordType: 'prescription',
-        originalRecordId: NONEXISTENT_ID,
+        originalRecordId: rx.id,
         reason: 'Typo in instructions',
         content: 'Take 500mg twice daily with food',
       }),
@@ -475,6 +491,26 @@ describe('createAmendment handler', () => {
     expect(body.patientId).toBe(PATIENT_ID);
     expect(body.originalRecordType).toBe('prescription');
     expect(body.reason).toBe('Typo in instructions');
+  });
+
+  // V-CLN-011: an amendment referencing a non-existent in-module record is rejected.
+  test('returns 404 when originalRecordId does not resolve for an in-module type', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const res = await app.request(`/dental/visits/${visit.id}/amendments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        originalRecordType: 'prescription',
+        originalRecordId: NONEXISTENT_ID,
+        reason: 'References a prescription that does not exist',
+        content: 'Should be rejected as a dangling reference',
+      }),
+    });
+
+    expect(res.status).toBe(404);
   });
 });
 
@@ -537,6 +573,7 @@ describe('listAmendments handler', () => {
 describe('BR-019: clinical records append-only', () => {
   test('createAmendment returns 201 with amendment record', async () => {
     const visit = await seedVisit();
+    const rx = await seedPrescription(visit.id);
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(`/dental/visits/${visit.id}/amendments`, {
@@ -545,7 +582,7 @@ describe('BR-019: clinical records append-only', () => {
       body: JSON.stringify({
         patientId: PATIENT_ID,
         originalRecordType: 'prescription',
-        originalRecordId: NONEXISTENT_ID,
+        originalRecordId: rx.id,
         reason: 'Incorrect dosage recorded',
         content: 'Corrected: amoxicillin 500mg → 250mg per BR-019 append-only policy',
       }),

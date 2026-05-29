@@ -1,3 +1,5 @@
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@monobase/ui';
+
 interface ClinicStepProps {
   clinicName: string;
   onClinicNameChange: (v: string) => void;
@@ -21,7 +23,7 @@ export function ClinicStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Clinic Name *
         </label>
-        <input
+        <Input
           type="text"
           value={clinicName}
           onChange={e => onClinicNameChange(e.target.value)}
@@ -34,22 +36,25 @@ export function ClinicStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Country *
         </label>
-        <select
-          value={countryCode}
-          onChange={e => onCountryCodeChange(e.target.value)}
-          aria-label="Country"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
-        >
-          <option value="PH">Philippines</option>
-          <option value="AU">Australia</option>
-          <option value="US">United States</option>
-        </select>
+        <Select value={countryCode} onValueChange={onCountryCodeChange}>
+          <SelectTrigger
+            aria-label="Country"
+            className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PH">Philippines</SelectItem>
+            <SelectItem value="AU">Australia</SelectItem>
+            <SelectItem value="US">United States</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Address
         </label>
-        <input
+        <Input
           type="text"
           value={address}
           onChange={e => onAddressChange(e.target.value)}
@@ -61,7 +66,7 @@ export function ClinicStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Phone
         </label>
-        <input
+        <Input
           type="text"
           value={clinicPhone}
           onChange={e => onClinicPhoneChange(e.target.value)}

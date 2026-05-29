@@ -14,11 +14,13 @@ import {
   UnauthorizedError,
   NotFoundError,
   BusinessLogicError,
+  ConflictError,
 } from '@/core/errors';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CompletePerioChartParams } from '@/generated/openapi/validators';
 
@@ -40,8 +42,10 @@ export async function completePerioChart(
   const chart = await chartRepo.findOneById(chartId);
   if (!chart) throw new NotFoundError('Perio chart');
 
+  // V-PER-001: completing an already-completed/locked chart is a state conflict (409),
+  // not a 422 business-rule failure. Canonical code CHART_COMPLETED.
   if (chart.status === 'completed' || chart.status === 'locked') {
-    throw new BusinessLogicError(`Perio chart is already ${chart.status}`, 'PERIO_CHART_ALREADY_COMPLETE');
+    throw new ConflictError(`Perio chart is already ${chart.status}`, 'CHART_COMPLETED');
   }
 
   // BR-P02 / AC-P08: parent visit must not be locked or completed.
@@ -60,7 +64,7 @@ export async function completePerioChart(
   if (readings.length < MIN_READINGS_FOR_COMPLETE) {
     throw new BusinessLogicError(
       `At least ${MIN_READINGS_FOR_COMPLETE} tooth readings required to complete chart (have ${readings.length})`,
-      'PERIO_INSUFFICIENT_READINGS',
+      'INSUFFICIENT_READINGS',
     );
   }
 
@@ -100,7 +104,8 @@ export async function completePerioChart(
 
   if (!updated) throw new NotFoundError('Perio chart');
 
-  ctx.get('logger')?.info(
+  const logger = ctx.get('logger');
+  logger?.info(
     {
       requestId: ctx.get('requestId'),
       action: 'dental_perio_chart_complete',
@@ -113,6 +118,27 @@ export async function completePerioChart(
     },
     'Perio chart completed',
   );
+
+  // V-PER-006 / V-PER-005: completion finalizes a clinical PHI record — persist a
+  // dental_audit_log row (§4/§17 + audit-convergence). Per ADR-006 the
+  // `perio.chart.completed` domain event is an audit-log-only semantic marker
+  // (no event bus); writing this row satisfies it.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: chart.branchId,
+    branchId: chart.branchId,
+    action: 'perio.chart.completed',
+    resourceType: 'dental_perio_chart',
+    resourceId: chartId,
+    metadata: {
+      visitId: chart.visitId,
+      patientId: chart.patientId,
+      summaryBopPercent: Number(bopPercent.toFixed(2)),
+      summaryMeanDepth: Number(meanDepth.toFixed(2)),
+      summaryDeepPocketCount: deepPocketCount,
+      readingCount: readings.length,
+    },
+  });
 
   return ctx.json({
     id: updated.id,

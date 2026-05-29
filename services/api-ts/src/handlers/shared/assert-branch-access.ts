@@ -28,6 +28,8 @@ export async function assertBranchAccess(
     .limit(1);
 
   if (!membership) {
-    throw new ForbiddenError('You do not have access to this branch');
+    // V-AUD-006: use the specific BRANCH_ACCESS_DENIED code (ERROR_TAXONOMY §5 dental-audit)
+    // rather than the generic FORBIDDEN. Status stays 403.
+    throw new ForbiddenError('You do not have access to this branch', 'BRANCH_ACCESS_DENIED');
   }
 }

@@ -31,8 +31,9 @@ These are distinct concerns with non-overlapping routes and tables.
 ## 1. Module Overview
 **Purpose:** Clinical consultation documentation for minor-ailment / telemedicine
 encounters. A provider records a consultation note (chief complaint, assessment,
-plan, vitals, symptoms, prescriptions, follow-up), optionally finalizes it, and
-amends it after finalization. Notes belong to a patient and the authoring provider.
+plan, vitals, symptoms, prescriptions, follow-up) and optionally finalizes it.
+Finalize is terminal — there is no amend-after-finalize workflow (see §8 and
+V-EMR-001). Notes belong to a patient and the authoring provider.
 
 **Users:** `provider` (create/update/finalize own notes), `patient` (read own
 notes), `admin` (read all).
@@ -53,16 +54,15 @@ active EMR for native dental visit/chart/treatment records is **`dental-visit`**
 |------|-----------|
 | Consultation Note | A documented clinical encounter; the aggregate root of this module |
 | Context | Optional idempotency key (e.g. `appointment:123`, `walkin:456`); unique when present |
-| Finalize | Lock a draft note as the authoritative record (sets `finalizedAt`/`finalizedBy`) |
-| Amend | Re-open a finalized note for correction, preserving the finalized lineage |
+| Finalize | Lock a draft note as the authoritative record (sets `finalizedAt`/`finalizedBy`). Terminal — no amend-after-finalize (V-EMR-001) |
 
 ---
 
 ## 3. Workflows
 - WF-EMRC-001: Provider creates a draft consultation note for a patient.
-- WF-EMRC-002: Provider updates clinical fields on a draft (or amended) note.
-- WF-EMRC-003: Provider finalizes a draft note.
-- WF-EMRC-004: Provider amends a finalized note, then re-finalizes.
+- WF-EMRC-002: Provider updates clinical fields on a draft note.
+- WF-EMRC-003: Provider finalizes a draft note (terminal).
+- WF-EMRC-004: ~~Provider amends a finalized note, then re-finalizes.~~ **STRUCK (V-EMR-001)** — no amend endpoint exists and finalize rejects non-draft notes, so this workflow was unreachable. Removed rather than built (lower-risk per audit). If amend-after-finalize is required later, re-introduce it with a dedicated `POST /emr/consultations/{id}/amend` endpoint + an `amendedBy`/lineage column.
 - WF-EMRC-005: Patient/provider/admin reads a note, optionally expanding patient/provider/person.
 - WF-EMRC-006: Provider lists the patients they have consulted (with consultation stats).
 
@@ -101,8 +101,12 @@ isolation mechanism; see schema note), `context`, `chief_complaint`, `assessment
 ---
 
 ## 8. State Transitions
-`draft → finalized → amended → finalized` (re-finalizable). `draft` is the only
-state from which a first finalize is allowed.
+`draft → finalized` (**terminal**). `draft` is the only state from which finalize
+is allowed; finalizing a non-draft note is rejected (`CONSULTATION_NOT_DRAFT`, 422).
+The `amended` status value exists in the enum but is **reserved/unreachable** — no
+endpoint produces it (V-EMR-001). The earlier
+`draft → finalized → amended → finalized` re-finalizable machine was never built
+and has been struck.
 
 ---
 
@@ -124,6 +128,32 @@ Namespace `/emr` (`specs/api/src/modules/emr.tsp`, `EMRModule`):
 - **AC-EMRC-004:** `getConsultation?expand=patient,provider,person` returns nested
   patient and provider objects, each with a nested `person` — composed via the
   patient/provider facades (no direct cross-module schema access).
+
+---
+
+## 12b. Audit Logging
+
+Every PHI create / read / mutation / bulk-read writes a `dental_audit_log` row via
+`logAuditEvent` (in addition to the Pino `logger.info` trail):
+
+| Operation | Audit action | Notes |
+|-----------|--------------|-------|
+| createConsultation | `emr.consultation.create` | V-EMR (existing) |
+| getConsultation | `emr.consultation.read` | PHI read |
+| updateConsultation | `emr.consultation.update` | V-EMR-003 — records changed field NAMES only, never PHI values |
+| finalizeConsultation | `emr.consultation.finalize` | V-EMR-002 — locks authoritative record |
+| listConsultations | `emr.consultation.list` | V-EMR-004 — PHI bulk read; records counts/filter scope only |
+| listEMRPatients | `emr.patients.list` | V-EMR-004 — PHI bulk read; records counts/scope only |
+
+**Verb convention (V-EMR-006):** EMR is a platform-level module with no rows in the
+dental `AUDIT_CONTRACTS.md` (which is `dental-*`-only). It uses dotted-lowercase
+`emr.<resource>.<verb>` action names rather than the dental `CREATED|READ|UPDATED`
+verbs by design — this is the documented convention for this module, not drift.
+
+**Tenant slot (V-EMR-005):** `consultation_note.tenant_id` is nullable and is NOT the
+isolation mechanism. When null, the audit `tenantId` uses a non-PHI sentinel
+(`EMR_AUDIT_TENANT_SENTINEL`, `emr-audit.ts`) — it never falls back to the patient
+UUID (which would leak a PHI identifier into the append-only log).
 
 ---
 

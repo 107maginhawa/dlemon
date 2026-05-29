@@ -32,36 +32,49 @@ enum AppointmentStatus {
   no_show,
 }
 
+// V-SCH-007: visit_type is a constrained enum (checkup/treatment/emergency/recall),
+// not free-text. Wire field name is `visitType` (camelCase per repo convention).
+enum VisitType {
+  checkup,
+  treatment,
+  emergency,
+  recall,
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
 
+// V-SCH-006: canonical wire schema uses providerId/startAt/endAt/visitType
+// (API_CONTRACTS provider_id/start_at/end_at/visit_type). Duration is derived
+// from startAt/endAt; the DB still stores dentist_member_id/scheduled_at/
+// duration_minutes/service_type internally (see MODULE_SPEC §7).
 @example(#{
   id: "apt-1a2b3c4d-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-01T08:00:00Z"),
   updatedAt: utcDateTime.fromISO("2026-03-01T08:00:00Z"),
   version: 1,
   patientId: "d1a2b3c4-0000-4000-8000-000000000001",
-  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  providerId: "m1a2b3c4-0000-4000-8000-000000000001",
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
-  scheduledAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
-  durationMinutes: 60,
-  serviceType: "comprehensive-exam",
+  startAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  endAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  visitType: VisitType.checkup,
   walkIn: false,
   status: AppointmentStatus.scheduled,
   notes: "First visit — bring previous X-rays if available",
-}, #{ title: "Scheduled comprehensive exam" })
+}, #{ title: "Scheduled checkup" })
 model DentalAppointment {
   id: UUID;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
   version: int32;
   patientId: UUID;
-  dentistMemberId: UUID;
+  providerId: UUID;
   branchId: UUID;
-  scheduledAt: utcDateTime;
-  durationMinutes: int32;
-  serviceType: string;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  visitType: VisitType;
   operatoryId?: UUID;
   walkIn: boolean;
   status: AppointmentStatus;
@@ -71,36 +84,43 @@ model DentalAppointment {
   cancelledAt?: utcDateTime;
   cancellationReason?: string;
   no_showAt?: utcDateTime;
+  warnings?: string[];
 }
 
 @example(#{
   patientId: "d1a2b3c4-0000-4000-8000-000000000001",
-  dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  providerId: "m1a2b3c4-0000-4000-8000-000000000001",
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
-  scheduledAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
-  durationMinutes: 60,
-  serviceType: "comprehensive-exam",
+  startAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  endAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  visitType: VisitType.checkup,
   walkIn: false,
   notes: "First visit — bring previous X-rays if available",
-}, #{ title: "Book a comprehensive exam" })
+}, #{ title: "Book a checkup" })
 model CreateAppointmentRequest {
   patientId: UUID;
-  dentistMemberId: UUID;
+  providerId: UUID;
   branchId: UUID;
-  scheduledAt: utcDateTime;
-  durationMinutes: int32;
-  serviceType: string;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  visitType: VisitType;
   operatoryId?: UUID;
   walkIn?: boolean;
+
+  @maxLength(500)
   notes?: string;
 }
 
 model UpdateAppointmentRequest {
-  scheduledAt?: utcDateTime;
-  durationMinutes?: int32;
-  serviceType?: string;
+  startAt?: utcDateTime;
+  endAt?: utcDateTime;
+  providerId?: UUID;
+  visitType?: VisitType;
   operatoryId?: UUID;
+
+  @maxLength(500)
   notes?: string;
+
   status?: AppointmentStatus;
   cancellationReason?: string;
 }
@@ -131,11 +151,18 @@ namespace DentalSchedulingModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("listAppointments")
     list(
-      @query branchId?: UUID,
-      @query dentistMemberId?: UUID,
-      @query date?: string,
-      @query status?: AppointmentStatus
+      // V-SCH-004: branchId + date_from/date_to window (max 31 days) are required;
+      // page/per_page replace the old single date + limit/offset.
+      @query branchId: UUID,
+      @query("date_from") dateFrom: string,
+      @query("date_to") dateTo: string,
+      @query providerId?: UUID,
+      @query patientId?: UUID,
+      @query status?: AppointmentStatus,
+      @query @minValue(1) page?: int32,
+      @query("per_page") @minValue(1) @maxValue(200) perPage?: int32
     ): ApiOkResponse<DentalAppointment[]>
+      | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
     @get
@@ -168,7 +195,9 @@ namespace DentalSchedulingModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("cancelAppointment")
     cancel(
-      @path appointmentId: UUID
+      @path appointmentId: UUID,
+      // V-SCH-003: cancellation reason is a required query param, min:5/max:500.
+      @query @minLength(5) @maxLength(500) reason: string
     ): ApiNoContentResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;

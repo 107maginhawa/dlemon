@@ -8,7 +8,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError, ConflictError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -27,12 +27,14 @@ export async function archiveDentalPatient(
 
   const repo = new PatientRepository(db, logger);
 
-  // Branch-level authorization — dentist_owner only (EM-PAT-002)
+  // Branch-level authorization — dentist_owner only (EM-PAT-002).
+  // V-PAT-002: a missing branch must DENY, never bypass the guard.
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
-  if (patient.preferredBranchId) {
-    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
   }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
 
   // EM-PAT-003: parse optional reason from body
   let reason: string | undefined;
@@ -50,6 +52,11 @@ export async function archiveDentalPatient(
   if (!result.success) {
     if (result.reason === 'Patient not found') {
       throw new NotFoundError(result.reason);
+    }
+    // V-PAT-009: already-archived is a state conflict (409), not a business
+    // rule rejection (422). The repo reports it via this reason string.
+    if (result.reason === 'Patient is already archived') {
+      throw new ConflictError('Patient is already archived', 'PATIENT_ALREADY_ARCHIVED');
     }
     throw new BusinessLogicError(result.reason ?? 'Cannot archive patient', 'ARCHIVE_BLOCKED');
   }

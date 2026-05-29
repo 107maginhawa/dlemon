@@ -82,6 +82,29 @@ namespace DentalPatientModule {
     communicationPreferences?: Record<unknown>;
     person?: DentalPatientPerson;
     displayName?: string;
+
+    @doc("Safety-floor summary counts (V-PAT-007 / AC-PAT-003) — present on the profile endpoint")
+    safetyFloor?: DentalPatientSafetyFloorSummary;
+
+    @doc("Follow-up notes (V-PAT-007) — present on the profile endpoint")
+    followUpNotes?: FollowUpNote[];
+
+    @doc("Persisted registration consent (V-PAT-005/007)")
+    consent?: PersonConsentInfo;
+  }
+
+  @doc("Safety-floor summary counts for the patient profile")
+  model DentalPatientSafetyFloorSummary {
+    hasAlerts: boolean;
+    allergyCount: int32;
+    medicationCount: int32;
+    conditionCount: int32;
+  }
+
+  @doc("Persisted registration consent (single-consent model)")
+  model PersonConsentInfo {
+    registrationConsent: boolean;
+    capturedAt: string;
   }
 
   @doc("Duplicate warning on patient creation")
@@ -111,10 +134,11 @@ namespace DentalPatientModule {
     dateOfBirth?: string;
     gender?: string;
 
-    @doc("Patient consent must be true")
-    consentGiven?: boolean;
+    @doc("Patient registration consent — must be true (V-PAT-004: required)")
+    consentGiven: boolean;
 
-    branchId?: UUID;
+    @doc("Branch the patient is registered to (V-PAT-004: required)")
+    branchId: UUID;
   }
 
   @doc("Update dental patient request — all fields optional")
@@ -278,8 +302,15 @@ namespace DentalPatientModule {
 
   @doc("Bulk archive request")
   model BulkArchiveDentalPatientsRequest {
+    @doc("Patient IDs to archive (1–50)")
     @minItems(1)
-    patientIds: UUID[];
+    @maxItems(50)
+    ids: UUID[];
+
+    @doc("Reason for the bulk archive (required, 5–500 chars)")
+    @minLength(5)
+    @maxLength(500)
+    reason: string;
   }
 
   @doc("Per-patient bulk archive result")

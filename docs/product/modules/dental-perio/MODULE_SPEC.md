@@ -99,8 +99,8 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 | BR-P01 | One perio chart per visit | 409 CHART_EXISTS if chart already exists for visitId |
 | BR-P02 | Chart immutable after visit locked | 422 VISIT_LOCKED on any write to chart for locked visit |
 | BR-P03 | Probing depths 0–20 mm per site | 422 INVALID_DEPTH if out of range |
-| BR-P04 | FDI tooth numbers: adult 11–48, primary 51–85 | 422 INVALID_TOOTH_NUMBER |
-| BR-P05 | Chart create requires dentist role | 403 FORBIDDEN if not dentist_owner or dentist_associate |
+| BR-P04 | FDI tooth numbers must fall in a valid quadrant range — adult: 11–18, 21–28, 31–38, 41–48; primary: 51–55, 61–65, 71–75, 81–85 (the cross-quadrant gaps, e.g. 19, 29, 49, 56, are invalid) | 422 INVALID_TOOTH_NUMBER |
+| BR-P05 | Chart create/readings/complete require a clinical role | 403 FORBIDDEN if not dentist_owner, dentist_associate, or hygienist |
 | BR-P06 | Tooth reading upsert: one record per (chartId, toothNumber) | Server upsert — no 409 on duplicate; idempotent |
 | BR-P07 | Completed chart: minimum 16/32 teeth recorded (soft) | 422 INSUFFICIENT_READINGS if < 16 readings on completion attempt |
 
@@ -108,13 +108,15 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 
 ## 6. Permissions
 
-| Action | dentist_owner | dentist_associate | staff_full | staff_scheduling |
-|--------|:---:|:---:|:---:|:---:|
-| Create chart | ✅ | ✅ | ❌ | ❌ |
-| Record readings | ✅ | ✅ | ❌ | ❌ |
-| Complete chart | ✅ | ✅ | ❌ | ❌ |
-| View chart | ✅ | ✅ | ✅ | ❌ |
-| Print chart | ✅ | ✅ | ✅ | ❌ |
+| Action | dentist_owner | dentist_associate | hygienist | staff_full | staff_scheduling |
+|--------|:---:|:---:|:---:|:---:|:---:|
+| Create chart | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Record readings | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Complete chart | ✅ | ✅ | ✅ | ❌ | ❌ |
+| View chart | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Print chart | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+> Hygienists perform periodontal charting clinically and are granted write+read access here (consistent with ROLE_PERMISSION_MATRIX and the handler `assertBranchRole` allowlists). `staff_scheduling` is excluded from all perio access — perio data is clinical PHI (EF-PER-002).
 
 ---
 
@@ -177,6 +179,8 @@ draft ──► completed ──► locked
 
 ## 9. UI/UX Requirements
 
+> **Implementation status (V-PER-011): backend-only — frontend DEFERRED.** The perio chart-grid UI (WF-P01..P05 below) is NOT yet implemented in `apps/dentalemon`. The backend slice (create/read/upsert/complete + visit-lock cascade) is complete and contract-tested; the chart-grid, input panel, progress ring, and print layout are a future frontend slice. The requirements below are the design target for that deferred slice, not a description of shipped UI.
+
 - **Chart grid**: 2 rows (maxillary / mandibular), teeth ordered FDI left-to-right per arch. Each cell shows: tooth number, max probing depth, BOP dot count.
 - **Color coding**: ≤3 mm = green background, 4–5 mm = amber, ≥6 mm = red.
 - **Input panel**: slides in on tooth click. Numeric inputs for depths (mobile-friendly: numeric keyboard). Toggle buttons for BOP sites.
@@ -205,6 +209,8 @@ draft ──► completed ──► locked
 | `perio.chart.created` | WF-P01 | chartId, visitId, patientId, examinerMemberId |
 | `perio.chart.completed` | WF-P03 | chartId, summaryStats |
 | `perio.chart.locked` | Visit lock cascade | chartId, visitId |
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
 
 ---
 

@@ -224,8 +224,8 @@ describe('AC-MED-02: medical history entries are append-only (AC-CLI-005 superse
   // EF-CLI-001 / AC-CLI-005: medical history is an append-only clinical record.
   // The earlier "resolve via PATCH" behavior is rejected — resolving a condition
   // is recorded by appending a new entry, never by mutating the original. A PATCH
-  // returns 422 APPEND_ONLY_VIOLATION.
-  test('PATCH medical-history entry is rejected 422 APPEND_ONLY_VIOLATION [AC-MED-02]', async () => {
+  // returns 405 MEDICAL_HISTORY_IMMUTABLE.
+  test('PATCH medical-history entry is rejected 405 MEDICAL_HISTORY_IMMUTABLE [AC-MED-02]', async () => {
     const app = buildTestApp(TEST_USER);
 
     // Create entry first
@@ -253,9 +253,9 @@ describe('AC-MED-02: medical history entries are append-only (AC-CLI-005 superse
       }),
     });
 
-    expect(updateRes.status).toBe(422);
+    expect(updateRes.status).toBe(405);
     const updated = await updateRes.json() as any;
-    expect(updated.error?.code ?? updated.code).toBe('APPEND_ONLY_VIOLATION');
+    expect(updated.error?.code ?? updated.code).toBe('MEDICAL_HISTORY_IMMUTABLE');
   });
 });
 
@@ -335,9 +335,10 @@ describe('AC-MED-04: consent form cannot be re-signed after signing', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ signatureData: 'data:image/png;base64,xyz456' }),
     });
-    expect(signRes2.status).toBe(400);
+    expect(signRes2.status).toBe(422);
     const body = await signRes2.json() as any;
     expect(body.error).toMatch(/already signed/i);
+    expect(body.code).toBe('CONSENT_FORM_SIGNED');
   });
 });
 

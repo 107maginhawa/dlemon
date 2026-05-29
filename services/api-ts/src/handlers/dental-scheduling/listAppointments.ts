@@ -8,62 +8,71 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { listAppointmentsWithPatientName } from './repos/appointment-patient.facade';
-import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import type { User } from '@/types/auth';
-import { eq, gte, lt, inArray, type SQL } from 'drizzle-orm';
+import { eq, gte, lt, type SQL } from 'drizzle-orm';
 import { dentalAppointments } from './repos/dental-appointment.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { ListAppointmentsQuery } from '@/generated/openapi/validators';
+import { toWire } from './appointment-wire';
+
+const MAX_RANGE_DAYS = 31;
+const DEFAULT_PER_PAGE = 50;
+const MAX_PER_PAGE = 200;
 
 export async function listAppointments(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const query = ctx.req.valid('query') as ListAppointmentsQuery;
-  const filters: { branchId?: string; dentistMemberId?: string; date?: string; status?: string; patientId?: string } = {};
-
-  if (query.branchId) filters.branchId = query.branchId;
-  if (query.dentistMemberId) filters.dentistMemberId = query.dentistMemberId;
-  if (query.date) filters.date = query.date;
-  if (query.status) filters.status = query.status;
-
-  // Additional filters not in TypeSpec (read from raw query)
   const rawQuery = ctx.req.query();
-  const patientId = rawQuery['patientId'];
-  if (patientId) filters.patientId = patientId;
 
-  // Pagination (not in TypeSpec — read from raw query)
-  const limit = Math.min(parseInt(rawQuery['limit'] ?? '50', 10) || 50, 200);
-  const offset = Math.max(parseInt(rawQuery['offset'] ?? '0', 10) || 0, 0);
+  // V-SCH-004: branchId, date_from and date_to are required calendar-window params.
+  const branchId = query.branchId ?? rawQuery['branchId'];
+  const dateFrom = (query as { dateFrom?: string }).dateFrom ?? rawQuery['date_from'];
+  const dateTo = (query as { dateTo?: string }).dateTo ?? rawQuery['date_to'];
+  if (!branchId) throw new ValidationError('branchId is required');
+  if (!dateFrom || !dateTo) throw new ValidationError('date_from and date_to are required');
+
+  const windowStart = new Date(dateFrom + 'T00:00:00.000Z');
+  const windowEnd = new Date(dateTo + 'T23:59:59.999Z');
+  if (Number.isNaN(windowStart.getTime()) || Number.isNaN(windowEnd.getTime())) {
+    throw new ValidationError('date_from and date_to must be valid dates');
+  }
+  if (windowEnd.getTime() < windowStart.getTime()) {
+    throw new ValidationError('date_to must be on or after date_from');
+  }
+  // 31-day cap (inclusive).
+  const rangeDays = Math.floor((windowEnd.getTime() - windowStart.getTime()) / 86_400_000) + 1;
+  if (rangeDays > MAX_RANGE_DAYS) {
+    throw new ValidationError(`date range must not exceed ${MAX_RANGE_DAYS} days`);
+  }
+
+  // Pagination: page/per_page (1-based).
+  const providerId = (query as { providerId?: string }).providerId ?? rawQuery['providerId'];
+  const patientId = (query as { patientId?: string }).patientId ?? rawQuery['patientId'];
+  const status = query.status as string | undefined;
+  const page = Math.max(parseInt(rawQuery['page'] ?? '1', 10) || 1, 1);
+  const perPage = Math.min(Math.max(parseInt(rawQuery['per_page'] ?? String(DEFAULT_PER_PAGE), 10) || DEFAULT_PER_PAGE, 1), MAX_PER_PAGE);
+  const limit = perPage;
+  const offset = (page - 1) * perPage;
 
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Build conditions
-  const conditions: (SQL<unknown> | undefined)[] = [];
+  // Authorization: caller must have access to the requested branch.
+  await assertBranchAccess(db, user.id, branchId);
 
-  // Authorization: scope results to branches the user has access to
-  if (filters.branchId) {
-    await assertBranchAccess(db, user.id, filters.branchId);
-    conditions.push(eq(dentalAppointments.branchId, filters.branchId));
-  } else {
-    // No branchId filter — restrict to branches where user has active membership
-    const accessibleBranchIds = await getActiveBranchIdsForPerson(db, user.id);
-    if (accessibleBranchIds.length === 0) return ctx.json([]);
-    conditions.push(inArray(dentalAppointments.branchId, accessibleBranchIds));
-  }
+  const conditions: (SQL<unknown> | undefined)[] = [
+    eq(dentalAppointments.branchId, branchId),
+    gte(dentalAppointments.scheduledAt, windowStart),
+    lt(dentalAppointments.scheduledAt, new Date(windowEnd.getTime() + 1)),
+  ];
 
-  if (filters.dentistMemberId) conditions.push(eq(dentalAppointments.dentistMemberId, filters.dentistMemberId));
-  if (filters.status) conditions.push(eq(dentalAppointments.status, filters.status as typeof dentalAppointments.status._.data));
-  if (filters.patientId) conditions.push(eq(dentalAppointments.patientId, filters.patientId));
-  if (filters.date) {
-    const dayStart = new Date(filters.date + 'T00:00:00.000Z');
-    const dayEnd = new Date(filters.date + 'T23:59:59.999Z');
-    conditions.push(gte(dentalAppointments.scheduledAt, dayStart));
-    conditions.push(lt(dentalAppointments.scheduledAt, new Date(dayEnd.getTime() + 1)));
-  }
+  if (providerId) conditions.push(eq(dentalAppointments.dentistMemberId, providerId));
+  if (status) conditions.push(eq(dentalAppointments.status, status as typeof dentalAppointments.status._.data));
+  if (patientId) conditions.push(eq(dentalAppointments.patientId, patientId));
 
   const appointments = await listAppointmentsWithPatientName(db, conditions, limit, offset);
-  return ctx.json(appointments);
+  return ctx.json(appointments.map((a) => toWire(a)));
 }

@@ -12,6 +12,7 @@ import { Lock } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Pagination, Keyboard } from 'swiper/modules';
 import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '@monobase/ui';
 import { getDentalChartOptions } from '@monobase/sdk-ts/generated/react-query';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
@@ -64,7 +65,7 @@ function VisitChartCard({
   dentitionType: DentitionType;
   completedToothNumbers?: Set<number>;
 }) {
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     ...getDentalChartOptions({ path: { visitId: visit.id } }),
     select: (raw) => {
       const chart = raw as { teeth?: ToothData[] } | null;
@@ -81,15 +82,37 @@ function VisitChartCard({
     >
       {isActive && <div data-accent-bar className="h-1 rounded-full bg-[#FFE97D]" />}
       <div className="overflow-x-auto flex-1 min-h-0">
-        <DentalChart
-          teeth={teeth}
-          onSelectTooth={isActive ? onSelectTooth : undefined}
-          toothSize={isActive ? 'md' : 'xs'}
-          showLegend={false}
-          showLayerToggle={isActive}
-          completedToothNumbers={isActive ? completedToothNumbers : undefined}
-          dentitionType={dentitionType}
-        />
+        {isLoading ? (
+          <div data-testid="visit-chart-loading" className="flex flex-col gap-2 p-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : isError ? (
+          <div
+            data-testid="visit-chart-error"
+            className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center"
+          >
+            <p className="text-sm text-destructive">Failed to load chart.</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <DentalChart
+            teeth={teeth}
+            onSelectTooth={isActive ? onSelectTooth : undefined}
+            toothSize={isActive ? 'md' : 'xs'}
+            showLegend={false}
+            showLayerToggle={isActive}
+            completedToothNumbers={isActive ? completedToothNumbers : undefined}
+            dentitionType={dentitionType}
+          />
+        )}
       </div>
       <div className="flex items-center justify-between mt-1">
         <span className="text-xs text-muted-foreground">{formatDate(visit.activatedAt ?? visit.createdAt)}</span>

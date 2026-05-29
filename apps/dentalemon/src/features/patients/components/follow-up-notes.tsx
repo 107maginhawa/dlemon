@@ -32,9 +32,13 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
   const { addNote, isPending } = useAddFollowUpNote({ patientId });
   const [text, setText] = useState('');
 
+  // V-PAT-013: note text must be 5–2000 characters (matches the API contract).
+  const trimmedLength = text.trim().length;
+  const isValid = trimmedLength >= 5 && trimmedLength <= 2000;
+
   const handleSubmit = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!isValid) return;
     addNote(trimmed);
     setText('');
   };
@@ -56,18 +60,23 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a follow-up note..."
+          placeholder="Type a follow-up note (5–2000 characters)..."
           rows={3}
+          maxLength={2000}
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground"
         />
         <div className="flex items-center justify-between mt-2">
           <span className="text-[11px] text-muted-foreground">
-            {isPending ? 'Saving...' : 'Cmd+Enter to submit'}
+            {isPending
+              ? 'Saving...'
+              : trimmedLength > 0 && trimmedLength < 5
+                ? 'Minimum 5 characters'
+                : 'Cmd+Enter to submit'}
           </span>
           <button
             data-testid="note-submit"
             onClick={handleSubmit}
-            disabled={!text.trim() || isPending}
+            disabled={!isValid || isPending}
             className="px-4 py-1.5 text-sm font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isPending ? 'Saving...' : 'Add Note'}

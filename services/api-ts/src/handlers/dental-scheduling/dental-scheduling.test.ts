@@ -148,14 +148,16 @@ function buildTestApp(user?: typeof TEST_USER) {
 // ---------------------------------------------------------------------------
 
 const FUTURE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+const FUTURE_END = new Date(new Date(FUTURE_DATE).getTime() + 30 * 60 * 1000).toISOString();
 
+// Canonical wire request shape (V-SCH-006/007): providerId/startAt/endAt/visitType.
 const VALID_APPOINTMENT_BODY = {
   patientId: PATIENT_ID,
-  dentistMemberId: MEMBER_ID,
+  providerId: MEMBER_ID,
   branchId: BRANCH_ID,
-  scheduledAt: FUTURE_DATE,
-  durationMinutes: 30,
-  serviceType: 'Cleaning',
+  startAt: FUTURE_DATE,
+  endAt: FUTURE_END,
+  visitType: 'checkup',
 };
 
 async function seedAppointment() {
@@ -206,9 +208,9 @@ describe('createAppointment handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when dentistMemberId is missing', async () => {
+  test('returns 400 when providerId is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const { dentistMemberId: _omit, ...withoutDentist } = VALID_APPOINTMENT_BODY;
+    const { providerId: _omit, ...withoutDentist } = VALID_APPOINTMENT_BODY;
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -228,9 +230,9 @@ describe('createAppointment handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when scheduledAt is missing', async () => {
+  test('returns 400 when startAt is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const { scheduledAt: _omit, ...withoutDate } = VALID_APPOINTMENT_BODY;
+    const { startAt: _omit, ...withoutDate } = VALID_APPOINTMENT_BODY;
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -239,24 +241,44 @@ describe('createAppointment handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when durationMinutes is missing', async () => {
+  test('returns 400 when endAt is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const { durationMinutes: _omit, ...withoutDuration } = VALID_APPOINTMENT_BODY;
+    const { endAt: _omit, ...withoutEnd } = VALID_APPOINTMENT_BODY;
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(withoutDuration),
+      body: JSON.stringify(withoutEnd),
     });
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when serviceType is missing', async () => {
+  test('returns 400 when visitType is missing', async () => {
     const app = buildTestApp(TEST_USER);
-    const { serviceType: _omit, ...withoutProcedure } = VALID_APPOINTMENT_BODY;
+    const { visitType: _omit, ...withoutProcedure } = VALID_APPOINTMENT_BODY;
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(withoutProcedure),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('V-SCH-008: returns 400 when endAt is not after startAt', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, endAt: VALID_APPOINTMENT_BODY.startAt }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('V-SCH-007: returns 400 when visitType is not in enum', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, visitType: 'not-a-real-type' }),
     });
     expect(res.status).toBe(400);
   });
@@ -272,10 +294,12 @@ describe('createAppointment handler', () => {
     const body = await res.json() as any;
     expect(body.id).toBeTruthy();
     expect(body.patientId).toBe(PATIENT_ID);
-    expect(body.dentistMemberId).toBe(MEMBER_ID);
+    expect(body.providerId).toBe(MEMBER_ID);
     expect(body.branchId).toBe(BRANCH_ID);
     expect(body.status).toBe('scheduled');
-    expect(body.serviceType).toBe('Cleaning');
+    expect(body.visitType).toBe('checkup');
+    expect(body.startAt).toBeTruthy();
+    expect(body.endAt).toBeTruthy();
   });
 
   test('returns 201 with walkIn flag when walkIn is true', async () => {
@@ -326,15 +350,33 @@ describe('getAppointment handler', () => {
 // ===========================================================================
 
 describe('listAppointments handler', () => {
+  // V-SCH-004: branchId + date_from/date_to are required calendar-window params.
+  const RANGE_FROM = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const RANGE_TO = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const LIST_QS = `branchId=${BRANCH_ID}&date_from=${RANGE_FROM}&date_to=${RANGE_TO}`;
+
   test('returns 401 when unauthenticated', async () => {
     const app = buildTestApp(undefined);
-    const res = await app.request('/dental/appointments');
+    const res = await app.request(`/dental/appointments?${LIST_QS}`);
     expect(res.status).toBe(401);
+  });
+
+  test('V-SCH-004: returns 400 when date_from/date_to missing', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/appointments?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(400);
+  });
+
+  test('V-SCH-004: returns 400 when range exceeds 31 days', async () => {
+    const app = buildTestApp(TEST_USER);
+    const farTo = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const res = await app.request(`/dental/appointments?branchId=${BRANCH_ID}&date_from=${RANGE_FROM}&date_to=${farTo}`);
+    expect(res.status).toBe(400);
   });
 
   test('returns 200 with empty array when no appointments', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/appointments');
+    const res = await app.request(`/dental/appointments?${LIST_QS}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body)).toBe(true);
@@ -345,7 +387,7 @@ describe('listAppointments handler', () => {
     await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request('/dental/appointments');
+    const res = await app.request(`/dental/appointments?${LIST_QS}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body)).toBe(true);
@@ -356,7 +398,7 @@ describe('listAppointments handler', () => {
     await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request(`/dental/appointments?branchId=${BRANCH_ID}`);
+    const res = await app.request(`/dental/appointments?${LIST_QS}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.every((a: any) => a.branchId === BRANCH_ID)).toBe(true);
@@ -366,10 +408,20 @@ describe('listAppointments handler', () => {
     await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request('/dental/appointments?status=scheduled');
+    const res = await app.request(`/dental/appointments?${LIST_QS}&status=scheduled`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.every((a: any) => a.status === 'scheduled')).toBe(true);
+  });
+
+  test('V-SCH-004: paginates via page/per_page', async () => {
+    await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/appointments?${LIST_QS}&page=1&per_page=10`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(Array.isArray(body)).toBe(true);
   });
 });
 
@@ -427,18 +479,18 @@ describe('updateAppointment handler', () => {
     expect(body.noShowAt).not.toBeNull();
   });
 
-  test('updates serviceType', async () => {
+  test('updates visitType', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serviceType: 'Root Canal' }),
+      body: JSON.stringify({ visitType: 'treatment' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.serviceType).toBe('Root Canal');
+    expect(body.visitType).toBe('treatment');
   });
 });
 
@@ -532,10 +584,8 @@ describe('cancelAppointment handler', () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Test cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
     expect(res.status).toBe(204);
 
@@ -544,6 +594,16 @@ describe('cancelAppointment handler', () => {
     const updated = await repo.findOneById(appt.id);
     expect(updated!.status).toBe('cancelled');
     expect(updated!.cancelledAt).not.toBeNull();
+  });
+
+  test('V-SCH-003: returns 422 when reason is missing/too short', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=hi`, {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(422);
   });
 });
 
@@ -589,7 +649,7 @@ describe('FR3.7: double-booking warning', () => {
     const res = await app.request('/dental/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, dentistMemberId: DENTIST_2_MEMBER_ID }),
+      body: JSON.stringify({ ...VALID_APPOINTMENT_BODY, providerId: DENTIST_2_MEMBER_ID }),
     });
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -685,10 +745,8 @@ describe('status transition guards', () => {
     const app = buildTestApp(TEST_USER);
 
     // Cancel first
-    await app.request(`/dental/appointments/${appt.id}`, {
+    await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Test cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
 
     // Now attempt noShow
@@ -749,14 +807,12 @@ describe('status transition guards', () => {
 // ===========================================================================
 
 describe('cancellationReason', () => {
-  test('stores cancellationReason when cancelled via DELETE with body', async () => {
+  test('stores reason from query param when cancelled via DELETE', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    const res = await app.request(`/dental/appointments/${appt.id}`, {
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient request')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Patient request' }),
     });
     expect(res.status).toBe(204);
 
@@ -790,10 +846,8 @@ describe('audit trail', () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
-    await app.request(`/dental/appointments/${appt.id}`, {
+    await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Test cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
 
     const repo = new DentalAppointmentRepository(db);
@@ -807,75 +861,67 @@ describe('audit trail', () => {
 // ===========================================================================
 
 describe('pagination on listAppointments', () => {
-  test('returns at most limit appointments', async () => {
-    const repo = new DentalAppointmentRepository(db);
-    // Seed 3 appointments
-    for (let i = 0; i < 3; i++) {
-      await repo.createOne({
+  const RANGE_FROM = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const RANGE_TO = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const BASE_QS = `branchId=${BRANCH_ID}&date_from=${RANGE_FROM}&date_to=${RANGE_TO}`;
+
+  function seedN(repo: DentalAppointmentRepository, n: number) {
+    const work: Promise<unknown>[] = [];
+    for (let i = 0; i < n; i++) {
+      work.push(repo.createOne({
         patientId: PATIENT_ID,
         dentistMemberId: MEMBER_ID,
         branchId: BRANCH_ID,
         scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
         durationMinutes: 30,
-        serviceType: 'Cleaning',
-      });
+        serviceType: 'checkup',
+      }));
     }
+    return Promise.all(work);
+  }
+
+  test('returns at most per_page appointments', async () => {
+    const repo = new DentalAppointmentRepository(db);
+    await seedN(repo, 3);
 
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/appointments?limit=2');
+    const res = await app.request(`/dental/appointments?${BASE_QS}&per_page=2`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.length).toBeLessThanOrEqual(2);
   });
 
-  test('offset skips earlier results', async () => {
+  test('page skips earlier results', async () => {
     const repo = new DentalAppointmentRepository(db);
-    for (let i = 0; i < 3; i++) {
-      await repo.createOne({
-        patientId: PATIENT_ID,
-        dentistMemberId: MEMBER_ID,
-        branchId: BRANCH_ID,
-        scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
-        durationMinutes: 30,
-        serviceType: 'Cleaning',
-      });
-    }
+    await seedN(repo, 3);
 
     const app = buildTestApp(TEST_USER);
-    const res1 = await app.request('/dental/appointments?limit=2&offset=0');
-    const res2 = await app.request('/dental/appointments?limit=2&offset=2');
+    const res1 = await app.request(`/dental/appointments?${BASE_QS}&per_page=2&page=1`);
+    const res2 = await app.request(`/dental/appointments?${BASE_QS}&per_page=2&page=2`);
     expect(res1.status).toBe(200);
     expect(res2.status).toBe(200);
 
     const page1 = await res1.json() as any[];
     const page2 = await res2.json() as any[];
-    // IDs should not overlap
     const ids1 = new Set(page1.map((a: any) => a.id));
     const ids2 = new Set(page2.map((a: any) => a.id));
     const overlap = [...ids1].filter(id => ids2.has(id));
     expect(overlap.length).toBe(0);
   });
 
-  test('limit is capped at 200 even when higher value is requested', async () => {
+  test('per_page is capped at 200 even when higher value is requested', async () => {
     const repo = new DentalAppointmentRepository(db);
-    // Seed 3 appointments — if limit>200 were uncapped, we'd still only have 3
-    // This verifies the cap logic doesn't throw and returns valid results
-    for (let i = 0; i < 3; i++) {
-      await repo.createOne({
-        patientId: PATIENT_ID,
-        dentistMemberId: MEMBER_ID,
-        branchId: BRANCH_ID,
-        scheduledAt: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
-        durationMinutes: 30,
-        serviceType: 'Cleaning',
-      });
-    }
+    await seedN(repo, 3);
 
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/appointments?limit=500');
-    expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    // Should return all 3 (capped at 200, but we only have 3)
+    // V-SCH: per_page is bounded to <=200 at the schema layer — values above the
+    // cap are rejected with 400, while the maximum allowed value returns 200.
+    const tooHigh = await app.request(`/dental/appointments?${BASE_QS}&per_page=500`);
+    expect(tooHigh.status).toBe(400);
+
+    const atCap = await app.request(`/dental/appointments?${BASE_QS}&per_page=200`);
+    expect(atCap.status).toBe(200);
+    const body = await atCap.json() as any;
     expect(Array.isArray(body)).toBe(true);
     expect(body.length).toBeLessThanOrEqual(200);
   });
@@ -909,18 +955,18 @@ describe('branch authorization (assertBranchAccess)', () => {
   test('cancelAppointment returns 403 when user has no membership in appointment branch', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(OTHER_USER);
-    const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('not allowed')}`, { method: 'DELETE' });
     expect(res.status).toBe(403);
   });
 
-  test('listAppointments returns empty array when user has no memberships', async () => {
+  test('listAppointments returns 403 when user has no membership in requested branch', async () => {
     await seedAppointment(); // in BRANCH_ID
     const app = buildTestApp(OTHER_USER); // no memberships
-    const res = await app.request('/dental/appointments');
-    expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    // OTHER_USER has no memberships, so accessible branches = [] → empty result
-    expect(body).toHaveLength(0);
+    const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const res = await app.request(`/dental/appointments?branchId=${BRANCH_ID}&date_from=${from}&date_to=${to}`);
+    // assertBranchAccess rejects unauthorized branch access (V-SCH-004 requires branchId).
+    expect(res.status).toBe(403);
   });
 });
 
@@ -938,7 +984,7 @@ describe('patientId filter on listAppointments', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       durationMinutes: 30,
-      serviceType: 'Cleaning',
+      serviceType: 'checkup',
     });
     // Seed appointment for PATIENT_2
     await repo.createOne({
@@ -947,11 +993,13 @@ describe('patientId filter on listAppointments', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
       durationMinutes: 30,
-      serviceType: 'Checkup',
+      serviceType: 'checkup',
     });
 
+    const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/appointments?patientId=${PATIENT_ID}`);
+    const res = await app.request(`/dental/appointments?branchId=${BRANCH_ID}&date_from=${from}&date_to=${to}&patientId=${PATIENT_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.every((a: any) => a.patientId === PATIENT_ID)).toBe(true);
@@ -988,10 +1036,11 @@ describe('reschedule validation on updateAppointment', () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
+    const outsideEnd = new Date(new Date(OUTSIDE_HOURS_UTC).getTime() + 60 * 60 * 1000).toISOString();
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduledAt: OUTSIDE_HOURS_UTC, durationMinutes: 60 }),
+      body: JSON.stringify({ startAt: OUTSIDE_HOURS_UTC, endAt: outsideEnd }),
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
@@ -1005,13 +1054,13 @@ describe('reschedule validation on updateAppointment', () => {
     const repo = new DentalAppointmentRepository(db);
 
     // Seed fixed appointment at INSIDE_HOURS_UTC (10:00 Manila, 60 min)
-    const fixed = await repo.createOne({
+    await repo.createOne({
       patientId: PATIENT_ID,
       dentistMemberId: MEMBER_ID,
       branchId: BRANCH_ID,
       scheduledAt: new Date(INSIDE_HOURS_UTC),
       durationMinutes: 60,
-      serviceType: 'Cleaning',
+      serviceType: 'checkup',
     });
 
     // Seed a second appointment at a non-overlapping time
@@ -1021,18 +1070,21 @@ describe('reschedule validation on updateAppointment', () => {
       branchId: BRANCH_ID,
       scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       durationMinutes: 30,
-      serviceType: 'Follow-Up',
+      serviceType: 'treatment',
     });
 
     const app = buildTestApp(TEST_USER);
 
     // Reschedule toMove to overlap with fixed (same time, same dentist)
+    const insideEnd = new Date(new Date(INSIDE_HOURS_UTC).getTime() + 30 * 60 * 1000).toISOString();
     const res = await app.request(`/dental/appointments/${toMove.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduledAt: INSIDE_HOURS_UTC }),
+      body: JSON.stringify({ startAt: INSIDE_HOURS_UTC, endAt: insideEnd }),
     });
     expect(res.status).toBe(409);
+    const conflictBody = await res.json() as any;
+    expect(conflictBody.code).toBe('RESCHEDULE_CONFLICT');
 
     // Verify the appointment hasn't moved
     const current = await repo.findOneById(toMove.id);
@@ -1075,6 +1127,6 @@ describe('AL-009: createAppointment writes audit record to DB', () => {
     expect(entry!.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
     const meta = entry!.metadata as Record<string, unknown> | null;
     expect(meta?.['patientId']).toBe(PATIENT_ID);
-    expect(meta?.['serviceType']).toBe('Cleaning');
+    expect(meta?.['visitType']).toBe('checkup');
   });
 });

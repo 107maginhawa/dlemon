@@ -42,18 +42,19 @@ const QUICK_CHIPS: { label: string; value: ImagingFindingType }[] = [
   { label: 'Root Fracture', value: 'root_fracture' },
 ]
 
-const STATUS_CYCLE: ImagingFindingStatus[] = ['suspected', 'confirmed', 'monitoring', 'resolved']
+// V-IMG-007: SM-01 is forward-only draft → confirmed → resolved (no back-edge / wrap).
+const STATUS_CYCLE: ImagingFindingStatus[] = ['draft', 'confirmed', 'resolved']
 
 function nextStatus(current: ImagingFindingStatus): ImagingFindingStatus {
   const idx = STATUS_CYCLE.indexOf(current)
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]!
+  // Forward-only: `resolved` is terminal, so advancing it is a no-op (avoids a 422).
+  return STATUS_CYCLE[Math.min(idx + 1, STATUS_CYCLE.length - 1)]!
 }
 
 function statusBadgeClass(status: ImagingFindingStatus): string {
   switch (status) {
-    case 'suspected': return 'bg-zinc-700 text-zinc-300'
+    case 'draft': return 'bg-zinc-700 text-zinc-300'
     case 'confirmed': return 'bg-green-900 text-green-300'
-    case 'monitoring': return 'bg-blue-900 text-blue-300'
     case 'resolved': return 'bg-zinc-800 text-zinc-500'
   }
 }
@@ -79,7 +80,7 @@ export function FindingsSidebar({
     useImagingFindings(imageId, { enabled: isOpen })
 
   const [selectedType, setSelectedType] = useState<ImagingFindingType | ''>('')
-  const [selectedStatus, setSelectedStatus] = useState<ImagingFindingStatus>('suspected')
+  const [selectedStatus, setSelectedStatus] = useState<ImagingFindingStatus>('draft')
   const [toothNumber, setToothNumber] = useState('')
   const [surfaces, setSurfaces] = useState('')
   const [note, setNote] = useState('')
@@ -111,7 +112,7 @@ export function FindingsSidebar({
       {
         onSuccess: () => {
           setSelectedType('')
-          setSelectedStatus('suspected')
+          setSelectedStatus('draft')
           setToothNumber('')
           setSurfaces('')
           setNote('')

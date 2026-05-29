@@ -16,6 +16,7 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { UpdateAppointmentBody, UpdateAppointmentParams } from '@/generated/openapi/validators';
 import type { DentalAppointment } from './repos/dental-appointment.schema';
+import { durationFromRange, isVisitType, toWire } from './appointment-wire';
 
 export async function updateAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -46,7 +47,7 @@ export async function updateAppointment(ctx: HandlerContext) {
   if (body.status === 'no_show') {
     const result = await repo.markNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');
-    return ctx.json(result);
+    return ctx.json(toWire(result));
   }
 
   if (body.status === 'completed') {
@@ -56,30 +57,52 @@ export async function updateAppointment(ctx: HandlerContext) {
     }
     const result = await repo.revertNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');
-    return ctx.json(result);
+    return ctx.json(toWire(result));
   }
 
   if (body.status === 'cancelled') {
     const result = await repo.cancel(appointmentId, body.cancellationReason, user.id);
     if (!result) throw new NotFoundError('Appointment');
-    return ctx.json(result);
+    return ctx.json(toWire(result));
   }
 
-  // Generic field update (status transitions handled above — not allowed here)
+  // Generic field update — canonical wire shape: startAt/endAt/providerId/visitType.
   const patch: Partial<DentalAppointment> = {};
-  // scheduledAt is already a Date after zod transform
-  const newScheduledAt = body.scheduledAt instanceof Date
-    ? body.scheduledAt
-    : body.scheduledAt !== undefined ? new Date(String(body.scheduledAt)) : undefined;
+
+  const newStartAt = body.startAt instanceof Date
+    ? body.startAt
+    : body.startAt !== undefined ? new Date(String(body.startAt)) : undefined;
+  const newEndAt = body.endAt instanceof Date
+    ? body.endAt
+    : body.endAt !== undefined ? new Date(String(body.endAt)) : undefined;
+
+  // V-SCH-007: visit_type, if provided, must be a valid enum value.
+  if (body.visitType !== undefined && !isVisitType(body.visitType)) {
+    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall');
+  }
+
+  // Effective start/end after the patch (fall back to existing values).
+  const effectiveStart = newStartAt ?? existing.scheduledAt;
+  const effectiveEnd = newEndAt ?? new Date(existing.scheduledAt.getTime() + existing.durationMinutes * 60_000);
+
+  // V-SCH-008: end_at must be strictly after start_at when either is changed.
+  if ((newStartAt !== undefined || newEndAt !== undefined) && !(effectiveEnd.getTime() > effectiveStart.getTime())) {
+    throw new ValidationError('endAt must be after startAt');
+  }
+
+  const newScheduledAt = newStartAt;
   if (newScheduledAt !== undefined) patch['scheduledAt'] = newScheduledAt;
-  if (body.durationMinutes !== undefined) patch['durationMinutes'] = body.durationMinutes;
-  if (body.serviceType !== undefined) patch['serviceType'] = body.serviceType;
+  if (newStartAt !== undefined || newEndAt !== undefined) {
+    patch['durationMinutes'] = durationFromRange(effectiveStart, effectiveEnd);
+  }
+  if (body.providerId !== undefined) patch['dentistMemberId'] = body.providerId;
+  if (body.visitType !== undefined) patch['serviceType'] = body.visitType;
   if (body.operatoryId !== undefined) patch['operatoryId'] = body.operatoryId;
   if (body.notes !== undefined) patch['notes'] = body.notes;
 
-  // Re-validate working hours and check overlap if scheduledAt is being changed
+  // Re-validate working hours and check overlap if the time window is being changed
   if (newScheduledAt !== undefined) {
-    const durationMinutes = body.durationMinutes ?? existing.durationMinutes;
+    const durationMinutes = durationFromRange(effectiveStart, effectiveEnd);
     const branch = await getBranchSchedulingConfig(db, existing.branchId);
     if (branch?.workingHours) {
       const hours = parseWorkingHours(branch.workingHours);
@@ -88,17 +111,22 @@ export async function updateAppointment(ctx: HandlerContext) {
       }
     }
     const overlaps = await repo.findOverlapping(
-      existing.dentistMemberId,
+      body.providerId ?? existing.dentistMemberId,
       existing.branchId,
       newScheduledAt,
       durationMinutes,
       appointmentId, // exclude self
     );
     if (overlaps.length > 0) {
-      throw new ConflictError('Scheduling conflict: dentist already has an appointment at this time');
+      // V-SCH-001 / AC-SCH-002: reschedule hard-block uses the specific taxonomy code,
+      // not the generic CONFLICT. ERROR_TAXONOMY: RESCHEDULE_CONFLICT(409).
+      throw new ConflictError(
+        'Reschedule conflict: provider already has an appointment in the new time window',
+        'RESCHEDULE_CONFLICT',
+      );
     }
   }
 
   const updated = await repo.updateOneById(appointmentId, { ...patch, updatedBy: user.id });
-  return ctx.json(updated);
+  return ctx.json(toWire(updated));
 }

@@ -154,6 +154,8 @@ POST /dental/visits/:id/prescriptions (BR-017), GET /dental/visits/:id/prescript
 **Published:** DE-012 ConsentSigned, DE-013 ConsentRevoked, DE-014 LabOrderCreated, DE-015 LabOrderCompleted, DE-016 PrescriptionWritten
 **Consumed:** DE-002 VisitCompleted (trigger immutability guard)
 
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
+
 ---
 
 ## 11. Acceptance Criteria

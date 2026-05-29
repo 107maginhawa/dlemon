@@ -1,4 +1,5 @@
 import { activeArcsForLandmarks } from '../lib/ceph-geometry'
+import { BRAND_GOLD } from '@/constants/brand'
 import { imageToScreen } from '@monobase/ceph-math'
 import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark } from '../hooks/use-ceph-landmarks'
@@ -73,14 +74,14 @@ export function CephAngleArcLayer({
               data-arc-id={arc.id}
               d={arcPath(vp.x, vp.y, ARC_R, a0, a1)}
               fill="none"
-              stroke="#FFE97D"
+              stroke={BRAND_GOLD}
               strokeWidth={1.5}
               strokeOpacity={0.9}
             />
             <text
               x={vp.x + ARC_R + 4}
               y={vp.y}
-              fill="#FFE97D"
+              fill={BRAND_GOLD}
               fontSize={11}
               data-arc-label={arc.id}
             >

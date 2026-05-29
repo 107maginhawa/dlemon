@@ -103,7 +103,11 @@ export async function createMember(ctx: Context): Promise<Response> {
       action: 'membership.create',
       resourceType: 'dental_membership',
       resourceId: membership.id,
-      metadata: { role: body.role, displayName: body.displayName.trim() },
+      // V-AUD-001: NEVER put person PII (displayName/name/email/etc.) into audit
+      // metadata — the dental_audit_log is append-only and never deleted, so PHI
+      // written here is unremediable (AC-AUD-004 / HIPAA). The membership id +
+      // role are sufficient; displayName is resolvable via the membership row.
+      metadata: { role: body.role },
     });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-003: failed to write createMembership audit log');

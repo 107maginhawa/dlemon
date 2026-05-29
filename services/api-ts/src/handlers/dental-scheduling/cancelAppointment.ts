@@ -39,18 +39,12 @@ export async function cancelAppointment(
     throw new ValidationError(`Cannot cancel appointment with status '${existing.status}'`);
   }
 
-  // BR-SCH-003: cancellation_reason is mandatory; omitting returns 422 REASON_REQUIRED
-  let cancellationReason: string;
-  try {
-    const body = await ctx.req.json();
-    const reason = body?.cancellationReason;
-    if (typeof reason !== 'string' || reason.trim().length === 0) {
-      throw new BusinessLogicError('cancellationReason is required', 'REASON_REQUIRED');
-    }
-    cancellationReason = reason;
-  } catch (err) {
-    if (err instanceof BusinessLogicError) throw err;
-    throw new BusinessLogicError('cancellationReason is required', 'REASON_REQUIRED');
+  // V-SCH-003 / BR-SCH-003: cancellation reason is a required query param (`reason`),
+  // min:5 / max:500. Omitting or violating the length → 422 REASON_REQUIRED.
+  const rawReason = ctx.req.query('reason');
+  const cancellationReason = typeof rawReason === 'string' ? rawReason.trim() : '';
+  if (cancellationReason.length < 5 || cancellationReason.length > 500) {
+    throw new BusinessLogicError('reason is required (min 5, max 500 characters)', 'REASON_REQUIRED');
   }
 
   const result = await repo.cancel(appointmentId, cancellationReason, user.id);

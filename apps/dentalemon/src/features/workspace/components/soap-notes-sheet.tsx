@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Button, Input, Textarea } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 
 export interface SoapNotesSheetProps {
@@ -188,14 +189,15 @@ export function SoapNotesSheet({
               </span>
             )}
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onClose}
             aria-label="Close SOAP notes"
-            className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
+            className="w-7 h-7 p-0 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         {/* Scrollable body */}
@@ -219,7 +221,7 @@ export function SoapNotesSheet({
                 >
                   Reason
                 </label>
-                <input
+                <Input
                   id="addendum-reason"
                   type="text"
                   value={addendumForm.reason}
@@ -235,7 +237,7 @@ export function SoapNotesSheet({
                 >
                   Content
                 </label>
-                <textarea
+                <Textarea
                   id="addendum-content"
                   rows={5}
                   value={addendumForm.content}
@@ -256,7 +258,7 @@ export function SoapNotesSheet({
                 >
                   Subjective
                 </label>
-                <textarea
+                <Textarea
                   id="soap-subjective"
                   rows={3}
                   value={form.subjective}
@@ -275,7 +277,7 @@ export function SoapNotesSheet({
                 >
                   Objective
                 </label>
-                <textarea
+                <Textarea
                   id="soap-objective"
                   rows={3}
                   value={form.objective}
@@ -294,7 +296,7 @@ export function SoapNotesSheet({
                 >
                   Assessment
                 </label>
-                <textarea
+                <Textarea
                   id="soap-assessment"
                   rows={2}
                   value={form.assessment}
@@ -313,7 +315,7 @@ export function SoapNotesSheet({
                 >
                   Plan
                 </label>
-                <textarea
+                <Textarea
                   id="soap-plan"
                   rows={3}
                   value={form.plan}
@@ -332,7 +334,7 @@ export function SoapNotesSheet({
                 >
                   Additional Notes
                 </label>
-                <textarea
+                <Textarea
                   id="soap-notes"
                   rows={2}
                   value={form.notes}
@@ -345,25 +347,27 @@ export function SoapNotesSheet({
 
               {/* Medical history link */}
               {onOpenMedicalHistory && !isLocked && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={onOpenMedicalHistory}
-                  className="text-xs text-muted-foreground hover:underline mt-2 self-start"
+                  className="h-auto p-0 font-normal text-xs text-muted-foreground hover:bg-transparent hover:underline mt-2 self-start"
                 >
                   View Medical History
-                </button>
+                </Button>
               )}
 
               {/* Note history */}
               {history.length > 0 && (
                 <div className="mt-2 border-t pt-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => setShowHistory(h => !h)}
-                    className="text-xs text-muted-foreground hover:underline font-medium"
+                    className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:underline font-medium"
                   >
                     {showHistory ? 'Hide' : 'Show'} Note History ({history.length})
-                  </button>
+                  </Button>
                   {showHistory && (
                     <ul className="mt-2 flex flex-col gap-2">
                       {history.map(v => (
@@ -407,8 +411,9 @@ export function SoapNotesSheet({
         <div className="flex items-center gap-2 px-5 py-4 border-t flex-shrink-0">
           {showAddendum ? (
             <>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => {
                   setShowAddendum(false);
                   setAddendumForm(EMPTY_ADDENDUM);
@@ -416,55 +421,61 @@ export function SoapNotesSheet({
                 className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleSubmitAddendum}
                 disabled={isAddingAddendum || !addendumForm.content.trim()}
                 aria-label="Submit addendum"
                 className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
               >
                 {isAddingAddendum ? 'Submitting…' : 'Submit Addendum'}
-              </button>
+              </Button>
             </>
           ) : isLocked ? (
             <>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={onClose}
                 className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
               >
                 Close
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setShowAddendum(true)}
                 data-testid="add-addendum-btn"
                 className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
               >
                 Add Addendum
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={onClose}
                 className="h-11 px-4 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
               >
                 Discard
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleSave}
                 disabled={isSaving || isLoading}
                 aria-label="Save SOAP notes"
                 className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50"
               >
                 {isSaving ? 'Saving…' : 'Save'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={handleSignAndLock}
                 disabled={isSaving || isSigning || isLoading}
                 data-testid="sign-lock-btn"
@@ -472,7 +483,7 @@ export function SoapNotesSheet({
                 className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
               >
                 {isSigning || isSaving ? 'Signing…' : 'Sign & Lock'}
-              </button>
+              </Button>
             </>
           )}
         </div>

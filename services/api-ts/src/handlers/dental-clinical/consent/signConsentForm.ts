@@ -6,10 +6,12 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { ValidationError, UnauthorizedError, NotFoundError } from '@/core/errors';
+import { ValidationError, UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { ConsentFormRepository } from '../repos/consent-form.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { SignConsentFormBody, SignConsentFormParams } from '@/generated/openapi/validators';
 
@@ -32,8 +34,10 @@ export async function signConsentForm(
   const visit = await getVisitOrThrow(db, existing.visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
+  // V-CLN-005: a signed consent form is immutable. Re-signing is a business-rule
+  // violation, not an input-validation failure → 422 CONSENT_FORM_SIGNED.
   if (existing.signed) {
-    throw new ValidationError('Consent form is already signed and cannot be modified');
+    throw new BusinessLogicError('Consent form is already signed and cannot be modified', 'CONSENT_FORM_SIGNED');
   }
 
   const signed = await repo.sign(consentId, body.signatureData);
@@ -43,6 +47,18 @@ export async function signConsentForm(
     { requestId: ctx.get('requestId'), action: 'dental_consent_sign', consentId, visitId: existing.visitId, by: user.id },
     'Consent form signed',
   );
+
+  // V-CLN-002: persist an audit row for the "Sign consent" event.
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'consent.signed',
+    resourceType: 'dental_consent_form',
+    resourceId: consentId,
+    metadata: { visitId: existing.visitId, patientId: existing.patientId },
+  });
 
   return ctx.json(signed);
 }

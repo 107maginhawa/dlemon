@@ -7,7 +7,7 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
@@ -18,6 +18,7 @@ import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 import type { NotificationService } from '@/core/notifs';
 import type { JobScheduler } from '@/core/jobs';
 import { emitAppointmentBooked } from './domain-events';
+import { durationFromRange, isVisitType, toWire } from './appointment-wire';
 
 export async function createAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -35,11 +36,24 @@ export async function createAppointment(ctx: HandlerContext) {
   ]);
   const repo = new DentalAppointmentRepository(db);
 
-  // scheduledAt is already a Date after zod transform
-  const scheduledAt = body.scheduledAt instanceof Date ? body.scheduledAt : new Date(String(body.scheduledAt));
-  const durationMinutes = body.durationMinutes;
-  const dentistMemberId = body.dentistMemberId;
+  // Canonical wire shape: providerId / startAt / endAt / visitType (V-SCH-006/007).
+  const startAt = body.startAt instanceof Date ? body.startAt : new Date(String(body.startAt));
+  const endAt = body.endAt instanceof Date ? body.endAt : new Date(String(body.endAt));
+  const dentistMemberId = body.providerId;
   const branchId = body.branchId;
+
+  // V-SCH-008: end_at must be strictly after start_at.
+  if (!(endAt.getTime() > startAt.getTime())) {
+    throw new ValidationError('endAt must be after startAt');
+  }
+
+  // V-SCH-007: visit_type is a constrained enum.
+  if (!isVisitType(body.visitType)) {
+    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall');
+  }
+
+  const scheduledAt = startAt;
+  const durationMinutes = durationFromRange(startAt, endAt);
 
   // FR3.10: Validate against configured working hours (blocking); walk-ins bypass this check (BR-SCH-002)
   if (!body.walkIn) {
@@ -52,11 +66,23 @@ export async function createAppointment(ctx: HandlerContext) {
     }
   }
 
+  const logger = ctx.get('logger') as any | undefined;
+
   // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
   const overlapping = await repo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);
   const warnings: string[] = [];
   if (overlapping.length > 0) {
     warnings.push('DOUBLE_BOOKING');
+    // V-SCH-012 / §17: emit the dental-scheduling.double-booking WARN observable.
+    // No PII in log fields (only opaque ids + the warning marker).
+    logger?.warn?.({
+      event: 'dental-scheduling.double-booking',
+      branchId,
+      providerId: dentistMemberId,
+      startAt: scheduledAt.toISOString(),
+      durationMinutes,
+      overlapCount: overlapping.length,
+    }, 'Double-booking detected at appointment create (soft-warn)');
   }
 
   const appt = await repo.createOne({
@@ -65,15 +91,13 @@ export async function createAppointment(ctx: HandlerContext) {
     branchId,
     scheduledAt,
     durationMinutes,
-    serviceType: body.serviceType,
+    serviceType: body.visitType,
     operatoryId: body.operatoryId,
     walkIn: body.walkIn ?? false,
     notes: body.notes,
     createdBy: user.id,
     updatedBy: user.id,
   });
-
-  const logger = ctx.get('logger') as any | undefined;
 
   // AL-009: appointment booking audit trail — persisted to dental_audit + dental_audit_log
   await logAuditEvent(db, logger, {
@@ -85,10 +109,10 @@ export async function createAppointment(ctx: HandlerContext) {
     resourceId: appt.id,
     metadata: {
       patientId: appt.patientId,
-      dentistMemberId: appt.dentistMemberId,
-      scheduledAt: scheduledAt.toISOString(),
-      durationMinutes,
-      serviceType: appt.serviceType,
+      providerId: appt.dentistMemberId,
+      startAt: scheduledAt.toISOString(),
+      endAt: endAt.toISOString(),
+      visitType: appt.serviceType,
       walkIn: appt.walkIn ?? false,
     },
   });
@@ -111,5 +135,5 @@ export async function createAppointment(ctx: HandlerContext) {
     branchId: appt.branchId,
   }).catch(() => {/* non-blocking */});
 
-  return ctx.json({ ...appt, warnings }, 201);
+  return ctx.json(toWire(appt, { warnings }), 201);
 }

@@ -26,11 +26,15 @@ import { baseEntityFields } from '@/core/database.schema';
 // Enums
 // ---------------------------------------------------------------------------
 
+// V-IMG-010: `cbct` (cone-beam CT) added per spec WF-019 / §7. Adding a pg-enum value
+// requires an additive migration (ALTER TYPE ... ADD VALUE), produced on the next
+// `db:generate`; the value is non-default so existing rows are unaffected.
 export const modalityEnum = pgEnum('imaging_modality', [
   'periapical',
   'bitewing',
   'panoramic',
   'cephalometric',
+  'cbct',
   'intraoral_photo',
   'extraoral_photo',
   'other',

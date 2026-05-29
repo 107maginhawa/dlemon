@@ -76,6 +76,17 @@ export async function updateDentalTreatment(
   if (body.status === 'dismissed') {
     const reason = body.dismissReason ?? 'Dismissed';
     const dismissed = await repo.dismiss(treatmentId, reason);
+    // V-VIS-006: dismiss is a clinically-significant terminal transition — audit it.
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
+    await logAuditEvent(db, ctx.get('logger'), {
+      personId: user.id,
+      tenantId: branchForAudit?.organizationId ?? visit.branchId,
+      branchId: visit.branchId,
+      action: 'treatment.dismissed',
+      resourceType: 'dental_treatment',
+      resourceId: treatmentId,
+      metadata: { visitId: treatment.visitId, reason },
+    });
     return ctx.json(dismissed);
   }
 
@@ -84,7 +95,20 @@ export async function updateDentalTreatment(
     if (!body.refusalReason?.trim()) {
       throw new BusinessLogicError('refusalReason is required when declining a treatment', 'REFUSAL_REASON_REQUIRED');
     }
-    const declined = await repo.decline(treatmentId, body.refusalReason.trim());
+    const refusalReason = body.refusalReason.trim();
+    const declined = await repo.decline(treatmentId, refusalReason);
+    // V-VIS-006: patient refusal is a clinically- and legally-significant terminal
+    // transition — audit it (refusalReason captured for the compliance record).
+    const branchForAudit = await getBranchOrgId(db, visit.branchId);
+    await logAuditEvent(db, ctx.get('logger'), {
+      personId: user.id,
+      tenantId: branchForAudit?.organizationId ?? visit.branchId,
+      branchId: visit.branchId,
+      action: 'treatment.declined',
+      resourceType: 'dental_treatment',
+      resourceId: treatmentId,
+      metadata: { visitId: treatment.visitId, refusalReason },
+    });
     return ctx.json(declined);
   }
 

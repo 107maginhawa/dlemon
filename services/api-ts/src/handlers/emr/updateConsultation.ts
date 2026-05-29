@@ -9,6 +9,8 @@ import {
 import { ConsultationNoteRepository } from './repos/emr.repo';
 import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 import { type UpdateConsultationRequest } from './repos/emr.schema';
+import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * updateConsultation
@@ -90,6 +92,22 @@ export async function updateConsultation(ctx: HandlerContext) {
     updatedBy: user.id,
     ipAddress: ctx.req.header('x-forwarded-for') || ctx.req.header('x-real-ip')
   }, 'Consultation note updated');
-  
+
+  // Persisted audit trail (V-EMR-003) — this mutates PHI on a clinical note, so
+  // the change must leave a durable audit row. Only field NAMES are recorded,
+  // never the PHI values themselves.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: consultation.tenantId ?? EMR_AUDIT_TENANT_SENTINEL,
+    action: 'emr.consultation.update',
+    resourceType: 'consultation',
+    resourceId: consultationId,
+    metadata: {
+      patientId: consultation.patient,
+      providerId: provider.id,
+      updatedFields: Object.keys(body)
+    }
+  });
+
   return ctx.json(updatedConsultation, 200);
 }

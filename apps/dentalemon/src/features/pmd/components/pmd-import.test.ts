@@ -7,12 +7,16 @@ import { describe, test, expect } from 'bun:test';
 interface ImportPMDForm {
   sourceFacility: string;
   sourceReference: string;
+  sourceDescription: string;
   content: string;
 }
 
 function validateImportForm(form: ImportPMDForm): string[] {
   const errors: string[] = [];
   if (!form.sourceFacility.trim()) errors.push('Source facility is required');
+  // V-PMD-005: sourceDescription is required (NOT NULL on imported_pmd) and capped at 200.
+  if (!form.sourceDescription.trim()) errors.push('Source software/system is required');
+  if (form.sourceDescription.trim().length > 200) errors.push('Source software/system must be 200 characters or fewer');
   if (!form.content.trim()) errors.push('PMD content is required');
   // Try to parse content as JSON
   if (form.content.trim()) {
@@ -48,6 +52,7 @@ describe('PMDImport — form validation', () => {
   const valid: ImportPMDForm = {
     sourceFacility: 'City Dental Clinic',
     sourceReference: 'REF-001',
+    sourceDescription: 'Open Dental v21.1',
     content: '{"conditions":["I10"],"medications":["Amoxicillin"]}',
   };
 
@@ -58,6 +63,17 @@ describe('PMDImport — form validation', () => {
   test('missing sourceFacility produces error', () => {
     const errors = validateImportForm({ ...valid, sourceFacility: '' });
     expect(errors).toContain('Source facility is required');
+  });
+
+  // V-PMD-005: sourceDescription is required
+  test('missing sourceDescription produces error', () => {
+    const errors = validateImportForm({ ...valid, sourceDescription: '' });
+    expect(errors).toContain('Source software/system is required');
+  });
+
+  test('sourceDescription over 200 chars produces error', () => {
+    const errors = validateImportForm({ ...valid, sourceDescription: 'x'.repeat(201) });
+    expect(errors).toContain('Source software/system must be 200 characters or fewer');
   });
 
   test('missing content produces error', () => {

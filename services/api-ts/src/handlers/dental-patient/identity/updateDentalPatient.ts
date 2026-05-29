@@ -9,7 +9,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
@@ -33,17 +33,19 @@ export async function updateDentalPatient(
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
-  // Branch-level authorization
-  if (patient.preferredBranchId) {
-    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
+  // Branch-level authorization (V-PAT-002): a missing branch must DENY, never
+  // bypass the guard — a branchless patient is not editable by any member.
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
+  }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
 
-    // EM-PAT-004: archiving via PATCH is restricted to dentist_owner
-    if (body['status'] === 'archived') {
-      await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
-    }
+  // EM-PAT-004: archiving via PATCH is restricted to dentist_owner
+  if (body['status'] === 'archived') {
+    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
   }
 
   const updates: Record<string, any> = {};

@@ -17,7 +17,8 @@ export type ImagingFindingType =
   | 'crown_needed'
   | 'implant_needed'
 
-export type ImagingFindingStatus = 'suspected' | 'confirmed' | 'monitoring' | 'resolved'
+// V-IMG-007: SM-01 finding lifecycle is draft → confirmed → resolved (spec §8 / §11).
+export type ImagingFindingStatus = 'draft' | 'confirmed' | 'resolved'
 
 export interface ImagingFinding {
   id: string

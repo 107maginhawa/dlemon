@@ -505,6 +505,13 @@
       "when": 1780051989033,
       "tag": "0071_famous_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1780079180067,
+      "tag": "0072_normal_sauron",
+      "breakpoints": true
     }
   ]
 }

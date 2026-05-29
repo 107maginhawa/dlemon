@@ -56,23 +56,27 @@ export async function createDentalPatient(
     : null;
 
   // Create a new person record for the patient (distinct from the logged-in user)
+  // V-PAT-005: persist the captured registration consent on the person record.
   const newPerson = await createPersonForDentalPatient(db, {
     id: crypto.randomUUID(),
     firstName,
     ...(lastName ? { lastName } : {}),
     ...(body.dateOfBirth ? { dateOfBirth: body.dateOfBirth } : {}),
     ...(body.gender ? { gender: body.gender } : {}),
+    consent: { registrationConsent: true, capturedAt: new Date().toISOString() },
   }, user.id);
 
   // Create patient record linked to the new person
   const patient = await createPatientForRegistration(db, newPerson.id, body.branchId);
 
-  // AL-005: patient creation audit trail
+  // AL-005 + V-PAT-006 (DE-021 PatientRegistered): per ADR-006 the domain event
+  // is an audit-log-only semantic marker — satisfied by writing this row
+  // synchronously. No event bus / emit scaffolding.
   await logAuditEvent(db, logger, {
     personId: user.id,
     tenantId: body.branchId,
     branchId: body.branchId,
-    action: 'patient.create',
+    action: 'patient.registered',
     resourceType: 'dental_patient',
     resourceId: patient.id,
   });

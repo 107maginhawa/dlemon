@@ -26,7 +26,7 @@ describe('BR-023: Annotations non-destructive', () => {
     let capturedUrl: string | undefined;
     global.fetch = mock((url: string) => {
       capturedUrl = url;
-      return jsonResponse({ id: 'f1', imageId: 'img-1', type: 'caries', status: 'suspected',
+      return jsonResponse({ id: 'f1', imageId: 'img-1', type: 'caries', status: 'draft',
         visitId: 'v1', patientId: 'p1', branchId: 'b1', annotationId: null, treatmentId: null,
         toothNumber: null, surfaces: null, note: null, createdAt: '', updatedAt: '' });
     });
@@ -48,7 +48,7 @@ describe('BR-023: Annotations non-destructive', () => {
 
   test('findings are returned as overlay data separate from image URL', async () => {
     const findings = [{
-      id: 'f1', imageId: 'img-1', type: 'caries', status: 'suspected',
+      id: 'f1', imageId: 'img-1', type: 'caries', status: 'draft',
       visitId: 'v1', patientId: 'p1', branchId: 'b1', annotationId: null, treatmentId: null,
       toothNumber: null, surfaces: null, note: null, createdAt: '', updatedAt: '',
     }];

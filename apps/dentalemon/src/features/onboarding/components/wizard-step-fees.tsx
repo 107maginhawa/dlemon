@@ -1,3 +1,5 @@
+import { Input } from '@monobase/ui';
+
 export interface FeeEntry { cdtCode: string; description: string; priceCents: number; }
 
 export const DEFAULT_FEES: FeeEntry[] = [
@@ -31,7 +33,7 @@ export function FeesStep({ fees, onFeesChange }: FeesStepProps) {
               <td className="px-4 py-2 font-mono text-xs">{fee.cdtCode}</td>
               <td className="px-4 py-2">{fee.description}</td>
               <td className="px-4 py-2 text-right">
-                <input
+                <Input
                   type="number"
                   min="0"
                   step="0.01"

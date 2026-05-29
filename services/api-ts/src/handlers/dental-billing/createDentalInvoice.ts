@@ -29,9 +29,12 @@ export async function createDentalInvoice(
   const db = ctx.get('database') as DatabaseInstance;
 
   // Branch-level authorization
-  await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  // V-BIL-003: per ROLE_PERMISSION_MATRIX, create invoice = dentist_owner +
+  // dentist_associate (own patients). staff_full is NOT permitted.
+  await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate']);
 
-  // BR-011: signed consent form required before invoicing
+  // BR-014: signed consent form required before invoicing (see MODULE_SPEC §5).
+  // (Previously mislabeled BR-011, which governs payment-plan/void blocking.)
   const hasSigned = await hasSignedConsentForVisit(db, body.visitId);
   if (!hasSigned) {
     throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');

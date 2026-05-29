@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { imageToScreen, screenToImage } from '@monobase/ceph-math'
 import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark, CephLandmarkCode } from '../hooks/use-ceph-landmarks'
+import { BRAND_GOLD } from '@/constants/brand'
 
 export interface CephLandmarkLayerProps {
   landmarks: CephLandmark[]
@@ -22,7 +23,7 @@ function fillForStatus(status: CephLandmark['status']): string {
       return '#94a3b8'
     case 'placed':
     default:
-      return '#FFE97D'
+      return BRAND_GOLD
   }
 }
 

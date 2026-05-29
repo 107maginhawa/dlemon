@@ -5,6 +5,15 @@
 
 # Event Contracts — Dentalemon
 
+> **⚠️ Transport note (per [ADR-006](../decisions/ADR-006-domain-events-descope.md)):** These
+> events are **audit-log-only semantic markers** — there is **no event bus, no pg-boss queue, and
+> no DLQ**. Each event is recorded synchronously via `logAuditEvent` by its producer (see
+> [ADR-005](../decisions/ADR-005-audit-write-path.md)); the `dental-audit` consumer is satisfied
+> inline. Reactive (`notifs`) consumers are **deferred to a future phase**. This catalog is kept
+> intact as the canonical vocabulary and identifier contract for each fact — the "Delivery
+> Guarantees" / pg-boss / DLQ descriptions below document the *original* design intent, not the
+> implemented transport. Treat them as historical context superseded by ADR-006.
+
 > Internal domain events delivered via **pg-boss** async queue.
 > No external webhooks in Phase 1. Events are append-only — never mutated after emission.
 

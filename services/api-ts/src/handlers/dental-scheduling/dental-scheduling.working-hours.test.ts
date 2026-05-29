@@ -260,13 +260,14 @@ describe('createAppointment working hours enforcement (FR3.10)', () => {
   };
 
   function apptBody(scheduledAt: string, durationMinutes = 60) {
+    const endAt = new Date(new Date(scheduledAt).getTime() + durationMinutes * 60 * 1000).toISOString();
     return JSON.stringify({
       patientId: PATIENT_ID,
-      dentistMemberId: MEMBER_ID,
+      providerId: MEMBER_ID,
       branchId: BRANCH_ID,
-      scheduledAt,
-      durationMinutes,
-      serviceType: 'checkup',
+      startAt: scheduledAt,
+      endAt,
+      visitType: 'checkup',
     });
   }
 

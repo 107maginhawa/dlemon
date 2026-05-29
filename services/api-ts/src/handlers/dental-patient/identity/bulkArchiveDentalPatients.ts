@@ -3,24 +3,38 @@
  *
  * FR2.13: Bulk archive multiple patients with EC1 guard per patient.
  *
- * Body: { patientIds: string[] }
+ * Body: { ids: string[] (1–50), reason: string (5–500) }
  * Returns per-patient result: { id, success, reason? }
+ *
+ * V-PAT-012: body validated locally as { ids, reason } (renamed from patientIds,
+ * reason now required, list capped at 50). The handler self-validates because the
+ * generated validator is regenerated centrally from the TypeSpec change.
  */
 
-import type { ValidatedContext } from '@/types/app';
+import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import type { BulkArchiveDentalPatientsBody } from '@/generated/openapi/validators';
+import { z } from 'zod';
 
-export async function bulkArchiveDentalPatients(
-  ctx: ValidatedContext<BulkArchiveDentalPatientsBody, never, never>
-) {
+const bulkArchiveSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'ids must contain at least 1 patient').max(50, 'ids cannot exceed 50 patients'),
+  reason: z.string().min(5, 'reason must be at least 5 characters').max(500, 'reason must be at most 500 characters'),
+});
+
+export async function bulkArchiveDentalPatients(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientIds } = ctx.req.valid('json');
+  const rawBody = await ctx.req.json().catch(() => ({}));
+  const parsed = bulkArchiveSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    // Map to a 400 ValidationError so it surfaces consistently regardless of
+    // whether a route-level zValidator is wired (V-PAT-012).
+    throw new ValidationError(parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '));
+  }
+  const { ids, reason } = parsed.data;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -28,7 +42,7 @@ export async function bulkArchiveDentalPatients(
 
   // Branch-level authorization: verify access to all unique branch IDs
   const patientsToCheck = await Promise.all(
-    patientIds.map(id => repo.findOneById(id))
+    ids.map(id => repo.findOneById(id))
   );
   const uniqueBranchIds = [...new Set(
     patientsToCheck
@@ -40,8 +54,8 @@ export async function bulkArchiveDentalPatients(
   }
 
   const results = await Promise.all(
-    patientIds.map(async (id) => {
-      const result = await repo.archivePatient(id);
+    ids.map(async (id) => {
+      const result = await repo.archivePatient(id, reason);
       return { id, ...result };
     })
   );
@@ -50,7 +64,7 @@ export async function bulkArchiveDentalPatients(
   const failCount = results.length - successCount;
 
   logger?.info(
-    { action: 'bulkArchiveDentalPatients', total: patientIds.length, successCount, failCount, actorId: user.id },
+    { action: 'bulkArchiveDentalPatients', total: ids.length, successCount, failCount, actorId: user.id, reason },
     'Bulk archive completed'
   );
 

@@ -189,11 +189,12 @@ model ConsultationNote extends BaseEntity {
 /**
  * Consultation status enumeration
  */
-@doc("Status of consultation note")
+@doc("Status of consultation note. State machine is draft → finalized (terminal). The 'amended' value is RESERVED but unreachable: there is no amend endpoint and finalize rejects non-draft notes (V-EMR-001). Retained only as a reserved enum value for forward compatibility.")
 union ConsultationStatus {
   string,
   "draft": "draft",
-  "finalized": "finalized", 
+  "finalized": "finalized",
+  // RESERVED — not produced by any endpoint (see V-EMR-001). No amend workflow exists.
   "amended": "amended",
 }
 
@@ -238,6 +239,9 @@ model CreateConsultationRequest {
 
   @doc("Follow-up instructions")
   followUp?: FollowUpData;
+
+  @doc("External documentation (V-EMR-008 — settable at create, parity with update)")
+  externalDocumentation?: Record<unknown>;
 }
 
 /**
@@ -276,8 +280,10 @@ model UpdateConsultationRequest {
 /**
  * EMR Module — Telemedicine Consultation Notes (minor ailments)
  *
- * Simplified consultation-note documentation system (draft→finalized→amended)
- * for quick minor-ailment encounters. Spec: docs/product/modules/emr-consultation/.
+ * Simplified consultation-note documentation system (draft→finalized, terminal)
+ * for quick minor-ailment encounters. There is no amend endpoint — the prior
+ * draft→finalized→amended→finalized workflow was struck as unbuilt/unreachable
+ * (V-EMR-001). Spec: docs/product/modules/emr-consultation/.
  *
  * NOTE: This is the live "EMR" — telemedicine consultation notes at /emr. It is
  * NOT the external-EMR/EHR import bridge (Open Dental / Dentrix / HL7-FHIR), which

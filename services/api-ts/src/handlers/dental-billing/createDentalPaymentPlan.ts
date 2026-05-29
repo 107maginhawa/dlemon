@@ -27,7 +27,23 @@ export async function createDentalPaymentPlan(
   if (!invoice) throw new NotFoundError('Invoice');
 
   // Branch-level authorization
-  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  // V-BIL-003: per ROLE_PERMISSION_MATRIX, create payment plan = dentist_owner +
+  // dentist_associate (own patients). staff_full is NOT permitted.
+  await assertBranchRole(db, session.userId, invoice.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // V-BIL-002: bound installment count to the contract range (2–24). An
+  // unbounded/zero count yields Math.floor(total/0) = Infinity (money-integrity
+  // breach). Defended here even if the schema validator is bypassed.
+  if (
+    !Number.isInteger(body.numberOfInstallments) ||
+    body.numberOfInstallments < 2 ||
+    body.numberOfInstallments > 24
+  ) {
+    throw new BusinessLogicError(
+      'Number of installments must be between 2 and 24',
+      'INVALID_INSTALLMENT_COUNT',
+    );
+  }
 
   if (invoice.status === 'voided') {
     throw new BusinessLogicError('Cannot create payment plan for a voided invoice', 'VOIDED_INVOICE');

@@ -75,11 +75,13 @@ function makeDb(opts: {
   memberRole?: string;
   study?: typeof MOCK_STUDY | null;
   image?: typeof MOCK_IMAGE | null;
+  imagingTier?: 'free' | 'basic' | 'addon';
 } = {}) {
   const hasMembership = opts.hasMembership !== false;
   const memberRole = opts.memberRole ?? 'dentist_owner';
   const study = opts.study !== undefined ? opts.study : MOCK_STUDY;
   const image = opts.image !== undefined ? opts.image : MOCK_IMAGE;
+  const imagingTier = opts.imagingTier ?? 'addon';
 
   /**
    * The select() chain is used for:
@@ -158,7 +160,7 @@ function makeDb(opts: {
           }
           if (hasOrganizationId) {
             // dental_branch → dental_organization tier gate
-            const tierRows = Promise.resolve([{ imagingTier: 'addon' }]);
+            const tierRows = Promise.resolve([{ imagingTier }]);
             return Object.assign(tierRows, { limit: (_n: number) => tierRows });
           }
           // dental_attachment → innerJoin dental_visit (legacy query, returns empty for mocks)
@@ -281,6 +283,89 @@ describe('createImagingStudy 201 + upload URL', () => {
     expect(body.uploadUrl).not.toBeNull();
   });
 
+  // V-IMG-001 / AC-IMG-001: cephalometric study upload requires the addon tier.
+  test('cephalometric study without addon tier → 403 IMAGING_TIER_REQUIRED', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      db: makeDb({ imagingTier: 'basic' }),
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cephalometric',
+        filename: 'ceph.jpg',
+        mimeType: 'image/jpeg',
+        size: 204800,
+      }),
+    });
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('IMAGING_TIER_REQUIRED');
+  });
+
+  // V-IMG-001: cephalometric study WITH addon tier proceeds to create (201).
+  test('cephalometric study with addon tier → 201', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      db: makeDb({ imagingTier: 'addon' }),
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cephalometric',
+        filename: 'ceph.jpg',
+        mimeType: 'image/jpeg',
+        size: 204800,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+  });
+
+  // V-IMG-001: non-cephalometric study is NOT tier-gated (free/basic can upload).
+  test('non-cephalometric study on basic tier → 201 (no tier gate)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      db: makeDb({ imagingTier: 'basic' }),
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'panoramic',
+        filename: 'pano.jpg',
+        mimeType: 'image/jpeg',
+        size: 204800,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+  });
+
   test('uploadUrl is presigned string starting with https://', async () => {
     const { createImagingStudy } = await import('./createImagingStudy');
     const app = buildApp(createImagingStudy as any, {
@@ -392,8 +477,10 @@ describe('BR-033 file size limit', () => {
       }),
     });
 
-    // Should fail on mime type (400), not size
-    expect(res.status).toBe(400);
+    // V-IMG-003: should fail on mime type (422 UNSUPPORTED_MIME_TYPE), not size
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('UNSUPPORTED_MIME_TYPE');
   });
 });
 
@@ -424,8 +511,10 @@ describe('BR-034 mime type validation', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    // V-IMG-003: unsupported MIME → 422 UNSUPPORTED_MIME_TYPE (was 400 VALIDATION_ERROR)
+    expect(res.status).toBe(422);
     const body = (await res.json()) as any;
+    expect(body.code).toBe('UNSUPPORTED_MIME_TYPE');
     expect(body.error).toMatch(/unsupported|format|mime|allowed/i);
   });
 
@@ -1406,7 +1495,7 @@ const MOCK_FINDING = {
   patientId: PATIENT_ID,
   branchId: BRANCH_ID,
   type: 'caries' as const,
-  status: 'suspected' as import('./repos/imaging_finding.schema').ImagingFindingStatus,
+  status: 'draft' as import('./repos/imaging_finding.schema').FindingStatus,
   toothNumber: 14,
   surfaces: ['occlusal'] as string[],
   note: 'Small interproximal lesion',
@@ -1608,19 +1697,22 @@ describe('imaging findings', () => {
     expect(res.status).toBe(200);
   });
 
-  test('updateFinding rejects invalid transition (resolved → suspected)', async () => {
+  // V-IMG-007 / AC-IMG-002: SM-01 has no back-edge — confirmed → draft is rejected.
+  test('updateFinding rejects invalid transition (confirmed → draft)', async () => {
     const { updateFinding } = await import('./updateFinding');
-    const db = makeFindingDb({ hasMembership: true, study: MOCK_STUDY, image: MOCK_IMAGE, finding: { ...MOCK_FINDING, status: 'resolved' } });
+    const db = makeFindingDb({ hasMembership: true, study: MOCK_STUDY, image: MOCK_IMAGE, finding: { ...MOCK_FINDING, status: 'confirmed' } });
     const app = buildApp(updateFinding as any, { user: DENTIST_USER, db: db as any, method: 'PATCH', path: '/:findingId' });
-    const res = await app.request('/test-finding-id', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'suspected' }) });
+    const res = await app.request('/test-finding-id', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'draft' }) });
     expect(res.status).toBe(422);
     const body = (await res.json()) as any;
+    expect(body.code).toBe('INVALID_STATUS_TRANSITION');
     expect(body.error).toContain('Cannot transition');
   });
 
-  test('updateFinding allows valid transition (suspected → confirmed)', async () => {
+  // V-IMG-007: SM-01 forward transition draft → confirmed is allowed.
+  test('updateFinding allows valid transition (draft → confirmed)', async () => {
     const { updateFinding } = await import('./updateFinding');
-    const db = makeFindingDb({ hasMembership: true, study: MOCK_STUDY, image: MOCK_IMAGE, finding: { ...MOCK_FINDING, status: 'suspected' } });
+    const db = makeFindingDb({ hasMembership: true, study: MOCK_STUDY, image: MOCK_IMAGE, finding: { ...MOCK_FINDING, status: 'draft' } });
     const app = buildApp(updateFinding as any, { user: DENTIST_USER, db: db as any, method: 'PATCH', path: '/:findingId' });
     const res = await app.request('/test-finding-id', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'confirmed' }) });
     expect(res.status).toBe(200);

@@ -4,7 +4,7 @@
  * AC-003..AC-008: Update plan fields and enforce FSM for status transitions.
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { TREATMENT_PLAN_FSM, type TreatmentPlanStatus } from '../repos/treatment-plan.schema';
@@ -26,7 +26,7 @@ export async function updateTreatmentPlan(ctx: any): Promise<Response> {
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
   const repo = new TreatmentPlanRepository(db, logger);

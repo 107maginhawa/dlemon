@@ -22,11 +22,16 @@ export async function listPMDs(ctx: HandlerContext) {
 
   const db = ctx.get('database') as DatabaseInstance;
 
-  // Branch-level authorization via patient's preferred branch
   const patient = await getPatientForPMD(db, patientId);
   if (!patient) throw new NotFoundError('Patient');
-  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchAccess(db, user.id, patient.preferredBranchId);
+
+  // V-PMD-008 (§6 "Download: patient own PMDs"): a patient may list their own PMDs.
+  // Otherwise fall back to branch-level authorization via the patient's preferred branch.
+  const isPatientSelf = patient.person === user.id;
+  if (!isPatientSelf) {
+    if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+    await assertBranchAccess(db, user.id, patient.preferredBranchId);
+  }
 
   const repo = new PMDDocumentRepository(db);
 

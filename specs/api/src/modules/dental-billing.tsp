@@ -186,10 +186,21 @@ model CreateDentalInvoiceRequest {
 }
 
 model RecordDentalPaymentRequest {
+  // V-BIL-010: payments must be for at least 1 cent (enforced in handler → 422 INVALID_AMOUNT).
   amountCents: int32;
+
   method: PaymentMethod;
-  receiptNumber: string;
+
+  // V-BIL-009: the human-facing reference/receipt number is optional. When
+  // omitted the server generates one; when supplied it doubles as the
+  // idempotency key for the payment.
+  receiptNumber?: string;
+
   recordedByMemberId: UUID;
+
+  // V-BIL-009: optional caller-supplied payment date (defaults to now()).
+  paymentDate?: utcDateTime;
+
   notes?: string;
 }
 
@@ -199,13 +210,21 @@ model VoidDentalPaymentRequest {
 
 model CreateDentalPaymentPlanRequest {
   patientId: UUID;
+
+  // V-BIL-002: bound installment count to the contract range (2–24). A count
+  // of 0/1 or an unbounded value breaks installment math (division by zero →
+  // Infinity) and the agreement semantics. Enforced in handler → 422 INVALID_INSTALLMENT_COUNT.
   numberOfInstallments: int32;
+
   frequency: PlanFrequency;
   startDate: utcDateTime;
 }
 
 model ApplyDentalDiscountRequest {
   reason: string;
+
+  // V-BIL-001: a discount percentage must be within 0–100. An unbounded rate
+  // can drive the invoice total negative (money-integrity breach). Enforced in handler → 422 INVALID_DISCOUNT_RATE.
   percentageRate: float32;
 }
 
@@ -274,7 +293,9 @@ namespace DentalBillingModule {
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
-    @post
+    // V-BIL-008: issue is a state transition on an existing invoice → PATCH
+    // (per MODULE_SPEC §10), not POST.
+    @patch
     @route("/invoices/{invoiceId}/issue")
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
@@ -292,6 +313,21 @@ namespace DentalBillingModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("voidDentalInvoice")
     voidInvoice(
+      @path invoiceId: UUID
+    ): ApiOkResponse<DentalInvoice>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // V-BIL-006 / BR-013 / AC-BIL-005: write-off endpoint is contract-present
+    // but deferred — handler returns 501 NOT_IMPLEMENTED until the
+    // dental_billing_uncollectible feature flag is lifted.
+    @post
+    @route("/invoices/{invoiceId}/uncollectible")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("markUncollectible")
+    markUncollectible(
       @path invoiceId: UUID
     ): ApiOkResponse<DentalInvoice>
       | ApiNotFoundResponse

@@ -30,7 +30,19 @@ export async function listDentalPatients(
   if (!q['branchId']) {
     return ctx.json({ error: 'branchId is required' } as any, 400);
   }
-  await assertBranchRole(db, user.id, q['branchId'], ['dentist_owner', 'dentist_associate', 'staff_full', 'hygienist']);
+  // V-PAT-008: per ROLE_PERMISSION_MATRIX, ALL dental context roles may view
+  // the patient list (scoped to their branch). Read access is the floor.
+  await assertBranchRole(db, user.id, q['branchId'], [
+    'dentist_owner',
+    'dentist_associate',
+    'hygienist',
+    'staff_full',
+    'staff_scheduling',
+    'dental_assistant',
+    'front_desk',
+    'billing_staff',
+    'read_only',
+  ]);
 
   const filters: Record<string, any> = {};
 

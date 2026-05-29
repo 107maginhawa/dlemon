@@ -1,5 +1,6 @@
 import type { ImagingAnnotation } from '../hooks/use-measurements'
 import type { ToolMode } from './measurement-toolbar'
+import { BRAND_GOLD } from '@/constants/brand'
 
 interface AnnotationShapeProps {
   annotation: ImagingAnnotation
@@ -24,8 +25,8 @@ export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps)
         : ''
     return (
       <g>
-        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#FFE97D" strokeWidth={2} />
-        <text x={mx} y={my - 6} fill="#FFE97D" fontSize={12} textAnchor="middle">
+        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={BRAND_GOLD} strokeWidth={2} />
+        <text x={mx} y={my - 6} fill={BRAND_GOLD} fontSize={12} textAnchor="middle">
           {label}
         </text>
         <circle
@@ -56,10 +57,10 @@ export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps)
         <polyline
           points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
           fill="none"
-          stroke="#FFE97D"
+          stroke={BRAND_GOLD}
           strokeWidth={2}
         />
-        <text x={p2.x} y={p2.y - 8} fill="#FFE97D" fontSize={12} textAnchor="middle">
+        <text x={p2.x} y={p2.y - 8} fill={BRAND_GOLD} fontSize={12} textAnchor="middle">
           {label}
         </text>
         <circle
@@ -90,12 +91,12 @@ export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps)
       <g>
         <polygon
           points={pointsStr}
-          fill="#FFE97D"
+          fill={BRAND_GOLD}
           fillOpacity={0.2}
-          stroke="#FFE97D"
+          stroke={BRAND_GOLD}
           strokeWidth={2}
         />
-        <text x={cx} y={cy} fill="#FFE97D" fontSize={12} textAnchor="middle">
+        <text x={cx} y={cy} fill={BRAND_GOLD} fontSize={12} textAnchor="middle">
           {label}
         </text>
         <circle
@@ -127,7 +128,7 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
         onClick={() => onAnnotationClick?.(annotation.id)}
       >
         {/* UJ-IMG-002: annotation text rendered as JSX string child — React escapes it, no XSS possible */}
-        <text x={pt.x} y={pt.y} fill="#FFE97D" fontSize={13} fontWeight={600}>
+        <text x={pt.x} y={pt.y} fill={BRAND_GOLD} fontSize={13} fontWeight={600}>
           {text}
         </text>
         <circle
@@ -154,7 +155,7 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
           y1={from.y}
           x2={to.x}
           y2={to.y}
-          stroke="#FFE97D"
+          stroke={BRAND_GOLD}
           strokeWidth={2}
           markerEnd="url(#arrowhead)"
         />
@@ -180,7 +181,7 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
         <polyline
           points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
           fill="none"
-          stroke="#FFE97D"
+          stroke={BRAND_GOLD}
           strokeWidth={2}
         />
         <circle
@@ -215,9 +216,9 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
             y={y}
             width={width}
             height={height}
-            fill="#FFE97D"
+            fill={BRAND_GOLD}
             fillOpacity={0.1}
-            stroke="#FFE97D"
+            stroke={BRAND_GOLD}
             strokeWidth={2}
           />
           <circle
@@ -243,9 +244,9 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
             cy={cy}
             rx={width / 2}
             ry={height / 2}
-            fill="#FFE97D"
+            fill={BRAND_GOLD}
             fillOpacity={0.1}
-            stroke="#FFE97D"
+            stroke={BRAND_GOLD}
             strokeWidth={2}
           />
           <circle
@@ -268,8 +269,8 @@ export function AnnotationShape({ annotation, onDelete, onAnnotationClick }: Ann
     if (!pt || toothNumber == null) return null
     return (
       <g>
-        <circle cx={pt.x} cy={pt.y} r={14} fill="#FFE97D" fillOpacity={0.2} stroke="#FFE97D" strokeWidth={2} />
-        <text x={pt.x} y={pt.y + 5} fill="#FFE97D" fontSize={11} fontWeight={700} textAnchor="middle">
+        <circle cx={pt.x} cy={pt.y} r={14} fill={BRAND_GOLD} fillOpacity={0.2} stroke={BRAND_GOLD} strokeWidth={2} />
+        <text x={pt.x} y={pt.y + 5} fill={BRAND_GOLD} fontSize={11} fontWeight={700} textAnchor="middle">
           {toothNumber}
         </text>
         <circle
@@ -301,7 +302,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
     if (!p0) return null
     if (points.length < 2) {
       return (
-        <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
+        <circle cx={p0.x} cy={p0.y} r={4} fill={BRAND_GOLD} fillOpacity={0.8} />
       )
     }
     const p1 = points[1]!
@@ -311,7 +312,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
         y1={p0.y}
         x2={p1.x}
         y2={p1.y}
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="6 3"
       />
@@ -323,7 +324,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
       <polyline
         points={points.map((p) => `${p.x},${p.y}`).join(' ')}
         fill="none"
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="6 3"
       />
@@ -334,9 +335,9 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
     return (
       <polyline
         points={points.map((p) => `${p.x},${p.y}`).join(' ')}
-        fill="#FFE97D"
+        fill={BRAND_GOLD}
         fillOpacity={0.15}
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="6 3"
       />
@@ -346,13 +347,13 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
   if (toolMode === 'label' || toolMode === 'tooth') {
     const p0 = points[0]
     if (!p0) return null
-    return <circle cx={p0.x} cy={p0.y} r={5} fill="#FFE97D" fillOpacity={0.7} />
+    return <circle cx={p0.x} cy={p0.y} r={5} fill={BRAND_GOLD} fillOpacity={0.7} />
   }
 
   if (toolMode === 'arrow' && points.length >= 1) {
     const p0 = points[0]!
     if (points.length < 2) {
-      return <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
+      return <circle cx={p0.x} cy={p0.y} r={4} fill={BRAND_GOLD} fillOpacity={0.8} />
     }
     const p1 = points[1]!
     return (
@@ -361,7 +362,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
         y1={p0.y}
         x2={p1.x}
         y2={p1.y}
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="6 3"
         markerEnd="url(#arrowhead)"
@@ -374,7 +375,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
       <polyline
         points={points.map((p) => `${p.x},${p.y}`).join(' ')}
         fill="none"
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="4 2"
       />
@@ -384,7 +385,7 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
   if (toolMode === 'shape' && points.length >= 1) {
     const p0 = points[0]!
     if (points.length < 2) {
-      return <circle cx={p0.x} cy={p0.y} r={4} fill="#FFE97D" fillOpacity={0.8} />
+      return <circle cx={p0.x} cy={p0.y} r={4} fill={BRAND_GOLD} fillOpacity={0.8} />
     }
     const p1 = points[1]!
     const x = Math.min(p0.x, p1.x)
@@ -397,9 +398,9 @@ export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
         y={y}
         width={width}
         height={height}
-        fill="#FFE97D"
+        fill={BRAND_GOLD}
         fillOpacity={0.1}
-        stroke="#FFE97D"
+        stroke={BRAND_GOLD}
         strokeWidth={2}
         strokeDasharray="6 3"
       />

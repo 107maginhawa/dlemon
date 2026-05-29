@@ -20,6 +20,7 @@ import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
+import { toWire } from './appointment-wire';
 
 export async function checkInAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -47,7 +48,12 @@ export async function checkInAppointment(ctx: HandlerContext) {
   // (prevents appointment getting stuck in checkedIn with no visit on conflict)
   const inProgressVisit = await findInProgressVisitByPatient(db, appointment.patientId);
   if (inProgressVisit) {
-    throw new ConflictError('Visit already active for this patient. Complete or cancel the existing visit first.');
+    // V-SCH-002 / AC-SCH-003: specific taxonomy code, not generic CONFLICT.
+    // ERROR_TAXONOMY: CHECKIN_ACTIVE_VISIT(409).
+    throw new ConflictError(
+      'Visit already active for this patient. Complete or cancel the existing visit first.',
+      'CHECKIN_ACTIVE_VISIT',
+    );
   }
 
   // 2-4: Atomically: check in + create visit + link visit
@@ -67,5 +73,10 @@ export async function checkInAppointment(ctx: HandlerContext) {
     return { appointment: linked, visitId: visit.id };
   });
 
-  return ctx.json(result);
+  // V-SCH-010 / DE-001 VisitCheckedIn ownership: the VisitCheckedIn semantic marker
+  // is OWNED by dental-visit (it is the visit lifecycle that begins here). createVisit
+  // writes the corresponding dental_audit_log row. Per ADR-006 there is no event bus,
+  // so dental-scheduling does not publish/emit anything for check-in — it only delegates
+  // visit creation. See MODULE_SPEC §10b.
+  return ctx.json({ appointment: result.appointment ? toWire(result.appointment) : result.appointment, visitId: result.visitId });
 }

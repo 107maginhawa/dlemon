@@ -20,7 +20,7 @@ import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { assertValidDepths, assertValidToothNumber } from './utils/perio-validation';
+import { assertValidDepths, assertValidToothNumber, assertValidGrades } from './utils/perio-validation';
 import type { User } from '@/types/auth';
 import type {
   UpsertToothReadingBody,
@@ -39,16 +39,19 @@ export async function upsertToothReading(
 
   // BR-P04: validate FDI tooth number.
   assertValidToothNumber(toothNumber);
-  // BR-P03: validate depths in body.
+  // BR-P03: validate depths (and recession) in body.
   assertValidDepths(body as Record<string, unknown>);
+  // V-PER-004: mobility / furcation must be grade 0–3.
+  assertValidGrades(body as Record<string, unknown>);
 
   const chartRepo = new PerioChartRepository(db);
   const chart = await chartRepo.findOneById(chartId);
   if (!chart) throw new NotFoundError('Perio chart');
 
-  // BR-P02: chart must be writable.
+  // BR-P02: chart must be writable. A completed/locked chart is immutable —
+  // V-PER-002: canonical code CHART_COMPLETED (was PERIO_CHART_LOCKED).
   if (chart.status !== 'draft') {
-    throw new BusinessLogicError(`Cannot modify ${chart.status} perio chart`, 'PERIO_CHART_LOCKED');
+    throw new BusinessLogicError(`Cannot modify ${chart.status} perio chart`, 'CHART_COMPLETED');
   }
 
   // EF-PER-001: parent visit must not be completed or locked.

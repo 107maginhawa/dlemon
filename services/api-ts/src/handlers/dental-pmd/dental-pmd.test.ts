@@ -176,7 +176,9 @@ describe('generatePMD handler [AC-PMD-01]', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when visit is not completed or locked', async () => {
+  // V-PMD-003 (AC-PMD-001): non-completed visit → 422 VISIT_NOT_COMPLETED (business-rule
+  // violation), not 400 VALIDATION_ERROR.
+  test('returns 422 VISIT_NOT_COMPLETED when visit is not completed or locked', async () => {
     const visit = await seedDraftVisit();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit.id}/pmd`, {
@@ -184,7 +186,9 @@ describe('generatePMD handler [AC-PMD-01]', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patientId: PATIENT_ID }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_NOT_COMPLETED');
   });
 
   test('returns 201 with generated PMD on completed visit', async () => {

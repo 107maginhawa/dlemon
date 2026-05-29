@@ -135,11 +135,11 @@ describe('AC-SCHED-01: appointment creation fires booking.created notification',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         patientId: PATIENT_ID,
-        dentistMemberId: MEMBER_ID,
+        providerId: MEMBER_ID,
         branchId: BRANCH_ID,
-        scheduledAt: FUTURE_DATE,
-        durationMinutes: 30,
-        serviceType: 'Cleaning',
+        startAt: FUTURE_DATE,
+        endAt: new Date(new Date(FUTURE_DATE).getTime() + 30 * 60 * 1000).toISOString(),
+        visitType: 'checkup',
       }),
     });
 
@@ -205,10 +205,8 @@ describe('AC-SCHED-03: cancelling appointment sets status cancelled; visit is pr
     });
 
     // Cancel appointment B
-    const cancelRes = await app.request(`/dental/appointments/${apptB.id}`, {
+    const cancelRes = await app.request(`/dental/appointments/${apptB.id}?reason=${encodeURIComponent('Test cancellation')}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancellationReason: 'Test cancellation' }),
     });
     expect(cancelRes.status).toBe(204);
 
@@ -235,11 +233,11 @@ describe('AC-SCHED-04: walk-in appointments created without prior appointment ID
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         patientId: PATIENT_ID,
-        dentistMemberId: MEMBER_ID,
+        providerId: MEMBER_ID,
         branchId: BRANCH_ID,
-        scheduledAt: FUTURE_DATE,
-        durationMinutes: 15,
-        serviceType: 'Walk-In Consult',
+        startAt: FUTURE_DATE,
+        endAt: new Date(new Date(FUTURE_DATE).getTime() + 15 * 60 * 1000).toISOString(),
+        visitType: 'emergency',
         walkIn: true,
       }),
     });
@@ -282,14 +280,14 @@ describe('AC-SCHED-05: listing appointments with date filter returns only appoin
 
     const app = buildTestApp(TEST_USER);
     const res = await app.request(
-      `/dental/appointments?branchId=${BRANCH_ID}&date=${targetDate}`,
+      `/dental/appointments?branchId=${BRANCH_ID}&date_from=${targetDate}&date_to=${targetDate}`,
     );
     expect(res.status).toBe(200);
     const appts = await res.json() as any[];
     expect(appts.length).toBeGreaterThanOrEqual(1);
     // All returned appointments must fall on 2027-03-15
     for (const a of appts) {
-      const d = new Date(a.scheduledAt);
+      const d = new Date(a.startAt);
       expect(d.toISOString().startsWith('2027-03-15')).toBe(true);
     }
   });

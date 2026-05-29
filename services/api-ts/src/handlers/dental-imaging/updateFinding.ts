@@ -14,10 +14,12 @@ import type { User } from '@/types/auth';
 import { z } from 'zod';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingFindingRepository, type UpdateFindingPayload } from './repos/imaging_finding.repo';
-import { FINDING_TRANSITIONS, type ImagingFindingStatus } from './repos/imaging_finding.schema';
+import { FINDING_TRANSITIONS, FINDING_STATUSES, type FindingStatus } from './repos/imaging_finding.schema';
 
+// V-IMG-007: SM-01 finding states are draft → confirmed → resolved (spec §8).
 const UpdateFindingSchema = z.object({
   type: z.enum([
     'caries', 'secondary_caries', 'bone_loss', 'furcation_involvement',
@@ -25,7 +27,7 @@ const UpdateFindingSchema = z.object({
     'root_fracture', 'impacted_tooth', 'over_eruption', 'open_contact',
     'overhang', 'crown_needed', 'implant_needed',
   ]).optional(),
-  status: z.enum(['suspected', 'confirmed', 'monitoring', 'resolved']).optional(),
+  status: z.enum(FINDING_STATUSES).optional(),
   toothNumber: z.number().int().min(1).max(48).nullable().optional(),
   surfaces: z.array(z.string().max(20)).max(5).nullable().optional(),
   note: z.string().max(5000).nullable().optional(),
@@ -61,12 +63,15 @@ export async function updateFinding(ctx: BaseContext): Promise<Response> {
 
   const parsed = UpdateFindingSchema.parse(rawBody);
 
-  // Validate status transition (SM-01)
+  // Validate status transition (SM-01: draft → confirmed → resolved). V-IMG-007:
+  // legacy rows still in `suspected`/`monitoring` have no spec transitions, so any
+  // status change from them is rejected (they can only be left untouched).
   if (parsed.status !== undefined && parsed.status !== finding.status) {
-    const allowedTransitions = FINDING_TRANSITIONS[finding.status as ImagingFindingStatus];
-    if (!allowedTransitions?.includes(parsed.status as ImagingFindingStatus)) {
+    const allowedTransitions = FINDING_TRANSITIONS[finding.status as FindingStatus];
+    if (!allowedTransitions?.includes(parsed.status as FindingStatus)) {
       throw new BusinessLogicError(
-        `Cannot transition finding from '${finding.status}' to '${parsed.status}'. Allowed: ${allowedTransitions?.join(', ') || 'none'}`
+        `Cannot transition finding from '${finding.status}' to '${parsed.status}'. Allowed: ${allowedTransitions?.join(', ') || 'none'}`,
+        'INVALID_STATUS_TRANSITION',
       );
     }
   }
@@ -82,6 +87,27 @@ export async function updateFinding(ctx: BaseContext): Promise<Response> {
 
   const updated = await findingRepo.update(findingId, updateData);
   if (!updated) throw new NotFoundError('Finding not found after update');
+
+  // V-IMG-006: findings are clinical PHI — record the mutation in the audit log.
+  // V-IMG-005 / DE-019 ImagingFindingConfirmed: a draft → confirmed transition is the
+  // domain-event semantic marker (no event bus — see MODULE_SPEC §10b).
+  const becameConfirmed = parsed.status === 'confirmed' && finding.status !== 'confirmed';
+  const logger = ctx.get('logger');
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: study.branchId,
+    branchId: study.branchId,
+    action: becameConfirmed ? 'imaging_finding.confirmed' : 'imaging_finding.update',
+    eventType: 'data-modification',
+    resourceType: 'imaging_finding',
+    resourceId: updated.id,
+    metadata: {
+      patientId: study.patientId,
+      imageId: updated.imageId,
+      status: updated.status,
+      previousStatus: finding.status,
+    },
+  });
 
   return ctx.json(updated, 200);
 }

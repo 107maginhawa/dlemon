@@ -1,11 +1,13 @@
 /**
- * Property-based tests for the ImagingFinding FSM
+ * Property-based tests for the ImagingFinding FSM (V-IMG-007)
  *
- * Finding lifecycle:
- *   suspected → confirmed | monitoring | resolved
- *   confirmed → monitoring | resolved
- *   monitoring → confirmed | resolved  (can oscillate between confirmed/monitoring)
- *   resolved → [] (terminal — findings don't revert once resolved)
+ * SM-01 (spec §8 / §11):
+ *   draft     → confirmed | resolved
+ *   confirmed → resolved
+ *   resolved  → [] (terminal — findings don't revert once resolved)
+ *
+ * `draft` is the initial state; there is no back-edge into `draft`
+ * (reverting confirmed → draft is rejected, satisfying AC-IMG-002).
  *
  * Imports FINDING_TRANSITIONS from the schema.
  *
@@ -13,11 +15,11 @@
  */
 import { describe, test, expect } from 'bun:test';
 import * as fc from 'fast-check';
-import { FINDING_TRANSITIONS, type ImagingFindingStatus } from './repos/imaging_finding.schema';
+import { FINDING_TRANSITIONS, type FindingStatus } from './repos/imaging_finding.schema';
 
-const STATES: readonly ImagingFindingStatus[] = ['suspected', 'confirmed', 'monitoring', 'resolved'];
+const STATES: readonly FindingStatus[] = ['draft', 'confirmed', 'resolved'];
 
-function isValidTransition(from: ImagingFindingStatus, to: ImagingFindingStatus): boolean {
+function isValidTransition(from: FindingStatus, to: FindingStatus): boolean {
   return FINDING_TRANSITIONS[from].includes(to);
 }
 
@@ -61,21 +63,20 @@ describe('ImagingFinding FSM property tests', () => {
     );
   });
 
-  test('suspected can reach all other states', () => {
-    expect(FINDING_TRANSITIONS['suspected']).toContain('confirmed');
-    expect(FINDING_TRANSITIONS['suspected']).toContain('monitoring');
-    expect(FINDING_TRANSITIONS['suspected']).toContain('resolved');
+  test('draft can reach confirmed and resolved (SM-01)', () => {
+    expect(FINDING_TRANSITIONS['draft']).toContain('confirmed');
+    expect(FINDING_TRANSITIONS['draft']).toContain('resolved');
   });
 
-  test('confirmed and monitoring can oscillate (confirmed↔monitoring allowed)', () => {
-    expect(FINDING_TRANSITIONS['confirmed']).toContain('monitoring');
-    expect(FINDING_TRANSITIONS['monitoring']).toContain('confirmed');
+  test('confirmed advances only to resolved (no back-edge to draft — AC-IMG-002)', () => {
+    expect(FINDING_TRANSITIONS['confirmed']).toEqual(['resolved']);
+    expect(isValidTransition('confirmed', 'draft')).toBe(false);
   });
 
-  test('suspected cannot be re-entered from any state', () => {
+  test('draft cannot be re-entered from any state', () => {
     for (const from of STATES) {
-      if (from !== 'suspected') {
-        expect(isValidTransition(from, 'suspected')).toBe(false);
+      if (from !== 'draft') {
+        expect(isValidTransition(from, 'draft')).toBe(false);
       }
     }
   });

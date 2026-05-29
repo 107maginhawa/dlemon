@@ -12,6 +12,7 @@ import { getAppointmentWithPatientName } from './repos/appointment-patient.facad
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { User } from '@/types/auth';
 import type { GetAppointmentParams } from '@/generated/openapi/validators';
+import { toWire } from './appointment-wire';
 
 export async function getAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -25,5 +26,5 @@ export async function getAppointment(ctx: HandlerContext) {
 
   await assertBranchAccess(db, user.id, appt.branchId);
 
-  return ctx.json(appt);
+  return ctx.json(toWire(appt));
 }

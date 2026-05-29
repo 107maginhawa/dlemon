@@ -25,7 +25,7 @@ function makeFinding(overrides: Partial<ImagingFinding> = {}): ImagingFinding {
     patientId: 'p1',
     branchId: 'b1',
     type: 'caries' as ImagingFindingType,
-    status: 'suspected' as ImagingFindingStatus,
+    status: 'draft' as ImagingFindingStatus,
     toothNumber: 14,
     surfaces: ['M'],
     note: null,

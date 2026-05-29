@@ -107,8 +107,8 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ## 7. Data Requirements (key fields)
 **`imaging_study`:** id, patient_id (UUID ref), branch_id, dentist_member_id, study_type (enum), capture_method (enum), created_at
 **`imaging_study_image`:** id, study_id, storage_file_id, tooth_fdi (nullable), sequence_order
-**`imaging_annotation`:** id, study_id, image_id, type (enum), coordinates (JSONB), status (draft/confirmed/resolved)
-**`imaging_finding`:** id, study_id, tooth_fdi, finding_type, status (draft/confirmed/resolved)
+**`imaging_annotation`:** id, image_id, type (enum: line/angle/area/label/arrow/freehand/shape/tooth), geometry (JSONB), measurement_value, measurement_unit, tooth_number, visible (bool). V-IMG-008: annotations are presentation overlays with a `visible` flag — they do NOT carry the SM-01 finding state machine.
+**`imaging_finding`:** id, image_id, tooth_number, type, status (SM-01: draft/confirmed/resolved)
 **`ceph_analysis`:** id, study_id, analysis_type (steiner_hybrid_sn), status, calibration_method (enum), mm_per_pixel
 **`ceph_landmark`:** id, analysis_id, landmark_type, x, y, status (not_placed/placed/locked), source (manual/auto)
 
@@ -124,9 +124,12 @@ Both reference Patient, Visit by UUID only — no DB FKs (intentional loose coup
 ## 8. State Transitions
 See DOMAIN_MODEL.md §6 SM-IMAGING-FINDING (SM-01) and SM-CEPH-LANDMARK (SM-02).
 ```
-Annotation/Finding: draft → confirmed → resolved
-Ceph Landmark: not_placed → placed → locked
+Finding (SM-01):  draft → confirmed → resolved   (no back-edge; resolved terminal)
+Ceph Landmark:    not_placed → placed → locked
 ```
+V-IMG-007: SM-01 applies to findings only; the create default is `draft` and reverting
+`confirmed → draft` is rejected (422 INVALID_STATUS_TRANSITION, AC-IMG-002). Annotations
+carry no state machine (see §7 — `visible` flag only).
 
 ---
 
@@ -136,13 +139,24 @@ Ceph Landmark: not_placed → placed → locked
 ---
 
 ## 10. API Expectations
-POST /dental/imaging/studies, GET /dental/imaging/studies (patient-scoped), POST /dental/imaging/studies/:id/images (file upload to storage), POST /dental/imaging/studies/:id/annotations, PATCH /dental/imaging/studies/:id/annotations/:aid, POST /dental/imaging/studies/:id/findings, POST /dental/imaging/ceph-analyses, PUT /dental/imaging/ceph-analyses/:id/landmarks (batch upsert), POST /dental/imaging/ceph-analyses/:id/recompute
+V-IMG-009: the implemented surface is **image-centric** (ceph state hangs off an image,
+not a standalone `ceph-analyses` resource). Canonical routes:
+- `POST /dental/imaging/studies` (create study + presigned upload URL)
+- `GET /dental/imaging/studies/:studyId`
+- `GET /dental/patients/:patientId/images` (patient-scoped union of imaging + legacy)
+- `POST /dental/imaging/images/:imageId/measurements`, `PATCH .../measurements/:id`
+- `POST /dental/imaging/images/:imageId/findings`, `GET .../findings`, `PATCH /dental/imaging/findings/:findingId`
+- `GET|POST /dental/imaging/images/:imageId/ceph/landmarks` (batch upsert), `PATCH|DELETE .../ceph/landmarks/:code`
+- `GET /dental/imaging/images/:imageId/ceph/analysis`, `POST .../ceph/analysis/recompute`
+- `GET|POST /dental/imaging/images/:imageId/ceph/reports`
 
 ---
 
 ## 10b. Domain Events
 **Published:** DE-018 ImagingStudyUploaded, DE-019 ImagingFindingConfirmed, DE-020 CephAnalysisComputed
 **Consumed:** (none — loose coupling)
+
+Per ADR-006 (domain-events-descope), domain events here are audit-log-only semantic markers — there is NO event bus. Producers satisfy them by writing the corresponding dental_audit_log row synchronously via logAuditEvent(); reactive consumers (e.g. notifs) are deferred to a future phase. No publisher/emit scaffolding is required.
 
 ---
 

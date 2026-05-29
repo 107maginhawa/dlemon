@@ -8,6 +8,20 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 
 ---
 
+> **⚠️ Code-tightening note (2026-05-30 compliance pass):** Handler authorization was tightened to
+> match this matrix exactly, closing two prior instances of silent code drift:
+> - **`staff_full` → Create invoice is now DENIED** (matrix: ❌; see Billing Write Operations). The
+>   code previously permitted it.
+> - **`hygienist` → Create visit and Create consent form are now DENIED** (matrix: clinical-write
+>   ops are ✅ only for `dentist_owner` / `dentist_associate`). The code previously permitted
+>   hygienist create-visit.
+>
+> If the clinical workflow genuinely requires hygienist-create-visit (e.g. hygiene-led perio
+> appointments), that must be revisited as a **deliberate, documented matrix amendment** — updating
+> the Clinical Write Operations table here first — **not** reintroduced as silent code drift.
+
+---
+
 ## Actors
 
 | Actor | System Role | Context Role | Auth Method |
@@ -46,6 +60,20 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 | Staff – Full | Patient List |
 | Staff – Scheduling | Calendar |
 | Patient | Patient portal (Phase 2) |
+
+### Extended Staff Roles (G8-S3) [CODE]
+
+The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **5 additional** context roles beyond the four PRD personas above. These were previously undocumented; the dental-org `MODULE_SPEC.md` §6 Member Role Catalog is the authoritative description. Summary:
+
+| Context Role | Clinical? | Closest PRD analog | Key permissions | Admin (staff/roles/fees/audit) |
+|--------------|:---------:|--------------------|-----------------|:------------------------------:|
+| `hygienist` | ✅ | between associate & staff_full | Clinical R/W for hygiene (perio, prophy); no billing edits | ❌ |
+| `dental_assistant` | ✅ assist | staff_full + chairside | Chart updates under a dentist, imaging capture | ❌ |
+| `front_desk` | ❌ | staff_full (reception subset) | Check-in, scheduling, demographics | ❌ |
+| `billing_staff` | ❌ | staff_full (billing subset) | Invoices, payments, fee-schedule **read** | ❌ |
+| `read_only` | ❌ | auditor/observer | Read-only on permitted records; no writes | ❌ |
+
+> Only `dentist_owner` passes `assertBranchRole(['dentist_owner'])`. All nine roles carry Better-Auth system role `user`; capability is scoped by the context role above.
 
 ---
 

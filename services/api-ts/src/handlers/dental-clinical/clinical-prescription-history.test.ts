@@ -613,7 +613,7 @@ describe('listMedicalHistory handler', () => {
 describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () => {
   // EF-CLI-001 / AC-CLI-005: medical history entries are append-only. A PATCH
   // must never overwrite a recorded clinical observation — the handler rejects
-  // every update attempt with 422 APPEND_ONLY_VIOLATION. Corrections are made by
+  // every update attempt with 405 MEDICAL_HISTORY_IMMUTABLE. Corrections are made by
   // creating a new entry (or via the additive amendment flow, WF-038).
 
   test('returns 401 when user is not authenticated', async () => {
@@ -631,7 +631,7 @@ describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () =>
     expect(res.status).toBe(401);
   });
 
-  test('returns 422 APPEND_ONLY_VIOLATION for any update attempt', async () => {
+  test('returns 405 MEDICAL_HISTORY_IMMUTABLE for any update attempt', async () => {
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(
@@ -643,28 +643,26 @@ describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () =>
       },
     );
 
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(405);
     const body = await res.json() as any;
-    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
+    expect(body.error?.code ?? body.code).toBe('MEDICAL_HISTORY_IMMUTABLE');
   });
 
-  test('rejects update of an existing entry with 422 (does not overwrite)', async () => {
+  test('rejects update of an existing entry with 405 (does not overwrite)', async () => {
     const app = buildTestApp(TEST_USER);
 
-    const createRes = await app.request('/dental/clinical/medical-history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        patientId: PATIENT_ID,
-        entryType: 'condition',
-        displayName: 'Asthma',
-        notes: 'Mild intermittent',
-      }),
+    // Seed an entry directly via the repo (medical history entries are immutable, so
+    // the PATCH handler rejects unconditionally without reading the row).
+    const { MedicalHistoryRepository } = await import('./repos/medical-history.repo');
+    const entry = await new MedicalHistoryRepository(db).createOne({
+      patientId: PATIENT_ID,
+      entryType: 'condition',
+      displayName: 'Asthma',
+      notes: 'Mild intermittent',
     });
-    const created = await createRes.json() as any;
 
     const res = await app.request(
-      `/dental/clinical/medical-history/${created.id}`,
+      `/dental/clinical/medical-history/${entry.id}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -675,27 +673,23 @@ describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () =>
       },
     );
 
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(405);
     const body = await res.json() as any;
-    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
+    expect(body.error?.code ?? body.code).toBe('MEDICAL_HISTORY_IMMUTABLE');
   });
 
-  test('rejects marking an entry inactive with 422 (append-only)', async () => {
+  test('rejects marking an entry inactive with 405 (append-only)', async () => {
     const app = buildTestApp(TEST_USER);
 
-    const createRes = await app.request('/dental/clinical/medical-history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        patientId: PATIENT_ID,
-        entryType: 'medication',
-        displayName: 'Aspirin 81mg',
-      }),
+    const { MedicalHistoryRepository } = await import('./repos/medical-history.repo');
+    const entry = await new MedicalHistoryRepository(db).createOne({
+      patientId: PATIENT_ID,
+      entryType: 'medication',
+      displayName: 'Aspirin 81mg',
     });
-    const created = await createRes.json() as any;
 
     const res = await app.request(
-      `/dental/clinical/medical-history/${created.id}`,
+      `/dental/clinical/medical-history/${entry.id}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -703,9 +697,9 @@ describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () =>
       },
     );
 
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(405);
     const body = await res.json() as any;
-    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
+    expect(body.error?.code ?? body.code).toBe('MEDICAL_HISTORY_IMMUTABLE');
   });
 });
 

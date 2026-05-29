@@ -12,6 +12,8 @@ import { PrescriptionRepository } from '../repos/prescription.repo';
 import { medicalHistoryEntries } from '../repos/medical-history.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getActiveMembershipByIdForClinical } from '@/handlers/dental-org/repos/org-clinical.facade';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreatePrescriptionBody, CreatePrescriptionParams } from '@/generated/openapi/validators';
@@ -33,7 +35,7 @@ export async function createPrescription(
 
   // BR-003: writes to locked or completed visits are blocked
   if (visit.status === 'locked' || visit.status === 'completed') {
-    throw new BusinessLogicError('Cannot add prescriptions to a locked or completed visit', 'VISIT_LOCKED');
+    throw new BusinessLogicError('Cannot add prescriptions to a locked or completed visit', 'VISIT_IMMUTABLE');
   }
 
   // EM-CLI-005: Validate that prescriberMemberId refers to an active membership in this branch.
@@ -76,6 +78,18 @@ export async function createPrescription(
     { requestId: ctx.get('requestId'), action: 'dental_prescription_create', prescriptionId: prescription.id, visitId, prescriberMemberId: body.prescriberMemberId, by: user.id },
     'Prescription created',
   );
+
+  // V-CLN-001: persist an audit row for the AUDIT_CONTRACTS "Write prescription" event.
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    action: 'prescription.created',
+    resourceType: 'dental_prescription',
+    resourceId: prescription.id,
+    metadata: { visitId, patientId: body.patientId, prescriberMemberId: body.prescriberMemberId },
+  });
 
   return ctx.json({
     ...prescription,

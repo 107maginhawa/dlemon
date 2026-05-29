@@ -33,6 +33,9 @@ export const persons = pgTable('person', {
   avatar: jsonb('avatar').$type<MaybeStoredFile>(), // Avatar image
   languagesSpoken: jsonb('languages_spoken').$type<string[]>(), // Array of language codes
   timezone: varchar('timezone', { length: 50 }), // IANA timezone identifier
+  // V-PAT-005: persisted registration consent captured at dental-patient creation
+  // (BR-015/WF-044). Minimal/additive — single registration consent boolean + timestamp.
+  consent: jsonb('consent').$type<PersonConsent>(),
 }, (table) => ({
   // Indexes for search operations
   nameIdx: index('persons_name_idx').on(table.firstName, table.lastName),
@@ -62,6 +65,14 @@ export interface Address {
 export interface ContactInfo {
   email?: string;
   phone?: string;
+}
+
+// V-PAT-005: persisted registration consent. Single-consent model (NOT the
+// fictional 4-consent split) — captures whether the patient gave registration
+// consent and when. Additive; defaults to undefined for non-dental persons.
+export interface PersonConsent {
+  registrationConsent: boolean;
+  capturedAt: string; // ISO 8601 timestamp
 }
 
 // MaybeStoredFile type - matches TypeSpec MaybeStoredFile model

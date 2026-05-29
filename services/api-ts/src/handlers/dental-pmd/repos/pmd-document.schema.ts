@@ -1,5 +1,5 @@
 /**
- * Drizzle schema for PMD documents (Patient Medical Data)
+ * Drizzle schema for PMD documents (Portable Medical Document)
  *
  * PMDs are immutable: generated once from a completed visit, signed, never updated.
  * A new PMD supersedes the previous one via supersedesId.
@@ -7,10 +7,6 @@
 
 import { pgTable, uuid, text, timestamp, pgEnum, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
-import { dentalVisits } from '../../dental-visit/repos/visit.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { dentalBranches } from '../../dental-org/repos/branch.schema';
-import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 
 export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
   'generated',
@@ -18,12 +14,17 @@ export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
   'superseded',
 ]);
 
+// V-PMD-002 (§7.2/§20): cross-module refs (visit_id, patient_id, author_member_id,
+// branch_id) are stored as plain UUIDs with NO DB foreign key. This keeps the PMD
+// aggregate loosely coupled so imports/generation from a defunct facility cannot be
+// blocked by a missing FK target. The self-reference (supersedes_id) is intra-aggregate
+// and retains its FK.
 export const pmdDocuments = pgTable('pmd_document', {
   ...baseEntityFields,
-  visitId: uuid('visit_id').notNull().references(() => dentalVisits.id),
-  patientId: uuid('patient_id').notNull().references(() => patients.id),
-  authorMemberId: uuid('author_member_id').notNull().references(() => dentalMemberships.id),
-  branchId: uuid('branch_id').references(() => dentalBranches.id),
+  visitId: uuid('visit_id').notNull(),
+  patientId: uuid('patient_id').notNull(),
+  authorMemberId: uuid('author_member_id').notNull(),
+  branchId: uuid('branch_id'),
   status: pmdDocumentStatusEnum('status').notNull().default('generated'),
   /** JSON snapshot of the visit at generation time */
   content: text('content').notNull(),
@@ -36,9 +37,13 @@ export const pmdDocuments = pgTable('pmd_document', {
   checksum: text('checksum').notNull(),
 });
 
+// V-PMD-002 (§7.2 item 1): imported PMD rows store patient_id as a plain UUID with
+// NO DB foreign key. An external record from a defunct facility must be importable
+// even if the patient row is later anonymised/erased, so a hard FK would block a
+// legitimate ingestion.
 export const importedPmds = pgTable('imported_pmd', {
   ...baseEntityFields,
-  patientId: uuid('patient_id').notNull().references(() => patients.id),
+  patientId: uuid('patient_id').notNull(),
   sourceFacility: text('source_facility').notNull(),
   sourceReference: text('source_reference'),
   /** EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
@@ -46,6 +51,14 @@ export const importedPmds = pgTable('imported_pmd', {
   sourceDescription: text('source_description').notNull(),
   content: text('content').notNull(),
   importedAt: timestamp('imported_at').notNull().defaultNow(),
+  /**
+   * V-PMD-012: "Safety Floor merge" flag. The Safety Floor is the dental-patient
+   * concept (see dental-patient/identity/getDentalPatientSafetyFloor.ts) — the minimum
+   * set of safety-critical info (allergies, conditions, medications) a dentist must see.
+   * When an imported PMD's safety-critical items have been surfaced into the patient's
+   * Safety Floor, this flag is set 'true'. Merge is add-only and never mutates the
+   * imported_pmd content itself. See MODULE_SPEC §7.2.
+   */
   safetyFloorMerged: text('safety_floor_merged').notNull().default('false'),
 });
 

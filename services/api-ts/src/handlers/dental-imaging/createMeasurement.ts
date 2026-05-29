@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
 
 // ---------------------------------------------------------------------------
@@ -181,6 +182,18 @@ export async function createMeasurement(ctx: BaseContext): Promise<Response> {
     measurementUnit: rawBody.measurementUnit ?? null,
     toothNumber,
     visible: true,
+  });
+
+  // V-IMG-006: annotations/measurements are clinical PHI overlays — audit the mutation.
+  await logAuditEvent(db, ctx.get('logger'), {
+    personId: user.id,
+    tenantId: study.branchId,
+    branchId: study.branchId,
+    action: 'imaging_annotation.create',
+    eventType: 'data-modification',
+    resourceType: 'imaging_annotation',
+    resourceId: annotation.id,
+    metadata: { patientId: study.patientId, imageId, annotationType, type: rawBody.type },
   });
 
   return ctx.json(annotation, 201);

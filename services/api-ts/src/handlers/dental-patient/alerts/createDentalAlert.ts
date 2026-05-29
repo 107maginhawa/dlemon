@@ -4,7 +4,7 @@
  * alt01: Create a dental-specific alert for a patient (active: true by default).
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalAlertRepository } from '../repos/dental-alert.repo';
@@ -31,7 +31,7 @@ export async function createDentalAlert(ctx: any): Promise<Response> {
 
   // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
-    throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
+    throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }
 
   const alertRepo = new DentalAlertRepository(db, logger);

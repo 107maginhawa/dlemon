@@ -59,6 +59,25 @@ describe('PinSelect', () => {
     expect(screen.getByText(/Choose your profile/i)).not.toBeNull();
   });
 
+  test('renders loading skeletons when isLoading is true', () => {
+    render(React.createElement(PinSelect, { members: [], onSelect: () => {}, isLoading: true }));
+    expect(screen.getByTestId('pin-select-loading')).not.toBeNull();
+    // Success/empty content must not render while loading
+    expect(screen.queryByTestId('pin-select-empty')).toBeNull();
+  });
+
+  test('renders error state with a Retry button when isError is true', async () => {
+    const user = userEvent.setup();
+    const onRetry = mock(() => {});
+    render(
+      React.createElement(PinSelect, { members: [], onSelect: () => {}, isError: true, onRetry }),
+    );
+    expect(screen.getByTestId('pin-select-error')).not.toBeNull();
+    expect(screen.getByText(/Failed to load staff members/i)).not.toBeNull();
+    await user.click(screen.getByText(/Retry/i));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   test('each member card has accessible role="button"', () => {
     render(React.createElement(PinSelect, { members, onSelect: () => {} }));
     const buttons = screen.getAllByRole('button');

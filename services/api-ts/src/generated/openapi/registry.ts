@@ -65,6 +65,7 @@ import { getPatientBalance } from '../../handlers/dental-billing/getPatientBalan
 import { issueDentalInvoice } from '../../handlers/dental-billing/issueDentalInvoice';
 import { listDentalInvoices } from '../../handlers/dental-billing/listDentalInvoices';
 import { listDentalPayments } from '../../handlers/dental-billing/listDentalPayments';
+import { markUncollectible } from '../../handlers/dental-billing/markUncollectible';
 import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
 import { voidDentalInvoice } from '../../handlers/dental-billing/voidDentalInvoice';
 import { voidDentalPayment } from '../../handlers/dental-billing/voidDentalPayment';
@@ -314,6 +315,7 @@ export const registry = {
   issueDentalInvoice,
   listDentalInvoices,
   listDentalPayments,
+  markUncollectible,
   recordDentalPayment,
   voidDentalInvoice,
   voidDentalPayment,

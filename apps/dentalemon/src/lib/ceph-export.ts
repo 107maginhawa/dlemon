@@ -1,5 +1,6 @@
 import type { CephLandmark } from '../features/imaging/hooks/use-ceph-landmarks'
 import { activeLinesForLandmarks } from '../features/imaging/lib/ceph-geometry'
+import { BRAND_GOLD } from '@/constants/brand'
 
 export interface CephExportOptions {
   maxSize?: number
@@ -39,7 +40,7 @@ export function composeCephCanvas(
   const lmMap = new Map(landmarks.map((l) => [l.landmarkCode, l]))
 
   ctx.save()
-  ctx.strokeStyle = '#FFE97D'
+  ctx.strokeStyle = BRAND_GOLD
   ctx.lineWidth = Math.max(1, 1.5 * scale)
   ctx.setLineDash([4, 2])
 
@@ -54,7 +55,7 @@ export function composeCephCanvas(
   }
 
   ctx.setLineDash([])
-  ctx.fillStyle = '#FFE97D'
+  ctx.fillStyle = BRAND_GOLD
   for (const lm of landmarks) {
     ctx.beginPath()
     ctx.arc(lm.x * scale, lm.y * scale, 3 * scale, 0, Math.PI * 2)

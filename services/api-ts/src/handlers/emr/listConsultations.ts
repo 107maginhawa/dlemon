@@ -9,6 +9,8 @@ import { ConsultationNoteRepository, type ConsultationNoteFilters } from './repo
 import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
 import { getPatientByPersonIdForEMR } from '../patient/repos/patient-emr.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
+import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * listConsultations
@@ -18,8 +20,8 @@ import { parsePagination, buildPaginationMeta } from '@/utils/query';
  *
  * List consultation notes with role-based filtering:
  * - Providers see only their own consultations
- * - Admins/Support see all consultations
- * - Patients are not allowed to use this endpoint (they use patient-specific endpoint)
+ * - Patients see only their own consultations
+ * - Admins see all consultations
  */
 export async function listConsultations(ctx: HandlerContext) {
   // Get authenticated user from Better-Auth
@@ -122,6 +124,23 @@ export async function listConsultations(ctx: HandlerContext) {
     totalCount,
     action: 'list_consultations'
   }, 'Consultations listed');
+
+  // Persisted audit trail (V-EMR-004) — this returns PHI (consultation notes),
+  // so the bulk read must leave a durable audit row. Only counts/filter scope
+  // are recorded, never PHI values.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: EMR_AUDIT_TENANT_SENTINEL,
+    action: 'emr.consultation.list',
+    resourceType: 'consultation',
+    metadata: {
+      patientFilter: filters.patient,
+      providerFilter: filters.provider,
+      statusFilter: filters.status,
+      resultCount: consultations.length,
+      totalCount
+    }
+  });
 
   return ctx.json({
     data: consultations,

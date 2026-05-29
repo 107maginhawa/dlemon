@@ -57,7 +57,10 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
       { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_landmarks_upsert', currentTier: imagingTier },
       'Tier gate blocked access',
     );
-    throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
+    throw new ForbiddenError(
+      'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
+      'IMAGING_TIER_REQUIRED',
+    );
   }
 
   await cephRepo.batchUpsert(

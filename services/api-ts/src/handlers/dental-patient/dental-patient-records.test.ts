@@ -12,6 +12,7 @@
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
@@ -20,9 +21,13 @@ import {
   ListPatientVisitsQuery,
   ListPatientConditionsParams,
   ListPatientConditionsQuery,
+  GetDentalPatientSafetyFloorParams,
+  GetDentalPatientParams,
 } from '@/generated/openapi/validators';
 import { listPatientVisits } from './identity/listPatientVisits';
 import { listPatientConditions } from './identity/listPatientConditions';
+import { getDentalPatientSafetyFloor } from './identity/getDentalPatientSafetyFloor';
+import { getDentalPatient } from './identity/getDentalPatient';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -287,5 +292,76 @@ describe('listPatientConditions', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data).toBeDefined();
+  });
+});
+
+// =============================================================================
+// V-PAT-011 / AC-PAT-003: safety-floor counts (2 allergies + 1 medication)
+// =============================================================================
+
+describe('AC-PAT-003: safety floor aggregation counts', () => {
+  afterEach(async () => {
+    await db.execute(sql`DELETE FROM medical_history_entry WHERE patient_id = ${PATIENT_ID}`);
+  });
+
+  function buildSafetyApp() {
+    const app = new Hono();
+    app.onError((err, c) => {
+      if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+      if (err instanceof z.ZodError) return c.json({ error: err.issues.map((i: any) => i.message).join('; ') }, 400);
+      console.error('Unhandled safety-floor test error:', err);
+      return c.json({ error: 'Internal server error' }, 500);
+    });
+    app.use('*', async (c, next) => {
+      const ctx = c as any;
+      ctx.set('user', TEST_USER);
+      ctx.set('database', db);
+      ctx.set('logger', null);
+      await next();
+    });
+    app.get('/dental/patients/:id/safety-floor',
+      zValidator('param', GetDentalPatientSafetyFloorParams, ve),
+      (c) => getDentalPatientSafetyFloor(c as any));
+    app.get('/dental/patients/:id',
+      zValidator('param', GetDentalPatientParams, ve),
+      (c) => getDentalPatient(c as any));
+    return app;
+  }
+
+  async function seedSafetyEntries() {
+    const { medicalHistoryEntries } = await import('@/handlers/dental-clinical/repos/medical-history.schema');
+    await db.insert(medicalHistoryEntries).values([
+      { patientId: PATIENT_ID, entryType: 'allergy', displayName: 'Penicillin', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { patientId: PATIENT_ID, entryType: 'allergy', displayName: 'Latex', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { patientId: PATIENT_ID, entryType: 'medication', displayName: 'Metformin 500mg', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]);
+  }
+
+  test('safety-floor endpoint returns 2 allergies and 1 medication', async () => {
+    await seedSafetyEntries();
+    const app = buildSafetyApp();
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/safety-floor`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.allergies.length).toBe(2);
+    expect(body.medications.length).toBe(1);
+    expect(body.hasAlerts).toBe(true);
+  });
+
+  test('GET /:id profile includes safety-floor summary counts (V-PAT-007)', async () => {
+    await seedSafetyEntries();
+    const app = buildSafetyApp();
+    const res = await app.request(`/dental/patients/${PATIENT_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.safetyFloor).toBeDefined();
+    expect(body.safetyFloor.allergyCount).toBe(2);
+    expect(body.safetyFloor.medicationCount).toBe(1);
+    expect(body.safetyFloor.hasAlerts).toBe(true);
+    // V-PAT-014: person is a declared subset (no contactInfo / primaryAddress PII).
+    expect(body.person.contactInfo).toBeUndefined();
+    expect(body.person.primaryAddress).toBeUndefined();
+    // V-PAT-007: follow-up notes present on the profile.
+    expect(Array.isArray(body.followUpNotes)).toBe(true);
   });
 });

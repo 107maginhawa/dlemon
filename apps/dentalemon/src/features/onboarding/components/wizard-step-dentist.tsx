@@ -1,3 +1,5 @@
+import { Input } from '@monobase/ui';
+
 interface DentistStepProps {
   dentistName: string;
   onDentistNameChange: (v: string) => void;
@@ -21,7 +23,7 @@ export function DentistStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Full Name *
         </label>
-        <input
+        <Input
           type="text"
           value={dentistName}
           onChange={e => onDentistNameChange(e.target.value)}
@@ -34,7 +36,7 @@ export function DentistStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           License Number
         </label>
-        <input
+        <Input
           type="text"
           value={licenseNumber}
           onChange={e => onLicenseNumberChange(e.target.value)}
@@ -47,7 +49,7 @@ export function DentistStep({
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
           Specialization
         </label>
-        <input
+        <Input
           type="text"
           value={specialization}
           onChange={e => onSpecializationChange(e.target.value)}
@@ -64,7 +66,7 @@ export function DentistStep({
         >
           Your 6-digit PIN *
         </label>
-        <input
+        <Input
           id="dentist-pin"
           type="password"
           inputMode="numeric"

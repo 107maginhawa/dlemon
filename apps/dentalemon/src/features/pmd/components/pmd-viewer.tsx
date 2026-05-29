@@ -1,5 +1,5 @@
 /**
- * PMDViewer — displays a Patient Medical Data document
+ * PMDViewer — displays a Portable Medical Document
  *
  * Shows: visit snapshot, treatments (CDT), prescriptions (RxNorm),
  *        signature status, supersession chain.
@@ -34,7 +34,7 @@ export function PMDViewer({ pmd }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">Patient Medical Data</h3>
+          <h3 className="text-sm font-semibold">Portable Medical Document</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Generated {new Date(pmd.createdAt).toLocaleDateString()}
           </p>

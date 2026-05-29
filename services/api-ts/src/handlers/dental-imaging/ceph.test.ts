@@ -746,10 +746,24 @@ describe('PATCH non-existent landmark → 404', () => {
 // CIMG-15 recompute idempotent
 // ---------------------------------------------------------------------------
 
+// V-IMG-004: recompute requires the S–N reference line placed AND a calibrated image.
+// A calibrated image with S + N is the minimal valid recompute state.
+const CALIBRATED_IMAGE = { ...MOCK_IMAGE, pixelSpacingMm: 0.1 };
+const SN_LANDMARKS = (['S', 'N'] as const).map((code, i) => ({
+  ...MOCK_LANDMARK,
+  id: `sn-landmark-${i}`,
+  landmarkCode: code,
+  x: 300 + i * 50,
+  y: 200 + i * 10,
+  status: 'placed' as CephLandmarkStatus,
+}));
+
 describe('CIMG-15 recompute idempotent', () => {
   test('POST recompute returns 200 with analysis object (not {items, analysis})', async () => {
     const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
-    const db = makeCephDb();
+    // V-IMG-004: seed S+N reference landmarks and a calibrated image so the
+    // precondition gates pass and the analysis can be computed.
+    const db = makeCephDb({ image: CALIBRATED_IMAGE, landmarks: SN_LANDMARKS });
     const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
       user: DENTIST_USER, db, method: 'POST', path: '/:imageId/analysis/recompute',
     });
@@ -760,6 +774,34 @@ describe('CIMG-15 recompute idempotent', () => {
     expect(body.imageId).toBe(IMAGE_ID);
     expect(body.analysisType).toBe('steiner_hybrid_sn');
     expect(body.items).toBeUndefined();
+  });
+
+  // V-IMG-004: INSUFFICIENT_LANDMARKS when the S–N reference line is not placed.
+  test('POST recompute with missing reference landmarks → 422 INSUFFICIENT_LANDMARKS', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    // Only N present (default) on a calibrated image → S missing → insufficient.
+    const db = makeCephDb({ image: CALIBRATED_IMAGE, landmarks: [MOCK_LANDMARK] });
+    const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'POST', path: '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('INSUFFICIENT_LANDMARKS');
+  });
+
+  // V-IMG-004: NOT_CALIBRATED when reference landmarks are placed but image lacks calibration.
+  test('POST recompute on uncalibrated image → 422 NOT_CALIBRATED', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    // S+N placed but pixelSpacingMm null (default MOCK_IMAGE) → not calibrated.
+    const db = makeCephDb({ landmarks: SN_LANDMARKS });
+    const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'POST', path: '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('NOT_CALIBRATED');
   });
 
   test('recompute returns 401 when unauthenticated', async () => {
@@ -779,7 +821,8 @@ describe('CIMG-15 recompute idempotent', () => {
 describe('D-I immutability', () => {
   test('recompute response has no version field (analysis only, not a report)', async () => {
     const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
-    const db = makeCephDb();
+    // V-IMG-004: calibrated image + S/N reference landmarks so recompute reaches 200.
+    const db = makeCephDb({ image: CALIBRATED_IMAGE, landmarks: SN_LANDMARKS });
     const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
       user: DENTIST_USER, db, method: 'POST', path: '/:imageId/analysis/recompute',
     });
@@ -1316,6 +1359,8 @@ describe('Pino audit emission', () => {
     };
     const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
       user: DENTIST_USER,
+      // V-IMG-004: recompute now gates on calibration + reference landmarks; seed both.
+      db: makeCephDb({ image: CALIBRATED_IMAGE, landmarks: SN_LANDMARKS }),
       logger,
       method: 'POST',
       path: '/:imageId/analysis/recompute',

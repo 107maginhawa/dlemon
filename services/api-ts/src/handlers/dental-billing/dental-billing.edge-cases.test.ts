@@ -3,7 +3,7 @@
  *
  * Covers high-risk branches not exercised by module1/module2:
  *   getCollectionsSummary — period=month, year, custom from/to, branchId filter + deny
- *   recordDentalPayment   — INVALID_AMOUNT, ALREADY_PAID, VOIDED_INVOICE, OVERPAYMENT, idempotency
+ *   recordDentalPayment   — INVALID_AMOUNT, INVOICE_IMMUTABLE, PAYMENT_EXCEEDS_BALANCE, idempotency
  *   voidDentalInvoice     — BR-011 ACTIVE_PAYMENT_PLAN, void paid invoice, ALREADY_VOIDED
  *   applyDentalDiscount   — ALREADY_PAID guard
  *   createDentalPaymentPlan — NO_BALANCE, installment rounding (Math.floor)
@@ -248,7 +248,7 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     expect(body.code).toBe('INVALID_AMOUNT');
   });
 
-  test('returns 400 ALREADY_PAID when invoice is fully paid', async () => {
+  test('returns 422 INVOICE_IMMUTABLE when invoice is fully paid (V-BIL-005)', async () => {
     const invoice = await seedInvoice({ status: 'paid', totalCents: 5000, paidCents: 5000, balanceCents: 0 });
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -258,10 +258,10 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('ALREADY_PAID');
+    expect(body.code).toBe('INVOICE_IMMUTABLE');
   });
 
-  test('returns 422 VOIDED_INVOICE when recording payment on voided invoice', async () => {
+  test('returns 422 INVOICE_IMMUTABLE when recording payment on voided invoice (V-BIL-005)', async () => {
     const invoice = await seedInvoice({ status: 'voided', totalCents: 5000, balanceCents: 5000 });
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -271,10 +271,10 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VOIDED_INVOICE');
+    expect(body.code).toBe('INVOICE_IMMUTABLE');
   });
 
-  test('returns 400 OVERPAYMENT when amount exceeds remaining balance', async () => {
+  test('returns 422 PAYMENT_EXCEEDS_BALANCE when amount exceeds remaining balance (V-BIL-004)', async () => {
     const invoice = await seedInvoice({ totalCents: 5000, paidCents: 2000, balanceCents: 3000 });
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -284,7 +284,7 @@ describe('recordDentalPayment — error branches and idempotency', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('OVERPAYMENT');
+    expect(body.code).toBe('PAYMENT_EXCEEDS_BALANCE');
   });
 
   test('idempotency: duplicate receiptNumber returns 200 with same payment (not a new 201)', async () => {
@@ -415,6 +415,90 @@ describe('createDentalPaymentPlan — NO_BALANCE and rounding', () => {
     expect(body.installments[0].amountCents).toBe(3333);
     expect(body.installments[1].amountCents).toBe(3333);
     expect(body.installments[2].amountCents).toBe(3334); // last installment gets remainder: 10000-3333*2=3334
+  });
+
+  // V-BIL-002: installment count bounded 2–24.
+  test('returns 422 INVALID_INSTALLMENT_COUNT when count is 0 (div-by-zero guard)', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 0, frequency: 'monthly', startDate: '2025-06-01T00:00:00.000Z' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_INSTALLMENT_COUNT');
+  });
+
+  test('returns 422 INVALID_INSTALLMENT_COUNT when count is 1 (below min)', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 1, frequency: 'monthly', startDate: '2025-06-01T00:00:00.000Z' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('INVALID_INSTALLMENT_COUNT');
+  });
+
+  test('returns 422 INVALID_INSTALLMENT_COUNT when count exceeds 24', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 25, frequency: 'monthly', startDate: '2025-06-01T00:00:00.000Z' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('INVALID_INSTALLMENT_COUNT');
+  });
+});
+
+// =============================================================================
+// V-BIL-001 — applyDentalDiscount: percentageRate bounds (money-integrity)
+// =============================================================================
+
+describe('applyDentalDiscount — rate bounds (V-BIL-001)', () => {
+  afterEach(truncate);
+
+  test('returns 422 INVALID_DISCOUNT_RATE when rate exceeds 100', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percentageRate: 150, reason: 'Bad rate' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('INVALID_DISCOUNT_RATE');
+  });
+
+  test('returns 422 INVALID_DISCOUNT_RATE when rate is negative', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percentageRate: -10, reason: 'Bad rate' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('INVALID_DISCOUNT_RATE');
+  });
+
+  test('rate of exactly 100 is accepted and never yields a negative total', async () => {
+    const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percentageRate: 100, reason: 'Full waiver' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.totalCents).toBeGreaterThanOrEqual(0);
+    expect(body.balanceCents).toBeGreaterThanOrEqual(0);
   });
 });
 

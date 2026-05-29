@@ -20,40 +20,40 @@ Create a new patient record.
 **Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
 **Rate limit:** Default
 
+> **Single-consent model (V-PAT-004).** Registration captures ONE consent flag,
+> not a 4-consent split. The earlier `marketing_consent` / `data_sharing_consent`
+> / `sms_consent` / `email_consent` shape (and split first/last name) was never
+> implemented and has been removed. The wire body is the real handler body:
+> `{ displayName, dateOfBirth?, gender?, consentGiven, branchId }`.
+
 **Request body:**
 
 | Field | Type | Nullable | Required | Format | Constraints | Example |
 |-------|------|----------|----------|--------|-------------|---------|
-| `branch_id` | string | NO | YES | uuid | — | `"01JX..."` |
-| `first_name` | string | NO | YES | — | min:1, max:100 | `"Jane"` |
-| `last_name` | string | NO | YES | — | min:1, max:100 | `"Smith"` |
-| `date_of_birth` | string | NO | YES | date (YYYY-MM-DD) | past date | `"1985-03-15"` |
-| `email` | string | YES | NO | email | max:255 | `"jane@example.com"` |
-| `phone` | string | YES | NO | — | max:30 | `"+61412345678"` |
-| `gender` | string | YES | NO | — | enum: `male`, `female`, `other`, `prefer_not_to_say` | `"female"` |
-| `address` | object | YES | NO | — | — | `{...}` |
-| `marketing_consent` | boolean | NO | YES | — | — | `false` |
-| `data_sharing_consent` | boolean | NO | YES | — | — | `false` |
-| `sms_consent` | boolean | NO | NO | — | — | `false` |
-| `email_consent` | boolean | NO | NO | — | — | `false` |
-| `emergency_contact` | object | YES | NO | — | — | `{...}` |
-| `referring_dentist` | string | YES | NO | — | max:120 | `"Dr. Wong"` |
+| `displayName` | string | NO | YES | — | min:1 (split into firstName + lastName server-side) | `"Jane Smith"` |
+| `dateOfBirth` | string | YES | NO | date (YYYY-MM-DD) | past date | `"1985-03-15"` |
+| `gender` | string | YES | NO | — | — | `"female"` |
+| `consentGiven` | boolean | NO | YES | — | must be `true` (else `CONSENT_REQUIRED(422)`) | `true` |
+| `branchId` | string | NO | YES | uuid | branch membership required | `"01JX..."` |
 
-**Response 201:** `{ data: Patient }`
+The captured consent is persisted as a JSONB `consent` object on the underlying
+person record: `{ registrationConsent: true, capturedAt: <ISO timestamp> }`
+(V-PAT-005).
+
+**Response 201:** `{ data: Patient }` (also includes `displayName`, embedded
+`person` subset, and a `warning` object when duplicates are detected).
 
 | Field | Type | Nullable | Notes |
 |-------|------|----------|-------|
 | `id` | string (uuid) | NO | Patient ID |
-| `branch_id` | string (uuid) | NO | |
-| `person_id` | string (uuid) | NO | Platform person record |
-| `first_name` | string | NO | |
-| `last_name` | string | NO | |
-| `date_of_birth` | string (date) | NO | |
+| `preferredBranchId` | string (uuid) | NO | |
+| `displayName` | string | NO | |
+| `person` | object | NO | `{ id, firstName, lastName, dateOfBirth, gender }` |
 | `status` | string | NO | `active`, `archived` |
-| `created_at` | string (date-time) | NO | |
+| `createdAt` | string (date-time) | NO | |
 
 **Errors:** `VALIDATION_ERROR(400)`, `CONSENT_REQUIRED(422)`, `DUPLICATE_PATIENT(409)`
-**Events emitted:** DE-021 PatientRegistered
+**Events emitted:** DE-021 PatientRegistered (audit-log-only marker per ADR-006 — written synchronously as a `patient.registered` `dental_audit_log` row; no event bus)
 
 ---
 
@@ -101,9 +101,9 @@ Get full patient profile including safety floor.
 | `gender` | string | YES | |
 | `address` | object | YES | |
 | `status` | string | NO | `active`, `archived` |
-| `allergies` | string[] | NO | Safety floor (from medical history) |
-| `follow_up_notes` | FollowUpNote[] | NO | |
-| `consents` | ConsentSummary | NO | marketing, data_sharing, sms, email |
+| `safetyFloor` | object | NO | Safety floor summary counts: `{ hasAlerts, allergyCount, medicationCount, conditionCount }` (V-PAT-007 / AC-PAT-003) |
+| `followUpNotes` | FollowUpNote[] | NO | |
+| `consent` | object | YES | Single-consent model: `{ registrationConsent, capturedAt }` (V-PAT-005). NOT a 4-consent split. |
 | `created_at` | string (date-time) | NO | |
 | `updated_at` | string (date-time) | NO | |
 

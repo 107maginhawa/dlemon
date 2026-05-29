@@ -6,7 +6,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { RestoreDentalPatientParams } from '@/generated/openapi/validators';
@@ -24,12 +24,14 @@ export async function restoreDentalPatient(
 
   const repo = new PatientRepository(db, logger);
 
-  // Branch-level authorization
+  // Branch-level authorization (V-PAT-002): a missing branch must DENY,
+  // never bypass the guard.
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
-  if (patient.preferredBranchId) {
-    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
+  if (!patient.preferredBranchId) {
+    throw new ForbiddenError('Patient has no assigned branch');
   }
+  await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
 
   const result = await repo.restorePatient(patientId);
 

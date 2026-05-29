@@ -862,7 +862,7 @@ describe('recordDentalPayment handler', () => {
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const body = await res.json() as any;
-    expect(body.code).toBe('VOIDED_INVOICE');
+    expect(body.code).toBe('INVOICE_IMMUTABLE');
   });
 });
 

@@ -7,7 +7,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { LabOrderRepository } from '../repos/lab-order.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -40,7 +40,9 @@ export async function updateLabOrder(
       cancelReason: body.cancelReason,
       isDefective: body.isDefective,
     });
-    if (error) throw new ValidationError(error);
+    // V-CLN-008: an illegal lab-order FSM transition is a business-rule violation,
+    // not an input-validation failure → 422 INVALID_STATUS_TRANSITION.
+    if (error) throw new BusinessLogicError(error, 'INVALID_STATUS_TRANSITION');
     return ctx.json(order);
   }
 

@@ -8,6 +8,8 @@ import {
 } from '@/core/errors';
 import { ConsultationNoteRepository } from './repos/emr.repo';
 import { getProviderByPersonIdForEMR } from '../provider/repos/provider-emr.facade';
+import { logAuditEvent } from '@/core/audit-logger';
+import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 /**
  * finalizeConsultation
@@ -85,6 +87,22 @@ export async function finalizeConsultation(ctx: HandlerContext) {
     performedBy: user.id,
     ipAddress: ctx.req.header('x-forwarded-for') || ctx.req.header('x-real-ip')
   }, 'Consultation note finalized');
-  
+
+  // Persisted audit trail (V-EMR-002) — finalize locks the authoritative
+  // clinical record, so the state transition must leave a durable audit row.
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: consultation.tenantId ?? EMR_AUDIT_TENANT_SENTINEL,
+    action: 'emr.consultation.finalize',
+    resourceType: 'consultation',
+    resourceId: consultationId,
+    metadata: {
+      patientId: consultation.patient,
+      providerId: provider.id,
+      previousStatus: 'draft',
+      newStatus: 'finalized'
+    }
+  });
+
   return ctx.json(finalizedConsultation, 200);
 }
