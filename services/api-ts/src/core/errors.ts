@@ -47,8 +47,8 @@ export class BusinessLogicError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string = 'Resource conflict') {
-    super(message, 'CONFLICT', 409);
+  constructor(message: string = 'Resource conflict', code: string = 'CONFLICT') {
+    super(message, code, 409);
   }
 }
 
