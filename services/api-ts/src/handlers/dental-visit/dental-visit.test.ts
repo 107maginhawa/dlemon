@@ -162,6 +162,17 @@ async function seedCompletedVisit() {
   return repo.complete(visit.id);
 }
 
+async function seedLockedVisit() {
+  const repo = new VisitRepository(db);
+  const visit = await repo.createOne({
+    patientId: PATIENT_ID,
+    branchId: BRANCH_ID,
+    dentistMemberId: DENTIST_MEMBER_ID,
+  });
+  const completed = await repo.complete(visit.id);
+  return repo.lock(completed!.id);
+}
+
 async function seedSignedConsent(visitId: string) {
   await db.insert(consentForms).values({
     visitId,
@@ -994,6 +1005,162 @@ describe('upsertVisitNotes role gate', () => {
       body: JSON.stringify({ notes: 'some notes' }),
     });
     expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EF-VIS-001: updateDentalTreatment — completed+locked gate
+// ---------------------------------------------------------------------------
+
+describe('updateDentalTreatment — EF-VIS-001 lock gate', () => {
+  async function seedDiagnosedTreatment(visitId: string) {
+    const treatRepo = new TreatmentRepository(db);
+    return treatRepo.createOne({
+      visitId,
+      patientId: PATIENT_ID,
+      cdtCode: 'D0120',
+      description: 'Periodic eval',
+      priceCents: 5000,
+      status: 'diagnosed',
+      carriedOver: false,
+      createdBy: TEST_USER.id,
+      updatedBy: TEST_USER.id,
+    });
+  }
+
+  test('422 VISIT_IMMUTABLE when writing to a completed visit', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const treatment = await seedDiagnosedTreatment(completedVisit!.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${completedVisit!.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: 'New description' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('422 VISIT_IMMUTABLE when writing to a locked visit', async () => {
+    const lockedVisit = await seedLockedVisit();
+    const treatment = await seedDiagnosedTreatment(lockedVisit!.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${lockedVisit!.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: 'New description' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EF-VIS-002: updateTooth — completed+locked gate
+// ---------------------------------------------------------------------------
+
+describe('updateTooth — EF-VIS-002 lock gate', () => {
+  async function seedChartForVisit(visitId: string) {
+    const chartRepo = new DentalChartRepository(db);
+    return chartRepo.upsert({
+      visitId,
+      patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'healthy' }],
+    });
+  }
+
+  test('422 VISIT_IMMUTABLE when writing to a completed visit', async () => {
+    const completedVisit = await seedCompletedVisit();
+    await seedChartForVisit(completedVisit!.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${completedVisit!.id}/chart/teeth/11`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'caries' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('422 VISIT_IMMUTABLE when writing to a locked visit', async () => {
+    const lockedVisit = await seedLockedVisit();
+    await seedChartForVisit(lockedVisit!.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${lockedVisit!.id}/chart/teeth/11`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'caries' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EF-VIS-003: upsertDentalChart — completed+locked gate
+// ---------------------------------------------------------------------------
+
+describe('upsertDentalChart — EF-VIS-003 lock gate', () => {
+  test('422 VISIT_IMMUTABLE when writing to a completed visit', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${completedVisit!.id}/chart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, teeth: [{ toothNumber: 11, state: 'healthy' }] }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('422 VISIT_IMMUTABLE when writing to a locked visit', async () => {
+    const lockedVisit = await seedLockedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${lockedVisit!.id}/chart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, teeth: [{ toothNumber: 11, state: 'healthy' }] }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EM-VIS-007: upsertVisitNotes — completed+locked gate
+// ---------------------------------------------------------------------------
+
+describe('upsertVisitNotes — EM-VIS-007 lock gate', () => {
+  test('422 VISIT_IMMUTABLE when writing to a completed visit', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${completedVisit!.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subjective: 'new note' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('422 VISIT_IMMUTABLE when writing to a locked visit', async () => {
+    const lockedVisit = await seedLockedVisit();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${lockedVisit!.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subjective: 'new note' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 

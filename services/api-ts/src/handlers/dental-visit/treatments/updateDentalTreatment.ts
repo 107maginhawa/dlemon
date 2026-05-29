@@ -39,6 +39,11 @@ export async function updateDentalTreatment(
   if (!visit) throw new NotFoundError('Visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
+  // EF-VIS-001: completed/locked visits cannot be modified — lock gate
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
+  }
+
   // BR-007: verified treatment fields are immutable (status transitions still allowed)
   if (treatment.status === 'verified') {
     const fieldEdit = body.cdtCode || body.toothNumber !== undefined || body.surfaces || body.description || body.conditionCode;

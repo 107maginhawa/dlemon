@@ -31,8 +31,9 @@ export async function upsertVisitNotes(
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
-  if (visit.status === 'locked') {
-    throw new BusinessLogicError('Locked visits cannot be modified', 'VISIT_LOCKED');
+  // EM-VIS-007: completed OR locked visits cannot be modified — lock gate
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
   }
 
   // Resolve membership ID from user's personId + visit's branchId

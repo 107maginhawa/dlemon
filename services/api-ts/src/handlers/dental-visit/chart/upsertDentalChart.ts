@@ -6,7 +6,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from '../repos/dental-chart.repo';
 import { DentalChartBaselineRepository } from '../repos/dental-chart-baseline.repo';
@@ -31,6 +31,11 @@ export async function upsertDentalChart(
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
+
+  // EF-VIS-003: completed/locked visits cannot be modified — lock gate
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
+  }
 
   const repo = new DentalChartRepository(db);
 
