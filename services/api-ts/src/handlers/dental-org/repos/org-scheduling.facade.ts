@@ -5,9 +5,44 @@
  */
 
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalBranches } from './branch.schema';
 import { dentalMemberships } from './membership.schema';
+
+/**
+ * V-ORG-003 / BR-SCH-004 — typed contract for `dental_branch.working_hours`.
+ *
+ * dental-org owns the column; this is the validated shape it exposes to the
+ * dental-scheduling consumer (which enforces appointment-vs-hours). Kept here
+ * (the owner-of-record) so the structure is verified at the boundary rather
+ * than parsed as an untyped string. The column itself remains `text` (a JSON
+ * blob) to avoid a cross-module data migration; `getWorkingHours` parses and
+ * validates on read.
+ */
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const DayScheduleSchema = z.object({
+  enabled: z.boolean(),
+  open: z.string().regex(TIME_RE, 'Must be in HH:MM format').optional(),
+  close: z.string().regex(TIME_RE, 'Must be in HH:MM format').optional(),
+});
+
+// Days are individually optional to match what the scheduling update path can
+// persist (partial week schedules); a day absent from the blob means "no
+// configured hours" which the consumer treats as closed.
+export const WorkingHoursSchema = z.object({
+  monday: DayScheduleSchema.optional(),
+  tuesday: DayScheduleSchema.optional(),
+  wednesday: DayScheduleSchema.optional(),
+  thursday: DayScheduleSchema.optional(),
+  friday: DayScheduleSchema.optional(),
+  saturday: DayScheduleSchema.optional(),
+  sunday: DayScheduleSchema.optional(),
+});
+
+export type DaySchedule = z.infer<typeof DayScheduleSchema>;
+export type WorkingHours = z.infer<typeof WorkingHoursSchema>;
 
 export async function getBranchSchedulingConfig(
   db: DatabaseInstance,
@@ -18,6 +53,33 @@ export async function getBranchSchedulingConfig(
     .from(dentalBranches)
     .where(eq(dentalBranches.id, branchId));
   return row ?? null;
+}
+
+/**
+ * V-ORG-003 / BR-SCH-004: Validated accessor for a branch's working hours.
+ *
+ * Parses the stored JSON blob and validates it against `WorkingHoursSchema`,
+ * returning a typed `WorkingHours` object. Returns null when the column is
+ * unset, the JSON is malformed, or the structure fails validation — so a
+ * corrupt blob can never reach the scheduling enforcement path as an
+ * unvalidated shape.
+ */
+export async function getWorkingHours(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<WorkingHours | null> {
+  const config = await getBranchSchedulingConfig(db, branchId);
+  if (!config?.workingHours) return null;
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(config.workingHours);
+  } catch {
+    return null;
+  }
+
+  const parsed = WorkingHoursSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 export async function updateBranchWorkingHours(
