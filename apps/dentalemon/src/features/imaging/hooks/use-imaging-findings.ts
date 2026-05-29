@@ -126,6 +126,13 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
   return {
     findings: query.data ?? [],
     isLoading: query.isLoading,
+    // CONF-IMG-L2-001 (V-IMG-004): surface the list-query error so the UI can
+    // render it instead of swallowing failures (tier-block / 422) into console.
+    error: query.error,
+    // CONF-IMG-L2-001 (V-IMG-004): readable surface for the most recent mutation
+    // failure (tier-block 402/403, validation 422, etc.) for visible error UI.
+    mutationError:
+      createFinding.error ?? updateFinding.error ?? deleteFinding.error ?? null,
     createFinding,
     updateFinding,
     deleteFinding,

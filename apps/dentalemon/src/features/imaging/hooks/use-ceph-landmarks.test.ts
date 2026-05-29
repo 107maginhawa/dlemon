@@ -293,6 +293,28 @@ describe('useCephLandmarks — batchUpsert', () => {
     const cachedAnalysis = qc.getQueryData<CephAnalysis>(['ceph-analysis', 'img-1'])
     expect(cachedAnalysis?.measurements).toEqual(analysis.measurements)
   })
+
+  // CONF-IMG-L2-001 (V-IMG-004): a tier-block / validation failure on batchUpsert
+  // must be surfaced via the hook result, not swallowed into console.error only.
+  test('surfaces the failure via mutationError when batchUpsert is tier-blocked', async () => {
+    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        return Promise.resolve(new Response('IMAGING_TIER_REQUIRED', { status: 403 }))
+      }
+      return jsonResponse(makeResponse())
+    })
+
+    const qc = freshClientWithMutations()
+    const { result } = renderHook(() => useCephLandmarks('img-1'), { wrapper: makeWrapper(qc) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      result.current.batchUpsert.mutate([{ landmarkCode: 'S', x: 100, y: 200 }])
+    })
+
+    await waitFor(() => expect(result.current.mutationError).not.toBeNull())
+    expect((result.current.mutationError as Error).message).toContain('IMAGING_TIER_REQUIRED')
+  })
 })
 
 // ─── deleteLandmark ───────────────────────────────────────────────────────────

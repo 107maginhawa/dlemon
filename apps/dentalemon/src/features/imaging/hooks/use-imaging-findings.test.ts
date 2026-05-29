@@ -200,6 +200,30 @@ describe('useImagingFindings — createFinding', () => {
 
     await waitFor(() => expect(result.current.createFinding.isError).toBe(true));
   });
+
+  // CONF-IMG-L2-001 (V-IMG-004): a failed mutation (tier-block 403 / validation
+  // 422) must be surfaced via the hook result, not swallowed into console.error.
+  test('surfaces the failure via mutationError when createFinding is tier-blocked', async () => {
+    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        return jsonResponse({ message: 'IMAGING_TIER_REQUIRED' }, 403);
+      }
+      return jsonResponse({ data: [] });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useImagingFindings('img-1'),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await act(async () => {
+      result.current.createFinding.mutate({ type: 'caries' });
+    });
+
+    await waitFor(() => expect(result.current.mutationError).not.toBeNull());
+    expect((result.current.mutationError as Error).message).toContain('IMAGING_TIER_REQUIRED');
+  });
 });
 
 // ─── updateFinding mutation ─────────────────────────────────────────────────

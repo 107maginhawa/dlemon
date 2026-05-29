@@ -192,6 +192,14 @@ export function useCephLandmarks(imageId: string) {
     landmarks: query.data?.items ?? [],
     analysis: query.data?.analysis ?? null,
     isLoading: query.isLoading,
+    // CONF-IMG-L2-001 (V-IMG-004): surface the landmarks/analysis query error so
+    // the UI can render it instead of swallowing failures (tier-block / 422).
+    error: query.error,
+    // CONF-IMG-L2-001 (V-IMG-004): readable surface for the most recent mutation
+    // failure (batchUpsert/commit/delete tier-block 402/403, validation 422) for
+    // visible error UI.
+    mutationError:
+      commitLandmark.error ?? batchUpsert.error ?? deleteLandmark.error ?? null,
     dragLandmark,
     commitLandmark,
     batchUpsert,
