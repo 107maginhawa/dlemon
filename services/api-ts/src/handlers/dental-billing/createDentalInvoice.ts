@@ -8,7 +8,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { getTreatmentsForInvoice, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/consent-billing.facade';
@@ -44,7 +44,7 @@ export async function createDentalInvoice(
   const billable = treatments.filter(t => t.status === 'performed' || t.status === 'verified');
 
   if (billable.length === 0) {
-    throw new ValidationError('No billable treatments found for this visit');
+    throw new BusinessLogicError('No billable treatments for this visit', 'NO_BILLABLE_TREATMENTS');
   }
 
   // S1-T7: Double-billing prevention — reject if any treatment already billed

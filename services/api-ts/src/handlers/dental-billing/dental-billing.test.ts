@@ -16,6 +16,7 @@ import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { DentalAuditRepository } from '@/db/audit.repo';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { persons } from '@/handlers/person/repos/person.schema';
@@ -318,7 +319,7 @@ describe('createDentalInvoice handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when no billable treatments for visit', async () => {
+  test('returns 422 NO_BILLABLE_TREATMENTS when no billable treatments for visit', async () => {
     const visitRepo = new VisitRepository(db);
     const visit = await visitRepo.createOne({
       patientId: PATIENT_ID,
@@ -338,8 +339,9 @@ describe('createDentalInvoice handler', () => {
         dentistMemberId: MEMBER_ID,
       }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
+    expect(body.code).toBe('NO_BILLABLE_TREATMENTS');
     expect(body.error).toMatch(/billable/i);
   });
 
@@ -765,6 +767,39 @@ describe('recordDentalPayment handler', () => {
     expect(body.amountCents).toBe(2500);
     expect(body.method).toBe('card');
     expect(body.isVoid).toBe(false);
+  });
+
+  // AL-010: payment.record audit trail
+  test('persists payment.record audit record after recording a payment', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amountCents: 2500,
+        method: 'card',
+        receiptNumber: 'REC-AUDIT-001',
+        recordedByMemberId: MEMBER_ID,
+        notes: 'Audited payment',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const payment = await res.json() as any;
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: TEST_USER.id, action: 'payment.record', resourceId: payment.id },
+      { limit: 10, offset: 0 },
+    );
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+    const entry = entries[0]!;
+    expect(entry.action).toBe('payment.record');
+    expect(entry.resourceType).toBe('dental_payment');
+    expect(entry.resourceId).toBe(payment.id);
+    expect(entry.personId).toBe(TEST_USER.id);
+    expect(entry.branchId).toBe(BRANCH_ID);
   });
 
   test('invoice status becomes partial after partial payment', async () => {

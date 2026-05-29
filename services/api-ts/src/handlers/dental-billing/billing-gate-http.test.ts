@@ -175,7 +175,7 @@ async function seedSignedConsent(visitId: string) {
 // ---------------------------------------------------------------------------
 
 describe('BR-009 billing gate — planned treatment not billable (HTTP enforcement)', () => {
-  test('POST invoice with only planned treatment → 400 (no billable treatments) [BR-009]', async () => {
+  test('POST invoice with only planned treatment → 422 NO_BILLABLE_TREATMENTS [BR-009]', async () => {
     const visit = await seedActiveVisit();
     await seedTreatment(visit.id, 'planned');
     await seedSignedConsent(visit.id);
@@ -185,8 +185,9 @@ describe('BR-009 billing gate — planned treatment not billable (HTTP enforceme
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(invoiceBody(visit.id)),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
+    expect(body.code).toBe('NO_BILLABLE_TREATMENTS');
     expect(body.error).toMatch(/billable/i);
   });
 

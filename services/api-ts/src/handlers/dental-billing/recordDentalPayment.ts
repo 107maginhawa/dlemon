@@ -11,6 +11,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { JobScheduler } from '@/core/jobs';
 import { emitInvoicePaid } from './domain-events';
 
@@ -75,6 +77,19 @@ export async function recordDentalPayment(
   // Update invoice totals
   await invoiceRepo.addPayment(invoiceId, body.amountCents);
 
+  // AL-010: payment.record audit trail (never throws — see audit-logger)
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, invoice.branchId);
+  await logAuditEvent(db, logger, {
+    personId: session.userId,
+    tenantId: branchForAudit?.organizationId ?? invoice.branchId,
+    branchId: invoice.branchId,
+    action: 'payment.record',
+    resourceType: 'dental_payment',
+    resourceId: payment.id,
+    metadata: { invoiceId, amountCents: body.amountCents, method: body.method },
+  });
+
   // DE-021: emit InvoicePaid domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;
   scheduler && emitInvoicePaid(scheduler, {
@@ -84,7 +99,7 @@ export async function recordDentalPayment(
     amountCents: body.amountCents,
   }).catch(() => {/* non-blocking */});
 
-  ctx.get('logger')?.info(
+  logger?.info(
     { requestId: ctx.get('requestId'), action: 'dental_payment_record', paymentId: payment.id, invoiceId, amountCents: body.amountCents, branchId: invoice.branchId, by: session.userId },
     'Dental payment recorded',
   );
