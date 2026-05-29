@@ -10,8 +10,7 @@ import { UnauthorizedError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { AmendmentRepository } from '../repos/amendment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { eq, and } from 'drizzle-orm';
+import { getActiveMembershipForClinical } from '@/handlers/dental-org/repos/org-clinical.facade';
 import type { User } from '@/types/auth';
 import type { CreateAmendmentBody, CreateAmendmentParams } from '@/generated/openapi/validators';
 
@@ -35,17 +34,7 @@ export async function createAmendment(
 
   // Resolve caller's membership id for the audit trail (authorMemberId).
   // assertBranchRole above already guarantees this row exists; the cast is safe.
-  const [callerMembership] = await db
-    .select({ id: dentalMemberships.id })
-    .from(dentalMemberships)
-    .where(
-      and(
-        eq(dentalMemberships.personId, user.id),
-        eq(dentalMemberships.branchId, visit.branchId),
-        eq(dentalMemberships.status, 'active'),
-      ),
-    )
-    .limit(1);
+  const callerMembership = await getActiveMembershipForClinical(db, user.id, visit.branchId);
 
   const authorMemberId = callerMembership!.id;
 

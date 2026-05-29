@@ -11,7 +11,7 @@ import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PrescriptionRepository } from '../repos/prescription.repo';
 import { medicalHistoryEntries } from '../repos/medical-history.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { getActiveMembershipByIdForClinical } from '@/handlers/dental-org/repos/org-clinical.facade';
 import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreatePrescriptionBody, CreatePrescriptionParams } from '@/generated/openapi/validators';
@@ -38,17 +38,7 @@ export async function createPrescription(
 
   // EM-CLI-005: Validate that prescriberMemberId refers to an active membership in this branch.
   // Prevents callers from specifying a member ID from a different branch or an inactive member.
-  const [prescriberMembership] = await db
-    .select({ id: dentalMemberships.id, role: dentalMemberships.role })
-    .from(dentalMemberships)
-    .where(
-      and(
-        eq(dentalMemberships.id, body.prescriberMemberId),
-        eq(dentalMemberships.branchId, visit.branchId),
-        eq(dentalMemberships.status, 'active'),
-      ),
-    )
-    .limit(1);
+  const prescriberMembership = await getActiveMembershipByIdForClinical(db, body.prescriberMemberId, visit.branchId);
   if (!prescriberMembership) {
     throw new ForbiddenError('prescriberMemberId does not correspond to an active membership in this branch');
   }
