@@ -196,6 +196,16 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['admin'] }),
     getAuditEvents
   );
+  // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
+  (app as any).delete('/dental/audit-events/:id', (c: any) =>
+    c.json({ error: 'Audit log is append-only. Records cannot be deleted.', code: 'AUDIT_APPEND_ONLY' }, 405)
+  );
+  (app as any).put('/dental/audit-events/:id', (c: any) =>
+    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_APPEND_ONLY' }, 405)
+  );
+  (app as any).patch('/dental/audit-events/:id', (c: any) =>
+    c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_APPEND_ONLY' }, 405)
+  );
   // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
   (app as any).post('/dental/patients/:patientId/contacts',
     authMiddleware({ roles: ['user'] }),

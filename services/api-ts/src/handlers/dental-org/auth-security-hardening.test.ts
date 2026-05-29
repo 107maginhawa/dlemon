@@ -306,6 +306,56 @@ describe('CF-39 / AUTH-03 — recoverPin requires authentication', () => {
 });
 
 // ---------------------------------------------------------------------------
+// EM-AUD-005: setPin success → audit log entry written
+// ---------------------------------------------------------------------------
+
+describe('EM-AUD-005 — setPin creates audit log entry on success', () => {
+  test('successful setPin writes audit log entry [EM-AUD-005]', async () => {
+    await seedOrgWithMember(ORG_A, BRANCH_A, MEMBER_A, USER_A.id);
+
+    const app = makeSetPinApp(USER_A);
+    const res = await app.request(
+      `/dental/organizations/${ORG_A}/branches/${BRANCH_A}/members/${MEMBER_A}/set-pin`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: '9999' }),
+      }
+    );
+    expect(res.status).toBe(200);
+
+    // Audit log entry must exist for this member with action=update
+    const entries = await db.select().from(auditLogEntries)
+      .where(eq(auditLogEntries.resource, MEMBER_A));
+    const pinEntries = entries.filter((e: any) => e.action === 'update' && e.resourceType === 'dental_membership');
+    expect(pinEntries.length).toBeGreaterThan(0);
+    const entry = pinEntries[0]!;
+    expect(entry.outcome).toBe('success');
+    expect(entry.category).toBe('security');
+  });
+
+  test('failed setPin (cross-org) does NOT write success audit entry [EM-AUD-005 negative]', async () => {
+    await seedOrgWithMember(ORG_A, BRANCH_A, MEMBER_A, USER_A.id);
+    await seedOrgWithMember(ORG_B, BRANCH_B, MEMBER_B, USER_B.id);
+
+    const app = makeSetPinApp(USER_B); // attacker from Org B
+    await app.request(
+      `/dental/organizations/${ORG_A}/branches/${BRANCH_A}/members/${MEMBER_A}/set-pin`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: '9999' }),
+      }
+    );
+
+    const entries = await db.select().from(auditLogEntries)
+      .where(eq(auditLogEntries.resource, MEMBER_A));
+    const successEntries = entries.filter((e: any) => e.outcome === 'success' && e.action === 'update');
+    expect(successEntries.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CF-46 / AUTH-07: verifyPin success → audit log entry written
 // ---------------------------------------------------------------------------
 
