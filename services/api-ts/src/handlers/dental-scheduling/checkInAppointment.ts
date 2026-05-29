@@ -36,7 +36,7 @@ export async function checkInAppointment(ctx: HandlerContext) {
 
   // Authorization: user must have a check-in-capable role in the target branch (EM-SCH-001)
   await assertBranchRole(db, user.id, appointment.branchId, [
-    'dentist_owner', 'staff_full', 'staff_scheduling',
+    'dentist_owner', 'dentist_associate', 'staff_full',
   ]);
 
   if (!APPOINTMENT_TRANSITIONS[appointment.status].includes('checked_in')) {
