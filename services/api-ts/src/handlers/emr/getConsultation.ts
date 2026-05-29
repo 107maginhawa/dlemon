@@ -9,6 +9,7 @@ import { ConsultationNoteRepository } from './repos/emr.repo';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { ProviderRepository } from '../provider/repos/provider.repo';
 import { shouldExpand } from '@/utils/query';
+import { logAuditEvent } from '@/core/audit-logger';
 
 /**
  * getConsultation
@@ -76,7 +77,20 @@ export async function getConsultation(ctx: HandlerContext) {
   if (!hasAccess) {
     throw new ForbiddenError('You can only access your own consultation notes');
   }
-  
+
+  // Persisted audit trail (AL-024) — PHI read
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: consultation.tenantId ?? consultation.patient,
+    action: 'emr.consultation.read',
+    resourceType: 'consultation',
+    resourceId: consultation.id,
+    metadata: {
+      patientId: consultation.patient,
+      providerId: consultation.provider
+    }
+  });
+
   // Check for field expansion requests
   const expandPatient = shouldExpand(query, 'patient');
   const expandProvider = shouldExpand(query, 'provider');
