@@ -47,6 +47,10 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
 
   const orgData = await getOrgDataForBranch(db, study.branchId);
   if (orgData.imagingTier !== 'addon') {
+    logger?.warn(
+      { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_report_create', currentTier: orgData.imagingTier },
+      'Tier gate blocked access',
+    );
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 

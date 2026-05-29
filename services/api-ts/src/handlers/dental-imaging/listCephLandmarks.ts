@@ -41,6 +41,10 @@ export async function listCephLandmarks(ctx: BaseContext): Promise<Response> {
 
   const imagingTier = await getImagingTierForBranch(db, study.branchId);
   if (imagingTier !== 'addon') {
+    ctx.get('logger')?.warn(
+      { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_landmarks_list', currentTier: imagingTier },
+      'Tier gate blocked access',
+    );
     throw new ForbiddenError('Cephalometric analysis requires an imaging add-on. Upgrade your plan.');
   }
 

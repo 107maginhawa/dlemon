@@ -31,8 +31,12 @@ export const cephLandmarkSourceEnum = pgEnum('ceph_landmark_source', [
   'ai_corrected',
 ]);
 
-// placed → confirmed → locked (one-directional, locked is terminal)
+// Spec §7/§8 SM-02 declares `not_placed → placed → locked`. Per EM-IMG-008 the
+// spec value `not_placed` (initial state) is added so AC-IMG-003 (`placed → not_placed → 422`)
+// is structurally testable. `confirmed` retained as a working intermediate.
+// One-directional; `locked` is terminal.
 export const cephLandmarkStatusEnum = pgEnum('ceph_landmark_status', [
+  'not_placed',
   'placed',
   'confirmed',
   'locked',
@@ -133,8 +137,12 @@ export const imagingCephReports = pgTable(
 
 export type CephLandmarkStatus = (typeof cephLandmarkStatusEnum.enumValues)[number];
 
+// SM-02: not_placed → placed → locked (spec §8). `not_placed` is the initial state.
+// There is no back-edge into `not_placed` — reverting `placed → not_placed` is
+// rejected (422 INVALID_STATUS_TRANSITION), satisfying AC-IMG-003.
 export const CEPH_LANDMARK_TRANSITIONS: Record<CephLandmarkStatus, CephLandmarkStatus[]> = {
-  placed: ['confirmed'],
+  not_placed: ['placed'],
+  placed: ['confirmed'], // no back-edge to not_placed → AC-IMG-003 422
   confirmed: ['locked'],
   locked: [], // terminal — coordinates and status are immutable once locked
 };

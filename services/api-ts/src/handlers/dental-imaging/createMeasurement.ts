@@ -144,6 +144,10 @@ export async function createMeasurement(ctx: BaseContext): Promise<Response> {
   if (isMeasurementType) {
     const tier = await getImagingTierForBranch(db, study.branchId);
     if (tier === 'free') {
+      ctx.get('logger')?.warn(
+        { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'measurement_create', currentTier: tier },
+        'Tier gate blocked access',
+      );
       throw new ForbiddenError('Measurements require an imaging add-on. Upgrade your plan.');
     }
   }
