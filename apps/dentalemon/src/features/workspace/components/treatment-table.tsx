@@ -73,8 +73,12 @@ export function TreatmentTable({
   onSelectTreatment,
   selectedTreatmentId,
   onMarkDone: _onMarkDone,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
 }: TreatmentTableProps) {
+  // WR-01: with no active visit, visitId is '' → inline mutations would hit
+  // PATCH /dental/visits//treatments/:id (invalid). Force read-only so no edit,
+  // dismiss, price, notes, or mark-done control can fire against an empty visitId.
+  const readOnly = readOnlyProp || !visitId;
   // TXTBL-02: inline price edit state
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [draftPrice, setDraftPrice] = useState('');

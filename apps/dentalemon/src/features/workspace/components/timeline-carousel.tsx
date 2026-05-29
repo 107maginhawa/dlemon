@@ -7,7 +7,7 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Lock } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Pagination, Keyboard } from 'swiper/modules';
@@ -42,6 +42,8 @@ export interface TimelineCarouselProps {
   panelOpen?: boolean;
   /** Patient date of birth (ISO date string) — used to select dentition type */
   patientDateOfBirth?: string | null;
+  /** FDI numbers with a completed (performed) treatment on the current visit — drives the chart's 'completed' layer. */
+  completedToothNumbers?: Set<number>;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -52,6 +54,7 @@ function VisitChartCard({
   onLockVisit,
   lockPending,
   dentitionType,
+  completedToothNumbers,
 }: {
   visit: VisitCard;
   isActive: boolean;
@@ -59,6 +62,7 @@ function VisitChartCard({
   onLockVisit?: (visitId: string) => void;
   lockPending?: boolean;
   dentitionType: DentitionType;
+  completedToothNumbers?: Set<number>;
 }) {
   const { data } = useQuery({
     ...getDentalChartOptions({ path: { visitId: visit.id } }),
@@ -82,6 +86,8 @@ function VisitChartCard({
           onSelectTooth={isActive ? onSelectTooth : undefined}
           toothSize={isActive ? 'md' : 'xs'}
           showLegend={false}
+          showLayerToggle={isActive}
+          completedToothNumbers={isActive ? completedToothNumbers : undefined}
           dentitionType={dentitionType}
         />
       </div>
@@ -135,11 +141,13 @@ function formatDate(iso: string) {
 export function TimelineCarousel({
   visits,
   patientId,
+  currentVisitId,
   onSelectVisit,
   onNewVisit,
   onSelectTooth,
   panelOpen = false,
   patientDateOfBirth = null,
+  completedToothNumbers,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -152,12 +160,28 @@ export function TimelineCarousel({
 
   const initialSlide = Math.max(0, sorted.length - 1);
   const [activeIndex, setActiveIndex] = useState(initialSlide);
+  const swiperRef = useRef<{ slideTo: (index: number) => void } | null>(null);
+
+  // WR-02: when the selected visit changes (e.g. a freshly-created visit becomes
+  // current), focus its card. Swiper only honors initialSlide on mount, so sync
+  // imperatively here.
+  useEffect(() => {
+    if (!currentVisitId) return;
+    const idx = sorted.findIndex((v) => v.id === currentVisitId);
+    if (idx >= 0 && idx !== activeIndex) {
+      setActiveIndex(idx);
+      swiperRef.current?.slideTo(idx);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVisitId, sorted.length]);
 
   function handleSlideChange(swiper: { activeIndex: number }) {
     const idx = swiper.activeIndex;
     setActiveIndex(idx);
     const visit = sorted[idx];
-    if (visit) onSelectVisit(visit.id);
+    // Only notify the parent when the visit actually changed, to avoid feedback
+    // loops with the currentVisitId-driven sync effect above.
+    if (visit && visit.id !== currentVisitId) onSelectVisit(visit.id);
   }
 
   return (
@@ -175,6 +199,7 @@ export function TimelineCarousel({
         observer
         observeParents
         initialSlide={initialSlide}
+        onSwiper={(s: { slideTo: (index: number) => void }) => { swiperRef.current = s; }}
         onSlideChange={handleSlideChange}
         coverflowEffect={{ rotate: 35, stretch: 0, depth: 200, modifier: 1, scale: 0.72, slideShadows: false }}
         pagination={{ clickable: true }}
@@ -194,6 +219,7 @@ export function TimelineCarousel({
                 }
                 lockPending={lockMutation.isPending}
                 dentitionType={dentitionType}
+                completedToothNumbers={completedToothNumbers}
               />
             </SwiperSlide>
           );

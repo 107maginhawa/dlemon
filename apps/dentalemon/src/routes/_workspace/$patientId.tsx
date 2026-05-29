@@ -32,6 +32,7 @@ import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
+import { toast } from 'sonner';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
@@ -141,7 +142,8 @@ function WorkspacePage() {
   function handleNewVisit() {
     const { branchId: localBranchId, memberId: dentistMemberId } = useOrgContextStore.getState();
     if (!localBranchId || !dentistMemberId) {
-      console.error('Cannot create visit: branchId or memberId missing from org context store');
+      // CR-01: surface the failure instead of silently returning.
+      toast.error('Branch context unavailable — re-select your branch to start a visit.');
       return;
     }
     createVisitMutation.mutate(
@@ -149,6 +151,9 @@ function WorkspacePage() {
       {
         onSuccess: (visit) => {
           setCurrentVisitId(visit.id);
+        },
+        onError: () => {
+          toast.error('Could not start a new visit. Please try again.');
         },
       },
     );
@@ -194,6 +199,12 @@ function WorkspacePage() {
   const pendingCount = treatments.filter(
     (t) => t.status === 'diagnosed' || t.status === 'planned',
   ).length;
+  // Teeth with completed (performed/verified) treatments — drives the chart's 'completed' layer (CR-03).
+  const completedToothNumbers = new Set<number>(
+    treatments
+      .filter((t) => (t.status === 'performed' || t.status === 'verified') && t.toothNumber != null)
+      .map((t) => t.toothNumber as number),
+  );
 
   const currentVisitDate = currentVisit
     ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
@@ -301,6 +312,7 @@ function WorkspacePage() {
             onSelectTooth={selectTooth}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}
+            completedToothNumbers={completedToothNumbers}
           />
         </div>
 
@@ -310,6 +322,7 @@ function WorkspacePage() {
           className="flex-1 min-w-0 bg-background overflow-auto"
         >
           <TreatmentTable
+            visitId={currentVisitId ?? undefined}
             treatments={treatments}
             carriedOverItems={carriedOverItems}
             visits={visits}

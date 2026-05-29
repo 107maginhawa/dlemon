@@ -28,6 +28,28 @@
 
 ---
 
+## Resolution — Track A (2026-05-29, branch feat/clinical-workflow-demo-safe)
+
+The human-demo-blocking findings below were fixed to make the marquee clinical loop
+demo-safe (chart → record treatment → complete visit):
+
+- **CR-01** ✅ `handleNewVisit` now surfaces a toast on missing org context + on mutation error.
+- **CR-02** ✅ Pre-completion checklist offers an explicit "Complete anyway" when warnings exist (BR-014 override) instead of hard-disabling.
+- **CR-03** ✅ Dental chart has a Baseline/Proposed/Completed layer toggle; `entryClassification` drives per-tooth layer (pure `getToothLayer`, unit-tested), off-layer teeth dim, proposed teeth get a dashed outline; completed derived from performed/verified treatments.
+- **CR-04** ✅ `useSaveToothFlow` finalizes (closes slideout) only after the treatment persists; keeps the slideout open + toasts on treatment failure (unit-tested).
+- **WR-01** ✅ `TreatmentTable` receives `visitId`; inline mutations are read-only when no active visit (no more `PATCH /dental/visits//treatments/:id`).
+- **WR-02** ✅ Carousel syncs the active card to `currentVisitId` (newly-created visit becomes focused).
+- **IN-04** ✅ Classification-only tooth saves no longer silently no-op.
+
+Verification: FE+BE typecheck 0, `check:boundaries:error` exit 0, FE production build OK,
+FE unit suite green except 2 pre-existing unrelated failures (`src/routes/auth/pin-select.test.ts`
+`redirect` module-resolution error). Live interactive browser dry-run recommended before the demo.
+
+Deferred (not Track A): CR-05 (treatment-plan approval record), WR-03/05/06/07/08, IN-01/02/03/05/06,
+and the journey-harness truthfulness work (J01 verify / J05 assertion / J02 note persistence).
+
+---
+
 ## Executive Summary
 
 The dental-visit workspace implementation is structurally complete and covers the primary clinical journeys (chart entry, treatment lifecycle, SOAP notes, visit completion, timeline navigation). Several **BLOCKER-level** bugs were found: the pre-completion checklist blocks visit completion even on warnings with no reachable override path (contradicting the component's own comment and BR-014's override allowance); the dental chart has no layer-switching UI (baseline/proposed/completed layers are absent from the rendered output, violating §3.5 and §8.3 of the standard); the treatment save sequence calls `onSuccess` before the treatment mutation completes, causing silent data divergence; and the treatment-plan accept flow records no patient approval. Multiple WARNING-level gaps follow including `TreatmentTable` mutations operating on an empty `visitId`.

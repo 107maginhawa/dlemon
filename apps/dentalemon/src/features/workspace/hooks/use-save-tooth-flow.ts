@@ -69,31 +69,37 @@ export function useSaveToothFlow({
       { visitId, patientId, teeth: updatedTeeth },
       {
         onSuccess: () => {
-          onSuccess?.();
-          if (data.cdtCode && data.description && priceAmount !== undefined) {
-            saveTreatmentMutation.mutate(
-              {
-                visitId,
-                patientId,
-                cdtCode: data.cdtCode,
-                description: data.description,
-                toothNumber,
-                surfaces: data.surfaces,
-                conditionCode: data.conditionCode,
-                priceAmount,
-                currency: 'PHP',
-                clinicalNotes: data.clinicalNotes,
-              },
-              {
-                onError: (err) => {
-                  console.error(
-                    'Treatment save failed — chart was saved but treatment was not recorded',
-                    err,
-                  );
-                },
-              },
-            );
+          // Chart-only save (no billable treatment) — finalize immediately.
+          if (!(data.cdtCode && data.description && priceAmount !== undefined)) {
+            onSuccess?.();
+            return;
           }
+          // A treatment must be recorded too. Only finalize (close the slideout via
+          // onSuccess) AFTER it persists, so the clinician never sees a "saved" tooth
+          // with a silently-dropped treatment (CR-04).
+          saveTreatmentMutation.mutate(
+            {
+              visitId,
+              patientId,
+              cdtCode: data.cdtCode,
+              description: data.description,
+              toothNumber,
+              surfaces: data.surfaces,
+              conditionCode: data.conditionCode,
+              priceAmount,
+              currency: 'PHP',
+              clinicalNotes: data.clinicalNotes,
+            },
+            {
+              onSuccess: () => onSuccess?.(),
+              onError: (err) => {
+                // useSaveTreatment already surfaces a toast. Deliberately do NOT call
+                // onSuccess here: keep the slideout open so the clinician can retry
+                // without losing context (chart is saved; treatment is not).
+                console.error('Treatment save failed — chart saved, treatment not recorded', err);
+              },
+            },
+          );
         },
       },
     );

@@ -220,14 +220,28 @@ export function PreCompletionChecklist({
               >
                 Go Back
               </button>
-              <button
-                type="button"
-                onClick={handleComplete}
-                disabled={isPending || checks.length === 0 || hasWarns}
-                className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
-              >
-                {isPending ? 'Completing…' : 'Complete Visit'}
-              </button>
+              {/* CR-02: the four checks are warnings, not hard blocks (BR-014 allows
+                  owner override). When warnings exist, offer an explicit
+                  "Complete anyway" instead of disabling completion entirely. */}
+              {hasWarns ? (
+                <button
+                  type="button"
+                  onClick={handleComplete}
+                  disabled={isPending || checks.length === 0}
+                  className="flex-1 h-11 rounded-xl bg-amber-100 text-amber-900 text-sm font-semibold hover:bg-amber-200 transition-colors disabled:opacity-50"
+                >
+                  {isPending ? 'Completing…' : 'Complete anyway'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleComplete}
+                  disabled={isPending || checks.length === 0}
+                  className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                >
+                  {isPending ? 'Completing…' : 'Complete Visit'}
+                </button>
+              )}
             </div>
           )}
         </Dialog.Content>

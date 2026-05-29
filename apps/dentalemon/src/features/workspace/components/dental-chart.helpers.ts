@@ -37,6 +37,35 @@ export interface ToothData {
 }
 
 /**
+ * Chart layers for baseline/proposed/completed separation (CR-03, CHART-BR-001/002/006).
+ */
+export type ChartLayer = 'baseline' | 'proposed' | 'completed';
+
+/**
+ * Map a tooth's entryClassification to its chart layer.
+ * - existing / existing_other → baseline (pre-existing conditions)
+ * - treatment_plan / condition → proposed (planned/diagnosed work)
+ * - undefined (legacy/unclassified) → baseline
+ *
+ * NOTE: 'completed' is NOT derived from entryClassification — completion lives on
+ * the treatment record (status 'performed'), so the chart determines it at render
+ * time from its `completedToothNumbers` prop, not from this function.
+ */
+export function getToothLayer(
+  entryClassification?: ChartEntryClassification,
+): Exclude<ChartLayer, 'completed'> {
+  switch (entryClassification) {
+    case 'treatment_plan':
+    case 'condition':
+      return 'proposed';
+    case 'existing':
+    case 'existing_other':
+    default:
+      return 'baseline';
+  }
+}
+
+/**
  * FDI tooth numbering — all 32 permanent teeth:
  * Upper right: 18–11, Upper left: 21–28
  * Lower left: 31–38, Lower right: 41–48

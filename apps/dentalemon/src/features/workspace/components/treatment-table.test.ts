@@ -96,6 +96,7 @@ describe('TreatmentTable — Phase 3', () => {
     test('renders "Mark Done" button for non-completed treatment', () => {
       render(
         React.createElement(TreatmentTable, {
+          visitId: 'v-1', // WR-01: interactive controls require an active visit
           treatments: [TREATMENT_PENDING],
         }),
         { wrapper: makeWrapper() },
@@ -113,20 +114,34 @@ describe('TreatmentTable — Phase 3', () => {
       expect(screen.queryByTestId('mark-done-btn')).toBeNull();
     });
 
-    test('calls onMarkDone with treatmentId and visitId when clicked', async () => {
+    test('clicking "Mark Done" issues a treatment-status mutation', async () => {
+      // The component advances status via useMarkTreatmentDone (not the legacy
+      // onMarkDone prop, which is retained only for API compat). Assert the click
+      // fires a request against the treatments endpoint.
       const user = userEvent.setup();
-      const calls: Array<[string, string]> = [];
-      render(
-        React.createElement(TreatmentTable, {
-          treatments: [TREATMENT_PENDING],
-          onMarkDone: (tid: string, vid: string) => calls.push([tid, vid]),
-        }),
-        { wrapper: makeWrapper() },
-      );
+      const urls: string[] = [];
+      const originalFetch = global.fetch;
+      global.fetch = mock((req: Request | string | URL) => {
+        const url = req instanceof Request ? req.url : String(req);
+        urls.push(url);
+        return jsonResponse({ ...TREATMENT_PENDING, status: 'planned' });
+      }) as unknown as typeof fetch;
+      try {
+        render(
+          React.createElement(TreatmentTable, {
+            visitId: 'v-1', // WR-01: interactive controls require an active visit
+            treatments: [TREATMENT_PENDING],
+          }),
+          { wrapper: makeWrapper() },
+        );
 
-      await user.click(screen.getByTestId('mark-done-btn'));
-      expect(calls).toHaveLength(1);
-      expect(calls[0]).toEqual([TREATMENT_PENDING.id, TREATMENT_PENDING.visitId]);
+        await user.click(screen.getByTestId('mark-done-btn'));
+        await waitFor(() =>
+          expect(urls.some((u) => u.includes('/treatments'))).toBe(true),
+        );
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
     test('completed row shows check icon instead of Mark Done button', async () => {

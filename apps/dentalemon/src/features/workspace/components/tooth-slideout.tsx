@@ -193,7 +193,9 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
   }
 
   async function handleSave() {
-    if (!primaryState) return;
+    // IN-04: allow a classification-only entry (e.g. "Existing") even with no surface
+    // condition — matches the Save button's enable condition; avoids a silent no-op.
+    if (!primaryState && !entryClassification) return;
     setSaving(true);
     try {
       await onSave(buildSaveData());
@@ -207,7 +209,8 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
   }
 
   async function handleSaveAndNext() {
-    if (!primaryState) return;
+    // IN-04: see handleSave — a classification-only entry is a valid save.
+    if (!primaryState && !entryClassification) return;
     setSaving(true);
     try {
       await onSave(buildSaveData());

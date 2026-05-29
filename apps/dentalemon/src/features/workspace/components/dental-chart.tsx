@@ -8,8 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo } from './dental-chart.helpers';
-import type { ToothData, ToothState, DentitionType } from './dental-chart.helpers';
+import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo, getToothLayer } from './dental-chart.helpers';
+import type { ToothData, ToothState, DentitionType, ChartLayer } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
 
 export interface DentalChartProps {
@@ -22,11 +22,30 @@ export interface DentalChartProps {
   showLegend?: boolean;
   /** Permanent (32-tooth adult) or primary (20-tooth pediatric). Default: 'permanent' */
   dentitionType?: DentitionType;
+  /** Show the baseline/proposed/completed layer toggle. Default: true (gate to active card in carousels). */
+  showLayerToggle?: boolean;
+  /** FDI numbers of teeth with a completed (performed) treatment — drives the 'completed' layer. */
+  completedToothNumbers?: Set<number>;
 }
 
-export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true, dentitionType = 'permanent' }: DentalChartProps) {
+const CHART_LAYERS: { layer: ChartLayer; label: string }[] = [
+  { layer: 'baseline', label: 'Baseline' },
+  { layer: 'proposed', label: 'Proposed' },
+  { layer: 'completed', label: 'Completed' },
+];
+
+export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true, dentitionType = 'permanent', showLayerToggle = true, completedToothNumbers }: DentalChartProps) {
   const toothMap = buildToothMap(teeth);
+  // Per-tooth entryClassification lookup for layer resolution (CR-03).
+  const toothByNumber = new Map<number, ToothData>(teeth.map((t) => [t.toothNumber, t]));
   const [filterStates, setFilterStates] = useState<Set<ToothState>>(new Set());
+  const [activeLayer, setActiveLayer] = useState<ChartLayer>('baseline');
+
+  /** Effective layer for a tooth: completed (from treatments) wins, else by entryClassification. */
+  function toothLayerFor(toothNumber: number): ChartLayer {
+    if (completedToothNumbers?.has(toothNumber)) return 'completed';
+    return getToothLayer(toothByNumber.get(toothNumber)?.entryClassification);
+  }
 
   function toggleFilter(state: ToothState) {
     setFilterStates(prev => {
@@ -56,22 +75,35 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
     const state = toothMap.get(toothNumber) ?? 'healthy' as ToothState;
     const isSelected = selectedTooth === toothNumber;
     const { name } = getToothInfo(toothNumber);
-    const isDimmed = filterStates.size > 0 && !filterStates.has(state);
+    const toothLayer = toothLayerFor(toothNumber);
+    const isOffLayer = toothLayer !== activeLayer;
+    const isDimmed = (filterStates.size > 0 && !filterStates.has(state)) || isOffLayer;
+    // Proposed work stays visually distinct (dashed outline) when on its layer — CHART-BR-006.
+    const isProposedOnLayer = toothLayer === 'proposed' && !isOffLayer;
 
     return (
       <button
         key={toothNumber}
         type="button"
         data-testid={`tooth-${toothNumber}`}
+        data-tooth-layer={toothLayer}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${toothNumber} — ${name} (${state})`}
-        style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden', opacity: isDimmed ? 0.15 : 1, transition: 'opacity 200ms' }}
+        title={`Tooth ${toothNumber} — ${name} (${state}, ${toothLayer})`}
+        style={{
+          flex: '1 1 0',
+          minWidth: 0,
+          overflow: 'hidden',
+          opacity: isDimmed ? 0.2 : 1,
+          transition: 'opacity 200ms',
+          outline: isProposedOnLayer ? '1.5px dashed var(--primary, #007AFF)' : undefined,
+          outlineOffset: '-2px',
+        }}
         className={[
           'flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
           !isLastInQuadrant ? 'border-r border-border/20' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
-        aria-label={`Tooth ${toothNumber}: ${name}, ${state}`}
+        aria-label={`Tooth ${toothNumber}: ${name}, ${state}, ${toothLayer}`}
         aria-pressed={isSelected}
       >
         <UniversalToothFdi
@@ -90,6 +122,35 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
       data-testid="dental-chart"
       className="h-full flex flex-col rounded-md overflow-hidden border border-border/50 bg-muted/30"
     >
+      {/* Layer toggle — baseline / proposed / completed separation (CR-03) */}
+      {showLayerToggle && (
+        <div
+          data-testid="chart-layer-toggle"
+          role="group"
+          aria-label="Chart layer"
+          className="flex gap-1 px-2 py-1.5 border-b border-border/30 bg-background/60"
+        >
+          {CHART_LAYERS.map(({ layer, label }) => {
+            const isActive = activeLayer === layer;
+            return (
+              <button
+                key={layer}
+                type="button"
+                data-testid={`chart-layer-${layer}`}
+                onClick={() => setActiveLayer(layer)}
+                aria-pressed={isActive}
+                className={[
+                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                  isActive ? 'bg-[#FFE97D] text-[#4A4018]' : 'text-muted-foreground hover:bg-muted/60',
+                ].join(' ')}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Upper arch */}
       <div
         className="flex flex-1 min-h-0"

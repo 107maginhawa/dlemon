@@ -310,4 +310,47 @@ describe('useSaveToothFlow — onSuccess callback', () => {
     act(() => { result.current.saveToothData(SLIDEOUT_CHART_ONLY); });
     await waitFor(() => expect(called).toBe(true));
   });
+
+  // [CR-04] onSuccess must fire only AFTER the treatment persists — not before it.
+  test('[CR-04] does not call onSuccess until the treatment save completes', async () => {
+    const order: string[] = [];
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
+      if (url.includes('/treatments')) { order.push('treatment'); return jsonResponse(MOCK_TREATMENT_RESPONSE); }
+      order.push('chart');
+      return jsonResponse({});
+    }) as unknown as typeof fetch;
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useSaveToothFlow({ ...BASE_OPTS, onSuccess: () => order.push('onSuccess') }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    act(() => { result.current.saveToothData(SLIDEOUT_WITH_TREATMENT); });
+    await waitFor(() => expect(order).toContain('onSuccess'));
+
+    // onSuccess must come AFTER the treatment fetch, not between chart and treatment.
+    expect(order).toEqual(['chart', 'treatment', 'onSuccess']);
+  });
+
+  // [CR-04] On treatment failure, onSuccess must NOT fire (slideout stays open to retry).
+  test('[CR-04] does not call onSuccess when the treatment save fails', async () => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
+      if (url.includes('/treatments')) return new Response(JSON.stringify({ error: 'boom' }), { status: 500 });
+      return jsonResponse({});
+    }) as unknown as typeof fetch;
+
+    let called = false;
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useSaveToothFlow({ ...BASE_OPTS, onSuccess: () => { called = true; } }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    act(() => { result.current.saveToothData(SLIDEOUT_WITH_TREATMENT); });
+    await waitFor(() => expect(result.current.isSaving).toBe(false));
+    expect(called).toBe(false);
+  });
 });

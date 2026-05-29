@@ -330,3 +330,29 @@ describe('getToothFillColor', () => {
     }
   });
 });
+
+// ─── getToothLayer (CR-03 chart layer separation) ─────────────────────────
+
+import { getToothLayer } from './dental-chart.helpers';
+
+describe('getToothLayer (CR-03)', () => {
+  test('existing → baseline', () => {
+    expect(getToothLayer('existing')).toBe('baseline');
+  });
+
+  test('existing_other → baseline', () => {
+    expect(getToothLayer('existing_other')).toBe('baseline');
+  });
+
+  test('treatment_plan → proposed', () => {
+    expect(getToothLayer('treatment_plan')).toBe('proposed');
+  });
+
+  test('condition → proposed', () => {
+    expect(getToothLayer('condition')).toBe('proposed');
+  });
+
+  test('undefined (unclassified/legacy) → baseline', () => {
+    expect(getToothLayer(undefined)).toBe('baseline');
+  });
+});
