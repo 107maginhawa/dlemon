@@ -42,6 +42,7 @@ export async function createLabOrder(
   const order = await repo.createOne({
     visitId,
     patientId: body.patientId,
+    toothFdi: body.toothFdi,
     labName: body.labName,
     description: body.description,
     expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,

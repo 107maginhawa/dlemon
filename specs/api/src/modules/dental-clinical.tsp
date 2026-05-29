@@ -213,6 +213,8 @@ model LabOrder {
   version: int32;
   visitId: UUID;
   patientId: UUID;
+  /** FDI tooth notation the lab order is for (spec §7 / WF-017). */
+  toothFdi?: string;
   labName: string;
   description: string;
   status: LabOrderStatus;
@@ -229,6 +231,8 @@ model LabOrder {
 model CreateLabOrderRequest {
   visitId: UUID;
   patientId: UUID;
+  /** FDI tooth notation the lab order is for (spec §7 / WF-017). */
+  toothFdi?: string;
   labName: string;
   description: string;
   expectedDeliveryDate?: utcDateTime;

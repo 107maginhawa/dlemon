@@ -816,6 +816,7 @@ export const CreateInvoiceRequestSchema = z.object({
 export const CreateLabOrderRequestSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
+  toothFdi: z.string().optional(),
   labName: z.string(),
   description: z.string(),
   expectedDeliveryDate: z.string().datetime().transform((str) => new Date(str)).optional()
@@ -16178,6 +16179,7 @@ export const LabOrderSchema = z.object({
   version: z.number().int(),
   visitId: UUIDSchema,
   patientId: UUIDSchema,
+  toothFdi: z.string().optional(),
   labName: z.string(),
   description: z.string(),
   status: LabOrderStatusSchema,

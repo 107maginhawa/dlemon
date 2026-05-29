@@ -50,6 +50,17 @@ describe('LabOrderRepository', () => {
       const order = await repo.createOne({ ...baseOrder, expectedDeliveryDate: date });
       expect(order.expectedDeliveryDate).toBeInstanceOf(Date);
     });
+
+    // V-CLI-003 / spec §7 / WF-017: lab order carries the FDI tooth it is for.
+    test('stores toothFdi when provided', async () => {
+      const order = await repo.createOne({ ...baseOrder, toothFdi: '21' });
+      expect(order.toothFdi).toBe('21');
+    });
+
+    test('toothFdi defaults to null when omitted', async () => {
+      const order = await repo.createOne(baseOrder);
+      expect(order.toothFdi).toBeNull();
+    });
   });
 
   describe('state machine transitions', () => {

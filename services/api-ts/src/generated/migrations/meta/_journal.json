@@ -512,6 +512,13 @@
       "when": 1780079180067,
       "tag": "0072_normal_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1780098016833,
+      "tag": "0073_good_raza",
+      "breakpoints": true
     }
   ]
 }

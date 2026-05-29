@@ -21,6 +21,9 @@ export const labOrders = pgTable('lab_order', {
   ...baseEntityFields,
   visitId: uuid('visit_id').notNull().references(() => dentalVisits.id, { onDelete: 'cascade' }),
   patientId: uuid('patient_id').notNull().references(() => patients.id),
+  // V-CLI-003 / spec §7 / WF-017: FDI tooth notation the lab order is for.
+  // Nullable — not every lab order is tooth-specific (e.g. full denture, study models).
+  toothFdi: text('tooth_fdi'),
   labName: text('lab_name').notNull(),
   description: text('description').notNull(),
   status: labOrderStatusEnum('status').notNull().default('ordered'),

@@ -1,0 +1,1 @@
+ALTER TABLE "lab_order" ADD COLUMN "tooth_fdi" text;
