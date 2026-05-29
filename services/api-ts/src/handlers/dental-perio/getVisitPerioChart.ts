@@ -32,7 +32,6 @@ export async function getVisitPerioChart(
     'dentist_associate',
     'hygienist',
     'staff_full',
-    'staff_scheduling',
   ]);
 
   const chartRepo = new PerioChartRepository(db);

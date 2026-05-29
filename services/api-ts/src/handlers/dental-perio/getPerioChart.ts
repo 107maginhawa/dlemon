@@ -26,13 +26,13 @@ export async function getPerioChart(
   const chart = await chartRepo.findOneById(chartId);
   if (!chart) throw new NotFoundError('Perio chart');
 
-  // BR-P06: any branch member can read.
+  // BR-P06: any branch member with clinical access can read.
+  // staff_scheduling excluded per MODULE_SPEC §6 — perio data is clinical.
   await assertBranchRole(db, user.id, chart.branchId, [
     'dentist_owner',
     'dentist_associate',
     'hygienist',
     'staff_full',
-    'staff_scheduling',
   ]);
 
   const readingRepo = new PerioReadingRepository(db);

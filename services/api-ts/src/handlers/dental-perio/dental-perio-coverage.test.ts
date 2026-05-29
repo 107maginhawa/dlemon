@@ -6,9 +6,10 @@
  *   upsertToothReading     PUT  /dental/perio-charts/:id/readings/:tooth → 200
  *   completePerioChart     POST /dental/perio-charts/:id/complete         → 200
  *   getVisitPerioChart     GET  /dental/visits/:visitId/perio-chart       → 200 / 204
- *   RBAC                   non-dentist → 403
+ *   getPerioChart          GET  /dental/perio-charts/:chartId             → 200
+ *   RBAC                   non-dentist → 403; staff_scheduling → 403 on read (EF-PER-002)
  *
- * All fixture IDs use `pp` UUID prefix to avoid collisions with other suites.
+ * All fixture IDs use `ee` UUID prefix to avoid collisions with other suites.
  * Routes registered inline — not yet wired in app.ts.
  */
 
@@ -24,6 +25,7 @@ import {
   UpsertToothReadingParams,
   CompletePerioChartParams,
   GetVisitPerioChartParams,
+  GetPerioChartParams,
 } from '@/generated/openapi/validators';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
@@ -36,6 +38,7 @@ import { createPerioChart } from './createPerioChart';
 import { upsertToothReading } from './upsertToothReading';
 import { completePerioChart } from './completePerioChart';
 import { getVisitPerioChart } from './getVisitPerioChart';
+import { getPerioChart } from './getPerioChart';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -87,6 +90,7 @@ function buildApp(user?: typeof TEST_USER) {
   app.put('/dental/perio-charts/:chartId/readings/:toothNumber', zValidator('param', UpsertToothReadingParams, ve), zValidator('json', UpsertToothReadingBody, ve), upsertToothReading as any);
   app.post('/dental/perio-charts/:chartId/complete', zValidator('param', CompletePerioChartParams, ve), completePerioChart as any);
   app.get('/dental/visits/:visitId/perio-chart', zValidator('param', GetVisitPerioChartParams, ve), getVisitPerioChart as any);
+  app.get('/dental/perio-charts/:chartId', zValidator('param', GetPerioChartParams, ve), getPerioChart as any);
 
   return app;
 }
@@ -363,5 +367,32 @@ describe('getVisitPerioChart', () => {
     const app = buildApp(); // no user
     const res = await app.request(`/dental/visits/${VISIT_ID}/perio-chart`);
     expect(res.status).toBe(401);
+  });
+
+  // EF-PER-002: staff_scheduling must not read perio data
+  test('returns 403 for staff_scheduling role', async () => {
+    const app = buildApp(NON_DENTIST);
+    const res = await app.request(`/dental/visits/${VISIT_ID}/perio-chart`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('getPerioChart', () => {
+  test('returns 200 with chart and readings for dentist', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.id).toBe(chartId);
+    expect(Array.isArray(body.readings)).toBe(true);
+  });
+
+  // EF-PER-002: staff_scheduling must not read perio data via direct chart endpoint
+  test('returns 403 for staff_scheduling role', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(NON_DENTIST);
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(403);
   });
 });
