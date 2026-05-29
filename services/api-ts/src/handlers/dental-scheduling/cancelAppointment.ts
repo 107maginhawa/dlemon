@@ -13,6 +13,8 @@ import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CancelAppointmentParams } from '@/generated/openapi/validators';
+import type { JobScheduler } from '@/core/jobs';
+import { emitAppointmentCancelled } from './domain-events';
 
 export async function cancelAppointment(
   ctx: ValidatedContext<never, never, CancelAppointmentParams>
@@ -52,6 +54,14 @@ export async function cancelAppointment(
 
   const result = await repo.cancel(appointmentId, cancellationReason, user.id);
   if (!result) throw new NotFoundError('Appointment');
+
+  // DE-011: emit AppointmentCancelled domain event (best-effort, non-blocking)
+  const scheduler = ctx.get('jobs') as JobScheduler | undefined;
+  scheduler && emitAppointmentCancelled(scheduler, {
+    appointmentId: result.id,
+    patientId: result.patientId,
+    branchId: result.branchId,
+  }).catch(() => {/* non-blocking */});
 
   return ctx.body(null, 204);
 }

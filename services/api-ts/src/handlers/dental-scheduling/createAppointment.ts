@@ -15,6 +15,8 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 import type { NotificationService } from '@/core/notifs';
+import type { JobScheduler } from '@/core/jobs';
+import { emitAppointmentBooked } from './domain-events';
 
 export async function createAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -24,6 +26,7 @@ export async function createAppointment(ctx: HandlerContext) {
 
   const db = ctx.get('database') as DatabaseInstance;
   const notifs = ctx.get('notifs') as NotificationService | undefined;
+  const scheduler = ctx.get('jobs') as JobScheduler | undefined;
 
   // Authorization: user must have a scheduling-capable role in the target branch (EM-SCH-001)
   await assertBranchRole(db, user.id, body.branchId, [
@@ -78,6 +81,13 @@ export async function createAppointment(ctx: HandlerContext) {
     message: `Your appointment is confirmed for ${scheduledAt.toISOString()}`,
     relatedEntityType: 'appointment',
     relatedEntity: appt.id,
+  }).catch(() => {/* non-blocking */});
+
+  // DE-010: emit AppointmentBooked domain event (best-effort, non-blocking)
+  scheduler && emitAppointmentBooked(scheduler, {
+    appointmentId: appt.id,
+    patientId: appt.patientId,
+    branchId: appt.branchId,
   }).catch(() => {/* non-blocking */});
 
   return ctx.json({ ...appt, warnings }, 201);
