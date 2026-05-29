@@ -17,7 +17,7 @@ import {
   type NewImagingAnnotation,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
-import { storedFiles } from '@/handlers/storage/repos/file.schema';
+import { getFileSizesByIds } from '@/handlers/storage/repos/storage-imaging.facade';
 
 export class ImagingRepository {
   constructor(private readonly db: DatabaseInstance) {}
@@ -95,11 +95,9 @@ export class ImagingRepository {
         createdBy: imagingStudyImages.createdBy,
         updatedBy: imagingStudyImages.updatedBy,
         studyBranchId: imagingStudies.branchId,
-        fileSizeBytes: storedFiles.size,
       })
       .from(imagingStudyImages)
       .innerJoin(imagingStudies, eq(imagingStudyImages.studyId, imagingStudies.id))
-      .leftJoin(storedFiles, eq(imagingStudyImages.fileId, storedFiles.id))
       .where(
         and(
           eq(imagingStudies.patientId, patientId),
@@ -107,7 +105,15 @@ export class ImagingRepository {
           eq(imagingStudyImages.status, 'active'),
         ),
       );
-    return rows.map((r) => ({ ...r, fileSizeBytes: r.fileSizeBytes ?? 0 })) as (ImagingStudyImage & { studyBranchId: string; fileSizeBytes: number })[];
+
+    // Enrich with file sizes via storage facade (avoids cross-module repo import)
+    const fileIds = rows.map((r) => r.fileId).filter((id): id is string => id != null);
+    const fileSizeMap = await getFileSizesByIds(this.db, fileIds);
+
+    return rows.map((r) => ({
+      ...r,
+      fileSizeBytes: (r.fileId != null ? fileSizeMap.get(r.fileId) : undefined) ?? 0,
+    })) as (ImagingStudyImage & { studyBranchId: string; fileSizeBytes: number })[];
   }
 
   async archiveImage(id: string): Promise<void> {
