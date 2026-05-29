@@ -67,7 +67,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
     if (!invoice) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/issue`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/issue`, { method: 'PATCH', credentials: 'include' });
       if (!res.ok) throw new Error('Failed to issue invoice');
       await loadInvoice();
       onUpdated?.();
