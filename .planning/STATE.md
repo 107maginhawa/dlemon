@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: "structural-remediation"
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-05-28T23:44:57.851Z"
+last_updated: "2026-05-29T00:00:00Z"
 progress:
   total_phases: 13
   completed_phases: 10
@@ -44,7 +44,8 @@ Plan file: `~/.claude/plans/id-like-to-understand-wiggly-storm.md`
 Outstanding deferred items (from plan §Future Work):
 
 - F1: ✅ CLOSED 2026-05-28 — Renamed 21 ticket-ID test files to descriptive names (dental-visit.treatment-templates, dental-billing.payment-plan-fsm, acceptance.billing-payments, etc.); SA-GLOBAL-006 resolved
-- F2: Backend service-layer/DI refactor (after Phases 10+11) — READY, run `/oli-enforce-all` to seed ENFORCEMENT_REPORT.md
+- F2: Backend service-layer/DI refactor (after Phases 10+11) — READY, unblocked after enforce-fix Wave 3 complete (2026-05-29)
+- enforce-fix Wave 3: ✅ COMPLETE 2026-05-29 — 56 P0 security findings fixed (auth bypass, HIPAA audit trails, IDOR, lock gates, FSMs, domain events); 22 blocked pending F2 or architectural rename; 24 TDD_PROOF artifacts; ENFORCEMENT_FIX_REPORT.md written at docs/audits/; HANDOFF.json deleted (267db942)
 - F3: Schema unification legacy↔dental-* (multi-quarter, H2 2026→H1 2027)
 - F4: Offline-sync/Tauri (cadence stub activation) — separate milestone
 - F5: ✅ CLOSED 2026-05-28 — sample-workspace role documented in ARCHITECTURE.md (Frontend App Roles section); SA-GLOBAL-001 resolved
