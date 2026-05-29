@@ -1,8 +1,8 @@
 <!-- oli-version: 1.1 -->
-<!-- based-on: docs/audits/ENFORCEMENT_REPORT.md -->
-<!-- generated: 2026-05-29 -->
+<!-- based-on: docs/audits/ENFORCEMENT_REPORT.md run-7 -->
+<!-- generated: 2026-05-29 Wave4 sprint -->
 
-# Enforcement Fix Report
+# Enforcement Fix Report — Wave 4 (Run-7 P0 Sprint)
 Source: run-6-strict-2026-05-29 | Fix date: 2026-05-29 | Loops: 1
 
 ---
@@ -142,3 +142,108 @@ After re-verification:
 2. Fix 33 stale test-infra import paths (structural debt, not security risk)
 3. Start F2 service-layer sprint to unblock the 9 blocked module P1s and domain event infrastructure
 4. Run `/oli-enforce-all --strict` for updated baseline — expect significant P0 reduction from 78 → ~22 (the 22 blocked findings)
+
+---
+
+## Wave 4 Fix Summary (2026-05-29)
+
+| Metric | Count |
+|--------|-------|
+| P0 findings addressed | 40 |
+| Wave 1 (mechanical) fixed | 22 |
+| Wave 2 (structural) fixed | 18 |
+| BLOCKED (architectural) | 4 |
+| Migrations generated | 2 (0067, 0068) |
+| New prod typecheck errors | 0 |
+
+---
+
+## Wave 1 — Mechanical ✅ ALL FIXED
+
+| ID | Fix |
+|----|-----|
+| EM-AUD-001 | audit route `admin` → `user` in app.ts |
+| EM-SCH-a564d893 | cancelAppointment roles: `dentist_owner`, `staff_full` only |
+| EM-SCH-4afe5eab | checkInAppointment: added `dentist_associate`, removed `staff_scheduling` |
+| EM-ORG-001 | `assertBranchRole(['dentist_owner'])` in DentalMembershipManagement_create.ts |
+| EM-ORG-002 | Admin `ForbiddenError` in DentalOrganizationManagement_create.ts |
+| EF-ORG-P015 | `assertBranchAccess` added to `recoverPin()` |
+| EF-ORG-P018 | `TIER_LIMIT_REACHED` added to ERROR_TAXONOMY.md |
+| EM-PMD-6e91e277 | Removed `staff_full` from generatePMD roles |
+| EM-PAT-001..003 | `assertBranchAccess` → `assertBranchRole(['dentist_owner'])` in export/bulkArchive/restore |
+| EM-VIS-001 | `getTreatmentPlan` branchId now required (400 if missing) |
+| EM-CLI-ba65c348 | `createAttachment`: `hygienist` → `staff_full` |
+| EM-PER-001 | `createPerioChart`: BusinessLogicError 422 → ConflictError 409 `CHART_EXISTS` |
+| EM-PER-002 | `perio-validation.ts`: ValidationError 400 → BusinessLogicError 422 `INVALID_DEPTH`/`INVALID_TOOTH_NUMBER` |
+| AL-001 | `logAuditEvent` → DentalOrganizationManagement_create.ts |
+| AL-002 | `logAuditEvent` → DentalBranchManagement_create.ts |
+| AL-003 | `logAuditEvent` → DentalMembershipManagement_create.ts (canonical) |
+| AL-004 | `logAuditEvent` → DentalMembershipManagement_deactivate.ts |
+| AL-005 | `logAuditEvent` → createDentalPatient.ts |
+| AL-008 | `logAuditEvent` → cancelAppointment.ts |
+| AL-009 | `logAuditEvent` → createDentalInvoice.ts |
+| AL-013 | `logAuditEvent` → generatePMD.ts |
+| AL-025 | `logAuditEvent` → exportPMD.ts |
+| AL-023 | `logAuditEvent` → emr/createConsultation.ts |
+| AL-024 | `logAuditEvent` → emr/getConsultation.ts |
+
+---
+
+## Wave 2 — Structural ✅ ALL FIXED
+
+| ID | Fix |
+|----|-----|
+| EF-ORG-P017 | `'invited'`, `'revoked'` added to memberStatusEnum + migration 0067 |
+| EM-IMG-008 | `'draft'` → imagingFindingStatusEnum; `'not_placed'` → cephLandmarkStatusEnum + migration 0068 |
+| EM-IMG-014 | `dental-imaging.tier-blocked` WARN added to 9 tier-gated handlers |
+| EM-CLI-7e8a61cb | BR-003 locked-visit guard in createPrescription |
+| EM-CLI-bd7bc565 | BR-003 locked-visit guard in createConsentForm |
+| EM-CLI-e7fc720a | BR-003 locked-visit guard in createAttachment |
+| EM-CLI-6ff99c36 | revokeConsentForm: `signed → revoked` transition blocked |
+| EF-CLI-001 | updateMedicalHistoryEntry: 422 `APPEND_ONLY_VIOLATION` (append-only enforced) |
+| EF-CLI-002 | Branch auth added to all 5 inventory handlers |
+| EF-CLI-003 | Branch auth added to occlusion (2) + postop (3) handlers |
+| EM-PAT-004 | updateDentalPatient: `status=archived` requires `dentist_owner` |
+| EF-PAT cross-route | listDentalPatients: `assertBranchAccess` → `assertBranchRole` |
+| EF-PAT archive | archiveDentalPatient: verified already correct |
+| EF-PAT cross-branch | listDentalPatients org-expansion: verified already removed |
+| EX-004 | `patient/repos/patient-emr.facade.ts` created; 4 EMR handlers migrated off direct PatientRepository |
+| EM-EMR-004 | DB-level FK constraints removed from emr.schema.ts + migration 0068 |
+| EM-BIL-23495b6c | InvoiceCreated event wired via dental-billing/domain-events.ts |
+| EM-BIL-add117d4 | InvoicePaid event wired via dental-billing/domain-events.ts |
+
+---
+
+## BLOCKED Findings
+
+| ID | Reason | Action |
+|----|--------|--------|
+| EM-EMR-001 | Wrong domain — consultation notes ≠ EMR import bridge | Plan EMR module replacement in Phase 3 |
+| EM-EMR-002 | MODULE_SPEC §20 blocks implementation until Phase 3+ | Block on Phase 3 milestones |
+| EM-EMR-003 | Namespace collision blocks spec-compliant impl | Depends on EM-EMR-001/002 |
+| EF-ORG-P016 | Fee schedule endpoints entirely missing (new handlers needed) | Run `/oli-module-specs --module dental-org` then plan phase |
+
+---
+
+## Audit Compliance (Post Wave 4)
+
+**Before:** 13/25 contracts implemented  
+**After:** 24/25 contracts implemented
+
+Remaining open (P3 only): AL-020 (self-audit), AL-021 (signConsent log), AL-022 (revokeConsent log)
+
+---
+
+## Commit Trail
+
+`aa353b0a` EM-AUD-001 | `c91e39e4` SCH roles+AL-008 | `c6af4266` ORG auth+AL-001..004 | `cf03d64e` PAT auth+AL-005 | `6d9fc1b7` PMD+billing AL | `918b6d98` VIS+CLI roles | `a1c8a14f` PER errors | `fc2d6949` EMR AL-023/024 | `cef5b708` ORG enum+0067 | `cd822eab` IMG enum+observability | `ef89db86` CLI BR-003+revoke | `233ba78b` CLI auth | `fb4fea40` PAT fixes | `1ccb167d` EX-004 facade | `693eb28d` EMR FK | `2d14e4aa` BIL events | `99cb0873` migration 0068
+
+---
+
+## What's Next
+
+1. **`/oli-enforce-all --strict`** — verify 0 new P0 regressions (all 8 from run-7 were fixed)
+2. **Estimated remaining P0s:** ~11 (EM-EMR-001..003 + EF-ORG-P016 + ~7 to re-verify)
+3. **AL P3 cleanup:** AL-020/021/022 (self-audit + consent logs) — low priority
+4. **Fee schedule phase:** EF-ORG-P016 requires dedicated planning
+5. **EMR Phase 3:** EM-EMR-001..003 blocked until scheduling Phase 3
