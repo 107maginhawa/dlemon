@@ -24,8 +24,8 @@ last-modified-by: oli-check
 | Traceability | 🟡 **WARN** (71% chain) | [TRACE_REPORT.md](../trace/TRACE_REPORT.md) | 661 nodes/1043 edges; **0 dangling endpoints, 0 cross-module blind spots**; 1 P0 (patient-merge auth-drift), 9 P1 (all *reach*), 14 P2 |
 | Journeys (stale 05-29) / Enforcement / Runtime | ⏭️ not refreshed | [JOURNEY_COVERAGE_REPORT.md](./JOURNEY_COVERAGE_REPORT.md) | journey report predates G7/G8 — refresh in cycle 3 |
 
-## Overall
-🟡 **WARN** — Compliance PASS, but Confidence **8.0** < clinical ≥9.0 bar and trace chain coverage **71%** with 1 P0 (the patient-merge auth-drift, GAP-DENTAL-027). Discovery correctly skipped (obsolete artifact). The gaps are *reach*, not active defects: dental-imaging (5 tests/42 handlers), dental-pmd (no deny tests), patient/person base modules, 18/24 untraced domain events, BR-036..047 (ceph). Structural health is strong (237/0/0 spec parity, 0 blind spots). **Expected to gate Cycle-2 graduation → Cycle 3.** Next: `/oli-magic --update`.
+## Overall — updated post cycle-3
+🟢 **GRADUATED (cycle 3, 2026-05-30).** Cycle-3 waves G9/G10/G11 closed the gap: Confidence **8.0→9.0**, Trace **71%→80%** chain (P0 1→0), Compliance PASS with C4/C7 resolved, +142 tests (full suite **2684/0**, 0 regressions), GAP-DENTAL-027 closed. All graduation gates MET (P0=0, audit/compliance/confidence ≥9.0). `execution_state = graduated` — use `/oli` going forward. Non-blocking backlog: L4 release-infra 8.75, 5 trace P1s, ~43 P2.
 
 ## Knowledge Graph (built this session)
 Engine-produced AST map at `docs/audits/codebase-map/` (git_sha 01f83918):

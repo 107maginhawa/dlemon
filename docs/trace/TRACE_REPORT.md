@@ -2,39 +2,55 @@
 
 ---
 oli-version: trace-v1
-Report Date: 2026-05-30
+Report Date: 2026-05-30 (cycle-3 refresh)
 Phase: D
 Modules Traced: all (12 dental modules + Monobase platform layer)
 Mode: standalone
-Data Sources: artifacts (WORKFLOW_MAP, DOMAIN_MODEL, EVENT_CONTRACTS, ROLE_PERMISSION_MATRIX, 12 MODULE_SPECs), compliance_report, confidence_report, journey_report (dental-visit only — STALE 2026-05-27/29), knowledge_graph (CODE_SPEC_TRACE 237 ops, CODE_IMPORT_GRAPH 27 edges, CODE_STATE_MACHINES 28 FSMs)
-Partial Staleness: JOURNEY_COVERAGE_REPORT.md is module-scoped (dental-visit only) and dated 2026-05-27 with a 2026-05-29 Track-A resolution addendum; it predates the last two delivery waves. UI-action/journey edges (types 12, 15, 16, 17) are therefore complete only for dental-visit and inferred-from-code-graph elsewhere. CODE_SPEC_TRACE/IMPORT_GRAPH/STATE_MACHINES are fresh (2026-05-30 03:52).
+Data Sources: artifacts (WORKFLOW_MAP, DOMAIN_MODEL, EVENT_CONTRACTS, ROLE_PERMISSION_MATRIX, 12 MODULE_SPECs), compliance_report (🟢 PASS), confidence_report (8.0 — STALE, predates cycle-3), consistency_report (🟢 PASS, fresh 2026-05-30 04:48), journey_report (dental-visit only — STALE), knowledge_graph (CODE_SPEC_TRACE 237 ops — STALE, predates cycle-3), live test-source scan (FRESH, source of truth for cycle-3 deltas)
+Partial Staleness: **CONFIDENCE_REPORT (04:07) and CODE_SPEC_TRACE (03:52) PREDATE the G9/G10/G11 cycle-3 commits (04:33–04:49).** Their per-module scores (imaging=4, pmd=4, person=3) and `auth_drift=2` flag reflect the PRE-cycle-3 tree. This refresh therefore credits cycle-3 resolutions from a **direct test-source scan** (verified file/it-block counts + grep of BR/DE/role IDs), not from the stale reports. JOURNEY_COVERAGE_REPORT remains module-scoped (dental-visit only); UI-journey edges (types 12,15,16,17) are complete only there and inferred-from-code elsewhere.
 ---
 
 ## Summary
 
-| Metric | Count |
-|--------|-------|
-| Total nodes | 661 |
-| Total edges | 1,043 |
-| CRITICAL gaps (P0) | 1 |
-| HIGH gaps (P1) | 9 |
-| MEDIUM gaps (P2) | 14 |
-| **Chain coverage (WF→test)** | **71%** (74 / 104 workflows fully chained to a test) |
+| Metric | Count | Δ vs cycle-2 |
+|--------|-------|:---:|
+| Total nodes | 668 | +7 |
+| Total edges | ~1,099 | +56 |
+| CRITICAL gaps (P0) | **0** | **−1** |
+| HIGH gaps (P1) | **5** | **−4** |
+| MEDIUM gaps (P2) | 14 | 0 |
+| **Chain coverage (WF→test)** | **80%** (83 / 104 workflows fully chained to a test) | **+9pp** |
 
-> **Headline graduation metric — Chain coverage (WF→test) = 71%.** Of 104 workflows, 74 chain end-to-end (WF → BR/SM → spec → API → test). The 30 shortfall workflows are dominated by (a) `[INFERRED]` role-journey/reporting/notification workflows that are documentation constructs with no single owning endpoint, (b) deferred/orphan workflows (BR-005 auto-discard, BR-013 markUncollectible, BR-019 amendment approval, BR-020 patient merge), and (c) the ceph/imaging-finding interaction layer (BR-036..047, 18/24 events) whose tests do not yet exist. This is breadth-of-reach, not active correctness risk — compliance is 🟢 PASS (0 P0/P1 open) and the 237 implemented endpoints have perfect API↔spec parity.
+> **Headline graduation metric — Chain coverage (WF→test) = 80% (was 71%).** Cycle-3 (G9/G10/G11, +131 tests) closed the ceph layer (WF-030/031, all 12 BR-036..047 now tested), lifted dental-imaging (WF-019/020/040) from ~12% to real coverage, added pmd deny tests, person base coverage, and 16 of 24 domain events. The remaining 21 shortfall workflows are (a) `[INFERRED]` role-journey/reporting/notification composites with no single owning endpoint, (b) genuinely-deferred features (BR-005 auto-discard, BR-013 markUncollectible, BR-019 supervisor-approval gate, BR-020 patient merge `describe.skip` v2.0, WF-058/088 GDPR), and (c) DE-017..024 publisher-audit tests + two UI-journey gaps (WF-032 dentition-init, WF-048/049/050 item-level plan). **0 P0, 0 P1/P0 compliance open, 237/237 API↔spec parity.**
 
 ## Changes Since Last Run
 
-First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at `docs/trace/.trace-baseline.json`.
+- **New gaps:** 0
+- **Resolved gaps:** 5 (TR-P0-01, TR-P1-01, TR-P1-02, TR-P1-03, TR-P1-09-person)
+- **Downgraded/reduced:** 1 (TR-P1-04 events 18→8 untraced)
+- **Net change:** P0 −1, P1 −4, P2 0
+
+| Prior Gap | Prior Sev | Cycle-3 status | Evidence (test-source scan) |
+|-----------|:---:|----------------|------------------------------|
+| **TR-P0-01** patient merge/unmerge auth-drift | P0 | **RESOLVED → P3 cosmetic** | In-handler `user.role !== 'admin' → ForbiddenError` confirmed in `mergePatients.ts:19` + `unmergePatients.ts:25`; tested by `patient-merge-auth.test.ts` (22 role/403 assertions). CODE_SPEC_TRACE still shows `auth_drift=2` because its engine detects ROUTE-level middleware only, not in-handler role checks — **detection false-positive**; the authz IS enforced + tested. BR-020 itself is formally deferred (`describe.skip('BR-020 … [deferred v2.0]')`), closing the dangling intent. |
+| **TR-P1-01** ceph BR-036..047 (0 test owners) | P1 | **RESOLVED** | `ceph-business-rules.test.ts` — 22 it-blocks; all 12 IDs BR-036..047 referenced by exact ID. |
+| **TR-P1-02** dental-imaging thin (5 files/~42 handlers) | P1 | **RESOLVED / much-improved** | Now 7 imaging test files / **273 it-blocks**; `imaging-integration.test.ts` = 55 real-DB tests across 13 handlers. WF-019/020/040 now chained. |
+| **TR-P1-03** dental-pmd 0 deny-403 tests | P1 | **RESOLVED** | `dental-pmd-auth.test.ts` — 13 deny/403/forbidden refs; generatePMD identity pin present. |
+| **TR-P1-09** person base minimal coverage | P1 | **RESOLVED (person)** | `person.test.ts` unit (25 it) + e2e (91 it). patient(base) still thin (folded into open list as P2 watch, not a fresh P1). |
+| **TR-P1-04** event layer 18/24 untraced | P1 | **REDUCED (still P1)** | `*-events.test.ts` (clinical/visit/scheduling/billing) now reference DE-001..016 by exact ID; **8 remain untraced** (DE-017..024 — DE-023/024 are `[INFERRED]`/not-implemented). |
+| C4 + C7 consistency | (consistency) | **PASS (G11)** | CONSISTENCY_REPORT C4=PASS (permission closure), C7=PASS (dental-clinical → dental-visit via `VisitService` interface; direct repo import gone). Strengthens cross-module trace (5d still 0 blind spots). |
+
+### Still-open P1 (5) after cycle-3
+TR-P1-04 (DE-017..024 publisher-audit tests, ~8 events; several inferred/deferred) · TR-P1-05 (BR-019 supervisor-approval gate unimplemented — append-only tested, approval gate not) · TR-P1-06 (BR-013 markUncollectible incomplete) · TR-P1-07 (WF-032 dentition-init UI not covered) · TR-P1-08 (WF-048/049/050 item-level plan completion PARTIAL).
 
 ## Per-Phase Health Contribution
 
 | Phase | Score | Metric | Notes |
 |-------|-------|--------|-------|
-| A | 9/10 | Artifact completeness | All WF/BR/AC/SM/DE/role/endpoint nodes defined; 0 endpoint-level dangling refs (237/237 matched). Minor: 4 orphan BRs (deferred by ADR) and WF-100's `dental-emr` module name mismatch (code = `emr`/`emr-consultation`). |
-| B | 9/10 | Spec coverage | 30/30 canonical BRs are defined in WORKFLOW_MAP §5 and cross-referenced in MODULE_SPECs (`BR_DEFINED_IN_SPEC`). Cross-module integration mechanisms exist for every documented cross-module reference (CODE_IMPORT_GRAPH 27 edges, 0 circular). |
-| C | 8/10 | Slice coverage | No `VERTICAL_SLICE_PLAN.md`/`docs/slices/` slice nodes present (slices live under `docs/execution/slices/`, 46 TDD_PROOFs, 17 verified per confidence). BRs map to implemented handlers; slice-layer linkage inferred via TDD_PROOFs rather than explicit slice IDs. Not capped — no CRITICAL slice gap. |
-| D | 7/10 | Test coverage | (30/30 canonical BRs tested = 100%) × (chain coverage 71%) → weighted 7. Test-Confidence (min L1–L3) = 8.0 from CONFIDENCE_REPORT, below the ≥9.0 clinical-grade graduation bar. Drag: 18/24 events untraced, BR-036..047 untraced, imaging/pmd thin, 39/48 ACs lack exact-ID test trace. |
+| A | 9/10 | Artifact completeness | All WF/BR/AC/SM/DE/role/endpoint nodes defined; 0 endpoint-level dangling refs (237/237 matched). Minor: deferred BRs (BR-005/013/019/020 — now formally deferred or partially tested) and WF-100's `dental-emr` module name mismatch (code = `emr`/`emr-consultation`). |
+| B | 9/10 | Spec coverage | 30/30 canonical BRs defined in WORKFLOW_MAP §5 and cross-referenced in MODULE_SPECs. **+12 extended BRs (BR-036..047) now also have spec→test edges.** Cross-module integration mechanisms exist for every documented reference; **C4+C7 consistency now PASS (G11)** — dental-clinical→dental-visit via `VisitService` interface, no direct repo import; 0 circular. |
+| C | 8/10 | Slice coverage | No `VERTICAL_SLICE_PLAN.md` slice nodes (slices under `docs/execution/slices/`, TDD_PROOFs). BRs map to implemented handlers; slice-layer linkage inferred via TDD_PROOFs. Not capped — **no CRITICAL slice gap (P0 cleared this cycle)**. |
+| D | **8/10** | Test coverage | (canonical BR tested 100% + 12/12 ceph BR now tested) × (chain coverage **80%**) → weighted **8**. Test-Confidence per CONFIDENCE_REPORT is 8.0 but **stale (pre-cycle-3)** — the +131 cycle-3 tests (imaging 273 it-blocks, ceph 22, pmd deny, person 25+91, events DE-001..016) materially lift L1/L2 reach above the report's snapshot. Residual drag: DE-017..024 (8 events), BR-013/019 incomplete, 39/48 ACs lack exact-ID trace. |
 
 ## Coverage Matrix
 
@@ -42,9 +58,9 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 
 | WF-ID | Name | BRs Linked | BRs Tested | API Exposed | Chain % | Limiting factor |
 |-------|------|:----------:|:----------:|:-----------:|:-------:|-----------------|
-| WF-030 | Cephalometric analysis | BR-036..047 (12) | 0 | Yes | 0% | 5c — ceph BRs have zero test reference (CONFIDENCE L2); 5f — ceph UI journey untraced |
-| WF-031 | Ceph landmark placement | SM-02, BR-036..047 | 0 | Yes | 0% | 5c — ceph BR/SM untested |
-| WF-040 | Imaging finding record | SM-01 (BR-023..030) | partial | Yes | ~40% | 5c — imaging 5 test files / 42 handlers (L1/L2=4) |
+| WF-030 | Cephalometric analysis | BR-036..047 (12) | **12 ✓** | Yes | **100%** ✅ | RESOLVED (ceph-business-rules.test.ts, 22 it) |
+| WF-031 | Ceph landmark placement | SM-02, BR-036..047 | **12 ✓** | Yes | **~90%** ✅ | RESOLVED (BR tested; SM-02 landmark FSM exercised) |
+| WF-040 | Imaging finding record | SM-01 (BR-023..030) | **✓** | Yes | **~85%** ✅ | RESOLVED — imaging now 7 files / 273 it (imaging-integration 55 real-DB / 13 handlers) |
 | WF-047 | Auto-discard empty visit | BR-005 | 0 | No | 0% | 5a/5b — deferred (ADR-010); no enforcing impl |
 | WF-041 | Invoice void / uncollectible | BR-011, BR-013 | BR-011 only | Yes | 50% | 5c — BR-013 markUncollectible unimplemented (orphan) |
 | WF-038 | Clinical amendment | BR-019 | 0 | Yes | 0% | 5b — BR-019 supervisor approval not implemented |
@@ -81,25 +97,21 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 
 ### CRITICAL (P0) — Blocks Phase Progression
 
-| Gap ID | Algorithm | Description | Source | Suggested Fix |
-|--------|-----------|-------------|--------|---------------|
-| TR-P0-01 | 5e (dangling/auth drift) | `POST /patients/merge` and `POST /patients/unmerge` carry **auth_drift** (CODE_SPEC_TRACE: required_roles in spec ≠ code) and back the **unimplemented** WF-057/BR-020 patient-merge workflow (501 stub; DE-024 reserved). The endpoint pair exists in the surface but its authorization contract is unverified and the workflow chain is empty — a dangling intent: WF-057/BR-020 are referenced (WORKFLOW_MAP §3, §5, EVENT_CONTRACTS DE-024) but have no enforced, role-correct implementation. | CODE_SPEC_TRACE.json `auth_drift=2`; WORKFLOW_MAP §5 BR-020 ORPHAN; EVENT_CONTRACTS DE-024 | Resolve the merge/unmerge auth contract (align spec ↔ `assertBranchRole`), or formally mark the endpoints `501`/feature-flagged in spec so the dangling WF-057/BR-020 reference is closed. Tracked elsewhere as GAP-DENTAL-027. |
+**None.** (was 1 in cycle-2 — TR-P0-01 RESOLVED, see below.) Endpoint-level dangling references = **0** (237/237 spec↔code parity, 0 spec_only, 0 code_only). Cross-module blind spots = **0**. The project clears all P0 traceability gates this cycle.
 
-> **Note on the P0:** This is the *only* CRITICAL gap. Endpoint-level dangling references are otherwise **ZERO** (237/237 spec↔code parity, 0 spec_only, 0 code_only) — a strong structural signal. The single P0 is an authorization-drift + dangling-intent pair on the deliberately-unimplemented merge feature, not a broken core chain.
+> **TR-P0-01 (patient merge/unmerge auth-drift) — RESOLVED → P3 cosmetic.** G9 added an in-handler admin guard (`if (user.role !== 'admin') throw new ForbiddenError(...)`) to `mergePatients.ts` and `unmergePatients.ts`, pinned by `patient-merge-auth.test.ts` (22 role/403 assertions). The authorization contract is now enforced AND tested. CODE_SPEC_TRACE.json *still* reports `auth_drift=2` on these two ops, but this is a **detection false-positive**: the engine only inspects ROUTE-level middleware (`code_roles=None`) and cannot see in-handler role checks. The dangling-intent half is also closed — BR-020/WF-057 patient-merge is now formally deferred to v2.0 (`describe.skip('BR-020: patient merge/unmerge [deferred v2.0]')` in business-rules.test.ts), so the reference is intentionally parked, not orphaned. Logged as P3 cosmetic "engine detection gap (in-handler authz invisible to route-level scanner)".
 
 ### HIGH (P1) — Warns at Phase Boundary
 
 | Gap ID | Algorithm | Description | Source | Suggested Fix |
 |--------|-----------|-------------|--------|---------------|
-| TR-P1-01 | 5c | **BR-036..047 (12 ceph business rules) have zero test owners** — no reference in any api-ts test, no reference in handler code. WF-030/WF-031 chains are broken at the test link. | CONFIDENCE L2 "BR-036..047 untraced"; grep: 0 matches in tests & src | Add ceph-rule tests (math-engine assertions + landmark FSM SM-02 guards). `/oli-execute` TDD. |
-| TR-P1-02 | 5c / 5f | **dental-imaging coverage thin** — 5 test files / ~42 handlers (~12%, L1/L2=4). WF-019/020/040 (study upload, annotate, finding) and batch-landmark mutation largely untraced. | CONFIDENCE per-module (imaging=4); CODE_SPEC_TRACE 21 imaging endpoints | Add handler/contract tests across study/annotation/finding/landmark surface. |
-| TR-P1-03 | 5c / 5f | **dental-pmd has 0 deny-403 tests**; 3 tests / 7 handlers. `generatePMD` patientId-binding (N-PMD-02) fixed but not regression-pinned. | CONFIDENCE per-module (pmd=4) "0 deny-403"; CODE_SPEC_TRACE 7 pmd endpoints | Add RBAC deny tests + a `generatePMD` identity-binding regression test. |
-| TR-P1-04 | 5c | **Event layer: 18/24 domain events untraced** — only DE-001/002/005/006/010/011/014/015 region has audit-row test owners (grep found explicit DE-001/010/011/014/015 in tests; CONFIDENCE: 6/24). DE-003/004/007/008/009/012/013/016..023 have no publisher-asserts-audit-row test. | CONFIDENCE L2 events 6/24; EVENT_CONTRACTS; grep tests | Add publisher-asserts-`dental_audit_log`-row tests per untraced DE (consumer/idempotency deferred per ADR-006 — document the deferral in the denominator). |
-| TR-P1-05 | 5b | **BR-019 (supervisor amendment approval) not implemented** — WF-038 chain breaks; ORPHAN BR. | WORKFLOW_MAP §5 BR-019 ORPHAN | Implement approval gate or descope BR-019 via ADR. |
-| TR-P1-06 | 5b | **BR-013 (markUncollectible) incomplete** — WF-041 invoice-void chain only 50%; orphan BR, no error path. | WORKFLOW_MAP §5 BR-013; SM-INVOICE "INCOMPLETE" | Complete `uncollectible` transition + test, or descope. |
-| TR-P1-07 | 5f | **WF-032 Initialize dentition NOT COVERED** — no dentition-init UI in workspace; journey chain has no `ui_action`→`ACTION_COMPLETES_WF_STEP`. | JOURNEY_COVERAGE_REPORT line 430 | Add dentition-init UI action + bind to existing endpoint; add E2E. |
-| TR-P1-08 | 5f | **WF-048/049/050 treatment-plan completion PARTIAL** — plan-level FSM only, no item-level completion (TP-BR-005 NOT COVERED); CR-05 approval record deferred. | JOURNEY_COVERAGE_REPORT lines 434-435, 453-454 | Add item-level plan completion + patient-approval record. |
-| TR-P1-09 | 5b | **patient / person base modules minimal coverage (L1/L2=3)** — base-template handlers backing dental-patient flows under-traced. | CONFIDENCE per-module patient(base)=3, person=3 | Raise base-module coverage (deny+allow per gate). |
+| TR-P1-04 | 5c | **Event layer: 8/24 domain events still untraced (was 18/24)** — `*-events.test.ts` (clinical/visit/scheduling/billing) now assert DE-001..016 by exact ID. Remaining untraced: **DE-017..024** (PMDGenerated, ImagingStudyUploaded, ImagingFindingConfirmed, CephAnalysisComputed, PatientRegistered, MembershipAssigned, and the `[INFERRED]` DE-023 MembershipRevoked / DE-024 PatientMergeRequested-NOT-IMPLEMENTED). | live grep: DE-001..016 in tests; DE-017..024 = 0 test files; EVENT_CONTRACTS | Add publisher-asserts-`dental_audit_log`-row tests for DE-017..022; document DE-023/024 as inferred/deferred in the denominator. |
+| TR-P1-05 | 5b | **BR-019 supervisor-approval gate unimplemented** — append-only amendment behavior IS tested (business-rules.test.ts BR-019), but the *supervisor approval* requirement of WF-038 has no enforcing impl. Partial, not zero. | WORKFLOW_MAP §5; business-rules.test.ts:1413 | Implement approval gate or descope the approval clause via ADR. |
+| TR-P1-06 | 5b | **BR-013 (markUncollectible) incomplete** — WF-041 invoice-void chain ~50%; `uncollectible` transition lacks complete impl/error path. | WORKFLOW_MAP §5 BR-013; SM-INVOICE "INCOMPLETE" | Complete `uncollectible` transition + test, or descope. |
+| TR-P1-07 | 5f | **WF-032 Initialize dentition NOT COVERED** — no dentition-init UI in workspace; journey chain has no `ui_action`→`ACTION_COMPLETES_WF_STEP`. | JOURNEY_COVERAGE_REPORT | Add dentition-init UI action + bind to endpoint; add E2E. |
+| TR-P1-08 | 5f | **WF-048/049/050 treatment-plan completion PARTIAL** — plan-level FSM only, no item-level completion (TP-BR-005 NOT COVERED); CR-05 approval record deferred. | JOURNEY_COVERAGE_REPORT | Add item-level plan completion + patient-approval record. |
+
+> **RESOLVED this cycle (4 prior P1s):** TR-P1-01 ceph BR-036..047 (now 12/12 tested, ceph-business-rules.test.ts) · TR-P1-02 dental-imaging (5→7 files, 273 it-blocks, imaging-integration.test.ts 55 real-DB/13 handlers) · TR-P1-03 dental-pmd deny tests (dental-pmd-auth.test.ts, 13 deny refs) · TR-P1-09 person base (person.test.ts 25 unit + 91 e2e). patient(base) coverage remains thin but no longer rises to P1 — folded into P2 watch.
 
 ### MEDIUM (P2) — Report Only
 
@@ -115,14 +127,12 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 
 | Priority | Action | Gaps Fixed | Command |
 |----------|--------|-----------|---------|
-| 1 | Resolve patient merge/unmerge auth drift + dangling WF-057/BR-020 | 1 P0 | Edit spec auth + `assertBranchRole`, or formal `501` flag (GAP-DENTAL-027) |
-| 2 | Add dental-imaging handler/contract tests (study/annotation/finding/landmark) | 1 P1 (+raises L1/L2) | `/oli-execute --module dental-imaging` |
-| 3 | Add ceph BR-036..047 + SM-02 tests | 1 P1 | `/oli-execute --module dental-imaging` (ceph) |
-| 4 | Add dental-pmd deny-403 + generatePMD identity regression | 1 P1 | `/oli-execute --module dental-pmd` |
-| 5 | Add publisher-asserts-audit-row tests for 18 untraced DE events | 1 P1 | `/oli-execute` (event-layer) |
-| 6 | Implement/descope BR-013, BR-019, BR-005, BR-020 orphans | 1 P0 + 3 P1/P2 | PRD amendment + `/oli-execute` |
-| 7 | Add dentition-init UI + item-level plan completion + approval record | 2 P1 | `/frontend-module dental-visit` |
-| 8 | Reconcile AC test IDs to canonical MODULE_SPEC AC IDs; backfill perio ACs | 11 P2 | Edit MODULE_SPECs + test describe blocks |
+| 1 | Add publisher-asserts-audit-row tests for DE-017..022 (mark DE-023/024 inferred/deferred) | 1 P1 | `/oli-execute` (event-layer) |
+| 2 | Implement/descope BR-019 approval gate + BR-013 markUncollectible | 2 P1 | PRD amendment + `/oli-execute` |
+| 3 | Add dentition-init UI (WF-032) + item-level plan completion (WF-048/049/050) | 2 P1 | `/frontend-module dental-visit` |
+| 4 | Reconcile AC test IDs to canonical MODULE_SPEC AC IDs; backfill perio ACs | 11 P2 | Edit MODULE_SPECs + test describe blocks |
+| 5 | Re-run CODE_SPEC_TRACE + CONFIDENCE_REPORT (both stale, pre-cycle-3) to clear the auth_drift false-positive and refresh L1/L2 | 1 P3 cosmetic | `/oli-codebase-map` + `/oli-check --confidence` |
+| 6 | Raise patient(base) coverage (deny+allow per gate) | P2 watch | `/oli-execute --module patient` |
 
 ## Graph Statistics
 
@@ -140,9 +150,9 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 | api_endpoint | 237 (138 dental-* + 99 platform) |
 | ui_screen | 0 (UI screens inferred from journey report routes, not registered as discrete nodes) |
 | slice | 0 (no `VERTICAL_SLICE_PLAN.md`; 46 TDD_PROOFs under `docs/execution/slices/`) |
-| test_file | 295 (180 api-ts unit + 115 web/journey/e2e, per repo scan; CONFIDENCE cites 359 incl. e2e) |
+| test_file | 302 (+7 cycle-3: patient-merge-auth, ceph-business-rules, imaging-integration, dental-pmd-auth, person unit+e2e, 4 *-events) |
 | ui_action | ~11 (dental-visit journey registry; other modules inferred from code graph) |
-| **Total** | **661** |
+| **Total** | **668** (+7 test_file nodes) |
 
 ### Edges by Type
 
@@ -152,7 +162,7 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 | WF_TRIGGERS_SM | 14 | high |
 | BR_DEFINED_IN_SPEC | 30 | high |
 | BR_IMPLEMENTED_IN_SLICE | 0 | — (no slice nodes; TDD_PROOF linkage inferred) |
-| BR_TESTED_BY | 30 | high (exact BR-ID match in api-ts tests) |
+| BR_TESTED_BY | **42** | high (30 canonical + **12 ceph BR-036..047** via ceph-business-rules.test.ts) |
 | BR_ENFORCED_BY_API | 22 | high (CODE_SPEC_TRACE) |
 | AC_TESTED_BY | 9 | high (exact ID) + 39 medium (semantic) |
 | AC_IMPLEMENTED_IN_SLICE | 0 | — |
@@ -161,12 +171,13 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 | WF_EXPOSED_VIA_API | 237 | high (CODE_SPEC_TRACE perfect parity backbone) |
 | EVENT_PUBLISHED_BY | 24 | high (EVENT_CONTRACTS producers) |
 | EVENT_CONSUMED_BY | 18 | high (EVENT_CONTRACTS §4 — audit-log-only per ADR-006) |
+| EVENT_TESTED_BY (publisher-audit) | **16** | high (DE-001..016 exact-ID in *-events.test.ts; DE-017..024 untraced) |
 | ROLE_AUTHORIZED_FOR_ENDPOINT | 183 | high (CODE_SPEC_TRACE required_roles on 183/237 ops) |
 | ACTION_TRIGGERS_API | ~11 | medium (journey report Registry 3, dental-visit) |
 | ROLE_GATED_ACTION | ~8 | medium (journey + matrix) |
 | ACTION_COMPLETES_WF_STEP | ~11 | medium (journey Registry 2, dental-visit) |
-| cross_module_integration (CODE_IMPORT_GRAPH) | 27 | high (sync API/repo imports; 0 circular) |
-| **Total** | **~1,043** | — |
+| cross_module_integration (CODE_IMPORT_GRAPH) | 27 | high (sync API/repo imports; 0 circular; **C7 now via VisitService interface — G11**) |
+| **Total** | **~1,099** (+12 ceph BR_TESTED_BY, +16 EVENT_TESTED_BY, +28 misc cycle-3 test/role edges) | — |
 
 ### Connected Components (Union-Find)
 
@@ -180,31 +191,33 @@ First run — no prior `docs/trace/TRACE_REPORT.md` existed. Baseline created at
 
 ## Ratchet Status
 
-Baseline created this run (`docs/trace/.trace-baseline.json`). Future runs with `--no-new-gaps` will enforce: CRITICAL ≤ 1, HIGH ≤ 9, MEDIUM ≤ 14, total ≤ 24.
+Cycle-3 ratchet: all severities **at or below** the cycle-2 baseline → **PASS**. Baseline auto-updated to the new lower counts (CRITICAL 1→0, HIGH 9→5, MEDIUM 14). Future runs with `--no-new-gaps` enforce: CRITICAL ≤ 0, HIGH ≤ 5, MEDIUM ≤ 14, total ≤ 19.
 
-| Severity | Baseline | Current | Status |
-|----------|----------|---------|--------|
-| CRITICAL | 1 | 1 | PASS (baseline) |
-| HIGH | 9 | 9 | PASS (baseline) |
-| MEDIUM | 14 | 14 | PASS (baseline) |
+| Severity | Cycle-2 Baseline | Cycle-3 Current | Status |
+|----------|:---:|:---:|--------|
+| CRITICAL | 1 | **0** | PASS (−1) |
+| HIGH | 9 | **5** | PASS (−4) |
+| MEDIUM | 14 | 14 | PASS (=) |
+| **Total** | 24 | **19** | PASS (−5) |
 
 ## Trace Manifest
 
 - Spec IDs collected: WF=104, BR=30 (canonical; +17 extended BR-031..047 referenced), AC=48, SM=7 (named) / 28 (code FSMs), events=24, endpoints=237, roles=12
-- Nodes in graph: 661
-- Edges in graph: ~1,043
-- Chains traced: 104/104 workflows (COMPLETE=74, PARTIAL=18, BROKEN=8, UNMAPPABLE/composite=4)
-- BRs with coverage: 30/30 canonical (100% have ≥1 edge to test); BR-031..047 extended: 8/17 (BR-023..030 partial via imaging; BR-036..047 = 0)
-- AC with exact-ID test trace: 9/48 (39 semantic-only → P2)
-- Events with test owner: 6/24 (18 untraced → P1)
-- Orphan nodes: ~14 (deferred/inferred/unimplemented)
-- Broken chains: 8 (merge, GDPR, amendment-approval, uncollectible, auto-discard, ceph ×2, finding)
+- Nodes in graph: 668 (+7 test_file)
+- Edges in graph: ~1,099 (+56)
+- Chains traced: 104/104 workflows (COMPLETE=**83**, PARTIAL=**13**, BROKEN=**4**, UNMAPPABLE/composite=4)
+- BRs with coverage: 30/30 canonical + **12/12 ceph (BR-036..047)** = 42 tested; BR-023..030 covered via imaging-integration; deferred orphans: BR-005/013/019/020 (019 partially tested, 020 describe.skip v2.0)
+- AC with exact-ID test trace: 9/48 (39 semantic-only → P2; unchanged)
+- Events with test owner: **16/24** (was 6/24); DE-017..024 untraced (DE-023/024 inferred/not-impl)
+- Orphan nodes: ~12 (deferred/inferred/unimplemented; merge cluster now guarded+deferred, no longer orphan-with-auth-risk)
+- Broken chains: **4** (GDPR erasure, amendment-approval gate, uncollectible, auto-discard) — ceph ×2 + imaging finding now CLOSED
 - Dangling endpoint references: **0** (237/237 spec↔code parity)
 - Cross-module blind spots (5d): **0** — every documented cross-module reference has an integration mechanism (27 CODE_IMPORT_GRAPH sync edges + EVENT_CONTRACTS §4 consumers; 0 circular deps). WORKFLOW_MAP §12 WF-093 "broken direct repo import" is mitigated: dental-clinical→dental-visit edge exists (import_count 6).
 
 ## What's Next
 
-- **1 CRITICAL gap** (TR-P0-01, patient merge auth-drift + dangling intent) — resolve the auth contract or formally flag the endpoints unimplemented to close the dangling WF-057/BR-020 reference. It does not block any *core* clinical chain (compliance 🟢 PASS).
-- **9 HIGH gaps** — all are *reach* (imaging/pmd/ceph/event-layer test coverage + 4 deferred-BR orphans), aligning exactly with the CONFIDENCE_REPORT P1 plan to lift Test-Confidence 8.0 → ≥9.0. These are the Cycle-3 remediation scope.
-- Chain coverage (WF→test) = **71%** is the headline graduation metric. Lifting imaging + ceph + event-layer tests (TR-P1-01..04) would raise it toward ~90%.
-- Re-run after remediation: `/oli-check --traceability --no-new-gaps` (ratchet).
+- **0 CRITICAL gaps** — cycle-3 cleared the only P0 (TR-P0-01) via in-handler admin guard + formal BR-020 deferral. No critical blockers remain.
+- **5 HIGH gaps** (was 9) — all *reach* / deferred-feature: DE-017..024 publisher tests, BR-013/019 completion, WF-032 dentition UI, WF-048/049/050 item-level plan. None is an active correctness risk (compliance 🟢 PASS).
+- Chain coverage (WF→test) = **80%** (was 71%, +9pp). Closing DE-017..022 event tests + the two UI-journey gaps would push toward ~88%.
+- **Stale-source caveat:** CONFIDENCE_REPORT and CODE_SPEC_TRACE predate cycle-3 — re-run `/oli-codebase-map` + `/oli-check --confidence` to refresh L1/L2 and clear the `auth_drift` false-positive. This refresh credited cycle-3 from a direct test-source scan.
+- Re-run after remediation: `/oli-check --traceability --no-new-gaps` (ratchet now CRITICAL ≤ 0, HIGH ≤ 5).
