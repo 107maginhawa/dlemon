@@ -17,7 +17,7 @@ import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/utils/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
-import { assertBranchAccess } from './utils/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
 
@@ -34,7 +34,10 @@ export async function checkInAppointment(ctx: HandlerContext) {
   const appointment = await appointmentRepo.findOneById(appointmentId);
   if (!appointment) throw new NotFoundError('Appointment');
 
-  await assertBranchAccess(db, user.id, appointment.branchId);
+  // Authorization: user must have a check-in-capable role in the target branch (EM-SCH-001)
+  await assertBranchRole(db, user.id, appointment.branchId, [
+    'dentist_owner', 'staff_full', 'staff_scheduling',
+  ]);
 
   if (!APPOINTMENT_TRANSITIONS[appointment.status].includes('checked_in')) {
     throw new ValidationError(`Cannot check in appointment with status '${appointment.status}'`);

@@ -11,7 +11,7 @@ import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
-import { assertBranchAccess } from './utils/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { CreateAppointmentBody } from '@/generated/openapi/validators';
 import type { NotificationService } from '@/core/notifs';
@@ -25,8 +25,10 @@ export async function createAppointment(ctx: HandlerContext) {
   const db = ctx.get('database') as DatabaseInstance;
   const notifs = ctx.get('notifs') as NotificationService | undefined;
 
-  // Authorization: user must have active membership in the target branch
-  await assertBranchAccess(db, user.id, body.branchId);
+  // Authorization: user must have a scheduling-capable role in the target branch (EM-SCH-001)
+  await assertBranchRole(db, user.id, body.branchId, [
+    'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
+  ]);
   const repo = new DentalAppointmentRepository(db);
 
   // scheduledAt is already a Date after zod transform

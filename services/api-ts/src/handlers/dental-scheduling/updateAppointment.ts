@@ -12,7 +12,7 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
-import { assertBranchAccess } from './utils/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { UpdateAppointmentBody, UpdateAppointmentParams } from '@/generated/openapi/validators';
 import type { DentalAppointment } from './repos/dental-appointment.schema';
@@ -30,7 +30,10 @@ export async function updateAppointment(ctx: HandlerContext) {
   const existing = await repo.findOneById(appointmentId);
   if (!existing) throw new NotFoundError('Appointment');
 
-  await assertBranchAccess(db, user.id, existing.branchId);
+  // Authorization: user must have a scheduling-capable role in the target branch (EM-SCH-001)
+  await assertBranchRole(db, user.id, existing.branchId, [
+    'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
+  ]);
 
   // Handle status transitions via dedicated methods — validated against APPOINTMENT_TRANSITIONS
   if (body.status !== undefined) {
