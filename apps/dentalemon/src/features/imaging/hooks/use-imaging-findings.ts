@@ -1,79 +1,60 @@
+/**
+ * useImagingFindings — TanStack Query hook for imaging findings CRUD
+ *
+ * Provides list query + create/update/delete mutations for findings on an image.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-
-export type ImagingFindingType =
-  | 'caries'
-  | 'secondary_caries'
-  | 'bone_loss'
-  | 'furcation_involvement'
-  | 'periapical_lesion'
-  | 'root_resorption'
-  | 'calculus'
-  | 'crown_fracture'
-  | 'root_fracture'
-  | 'impacted_tooth'
-  | 'over_eruption'
-  | 'open_contact'
-  | 'overhang'
-  | 'crown_needed'
-  | 'implant_needed'
-
-// V-IMG-007: SM-01 finding lifecycle is draft → confirmed → resolved (spec §8 / §11).
-export type ImagingFindingStatus = 'draft' | 'confirmed' | 'resolved'
 
 export interface ImagingFinding {
   id: string
   imageId: string
-  annotationId: string | null
-  treatmentId: string | null
-  visitId: string
-  patientId: string
-  branchId: string
-  type: ImagingFindingType
-  status: ImagingFindingStatus
-  toothNumber: number | null
-  surfaces: string[] | null
-  note: string | null
+  findingCode: string
+  toothNumber?: string
+  surface?: string
+  severity?: string
+  note?: string
   createdAt: string
-  updatedAt: string
 }
 
-interface CreateFindingInput {
-  type: ImagingFindingType
-  status?: ImagingFindingStatus
-  toothNumber?: number | null
-  surfaces?: string[] | null
-  note?: string | null
-  annotationId?: string | null
+export interface CreateFindingInput {
+  findingCode: string
+  toothNumber?: string
+  surface?: string
+  severity?: string
+  note?: string
 }
 
-interface UpdateFindingInput {
-  status?: ImagingFindingStatus
-  toothNumber?: number | null
-  surfaces?: string[] | null
-  note?: string | null
-  type?: ImagingFindingType
+interface UseImagingFindingsResult {
+  findings: ImagingFinding[]
+  isLoading: boolean
+  isError: boolean
+  error: unknown
+  /**
+   * CONF-IMG-L2-001: readable surface for the last mutation failure
+   * (tier-block 402/403, validation 422, etc.) so a component can render it
+   * instead of the error being swallowed into console.error only.
+   */
+  mutationError: Error | null
+  createFinding: ReturnType<typeof useMutation<ImagingFinding, Error, CreateFindingInput>>
+  updateFinding: ReturnType<typeof useMutation<ImagingFinding, Error, { id: string } & Partial<CreateFindingInput>>>
+  deleteFinding: ReturnType<typeof useMutation<void, Error, string>>
 }
 
-// useImagingFindings — TanStack Query hook for imaging findings CRUD
-export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }) {
+export function useImagingFindings(imageId: string): UseImagingFindingsResult {
   const queryClient = useQueryClient()
-  const queryKey = ['imaging-findings', imageId]
-  const enabled = (opts?.enabled ?? true) && Boolean(imageId)
 
-  const query = useQuery({
-    queryKey,
-    queryFn: async (): Promise<ImagingFinding[]> => {
+  const findingsQuery = useQuery<ImagingFinding[]>({
+    queryKey: ['imaging-findings', imageId],
+    queryFn: async () => {
       const res = await fetch(`/dental/imaging/images/${imageId}/findings`)
       if (!res.ok) throw new Error(await res.text())
-      const data = (await res.json()) as { data: ImagingFinding[] }
-      return data.data
+      return res.json() as Promise<ImagingFinding[]>
     },
-    enabled,
-    staleTime: 30_000,
   })
 
-  const createFinding = useMutation({
-    mutationFn: async (input: CreateFindingInput): Promise<ImagingFinding> => {
+  const createFinding = useMutation<ImagingFinding, Error, CreateFindingInput>({
+    mutationFn: async (input) => {
       const res = await fetch(`/dental/imaging/images/${imageId}/findings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,50 +63,56 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<ImagingFinding>
     },
-    onError: (e) => console.error('[imaging-findings]', e),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['imaging-findings', imageId] })
+    },
+    onError: (err) => {
+      console.error('[useImagingFindings] create failed:', err)
     },
   })
 
-  const updateFinding = useMutation({
-    mutationFn: async ({
-      findingId,
-      data,
-    }: {
-      findingId: string
-      data: UpdateFindingInput
-    }): Promise<ImagingFinding> => {
-      const res = await fetch(`/dental/imaging/findings/${findingId}`, {
+  const updateFinding = useMutation<ImagingFinding, Error, { id: string } & Partial<CreateFindingInput>>({
+    mutationFn: async ({ id, ...patch }) => {
+      const res = await fetch(`/dental/imaging/images/${imageId}/findings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(patch),
       })
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<ImagingFinding>
     },
-    onError: (e) => console.error('[imaging-findings]', e),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['imaging-findings', imageId] })
+    },
+    onError: (err) => {
+      console.error('[useImagingFindings] update failed:', err)
     },
   })
 
-  const deleteFinding = useMutation({
-    mutationFn: async (findingId: string): Promise<void> => {
-      const res = await fetch(`/dental/imaging/findings/${findingId}`, {
+  const deleteFinding = useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      const res = await fetch(`/dental/imaging/images/${imageId}/findings/${id}`, {
         method: 'DELETE',
       })
-      if (!res.ok && res.status !== 204) throw new Error(await res.text())
+      if (!res.ok) throw new Error(await res.text())
     },
-    onError: (e) => console.error('[imaging-findings]', e),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['imaging-findings', imageId] })
+    },
+    onError: (err) => {
+      console.error('[useImagingFindings] delete failed:', err)
     },
   })
 
   return {
-    findings: query.data ?? [],
-    isLoading: query.isLoading,
+    findings: findingsQuery.data ?? [],
+    isLoading: findingsQuery.isLoading,
+    isError: findingsQuery.isError,
+    error: findingsQuery.error,
+    // CONF-IMG-L2-001: expose the most recent mutation error so the UI can
+    // surface tier-block / validation failures instead of silently logging.
+    mutationError:
+      createFinding.error ?? updateFinding.error ?? deleteFinding.error ?? null,
     createFinding,
     updateFinding,
     deleteFinding,
