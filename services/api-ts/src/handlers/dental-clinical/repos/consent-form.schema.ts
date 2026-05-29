@@ -24,6 +24,10 @@ export const consentForms = pgTable('consent_form', {
     () => treatmentPlanVersions.id,
     { onDelete: 'set null' },
   ),
+  // DE-013 revocation fields (EM-CLI-001)
+  revoked: boolean('revoked').notNull().default(false),
+  revokedAt: timestamp('revoked_at'),
+  revokedBy: uuid('revoked_by'),
 });
 
 export type ConsentForm = typeof consentForms.$inferSelect;

@@ -25,6 +25,7 @@ import {
 import { createConsentForm } from './consent/createConsentForm';
 import { listConsentForms } from './consent/listConsentForms';
 import { signConsentForm } from './consent/signConsentForm';
+import { revokeConsentForm } from './consent/revokeConsentForm';
 import { createLabOrder } from './lab-orders/createLabOrder';
 import { listLabOrders } from './lab-orders/listLabOrders';
 import { updateLabOrder } from './lab-orders/updateLabOrder';
@@ -111,6 +112,7 @@ function buildTestApp(user?: typeof TEST_USER) {
     zValidator('json', SignConsentFormBody, ve),
     signConsentForm as any,
   );
+  app.patch('/dental/visits/:visitId/consents/:cid/revoke', revokeConsentForm as any);
   app.post('/dental/visits/:visitId/lab-orders',
     zValidator('param', CreateLabOrderParams, ve),
     zValidator('json', LabOrderBodyOnly, ve),
@@ -724,5 +726,96 @@ describe('updateLabOrder handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.isDefective).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// revokeConsentForm (EM-CLI-001)
+// ---------------------------------------------------------------------------
+
+describe('revokeConsentForm handler', () => {
+  test('returns 401 when user is not authenticated', async () => {
+    const app = buildTestApp(undefined);
+    const visit = await seedVisit();
+
+    const res = await app.request(
+      `/dental/visits/${visit.id}/consents/${NONEXISTENT_ID}/revoke`,
+      { method: 'PATCH' },
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 404 when consent form does not exist', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const res = await app.request(
+      `/dental/visits/${visit.id}/consents/${NONEXISTENT_ID}/revoke`,
+      { method: 'PATCH' },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 200 with revoked consent form on valid request', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    // Create a consent form first
+    const createRes = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        templateId: 'tpl-revoke-001',
+        templateName: 'Revocable Consent',
+      }),
+    });
+    const created = await createRes.json() as any;
+    expect(createRes.status).toBe(201);
+
+    const revokeRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+
+    expect(revokeRes.status).toBe(200);
+    const body = await revokeRes.json() as any;
+    expect(body.id).toBe(created.id);
+    expect(body.revoked).toBe(true);
+    expect(body.revokedAt).not.toBeNull();
+    expect(body.revokedBy).toBe(TEST_USER.id);
+  });
+
+  test('returns 409 when consent form is already revoked', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    // Create and revoke once
+    const createRes = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        templateId: 'tpl-revoke-002',
+        templateName: 'Revocable Consent 2',
+      }),
+    });
+    const created = await createRes.json() as any;
+
+    // Revoke once
+    await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+
+    // Revoke again — should conflict
+    const secondRevoke = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+
+    expect(secondRevoke.status).toBe(409);
   });
 });

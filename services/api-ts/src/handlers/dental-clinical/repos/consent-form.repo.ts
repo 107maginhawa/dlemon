@@ -52,4 +52,19 @@ export class ConsentFormRepository extends DatabaseRepository<ConsentForm, NewCo
       .returning();
     return updated ?? null;
   }
+
+  /** DE-013: Revoke a consent form. Returns null if already revoked. */
+  async revoke(id: string, revokedBy: string): Promise<ConsentForm | null> {
+    const [updated] = await this.db
+      .update(consentForms)
+      .set({
+        revoked: true,
+        revokedAt: new Date(),
+        revokedBy,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(consentForms.id, id), eq(consentForms.revoked, false)))
+      .returning();
+    return updated ?? null;
+  }
 }
