@@ -11,7 +11,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { BulkArchiveDentalPatientsBody } from '@/generated/openapi/validators';
 
 export async function bulkArchiveDentalPatients(
@@ -36,7 +36,7 @@ export async function bulkArchiveDentalPatients(
       .map(p => p.preferredBranchId as string)
   )];
   for (const branchId of uniqueBranchIds) {
-    await assertBranchAccess(db, user.id, branchId);
+    await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
   }
 
   const results = await Promise.all(

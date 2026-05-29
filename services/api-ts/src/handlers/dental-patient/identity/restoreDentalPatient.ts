@@ -8,7 +8,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { RestoreDentalPatientParams } from '@/generated/openapi/validators';
 
 export async function restoreDentalPatient(
@@ -28,7 +28,7 @@ export async function restoreDentalPatient(
   const patient = await repo.findOneById(patientId);
   if (!patient) throw new NotFoundError('Patient not found');
   if (patient.preferredBranchId) {
-    await assertBranchAccess(db, user.id, patient.preferredBranchId as string);
+    await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
   }
 
   const result = await repo.restorePatient(patientId);

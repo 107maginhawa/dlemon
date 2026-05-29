@@ -10,7 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { PatientRepository } from '../../patient/repos/patient.repo';
 import type { PatientWithPerson } from '../../patient/repos/patient.schema';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';
 
@@ -53,7 +53,7 @@ export async function exportDentalPatients(
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  await assertBranchAccess(db, user.id, q['branchId']);
+  await assertBranchRole(db, user.id, q['branchId'], ['dentist_owner']);
 
   const format = q['format'] === 'csv' ? 'csv' : 'json';
   const filters: Record<string, any> = {};
