@@ -7,7 +7,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -39,18 +39,18 @@ export async function cancelAppointment(
     throw new ValidationError(`Cannot cancel appointment with status '${existing.status}'`);
   }
 
-  // BR-SCH-003: cancellation_reason is mandatory; omitting returns 422
+  // BR-SCH-003: cancellation_reason is mandatory; omitting returns 422 REASON_REQUIRED
   let cancellationReason: string;
   try {
     const body = await ctx.req.json();
     const reason = body?.cancellationReason;
     if (typeof reason !== 'string' || reason.trim().length === 0) {
-      throw new ValidationError('cancellationReason is required and must be a non-empty string');
+      throw new BusinessLogicError('cancellationReason is required', 'REASON_REQUIRED');
     }
     cancellationReason = reason;
   } catch (err) {
-    if (err instanceof ValidationError) throw err;
-    throw new ValidationError('cancellationReason is required and must be a non-empty string');
+    if (err instanceof BusinessLogicError) throw err;
+    throw new BusinessLogicError('cancellationReason is required', 'REASON_REQUIRED');
   }
 
   const result = await repo.cancel(appointmentId, cancellationReason, user.id);

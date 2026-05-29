@@ -248,6 +248,29 @@ describe('APPOINTMENT_TRANSITIONS: cancelAppointment', () => {
     const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
+
+  // EF-SCH: missing cancellation reason on a valid transition → 422 REASON_REQUIRED
+  test('invalid: scheduled → cancelled without reason rejected (422 REASON_REQUIRED)', async () => {
+    const appt = await seedAppointment();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('REASON_REQUIRED');
+  });
+
+  test('invalid: scheduled → cancelled with blank reason rejected (422 REASON_REQUIRED)', async () => {
+    const appt = await seedAppointment();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellationReason: '   ' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('REASON_REQUIRED');
+  });
 });
 
 // ---------------------------------------------------------------------------
