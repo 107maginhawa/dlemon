@@ -3,6 +3,10 @@
  *
  * Tests PIN verification flow: correct PIN returns success, wrong PIN returns failure,
  * lockout after 5 and 10 attempts, and PIN setting/changing.
+ *
+ * EF-ORG-006: Tests use canonical DentalMembershipManagement_verifyPin /
+ * DentalMembershipManagement_setPin — the handlers wired in the generated
+ * registry — not the legacy verifyPin.ts / setPin.ts aliases.
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
@@ -13,8 +17,8 @@ import { createDatabase } from '@/core/database';
 import { MembershipRepository } from './repos/membership.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { OrganizationRepository } from './repos/organization.repo';
-import { DentalMembershipManagement_verifyPin } from '@/handlers/dental-org/verifyPin';
-import { DentalMembershipManagement_setPin } from '@/handlers/dental-org/setPin';
+import { DentalMembershipManagement_verifyPin } from '@/handlers/dental-org/DentalMembershipManagement_verifyPin';
+import { DentalMembershipManagement_setPin } from '@/handlers/dental-org/DentalMembershipManagement_setPin';
 import { zValidator } from '@hono/zod-validator';
 import {
   DentalMembershipManagement_verifyPinParams,
