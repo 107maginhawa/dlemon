@@ -11,6 +11,7 @@ import { ConsultationNoteRepository } from './repos/emr.repo';
 import { ProviderRepository } from '../provider/repos/provider.repo';
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { type CreateConsultationRequest } from './repos/emr.schema';
+import { logAuditEvent } from '@/core/audit-logger';
 
 /**
  * createConsultation
@@ -100,6 +101,21 @@ export async function createConsultation(ctx: HandlerContext) {
     createdBy: user.id,
     ipAddress: ctx.req.header('x-forwarded-for') || ctx.req.header('x-real-ip')
   }, 'Consultation note created');
+
+  // Persisted audit trail (AL-023)
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: consultation.tenantId ?? consultation.patient,
+    action: 'emr.consultation.create',
+    resourceType: 'consultation',
+    resourceId: consultation.id,
+    metadata: {
+      patientId: consultation.patient,
+      providerId: consultation.provider,
+      context: consultation.context,
+      status: consultation.status
+    }
+  });
 
   return ctx.json(consultation, 201);
 }
