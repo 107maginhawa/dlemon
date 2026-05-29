@@ -15,6 +15,8 @@ import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/conse
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { logAuditEvent } from '@/core/audit-logger';
+import type { JobScheduler } from '@/core/jobs';
+import { emitInvoiceCreated } from './domain-events';
 import type { CreateDentalInvoiceBody } from '@/generated/openapi/validators';
 
 export async function createDentalInvoice(
@@ -114,6 +116,15 @@ export async function createDentalInvoice(
     resourceType: 'dental_invoice',
     resourceId: invoice.id,
   });
+
+  // DE-020: emit InvoiceCreated domain event (best-effort, non-blocking)
+  const scheduler = ctx.get('jobs') as JobScheduler | undefined;
+  scheduler && emitInvoiceCreated(scheduler, {
+    invoiceId: invoice.id,
+    patientId: invoice.patientId,
+    branchId: invoice.branchId,
+    totalCents: invoice.totalCents,
+  }).catch(() => {/* non-blocking */});
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

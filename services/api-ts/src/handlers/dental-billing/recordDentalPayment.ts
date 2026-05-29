@@ -11,6 +11,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import type { JobScheduler } from '@/core/jobs';
+import { emitInvoicePaid } from './domain-events';
 
 export async function recordDentalPayment(
   ctx: ValidatedContext<any, never, any>
@@ -72,6 +74,15 @@ export async function recordDentalPayment(
 
   // Update invoice totals
   await invoiceRepo.addPayment(invoiceId, body.amountCents);
+
+  // DE-021: emit InvoicePaid domain event (best-effort, non-blocking)
+  const scheduler = ctx.get('jobs') as JobScheduler | undefined;
+  scheduler && emitInvoicePaid(scheduler, {
+    invoiceId,
+    patientId: invoice.patientId,
+    branchId: invoice.branchId,
+    amountCents: body.amountCents,
+  }).catch(() => {/* non-blocking */});
 
   ctx.get('logger')?.info(
     { requestId: ctx.get('requestId'), action: 'dental_payment_record', paymentId: payment.id, invoiceId, amountCents: body.amountCents, branchId: invoice.branchId, by: session.userId },
