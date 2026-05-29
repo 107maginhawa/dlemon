@@ -19,7 +19,7 @@ export const memberRoleEnum = pgEnum('member_role', [
   'read_only',
 ]);
 
-export const memberStatusEnum = pgEnum('member_status', ['active', 'inactive']);
+export const memberStatusEnum = pgEnum('member_status', ['invited', 'active', 'inactive', 'revoked']);
 
 export const dentalMemberships = pgTable('dental_membership', {
   ...baseEntityFields,
@@ -63,5 +63,5 @@ export const VALID_MEMBER_ROLES = [
 ] as const;
 export type MemberRole = typeof VALID_MEMBER_ROLES[number];
 
-export const VALID_MEMBER_STATUSES = ['active', 'inactive'] as const;
+export const VALID_MEMBER_STATUSES = ['invited', 'active', 'inactive', 'revoked'] as const;
 export type MemberStatus = typeof VALID_MEMBER_STATUSES[number];
