@@ -1,6 +1,7 @@
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalAuditLog, type NewDentalAuditLog, type DentalAuditLog } from './audit-log.schema';
+import { sanitizeAuditField } from '@/core/audit-phi-sanitizer';
 
 export interface AuditLogFilters {
   actorId?: string;
@@ -18,13 +19,31 @@ export class AuditLogRepository {
   constructor(private db: DatabaseInstance) {}
 
   async insert(entry: NewDentalAuditLog): Promise<DentalAuditLog> {
+    // V-AUD-101 / CONF-AUD-001 (PHI choke point): strip PHI from the JSONB fields
+    // HERE, in the repository, so EVERY write path is covered regardless of caller —
+    // including the pg-boss `domain-events.consumer.ts` path, which calls insert()
+    // directly with caller-supplied snapshots. The audit store is append-only and
+    // never deleted (DATA_GOVERNANCE §2/§3), so PHI written here is unremediable
+    // (AC-AUD-004 / MODULE_SPEC §5 "No PHI in log body"). Sanitization is idempotent,
+    // so callers that already sanitized (logAuditEvent) pass through unchanged.
+    const safeEntry: NewDentalAuditLog = {
+      ...entry,
+      metadata: sanitizeAuditField(entry.metadata as Record<string, unknown> | null | undefined),
+      beforeSnapshot: sanitizeAuditField(
+        entry.beforeSnapshot as Record<string, unknown> | null | undefined,
+      ),
+      afterSnapshot: sanitizeAuditField(
+        entry.afterSnapshot as Record<string, unknown> | null | undefined,
+      ),
+    };
+
     // EM-AUD-008: generate the id explicitly. The id column has no reliable
     // DB-level default in migrated databases (schema drift), so relying on it
     // makes audit writes fail the NOT NULL constraint — and audit-logger swallows
     // the error, leaving the dental audit viewer blind. See [[project_run7_enforcement]].
     const [row] = await this.db
       .insert(dentalAuditLog)
-      .values({ ...entry, id: entry.id ?? crypto.randomUUID() })
+      .values({ ...safeEntry, id: safeEntry.id ?? crypto.randomUUID() })
       .returning();
     return row!;
   }

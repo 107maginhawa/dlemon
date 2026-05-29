@@ -8,6 +8,7 @@
 import type { DatabaseInstance } from './database';
 import { DentalAuditRepository } from '@/db/audit.repo';
 import { AuditLogRepository } from '@/handlers/dental-audit/repos/audit-log.repo';
+import { sanitizeAuditField } from './audit-phi-sanitizer';
 
 export interface AuditEvent {
   personId: string;
@@ -56,67 +57,20 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * V-AUD-001 / V-AUD-NEW-A (PHI guard): The audit log is append-only and never deleted,
- * so any PHI written into `metadata` OR the before/after row snapshots is unremediable
- * (AC-AUD-004 / "No PHI in log body" / HIPAA breach). Strip obvious PII keys before
- * persisting to EITHER audit table.
+ * V-AUD-001 / V-AUD-NEW-A / V-AUD-101 (PHI guard): The audit log is append-only and
+ * never deleted, so any PHI written into `metadata` OR the before/after row snapshots is
+ * unremediable (AC-AUD-004 / "No PHI in log body" / HIPAA breach). The recursive
+ * sanitizer now lives in `core/audit-phi-sanitizer.ts` so it is shared across EVERY
+ * write path — including the pg-boss consumer, which writes via
+ * `AuditLogRepository.insert` (the single choke point) without going through this
+ * function.
  *
- * Matching is case-insensitive against a blocklist. The sanitizer is RECURSIVE so that
- * PHI nested inside row snapshots (objects + arrays) is stripped too — full row
- * snapshots routinely contain nested clinical/demographic objects. It is conservative:
- * only blocklisted keys are removed; structural keys (`id`, `status`, timestamps,
- * counts, codes, flags) are preserved.
- *
- * Never throws — sanitization must never break the audit write or the originating
- * request (best-effort, like the original metadata-only implementation).
+ * `logAuditEvent` still sanitizes here for two reasons: (1) to emit the best-effort
+ * warn log when PHI is stripped, and (2) because the legacy `dental_audit` table write
+ * below does NOT go through `AuditLogRepository`, so it would otherwise be uncovered.
+ * Sanitization is idempotent, so the second sanitize inside `AuditLogRepository.insert`
+ * is a no-op on these already-clean values.
  */
-const PHI_METADATA_KEYS = new Set([
-  // Identity / demographics
-  'displayname',
-  'firstname',
-  'lastname',
-  'fullname',
-  'name',
-  'email',
-  'phone',
-  'ssn',
-  'address',
-  'mrn',
-  // Date of birth (multiple spellings)
-  'dateofbirth',
-  'dob',
-  'birthdate',
-  // Clinical free-text / sensitive
-  'diagnosis',
-  'medication',
-  'medications',
-  'notes',
-  'chiefcomplaint',
-]);
-
-/**
- * Recursively strip blocklisted PHI keys from an arbitrary JSON-ish value. Returns a
- * cloned, sanitized value; mutates nothing. Collects stripped key names (deduped, by
- * leaf key) for best-effort warn logging. Never throws — callers guard with try/catch.
- */
-function sanitizeValueDeep(value: unknown, stripped: Set<string>): unknown {
-  if (Array.isArray(value)) {
-    return value.map((v) => sanitizeValueDeep(v, stripped));
-  }
-  if (value != null && typeof value === 'object') {
-    const clean: Record<string, unknown> = {};
-    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      if (PHI_METADATA_KEYS.has(key.toLowerCase())) {
-        stripped.add(key);
-        continue;
-      }
-      clean[key] = sanitizeValueDeep(v, stripped);
-    }
-    return clean;
-  }
-  return value;
-}
-
 function sanitizeAuditObject(
   obj: Record<string, unknown> | null | undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,29 +78,17 @@ function sanitizeAuditObject(
   event: AuditEvent,
   field: string,
 ): Record<string, unknown> | null {
-  if (obj == null || typeof obj !== 'object') {
-    return (obj as Record<string, unknown> | null) ?? null;
-  }
-  try {
-    const stripped = new Set<string>();
-    const clean = sanitizeValueDeep(obj, stripped) as Record<string, unknown>;
-    if (stripped.size > 0) {
-      logger?.warn(
-        {
-          strippedKeys: [...stripped],
-          field,
-          action: event.action,
-          resourceType: event.resourceType,
-        },
-        `dental.audit: stripped PHI keys from audit ${field} before persisting (V-AUD-001/V-AUD-NEW-A)`,
-      );
-    }
-    return clean;
-  } catch {
-    // Sanitization must never throw — fall back to dropping the field rather than risk
-    // leaking PHI or breaking the audit write.
-    return null;
-  }
+  return sanitizeAuditField(obj, (strippedKeys) => {
+    logger?.warn(
+      {
+        strippedKeys,
+        field,
+        action: event.action,
+        resourceType: event.resourceType,
+      },
+      `dental.audit: stripped PHI keys from audit ${field} before persisting (V-AUD-001/V-AUD-NEW-A)`,
+    );
+  });
 }
 
 function sanitizeAuditMetadata(
