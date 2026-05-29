@@ -23,6 +23,7 @@ import type { User } from '@/types/auth';
 import { findDuplicateDentalPatients, createPatientForRegistration } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
 import type { CreateDentalPatientBody } from '@/generated/openapi/validators';
 
 export async function createDentalPatient(
@@ -65,6 +66,16 @@ export async function createDentalPatient(
 
   // Create patient record linked to the new person
   const patient = await createPatientForRegistration(db, newPerson.id, body.branchId);
+
+  // AL-005: patient creation audit trail
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: body.branchId,
+    branchId: body.branchId,
+    action: 'patient.create',
+    resourceType: 'dental_patient',
+    resourceId: patient.id,
+  });
 
   const response = {
     ...patient,
