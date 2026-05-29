@@ -95,6 +95,7 @@ import { setSecurityQuestion } from '../../handlers/dental-org/setSecurityQuesti
 import { updateBranchSettings } from '../../handlers/dental-org/updateBranchSettings';
 import { updateConsentTemplate } from '../../handlers/dental-org/updateConsentTemplate';
 import { updateWorkingHours } from '../../handlers/dental-org/updateWorkingHours';
+import { approveAmendment } from '../../handlers/dental-clinical/amendments/approveAmendment';
 import { createAmendment } from '../../handlers/dental-clinical/amendments/createAmendment';
 import { createAttachment } from '../../handlers/dental-clinical/attachments/createAttachment';
 import { createConsentForm } from '../../handlers/dental-clinical/consent/createConsentForm';
@@ -349,6 +350,7 @@ export const registry = {
   updateWorkingHours,
 
   // Dental-clinical handlers
+  approveAmendment,
   createAmendment,
   createAttachment,
   createConsentForm,

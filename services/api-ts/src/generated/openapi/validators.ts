@@ -18995,6 +18995,14 @@ export const ListAmendmentsResponse = z.object({
 })
 });
 
+export const ApproveAmendmentParams = z.object({
+  visitId: UUIDSchema,
+  amendmentId: UUIDSchema,
+});
+export type ApproveAmendmentParams = z.infer<typeof ApproveAmendmentParams>;
+
+export const ApproveAmendmentResponse = AmendmentSchema;
+
 export const ApplyTemplateParams = z.object({
   visitId: UUIDSchema,
   templateId: UUIDSchema,

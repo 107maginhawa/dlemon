@@ -1160,6 +1160,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listAmendments as unknown as Handler
   );
 
+  // approveAmendment
+  app.post('/dental/visits/:visitId/amendments/:amendmentId/approve',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ApproveAmendmentParams, validationErrorHandler),
+    registry.approveAmendment as unknown as Handler
+  );
+
   // applyTemplate
   app.post('/dental/visits/:visitId/apply-template/:templateId',
     authMiddleware({ roles: ["user"] }),

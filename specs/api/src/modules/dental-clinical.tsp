@@ -532,5 +532,21 @@ namespace DentalClinicalModule {
       @path visitId: UUID
     ): ApiOkResponse<PaginatedResponse<Amendment>>
       | ApiUnauthorizedResponse;
+
+    // V-CLI-001 / TR-P1-05 / BR-019: supervisor-approval endpoint is
+    // contract-present but deferred — handler returns 501 NOT_IMPLEMENTED until
+    // the dental_clinical_amendment_approval feature flag is lifted (spec §5/§13/§15).
+    @post
+    @route("/{visitId}/amendments/{amendmentId}/approve")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("approveAmendment")
+    approve(
+      @path visitId: UUID,
+      @path amendmentId: UUID
+    ): ApiOkResponse<Amendment>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
   }
 }
