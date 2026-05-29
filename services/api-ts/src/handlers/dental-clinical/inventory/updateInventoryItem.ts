@@ -4,6 +4,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { InventoryRepository } from '../repos/inventory.repo';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function updateInventoryItem(ctx: any): Promise<Response> {
@@ -15,6 +16,9 @@ export async function updateInventoryItem(ctx: any): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization (mutation)
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner', 'staff_full']);
 
   const repo = new InventoryRepository(db, logger);
   const existing = await repo.findOneById(itemId, branchId);

@@ -4,6 +4,7 @@
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PostopTemplateRepository } from '../repos/postop-template.repo';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
 
@@ -16,6 +17,9 @@ export async function createPostopTemplate(ctx: any): Promise<Response> {
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // Branch-level authorization (mutation)
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner', 'dentist_associate']);
 
   // Verify branch exists
   const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');

@@ -2,14 +2,17 @@
  * updateMedicalHistoryEntry handler
  *
  * PATCH /dental/clinical/medical-history/{entryId}
+ *
+ * AC-CLI-005 (clinical safety invariant): medical history entries are
+ * append-only. Once a systemic-health / allergy / medication observation is
+ * recorded it must never be overwritten — a new entry is created instead, and
+ * corrections flow through the additive amendment path (WF-038). Permitting an
+ * in-place PATCH would silently corrupt the clinical record, so every update
+ * attempt is rejected with APPEND_ONLY_VIOLATION (422).
  */
 
 import type { ValidatedContext } from '@/types/app';
-import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { MedicalHistoryRepository } from '../repos/medical-history.repo';
-import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
-import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import type { UpdateMedicalHistoryEntryBody, UpdateMedicalHistoryEntryParams } from '@/generated/openapi/validators';
 
@@ -19,26 +22,8 @@ export async function updateMedicalHistoryEntry(
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const { entryId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
-
-  const db = ctx.get('database') as DatabaseInstance;
-  const repo = new MedicalHistoryRepository(db);
-
-  const existing = await repo.findOneById(entryId);
-  if (!existing) throw new NotFoundError('Medical history entry');
-
-  // Branch-level authorization via patient's preferred branch
-  const patient = await getPatientForClinical(db, existing.patientId);
-  if (!patient) throw new NotFoundError('Patient');
-  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
-  await assertBranchRole(db, user.id, patient.preferredBranchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'staff_full']);
-
-  const updated = await repo.update(entryId, {
-    displayName: body.displayName,
-    notes: body.notes,
-    resolvedDate: body.resolvedDate,
-    active: body.active,
-  });
-  return ctx.json(updated);
+  throw new BusinessLogicError(
+    'Medical history entries are append-only. Create a new entry instead.',
+    'APPEND_ONLY_VIOLATION',
+  );
 }

@@ -600,7 +600,12 @@ describe('listMedicalHistory handler', () => {
 // updateMedicalHistoryEntry
 // ---------------------------------------------------------------------------
 
-describe('updateMedicalHistoryEntry handler', () => {
+describe('updateMedicalHistoryEntry handler (append-only — AC-CLI-005)', () => {
+  // EF-CLI-001 / AC-CLI-005: medical history entries are append-only. A PATCH
+  // must never overwrite a recorded clinical observation — the handler rejects
+  // every update attempt with 422 APPEND_ONLY_VIOLATION. Corrections are made by
+  // creating a new entry (or via the additive amendment flow, WF-038).
+
   test('returns 401 when user is not authenticated', async () => {
     const app = buildTestApp(undefined);
 
@@ -616,7 +621,7 @@ describe('updateMedicalHistoryEntry handler', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 404 when entry does not exist', async () => {
+  test('returns 422 APPEND_ONLY_VIOLATION for any update attempt', async () => {
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(
@@ -628,10 +633,12 @@ describe('updateMedicalHistoryEntry handler', () => {
       },
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
   });
 
-  test('returns 200 with updated entry fields', async () => {
+  test('rejects update of an existing entry with 422 (does not overwrite)', async () => {
     const app = buildTestApp(TEST_USER);
 
     const createRes = await app.request('/dental/clinical/medical-history', {
@@ -658,14 +665,12 @@ describe('updateMedicalHistoryEntry handler', () => {
       },
     );
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.id).toBe(created.id);
-    expect(body.notes).toBe('Mild intermittent — well controlled');
-    expect(body.resolvedDate).toBe('2025-03-01');
+    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
   });
 
-  test('returns 200 when marking entry as inactive', async () => {
+  test('rejects marking an entry inactive with 422 (append-only)', async () => {
     const app = buildTestApp(TEST_USER);
 
     const createRes = await app.request('/dental/clinical/medical-history', {
@@ -688,9 +693,9 @@ describe('updateMedicalHistoryEntry handler', () => {
       },
     );
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.active).toBe(false);
+    expect(body.error?.code ?? body.code).toBe('APPEND_ONLY_VIOLATION');
   });
 });
 

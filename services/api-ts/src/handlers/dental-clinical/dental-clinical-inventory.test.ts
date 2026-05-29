@@ -420,20 +420,24 @@ describe('Auth (inv01-AC-006)', () => {
 // =============================================================================
 
 describe('Branch not found (inv01-AC-007)', () => {
-  test('POST returns 404 for non-existent branch', async () => {
+  // EF-CLI-002: branch authorization runs before branch-existence lookup, so a
+  // user with no membership in the target branch gets 403 (not 404). This is the
+  // correct auth-first ordering — it prevents branch-existence enumeration by
+  // non-members.
+  test('POST returns 403 for branch the user is not a member of', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/branches/${NONEXISTENT_ID}/inventory`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'X', category: 'other', unit: 'pcs' }),
     });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
-  test('GET returns 404 for non-existent branch', async () => {
+  test('GET returns 403 for branch the user is not a member of', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/branches/${NONEXISTENT_ID}/inventory`);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });
 
