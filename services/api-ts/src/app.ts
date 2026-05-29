@@ -194,7 +194,7 @@ export function createApp(config: Config): App {
     getToothHistory
   );
   (app as any).get('/dental/admin/audit',
-    authMiddleware({ roles: ['admin'] }),
+    authMiddleware({ roles: ['user'] }),
     getAuditEvents
   );
   // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
