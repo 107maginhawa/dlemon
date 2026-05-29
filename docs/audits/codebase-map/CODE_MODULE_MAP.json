@@ -1,0 +1,268 @@
+{
+  "version": 3,
+  "modules": {
+    "audit": {
+      "name": "audit",
+      "source_path": "services/api-ts/src/handlers/audit",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 5,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "billing": {
+      "name": "billing",
+      "source_path": "services/api-ts/src/handlers/billing",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 19,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "booking": {
+      "name": "booking",
+      "source_path": "services/api-ts/src/handlers/booking",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 31,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "comms": {
+      "name": "comms",
+      "source_path": "services/api-ts/src/handlers/comms",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 14,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "dental-audit": {
+      "name": "dental-audit",
+      "source_path": "services/api-ts/src/handlers/dental-audit",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 4,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "dental-billing": {
+      "name": "dental-billing",
+      "source_path": "services/api-ts/src/handlers/dental-billing",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 25,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "dental-clinical": {
+      "name": "dental-clinical",
+      "source_path": "services/api-ts/src/handlers/dental-clinical",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 54,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "dental-imaging": {
+      "name": "dental-imaging",
+      "source_path": "services/api-ts/src/handlers/dental-imaging",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 48,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "dental-org": {
+      "name": "dental-org",
+      "source_path": "services/api-ts/src/handlers/dental-org",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 46,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "dental-patient": {
+      "name": "dental-patient",
+      "source_path": "services/api-ts/src/handlers/dental-patient",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 69,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "dental-perio": {
+      "name": "dental-perio",
+      "source_path": "services/api-ts/src/handlers/dental-perio",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 11,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "dental-pmd": {
+      "name": "dental-pmd",
+      "source_path": "services/api-ts/src/handlers/dental-pmd",
+      "framework": "hono",
+      "entry_points": [
+        "services/api-ts/src/handlers/dental-pmd/index.ts"
+      ],
+      "public_exports": [
+        "exportPMD",
+        "generatePMD",
+        "getImportedPMD",
+        "getPMDForVisit",
+        "importPMD",
+        "listImportedPMDs",
+        "listPMDs"
+      ],
+      "file_count": 11,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "dental-scheduling": {
+      "name": "dental-scheduling",
+      "source_path": "services/api-ts/src/handlers/dental-scheduling",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 20,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "dental-visit": {
+      "name": "dental-visit",
+      "source_path": "services/api-ts/src/handlers/dental-visit",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 45,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "email": {
+      "name": "email",
+      "source_path": "services/api-ts/src/handlers/email",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 15,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "emr": {
+      "name": "emr",
+      "source_path": "services/api-ts/src/handlers/emr",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 9,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "notifs": {
+      "name": "notifs",
+      "source_path": "services/api-ts/src/handlers/notifs",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 7,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "patient": {
+      "name": "patient",
+      "source_path": "services/api-ts/src/handlers/patient",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 15,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "person": {
+      "name": "person",
+      "source_path": "services/api-ts/src/handlers/person",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 7,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "provider": {
+      "name": "provider",
+      "source_path": "services/api-ts/src/handlers/provider",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 21,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "reviews": {
+      "name": "reviews",
+      "source_path": "services/api-ts/src/handlers/reviews",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 6,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "shared": {
+      "name": "shared",
+      "source_path": "services/api-ts/src/handlers/shared",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 2,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "storage": {
+      "name": "storage",
+      "source_path": "services/api-ts/src/handlers/storage",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 13,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    }
+  }
+}

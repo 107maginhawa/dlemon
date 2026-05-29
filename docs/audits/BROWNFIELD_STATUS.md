@@ -1,6 +1,6 @@
 # Dentalemon — Brownfield Status Dashboard
 
-<!-- oli-magic v2 | generated: 2026-05-26 | updated: 2026-05-30 (G7+G8 complete; reconciled) | cycle: 2 | 4-agent parallel audit -->
+<!-- oli-magic v2 | generated: 2026-05-26 | updated: 2026-05-30 (cycle-2 graduation check; knowledge-graph-backed re-audit) | cycle: 2 | state: cycle_2 (NOT graduated) -->
 
 ---
 
@@ -8,16 +8,45 @@
 
 | Field | Value |
 |---|---|
-| **Brownfield state** | `executed` — cycle-2 waves G7+G8 COMPLETE 2026-05-30; awaiting post-execution re-audit |
-| **Score at graduation** | 9.0 / 10 (2026-05-21) |
-| **Graduation threshold** | P0 = 0, audit/compliance/confidence ≥ 9.0 |
-| **2026-05-26 audit** | 3x P0 security findings (IDOR, hash-leak, privilege-escalation) — ✅ ALL RESOLVED (see below) |
-| **G7 Security** | ✅ COMPLETE — 7/8 via enforce-fix track; G7-S5 (PIN `@pattern`) landed 2026-05-30 = 8/8 |
+| **Brownfield state** | `cycle_2` — cycle-2 re-audit complete 2026-05-30; **NOT graduated** (confidence 8.0 < 9.0). Re-entry available for cycle 3. |
+| **Score at graduation (cycle 1)** | 9.0 / 10 (2026-05-21) — graduated, then 2026-05-26 audit reopened cycle 2 on new P0 security drift |
+| **Graduation threshold** | P0 = 0, audit/compliance/confidence ≥ 9.0 (clinical bar) |
+| **Cycle-2 re-audit (2026-05-30)** | Compliance 🟢 PASS · Confidence 🟡 8.0 · Traceability 🟡 71% chain · Knowledge graph ✅ 237/0/0 spec parity |
+| **G7 Security** | ✅ COMPLETE — 8/8 (3 P0 + 3 P1 security findings resolved) |
 | **G8 Spec & UI** | ✅ COMPLETE — S1/S3/S4/S8 specs + ADR-005; S2 pre-satisfied; S5/S6/S7 UI |
-| **Current branch** | `main` |
+| **Current branch** | `main` (HEAD 01f83918) |
 | **Typecheck** | ✅ PASSING — api-ts + dentalemon both clean (2026-05-30) |
-| **Tests** | ✅ dental-org 273/0, dental-audit 18/0; frontend touched-area 740/0 (5 skip) (2026-05-30) |
-| **NEXT ACTION** | **Mandatory re-audit:** `/oli-check --compliance --all` → `--confidence` → `--traceability` → `/oli-magic --update` for cycle-2 graduation check |
+| **Tests** | ✅ api-ts 2542/0 (full suite); frontend touched-area 740/0 |
+| **NEXT ACTION** | **Cycle 3:** run `/oli-magic` → it re-enters (renames audit + ROADMAP, state→planned), plans a cycle-3 wave from the confidence/trace P1 gaps (imaging tests, pmd deny tests, event traceability, BR-036..047, patient/person coverage, resolve GAP-DENTAL-027 + CONSISTENCY C4/C7). Cycle 3 is the **last** before `blocked`. |
+
+---
+
+## Cycle-2 Re-Audit Results (2026-05-30) — knowledge-graph-backed
+
+The mandatory re-audit sequence ran against the engine knowledge graph (`docs/audits/codebase-map/`, AST, git_sha 01f83918).
+
+### Dimension verdicts
+
+| Dimension | Verdict / Score | Report | Headline |
+|-----------|-----------------|--------|----------|
+| Knowledge graph | ✅ built | `codebase-map/` | 23 modules · 237 endpoints · 75 tables · 28 FSMs · **237/0/0 spec-trace parity** · 2 auth-drift |
+| Compliance | 🟢 PASS (~8.5/10) | [COMPLIANCE_REPORT.md](./COMPLIANCE_REPORT.md) | 0 P0 / 0 P1 open; ~43 P2 + C4/C7 consistency FAILs hold it < 9 |
+| Confidence | 🟡 **8.0/10** | [CONFIDENCE_REPORT.md](./CONFIDENCE_REPORT.md) | L1=8 L2=8 L3=9 L4=8.75; **0 fabrication** in 17 TDD proofs verified |
+| Traceability | 🟡 71% chain | [TRACE_REPORT.md](../trace/TRACE_REPORT.md) | 661 nodes/1043 edges; 0 dangling, 0 blind spots; 1 P0 (latent), 9 P1, 14 P2 |
+
+### Why not 9.0 — the gap is *reach*, not defects
+
+Structural health is strong (perfect API↔spec parity, zero cross-module blind spots, zero dangling refs, compliance PASS). The miss is **test coverage breadth** into specific surfaces:
+
+| Cycle-3 P1 scope | Source | Current |
+|------------------|--------|---------|
+| dental-imaging coverage | confidence/trace | 5 tests / ~42 handlers (L1/L2=4) |
+| dental-pmd deny-403 tests + generatePMD identity pin | confidence/trace | 0 deny tests |
+| Domain-event traceability (publisher-asserts-audit-row) | confidence/trace | 6/24 events traced |
+| BR-036..047 (ceph rules) test owners | trace | 0 traced |
+| patient / person base-module coverage | confidence | L1/L2=3 |
+| Resolve GAP-DENTAL-027 (patient merge/unmerge admin guard) | knowledge graph | latent P0/auth-drift |
+| CONSISTENCY C4 (permission closure) + C7 (broken trace) | spec-gate | FAIL-level |
 
 ---
 
@@ -282,7 +311,8 @@ GAP-013 (HMAC tamper-evidence), GAP-014 through GAP-018 (minor polish), GAP-025 
 | 2026-05-24 | v1.5 spec pipeline | 9.0 | 70 UI blueprints; spec-consistency PASS |
 | 2026-05-25 | Domain audit (P1 fixes) | **8.5*** | 4 P1 gaps resolved; domain rubric 58/100 |
 | 2026-05-25 | feat/v1.5-g1-foundation | In progress | P0-A/C/D GREEN; P0-B RED; typecheck failing |
-| 2026-05-30 | G7+G8 complete (cycle 2) | Pending re-audit | 3 P0 + 6 P1 security/spec/UI findings RESOLVED; gate green; compliance/confidence/trace not yet re-run |
+| 2026-05-30 | G7+G8 complete (cycle 2) | Pending re-audit | 3 P0 + 6 P1 security/spec/UI findings RESOLVED; gate green |
+| 2026-05-30 | **Cycle-2 graduation check** (knowledge-graph re-audit) | **8.0/10** | Compliance PASS (~8.5) · Confidence **8.0** · Trace 71% · **NOT graduated** — confidence < 9.0; gap is coverage reach (imaging/pmd/events/ceph BRs). Overall = min(compliance, confidence) = 8.0 |
 
 *Domain audit (58/100) uses a different rubric than the oli graduation audit (9.0/10). The domain audit penalizes missing TDD_PROOF artifacts (which exist but weren't detected), weak spec-traceability, and V1 domain gaps not in scope of the original brownfield assessment.
 
@@ -302,15 +332,15 @@ Review before acting — suggestions only.
 
 ## Graduation Threshold Check
 
-| Threshold | Required | Current | Status |
-|-----------|----------|---------|--------|
-| P0 open gaps | 0 | 0 (3 cycle-2 P0s resolved 2026-05-30) | ✅ |
-| Audit health | ≥ 9.0 | ~8.5 (pre-G7/G8) | ⏳ Re-audit pending |
-| Compliance health | ≥ 9.0 | not re-run since G8 | ⏳ Run `/oli-check --compliance --all` |
-| Confidence | ≥ 9.0 | not re-run since G8 | ⏳ Run `/oli-check --confidence` |
-| Typecheck | PASS | ✅ PASS (api-ts + dentalemon, 2026-05-30) | ✅ |
+| Threshold | Required | Current (2026-05-30) | Status |
+|-----------|----------|----------------------|--------|
+| P0 open gaps | 0 | 0 active · **1 latent** (GAP-DENTAL-027 / TR-P0-01, stub auth-drift) | ⚠️ flagged |
+| Audit health | ≥ 9.0 | ~8.5 — not freshly scored (discovery obsolete for spec'd project); structural proxy strong but unverified ≥9 | ❌ NOT MET |
+| Compliance health | ≥ 9.0 | ~8.5 — 🟢 PASS (0 P0/P1) but ~43 P2 + C4/C7 consistency FAILs | ❌ NOT MET |
+| Confidence | ≥ 9.0 | **8.0** (min L1=8, L2=8, L3=9) | ❌ NOT MET |
+| Typecheck | PASS | ✅ PASS (api-ts + dentalemon) | ✅ |
 
-> **Status: cycle-2 waves executed; graduation check pending post-execution audits.** All 3 cycle-2 P0 security findings + 6 P1s are resolved and the gate is green, but `COMPLIANCE_REPORT.md` / `CONFIDENCE_REPORT.md` / `TRACE_REPORT.md` were never generated for this cycle. They must be regenerated before a graduation verdict. Run the mandatory re-audit sequence (see Execution State → NEXT ACTION), then `/oli-magic --update` resolves `executed` → `graduated` / `cycle_3`.
+> **Status: 🟡 NOT GRADUATED (cycle 2).** Overall = min(audit, compliance, confidence) = **8.0/10** vs the ≥9.0 clinical bar. The decisive miss is **Confidence 8.0** — coverage *reach* into dental-imaging, dental-pmd, the domain-event layer, ceph BRs, and the patient/person base modules. No active P0/P1 defects (compliance PASS); structural health is strong (237/0/0 spec parity, 0 blind spots, 0 dangling). `execution_state` set to `cycle_2`. **Cycle 3 is the last before `blocked`** — run `/oli-magic` to re-enter and plan the cycle-3 wave from the table in "Cycle-2 Re-Audit Results" above.
 
 ---
 

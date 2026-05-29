@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "timestamp": "2026-05-29T19:52:13.891Z",
+  "git_sha": "01f83918551f6cd825f3c2f6edcf462d3e985a77",
+  "file_count": 542,
+  "frameworks": [
+    "generic",
+    "hono"
+  ],
+  "mode": "full",
+  "phase_timings": {
+    "structural": 21,
+    "module-map": 4,
+    "react": 2009,
+    "hono": 89,
+    "tanstack": 105,
+    "terminology": 1,
+    "data-model": 9,
+    "state-machines": 44,
+    "behavior": 2,
+    "data-flow": 2,
+    "api-usage": 0,
+    "spec-trace": 15
+  },
+  "artifact_hashes": {
+    "CODE_MODULE_MAP": "a7c9a2474e322bb79c630e1bed8809a30ffa433c83016842cb2dc0a776a202fd",
+    "CODE_COMPONENT_REGISTRY": "1ac71f8a47a53fc859eab1aa096d20de65b8dae0acfc63cb8b8bb45718dc7193",
+    "CODE_ROUTE_MAP": "f9c1532ed1277eccd864fa59488f0bc95307d93cbb9306bef2c7f7d01683c832",
+    "CODE_DATA_FLOW": "f6576a557145750d8aaed2e5a6e20b13ddd5f19a2e24ba5e77f3db011ffedf7c",
+    "CODE_API_SURFACE": "67eb0e0108e897f2f347888eefe177da7e66dc2995632e091b0d3861f4a86aa6",
+    "CODE_IMPORT_GRAPH": "30022f21d00b3ad66d6f013c1fb88a34da48383aa8860f829033215f5e9268d2",
+    "CODE_TERMINOLOGY_MAP": "fa6ac83c6910736e960e2cb49dfa7b8a957c8e8dc341628ebe908f36faf7fd9c",
+    "CODE_STATE_MACHINES": "55bb683fd3885d7be9ac74db417bd28c3e7342cde82c4277b2a847e6803855c3",
+    "CODE_DATA_MODEL": "f39e3b83243787f1eefef324ff5fc14c97d1e36beea3f005c16a45e182f538be",
+    "CODE_SPEC_TRACE": "7a1de14be7f20008a71de73628690f516a1e03e8cf37504e763507e251468766"
+  }
+}

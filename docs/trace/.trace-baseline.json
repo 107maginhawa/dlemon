@@ -1,0 +1,12 @@
+{
+  "critical": 1,
+  "high": 9,
+  "medium": 14,
+  "total": 24,
+  "chain_coverage_wf_to_test_pct": 71,
+  "created": "2026-05-30",
+  "last_passed": "2026-05-30",
+  "oli_version": "trace-v1",
+  "phase": "D",
+  "notes": "First baseline. CRITICAL=1 (patient merge/unmerge auth_drift + dangling WF-057/BR-020). HIGH=9 (imaging/pmd/ceph/event-layer test reach + 4 deferred-BR orphans). MEDIUM=14 (AC exact-ID trace drift, inferred/orphan WFs, perio 0-AC spec gap). 0 dangling endpoints (237/237 parity), 0 cross-module blind spots, 0 circular deps."
+}

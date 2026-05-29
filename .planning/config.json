@@ -56,12 +56,13 @@
     "audit_health_min": 9.0,
     "compliance_health_min": 9.0,
     "confidence_min": 9.0,
-    "max_cycles": 3,
+    "max_cycles": 5,
     "rationale": "Dentist-facing clinical product: ≥9 required — treatment decisions, PHI, prescriptions, billing all carry clinical/legal risk"
   },
   "brownfield": {
-    "execution_state": "executed",
+    "execution_state": "planned",
+    "cycle": 3,
     "execution_state_updated": "2026-05-30",
-    "execution_state_rationale": "Cycle 2 waves G7+G8 COMPLETE 2026-05-30. G7: 7/8 via enforce-fix track + G7-S5 (TypeSpec PIN @pattern) landed today = 8/8. G8: S1/S3/S4/S8 spec docs + ADR-005, S2 pre-satisfied, S5/S6/S7 UI compliance. Gate green (api-ts typecheck + dental-org 273/0 + dental-audit 18/0; frontend typecheck + 740/0 touched-area tests). MANDATORY NEXT: /oli-check --compliance --all -> --confidence -> --traceability -> /oli-magic --update for cycle-2 graduation check."
+    "execution_state_rationale": "Cycle-2 graduation check FAILED (NOT graduated). Knowledge-graph-backed re-audit 2026-05-30: Compliance PASS (~8.5, 0 P0/P1, ~43 P2 + C4/C7 consistency FAILs); Confidence 8.0 (L1=8 L2=8 L3=9 L4=8.75, 0 fabrication in 17 TDD proofs verified); Traceability 71% chain (661 nodes, 0 dangling, 0 cross-module blind spots, 1 latent P0 = GAP-DENTAL-027 patient-merge auth-drift); audit-health not freshly scored (discovery obsolete for a fully-spec'd project). Overall = min = 8.0 < 9.0 clinical bar. Decisive miss = Confidence 8.0 — gap is coverage REACH not active defects (dental-imaging 5 tests/42 handlers, dental-pmd no deny tests, 18/24 events untraced, BR-036..047 ceph untraced, patient/person base modules thin). State=cycle_2 (2<3) -> next /oli-magic re-enters as CYCLE 3 (last before blocked): rename audit+ROADMAP, state->planned, plan cycle-3 wave from the confidence/trace P1 scope + resolve GAP-DENTAL-027 + CONSISTENCY C4/C7. Knowledge graph at docs/audits/codebase-map/ (engine, .oli/config.json)."
   }
 }

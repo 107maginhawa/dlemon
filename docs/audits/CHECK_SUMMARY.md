@@ -1,7 +1,8 @@
 ---
 oli-version: "1.0"
 based-on:
-  - docs/audits/COMPLIANCE_REPORT.md
+  - docs/audits/codebase-map/.map-meta.json (knowledge graph, engine-produced)
+  - docs/audits/COMPLIANCE_REPORT.md (carried forward — PASS)
 last-modified: 2026-05-30
 last-modified-by: oli-check
 ---
@@ -9,48 +10,38 @@ last-modified-by: oli-check
 # OLI Check — Summary
 
 ## Run Context
-
-- **Invocation:** `/oli-check --compliance` (re-audit) → followed by a **pass-2 remediation** (user: "ok can you fix").
-- **Detected state:** specs present (12 module specs) + source code + tests + full shared-artifact set.
-- **Dimension:** Compliance only (`--compliance` isolates it).
-- **Sequence this session:** (1) read-only re-audit of remediation commit 90339da5 → BLOCK reduced 15→1 P0; (2) fixed the 1 P0 + all ~16 open/borderline P1s (TDD, parallel per-module agents + central codegen/doc work); (3) full-suite + typecheck verification.
+- **Invocation:** `/oli-check --discovery` (isolated), within an `/oli-magic` guided re-audit of Cycle 2.
+- **Detected state:** fully-spec'd, **executed** brownfield project (Cycle 2 of 3). 12 MODULE_SPECs, 287 test files, 23 backend modules. All ROADMAP waves (G1–G8) complete.
+- **This session also produced:** the engine knowledge graph (`docs/audits/codebase-map/`).
 
 ## Dimension Results
 
 | Dimension | Verdict | Report | Findings |
 |-----------|---------|--------|----------|
-| Compliance | 🟢 **PASS** (was 🔴 BLOCK) | [COMPLIANCE_REPORT.md](./COMPLIANCE_REPORT.md) | 1 P0 + 16 P1 fixed & verified; ~43 P2 / ~12 P3 non-blocking backlog |
-| Consistency / Traceability / Discovery / Confidence / Enforcement / Journeys / Runtime | ⏭️ skipped | — | not selected (`--compliance` isolates Compliance) |
+| Discovery | ⏭️ **SKIPPED** (stop condition) | — | 12 MODULE_SPECs present → re-baselining inappropriate; dimension defers to `--compliance` |
+| Compliance | 🟢 **PASS** (carried fwd) | [COMPLIANCE_REPORT.md](./COMPLIANCE_REPORT.md) | 0 P0 / 0 P1 open (commit 01f83918); ~55 P2/P3 non-blocking |
+| Confidence | 🟡 **WARN** (8.0 < 9.0 bar) | [CONFIDENCE_REPORT.md](./CONFIDENCE_REPORT.md) | L1=8 L2=8 L3=9 L4=8.75; gated by coverage breadth (imaging/pmd/patient) + event traceability; **0 fabrication** in 17 TDD proofs |
+| Traceability | 🟡 **WARN** (71% chain) | [TRACE_REPORT.md](../trace/TRACE_REPORT.md) | 661 nodes/1043 edges; **0 dangling endpoints, 0 cross-module blind spots**; 1 P0 (patient-merge auth-drift), 9 P1 (all *reach*), 14 P2 |
+| Journeys (stale 05-29) / Enforcement / Runtime | ⏭️ not refreshed | [JOURNEY_COVERAGE_REPORT.md](./JOURNEY_COVERAGE_REPORT.md) | journey report predates G7/G8 — refresh in cycle 3 |
 
 ## Overall
+🟡 **WARN** — Compliance PASS, but Confidence **8.0** < clinical ≥9.0 bar and trace chain coverage **71%** with 1 P0 (the patient-merge auth-drift, GAP-DENTAL-027). Discovery correctly skipped (obsolete artifact). The gaps are *reach*, not active defects: dental-imaging (5 tests/42 handlers), dental-pmd (no deny tests), patient/person base modules, 18/24 untraced domain events, BR-036..047 (ceph). Structural health is strong (237/0/0 spec parity, 0 blind spots). **Expected to gate Cycle-2 graduation → Cycle 3.** Next: `/oli-magic --update`.
 
-🟢 **PASS** — 0 P0, 0 P1 open. The quality gate (block on any P0) is cleared.
+## Knowledge Graph (built this session)
+Engine-produced AST map at `docs/audits/codebase-map/` (git_sha 01f83918):
 
-### Trajectory
+| Metric | Value |
+|--------|-------|
+| Modules / endpoints | 23 / 237 |
+| Drizzle tables / enums | 75 / 58 |
+| State machines | 28 |
+| Spec-trace | **237 matched · 0 spec-only · 0 code-only** |
+| Auth drift | **2** → `POST /patients/merge`, `/patients/unmerge` (logged GAP-DENTAL-027, P2 latent) |
 
-| Stage | P0 | P1 | Verdict |
-|-------|:--:|:--:|---------|
-| Original baseline | 15 | 59 | 🔴 BLOCK |
-| Re-audit of commit 90339da5 | 1 | ~14 | 🔴 BLOCK (reduced) |
-| **Pass-2 remediation (this session)** | **0** | **0** | 🟢 **PASS** |
-
-### Verification evidence
-
-| Gate | Result |
-|------|--------|
-| `bun run typecheck` (all workspaces) | ✅ 0 errors |
-| `bun run scripts/test-with-db.ts` (full api-ts suite, per-file isolated) | ✅ 180 files, **2542 pass / 0 fail** |
-| OpenAPI regen (`specs/api` build + `api-ts generate`) | ✅ clean (237 handlers) |
-
-## What Was Fixed (pass-2)
-
-- **P0 (1):** V-PAT-002 branchless auth bypass — centralized `assertPatientBranchAccess` helper applied to all 23 drifted dental-patient handlers (root cause was inline-guard drift); regression test added.
-- **P1 (16):** 11 code/schema fixes — N-BIL-01 (idempotency leak), N-PMD-02 (patientId binding), V-VIS-001 (check-in audit), N-PER-01 (409), N-PER-02 (primary dentition), V-AUD-NEW-A (snapshot PHI sanitize), V-AUD-NEW-B (audit self-audit), V-CLN-004 (lab-order audit), N-ORG-01 (dashboard role gate), V-SCH-003 (422 REASON_REQUIRED via TypeSpec), V-BIL-010 (amount min:1 via TypeSpec); plus 5 spec-doc reconciliations — V-PMD-006, N-SCH-03, V-PAT-008, V-CLN-NEW-B, V-AUD-004.
-- **Execution model:** 7 parallel per-module TDD agents (disjoint files) for the clean code bugs + central handling of the 2 codegen-coupled fixes (single regen) and 5 doc reconciliations. Two "tests must verify real wiring" gaps closed (scheduling cancel query validator; pmd list route path).
-
-## What's Next
-
-- Changes are in the working tree (**60 files, not committed**) — review the diff, then commit/PR.
-- **P2/P3 (~55)** remain non-blocking (terminology/doc drift, dead FSM code); address opportunistically.
-- Regenerate `@monobase/sdk-ts` to pick up the non-breaking OpenAPI changes (web app already typechecks clean against the current SDK).
-- Complementary dimensions not run: `/oli-check --confidence` (test depth), `/oli-check --enforcement` (baseline/ratchet).
+## What's Next — Mandatory Re-Audit Sequence (execution_state = executed)
+1. ✅ Knowledge graph — built.
+2. ✅ Compliance — PASS (fresh, committed).
+3. ⬜ **Confidence** — `/oli-check --confidence` (MISSING, required).
+4. ⬜ **Journeys** — `/oli-check --journeys --all` (stale 05-29, refresh).
+5. ⬜ **Traceability** — `/oli-check --traceability` (MISSING; backed by `CODE_SPEC_TRACE` 237/0/0).
+6. ⬜ **Graduation** — `/oli-magic --update` → Cycle-2 verdict vs ≥9.0 thresholds.

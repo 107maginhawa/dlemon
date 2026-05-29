@@ -1,0 +1,381 @@
+{
+  "version": 3,
+  "edges": [
+    {
+      "from_module": "billing",
+      "to_module": "person",
+      "import_count": 14,
+      "files": [
+        "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+        "services/api-ts/src/handlers/billing/createInvoice.ts",
+        "services/api-ts/src/handlers/billing/createMerchantAccount.ts",
+        "services/api-ts/src/handlers/billing/deleteInvoice.ts",
+        "services/api-ts/src/handlers/billing/finalizeInvoice.ts",
+        "services/api-ts/src/handlers/billing/getInvoice.ts",
+        "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+        "services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
+        "services/api-ts/src/handlers/billing/payInvoice.ts",
+        "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+        "services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+        "services/api-ts/src/handlers/billing/repos/billing.schema.ts",
+        "services/api-ts/src/handlers/billing/updateInvoice.ts",
+        "services/api-ts/src/handlers/billing/voidInvoice.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "booking",
+      "to_module": "billing",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/booking/repos/booking.repo.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "booking",
+      "to_module": "person",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/booking/repos/booking.repo.ts",
+        "services/api-ts/src/handlers/booking/repos/booking.schema.ts",
+        "services/api-ts/src/handlers/booking/repos/bookingEvent.repo.ts",
+        "services/api-ts/src/handlers/booking/repos/timeSlot.repo.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-billing",
+      "to_module": "dental-org",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts",
+        "services/api-ts/src/handlers/dental-billing/repos/dental-payment.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-billing",
+      "to_module": "dental-visit",
+      "import_count": 2,
+      "files": [
+        "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-billing",
+      "to_module": "patient",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/dental-billing/getPatientBalance.ts",
+        "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts",
+        "services/api-ts/src/handlers/dental-billing/repos/dental-payment-plan.schema.ts",
+        "services/api-ts/src/handlers/dental-billing/repos/dental-payment.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-clinical",
+      "to_module": "dental-org",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/dental-clinical/repos/amendment.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/inventory.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/postop-template.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/prescription.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-clinical",
+      "to_module": "dental-visit",
+      "import_count": 6,
+      "files": [
+        "services/api-ts/src/handlers/dental-clinical/repos/amendment.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/attachment.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/consent-form.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/lab-order.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/prescription.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-clinical",
+      "to_module": "patient",
+      "import_count": 7,
+      "files": [
+        "services/api-ts/src/handlers/dental-clinical/repos/amendment.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/attachment.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/consent-form.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/lab-order.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/medical-history.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/occlusion-screening.schema.ts",
+        "services/api-ts/src/handlers/dental-clinical/repos/prescription.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-patient",
+      "to_module": "dental-billing",
+      "import_count": 3,
+      "files": [
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientStatement.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-patient",
+      "to_module": "dental-clinical",
+      "import_count": 2,
+      "files": [
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientSafetyFloor.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-patient",
+      "to_module": "dental-visit",
+      "import_count": 5,
+      "files": [
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientStatement.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/initializeDentition.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/listDentalPatients.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-patient",
+      "to_module": "patient",
+      "import_count": 19,
+      "files": [
+        "services/api-ts/src/handlers/dental-patient/engagement/followUpNotes.ts",
+        "services/api-ts/src/handlers/dental-patient/engagement/listFollowUpNotes.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/archiveDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/bulkArchiveDentalPatients.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/exportDentalPatients.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientSafetyFloor.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientStatement.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/listDentalPatients.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/restoreDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/identity/updateDentalPatient.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/claim-draft.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/dental-alert.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/insurance-profile.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/patient-contact.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/recall.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/task.schema.ts",
+        "services/api-ts/src/handlers/dental-patient/repos/treatment-plan.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-perio",
+      "to_module": "dental-org",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/dental-perio/repos/perio-chart.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-perio",
+      "to_module": "dental-visit",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/dental-perio/repos/perio-chart.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-perio",
+      "to_module": "patient",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/dental-perio/repos/perio-chart.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-scheduling",
+      "to_module": "dental-org",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts",
+        "services/api-ts/src/handlers/dental-scheduling/repos/operatory.schema.ts",
+        "services/api-ts/src/handlers/dental-scheduling/repos/queue-item.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-scheduling",
+      "to_module": "dental-visit",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-scheduling",
+      "to_module": "patient",
+      "import_count": 2,
+      "files": [
+        "services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts",
+        "services/api-ts/src/handlers/dental-scheduling/repos/queue-item.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-visit",
+      "to_module": "dental-org",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/dental-visit/repos/treatment-template.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/treatment.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "dental-visit",
+      "to_module": "patient",
+      "import_count": 5,
+      "files": [
+        "services/api-ts/src/handlers/dental-visit/repos/dental-chart-baseline.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/dental-chart.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/treatment-plan-version.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/treatment.schema.ts",
+        "services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "emr",
+      "to_module": "patient",
+      "import_count": 4,
+      "files": [
+        "services/api-ts/src/handlers/emr/createConsultation.ts",
+        "services/api-ts/src/handlers/emr/getConsultation.ts",
+        "services/api-ts/src/handlers/emr/listConsultations.ts",
+        "services/api-ts/src/handlers/emr/listEMRPatients.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "emr",
+      "to_module": "provider",
+      "import_count": 6,
+      "files": [
+        "services/api-ts/src/handlers/emr/createConsultation.ts",
+        "services/api-ts/src/handlers/emr/finalizeConsultation.ts",
+        "services/api-ts/src/handlers/emr/getConsultation.ts",
+        "services/api-ts/src/handlers/emr/listConsultations.ts",
+        "services/api-ts/src/handlers/emr/listEMRPatients.ts",
+        "services/api-ts/src/handlers/emr/updateConsultation.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "notifs",
+      "to_module": "person",
+      "import_count": 5,
+      "files": [
+        "services/api-ts/src/handlers/notifs/getNotification.ts",
+        "services/api-ts/src/handlers/notifs/listNotifications.ts",
+        "services/api-ts/src/handlers/notifs/markAllNotificationsAsRead.ts",
+        "services/api-ts/src/handlers/notifs/markNotificationAsRead.ts",
+        "services/api-ts/src/handlers/notifs/repos/notification.repo.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "patient",
+      "to_module": "person",
+      "import_count": 3,
+      "files": [
+        "services/api-ts/src/handlers/patient/createPatient.ts",
+        "services/api-ts/src/handlers/patient/repos/patient.repo.ts",
+        "services/api-ts/src/handlers/patient/repos/patient.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "provider",
+      "to_module": "person",
+      "import_count": 3,
+      "files": [
+        "services/api-ts/src/handlers/provider/createProvider.ts",
+        "services/api-ts/src/handlers/provider/repos/provider.repo.ts",
+        "services/api-ts/src/handlers/provider/repos/provider.schema.ts"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "from_module": "reviews",
+      "to_module": "person",
+      "import_count": 1,
+      "files": [
+        "services/api-ts/src/handlers/reviews/repos/review.schema.ts"
+      ],
+      "confidence": "HIGH"
+    }
+  ],
+  "circular_deps": [],
+  "high_fan_in": [
+    {
+      "module": "person",
+      "importers": 6
+    },
+    {
+      "module": "patient",
+      "importers": 7
+    },
+    {
+      "module": "dental-visit",
+      "importers": 5
+    },
+    {
+      "module": "dental-org",
+      "importers": 5
+    }
+  ],
+  "high_fan_out": [
+    {
+      "module": "booking",
+      "imports": 2
+    },
+    {
+      "module": "dental-billing",
+      "imports": 3
+    },
+    {
+      "module": "dental-clinical",
+      "imports": 3
+    },
+    {
+      "module": "dental-patient",
+      "imports": 4
+    },
+    {
+      "module": "dental-perio",
+      "imports": 3
+    },
+    {
+      "module": "dental-scheduling",
+      "imports": 3
+    },
+    {
+      "module": "dental-visit",
+      "imports": 2
+    },
+    {
+      "module": "emr",
+      "imports": 2
+    }
+  ]
+}

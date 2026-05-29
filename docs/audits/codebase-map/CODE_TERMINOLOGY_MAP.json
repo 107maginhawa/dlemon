@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "strings": [],
+  "synonym_clusters": [],
+  "glossary_mismatches": [],
+  "uncovered_strings": [],
+  "meta": {
+    "total_strings": 0,
+    "total_clusters": 0,
+    "glossary_available": false,
+    "locale_files_found": []
+  }
+}

@@ -1,6 +1,6 @@
 # Dental Gap Registry
 
-Last updated: 2026-05-25 | Branch: feat/v1.5-g1-foundation | Run: 002
+Last updated: 2026-05-30 | Branch: main | Run: 003 (knowledge-graph CODE_SPEC_TRACE)
 
 ---
 
@@ -597,14 +597,42 @@ Create `docs/product/BASE_MODULE_CONTRACTS.md` with a table: base module → den
 
 ---
 
+## GAP-DENTAL-027
+
+| Field | Value |
+|---|---|
+| **Gap ID** | GAP-DENTAL-027 |
+| **Title** | Patient merge/unmerge missing `admin` role guard (spec↔code auth drift) |
+| **Severity** | P2 — Latent (handlers are stubs; becomes P0 the moment merge logic is implemented) |
+| **Area** | patient / authorization |
+| **Type** | Spec-declared role not enforced in code |
+| **Status** | OPEN — surfaced 2026-05-30 by knowledge-graph `CODE_SPEC_TRACE` (auth_drift) |
+
+**Evidence:**
+- `docs/audits/codebase-map/CODE_SPEC_TRACE.json` `coverage.auth_drift`: `["POST /patients/merge", "POST /patients/unmerge"]` — the only 2 of 237 traced operations flagged. OpenAPI declares `x-security-required-roles: ["admin"]` for both `mergePatients` and `unmergePatients`.
+- `services/api-ts/src/handlers/patient/mergePatients.ts:15` — only checks `if (!user?.id) throw new UnauthorizedError()` (authentication), no `admin` role check. Returns `501 NOT_IMPLEMENTED` (stub).
+- `services/api-ts/src/handlers/patient/unmergePatients.ts:21` — same auth-only check; body validated but `// TODO: Implement business logic` (stub).
+- `services/api-ts/src/generated/openapi/routes.ts:1534,1540` — route chains carry only `zValidator`; no role middleware. No `requireRole`/`assertRole` guard exists in the patient handlers, core, or middleware for these routes (235 other spec-protected routes ARE guarded).
+
+**Impact:**
+Today: none — both handlers are unimplemented stubs (501 / no-op), so no PHI is mutated. Latent: when patient merge/unmerge logic is implemented without first adding the `admin` guard, the endpoints would ship PHI-mutating admin operations callable by any authenticated user (cross-patient record merge). For a clinical product this is a P0-grade authorization gap the instant the stubs gain behavior.
+
+**Recommended Fix:**
+Add an `admin` role guard to both routes — preferably a route-level guard wired from the OpenAPI `x-security-required-roles` (the mechanism already protects the other 235 routes), or an explicit in-handler `ForbiddenError` when `user.role !== 'admin'`. Add the guard **before** implementing the merge/unmerge business logic.
+
+**Verification:**
+HTTP test per endpoint: authenticated non-admin → `403 FORBIDDEN`; admin → passes the guard. Test RED before guard, GREEN after. Re-run `oli-engine scan` and confirm `CODE_SPEC_TRACE.json` `coverage.auth_drift` is empty.
+
+---
+
 ## Gap Status Summary
 
 | Severity | Count | Open | Fixed | Deferred |
 |---|:---:|:---:|:---:|:---:|
 | P0 | 0 | 0 | — | — |
 | P1 | 4 | 0 | 4 | 0 |
-| P2 | 16 | 14 | 2 | 0 |
+| P2 | 17 | 15 | 2 | 0 |
 | P3 | 8 | 6 | 0 | 2 |
-| **Total** | **28** | **20** | **6** | **2** |
+| **Total** | **29** | **21** | **6** | **2** |
 
-_P1: all 4 resolved 2026-05-25. P2: GAP-008 resolved 2026-05-25. GAP-019 through GAP-026 added in Pass 08._
+_P1: all 4 resolved 2026-05-25. P2: GAP-008 resolved 2026-05-25. GAP-019 through GAP-026 added in Pass 08. GAP-DENTAL-027 added 2026-05-30 from knowledge-graph CODE_SPEC_TRACE auth_drift._
