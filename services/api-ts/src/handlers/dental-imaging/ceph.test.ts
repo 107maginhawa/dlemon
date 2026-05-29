@@ -439,6 +439,7 @@ describe('Addon tier gate — free org → 403', () => {
 // ---------------------------------------------------------------------------
 
 describe('Branch isolation — non-member → 404 not 403', () => {
+  // EF-IMG-002 — batchUpsertCephLandmarks
   test('batch upsert by non-member returns 404', async () => {
     const { CephMgmt_batchUpsertCephLandmarks } = await import('./CephMgmt_batchUpsertCephLandmarks');
     const db = makeCephDb({ hasMembership: false });
@@ -463,6 +464,62 @@ describe('Branch isolation — non-member → 404 not 403', () => {
     });
     const res = await app.request(`/${IMAGE_ID}/analysis`);
     expect(res.status).toBe(404);
+  });
+
+  // EF-IMG-001 — createCephReport
+  test('createCephReport by non-member returns 404 not 403 (EF-IMG-001)', async () => {
+    const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
+    const db = makeCephDb({ hasMembership: false, landmarks: GATE_LANDMARKS });
+    const app = buildCephApp(CephMgmt_createCephReport as any, {
+      user: DENTIST_USER, db, method: 'POST', path: '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(404);
+    expect(res.status).not.toBe(403);
+  });
+
+  // EF-IMG-003 — recomputeCephAnalysis
+  test('recomputeCephAnalysis by non-member returns 404 not 403 (EF-IMG-003)', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    const db = makeCephDb({ hasMembership: false });
+    const app = buildCephApp(CephMgmt_recomputeCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'POST', path: '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(404);
+    expect(res.status).not.toBe(403);
+  });
+
+  // EF-IMG-004 — deleteCephLandmark
+  test('deleteCephLandmark by non-member returns 404 not 403 (EF-IMG-004)', async () => {
+    const { CephMgmt_deleteCephLandmark } = await import('./CephMgmt_deleteCephLandmark');
+    const db = makeCephDb({ hasMembership: false });
+    const app = buildCephApp(CephMgmt_deleteCephLandmark as any, {
+      user: DENTIST_USER, db, method: 'DELETE', path: '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+    expect(res.status).not.toBe(403);
+  });
+
+  // EF-IMG-005 — updateCephLandmark
+  test('updateCephLandmark by non-member returns 404 not 403 (EF-IMG-005)', async () => {
+    const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
+    const db = makeCephDb({ hasMembership: false });
+    const app = buildCephApp(CephMgmt_updateCephLandmark as any, {
+      user: DENTIST_USER, db, method: 'PATCH', path: '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x: 310 }),
+    });
+    expect(res.status).toBe(404);
+    expect(res.status).not.toBe(403);
   });
 });
 
