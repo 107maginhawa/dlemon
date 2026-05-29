@@ -16,10 +16,10 @@ _Updated 2026-05-24 — all 6 original HIGH findings resolved (5 fixed in spec a
 | C1 | Naming — glossary alignment | WARN | 4 terms in MODULE_SPECs absent from DOMAIN_GLOSSARY |
 | C2 | Entity attributes — field name alignment | WARN | 5 field gaps/mismatches across visit, billing, patient |
 | C3 | Workflow coverage — WF→screen→MODULE_SPEC | WARN | 3 modules missing §4 Workflow Details; 1 duplicate UI route |
-| C4 | Permission closure — ROLE_PERMISSION_MATRIX vs §6 | FAIL | 3 HIGH contradictions/gaps |
+| C4 | Permission closure — ROLE_PERMISSION_MATRIX vs §6 | PASS | All 3 HIGH (F-016/F-017/F-018) + F-035 + F-020 resolved; doc-reconciled & code-verified 2026-05-30 |
 | C5 | API surface — §10 endpoints vs API_CONTRACTS | WARN | 2 discrepancies (status value, cancel semantics) |
 | C6 | UI data binding — screens.md fields vs §7 | WARN | 2 fields referenced in screens not in §7 |
-| C7 | Cross-module traces | FAIL | 1 BROKEN trace (G-003 direct repo import); 1 naming conflict |
+| C7 | Cross-module traces | PASS | G-003 resolved — dental-clinical now depends on the `VisitService` interface (dental-visit/utils/visit.service.ts); no direct `VisitRepository` import remains. Naming conflict (F-019) previously resolved. |
 | C8 | State machines — §8 vs screens.md badges | WARN | 1 state name conflict (`sent` vs `issued`) |
 | C9 | Event coverage — §10b vs EVENT_CONTRACTS | PASS | All 24 events accounted for; DE-001 emitter ambiguity noted |
 
@@ -35,8 +35,28 @@ _Updated 2026-05-24 — all 6 original HIGH findings resolved (5 fixed in spec a
 | F-017 | C4 | dental-billing | **RESOLVED** | Added `dentist_associate` to `POST /invoices` Auth in API_CONTRACTS |
 | F-018 | C4 | dental-billing | **RESOLVED** | Added `dentist_associate` to `PATCH /invoices/:id/issue` Auth in API_CONTRACTS |
 | F-019 | C7 | dental-org + dental-audit | **RESOLVED** | dental-org entry updated to explicit proxy note pointing to canonical dental-audit/API_CONTRACTS |
-| F-034 | C7 | dental-clinical + dental-visit | **RECLASSIFIED → MEDIUM** | Known coupling risk G-003, documented in CLAUDE.md and WORKFLOW_MAP. Tracked for Wave G1 refactor. Not a spec error — implementation constraint. |
+| F-034 | C7 | dental-clinical + dental-visit | **RESOLVED** | G-003 coupling closed — introduced `VisitService` interface in dental-visit/utils/visit.service.ts (getVisitOrThrow / findVisits / findInProgressVisitByPatient / createVisit). dental-clinical (handlers + tests) now depends on this abstraction; the direct `VisitRepository` import is gone. Behavior identical (suites unchanged). |
 | F-035 | C4 | dental-pmd | **RESOLVED** | Fixed `dentist` → `dentist_owner, dentist_associate` in dental-pmd MODULE_SPEC §6 |
+
+#### C4 closure (2026-05-30) — permission closure verified against enforced code
+
+The C4 check was re-run against handler role guards (source of truth = enforced code). All three HIGH
+contradictions plus the two associated C4 gaps are **doc-reconciled and code-verified consistent** —
+ROLE_PERMISSION_MATRIX, the relevant MODULE_SPEC §6 tables, and the handler `assertBranchRole(...)`
+guards now agree. No authz gap was found; **no code change was required**.
+
+| Finding | Resolution | Code verification |
+|---------|-----------|-------------------|
+| F-016 (scheduling check-in) | doc-reconcile (MODULE_SPEC §6 / matrix N-SCH-03 amendment) | `checkInAppointment.ts` enforces `['dentist_owner','dentist_associate','staff_full']` (excludes `staff_scheduling`) — matches §6 + matrix exactly ✅ |
+| F-017 (billing create invoice) | doc-reconcile (MODULE_SPEC §6 V-BIL-003 / matrix) | `createDentalInvoice.ts` enforces `['dentist_owner','dentist_associate']` (`staff_full` denied) — matches ✅ |
+| F-018 (billing issue invoice) | doc-reconcile (MODULE_SPEC §6 V-BIL-003 / matrix) | `issueDentalInvoice.ts` enforces `['dentist_owner','dentist_associate']` — matches ✅ |
+| F-035 (dental-pmd) | doc-reconcile (already fixed: `dentist`→`dentist_owner, dentist_associate` in §6) | consistent with matrix Generate-PMD row ✅ |
+| F-020 (dental-emr §6 stub) | doc-reconcile (external-records-import §6 now has a permission table: import = `dentist_owner, dentist_associate`; view = all dental roles; delete = `dentist_owner`) | consistent with §1 Users + matrix ✅ |
+
+The 5 extended staff roles (`hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only`)
+are catalogued in dental-org MODULE_SPEC §6 Member Role Catalog and the matrix Extended Staff Roles
+table; only `dentist_owner` passes `assertBranchRole(['dentist_owner'])` admin guards, matching the
+`member_role` enum. No new roles implemented (deferred-role catalog is documentation-only).
 
 ---
 
@@ -113,7 +133,7 @@ Cross-module runtime:
 dental-scheduling ──(check-in)──► dental-visit (visit creation)
 dental-visit ──(completed)──► dental-billing (invoice eligible)
 dental-visit + dental-clinical ──(completed)──► dental-pmd (PMD eligible)
-dental-clinical ──[BROKEN G-003]──► dental-visit (direct VisitRepository import)
+dental-clinical ──(VisitService)──► dental-visit (G-003 resolved: abstraction, not direct repo)
 dental-org ──(assertBranchAccess)──► all modules
 dental-org ──(proxies)──► dental-audit [CONFLICT F-019]
 ```
@@ -126,7 +146,7 @@ dental-org ──(proxies)──► dental-audit [CONFLICT F-019]
 
 Priority MEDIUM items to track in execution waves:
 - **F-021** ✅ Fixed — state string `sent`→`issued` in dental-billing API_CONTRACTS
-- **F-034** Wave G1 — introduce `VisitService` interface (G-003 coupling)
+- **F-034** ✅ Resolved — `VisitService` interface introduced (G-003 coupling closed)
 - **F-012** Wave G2 — consolidate audit-log UI to single route `/audit/log`
 - **F-023** Wave G1 — remove `"Reopen"` from visit workspace screens.md (terminal state violation)
 - **F-013/F-014/F-015** — add MODULE_SPEC §4 Workflow Details for clinical, billing, imaging

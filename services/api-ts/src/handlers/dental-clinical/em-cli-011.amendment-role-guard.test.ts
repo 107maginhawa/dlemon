@@ -105,8 +105,8 @@ beforeAll(async () => {
 
 // Visit is seeded fresh for each test (truncated in afterEach)
 async function seedVisit(memberId: string, createdBy: string): Promise<string> {
-  const { VisitRepository } = await import('@/handlers/dental-visit/repos/visit.repo');
-  const visit = await new VisitRepository(db).createOne({
+  const { createVisit } = await import('@/handlers/dental-visit/utils/visit.service');
+  const visit = await createVisit(db, {
     patientId: PATIENT_ID,
     branchId: BRANCH_ID,
     dentistMemberId: memberId,

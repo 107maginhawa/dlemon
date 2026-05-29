@@ -112,8 +112,8 @@ function buildTestApp() {
 }
 
 async function seedVisit() {
-  const { VisitRepository } = await import('@/handlers/dental-visit/repos/visit.repo');
-  return new VisitRepository(db).createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID });
+  const { createVisit } = await import('@/handlers/dental-visit/utils/visit.service');
+  return createVisit(db, { patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID });
 }
 
 async function createConsentViaApi(app: ReturnType<typeof buildTestApp>, visitId: string) {

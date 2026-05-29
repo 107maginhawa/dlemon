@@ -114,9 +114,8 @@ function buildTestApp(user?: typeof TEST_USER) {
 }
 
 async function seedVisit() {
-  const { VisitRepository } = await import('@/handlers/dental-visit/repos/visit.repo');
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.createOne({
+  const { createVisit } = await import('@/handlers/dental-visit/utils/visit.service');
+  const visit = await createVisit(db, {
     patientId: PATIENT_ID,
     branchId: BRANCH_ID,
     dentistMemberId: MEMBER_ID,
