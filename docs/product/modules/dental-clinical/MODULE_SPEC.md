@@ -22,7 +22,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | Term | Definition |
 |------|-----------|
 | Prescription | Drug order by a dentist member; requires prescriberMemberId (BR-017) |
-| Lab Order | Request to external dental lab; states: ordered→sent→completed/cancelled (BR-018) |
+| Lab Order | Request to external dental lab; states: ordered→in_fabrication→delivered→fitted/cancelled (BR-018) |
 | Consent Form | Patient authorization; states: pending→signed/revoked (BR-014) |
 | Medical History Entry | Append-only systemic health, allergy, medication record |
 | Amendment | Additive correction to any clinical record; original immutable |
@@ -61,9 +61,9 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ### WF-017 — Create Lab Order
 1. Dentist selects tooth/surface from chart → "Send to Lab" action.
 2. Lab order dialog: lab name, instructions, due date, shade (optional).
-3. On submit: record created (`pending`). pg-boss sends lab notification email.
-4. State machine: `pending → sent → completed | cancelled`.
-5. Completed lab orders link back to the treatment record on the chart.
+3. On submit: record created (`ordered`). pg-boss sends lab notification email.
+4. State machine: `ordered → in_fabrication → delivered → fitted | cancelled`.
+5. Fitted lab orders link back to the treatment record on the chart.
 
 ### WF-018 — Obtain Consent Signature
 1. Dentist selects treatment → "Request Consent" → picks consent template.
@@ -95,7 +95,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | BR-003 | Visit immutable after completed → no clinical writes | 422 on write to locked visit |
 | BR-014 | Consent form required before treatment proceeds | UI guard; 422 if unsigned |
 | BR-017 | Prescription requires prescriberMemberId (dentist role only) | 422 if missing/non-dentist |
-| BR-018 | Lab order lifecycle: ordered→sent→completed/cancelled; forward-only | 422 on reversal |
+| BR-018 | Lab order lifecycle: ordered→in_fabrication→delivered→fitted/cancelled; forward-only | 422 on reversal |
 | BR-019 | Supervisor approval for amendments NOT IMPLEMENTED | 501 for amendment approval endpoint |
 
 ---
@@ -116,7 +116,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ## 7. Data Requirements (key fields)
 **`prescription`:** id, visit_id, patient_id, branch_id, prescriber_member_id, drug_name, dosage, frequency, duration, status
-**`lab_order`:** id, visit_id, tooth_fdi, lab_name, instructions, due_date, status (ordered/sent/completed/cancelled)
+**`lab_order`:** id, visit_id, tooth_fdi, lab_name, instructions, due_date, status (ordered/in_fabrication/delivered/fitted/cancelled)
 **`consent_form`:** id, visit_id, patient_id, template_id, status (pending/signed/revoked), signed_at, signature_data
 **`medical_history_entry`:** id, patient_id, branch_id, entry_type (allergy/condition/medication), value, created_by (append-only)
 **`dental_attachment`:** id, visit_id, storage_file_id, file_name, mime_type, image_type_enum
@@ -134,8 +134,8 @@ Cross-module coupling: VisitRepository imported directly — refactor to service
 ```
 ConsentForm:  pending → signed → (immutable after signed, BR-014)
               pending → revoked
-LabOrder:     ordered → sent → completed
-              ordered/sent → cancelled
+LabOrder:     ordered → in_fabrication → delivered → fitted
+              ordered / in_fabrication / delivered → cancelled
 ```
 
 ---
@@ -160,7 +160,7 @@ POST /dental/visits/:id/prescriptions (BR-017), GET /dental/visits/:id/prescript
 **AC-CLI-001:** Prescription without prescriberMemberId → 422 (BR-017).
 **AC-CLI-002:** Prescription by non-dentist → 422 (assertBranchRole).
 **AC-CLI-003:** Sign consent form → status = signed, immutable (BR-014).
-**AC-CLI-004:** Lab order: sent → ordered (reversal) → 422 (BR-018).
+**AC-CLI-004:** Lab order: in_fabrication → ordered (reversal) → 422 (BR-018).
 **AC-CLI-005:** Medical history entry → no PATCH/DELETE endpoints available (append-only).
 **AC-CLI-006:** Write to clinical record on completed visit → 422 (BR-003).
 
