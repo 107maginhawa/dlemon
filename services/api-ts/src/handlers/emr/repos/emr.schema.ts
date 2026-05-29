@@ -17,8 +17,6 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { providers } from '../../provider/repos/provider.schema';
 
 // Consultation status enum - matches TypeSpec definition
 export const consultationStatusEnum = pgEnum('consultation_status', [
@@ -33,13 +31,11 @@ export const consultationNotes = pgTable('consultation_note', {
   ...baseEntityFields,
   
   // Required relationship fields per TypeSpec
-  patient: uuid('patient_id')
-    .notNull()
-    .references(() => patients.id, { onDelete: 'cascade' }),
+  // loose-coupling: cross-module UUID ref (patient module), no DB-level FK per MODULE_SPEC §20
+  patient: uuid('patient_id').notNull(),
 
-  provider: uuid('provider_id')
-    .notNull()
-    .references(() => providers.id, { onDelete: 'cascade' }),
+  // loose-coupling: cross-module UUID ref (provider module), no DB-level FK per MODULE_SPEC §20
+  provider: uuid('provider_id').notNull(),
 
   // Tenant isolation — nullable and intentionally NOT the isolation mechanism.
   // Clinical PHI lives in per-user embedded SQLite (api-ts-embedded / Tauri rusqlite).
