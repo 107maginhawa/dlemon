@@ -30,11 +30,17 @@ const updateConsentTemplateSchema = z.object({
   requiresWitnessSignature: z.boolean().optional(),
 });
 
-async function getMemberRole(db: DatabaseInstance, userId: string, branchId: string): Promise<string | null> {
+export async function getMemberRole(db: DatabaseInstance, userId: string, branchId: string): Promise<string | null> {
+  // EF-ORG-P020: Only an *active* membership grants role-based access. A
+  // revoked/inactive/invited member must not retain their role privileges.
   const [member] = await db
     .select({ role: dentalMemberships.role })
     .from(dentalMemberships)
-    .where(and(eq(dentalMemberships.personId, userId), eq(dentalMemberships.branchId, branchId)));
+    .where(and(
+      eq(dentalMemberships.personId, userId),
+      eq(dentalMemberships.branchId, branchId),
+      eq(dentalMemberships.status, 'active'),
+    ));
   return member?.role ?? null;
 }
 

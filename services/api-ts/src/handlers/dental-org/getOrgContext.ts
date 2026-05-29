@@ -33,8 +33,10 @@ export async function getOrgContext(ctx: Context): Promise<Response> {
     return ctx.json({ org: null, branch: null, member: null }, 200);
   }
 
+  // EF-ORG-P022: Only consider active branches when picking the default
+  // context branch. An inactive/soft-deleted branch must not be auto-selected.
   const branches = await branchRepo.listByOrg(org.id);
-  const branch = branches[0] ?? null;
+  const branch = branches.find((b) => b.active) ?? null;
 
   // Find this user's membership in the branch
   let member = null;
