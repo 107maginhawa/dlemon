@@ -878,6 +878,64 @@ describe('EM-PAT-002: archiveDentalPatient requires dentist_owner role', () => {
 });
 
 // =============================================================================
+// EM-PAT-001/002/003: export / bulk-archive / restore require dentist_owner
+// =============================================================================
+
+describe('EM-PAT-001/002/003: export, bulk-archive, restore require dentist_owner', () => {
+  afterEach(truncate);
+
+  const HYGIENIST_ID = 'c1000000-0000-1000-8000-000000000098';
+  const hygienistUser = { id: HYGIENIST_ID, email: 'hygienist2@clinic.com' };
+
+  async function seedHygienist() {
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dentalMemberships).values({
+      id: 'eedd0000-0000-1000-8000-000000000098',
+      branchId: BRANCH_ID,
+      personId: HYGIENIST_ID,
+      displayName: 'Hygienist',
+      role: 'hygienist',
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoNothing();
+  }
+
+  test('EM-PAT-001: export by non-owner returns 403', async () => {
+    await seedHygienist();
+    const app = buildTestApp(hygienistUser);
+    const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('EM-PAT-002: bulk-archive by non-owner returns 403', async () => {
+    await seedHygienist();
+    const ownerApp = buildTestApp(authedUser);
+    const p = await createPatient(ownerApp, 'Bulk Guard Patient');
+
+    const app = buildTestApp(hygienistUser);
+    const res = await app.request('/dental/patients/bulk-archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientIds: [p.id] }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('EM-PAT-003: restore by non-owner returns 403', async () => {
+    await seedHygienist();
+    const ownerApp = buildTestApp(authedUser);
+    const p = await createPatient(ownerApp, 'Restore Guard Patient');
+    await ownerApp.request(`/dental/patients/${p.id}/archive`, { method: 'POST' });
+
+    const app = buildTestApp(hygienistUser);
+    const res = await app.request(`/dental/patients/${p.id}/restore`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// =============================================================================
 // EM-PAT-003: archiveDentalPatient parses and stores reason
 // =============================================================================
 
