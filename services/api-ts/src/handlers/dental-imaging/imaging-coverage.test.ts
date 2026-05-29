@@ -998,3 +998,583 @@ describe('PatientImageMgmt_listPatientImages wrapper', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// ---------------------------------------------------------------------------
+// CephMgmt wrapper coverage helpers
+//
+// These use the same column duck-typing as the other mocks but also need to
+// support the innerJoin call in getImagingTierForBranch / getOrgDataForBranch.
+// imagingTier defaults to 'addon' (ceph-enabled); pass 'free' or 'basic' to test the gate.
+// ---------------------------------------------------------------------------
+
+const LANDMARK_ID  = '77777777-0000-0000-0000-000000000030';
+const CEPH_REPORT_ID = '88888888-0000-0000-0000-000000000040';
+
+const MOCK_CEPH_IMAGE = {
+  ...MOCK_IMAGE,
+  modality: 'other' as const,
+};
+
+const MOCK_LANDMARK = {
+  id: LANDMARK_ID,
+  imageId: IMAGE_ID,
+  landmarkCode: 'N',
+  x: 300,
+  y: 200,
+  source: 'manual' as const,
+  confidence: null as number | null,
+  status: 'placed' as const,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  version: 1,
+  createdBy: DENTIST_USER.id,
+  updatedBy: DENTIST_USER.id,
+};
+
+/** A, B, Go, Po all confirmed — satisfies D-L gate for createCephReport */
+const GATE_LANDMARKS = (['A', 'B', 'Go', 'Po'] as const).map((code, i) => ({
+  ...MOCK_LANDMARK,
+  id: `gate-lm-${i}`,
+  landmarkCode: code,
+  status: 'confirmed' as const,
+}));
+
+const MOCK_CEPH_ANALYSIS = {
+  id: 'analysis-cov-1',
+  imageId: IMAGE_ID,
+  analysisType: 'steiner_hybrid_sn' as const,
+  measurements: {} as Record<string, number | null>,
+  calibrationValue: null as number | null,
+  calibrationMethod: 'not_calibrated' as const,
+  calibratedAt: null as Date | null,
+  calibratedBy: null as string | null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  version: 1,
+  createdBy: DENTIST_USER.id,
+  updatedBy: DENTIST_USER.id,
+};
+
+const MOCK_CEPH_REPORT = {
+  id: CEPH_REPORT_ID,
+  imageId: IMAGE_ID,
+  version: 1,
+  snapshot: {
+    landmarks: [],
+    measurements: {},
+    analysis_label: 'steiner_hybrid_sn',
+    calibration: { value: null, method: 'not_calibrated' },
+    software_version: '1.4.0',
+    operator: DENTIST_USER.id,
+    generated_at: new Date().toISOString(),
+    study_date: '2026-01-01',
+    patient_display_id: PATIENT_ID,
+    branch_name: 'Main Branch',
+  } as Record<string, unknown>,
+  createdAt: new Date(),
+  createdBy: DENTIST_USER.id,
+};
+
+function makeCephCoverageDb(opts: {
+  hasMembership?: boolean;
+  memberRole?: string;
+  imagingTier?: 'free' | 'basic' | 'addon' | null;
+  image?: typeof MOCK_CEPH_IMAGE | null;
+  study?: typeof MOCK_STUDY | null;
+  landmark?: typeof MOCK_LANDMARK | null;
+  landmarks?: any[];
+  analysis?: typeof MOCK_CEPH_ANALYSIS | null;
+  report?: typeof MOCK_CEPH_REPORT | null;
+  reportVersion?: number;
+} = {}) {
+  const hasMembership = opts.hasMembership !== false;
+  const memberRole    = opts.memberRole ?? 'dentist_owner';
+  const imagingTier   = opts.imagingTier !== undefined ? opts.imagingTier : 'addon';
+  const image         = opts.image     !== undefined ? opts.image    : MOCK_CEPH_IMAGE;
+  const study         = opts.study     !== undefined ? opts.study    : MOCK_STUDY;
+  const landmark      = opts.landmark  !== undefined ? opts.landmark : MOCK_LANDMARK;
+  const landmarks     = opts.landmarks !== undefined ? opts.landmarks : (landmark ? [landmark] : []);
+  const analysis      = opts.analysis  !== undefined ? opts.analysis : MOCK_CEPH_ANALYSIS;
+  const report        = opts.report    !== undefined ? opts.report   : MOCK_CEPH_REPORT;
+  const reportVersion = opts.reportVersion ?? 0;
+
+  const buildSelectChain = (tableRef: any, fields?: any) => {
+    const hasPersonId     = tableRef?.personId    !== undefined;
+    const hasStudyId      = tableRef?.studyId     !== undefined;
+    const hasPatientId    = tableRef?.patientId   !== undefined && !hasStudyId;
+    const hasLandmarkCode = tableRef?.landmarkCode !== undefined;
+    const hasAnalysisType = tableRef?.analysisType !== undefined;
+    const hasSnapshot     = tableRef?.snapshot    !== undefined;
+    const isMaxVersionQuery = hasSnapshot && fields != null && 'maxVersion' in fields;
+    const hasBranchNameField = fields != null && 'branchName' in fields;
+
+    const whereFn = (_cond: any): any => {
+      if (hasPersonId) {
+        const isRoleQuery = fields != null && 'role' in fields;
+        const memberRow = hasMembership
+          ? (isRoleQuery ? [{ id: 'membership-id', role: memberRole }] : [{ id: 'membership-id' }])
+          : [];
+        const rows = Promise.resolve(memberRow);
+        return Object.assign(rows, { limit: (_n: number) => rows });
+      }
+      if (hasLandmarkCode) {
+        const allRows  = Promise.resolve(landmarks);
+        const oneRow   = Promise.resolve(landmark ? [landmark] : []);
+        return Object.assign(allRows, { limit: (_n: number) => oneRow });
+      }
+      if (hasAnalysisType) {
+        const rows = Promise.resolve(analysis ? [analysis] : []);
+        return Object.assign(rows, { limit: (_n: number) => rows });
+      }
+      if (hasSnapshot) {
+        let rows: Promise<any[]>;
+        if (isMaxVersionQuery) {
+          rows = Promise.resolve([{ maxVersion: reportVersion }]);
+        } else {
+          rows = Promise.resolve(report ? [report] : []);
+        }
+        return Object.assign(rows, {
+          limit: (_n: number) => rows,
+          orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+        });
+      }
+      if (hasStudyId) {
+        const rows = Promise.resolve(image ? [image] : []);
+        return Object.assign(rows, { limit: (_n: number) => rows });
+      }
+      if (hasPatientId) {
+        const rows = Promise.resolve(study ? [study] : []);
+        return Object.assign(rows, { limit: (_n: number) => rows });
+      }
+      const rows = Promise.resolve([]);
+      return Object.assign(rows, { limit: (_n: number) => rows });
+    };
+
+    return {
+      where: whereFn,
+      // listByImage uses direct await on .where() (thenable)
+      then: (res: any, rej: any) => Promise.resolve(landmarks).then(res, rej),
+      innerJoin: (_joinTable: any, _cond: any) => ({
+        where: (_cond2: any) => ({
+          limit: (_n: number) =>
+            Promise.resolve([{
+              imagingTier,
+              ...(hasBranchNameField ? { branchName: 'Main Branch' } : {}),
+            }]),
+        }),
+      }),
+    };
+  };
+
+  return {
+    select: (fields?: any) => ({
+      from: (tableRef: any) => buildSelectChain(tableRef, fields),
+    }),
+    insert: (tableRef: any) => {
+      const isReportTable = tableRef?.snapshot !== undefined;
+      return {
+        values: (_data: any) => ({
+          returning: () =>
+            isReportTable
+              ? Promise.resolve([{ ...MOCK_CEPH_REPORT, version: reportVersion + 1 }])
+              : Promise.resolve([analysis ?? MOCK_CEPH_ANALYSIS]),
+          onConflictDoUpdate: (_opts: any) => ({
+            returning: () => Promise.resolve([analysis ?? MOCK_CEPH_ANALYSIS]),
+          }),
+        }),
+      };
+    },
+    update: (_tableRef: any) => ({
+      set: (_data: any) => ({
+        where: (_cond: any) => ({
+          returning: () => Promise.resolve([landmark ?? MOCK_LANDMARK]),
+        }),
+      }),
+    }),
+    delete: (_tableRef: any) => ({
+      where: (_cond: any) => Promise.resolve(undefined),
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CephMgmt_listCephLandmarks
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_listCephLandmarks wrapper', () => {
+  test('delegates to listCephLandmarks — returns 200 with {items, analysis}', async () => {
+    const { CephMgmt_listCephLandmarks } = await import('./CephMgmt_listCephLandmarks');
+    const app = buildApp(CephMgmt_listCephLandmarks as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, { method: 'GET' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(Array.isArray(body.items)).toBe(true);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_listCephLandmarks } = await import('./CephMgmt_listCephLandmarks');
+    const app = buildApp(CephMgmt_listCephLandmarks as any, {
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, { method: 'GET' });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_listCephLandmarks } = await import('./CephMgmt_listCephLandmarks');
+    const app = buildApp(CephMgmt_listCephLandmarks as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'GET',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, { method: 'GET' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_batchUpsertCephLandmarks
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_batchUpsertCephLandmarks wrapper', () => {
+  test('delegates to batchUpsertCephLandmarks — returns 200', async () => {
+    const { CephMgmt_batchUpsertCephLandmarks } = await import('./CephMgmt_batchUpsertCephLandmarks');
+    const app = buildApp(CephMgmt_batchUpsertCephLandmarks as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'POST',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ landmarks: [{ landmarkCode: 'N', x: 300, y: 200 }] }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_batchUpsertCephLandmarks } = await import('./CephMgmt_batchUpsertCephLandmarks');
+    const app = buildApp(CephMgmt_batchUpsertCephLandmarks as any, {
+      db:     makeCephCoverageDb(),
+      method: 'POST',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ landmarks: [{ landmarkCode: 'N', x: 300, y: 200 }] }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_batchUpsertCephLandmarks } = await import('./CephMgmt_batchUpsertCephLandmarks');
+    const app = buildApp(CephMgmt_batchUpsertCephLandmarks as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'POST',
+      path:   '/:imageId/landmarks',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ landmarks: [{ landmarkCode: 'N', x: 300, y: 200 }] }),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_updateCephLandmark
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_updateCephLandmark wrapper', () => {
+  test('delegates to updateCephLandmark — returns 200', async () => {
+    const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
+    const app = buildApp(CephMgmt_updateCephLandmark as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'PATCH',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x: 310 }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
+    const app = buildApp(CephMgmt_updateCephLandmark as any, {
+      db:     makeCephCoverageDb(),
+      method: 'PATCH',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x: 310 }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
+    const app = buildApp(CephMgmt_updateCephLandmark as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'PATCH',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x: 310 }),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_deleteCephLandmark
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_deleteCephLandmark wrapper', () => {
+  test('delegates to deleteCephLandmark — returns 204', async () => {
+    const { CephMgmt_deleteCephLandmark } = await import('./CephMgmt_deleteCephLandmark');
+    const app = buildApp(CephMgmt_deleteCephLandmark as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'DELETE',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_deleteCephLandmark } = await import('./CephMgmt_deleteCephLandmark');
+    const app = buildApp(CephMgmt_deleteCephLandmark as any, {
+      db:     makeCephCoverageDb(),
+      method: 'DELETE',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, { method: 'DELETE' });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_deleteCephLandmark } = await import('./CephMgmt_deleteCephLandmark');
+    const app = buildApp(CephMgmt_deleteCephLandmark as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'DELETE',
+      path:   '/:imageId/landmarks/:landmarkCode',
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/N`, { method: 'DELETE' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_getCephAnalysis
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_getCephAnalysis wrapper', () => {
+  test('delegates to getCephAnalysis — returns 200', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const app = buildApp(CephMgmt_getCephAnalysis as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis`, { method: 'GET' });
+    expect(res.status).toBe(200);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const app = buildApp(CephMgmt_getCephAnalysis as any, {
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis`, { method: 'GET' });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const app = buildApp(CephMgmt_getCephAnalysis as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'GET',
+      path:   '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis`, { method: 'GET' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_recomputeCephAnalysis
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_recomputeCephAnalysis wrapper', () => {
+  test('delegates to recomputeCephAnalysis — returns 200', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    const app = buildApp(CephMgmt_recomputeCephAnalysis as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'POST',
+      path:   '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(200);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    const app = buildApp(CephMgmt_recomputeCephAnalysis as any, {
+      db:     makeCephCoverageDb(),
+      method: 'POST',
+      path:   '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
+    const app = buildApp(CephMgmt_recomputeCephAnalysis as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'POST',
+      path:   '/:imageId/analysis/recompute',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis/recompute`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_createCephReport
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_createCephReport wrapper', () => {
+  test('delegates to createCephReport — returns 201', async () => {
+    const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
+    const app = buildApp(CephMgmt_createCephReport as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ landmarks: GATE_LANDMARKS, reportVersion: 0 }),
+      method: 'POST',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.version).toBe(1);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
+    const app = buildApp(CephMgmt_createCephReport as any, {
+      db:     makeCephCoverageDb({ landmarks: GATE_LANDMARKS }),
+      method: 'POST',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
+    const app = buildApp(CephMgmt_createCephReport as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic', landmarks: GATE_LANDMARKS }),
+      method: 'POST',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CephMgmt_getCephReport
+// ---------------------------------------------------------------------------
+
+describe('CephMgmt_getCephReport wrapper', () => {
+  test('delegates to getCephReport — returns 200', async () => {
+    const { CephMgmt_getCephReport } = await import('./CephMgmt_getCephReport');
+    const app = buildApp(CephMgmt_getCephReport as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, { method: 'GET' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.version).toBe(1);
+  });
+
+  test('returns 401 when unauthenticated', async () => {
+    const { CephMgmt_getCephReport } = await import('./CephMgmt_getCephReport');
+    const app = buildApp(CephMgmt_getCephReport as any, {
+      db:     makeCephCoverageDb(),
+      method: 'GET',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, { method: 'GET' });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 404 when no report exists', async () => {
+    const { CephMgmt_getCephReport } = await import('./CephMgmt_getCephReport');
+    const app = buildApp(CephMgmt_getCephReport as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ report: null }),
+      method: 'GET',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, { method: 'GET' });
+    expect(res.status).toBe(404);
+  });
+
+  test('returns 403 on basic tier (EF-IMG-009)', async () => {
+    const { CephMgmt_getCephReport } = await import('./CephMgmt_getCephReport');
+    const app = buildApp(CephMgmt_getCephReport as any, {
+      user:   DENTIST_USER,
+      db:     makeCephCoverageDb({ imagingTier: 'basic' }),
+      method: 'GET',
+      path:   '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, { method: 'GET' });
+    expect(res.status).toBe(403);
+  });
+});
