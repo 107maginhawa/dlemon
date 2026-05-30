@@ -49,6 +49,45 @@ describe('parseConfig', () => {
     expect(config.cors.origins).toEqual(['*']);
   });
 
+  // --------------------------------------------------------------------------
+  // T-002: email-verification gate (env-gated, prod-safe-by-default)
+  // --------------------------------------------------------------------------
+
+  test('requireEmailVerification defaults to false in dev/test', () => {
+    delete process.env['NODE_ENV'];
+    delete process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'];
+    expect(parseConfig().auth.requireEmailVerification).toBe(false);
+  });
+
+  test('requireEmailVerification can be forced on via env', () => {
+    delete process.env['NODE_ENV'];
+    process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'] = 'true';
+    expect(parseConfig().auth.requireEmailVerification).toBe(true);
+  });
+
+  test('requireEmailVerification defaults to TRUE in production', () => {
+    // Satisfy the production secret guard so parseConfig() doesn't refuse to start.
+    process.env['NODE_ENV'] = 'production';
+    process.env['AUTH_SECRET'] = 'x'.repeat(40);
+    process.env['INTERNAL_SERVICE_TOKEN'] = 'y'.repeat(40);
+    process.env['DATABASE_URL'] = 'postgres://real:cred@db.example.com:5432/prod';
+    process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
+    process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+    delete process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'];
+    expect(parseConfig().auth.requireEmailVerification).toBe(true);
+  });
+
+  test('production can explicitly opt out via env', () => {
+    process.env['NODE_ENV'] = 'production';
+    process.env['AUTH_SECRET'] = 'x'.repeat(40);
+    process.env['INTERNAL_SERVICE_TOKEN'] = 'y'.repeat(40);
+    process.env['DATABASE_URL'] = 'postgres://real:cred@db.example.com:5432/prod';
+    process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
+    process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+    process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'] = 'false';
+    expect(parseConfig().auth.requireEmailVerification).toBe(false);
+  });
+
   test('returns default log level info', () => {
     delete process.env['LOG_LEVEL'];
     const config = parseConfig();

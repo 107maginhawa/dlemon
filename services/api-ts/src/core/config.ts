@@ -148,6 +148,13 @@ export function parseConfig(): Config {
       rateLimitWindow: parseIntValue(process.env['AUTH_RATE_LIMIT_WINDOW'], 60), // 1 minute
       rateLimitMax: parseIntValue(process.env['AUTH_RATE_LIMIT_MAX'], 10), // 10 attempts
       adminEmails: parseList(process.env['AUTH_ADMIN_EMAILS'], []),
+      // T-002: require a verified email before sign-in. Safe-by-default in production;
+      // off in dev/test so immediate sign-in (seeds, local, CI) keeps working.
+      // Override anywhere with AUTH_REQUIRE_EMAIL_VERIFICATION.
+      requireEmailVerification: parseBool(
+        process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'],
+        process.env['NODE_ENV'] === 'production',
+      ),
       socialProviders: {
         google: process.env['GOOGLE_CLIENT_ID'] && process.env['GOOGLE_CLIENT_SECRET'] ? {
           clientId: process.env['GOOGLE_CLIENT_ID'],

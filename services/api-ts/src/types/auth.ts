@@ -41,6 +41,8 @@ export interface AuthConfig {
   rateLimitWindow?: number; // seconds
   rateLimitMax?: number; // max attempts
   adminEmails?: string[]; // emails to automatically promote to admin
+  /** T-002: gate sign-in on a verified email. Defaults true in production, false otherwise. */
+  requireEmailVerification?: boolean;
   cookieSameSite?: 'strict' | 'lax' | 'none';
   secureCookies?: boolean;
   socialProviders?: {

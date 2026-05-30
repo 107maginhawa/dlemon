@@ -77,7 +77,8 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
     // Email and password authentication
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false, // Disabled for testing
+      // T-002: env-gated — true in production, false in dev/test (config.ts default).
+      requireEmailVerification: config.auth.requireEmailVerification ?? false,
       minPasswordLength: 8,
       maxPasswordLength: 128,
       sendResetPassword: async ({ user, url, token }) => {

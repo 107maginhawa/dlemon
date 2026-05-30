@@ -224,7 +224,7 @@ inherit the global PERFORMANCE.md SLAs. Fill module-specific P95s when defined.
 | Session token theft via XSS (S) | Better-Auth httpOnly cookies; React escaping | Inject `<script>` in all text inputs; verify stored output is encoded | HIGH |
 | Auth bypass (S) | Better-Auth session validation | Send expired / tampered / missing tokens → expect 401 | HIGH |
 | PHI in logs (T-001, **RESOLVED**) | Pino `redact` paths (logger.ts) + audit-logger emits safe identifiers only (no metadata/before/after snapshots to Pino) | Trigger requests with PII; grep logs for email/name/dob/clinical text — expect none. Covered by `logger.test.ts` + `audit-logger.test.ts`. | HIGH |
-| Email verification bypass (T-002, **OPEN P1**) | `requireEmailVerification` hardcoded false | Register + act without verifying; verify gating once fixed | HIGH |
+| Email verification bypass (T-002, **RESOLVED**) | `requireEmailVerification` env-gated — true in production by default (config.ts), false in dev/test; override via `AUTH_REQUIRE_EMAIL_VERIFICATION` | In a prod-like env, register then act before verifying → expect gating. Covered by `config.test.ts`. | HIGH |
 | Associate accessing other dentist's patients (I, Partial) | "own patients" check in repo | As `dentist_associate`, request another associate's patient → expect 403 | HIGH |
 | Unbounded list query flood (T-007, **OPEN P2**) | Pagination (verify all list handlers) | Request lists without/with huge `pageSize`; expect capped page size | MEDIUM |
 | CORS misconfig (I) | Dynamic origin allowlist, credentials only for allowlisted | Send cross-origin with non-allowlisted Origin → expect no credentialed CORS | MEDIUM |
@@ -352,5 +352,5 @@ Pipeline: `/oli-plan-slices` → `/oli-check --traceability` → **YOU ARE HERE
    target, image upload/processing time, PMD generation time, CRDT merge time,
    pg-boss throughput.
 5. **Confirm or override** the inferred WCAG 2.1 AA a11y baseline (§1 CONFIRM flag).
-6. Prioritize DAST on the remaining OPEN P1 threats: T-002 (email-verification
-   bypass), T-004 (admin break-glass audit). T-001 (PHI in logs) is RESOLVED in code.
+6. Prioritize DAST on the remaining OPEN P1 threat T-004 (admin break-glass audit).
+   T-001 (PHI in logs) and T-002 (email-verification bypass) are RESOLVED in code.
