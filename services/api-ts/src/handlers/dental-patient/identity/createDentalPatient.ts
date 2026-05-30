@@ -22,7 +22,7 @@ import { UnauthorizedError, ValidationError, BusinessLogicError } from '@/core/e
 import type { User } from '@/types/auth';
 import { findDuplicateDentalPatients, createPatientForRegistration } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { CreateDentalPatientBody } from '@/generated/openapi/validators';
 
@@ -40,9 +40,12 @@ export async function createDentalPatient(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // Branch-level authorization — branchId required for all patient registrations
+  // Branch-level authorization — branchId required for all patient registrations.
+  // V-PAT-002/CONF-DP-001: enforce a create-capable role (matrix denies hygienist,
+  // staff_scheduling, read_only) rather than mere branch membership — mirrors
+  // updateDentalPatient. API_CONTRACTS: owner/associate/staff_full.
   if (!body.branchId) throw new ValidationError('branchId is required');
-  await assertBranchAccess(db, user.id, body.branchId);
+  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
 
   // Split displayName into firstName + lastName
   const parts = body.displayName.trim().split(/\s+/);

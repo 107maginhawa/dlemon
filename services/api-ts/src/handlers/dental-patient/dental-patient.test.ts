@@ -923,6 +923,74 @@ describe('EF-PAT-002: consent check returns 422 CONSENT_REQUIRED', () => {
 });
 
 // =============================================================================
+// V-PAT-002 / CONF-DP-001: createDentalPatient enforces role, not just membership
+//
+// ROLE_PERMISSION_MATRIX: Create patient is allowed for dentist_owner,
+// dentist_associate, staff_full and DENIED (403) for hygienist,
+// staff_scheduling, read_only. The matrix-denied roles are active branch
+// members, so a pure membership check (assertBranchAccess) would wrongly
+// allow them — this suite pins the role backstop.
+// =============================================================================
+
+describe('V-PAT-002/CONF-DP-001: createDentalPatient requires a create-capable role', () => {
+  afterEach(truncate);
+
+  async function seedMember(personId: string, membershipId: string, role: string) {
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dentalMemberships).values({
+      id: membershipId,
+      branchId: BRANCH_ID,
+      personId,
+      displayName: role,
+      role: role as any,
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoUpdate({ target: dentalMemberships.id, set: { role: role as any } });
+  }
+
+  test('staff_scheduling (matrix-DENIED) gets 403 on POST /dental/patients', async () => {
+    const SCHED_ID = 'c1000000-0000-1000-8000-0000000000a1';
+    await seedMember(SCHED_ID, 'eedd0000-0000-1000-8000-0000000000a1', 'staff_scheduling');
+
+    const app = buildTestApp({ id: SCHED_ID, email: 'sched@clinic.com' });
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Denied Patient', consentGiven: true, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('hygienist (matrix-DENIED) gets 403 on POST /dental/patients', async () => {
+    const HYG_ID = 'c1000000-0000-1000-8000-0000000000a2';
+    await seedMember(HYG_ID, 'eedd0000-0000-1000-8000-0000000000a2', 'hygienist');
+
+    const app = buildTestApp({ id: HYG_ID, email: 'hyg-create@clinic.com' });
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Denied Patient 2', consentGiven: true, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_full (matrix-ALLOWED) gets 201 on POST /dental/patients', async () => {
+    const SF_ID = 'c1000000-0000-1000-8000-0000000000a3';
+    await seedMember(SF_ID, 'eedd0000-0000-1000-8000-0000000000a3', 'staff_full');
+
+    const app = buildTestApp({ id: SF_ID, email: 'sf-create@clinic.com' });
+    const res = await app.request('/dental/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Allowed Patient', consentGiven: true, branchId: BRANCH_ID }),
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
+// =============================================================================
 // EM-PAT-002: archiveDentalPatient requires dentist_owner role
 // =============================================================================
 

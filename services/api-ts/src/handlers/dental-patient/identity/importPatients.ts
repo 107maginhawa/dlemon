@@ -120,10 +120,12 @@ export async function importPatients(ctx: Context): Promise<Response> {
     return ctx.json({ success: false, errors, imported: 0, total: rawRows.length }, 422);
   }
 
-  // Branch-level authorization: verify access to all unique branchIds
+  // Branch-level authorization: verify access to all unique branchIds.
+  // V-PAT-002/CONF-DP-001: API_CONTRACTS + ROLE_PERMISSION_MATRIX restrict bulk
+  // import to dentist_owner only.
   const uniqueBranchIds = [...new Set(validRows.map(r => r.branchId))];
   for (const branchId of uniqueBranchIds) {
-    await assertBranchRole(db, user.id, branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+    await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
   }
 
   // All-or-nothing transaction
