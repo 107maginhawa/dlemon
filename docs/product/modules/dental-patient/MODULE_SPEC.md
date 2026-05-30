@@ -94,6 +94,21 @@ Visit/treatment records (dental-visit), billing invoices (dental-billing), clini
 | BR-015b | IF patient.status = archived THEN record is read-only | All write handlers | 403 |
 | BR-015c | IF follow-up note added THEN append-only (no edit/delete) | Follow-up notes | 405 on PATCH/DELETE |
 | BR-020 | Patient merge not implemented — manual deduplication only | Merge endpoint | 501 NOT IMPLEMENTED |
+| TP-BR-005 | Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete | Treatment-plan completion (derived) | Plan status derived from linked treatments: all done→`completed`, some done→`partially_completed`, none→`approved`; `dismissed`/`declined` excluded |
+
+### Treatment plans (TR-P1-08)
+
+Plan FSM: `draft → presented → approved → partially_completed → completed` (`cancelled`
+reachable from any non-terminal state). The completion states (`partially_completed`,
+`completed`) are **derived**, not manually set: a treatment is linked to a plan
+(`dental_treatment.treatment_plan_id`) at approval time, and any treatment status change
+recomputes the parent plan per **TP-BR-005**. `approved`+ plans only.
+
+**CR-05 — approval record:** approving a plan writes an append-only
+`dental_treatment_plan_approval` row (`approved_by_person_id`, `method` =
+signature/verbal/portal, optional `consent_form_id` / `plan_version_id` /
+`signature_data`). Approval also links the patient's pending (diagnosed/planned)
+treatments as the plan's items.
 
 ---
 
@@ -182,6 +197,7 @@ archived ──► active  (reactivation by dentist_owner)
 | POST /dental/patients/bulk-archive | Bulk archive | ids[] | count | 403 |
 | POST /dental/patients/import | CSV/JSON import | file | result | 422 |
 | GET /dental/patients/:id/export | Export record | — | JSON/CSV | — |
+| POST /dental/patients/:id/treatment-plans/:planId/approval | CR-05: approve plan, link items, write approval record | approvedByPersonId, method, consentFormId?, planVersionId?, signatureData? | { approval, plan } | 404, 422 (PLAN_NOT_APPROVABLE) |
 
 ---
 
