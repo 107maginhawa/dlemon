@@ -69,14 +69,16 @@ Post-fix gate: **`bun test` 196 files / 2747 pass / 0 fail**, api + web `typeche
 - **Audit:** PHI sanitizer moved into `AuditLogRepository.insert` (single choke point) + consumer test. `ae53edc9`
 - **PMD:** Hurl contract 400→422; AC-PMD-004 immutability test. **Scheduling:** doc fix + flake fix. **Perio:** API_CONTRACTS hygienist doc. **EMR admin** read/list branches + tests. **Events** publisher audit-trace tests. **Imaging** FE error-surfacing.
 
-### Blocked — deferred for product/human decision (5; **not** auto-changed)
-| ID | Why deferred |
-|----|--------------|
-| TR-P1-07 | Roadmap feature: dentition-init UI (new workspace action), not a binding fix |
-| TR-P1-08 | Roadmap feature: item-level treatment-plan completion + CR-05 approval record |
-| TR-P1-06 | `markUncollectible`/BR-013 — explicitly deferred in MODULE_SPEC (6+ places) |
-| V-CLI-015 | Spec-decision: attachment image-type enum vs radiograph taxonomy needs canonical direction (recommend reconcile spec→code; code→spec needs impossible backfill) |
-| V-VIS-101 | Spec-decision: performed-vs-verified treatment immutability — documented MODULE_SPEC ↔ API_CONTRACTS contradiction; needs a canonical ruling before changing behavior |
+### Previously-deferred 5 — ALL RESOLVED (2026-05-30 follow-up session, +11 commits)
+| ID | Resolution | Commit |
+|----|-----------|--------|
+| V-CLI-015 | Ruling: reconcile spec→code. `dental_attachment.image_type` is a coarse FILE-category enum; the radiograph MODALITY taxonomy is owned by dental-imaging.ModalityEnum (system-of-record). MODULE_SPEC §7 fixed + enum-lock test. | `1e9c898d` |
+| V-VIS-101 | Ruling: field-immutability begins at `performed` (BR-007/AC-VIS-003 canonical; API_CONTRACTS:139 "verified" was wrong). Guard already correct — added performed-immutability tests + fixed contract wording. | `2a143431` |
+| TR-P1-06 | Keep deferred (spec explicit). Converted the skipped BR-013 placeholder into an active 501 NOT_IMPLEMENTED test (deferral now enforced). | `4b443343` |
+| TR-P1-07 | Built: chart empty-state "Initialize Dentition" action (auto-detect from patient DOB) + `useInitializeDentition` hook. | `92251753` |
+| TR-P1-08 | Built: item-level TP completion (TP-BR-005 derivation) + CR-05 approval record. Migration 0074, recompute trigger, `POST .../treatment-plans/:planId/approval`. Design doc in `slices/tr-p1-08-item-level-tp-completion/DESIGN.md`. | `4012ac9c`→`cb5c6dde` |
+
+Post-resolution gate: **api 199 files / 2768 pass / 0 fail**, web 1356 pass / 0 fail, api+web typecheck clean.
 
 ### Follow-ups noted (out of --fix scope)
 - `@monobase/api-ts-embedded` resolves drizzle-orm@0.44.7 transitively — bump if embedded ORM exposure matters.
