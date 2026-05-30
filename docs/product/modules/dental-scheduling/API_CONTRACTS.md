@@ -46,7 +46,8 @@ Book an appointment.
 | `visit_type` | string | NO | |
 | `created_at` | string (date-time) | NO | |
 
-**Errors:** `DOUBLE_BOOKING(409)`, `OUTSIDE_WORKING_HOURS(422)`, `NOT_FOUND(404)`, `VALIDATION_ERROR(400)`
+**Warnings (non-blocking):** `201 + warnings:[DOUBLE_BOOKING]` in body (per MODULE_SPEC §20.1 / AC-SCH-001 — double-booking soft-warns, it does not reject)
+**Errors:** `OUTSIDE_WORKING_HOURS(422)`, `NOT_FOUND(404)`, `VALIDATION_ERROR(400)`
 **Events emitted:** DE-010 AppointmentBooked
 
 ---
