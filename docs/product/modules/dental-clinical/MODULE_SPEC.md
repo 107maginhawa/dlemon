@@ -81,7 +81,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ### WF-039 — File Attachment Upload
 1. Dentist or Staff Full opens visit → "Attachments" panel → drag-drop or file picker.
-2. Smart Attachment tagging: image type (periapical, bitewing, panoramic, photo, other) + optional tooth numbers.
+2. Smart Attachment tagging: file-category image type (`xray`, `photo`, `scan`, `document`, `other`) + optional tooth numbers. This is a coarse file bucket; the clinical radiograph **modality** taxonomy (periapical/bitewing/panoramic/cephalometric/cbct/…) is owned by the dental-imaging module (`ModalityEnum`), which is the system-of-record for true radiograph studies. Legacy attachments tagged `xray`/`photo`/`scan` surface in the imaging workspace via `clinical-imaging.facade` (`source: 'legacy'`).
 3. File stored in S3/MinIO via `storage` module. Metadata record linked to `dental_visit_id`.
 4. Max file size: 50 MB per file. Accepted types: JPEG, PNG, TIFF, DICOM, PDF.
 5. Attachment list updates optimistically; S3 upload confirmed before persisting DB record.
@@ -119,7 +119,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 **`lab_order`:** id, visit_id, tooth_fdi, lab_name, instructions, due_date, status (ordered/in_fabrication/delivered/fitted/cancelled)
 **`consent_form`:** id, visit_id, patient_id, template_id, status (pending/signed/revoked), signed_at, signature_data
 **`medical_history_entry`:** id, patient_id, branch_id, entry_type (allergy/condition/medication), value, created_by (append-only)
-**`dental_attachment`:** id, visit_id, storage_file_id, file_name, mime_type, image_type_enum
+**`dental_attachment`:** id, visit_id, patient_id, storage_file_id (file_path), file_name, mime_type, image_type (enum: `xray`/`photo`/`scan`/`document`/`other` — file category, NOT radiograph modality; modality lives in dental-imaging), tooth_numbers, file_size_bytes, note
 
 ---
 

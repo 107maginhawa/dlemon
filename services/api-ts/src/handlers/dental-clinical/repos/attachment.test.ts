@@ -4,6 +4,7 @@
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { AttachmentRepository } from './attachment.repo';
+import { VALID_IMAGE_TYPES } from './attachment.schema';
 import { openTestTx } from '@/core/test-tx';
 import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -62,6 +63,18 @@ describe('AttachmentRepository', () => {
       for (const imageType of ['xray', 'photo', 'scan', 'document', 'other'] as const) {
         const att = await repo.createOne({ ...baseAttachment, imageType });
         expect(att.imageType).toBe(imageType);
+      }
+    });
+
+    // V-CLI-015 canonical ruling: dental_attachment.image_type is a coarse
+    // FILE-CATEGORY taxonomy, NOT the clinical radiograph modality taxonomy
+    // (periapical/bitewing/panoramic/…) — that lives in dental-imaging.ModalityEnum.
+    // Lock the exact set so spec↔code can't silently drift toward modalities.
+    test('image_type is the canonical file-category enum (V-CLI-015)', () => {
+      expect([...VALID_IMAGE_TYPES]).toEqual(['xray', 'photo', 'scan', 'document', 'other']);
+      // radiograph modalities must NOT leak into the attachment enum
+      for (const modality of ['periapical', 'bitewing', 'panoramic', 'cephalometric', 'cbct']) {
+        expect(VALID_IMAGE_TYPES as readonly string[]).not.toContain(modality);
       }
     });
   });
