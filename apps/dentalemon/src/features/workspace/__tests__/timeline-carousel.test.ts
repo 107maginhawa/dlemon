@@ -7,13 +7,16 @@
  * the __swiperCaptures global for captured Swiper callbacks.
  */
 
-import { describe, test, expect, afterEach, beforeEach, test as _test } from 'bun:test';
+import { describe, test, expect, afterEach, beforeEach, mock, test as _test } from 'bun:test';
 const skipMockDependent = _test.skip; // tests that rely on Swiper prop capture not yet wired
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TimelineCarousel } from '../components/timeline-carousel';
+
+// useInitializeDentition's success/error paths call sonner toasts — stub them.
+mock.module('sonner', () => ({ toast: { error: () => {}, success: () => {} } }));
 
 // Access swiper captures from test-setup.ts (accessed lazily — preload sets this up)
 const getCaptures = () => (globalThis as any).__swiperCaptures as Record<string, unknown>;
@@ -262,6 +265,72 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(errorEl).not.toBeNull();
       expect(errorEl.textContent).toMatch(/Failed to load chart/i);
       expect(screen.getAllByText(/Retry/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('dentition init empty-state (TR-P1-07)', () => {
+    // Active slide = most-recent visit (VISIT_NEW, draft → editable). With an empty
+    // chart and a known DOB, the card offers an "Initialize Dentition" action.
+    test('shows Initialize Dentition action for active editable visit with DOB and no teeth', async () => {
+      renderCarousel({
+        visits: [VISIT_NEW],
+        patientId: 'test-patient',
+        patientDateOfBirth: '2018-04-01',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(await screen.findByTestId('init-dentition-btn')).not.toBeNull();
+    });
+
+    test('omits the action when no patientDateOfBirth is provided', async () => {
+      renderCarousel({
+        visits: [VISIT_NEW],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      // chart renders instead of the init empty-state
+      expect(await screen.findByTestId('dental-chart-stub')).not.toBeNull();
+      expect(screen.queryByTestId('init-dentition-btn')).toBeNull();
+    });
+
+    test('omits the action for a locked (non-editable) visit', async () => {
+      renderCarousel({
+        visits: [{ ...VISIT_NEW, status: 'locked' as const }],
+        patientId: 'test-patient',
+        patientDateOfBirth: '2018-04-01',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(await screen.findByTestId('dental-chart-stub')).not.toBeNull();
+      expect(screen.queryByTestId('init-dentition-btn')).toBeNull();
+    });
+
+    test('clicking Initialize Dentition POSTs to /dental/patients/:id/dentition', async () => {
+      const user = userEvent.setup();
+      const calls: { url: string; method: string }[] = [];
+      global.fetch = ((req: Request | string | URL, init?: RequestInit) => {
+        const url = req instanceof Request ? req.url : String(req);
+        const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
+        calls.push({ url, method });
+        if (url.includes('/dentition')) {
+          return Promise.resolve(new Response(JSON.stringify({ chartId: 'c1', toothCount: 20 }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ teeth: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }) as typeof fetch;
+
+      renderCarousel({
+        visits: [VISIT_NEW],
+        patientId: 'test-patient',
+        patientDateOfBirth: '2018-04-01',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      await user.click(await screen.findByTestId('init-dentition-btn'));
+      await waitFor(() =>
+        expect(calls.some((c) => c.url.includes('/dental/patients/test-patient/dentition') && c.method === 'POST')).toBe(true),
+      );
     });
   });
 

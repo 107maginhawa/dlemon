@@ -18,6 +18,7 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import { useUpdateVisit } from '@/features/workspace/hooks/use-update-visit';
+import { useInitializeDentition } from '@/features/workspace/hooks/use-initialize-dentition';
 import { getDentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import type { ToothData, DentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
@@ -51,6 +52,8 @@ export interface TimelineCarouselProps {
 function VisitChartCard({
   visit,
   isActive,
+  patientId,
+  patientDateOfBirth,
   onSelectTooth,
   onLockVisit,
   lockPending,
@@ -59,6 +62,8 @@ function VisitChartCard({
 }: {
   visit: VisitCard;
   isActive: boolean;
+  patientId: string;
+  patientDateOfBirth?: string | null;
   onSelectTooth?: (toothNumber: number) => void;
   onLockVisit?: (visitId: string) => void;
   lockPending?: boolean;
@@ -73,6 +78,12 @@ function VisitChartCard({
     },
   });
   const teeth = data ?? [];
+
+  const initDentition = useInitializeDentition();
+  // TR-P1-07: a fresh, editable visit with no charted teeth can auto-populate its
+  // dentition from the patient's DOB (deciduous / mixed / permanent picked by age).
+  const isEditable = visit.status === 'active' || visit.status === 'draft';
+  const canInitDentition = isActive && isEditable && !!patientDateOfBirth && teeth.length === 0;
 
   return (
     <div
@@ -100,6 +111,28 @@ function VisitChartCard({
               className="h-8 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
             >
               Retry
+            </button>
+          </div>
+        ) : canInitDentition ? (
+          <div
+            data-testid="dentition-empty-state"
+            className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center"
+          >
+            <p className="text-sm text-muted-foreground">No dental chart yet for this visit.</p>
+            <button
+              type="button"
+              data-testid="init-dentition-btn"
+              disabled={initDentition.isPending}
+              onClick={() =>
+                initDentition.mutate({
+                  patientId,
+                  visitId: visit.id,
+                  dateOfBirth: patientDateOfBirth as string,
+                })
+              }
+              className="h-9 px-4 rounded-lg border-2 border-[#FFCC5E] bg-[#FFE97D]/40 text-sm font-semibold text-foreground hover:bg-[#FFE97D]/70 transition-colors disabled:opacity-50"
+            >
+              {initDentition.isPending ? 'Initializing…' : 'Initialize Dentition'}
             </button>
           </div>
         ) : (
@@ -236,6 +269,8 @@ export function TimelineCarousel({
               <VisitChartCard
                 visit={visit}
                 isActive={isActive}
+                patientId={patientId}
+                patientDateOfBirth={patientDateOfBirth}
                 onSelectTooth={onSelectTooth}
                 onLockVisit={(visitId) =>
                   lockMutation.mutate({ path: { visitId }, body: { status: 'locked' } })
