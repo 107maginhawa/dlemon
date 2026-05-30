@@ -189,7 +189,9 @@ Content-Type: application/json
   "visitId": "{{draft_visit_id}}",
   "patientId": "{{patient_id_2}}"
 }
-HTTP 400
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "VISIT_NOT_COMPLETED"
 
 
 # 8. List PMDs for patient
