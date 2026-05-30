@@ -126,7 +126,7 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
 // ---------------------------------------------------------------------------
 
 export function TreatmentPlansSheet({ patientId, open, onClose }: TreatmentPlansSheetProps) {
-  const { plans, isLoading, updatePlan, isUpdating } = useTreatmentPlans(patientId);
+  const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
 
   if (!open) return null;
 
@@ -175,6 +175,11 @@ export function TreatmentPlansSheet({ patientId, open, onClose }: TreatmentPlans
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading ? (
             <p className="text-center text-sm text-muted-foreground py-8">Loading plans…</p>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+              <ClipboardList className="h-8 w-8 text-destructive/50" />
+              <p className="text-sm text-destructive">Couldn’t load treatment plans. Please try again.</p>
+            </div>
           ) : plans.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
               <ClipboardList className="h-8 w-8 text-muted-foreground/40" />

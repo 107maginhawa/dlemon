@@ -28,7 +28,7 @@ const CDT_DESCRIPTIONS: Record<string, string> = {
 
 export function FeeSchedule() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading } = useBranchSettings(branchId);
+  const { settings, isLoading, isError } = useBranchSettings(branchId);
   const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 
   const [fees, setFees] = useState<FeeEntry[]>(DEFAULT_FEES);
@@ -70,6 +70,7 @@ export function FeeSchedule() {
   }
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isError) return <div className="text-sm text-destructive">Failed to load fee schedule. Please try again.</div>;
 
   return (
     <div className="flex flex-col gap-4">

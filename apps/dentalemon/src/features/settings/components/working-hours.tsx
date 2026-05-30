@@ -90,7 +90,7 @@ const TIME_OPTIONS = generateTimeOptions();
 
 export function WorkingHours() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading } = useBranchSettings(branchId);
+  const { settings, isLoading, isError } = useBranchSettings(branchId);
   const { update, isPending, isSuccess, error: saveError, reset } = useUpdateBranchSettings(branchId);
 
   const [hours, setHours] = useState<WorkingHoursMap>(defaultWorkingHours);
@@ -124,6 +124,7 @@ export function WorkingHours() {
   const inputClass = 'h-9 rounded-lg border border-border px-2 text-sm bg-background focus:border-[#FFE97D] outline-none';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isError) return <div className="text-sm text-destructive">Failed to load working hours. Please try again.</div>;
 
   return (
     <div className="flex flex-col gap-4 max-w-xl">

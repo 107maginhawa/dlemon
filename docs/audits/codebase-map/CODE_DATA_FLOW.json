@@ -1,4 +1,2836 @@
 {
-  "version": 3,
-  "flows": {}
+  "version": 5,
+  "flows": {
+    "AppSidebar": {
+      "props_received_from": [
+        {
+          "parent": "DashboardLayout",
+          "props": [
+            "headerSubtitle",
+            "headerTitle",
+            "navGroups"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "Combobox": {
+      "props_received_from": [
+        {
+          "parent": "PreferencesForm",
+          "props": [
+            "emptyText",
+            "maxHeight",
+            "multiSelect",
+            "onChange",
+            "options",
+            "placeholder",
+            "searchPlaceholder",
+            "testId",
+            "value"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PreferencesForm",
+          "events": [
+            "onChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DateTimeFilter": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "EmptyState": {
+      "props_received_from": [
+        {
+          "parent": "TreatmentPlanTab",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ImageCropperDialog": {
+      "props_received_from": [
+        {
+          "parent": "PersonalInfoForm",
+          "props": [
+            "aspectRatio",
+            "cropShape",
+            "imageSrc",
+            "onClose",
+            "onCropComplete",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PersonalInfoForm",
+          "events": [
+            "onClose",
+            "onCropComplete"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useOneSignal": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "RootComponent": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DashboardLayout": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkspaceLayout": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephReportPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "HomePage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "OnboardingPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "VerifyEmailPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "BillingPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CalendarPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DashboardPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DentalOnboardingPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientsPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients",
+          "trigger": "handleRegister"
+        }
+      ]
+    },
+    "ReportsPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "SettingsPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "StaffPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkspacePage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "QueueBoardPage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "RouteComponent": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PinEntry": {
+      "props_received_from": [
+        {
+          "parent": "PinEntryRoute",
+          "props": [
+            "errorMessage",
+            "failedAttempts",
+            "lockedUntil",
+            "member",
+            "onBack",
+            "onSubmit"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PinEntryRoute",
+          "events": [
+            "onBack",
+            "onSubmit"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PinEntryRoute": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members",
+          "trigger": null
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:orgId/branches/:branchId/members/:memberId/verify-pin",
+          "trigger": "handleSubmit"
+        }
+      ]
+    },
+    "PinSelect": {
+      "props_received_from": [
+        {
+          "parent": "PinSelectRoute",
+          "props": [
+            "isError",
+            "isLoading",
+            "members",
+            "onRetry",
+            "onSelect"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PinSelectRoute",
+          "events": [
+            "onRetry",
+            "onSelect"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PinSelectRoute": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members",
+          "trigger": null
+        }
+      ]
+    },
+    "BillingList": {
+      "props_received_from": [
+        {
+          "parent": "BillingPage",
+          "props": [
+            "onInvoiceClick"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "BillingPage",
+          "events": [
+            "onInvoiceClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "InvoiceDetail": {
+      "props_received_from": [
+        {
+          "parent": "BillingPage",
+          "props": [
+            "invoiceId",
+            "onClose",
+            "onUpdated",
+            "onViewPlan",
+            "open"
+          ]
+        },
+        {
+          "parent": "WorkspacePaymentModal",
+          "props": [
+            "invoiceId",
+            "onClose",
+            "onUpdated",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "BillingPage",
+          "events": [
+            "onClose",
+            "onUpdated",
+            "onViewPlan"
+          ]
+        },
+        {
+          "parent": "WorkspacePaymentModal",
+          "events": [
+            "onClose",
+            "onUpdated"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices/:invoiceId",
+          "trigger": "loadInvoice"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/billing/invoices/:invoiceId/issue",
+          "trigger": "handleIssue"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/void",
+          "trigger": "handleVoid"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/payments",
+          "trigger": "handleRecordPayment"
+        }
+      ]
+    },
+    "PaymentPlanView": {
+      "props_received_from": [
+        {
+          "parent": "BillingPage",
+          "props": [
+            "invoiceId",
+            "onClose",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "BillingPage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices/:invoiceId/plan",
+          "trigger": "loadPlan"
+        }
+      ]
+    },
+    "useInvoiceDetail": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useInvoices": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "MetricCard": {
+      "props_received_from": [
+        {
+          "parent": "MorningBriefing",
+          "props": [
+            "accentColor",
+            "action",
+            "subtitle",
+            "title",
+            "value"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "MorningBriefing": {
+      "props_received_from": [
+        {
+          "parent": "DashboardPage",
+          "props": [
+            "branchId",
+            "role"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useDashboardSummary": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AnnotationToolbar": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "onToolChange",
+            "toolMode"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onToolChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CalibrationDialog": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "onCancel",
+            "onConfirm",
+            "open",
+            "pixelDistance"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onCancel",
+            "onConfirm"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "MeasurementShape": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "annotation",
+            "onDelete",
+            "pixelSpacingMm"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onDelete"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AnnotationShape": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "annotation",
+            "onAnnotationClick",
+            "onDelete",
+            "pixelSpacingMm"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onAnnotationClick",
+            "onDelete"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DrawingPreview": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "points",
+            "toolMode"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephAngleArcLayer": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "height",
+            "landmarks",
+            "measurements",
+            "transform",
+            "width"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephLandmarkLayer": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "height",
+            "landmarks",
+            "onCommit",
+            "onDrag",
+            "onPlace",
+            "selectedCode",
+            "transform",
+            "width"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onCommit",
+            "onDrag",
+            "onPlace"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephLandmarkPalette": {
+      "props_received_from": [
+        {
+          "parent": "CephWorkspacePanel",
+          "props": [
+            "landmarks",
+            "onSelect",
+            "selectedCode"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CephWorkspacePanel",
+          "events": [
+            "onSelect"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephLayerPanel": {
+      "props_received_from": [
+        {
+          "parent": "CephWorkspacePanel",
+          "props": [
+            "layers",
+            "onChange"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CephWorkspacePanel",
+          "events": [
+            "onChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephMeasurementsPanel": {
+      "props_received_from": [
+        {
+          "parent": "CephWorkspacePanel",
+          "props": [
+            "analysis"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephReportView": {
+      "props_received_from": [
+        {
+          "parent": "CephReportPage",
+          "props": [
+            "snapshot",
+            "version"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephTracingOverlay": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "height",
+            "landmarks",
+            "transform",
+            "width"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CephWorkspacePanel": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "imageId",
+            "isOpen",
+            "onClose",
+            "onExportPng",
+            "onLayerChange"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onClose",
+            "onExportPng",
+            "onLayerChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/reports",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "ComparisonView": {
+      "props_received_from": [
+        {
+          "parent": "WorkspaceImagingOverlay",
+          "props": [
+            "imageA",
+            "imageB",
+            "onClose"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspaceImagingOverlay",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "FindingsSidebar": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "imageId",
+            "initialAnnotationId",
+            "isOpen",
+            "onClose"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ImageUpload": {
+      "props_received_from": [
+        {
+          "parent": "PatientImageList",
+          "props": [
+            "branchId",
+            "onSuccess",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PatientImageList",
+          "events": [
+            "onSuccess"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ImagingWorkspace": {
+      "props_received_from": [
+        {
+          "parent": "ComparisonView",
+          "props": [
+            "className",
+            "imageId",
+            "imageUrl",
+            "modality"
+          ]
+        },
+        {
+          "parent": "WorkspaceImagingOverlay",
+          "props": [
+            "branchId",
+            "className",
+            "imageId",
+            "imageUrl",
+            "modality",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/calibration",
+          "trigger": null
+        }
+      ]
+    },
+    "MeasurementToolbar": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "isCalibrated",
+            "modality",
+            "onToolChange",
+            "toolMode"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ImagingWorkspace",
+          "events": [
+            "onToolChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientImageList": {
+      "props_received_from": [
+        {
+          "parent": "WorkspaceImagingOverlay",
+          "props": [
+            "branchId",
+            "onCompare",
+            "onSelectImage",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspaceImagingOverlay",
+          "events": [
+            "onCompare",
+            "onSelectImage"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useCephAnalysis": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis",
+          "trigger": "queryFn"
+        }
+      ]
+    },
+    "useCephLandmarks": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useImagingFindings": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/findings",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/findings",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/findings/:findingId",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/findings/:findingId",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useImagingStudies": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/images",
+          "trigger": "queryFn"
+        }
+      ]
+    },
+    "useImagingUpload": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/studies",
+          "trigger": "upload"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/storage/multipart/:fileId/abort",
+          "trigger": "upload"
+        }
+      ]
+    },
+    "useMeasurements": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/measurements",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/measurements",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/measurements/:measurementId",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useOfflineCache": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "OnboardingWizard": {
+      "props_received_from": [
+        {
+          "parent": "DentalOnboardingPage",
+          "props": [
+            "onComplete"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "DentalOnboardingPage",
+          "events": [
+            "onComplete"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations",
+          "trigger": "handleFinish"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches",
+          "trigger": "handleFinish"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches/:id/members",
+          "trigger": "handleFinish"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches/:id/members/:id/set-pin",
+          "trigger": "handleFinish"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients",
+          "trigger": "handleFinish"
+        }
+      ]
+    },
+    "ClinicStep": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingWizard",
+          "props": [
+            "address",
+            "clinicName",
+            "clinicPhone",
+            "countryCode",
+            "onAddressChange",
+            "onClinicNameChange",
+            "onClinicPhoneChange",
+            "onCountryCodeChange"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingWizard",
+          "events": [
+            "onAddressChange",
+            "onClinicNameChange",
+            "onClinicPhoneChange",
+            "onCountryCodeChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DentistStep": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingWizard",
+          "props": [
+            "dentistName",
+            "licenseNumber",
+            "onDentistNameChange",
+            "onLicenseNumberChange",
+            "onPinChange",
+            "onSpecializationChange",
+            "pin",
+            "specialization"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingWizard",
+          "events": [
+            "onDentistNameChange",
+            "onLicenseNumberChange",
+            "onPinChange",
+            "onSpecializationChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "FeesStep": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingWizard",
+          "props": [
+            "fees",
+            "onFeesChange"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingWizard",
+          "events": [
+            "onFeesChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientStep": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingWizard",
+          "props": [
+            "birthDate",
+            "gender",
+            "onBirthDateChange",
+            "onGenderChange",
+            "onPatientNameChange",
+            "onPatientPhoneChange",
+            "patientName",
+            "patientPhone"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingWizard",
+          "events": [
+            "onBirthDateChange",
+            "onGenderChange",
+            "onPatientNameChange",
+            "onPatientPhoneChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DentalChartThumbnail": {
+      "props_received_from": [
+        {
+          "parent": "PatientFolderCard",
+          "props": [
+            "teeth"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "FollowUpNotes": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientFilterTabs": {
+      "props_received_from": [
+        {
+          "parent": "PatientsPage",
+          "props": [
+            "activeFilter",
+            "onFilterChange"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PatientsPage",
+          "events": [
+            "onFilterChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientFolderCard": {
+      "props_received_from": [
+        {
+          "parent": "PatientList",
+          "props": [
+            "onClick",
+            "onProfile",
+            "patient"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PatientList",
+          "events": [
+            "onClick",
+            "onProfile"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientList": {
+      "props_received_from": [
+        {
+          "parent": "PatientsPage",
+          "props": [
+            "activeFilter",
+            "isActionPending",
+            "isExporting",
+            "isLoading",
+            "onArchive",
+            "onBulkArchive",
+            "onExport",
+            "onProfile",
+            "onRestore",
+            "onSearchChange",
+            "onSelect",
+            "patients",
+            "searchQuery"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PatientsPage",
+          "events": [
+            "onArchive",
+            "onBulkArchive",
+            "onExport",
+            "onProfile",
+            "onRestore",
+            "onSearchChange",
+            "onSelect"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientProfilePage": {
+      "props_received_from": [
+        {
+          "parent": "ProfilePage",
+          "props": [
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientRegistrationModal": {
+      "props_received_from": [
+        {
+          "parent": "PatientsPage",
+          "props": [
+            "onClose",
+            "onSubmit",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "PatientsPage",
+          "events": [
+            "onClose",
+            "onSubmit"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useFollowUpNotes": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useAddFollowUpNote": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useArchivePatient": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useRestorePatient": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useBulkArchive": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useExportPatients": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePatientBilling": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePatientProfile": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePatients": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AddressForm": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingPage",
+          "props": [
+            "defaultValues",
+            "mode",
+            "onSkip",
+            "onSubmit",
+            "showButtons"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingPage",
+          "events": [
+            "onSkip",
+            "onSubmit"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ContactInfoForm": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PersonalInfoForm": {
+      "props_received_from": [
+        {
+          "parent": "OnboardingPage",
+          "props": [
+            "defaultValues",
+            "formId",
+            "mode",
+            "onSubmit",
+            "showButtons"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "OnboardingPage",
+          "events": [
+            "onSubmit"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PreferencesForm": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PMDImport": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/pmd/import",
+          "trigger": "handleConfirm"
+        }
+      ]
+    },
+    "PMDViewerSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "onImportClick",
+            "open",
+            "pmd"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose",
+            "onImportClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PMDViewer": {
+      "props_received_from": [
+        {
+          "parent": "PMDViewerSheet",
+          "props": [
+            "pmd"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "InvoiceDetailSheet": {
+      "props_received_from": [
+        {
+          "parent": "RevenueReport",
+          "props": [
+            "invoiceId",
+            "onClose",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "RevenueReport",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PatientReport": {
+      "props_received_from": [
+        {
+          "parent": "ReportsPage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "RevenueReport": {
+      "props_received_from": [
+        {
+          "parent": "ReportsPage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices",
+          "trigger": null
+        }
+      ]
+    },
+    "TreatmentReport": {
+      "props_received_from": [
+        {
+          "parent": "ReportsPage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePatientReport": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useTreatmentReport": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AppointmentCard": {
+      "props_received_from": [
+        {
+          "parent": "CalendarDay",
+          "props": [
+            "appointment",
+            "onCheckIn",
+            "onClick"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CalendarDay",
+          "events": [
+            "onCheckIn",
+            "onClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AppointmentModal": {
+      "props_received_from": [
+        {
+          "parent": "CalendarPage",
+          "props": [
+            "appointmentId",
+            "initialDate",
+            "onClose",
+            "onSaved",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CalendarPage",
+          "events": [
+            "onClose",
+            "onSaved"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CalendarDay": {
+      "props_received_from": [
+        {
+          "parent": "CalendarPage",
+          "props": [
+            "appointments",
+            "date",
+            "onAppointmentClick",
+            "onCheckIn",
+            "onSlotClick"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CalendarPage",
+          "events": [
+            "onAppointmentClick",
+            "onCheckIn",
+            "onSlotClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CalendarMonth": {
+      "props_received_from": [
+        {
+          "parent": "CalendarPage",
+          "props": [
+            "appointments",
+            "onDayClick",
+            "selectedDate"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CalendarPage",
+          "events": [
+            "onDayClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CalendarWeek": {
+      "props_received_from": [
+        {
+          "parent": "CalendarPage",
+          "props": [
+            "appointments",
+            "onAppointmentClick",
+            "onDayClick",
+            "weekStart"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "CalendarPage",
+          "events": [
+            "onAppointmentClick",
+            "onDayClick"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "QueueBoard": {
+      "props_received_from": [
+        {
+          "parent": "QueueBoardPage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useAppointments": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useQueueBoard": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/queue-board",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/queue-items/:itemId/status",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "ClinicSettings": {
+      "props_received_from": [
+        {
+          "parent": "SettingsPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "FeeSchedule": {
+      "props_received_from": [
+        {
+          "parent": "SettingsPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "LocaleSettings": {
+      "props_received_from": [
+        {
+          "parent": "SettingsPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "NotificationSettings": {
+      "props_received_from": [
+        {
+          "parent": "SettingsPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkingHours": {
+      "props_received_from": [
+        {
+          "parent": "SettingsPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useBranchSettings": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useUpdateBranchSettings": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "StaffCreateModal": {
+      "props_received_from": [
+        {
+          "parent": "StaffList",
+          "props": [
+            "branchId",
+            "onClose",
+            "onCreated",
+            "open"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "StaffList",
+          "events": [
+            "onClose",
+            "onCreated"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "StaffAccessDenied": {
+      "props_received_from": [
+        {
+          "parent": "StaffPage",
+          "props": []
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "StaffList": {
+      "props_received_from": [
+        {
+          "parent": "StaffPage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useStaffMembers": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useStaffMutations": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AmendmentForm": {
+      "props_received_from": [
+        {
+          "parent": "ToothSlideout",
+          "props": [
+            "onClose",
+            "onSaved",
+            "originalRecordId",
+            "originalRecordType",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ToothSlideout",
+          "events": [
+            "onClose",
+            "onSaved"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "AttachmentsSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "CdtCodeBrowser": {
+      "props_received_from": [
+        {
+          "parent": "ToothSlideout",
+          "props": [
+            "initialCode",
+            "onSelect"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ToothSlideout",
+          "events": [
+            "onSelect"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ConsentSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DentalChart": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "FiveSurfaceSelector": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "LabOrdersSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "MedicalHistoryForm": {
+      "props_received_from": [
+        {
+          "parent": "MedicalHistorySheet",
+          "props": [
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "MedicalHistorySheet": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "PreCompletionChecklist": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "RecallsSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ResizableDivider": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "RxSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId",
+            "prescriberMemberId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "SoapNotesSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "onOpenMedicalHistory",
+            "open",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose",
+            "onOpenMedicalHistory"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "SyncStatusBadge": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "branchId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "TimelineCarousel": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "completedToothNumbers",
+            "currentVisitId",
+            "onNewVisit",
+            "onSelectTooth",
+            "onSelectVisit",
+            "panelOpen",
+            "patientDateOfBirth",
+            "patientId",
+            "visits"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onNewVisit",
+            "onSelectTooth",
+            "onSelectVisit"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ToothOverviewStep": {
+      "props_received_from": [
+        {
+          "parent": "ToothSlideout",
+          "props": [
+            "entryClassification",
+            "focusedSurface",
+            "onAssignCondition",
+            "onFocusSurface",
+            "onSelectEntryClassification",
+            "patientId",
+            "surfaceConditions",
+            "toothNumber"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "ToothSlideout",
+          "events": [
+            "onAssignCondition",
+            "onFocusSurface",
+            "onSelectEntryClassification"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ToothSlideout": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "onSave",
+            "onSaveAndNext",
+            "open",
+            "patientId",
+            "readOnly",
+            "toothNumber"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose",
+            "onSave",
+            "onSaveAndNext"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "TreatmentPlanTab": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "branchId",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "TreatmentPlansSheet": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onClose",
+            "open",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DismissTreatmentPopover": {
+      "props_received_from": [
+        {
+          "parent": "TreatmentTable",
+          "props": [
+            "isPending",
+            "onConfirm",
+            "onOpenChange",
+            "onReasonChange",
+            "open",
+            "reason",
+            "treatmentId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "TreatmentTable",
+          "events": [
+            "onConfirm",
+            "onOpenChange",
+            "onReasonChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DeclineTreatmentPopover": {
+      "props_received_from": [
+        {
+          "parent": "TreatmentTable",
+          "props": [
+            "isPending",
+            "onConfirm",
+            "onOpenChange",
+            "onReasonChange",
+            "open",
+            "reason",
+            "treatmentId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "TreatmentTable",
+          "events": [
+            "onConfirm",
+            "onOpenChange",
+            "onReasonChange"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "TreatmentTable": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "carriedOverItems",
+            "onMarkDone",
+            "treatments",
+            "visitId",
+            "visits"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onMarkDone"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkspaceImagingOverlay": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "branchId",
+            "currentVisitId",
+            "onClose",
+            "open",
+            "patientId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkspacePaymentModal": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "lineItems",
+            "onClose",
+            "open",
+            "patientId",
+            "visitId"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onClose"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "WorkspaceTopBar": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onAttachments",
+            "onCompleteVisit",
+            "onConsent",
+            "onLab",
+            "onNotes",
+            "onPmd",
+            "onRx",
+            "onTreatmentPlan",
+            "patientId",
+            "visitDate",
+            "visitStatus"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onAttachments",
+            "onCompleteVisit",
+            "onConsent",
+            "onLab",
+            "onNotes",
+            "onPmd",
+            "onRx",
+            "onTreatmentPlan"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "YearSegmentControl": {
+      "props_received_from": [
+        {
+          "parent": "WorkspacePage",
+          "props": [
+            "onSelect",
+            "selectedYear",
+            "years"
+          ]
+        }
+      ],
+      "events_emitted_to": [
+        {
+          "parent": "WorkspacePage",
+          "events": [
+            "onSelect"
+          ]
+        }
+      ],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useAttachments": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useUploadAttachment": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useDeleteAttachment": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useCreateVisit": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useDentalChart": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useInitializeDentition": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useMarkTreatmentDone": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useMedicalHistory": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useMedicalHistoryMutations": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePMD": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useRecalls": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/recalls",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/recalls",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/recalls/:recallId",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useSaveChart": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useSaveToothFlow": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useSaveTreatment": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useSharePMD": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useSyncStatus": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/sync-logs",
+          "trigger": "queryFn"
+        }
+      ]
+    },
+    "useToothHistory": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useTreatmentPlan": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plan",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plan/accept",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useTreatmentPlans": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plans",
+          "trigger": "queryFn"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plans",
+          "trigger": "mutationFn"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/treatment-plans/:planId",
+          "trigger": "mutationFn"
+        }
+      ]
+    },
+    "useTreatments": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useUpdateTreatment": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useUpdateVisit": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useVisitNotes": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useVisits": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "usePatientInvoices": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "useCreateInvoice": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "ProfilePage": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "UniversalToothFdi": {
+      "props_received_from": [
+        {
+          "parent": "DentalChart",
+          "props": [
+            "fdiToothNumber",
+            "fillColor",
+            "interactive",
+            "showLabel",
+            "size"
+          ]
+        },
+        {
+          "parent": "FiveSurfaceSelector",
+          "props": [
+            "fdiToothNumber",
+            "interactive",
+            "showLabel",
+            "size",
+            "variant"
+          ]
+        },
+        {
+          "parent": "ToothOverviewStep",
+          "props": [
+            "fdiToothNumber",
+            "interactive",
+            "showLabel",
+            "size",
+            "surfacesStatus",
+            "variant"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "UniversalTooth": {
+      "props_received_from": [
+        {
+          "parent": "UniversalToothFdi",
+          "props": [
+            "label",
+            "toothNumber"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    }
+  }
 }

@@ -4,7 +4,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 
 export function ClinicSettings() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading } = useBranchSettings(branchId);
+  const { settings, isLoading, isError } = useBranchSettings(branchId);
   const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 
   const [name, setName] = useState('');
@@ -61,6 +61,7 @@ export function ClinicSettings() {
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isError) return <div className="text-sm text-destructive">Failed to load clinic settings. Please try again.</div>;
 
   return (
     <div className="flex flex-col gap-4 max-w-lg">

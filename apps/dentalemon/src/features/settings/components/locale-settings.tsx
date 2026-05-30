@@ -21,7 +21,7 @@ const LOCALES: LocaleOption[] = [
 
 export function LocaleSettings() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading } = useBranchSettings(branchId);
+  const { settings, isLoading, isError } = useBranchSettings(branchId);
   const { update, isPending, error: saveError, isSuccess, reset } = useUpdateBranchSettings(branchId);
 
   const [selectedCode, setSelectedCode] = useState('PH');
@@ -57,6 +57,7 @@ export function LocaleSettings() {
   const locale = LOCALES.find(l => l.code === selectedCode) ?? LOCALES[0]!;
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isError) return <div className="text-sm text-destructive">Failed to load locale settings. Please try again.</div>;
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">

@@ -107,6 +107,7 @@ export function usePatientReport(options: UsePatientReportOptions) {
     stats,
     patients: rawPatients,
     isLoading: query.isLoading,
+    isError: query.isError,
     error: query.error,
     refetch: query.refetch,
   };

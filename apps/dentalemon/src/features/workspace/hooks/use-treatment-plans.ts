@@ -52,7 +52,9 @@ export function useTreatmentPlans(patientId: string) {
   const query = useQuery({
     queryKey: treatmentPlansQueryKey(patientId),
     queryFn: async (): Promise<TreatmentPlanDoc[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/treatment-plans`);
+      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/treatment-plans`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`Failed to fetch treatment plans (${res.status})`);
       const data: unknown = await res.json();
       if (Array.isArray(data)) return data as TreatmentPlanDoc[];
@@ -67,6 +69,7 @@ export function useTreatmentPlans(patientId: string) {
     mutationFn: async (body: CreateTreatmentPlanBody) => {
       const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/treatment-plans`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -84,6 +87,7 @@ export function useTreatmentPlans(patientId: string) {
         `${apiBaseUrl}/dental/patients/${patientId}/treatment-plans/${planId}`,
         {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },

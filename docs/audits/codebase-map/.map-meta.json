@@ -1,37 +1,37 @@
 {
-  "version": 3,
-  "timestamp": "2026-05-29T21:35:10.810Z",
-  "git_sha": "86f9cbaae0c92f3a78711ab1b65da844acb98b6d",
-  "file_count": 542,
+  "version": 5,
+  "timestamp": "2026-05-30T09:33:19.510Z",
+  "git_sha": "2e07553ea754bfc0459517a7e60886d43eba5632",
+  "file_count": 194,
   "frameworks": [
     "generic",
-    "hono"
+    "react"
   ],
   "mode": "full",
   "phase_timings": {
-    "structural": 21,
-    "module-map": 4,
-    "react": 1906,
-    "hono": 86,
-    "tanstack": 98,
-    "terminology": 0,
-    "data-model": 9,
-    "state-machines": 41,
-    "behavior": 2,
-    "data-flow": 2,
-    "api-usage": 0,
-    "spec-trace": 14
+    "structural": 10,
+    "module-map": 1,
+    "react": 1785,
+    "hono": 42,
+    "tanstack": 81,
+    "terminology": 1,
+    "data-model": 2,
+    "state-machines": 45,
+    "behavior": 106,
+    "data-flow": 89,
+    "api-usage": 1,
+    "spec-trace": 0
   },
   "artifact_hashes": {
-    "CODE_MODULE_MAP": "a7c9a2474e322bb79c630e1bed8809a30ffa433c83016842cb2dc0a776a202fd",
-    "CODE_COMPONENT_REGISTRY": "1ac71f8a47a53fc859eab1aa096d20de65b8dae0acfc63cb8b8bb45718dc7193",
-    "CODE_ROUTE_MAP": "f9c1532ed1277eccd864fa59488f0bc95307d93cbb9306bef2c7f7d01683c832",
-    "CODE_DATA_FLOW": "f6576a557145750d8aaed2e5a6e20b13ddd5f19a2e24ba5e77f3db011ffedf7c",
-    "CODE_API_SURFACE": "67eb0e0108e897f2f347888eefe177da7e66dc2995632e091b0d3861f4a86aa6",
-    "CODE_IMPORT_GRAPH": "30022f21d00b3ad66d6f013c1fb88a34da48383aa8860f829033215f5e9268d2",
-    "CODE_TERMINOLOGY_MAP": "fa6ac83c6910736e960e2cb49dfa7b8a957c8e8dc341628ebe908f36faf7fd9c",
-    "CODE_STATE_MACHINES": "55bb683fd3885d7be9ac74db417bd28c3e7342cde82c4277b2a847e6803855c3",
-    "CODE_DATA_MODEL": "f39e3b83243787f1eefef324ff5fc14c97d1e36beea3f005c16a45e182f538be",
-    "CODE_SPEC_TRACE": "7a1de14be7f20008a71de73628690f516a1e03e8cf37504e763507e251468766"
+    "CODE_MODULE_MAP": "1b01c0ee0bbb8fe0d63bd53ecf7a37d119d09fc060a4c66b8c6adfb07130db9d",
+    "CODE_COMPONENT_REGISTRY": "21987fc20dbf675bcb19e8c6380136ff653b218fcd110af13fda70957033ecf5",
+    "CODE_ROUTE_MAP": "05648c579083e25286ff6a0a3ef4f06584b938e4f12eab942ee2b9fdad42a56d",
+    "CODE_DATA_FLOW": "5fff78d5e13784a83f5964c87ce417e267aa507f6cdc327f91c572aede831bcb",
+    "CODE_API_SURFACE": "dfe5b59db6c697f8adb10fde1b00aa4cddfc7c1078d7dd0c52f8fc8d59ce99ed",
+    "CODE_IMPORT_GRAPH": "84e3e247903d02a059b738eb770d009a7c684a48fa93d5e04fa0388e0efabe68",
+    "CODE_TERMINOLOGY_MAP": "7153a6e6a42370d4f72ef4b2bcf5b8ede63dcc03c6ac1b890b80564cf46c08a6",
+    "CODE_STATE_MACHINES": "76b2f569ace3639fa678b2cb2c6f8e83fdbe72e7bcc9914908b00855b8705d18",
+    "CODE_DATA_MODEL": "8cd6f5f2341a35549d4335bd255677ad0026f496baca89de9e47f12b0ae4c85d",
+    "CODE_SPEC_TRACE": "3b8678699c75b4617ea75f77a05ce7489b484c09a6e0c8755a987368cf82f8ee"
   }
 }

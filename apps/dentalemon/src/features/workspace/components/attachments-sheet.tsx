@@ -265,7 +265,7 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
   const [imageType, setImageType] = useState<AttachmentImageType>('xray');
   const [toothNumbers, setToothNumbers] = useState<number[]>([]);
 
-  const { data: attachments = [], isLoading, refetch } = useAttachments(visitId);
+  const { data: attachments = [], isLoading, isError, refetch } = useAttachments(visitId);
 
   const apiBase = apiBaseUrl;
 
@@ -390,7 +390,18 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
           )}
 
           {/* Attachment list */}
-          {isLoading ? (
+          {isError ? (
+            <div className="flex h-16 flex-col items-center justify-center gap-2">
+              <span className="text-sm text-destructive">Failed to load attachments.</span>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="text-xs text-muted-foreground underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="flex h-16 items-center justify-center">
               <span className="text-sm text-muted-foreground">Loading…</span>
             </div>

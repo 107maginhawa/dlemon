@@ -44,7 +44,9 @@ export function useRecalls(patientId: string) {
   const query = useQuery({
     queryKey: recallsQueryKey(patientId),
     queryFn: async (): Promise<DentalRecall[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls`);
+      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`Failed to fetch recalls (${res.status})`);
       const data: unknown = await res.json();
       if (Array.isArray(data)) return data as DentalRecall[];
@@ -59,6 +61,7 @@ export function useRecalls(patientId: string) {
     mutationFn: async (body: CreateRecallBody) => {
       const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -74,6 +77,7 @@ export function useRecalls(patientId: string) {
     mutationFn: async ({ recallId, body }: { recallId: string; body: UpdateRecallBody }) => {
       const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls/${recallId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });

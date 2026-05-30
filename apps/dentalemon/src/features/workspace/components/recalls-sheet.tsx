@@ -120,7 +120,7 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
 // ---------------------------------------------------------------------------
 
 export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
-  const { recalls, isLoading, createRecall, updateRecall, isCreating, isUpdating } =
+  const { recalls, isLoading, isError, createRecall, updateRecall, isCreating, isUpdating } =
     useRecalls(patientId);
 
   const [showForm, setShowForm] = useState(false);
@@ -275,6 +275,11 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading ? (
             <p className="text-center text-sm text-muted-foreground py-8">Loading recalls…</p>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+              <CalendarClock className="h-8 w-8 text-destructive/50" />
+              <p className="text-sm text-destructive">Couldn’t load recalls. Please try again.</p>
+            </div>
           ) : recalls.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
               <CalendarClock className="h-8 w-8 text-muted-foreground/40" />

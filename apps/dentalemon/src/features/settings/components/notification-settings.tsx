@@ -59,7 +59,7 @@ const NOTIFICATION_ITEMS: { key: keyof NotificationPreferences; label: string; d
 
 export function NotificationSettings() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading } = useBranchSettings(branchId);
+  const { settings, isLoading, isError } = useBranchSettings(branchId);
   const { update, isPending, isSuccess, error: saveError, reset } = useUpdateBranchSettings(branchId);
 
   const [prefs, setPrefs] = useState<NotificationPreferences>(defaultNotificationPreferences);
@@ -83,6 +83,7 @@ export function NotificationSettings() {
   }
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (isError) return <div className="text-sm text-destructive">Failed to load notification settings. Please try again.</div>;
 
   const triggers = NOTIFICATION_ITEMS.filter((i) => i.group === 'triggers');
   const channels = NOTIFICATION_ITEMS.filter((i) => i.group === 'channels');

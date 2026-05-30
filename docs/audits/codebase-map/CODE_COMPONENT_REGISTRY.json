@@ -1,4 +1,7016 @@
 {
-  "version": 3,
-  "components": {}
+  "version": 5,
+  "components": {
+    "AppSidebar": {
+      "name": "AppSidebar",
+      "file_path": "apps/dentalemon/src/components/app-sidebar.tsx",
+      "module": "components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "navGroups",
+          "type": "NavGroup[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "headerTitle",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "headerSubtitle",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "Combobox": {
+      "name": "Combobox",
+      "file_path": "apps/dentalemon/src/components/combobox.tsx",
+      "module": "components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "options",
+          "type": "ComboboxOption[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "value",
+          "type": "string | string[]",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onChange",
+          "type": "(value: string | string[]) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "searchPlaceholder",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "emptyText",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "multiSelect",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "maxHeight",
+          "type": "number",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showBadges",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "clearable",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "testId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "id",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "'aria-labelledby'",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "'aria-describedby'",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "'aria-invalid'",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onChange",
+          "payload_type": "(value: string | string[]) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DateTimeFilter": {
+      "name": "DateTimeFilter",
+      "file_path": "apps/dentalemon/src/components/datetime-filter.tsx",
+      "module": "components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "value",
+          "type": "DateTimeFilterValue",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onChange",
+          "type": "(value: DateTimeFilterValue) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onChange",
+          "payload_type": "(value: DateTimeFilterValue) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "EmptyState": {
+      "name": "EmptyState",
+      "file_path": "apps/dentalemon/src/components/empty-state.tsx",
+      "module": "components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "icon",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "action",
+          "type": "{ label: string; onClick: () => void }",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ImageCropperDialog": {
+      "name": "ImageCropperDialog",
+      "file_path": "apps/dentalemon/src/components/image-cropper-dialog.tsx",
+      "module": "components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "imageSrc",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCropComplete",
+          "type": "(croppedFile: File) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "aspectRatio",
+          "type": "number",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "cropShape",
+          "type": "'rect' | 'round'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onCropComplete",
+          "payload_type": "(croppedFile: File) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useOneSignal": {
+      "name": "useOneSignal",
+      "file_path": "apps/dentalemon/src/hooks/use-onesignal.ts",
+      "module": "hooks",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "RootComponent": {
+      "name": "RootComponent",
+      "file_path": "apps/dentalemon/src/routes/__root.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DashboardLayout": {
+      "name": "DashboardLayout",
+      "file_path": "apps/dentalemon/src/routes/_dashboard.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "WorkspaceLayout": {
+      "name": "WorkspaceLayout",
+      "file_path": "apps/dentalemon/src/routes/_workspace.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_workspace"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephReportPage": {
+      "name": "CephReportPage",
+      "file_path": "apps/dentalemon/src/routes/imaging-ceph-report.$imageId.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/imaging-ceph-report/$imageId"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": true,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "HomePage": {
+      "name": "HomePage",
+      "file_path": "apps/dentalemon/src/routes/index.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": false,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "OnboardingPage": {
+      "name": "OnboardingPage",
+      "file_path": "apps/dentalemon/src/routes/onboarding.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/onboarding"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": true,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "VerifyEmailPage": {
+      "name": "VerifyEmailPage",
+      "file_path": "apps/dentalemon/src/routes/verify-email.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/verify-email"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "BillingPage": {
+      "name": "BillingPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/billing.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/billing"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CalendarPage": {
+      "name": "CalendarPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/calendar.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/calendar"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DashboardPage": {
+      "name": "DashboardPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/dashboard.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/dashboard"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "DentalOnboardingPage": {
+      "name": "DentalOnboardingPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/dental-onboarding.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/dental-onboarding"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientsPage": {
+      "name": "PatientsPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/patients.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients"
+        }
+      ],
+      "routes_used_in": [
+        "/_dashboard/patients"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ReportsPage": {
+      "name": "ReportsPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/reports.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/reports"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "SettingsPage": {
+      "name": "SettingsPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/settings.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/settings"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "StaffPage": {
+      "name": "StaffPage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/staff.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/staff"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "WorkspacePage": {
+      "name": "WorkspacePage",
+      "file_path": "apps/dentalemon/src/routes/_workspace/$patientId.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_workspace/$patientId"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "QueueBoardPage": {
+      "name": "QueueBoardPage",
+      "file_path": "apps/dentalemon/src/routes/_workspace/queue-board.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_workspace/queue-board"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "RouteComponent": {
+      "name": "RouteComponent",
+      "file_path": "apps/dentalemon/src/routes/auth/$authView.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/auth/$authView"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "PinEntry": {
+      "name": "PinEntry",
+      "file_path": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "member",
+          "type": "PinEntryMember",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(pin: string) => Promise<VerifyPinResult | void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onBack",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "errorMessage",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "lockedUntil",
+          "type": "Date",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "failedAttempts",
+          "type": "number",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSubmit",
+          "payload_type": "(pin: string) => Promise<VerifyPinResult | void>"
+        },
+        {
+          "name": "onBack",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PinEntryRoute": {
+      "name": "PinEntryRoute",
+      "file_path": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:orgId/branches/:branchId/members/:memberId/verify-pin"
+        }
+      ],
+      "routes_used_in": [
+        "/auth/pin-entry/$memberId"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PinSelect": {
+      "name": "PinSelect",
+      "file_path": "apps/dentalemon/src/routes/auth/pin-select.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "members",
+          "type": "PinSelectMember[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelect",
+          "type": "(member: PinSelectMember) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "isError",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onRetry",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelect",
+          "payload_type": "(member: PinSelectMember) => void"
+        },
+        {
+          "name": "onRetry",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PinSelectRoute": {
+      "name": "PinSelectRoute",
+      "file_path": "apps/dentalemon/src/routes/auth/pin-select.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members"
+        }
+      ],
+      "routes_used_in": [
+        "/auth/pin-select"
+      ],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "BillingList": {
+      "name": "BillingList",
+      "file_path": "apps/dentalemon/src/features/billing/components/billing-list.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onInvoiceClick",
+          "type": "(invoice: Invoice) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onInvoiceClick",
+          "payload_type": "(invoice: Invoice) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "InvoiceDetail": {
+      "name": "InvoiceDetail",
+      "file_path": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "invoiceId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onUpdated",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onViewPlan",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onUpdated",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onViewPlan",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices/:invoiceId"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/billing/invoices/:invoiceId/issue"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/void"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/payments"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PaymentPlanView": {
+      "name": "PaymentPlanView",
+      "file_path": "apps/dentalemon/src/features/billing/components/payment-plan-view.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "invoiceId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices/:invoiceId/plan"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useInvoiceDetail": {
+      "name": "useInvoiceDetail",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useInvoices": {
+      "name": "useInvoices",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-invoices.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "MetricCard": {
+      "name": "MetricCard",
+      "file_path": "apps/dentalemon/src/features/dashboard/components/metric-card.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "value",
+          "type": "string | number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "trend",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "action",
+          "type": "{ label: string; onClick: () => void }",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "children",
+          "type": "React.ReactNode",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "accentColor",
+          "type": "'lemon' | 'red' | 'green' | 'amber'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [
+        {
+          "name": "children",
+          "scoped": false
+        }
+      ],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "MorningBriefing": {
+      "name": "MorningBriefing",
+      "file_path": "apps/dentalemon/src/features/dashboard/components/morning-briefing.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "role",
+          "type": "DentalRole",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useDashboardSummary": {
+      "name": "useDashboardSummary",
+      "file_path": "apps/dentalemon/src/features/dashboard/hooks/use-dashboard-summary.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "AnnotationToolbar": {
+      "name": "AnnotationToolbar",
+      "file_path": "apps/dentalemon/src/features/imaging/components/annotation-toolbar.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toolMode",
+          "type": "ToolMode",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onToolChange",
+          "type": "(mode: ToolMode) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToolChange",
+          "payload_type": "(mode: ToolMode) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CalibrationDialog": {
+      "name": "CalibrationDialog",
+      "file_path": "apps/dentalemon/src/features/imaging/components/calibration-dialog.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pixelDistance",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onConfirm",
+          "type": "(actualMm: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCancel",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onConfirm",
+          "payload_type": "(actualMm: number) => void"
+        },
+        {
+          "name": "onCancel",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "MeasurementShape": {
+      "name": "MeasurementShape",
+      "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "annotation",
+          "type": "ImagingAnnotation",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pixelSpacingMm",
+          "type": "number | null | undefined",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDelete",
+          "type": "(id: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAnnotationClick",
+          "type": "(id: string) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onDelete",
+          "payload_type": "(id: string) => void"
+        },
+        {
+          "name": "onAnnotationClick",
+          "payload_type": "(id: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "AnnotationShape": {
+      "name": "AnnotationShape",
+      "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "annotation",
+          "type": "ImagingAnnotation",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pixelSpacingMm",
+          "type": "number | null | undefined",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDelete",
+          "type": "(id: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAnnotationClick",
+          "type": "(id: string) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onDelete",
+          "payload_type": "(id: string) => void"
+        },
+        {
+          "name": "onAnnotationClick",
+          "payload_type": "(id: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DrawingPreview": {
+      "name": "DrawingPreview",
+      "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toolMode",
+          "type": "ToolMode | undefined",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "points",
+          "type": "{ x: number; y: number }[]",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephAngleArcLayer": {
+      "name": "CephAngleArcLayer",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephAngleArcLayer.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "landmarks",
+          "type": "CephLandmark[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "transform",
+          "type": "CephTransformState",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "measurements",
+          "type": "Record<string, number | null>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visible",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "width",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephLandmarkLayer": {
+      "name": "CephLandmarkLayer",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephLandmarkLayer.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "landmarks",
+          "type": "CephLandmark[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedCode",
+          "type": "CephLandmarkCode | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "transform",
+          "type": "CephTransformState",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onPlace",
+          "type": "(code: CephLandmarkCode, x: number, y: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDrag",
+          "type": "(code: CephLandmarkCode, x: number, y: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCommit",
+          "type": "(code: CephLandmarkCode, x: number, y: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "width",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onPlace",
+          "payload_type": "(code: CephLandmarkCode, x: number, y: number) => void"
+        },
+        {
+          "name": "onDrag",
+          "payload_type": "(code: CephLandmarkCode, x: number, y: number) => void"
+        },
+        {
+          "name": "onCommit",
+          "payload_type": "(code: CephLandmarkCode, x: number, y: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CephLandmarkPalette": {
+      "name": "CephLandmarkPalette",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephLandmarkPalette.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "landmarks",
+          "type": "CephLandmark[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedCode",
+          "type": "CephLandmarkCode | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelect",
+          "type": "(code: CephLandmarkCode) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelect",
+          "payload_type": "(code: CephLandmarkCode) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CephLayerPanel": {
+      "name": "CephLayerPanel",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephLayerPanel.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "layers",
+          "type": "LayerState",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onChange",
+          "type": "(key: keyof LayerState, value: boolean) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onChange",
+          "payload_type": "(key: keyof LayerState, value: boolean) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CephMeasurementsPanel": {
+      "name": "CephMeasurementsPanel",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephMeasurementsPanel.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "analysis",
+          "type": "CephAnalysis | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephReportView": {
+      "name": "CephReportView",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephReportView.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "snapshot",
+          "type": "CephReportSnapshot",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "version",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "imageUrl",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephTracingOverlay": {
+      "name": "CephTracingOverlay",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephTracingOverlay.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "landmarks",
+          "type": "CephLandmark[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "transform",
+          "type": "CephTransformState",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visible",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "width",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "CephWorkspacePanel": {
+      "name": "CephWorkspacePanel",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephWorkspacePanel.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "imageId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onExportPng",
+          "type": "(reportVersion: number) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onLayerChange",
+          "type": "(key: keyof LayerState, value: boolean) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onExportPng",
+          "payload_type": "(reportVersion: number) => void"
+        },
+        {
+          "name": "onLayerChange",
+          "payload_type": "(key: keyof LayerState, value: boolean) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/reports"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ComparisonView": {
+      "name": "ComparisonView",
+      "file_path": "apps/dentalemon/src/features/imaging/components/comparison-view.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "imageA",
+          "type": "PatientImageItem",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "imageB",
+          "type": "PatientImageItem",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "FindingsSidebar": {
+      "name": "FindingsSidebar",
+      "file_path": "apps/dentalemon/src/features/imaging/components/FindingsSidebar.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "imageId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "initialAnnotationId",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ImageUpload": {
+      "name": "ImageUpload",
+      "file_path": "apps/dentalemon/src/features/imaging/components/image-upload.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSuccess",
+          "type": "(studyId: string) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSuccess",
+          "payload_type": "(studyId: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ImagingWorkspace": {
+      "name": "ImagingWorkspace",
+      "file_path": "apps/dentalemon/src/features/imaging/components/imaging-workspace.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "imageId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "imageUrl",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "toolMode",
+          "type": "ToolMode",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onToolModeChange",
+          "type": "(mode: ToolMode) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onMeasurementSaved",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "modality",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "pixelSpacingMm",
+          "type": "number | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCalibrationSaved",
+          "type": "(pxMm: number) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToolModeChange",
+          "payload_type": "(mode: ToolMode) => void"
+        },
+        {
+          "name": "onMeasurementSaved",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onCalibrationSaved",
+          "payload_type": "(pxMm: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/calibration"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/measurements"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/measurements"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/measurements/:measurementId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "MeasurementToolbar": {
+      "name": "MeasurementToolbar",
+      "file_path": "apps/dentalemon/src/features/imaging/components/measurement-toolbar.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toolMode",
+          "type": "ToolMode",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onToolChange",
+          "type": "(mode: ToolMode) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isCalibrated",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "modality",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToolChange",
+          "payload_type": "(mode: ToolMode) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientImageList": {
+      "name": "PatientImageList",
+      "file_path": "apps/dentalemon/src/features/imaging/components/patient-image-list.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelectImage",
+          "type": "(item: PatientImageItem) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCompare",
+          "type": "(items: [PatientImageItem, PatientImageItem]) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelectImage",
+          "payload_type": "(item: PatientImageItem) => void"
+        },
+        {
+          "name": "onCompare",
+          "payload_type": "(items: [PatientImageItem, PatientImageItem]) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useCephAnalysis": {
+      "name": "useCephAnalysis",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-analysis.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useCephLandmarks": {
+      "name": "useCephLandmarks",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-landmarks.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useImagingFindings": {
+      "name": "useImagingFindings",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-findings.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/findings"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/findings"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/imaging/findings/:findingId"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/findings/:findingId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useImagingStudies": {
+      "name": "useImagingStudies",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-studies.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/images"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useImagingUpload": {
+      "name": "useImagingUpload",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-upload.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/studies"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/storage/multipart/:fileId/abort"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useMeasurements": {
+      "name": "useMeasurements",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-measurements.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/measurements"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/measurements"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/imaging/measurements/:measurementId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useOfflineCache": {
+      "name": "useOfflineCache",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-offline-cache.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "OnboardingWizard": {
+      "name": "OnboardingWizard",
+      "file_path": "apps/dentalemon/src/features/onboarding/components/onboarding-wizard.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "onComplete",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onComplete",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches/:id/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/organizations/:id/branches/:id/members/:id/set-pin"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ClinicStep": {
+      "name": "ClinicStep",
+      "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-clinic.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "clinicName",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClinicNameChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "countryCode",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCountryCodeChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "address",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAddressChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "clinicPhone",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClinicPhoneChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClinicNameChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onCountryCodeChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onAddressChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onClinicPhoneChange",
+          "payload_type": "(v: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DentistStep": {
+      "name": "DentistStep",
+      "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-dentist.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "dentistName",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDentistNameChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "licenseNumber",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onLicenseNumberChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "specialization",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSpecializationChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pin",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onPinChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onDentistNameChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onLicenseNumberChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onSpecializationChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onPinChange",
+          "payload_type": "(v: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "FeesStep": {
+      "name": "FeesStep",
+      "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-fees.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "fees",
+          "type": "FeeEntry[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onFeesChange",
+          "type": "(fees: FeeEntry[]) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onFeesChange",
+          "payload_type": "(fees: FeeEntry[]) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientStep": {
+      "name": "PatientStep",
+      "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-patient.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientName",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onPatientNameChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "birthDate",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onBirthDateChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "gender",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onGenderChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientPhone",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onPatientPhoneChange",
+          "type": "(v: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onPatientNameChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onBirthDateChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onGenderChange",
+          "payload_type": "(v: string) => void"
+        },
+        {
+          "name": "onPatientPhoneChange",
+          "payload_type": "(v: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DentalChartThumbnail": {
+      "name": "DentalChartThumbnail",
+      "file_path": "apps/dentalemon/src/features/patients/components/dental-chart-thumbnail.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "teeth",
+          "type": "Array<{ toothNumber: number; state: ToothState }>",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "FollowUpNotes": {
+      "name": "FollowUpNotes",
+      "file_path": "apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientFilterTabs": {
+      "name": "PatientFilterTabs",
+      "file_path": "apps/dentalemon/src/features/patients/components/patient-filter-tabs.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "activeFilter",
+          "type": "PatientFilter",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "counts",
+          "type": "FilterCounts",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onFilterChange",
+          "type": "(filter: PatientFilter) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onFilterChange",
+          "payload_type": "(filter: PatientFilter) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientFolderCard": {
+      "name": "PatientFolderCard",
+      "file_path": "apps/dentalemon/src/features/patients/components/patient-folder-card.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patient",
+          "type": "PatientCardData",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClick",
+          "type": "(patient: PatientCardData) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onProfile",
+          "type": "(patient: PatientCardData) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClick",
+          "payload_type": "(patient: PatientCardData) => void"
+        },
+        {
+          "name": "onProfile",
+          "payload_type": "(patient: PatientCardData) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientList": {
+      "name": "PatientList",
+      "file_path": "apps/dentalemon/src/features/patients/components/patient-list.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patients",
+          "type": "PatientCardData[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelect",
+          "type": "(patient: PatientCardData) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onProfile",
+          "type": "(patient: PatientCardData) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "searchQuery",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSearchChange",
+          "type": "(q: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "activeFilter",
+          "type": "'all' | 'active' | 'archived' | 'needs-follow-up'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onArchive",
+          "type": "(patientId: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onRestore",
+          "type": "(patientId: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onBulkArchive",
+          "type": "(patientIds: string[]) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onExport",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "isActionPending",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "isExporting",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelect",
+          "payload_type": "(patient: PatientCardData) => void"
+        },
+        {
+          "name": "onProfile",
+          "payload_type": "(patient: PatientCardData) => void"
+        },
+        {
+          "name": "onSearchChange",
+          "payload_type": "(q: string) => void"
+        },
+        {
+          "name": "onArchive",
+          "payload_type": "(patientId: string) => void"
+        },
+        {
+          "name": "onRestore",
+          "payload_type": "(patientId: string) => void"
+        },
+        {
+          "name": "onBulkArchive",
+          "payload_type": "(patientIds: string[]) => void"
+        },
+        {
+          "name": "onExport",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientProfilePage": {
+      "name": "PatientProfilePage",
+      "file_path": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientRegistrationModal": {
+      "name": "PatientRegistrationModal",
+      "file_path": "apps/dentalemon/src/features/patients/components/patient-registration-modal.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(data: PatientRegistrationData) => Promise<void>",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSubmit",
+          "payload_type": "(data: PatientRegistrationData) => Promise<void>"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useFollowUpNotes": {
+      "name": "useFollowUpNotes",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useAddFollowUpNote": {
+      "name": "useAddFollowUpNote",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useArchivePatient": {
+      "name": "useArchivePatient",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useRestorePatient": {
+      "name": "useRestorePatient",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useBulkArchive": {
+      "name": "useBulkArchive",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useExportPatients": {
+      "name": "useExportPatients",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "usePatientBilling": {
+      "name": "usePatientBilling",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-billing.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "usePatientProfile": {
+      "name": "usePatientProfile",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-profile.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "usePatients": {
+      "name": "usePatients",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patients.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "AddressForm": {
+      "name": "AddressForm",
+      "file_path": "apps/dentalemon/src/features/person/components/address-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "defaultValues",
+          "type": "Partial<OptionalAddress>",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(data: OptionalAddress) => void | Promise<void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "type": "'create' | 'edit'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showButtons",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCancel",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSkip",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "required",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "formId",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSubmit",
+          "payload_type": "(data: OptionalAddress) => void | Promise<void>"
+        },
+        {
+          "name": "onCancel",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSkip",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ContactInfoForm": {
+      "name": "ContactInfoForm",
+      "file_path": "apps/dentalemon/src/features/person/components/contact-info-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "defaultValues",
+          "type": "Partial<ContactInfo>",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(data: ContactInfo) => void | Promise<void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "type": "'create' | 'edit'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showButtons",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCancel",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "userEmail",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "role",
+          "type": "'patient' | 'provider'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "submitText",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "formId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "emailEditable",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSubmit",
+          "payload_type": "(data: ContactInfo) => void | Promise<void>"
+        },
+        {
+          "name": "onCancel",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "PersonalInfoForm": {
+      "name": "PersonalInfoForm",
+      "file_path": "apps/dentalemon/src/features/person/components/personal-info-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "defaultValues",
+          "type": "Partial<PersonalInfo>",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(data: PersonalInfo) => void | Promise<void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "type": "'create' | 'edit'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showButtons",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCancel",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "role",
+          "type": "'patient' | 'provider'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "submitText",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "formId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showAvatar",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onAvatarUpload",
+          "type": "(file: File) => Promise<{ file?: string, url: string }>",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "memberSince",
+          "type": "Date | string | number",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSubmit",
+          "payload_type": "(data: PersonalInfo) => void | Promise<void>"
+        },
+        {
+          "name": "onCancel",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onAvatarUpload",
+          "payload_type": "(file: File) => Promise<{ file?: string, url: string }>"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PreferencesForm": {
+      "name": "PreferencesForm",
+      "file_path": "apps/dentalemon/src/features/person/components/preferences-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "defaultValues",
+          "type": "Partial<Preferences>",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSubmit",
+          "type": "(data: Preferences) => void | Promise<void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "mode",
+          "type": "'create' | 'edit'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showButtons",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCancel",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSubmit",
+          "payload_type": "(data: Preferences) => void | Promise<void>"
+        },
+        {
+          "name": "onCancel",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "PMDImport": {
+      "name": "PMDImport",
+      "file_path": "apps/dentalemon/src/features/pmd/components/pmd-import.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onImported",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onImported",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/pmd/import"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PMDViewerSheet": {
+      "name": "PMDViewerSheet",
+      "file_path": "apps/dentalemon/src/features/pmd/components/pmd-viewer-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "pmd",
+          "type": "PMDDocument | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onImportClick",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onImportClick",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PMDViewer": {
+      "name": "PMDViewer",
+      "file_path": "apps/dentalemon/src/features/pmd/components/pmd-viewer.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "pmd",
+          "type": "PMDDocument",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "InvoiceDetailSheet": {
+      "name": "InvoiceDetailSheet",
+      "file_path": "apps/dentalemon/src/features/reports/components/invoice-detail-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "invoiceId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PatientReport": {
+      "name": "PatientReport",
+      "file_path": "apps/dentalemon/src/features/reports/components/patient-report.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "RevenueReport": {
+      "name": "RevenueReport",
+      "file_path": "apps/dentalemon/src/features/reports/components/revenue-report.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "TreatmentReport": {
+      "name": "TreatmentReport",
+      "file_path": "apps/dentalemon/src/features/reports/components/treatment-report.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "usePatientReport": {
+      "name": "usePatientReport",
+      "file_path": "apps/dentalemon/src/features/reports/hooks/use-patient-report.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useTreatmentReport": {
+      "name": "useTreatmentReport",
+      "file_path": "apps/dentalemon/src/features/reports/hooks/use-treatment-report.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "AppointmentCard": {
+      "name": "AppointmentCard",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/appointment-card.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "appointment",
+          "type": "Appointment",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClick",
+          "type": "(appointment: Appointment) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCheckIn",
+          "type": "(appointmentId: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClick",
+          "payload_type": "(appointment: Appointment) => void"
+        },
+        {
+          "name": "onCheckIn",
+          "payload_type": "(appointmentId: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "AppointmentModal": {
+      "name": "AppointmentModal",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/appointment-modal.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSaved",
+          "type": "(appointment: unknown) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "initialDate",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "appointmentId",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSaved",
+          "payload_type": "(appointment: unknown) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CalendarDay": {
+      "name": "CalendarDay",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-day.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "date",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "appointments",
+          "type": "Appointment[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAppointmentClick",
+          "type": "(appointment: Appointment) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSlotClick",
+          "type": "(time: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCheckIn",
+          "type": "(appointmentId: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onAppointmentClick",
+          "payload_type": "(appointment: Appointment) => void"
+        },
+        {
+          "name": "onSlotClick",
+          "payload_type": "(time: string) => void"
+        },
+        {
+          "name": "onCheckIn",
+          "payload_type": "(appointmentId: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CalendarMonth": {
+      "name": "CalendarMonth",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-month.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "selectedDate",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "appointments",
+          "type": "Appointment[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDayClick",
+          "type": "(date: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onDayClick",
+          "payload_type": "(date: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CalendarWeek": {
+      "name": "CalendarWeek",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-week.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "weekStart",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "appointments",
+          "type": "Appointment[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAppointmentClick",
+          "type": "(appointment: Appointment) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDayClick",
+          "type": "(date: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onAppointmentClick",
+          "payload_type": "(appointment: Appointment) => void"
+        },
+        {
+          "name": "onDayClick",
+          "payload_type": "(date: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "QueueBoard": {
+      "name": "QueueBoard",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/queue-board.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/queue-board"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/queue-items/:itemId/status"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useAppointments": {
+      "name": "useAppointments",
+      "file_path": "apps/dentalemon/src/features/scheduling/hooks/use-appointments.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useQueueBoard": {
+      "name": "useQueueBoard",
+      "file_path": "apps/dentalemon/src/features/scheduling/hooks/use-queue-board.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/queue-board"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/queue-items/:itemId/status"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "ClinicSettings": {
+      "name": "ClinicSettings",
+      "file_path": "apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "FeeSchedule": {
+      "name": "FeeSchedule",
+      "file_path": "apps/dentalemon/src/features/settings/components/fee-schedule.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "LocaleSettings": {
+      "name": "LocaleSettings",
+      "file_path": "apps/dentalemon/src/features/settings/components/locale-settings.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "NotificationSettings": {
+      "name": "NotificationSettings",
+      "file_path": "apps/dentalemon/src/features/settings/components/notification-settings.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "WorkingHours": {
+      "name": "WorkingHours",
+      "file_path": "apps/dentalemon/src/features/settings/components/working-hours.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useBranchSettings": {
+      "name": "useBranchSettings",
+      "file_path": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useUpdateBranchSettings": {
+      "name": "useUpdateBranchSettings",
+      "file_path": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "StaffCreateModal": {
+      "name": "StaffCreateModal",
+      "file_path": "apps/dentalemon/src/features/staff/components/staff-create-modal.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCreated",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onCreated",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "StaffAccessDenied": {
+      "name": "StaffAccessDenied",
+      "file_path": "apps/dentalemon/src/features/staff/components/staff-list.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "StaffList": {
+      "name": "StaffList",
+      "file_path": "apps/dentalemon/src/features/staff/components/staff-list.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "currentUserRole",
+          "type": "MemberRole",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useStaffMembers": {
+      "name": "useStaffMembers",
+      "file_path": "apps/dentalemon/src/features/staff/hooks/use-staff-members.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useStaffMutations": {
+      "name": "useStaffMutations",
+      "file_path": "apps/dentalemon/src/features/staff/hooks/use-staff-members.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "AmendmentForm": {
+      "name": "AmendmentForm",
+      "file_path": "apps/dentalemon/src/features/workspace/components/amendment-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "originalRecordType",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "originalRecordId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSaved",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSaved",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "AttachmentsSheet": {
+      "name": "AttachmentsSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/attachments-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "CdtCodeBrowser": {
+      "name": "CdtCodeBrowser",
+      "file_path": "apps/dentalemon/src/features/workspace/components/cdt-code-browser.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "onSelect",
+          "type": "(selection: CdtCodeSelection) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "initialCode",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelect",
+          "payload_type": "(selection: CdtCodeSelection) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ConsentSheet": {
+      "name": "ConsentSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/consent-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSaved",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSaved",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DentalChart": {
+      "name": "DentalChart",
+      "file_path": "apps/dentalemon/src/features/workspace/components/dental-chart.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "teeth",
+          "type": "ToothData[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedTooth",
+          "type": "number | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelectTooth",
+          "type": "(toothNumber: number) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "toothSize",
+          "type": "'xs' | 'sm' | 'md' | 'lg' | 'xl'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showLegend",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "dentitionType",
+          "type": "DentitionType",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showLayerToggle",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "completedToothNumbers",
+          "type": "Set<number>",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelectTooth",
+          "payload_type": "(toothNumber: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "FiveSurfaceSelector": {
+      "name": "FiveSurfaceSelector",
+      "file_path": "apps/dentalemon/src/features/workspace/components/five-surface-selector.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toothNumber",
+          "type": "number | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedSurfaces",
+          "type": "ToothSurface[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onToggle",
+          "type": "(surface: ToothSurface) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "highlightColor",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToggle",
+          "payload_type": "(surface: ToothSurface) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "LabOrdersSheet": {
+      "name": "LabOrdersSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/lab-orders-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "MedicalHistoryForm": {
+      "name": "MedicalHistoryForm",
+      "file_path": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": true,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "MedicalHistorySheet": {
+      "name": "MedicalHistorySheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/medical-history-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "PreCompletionChecklist": {
+      "name": "PreCompletionChecklist",
+      "file_path": "apps/dentalemon/src/features/workspace/components/pre-completion-checklist.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCompleted",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onCompleted",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "RecallsSheet": {
+      "name": "RecallsSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/recalls-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/recalls"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/recalls"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/recalls/:recallId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ResizableDivider": {
+      "name": "ResizableDivider",
+      "file_path": "apps/dentalemon/src/features/workspace/components/resizable-divider.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "onResize",
+          "type": "(delta: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "direction",
+          "type": "'x' | 'y'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onResize",
+          "payload_type": "(delta: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "RxSheet": {
+      "name": "RxSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/rx-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "prescriberMemberId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSaved",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSaved",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "SoapNotesSheet": {
+      "name": "SoapNotesSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/soap-notes-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onOpenMedicalHistory",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onOpenMedicalHistory",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "SyncStatusBadge": {
+      "name": "SyncStatusBadge",
+      "file_path": "apps/dentalemon/src/features/workspace/components/sync-status-badge.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/sync-logs"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "TimelineCarousel": {
+      "name": "TimelineCarousel",
+      "file_path": "apps/dentalemon/src/features/workspace/components/timeline-carousel.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visits",
+          "type": "VisitCard[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "currentVisitId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelectVisit",
+          "type": "(visitId: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onNewVisit",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelectTooth",
+          "type": "(toothNumber: number) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "panelOpen",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "patientDateOfBirth",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "completedToothNumbers",
+          "type": "Set<number>",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelectVisit",
+          "payload_type": "(visitId: string) => void"
+        },
+        {
+          "name": "onNewVisit",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSelectTooth",
+          "payload_type": "(toothNumber: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ToothOverviewStep": {
+      "name": "ToothOverviewStep",
+      "file_path": "apps/dentalemon/src/features/workspace/components/tooth-overview-step.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toothNumber",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "surfaceConditions",
+          "type": "Record<string, ToothState>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "focusedSurface",
+          "type": "ToothSurface | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onFocusSurface",
+          "type": "(surface: ToothSurface) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAssignCondition",
+          "type": "(state: ToothState) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "entryClassification",
+          "type": "ChartEntryClassification",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelectEntryClassification",
+          "type": "(c: ChartEntryClassification) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onFocusSurface",
+          "payload_type": "(surface: ToothSurface) => void"
+        },
+        {
+          "name": "onAssignCondition",
+          "payload_type": "(state: ToothState) => void"
+        },
+        {
+          "name": "onSelectEntryClassification",
+          "payload_type": "(c: ChartEntryClassification) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "ToothSlideout": {
+      "name": "ToothSlideout",
+      "file_path": "apps/dentalemon/src/features/workspace/components/tooth-slideout.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toothNumber",
+          "type": "number | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSave",
+          "type": "(data: ToothSlideoutData) => void | Promise<void>",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSaveAndNext",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "originalRecordId",
+          "type": "string",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onSave",
+          "payload_type": "(data: ToothSlideoutData) => void | Promise<void>"
+        },
+        {
+          "name": "onSaveAndNext",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "TreatmentPlanTab": {
+      "name": "TreatmentPlanTab",
+      "file_path": "apps/dentalemon/src/features/workspace/components/treatment-plan-tab.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plan"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plan/accept"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "TreatmentPlansSheet": {
+      "name": "TreatmentPlansSheet",
+      "file_path": "apps/dentalemon/src/features/workspace/components/treatment-plans-sheet.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plans"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plans"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/treatment-plans/:planId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DismissTreatmentPopover": {
+      "name": "DismissTreatmentPopover",
+      "file_path": "apps/dentalemon/src/features/workspace/components/treatment-row-popovers.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "treatmentId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isPending",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onOpenChange",
+          "type": "(open: boolean) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onReasonChange",
+          "type": "(value: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onConfirm",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onOpenChange",
+          "payload_type": "(open: boolean) => void"
+        },
+        {
+          "name": "onReasonChange",
+          "payload_type": "(value: string) => void"
+        },
+        {
+          "name": "onConfirm",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "DeclineTreatmentPopover": {
+      "name": "DeclineTreatmentPopover",
+      "file_path": "apps/dentalemon/src/features/workspace/components/treatment-row-popovers.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "treatmentId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isPending",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onOpenChange",
+          "type": "(open: boolean) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onReasonChange",
+          "type": "(value: string) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onConfirm",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onOpenChange",
+          "payload_type": "(open: boolean) => void"
+        },
+        {
+          "name": "onReasonChange",
+          "payload_type": "(value: string) => void"
+        },
+        {
+          "name": "onConfirm",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "TreatmentTable": {
+      "name": "TreatmentTable",
+      "file_path": "apps/dentalemon/src/features/workspace/components/treatment-table.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "treatments",
+          "type": "Treatment[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "carriedOverItems",
+          "type": "TreatmentPlanItem[]",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "visits",
+          "type": "VisitCard[]",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelectTreatment",
+          "type": "(id: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "selectedTreatmentId",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onMarkDone",
+          "type": "(treatmentId: string, visitId: string, currentStatus: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelectTreatment",
+          "payload_type": "(id: string) => void"
+        },
+        {
+          "name": "onMarkDone",
+          "payload_type": "(treatmentId: string, visitId: string, currentStatus: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "WorkspaceImagingOverlay": {
+      "name": "WorkspaceImagingOverlay",
+      "file_path": "apps/dentalemon/src/features/workspace/components/workspace-imaging-overlay.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "currentVisitId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "WorkspacePaymentModal": {
+      "name": "WorkspacePaymentModal",
+      "file_path": "apps/dentalemon/src/features/workspace/components/workspace-payment-modal.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visitId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "patientName",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "lineItems",
+          "type": "PaymentLineItem[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "WorkspaceTopBar": {
+      "name": "WorkspaceTopBar",
+      "file_path": "apps/dentalemon/src/features/workspace/components/workspace-top-bar.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visitDate",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onRx",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onConsent",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onLab",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onPmd",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAttachments",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onNotes",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onTreatmentPlan",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onCompleteVisit",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visitStatus",
+          "type": "'draft' | 'active' | 'completed' | 'locked'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onRx",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onConsent",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onLab",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onPmd",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onAttachments",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onNotes",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onTreatmentPlan",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onCompleteVisit",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "YearSegmentControl": {
+      "name": "YearSegmentControl",
+      "file_path": "apps/dentalemon/src/features/workspace/components/year-segment-control.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "years",
+          "type": "string[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedYear",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelect",
+          "type": "(year: string) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelect",
+          "payload_type": "(year: string) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    },
+    "useAttachments": {
+      "name": "useAttachments",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useUploadAttachment": {
+      "name": "useUploadAttachment",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useDeleteAttachment": {
+      "name": "useDeleteAttachment",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useCreateVisit": {
+      "name": "useCreateVisit",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-create-visit.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useDentalChart": {
+      "name": "useDentalChart",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-dental-chart-query.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useInitializeDentition": {
+      "name": "useInitializeDentition",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-initialize-dentition.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useMarkTreatmentDone": {
+      "name": "useMarkTreatmentDone",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-mark-treatment-done.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useMedicalHistory": {
+      "name": "useMedicalHistory",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useMedicalHistoryMutations": {
+      "name": "useMedicalHistoryMutations",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "usePMD": {
+      "name": "usePMD",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-pmd.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useRecalls": {
+      "name": "useRecalls",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-recalls.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/recalls"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/recalls"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/recalls/:recallId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useSaveChart": {
+      "name": "useSaveChart",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-chart.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useSaveToothFlow": {
+      "name": "useSaveToothFlow",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-tooth-flow.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useSaveTreatment": {
+      "name": "useSaveTreatment",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-treatment.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useSharePMD": {
+      "name": "useSharePMD",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-share-pmd.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useSyncStatus": {
+      "name": "useSyncStatus",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-sync-status.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/sync-logs"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useToothHistory": {
+      "name": "useToothHistory",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-tooth-history.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useTreatmentPlan": {
+      "name": "useTreatmentPlan",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plan"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plan/accept"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useTreatmentPlans": {
+      "name": "useTreatmentPlans",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatment-plans.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-plans"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-plans"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/treatment-plans/:planId"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useTreatments": {
+      "name": "useTreatments",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatments.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useUpdateTreatment": {
+      "name": "useUpdateTreatment",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-update-treatment.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useUpdateVisit": {
+      "name": "useUpdateVisit",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-update-visit.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useVisitNotes": {
+      "name": "useVisitNotes",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-visit-notes.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useVisits": {
+      "name": "useVisits",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-visits.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "usePatientInvoices": {
+      "name": "usePatientInvoices",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-workspace-payment.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "useCreateInvoice": {
+      "name": "useCreateInvoice",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-workspace-payment.ts",
+      "module": "features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "ProfilePage": {
+      "name": "ProfilePage",
+      "file_path": "apps/dentalemon/src/routes/_dashboard/patients_/$patientId.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/_dashboard/patients_/$patientId"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "UniversalToothFdi": {
+      "name": "UniversalToothFdi",
+      "file_path": "apps/dentalemon/src/features/workspace/components/dental/universal-tooth-fdi.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "fdiToothNumber",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "size",
+          "type": "'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "UniversalTooth": {
+      "name": "UniversalTooth",
+      "file_path": "apps/dentalemon/src/features/workspace/components/dental/universal-tooth.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "toothNumber",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "label",
+          "type": "number | string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "surfacesStatus",
+          "type": "SurfaceStatus[]",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "fillColor",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "size",
+          "type": "'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "variant",
+          "type": "'column' | 'surfacemap'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "showLabel",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "interactive",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onClick",
+          "type": "(toothNumber: number) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClick",
+          "payload_type": "(toothNumber: number) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "confidence": "MEDIUM"
+    }
+  }
 }

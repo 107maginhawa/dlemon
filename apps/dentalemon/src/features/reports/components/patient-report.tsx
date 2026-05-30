@@ -12,7 +12,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
   const [startDate, setStartDate] = useState(monthStart);
   const [endDate, setEndDate] = useState(today);
 
-  const { stats, patients, isLoading } = usePatientReport({
+  const { stats, patients, isLoading, isError } = usePatientReport({
     branchId,
     startDate,
     endDate,
@@ -65,7 +65,9 @@ export function PatientReport({ branchId }: PatientReportProps) {
         </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <p className="text-sm text-destructive">Failed to load patient report. Please try again.</p>
+      ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : (
         <>

@@ -137,6 +137,7 @@ export function useTreatmentReport(options: UseTreatmentReportOptions) {
     grouped,
     allTreatments: filtered,
     isLoading,
+    isError: visitsQuery.isError || treatmentQueries.some((q) => q.isError),
     error: visitsQuery.error,
     totalCount: filtered.length,
     totalBilledCents: filtered.reduce((sum, t) => sum + t.priceCents, 0),

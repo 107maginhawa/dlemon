@@ -1,492 +1,158 @@
 {
-  "version": 3,
+  "version": 5,
   "state_machines": [
     {
-      "id": "fsm:appointment-status",
-      "name": "appointment_status",
-      "source_file": "services/api-ts/src/handlers/dental-scheduling/repos/dental-appointment.schema.ts",
-      "source_line": 16,
-      "module": "dental-scheduling",
-      "detection_method": "drizzle_enum",
+      "id": "fsm:alcohol",
+      "name": "alcohol",
+      "source_file": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx",
+      "source_line": 95,
+      "module": "features",
+      "detection_method": "useState_union",
       "states": [
-        "scheduled",
-        "checked_in",
-        "completed",
-        "cancelled",
-        "no_show"
+        "none",
+        "occasional",
+        "regular",
+        "heavy"
       ],
-      "transitions": [],
+      "transitions": [
+        {
+          "from": "*",
+          "to": "occasional",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:129"
+        },
+        {
+          "from": "*",
+          "to": "regular",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:130"
+        },
+        {
+          "from": "*",
+          "to": "heavy",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:131"
+        },
+        {
+          "from": "*",
+          "to": "none",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:132"
+        }
+      ],
       "spec_match": null,
-      "confidence": "MEDIUM"
+      "confidence": "HIGH"
     },
     {
-      "id": "fsm:audit-retention-status",
-      "name": "audit_retention_status",
-      "source_file": "services/api-ts/src/handlers/audit/repos/audit.schema.ts",
-      "source_line": 49,
-      "module": "audit",
-      "detection_method": "drizzle_enum",
+      "id": "fsm:pregnancy-status",
+      "name": "pregnancyStatus",
+      "source_file": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx",
+      "source_line": 91,
+      "module": "features",
+      "detection_method": "useState_union",
       "states": [
-        "active",
-        "archived",
-        "pending-purge"
+        "not_applicable",
+        "pregnant",
+        "breastfeeding"
       ],
-      "transitions": [],
+      "transitions": [
+        {
+          "from": "*",
+          "to": "pregnant",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:111"
+        },
+        {
+          "from": "*",
+          "to": "breastfeeding",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:112"
+        },
+        {
+          "from": "*",
+          "to": "not_applicable",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:113"
+        }
+      ],
       "spec_match": null,
-      "confidence": "MEDIUM"
+      "confidence": "HIGH"
     },
     {
-      "id": "fsm:booking-event-status",
-      "name": "booking_event_status",
-      "source_file": "services/api-ts/src/handlers/booking/repos/booking.schema.ts",
-      "source_line": 45,
-      "module": "booking",
-      "detection_method": "drizzle_enum",
+      "id": "fsm:smoking",
+      "name": "smoking",
+      "source_file": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx",
+      "source_line": 94,
+      "module": "features",
+      "detection_method": "useState_union",
       "states": [
-        "draft",
-        "active",
-        "paused",
-        "archived"
+        "non_smoker",
+        "former",
+        "current"
       ],
-      "transitions": [],
+      "transitions": [
+        {
+          "from": "*",
+          "to": "former",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:120"
+        },
+        {
+          "from": "*",
+          "to": "current",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:121"
+        },
+        {
+          "from": "*",
+          "to": "non_smoker",
+          "trigger": "MedicalHistoryForm",
+          "site": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx:122"
+        }
+      ],
       "spec_match": null,
-      "confidence": "MEDIUM"
+      "confidence": "HIGH"
     },
     {
-      "id": "fsm:booking-status",
-      "name": "booking_status",
-      "source_file": "services/api-ts/src/handlers/booking/repos/booking.schema.ts",
-      "source_line": 28,
-      "module": "booking",
-      "detection_method": "drizzle_enum",
+      "id": "fsm:view",
+      "name": "view",
+      "source_file": "apps/dentalemon/src/routes/_dashboard/calendar.tsx",
+      "source_line": 73,
+      "module": "routes",
+      "detection_method": "useState_union",
       "states": [
-        "pending",
-        "confirmed",
-        "rejected",
-        "cancelled",
-        "completed",
-        "no_show_client",
-        "no_show_host"
+        "day",
+        "week",
+        "month"
       ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:ceph-landmark-status",
-      "name": "ceph_landmark_status",
-      "source_file": "services/api-ts/src/handlers/dental-imaging/repos/imaging_ceph.schema.ts",
-      "source_line": 38,
-      "module": "dental-imaging",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "not_placed",
-        "placed",
-        "confirmed",
-        "locked"
+      "transitions": [
+        {
+          "from": "*",
+          "to": "day",
+          "trigger": "handleDayClick",
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:144"
+        },
+        {
+          "from": "*",
+          "to": "day",
+          "trigger": "CalendarPage",
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:197"
+        },
+        {
+          "from": "*",
+          "to": "week",
+          "trigger": "CalendarPage",
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:209"
+        },
+        {
+          "from": "*",
+          "to": "month",
+          "trigger": "CalendarPage",
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:221"
+        }
       ],
-      "transitions": [],
       "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:chat-room-status",
-      "name": "chat_room_status",
-      "source_file": "services/api-ts/src/handlers/comms/repos/comms.schema.ts",
-      "source_line": 24,
-      "module": "comms",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "active",
-        "archived"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:consultation-status",
-      "name": "consultation_status",
-      "source_file": "services/api-ts/src/handlers/emr/repos/emr.schema.ts",
-      "source_line": 22,
-      "module": "emr",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "finalized",
-        "amended"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-installment-status",
-      "name": "dental_installment_status",
-      "source_file": "services/api-ts/src/handlers/dental-billing/repos/dental-payment-plan.schema.ts",
-      "source_line": 22,
-      "module": "dental-billing",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "pending",
-        "paid",
-        "overdue",
-        "waived"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-invoice-status",
-      "name": "dental_invoice_status",
-      "source_file": "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts",
-      "source_line": 16,
-      "module": "dental-billing",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "issued",
-        "partial",
-        "paid",
-        "overdue",
-        "voided"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-perio-chart-status",
-      "name": "dental_perio_chart_status",
-      "source_file": "services/api-ts/src/handlers/dental-perio/repos/perio-chart.schema.ts",
-      "source_line": 13,
-      "module": "dental-perio",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "completed",
-        "locked"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-plan-status",
-      "name": "dental_plan_status",
-      "source_file": "services/api-ts/src/handlers/dental-billing/repos/dental-payment-plan.schema.ts",
-      "source_line": 18,
-      "module": "dental-billing",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "on_track",
-        "behind",
-        "completed",
-        "defaulted"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-treatment-status",
-      "name": "dental_treatment_status",
-      "source_file": "services/api-ts/src/handlers/dental-visit/repos/treatment.schema.ts",
-      "source_line": 13,
-      "module": "dental-visit",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "diagnosed",
-        "planned",
-        "performed",
-        "verified",
-        "dismissed",
-        "declined"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:dental-visit-status",
-      "name": "dental_visit_status",
-      "source_file": "services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts",
-      "source_line": 15,
-      "module": "dental-visit",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "active",
-        "completed",
-        "locked",
-        "discarded"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:email-queue-status",
-      "name": "email_queue_status",
-      "source_file": "services/api-ts/src/handlers/email/repos/email.schema.ts",
-      "source_line": 50,
-      "module": "email",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "pending",
-        "processing",
-        "sent",
-        "failed",
-        "cancelled"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:file-status",
-      "name": "file_status",
-      "source_file": "services/api-ts/src/handlers/storage/repos/file.schema.ts",
-      "source_line": 10,
-      "module": "storage",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "uploading",
-        "processing",
-        "available",
-        "failed"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:imaging-finding-status",
-      "name": "imaging_finding_status",
-      "source_file": "services/api-ts/src/handlers/dental-imaging/repos/imaging_finding.schema.ts",
-      "source_line": 40,
-      "module": "dental-imaging",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "suspected",
-        "confirmed",
-        "monitoring",
-        "resolved"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:imaging-status",
-      "name": "imaging_status",
-      "source_file": "services/api-ts/src/handlers/dental-imaging/repos/imaging.schema.ts",
-      "source_line": 43,
-      "module": "dental-imaging",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "active",
-        "archived"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:invoice-status",
-      "name": "invoice_status",
-      "source_file": "services/api-ts/src/handlers/billing/repos/billing.schema.ts",
-      "source_line": 24,
-      "module": "billing",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "open",
-        "paid",
-        "void",
-        "uncollectible"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:lab-order-status",
-      "name": "lab_order_status",
-      "source_file": "services/api-ts/src/handlers/dental-clinical/repos/lab-order.schema.ts",
-      "source_line": 12,
-      "module": "dental-clinical",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "ordered",
-        "in_fabrication",
-        "delivered",
-        "fitted",
-        "cancelled"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:member-status",
-      "name": "member_status",
-      "source_file": "services/api-ts/src/handlers/dental-org/repos/membership.schema.ts",
-      "source_line": 22,
-      "module": "dental-org",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "invited",
-        "active",
-        "inactive",
-        "revoked"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:notification-status",
-      "name": "notification_status",
-      "source_file": "services/api-ts/src/handlers/notifs/repos/notification.schema.ts",
-      "source_line": 37,
-      "module": "notifs",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "queued",
-        "sent",
-        "delivered",
-        "read",
-        "failed",
-        "expired"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:payment-status",
-      "name": "payment_status",
-      "source_file": "services/api-ts/src/handlers/billing/repos/billing.schema.ts",
-      "source_line": 32,
-      "module": "billing",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "pending",
-        "requires_capture",
-        "processing",
-        "succeeded",
-        "failed",
-        "canceled"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:pmd-document-status",
-      "name": "pmd_document_status",
-      "source_file": "services/api-ts/src/handlers/dental-pmd/repos/pmd-document.schema.ts",
-      "source_line": 11,
-      "module": "dental-pmd",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "generated",
-        "signed",
-        "superseded"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:prescription-status",
-      "name": "prescription_status",
-      "source_file": "services/api-ts/src/handlers/dental-clinical/repos/prescription.schema.ts",
-      "source_line": 15,
-      "module": "dental-clinical",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "pending",
-        "dispensed",
-        "cancelled"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:slot-status",
-      "name": "slot_status",
-      "source_file": "services/api-ts/src/handlers/booking/repos/booking.schema.ts",
-      "source_line": 38,
-      "module": "booking",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "available",
-        "booked",
-        "blocked"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:template-status",
-      "name": "template_status",
-      "source_file": "services/api-ts/src/handlers/email/repos/email.schema.ts",
-      "source_line": 45,
-      "module": "email",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "draft",
-        "active",
-        "archived"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:tooth-state",
-      "name": "tooth_state",
-      "source_file": "services/api-ts/src/handlers/dental-visit/repos/dental-chart.schema.ts",
-      "source_line": 12,
-      "module": "dental-visit",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "healthy",
-        "caries",
-        "fractured",
-        "filled",
-        "crown",
-        "missing",
-        "implant",
-        "extracted",
-        "watchlist"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
-    },
-    {
-      "id": "fsm:video-call-status",
-      "name": "video_call_status",
-      "source_file": "services/api-ts/src/handlers/comms/repos/comms.schema.ts",
-      "source_line": 35,
-      "module": "comms",
-      "detection_method": "drizzle_enum",
-      "states": [
-        "starting",
-        "active",
-        "ended",
-        "cancelled"
-      ],
-      "transitions": [],
-      "spec_match": null,
-      "confidence": "MEDIUM"
+      "confidence": "HIGH"
     }
   ],
   "spec_comparison": {

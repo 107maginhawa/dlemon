@@ -75,6 +75,7 @@ export function useBranchSettings(branchId: string | null) {
   return {
     settings: query.data ?? null,
     isLoading: query.isLoading,
+    isError: query.isError,
     error: query.error as Error | null,
   };
 }

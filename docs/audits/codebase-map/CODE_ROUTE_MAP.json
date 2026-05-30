@@ -1,5 +1,217 @@
 {
-  "version": 3,
-  "strategy": "config-based",
-  "routes": {}
+  "version": 5,
+  "strategy": "file-based",
+  "routes": {
+    "/_dashboard": {
+      "method": "*",
+      "page_component": "DashboardLayout",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_workspace": {
+      "method": "*",
+      "page_component": "WorkspaceLayout",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/imaging-ceph-report/$imageId": {
+      "method": "*",
+      "page_component": "CephReportPage",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [
+        "imageId"
+      ],
+      "module": "routes"
+    },
+    "/": {
+      "method": "*",
+      "page_component": "HomePage",
+      "layout": null,
+      "middleware": [
+        "requireGuest"
+      ],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/onboarding": {
+      "method": "*",
+      "page_component": "OnboardingPage",
+      "layout": null,
+      "middleware": [
+        "requireAuth",
+        "requireEmailVerified",
+        "requireNoPerson"
+      ],
+      "auth_required": true,
+      "params": [],
+      "module": "routes"
+    },
+    "/verify-email": {
+      "method": "*",
+      "page_component": "VerifyEmailPage",
+      "layout": null,
+      "middleware": [
+        "requireAuth",
+        "requireNotEmailVerified"
+      ],
+      "auth_required": true,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/billing": {
+      "method": "*",
+      "page_component": "BillingPage",
+      "layout": "DashboardLayout",
+      "middleware": [
+        "requireRole"
+      ],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/calendar": {
+      "method": "*",
+      "page_component": "CalendarPage",
+      "layout": "DashboardLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/dashboard": {
+      "method": "*",
+      "page_component": "DashboardPage",
+      "layout": "DashboardLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/dental-onboarding": {
+      "method": "*",
+      "page_component": "DentalOnboardingPage",
+      "layout": "DashboardLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/patients": {
+      "method": "*",
+      "page_component": "PatientsPage",
+      "layout": "DashboardLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/reports": {
+      "method": "*",
+      "page_component": "ReportsPage",
+      "layout": "DashboardLayout",
+      "middleware": [
+        "requireRole"
+      ],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/settings": {
+      "method": "*",
+      "page_component": "SettingsPage",
+      "layout": "DashboardLayout",
+      "middleware": [
+        "requireRole"
+      ],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/staff": {
+      "method": "*",
+      "page_component": "StaffPage",
+      "layout": "DashboardLayout",
+      "middleware": [
+        "requireRole"
+      ],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/_workspace/$patientId": {
+      "method": "*",
+      "page_component": "WorkspacePage",
+      "layout": "WorkspaceLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [
+        "patientId"
+      ],
+      "module": "routes"
+    },
+    "/_workspace/queue-board": {
+      "method": "*",
+      "page_component": "QueueBoardPage",
+      "layout": "WorkspaceLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "routes"
+    },
+    "/auth/$authView": {
+      "method": "*",
+      "page_component": "RouteComponent",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [
+        "authView"
+      ],
+      "module": "routes"
+    },
+    "/auth/pin-entry/$memberId": {
+      "method": "*",
+      "page_component": "PinEntryRoute",
+      "layout": null,
+      "middleware": [
+        "requireAuth"
+      ],
+      "auth_required": true,
+      "params": [
+        "memberId"
+      ],
+      "module": "routes"
+    },
+    "/auth/pin-select": {
+      "method": "*",
+      "page_component": "PinSelectRoute",
+      "layout": null,
+      "middleware": [
+        "requireAuth"
+      ],
+      "auth_required": true,
+      "params": [],
+      "module": "routes"
+    },
+    "/_dashboard/patients_/$patientId": {
+      "method": "*",
+      "page_component": "ProfilePage",
+      "layout": "DashboardLayout",
+      "middleware": [],
+      "auth_required": null,
+      "params": [
+        "patientId"
+      ],
+      "module": "routes"
+    }
+  }
 }

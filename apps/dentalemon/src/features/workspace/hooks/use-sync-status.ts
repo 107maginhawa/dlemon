@@ -32,6 +32,7 @@ export function useSyncStatus(branchId: string | null): UseSyncStatusResult {
     queryFn: async (): Promise<SyncLogEntry[]> => {
       const res = await fetch(
         `${apiBaseUrl}/dental/sync-logs?branchId=${encodeURIComponent(branchId!)}`,
+        { credentials: 'include' },
       );
       if (!res.ok) throw new Error(`Failed to fetch sync logs (${res.status})`);
       const data: unknown = await res.json();

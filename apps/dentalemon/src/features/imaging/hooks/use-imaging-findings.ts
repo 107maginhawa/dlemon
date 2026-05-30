@@ -126,6 +126,7 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
   return {
     findings: query.data ?? [],
     isLoading: query.isLoading,
+    isError: query.isError,
     // CONF-IMG-L2-001 (V-IMG-004): surface the list-query error so the UI can
     // render it instead of swallowing failures (tier-block / 422) into console.
     error: query.error,

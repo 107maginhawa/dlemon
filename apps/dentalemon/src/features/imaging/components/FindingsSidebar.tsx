@@ -76,7 +76,7 @@ export function FindingsSidebar({
   onClose,
   initialAnnotationId,
 }: FindingsSidebarProps) {
-  const { findings, isLoading, createFinding, updateFinding, deleteFinding } =
+  const { findings, isLoading, isError, createFinding, updateFinding, deleteFinding } =
     useImagingFindings(imageId, { enabled: isOpen })
 
   const [selectedType, setSelectedType] = useState<ImagingFindingType | ''>('')
@@ -264,7 +264,11 @@ export function FindingsSidebar({
       <div className="flex flex-col flex-1 px-4 py-3 gap-2">
         <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Findings List</span>
 
-        {isLoading ? (
+        {isError ? (
+          <p className="text-xs text-red-400 mt-2">
+            Failed to load findings. Please try again.
+          </p>
+        ) : isLoading ? (
           <>
             <Skeleton className="h-14 w-full bg-zinc-800" />
             <Skeleton className="h-14 w-full bg-zinc-800" />
