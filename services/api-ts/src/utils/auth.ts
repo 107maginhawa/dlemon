@@ -75,6 +75,13 @@ export async function userHasRole(
   if (!user.role) return false;
 
   const userRoles = user.role.split(',').map(r => r.trim());
+
+  // 'admin' is a superuser — it satisfies any standard role requirement.
+  // (The Better-Auth admin plugin treats admin as privileged; route-level role
+  // gates must agree, otherwise an admin is denied 'user'-scoped routes like
+  // POST /persons while still passing exact `role === 'admin'` handler checks.)
+  if (userRoles.includes('admin')) return true;
+
   const rolesToCheck = Array.isArray(roleToCheck) ? roleToCheck : [roleToCheck];
 
   return rolesToCheck.some(role => userRoles.includes(role));

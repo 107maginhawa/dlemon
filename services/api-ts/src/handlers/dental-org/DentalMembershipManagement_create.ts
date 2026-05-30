@@ -39,9 +39,6 @@ export async function DentalMembershipManagement_create(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // EM-ORG-001: Only dentist_owner may create staff members on the branch
-  await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
-
   const orgRepo = new OrganizationRepository(db, logger);
   const org = await orgRepo.findOneById(orgId);
   if (!org) {
@@ -49,6 +46,18 @@ export async function DentalMembershipManagement_create(
   }
 
   const memberRepo = new MembershipRepository(db, logger);
+
+  // EM-ORG-001: Only dentist_owner may create staff members on the branch.
+  // Bootstrap exception: the org owner may create the FIRST membership when they
+  // hold none yet — otherwise the very first member can never be added (the
+  // branch-role check requires a membership the owner doesn't have). Once the
+  // owner holds any membership, their membership role governs as normal.
+  const callerIsOwner = user.id === org.ownerPersonId;
+  const callerMembership = await memberRepo.findActiveByPersonAndBranch(user.id, branchId);
+  if (!(callerIsOwner && !callerMembership)) {
+    await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
+  }
+
   const activeCount = await memberRepo.countActiveStaffByBranch(branchId);
   const limit = TIER_MEMBER_LIMITS[org.tier] ?? Infinity;
 

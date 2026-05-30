@@ -20,11 +20,34 @@ export interface TestDatabase {
 }
 
 /**
+ * The canonical local TEST database. This helper mints per-test schemas
+ * (`test_<id>`) via CREATE SCHEMA; if it ever runs against the dev `monobase`
+ * DB those schemas leak permanently (there is no clone to drop them with).
+ * So we default to — and hard-require — a `monobase_test*` database.
+ */
+const DEFAULT_TEST_URL = 'postgresql://postgres:password@localhost:5432/monobase_test';
+
+/**
+ * Refuse any database that is not `monobase_test*`. Mirrors tests/db-guard.ts.
+ * Override only with ALLOW_NON_TEST_DB=1.
+ */
+export function assertTestDb(url: string): string {
+  const isTestDb = /\/monobase_test(_[a-z0-9_]+)?(\?|$)/.test(url) || process.env.ALLOW_NON_TEST_DB === '1';
+  if (!isTestDb) {
+    throw new Error(
+      `[test-db] Refusing to create test schemas in a non-test database: "${url}". ` +
+        `Point TEST_DATABASE_URL/DATABASE_URL at a monobase_test* DB (or set ALLOW_NON_TEST_DB=1).`
+    );
+  }
+  return url;
+}
+
+/**
  * Generate connection string with unique schema name
  */
 export function getConnectionString(schema = nanoid()): { url: string; schemaName: string } {
-  // Use environment variable or default to local PostgreSQL
-  const baseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/monobase';
+  // Default to the local TEST database — never the dev DB — and reject non-test DBs.
+  const baseUrl = assertTestDb(process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || DEFAULT_TEST_URL);
 
   // Each test gets a unique schema name for isolation
   const testRunId = Date.now().toString(36);
@@ -38,7 +61,7 @@ export function getConnectionString(schema = nanoid()): { url: string; schemaNam
  * Uses environment variables or defaults
  */
 export function createTestConnection(databaseUrl?: string): Sql {
-  const url = databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/monobase';
+  const url = assertTestDb(databaseUrl || process.env.DATABASE_URL || DEFAULT_TEST_URL);
 
   return postgres(url, {
     max: 10,
@@ -274,7 +297,7 @@ export async function waitForDatabase(
   maxRetries = 30,
   delayMs = 1000
 ): Promise<void> {
-  const url = databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/monobase';
+  const url = databaseUrl || process.env.DATABASE_URL || DEFAULT_TEST_URL;
 
   for (let i = 0; i < maxRetries; i++) {
     try {

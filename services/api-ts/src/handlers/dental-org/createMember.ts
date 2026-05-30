@@ -52,9 +52,6 @@ export async function createMember(ctx: Context): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // EF-ORG-003: Only dentist_owner may invite new staff members
-  await assertBranchRole(db, user.id, resolvedBranchId, ['dentist_owner']);
-
   const branchRepo = new BranchRepository(db, logger);
   const branch = await branchRepo.findOneById(resolvedBranchId);
   if (!branch) throw new AppError('Branch not found', 'NOT_FOUND', 404);
@@ -64,6 +61,18 @@ export async function createMember(ctx: Context): Promise<Response> {
   if (!org) throw new AppError('Organization not found', 'NOT_FOUND', 404);
 
   const memberRepo = new MembershipRepository(db, logger);
+
+  // EF-ORG-003: Only dentist_owner may invite new staff members.
+  // Bootstrap exception: the org owner may create the FIRST membership when they
+  // hold none yet — otherwise the very first member can never be added (the
+  // branch-role check requires a membership the owner doesn't have). Once the
+  // owner holds any membership, their membership role governs as normal.
+  const callerIsOwner = user.id === org.ownerPersonId;
+  const callerMembership = await memberRepo.findActiveByPersonAndBranch(user.id, resolvedBranchId);
+  if (!(callerIsOwner && !callerMembership)) {
+    await assertBranchRole(db, user.id, resolvedBranchId, ['dentist_owner']);
+  }
+
   const activeCount = await memberRepo.countActiveStaffByBranch(resolvedBranchId);
   const limit = TIER_MEMBER_LIMITS[org.tier] ?? Infinity;
 

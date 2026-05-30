@@ -129,8 +129,11 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
               : [];
 
             if (!existingRoles.includes('admin')) {
-              existingRoles.push('admin');
-              const newRole = existingRoles.join(',');
+              // Store the role as exactly 'admin' — every admin-gated handler
+              // checks `user.role === 'admin'` (exact), and the Better-Auth admin
+              // plugin uses adminRoles: ['admin']. A comma-joined 'user,admin'
+              // would fail that exact check, so promoted admins must be 'admin'.
+              const newRole = 'admin';
 
               if (logger) {
                 logger.info(`Auto-promoting new user ${user.email} to admin role during creation`);
