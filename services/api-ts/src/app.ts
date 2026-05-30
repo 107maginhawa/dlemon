@@ -63,7 +63,8 @@ import { listPatientTreatmentPlans } from '@/handlers/dental-patient/treatment-p
 import { getTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/getTreatmentPlan';
 import { updateTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/updateTreatmentPlan';
 import { acceptTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
-import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody } from '@/handlers/dental-patient/utils/treatment-plan-validators';
+import { approveTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/approveTreatmentPlan';
+import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody, ApproveTreatmentPlanBody } from '@/handlers/dental-patient/utils/treatment-plan-validators';
 import { createSyncLog } from '@/handlers/dental-patient/sync/createSyncLog';
 import { listSyncLogs } from '@/handlers/dental-patient/sync/listSyncLogs';
 import { updateSyncLog } from '@/handlers/dental-patient/sync/updateSyncLog';
@@ -404,6 +405,13 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['user'] }),
     zValidator('param', TreatmentPlanPlanParams),
     acceptTreatmentPlan
+  );
+  // CR-05 / TP-BR-005 (TR-P1-08): record patient approval + bind plan items
+  (app as any).post('/dental/patients/:patientId/treatment-plans/:planId/approval',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', TreatmentPlanPlanParams),
+    zValidator('json', ApproveTreatmentPlanBody),
+    approveTreatmentPlan
   );
 
   // SyncLog endpoints (P0-D)

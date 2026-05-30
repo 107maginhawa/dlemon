@@ -14,6 +14,7 @@ import type { DentalTreatment, DentalTreatmentStatus } from '../repos/treatment.
 import { TREATMENT_TRANSITIONS } from '../repos/treatment.schema';
 import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/clinical-visit.facade';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { recomputePlanForTreatment } from '@/handlers/dental-patient/repos/treatment-plan.facade';
 import type { User } from '@/types/auth';
 import type { UpdateDentalTreatmentBody, UpdateDentalTreatmentParams } from '@/generated/openapi/validators';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -79,6 +80,8 @@ export async function updateDentalTreatment(
   if (body.status === 'dismissed') {
     const reason = body.dismissReason ?? 'Dismissed';
     const dismissed = await repo.dismiss(treatmentId, reason);
+    // TR-P1-08: a dismissed item leaves the plan's completion denominator — recompute.
+    await recomputePlanForTreatment(db, treatmentId);
     // V-VIS-006: dismiss is a clinically-significant terminal transition — audit it.
     const branchForAudit = await getBranchOrgId(db, visit.branchId);
     await logAuditEvent(db, ctx.get('logger'), {
@@ -100,6 +103,8 @@ export async function updateDentalTreatment(
     }
     const refusalReason = body.refusalReason.trim();
     const declined = await repo.decline(treatmentId, refusalReason);
+    // TR-P1-08: a declined item leaves the plan's completion denominator — recompute.
+    await recomputePlanForTreatment(db, treatmentId);
     // V-VIS-006: patient refusal is a clinically- and legally-significant terminal
     // transition — audit it (refusalReason captured for the compliance record).
     const branchForAudit = await getBranchOrgId(db, visit.branchId);
@@ -127,6 +132,10 @@ export async function updateDentalTreatment(
   if (body.clinicalNotes !== undefined) patch.clinicalNotes = body.clinicalNotes;
 
   const updated = await repo.update(treatmentId, patch);
+
+  // TR-P1-08 / TP-BR-005: a status transition (→performed/→verified) can change the
+  // parent plan's completion — recompute it (no-op if the treatment isn't plan-linked).
+  if (body.status) await recomputePlanForTreatment(db, treatmentId);
 
   if (body.status === 'performed' && visit) {
     const branchForAudit = await getBranchOrgId(db, visit.branchId);
