@@ -40,9 +40,17 @@ export const dentalTreatments = pgTable('dental_treatment', {
   clinicalNotes: text('clinical_notes'),
   performedAt: timestamp('performed_at'),
   billedInvoiceId: uuid('billed_invoice_id'),
+  /**
+   * TR-P1-08: the treatment-plan this treatment belongs to (its "item" membership).
+   * Loose cross-module ref (dental_treatment_plan lives in dental-patient) — no DB FK,
+   * mirroring billedInvoiceId, to keep dental-visit decoupled from dental-patient.
+   * NULL = not part of any plan's completion math (TP-BR-005).
+   */
+  treatmentPlanId: uuid('treatment_plan_id'),
 }, (table) => ({
   visitIdx: index('dental_treatment_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_treatment_patient_id_idx').on(table.patientId),
+  treatmentPlanIdx: index('dental_treatment_treatment_plan_id_idx').on(table.treatmentPlanId),
 }));
 
 export const visitNotes = pgTable('visit_notes', {
