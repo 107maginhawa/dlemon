@@ -336,6 +336,16 @@ describe('Auth (alt01-AC-004)', () => {
     const res = await app.request(`/dental/patients/${PATIENT_ID}/dental-alerts`);
     expect(res.status).toBe(401);
   });
+
+  // CONF-DP-002: READ gate must deny a wrong principal, not just unauthenticated.
+  // ROLE_PERMISSION_MATRIX grants sub-resource READ to all clinic roles, so the
+  // denied principal is an authenticated non-member (assertPatientBranchAccess → 403).
+  test('GET returns 403 for an authenticated non-member', async () => {
+    const OUTSIDER = { id: 'a0000000-0000-1000-8000-0000000000ff', email: 'outsider@other.com' };
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/dental-alerts`);
+    expect(res.status).toBe(403);
+  });
 });
 
 // =============================================================================

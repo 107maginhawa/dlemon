@@ -173,6 +173,16 @@ describe('Auth required (AC-007)', () => {
     });
     expect(res.status).toBe(401);
   });
+
+  // CONF-DP-002: READ gate must deny a wrong principal, not just unauthenticated.
+  // ROLE_PERMISSION_MATRIX grants sub-resource READ to all clinic roles, so the
+  // denied principal is an authenticated non-member (assertPatientBranchAccess → 403).
+  test('GET insurance-profiles returns 403 for an authenticated non-member', async () => {
+    const OUTSIDER = { id: 'a0000000-0000-1000-8000-00000000a1ff', email: 'outsider@ins01.com' };
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/insurance-profiles`);
+    expect(res.status).toBe(403);
+  });
 });
 
 // =============================================================================
