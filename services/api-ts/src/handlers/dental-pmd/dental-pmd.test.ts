@@ -244,6 +244,54 @@ describe('generatePMD handler [AC-PMD-01]', () => {
     expect(content.patientId).toBe(visit!.patientId);
   });
 
+  // AC-PMD-004 / BR-021: a generated PMD is a frozen, checksum-sealed snapshot.
+  // Mutating a treatment on the SOURCE VISIT after generation MUST NOT change the
+  // stored PMD's content or checksum (medico-legal immutability, §15). The handler
+  // persists `content`+`checksum` at generation time; re-fetching must return them
+  // byte-identical regardless of later edits to the underlying visit data.
+  test('PMD content + checksum are immutable against future edits to the source visit treatments [AC-PMD-004]', async () => {
+    const visit = await seedCompletedVisitWithTreatment();
+    const app = buildTestApp(TEST_USER);
+
+    // Generate the PMD and capture its frozen content + checksum.
+    const genRes = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(genRes.status).toBe(201);
+    const generated = await genRes.json() as any;
+    const originalContent: string = generated.content;
+    const originalChecksum: string = generated.checksum;
+    expect(originalContent).toBeTruthy();
+    expect(originalChecksum).toBeTruthy();
+    // Sanity: the source treatment (cdtCode D2140) is captured in the snapshot.
+    expect(JSON.parse(originalContent).treatments[0].cdtCode).toBe('D2140');
+
+    // Mutate a treatment on the SOURCE visit after PMD generation.
+    const treatmentRepo = new TreatmentRepository(db);
+    const visitTreatments = await treatmentRepo.findByVisit(visit!.id);
+    expect(visitTreatments.length).toBeGreaterThanOrEqual(1);
+    const updated = await treatmentRepo.update(visitTreatments[0]!.id, {
+      cdtCode: 'D9999',
+      description: 'MUTATED AFTER PMD GENERATION',
+      priceCents: 99999,
+    });
+    expect(updated!.cdtCode).toBe('D9999');
+
+    // Re-fetch the PMD; the stored snapshot must be byte-identical and the
+    // checksum unchanged — the mutated treatment must NOT leak into the PMD.
+    const getRes = await app.request(`/dental/visits/${visit!.id}/pmd`);
+    expect(getRes.status).toBe(200);
+    const refetched = await getRes.json() as any;
+    expect(refetched.content).toBe(originalContent);
+    expect(refetched.checksum).toBe(originalChecksum);
+    // The frozen snapshot still carries the ORIGINAL treatment data, not the mutation.
+    const refetchedTreatments = JSON.parse(refetched.content).treatments;
+    expect(refetchedTreatments[0].cdtCode).toBe('D2140');
+    expect(refetchedTreatments[0].cdtCode).not.toBe('D9999');
+  });
+
   test('supersedes previous PMD on second generation', async () => {
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
