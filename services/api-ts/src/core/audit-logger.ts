@@ -100,14 +100,33 @@ function sanitizeAuditMetadata(
   return sanitizeAuditObject(metadata, logger, event, 'metadata');
 }
 
+/**
+ * T-001 (PHI in logs): the Pino stream must carry only non-PHI identifiers. The raw
+ * event's `metadata` / `before` / `after` snapshots routinely contain names, email,
+ * DOB, and clinical free-text, and they nest too deep for the logger's `*.field`
+ * redact paths. Log ONLY these safe fields; PHI goes (sanitized) to the DB tables.
+ */
+function safeAuditLogFields(event: AuditEvent) {
+  return {
+    action: event.action,
+    resourceType: event.resourceType,
+    resourceId: event.resourceId,
+    personId: event.personId,
+    tenantId: event.tenantId,
+    branchId: event.branchId,
+    eventType: event.eventType,
+    actorRole: event.actorRole,
+  };
+}
+
 export async function logAuditEvent(
   db: DatabaseInstance,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logger: any,
   event: AuditEvent,
 ): Promise<void> {
-  // Pino log (existing behaviour)
-  logger?.info({ audit: event }, `dental.audit: ${event.action}`);
+  // Pino log — safe identifiers only (T-001: never the PHI-bearing snapshots/metadata).
+  logger?.info({ audit: safeAuditLogFields(event) }, `dental.audit: ${event.action}`);
 
   // V-AUD-001: strip PHI keys from metadata once, before either persisted write.
   const safeMetadata = sanitizeAuditMetadata(event.metadata, logger, event);
@@ -150,7 +169,7 @@ export async function logAuditEvent(
       }),
     );
   } catch (err) {
-    logger?.error({ err, event }, 'dental.audit: failed to write to dental_audit_log');
+    logger?.error({ err, audit: safeAuditLogFields(event) }, 'dental.audit: failed to write to dental_audit_log');
     if (isSecurityEvent) {
       // Fail-closed (ADR-005): surface security audit failures rather than swallow them.
       throw err;
@@ -174,6 +193,6 @@ export async function logAuditEvent(
       }),
     );
   } catch (err) {
-    logger?.error({ err, event }, 'dental.audit: failed to write to dental_audit');
+    logger?.error({ err, audit: safeAuditLogFields(event) }, 'dental.audit: failed to write to dental_audit');
   }
 }
