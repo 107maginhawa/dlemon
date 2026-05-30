@@ -747,7 +747,8 @@ describe('recordDentalPayment handler', () => {
   });
 
   test('returns 201 with payment record on valid input', async () => {
-    const { invoice } = await seedInvoice();
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue invoices.
+    const { invoice } = await seedIssuedInvoice();
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -771,7 +772,8 @@ describe('recordDentalPayment handler', () => {
 
   // AL-010: payment.record audit trail
   test('persists payment.record audit record after recording a payment', async () => {
-    const { invoice } = await seedInvoice();
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue invoices.
+    const { invoice } = await seedIssuedInvoice();
     const app = buildTestApp(TEST_USER);
 
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -803,7 +805,8 @@ describe('recordDentalPayment handler', () => {
   });
 
   test('invoice status becomes partial after partial payment', async () => {
-    const { invoice } = await seedInvoice();
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue invoices.
+    const { invoice } = await seedIssuedInvoice();
     const app = buildTestApp(TEST_USER);
 
     await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
@@ -824,7 +827,8 @@ describe('recordDentalPayment handler', () => {
   });
 
   test('invoice status becomes paid after full payment', async () => {
-    const { invoice } = await seedInvoice();
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue invoices.
+    const { invoice } = await seedIssuedInvoice();
     const app = buildTestApp(TEST_USER);
 
     await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {

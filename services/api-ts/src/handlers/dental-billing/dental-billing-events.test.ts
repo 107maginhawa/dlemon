@@ -30,6 +30,7 @@ import {
 import { createDentalInvoice } from './createDentalInvoice';
 import { recordDentalPayment } from './recordDentalPayment';
 import { voidDentalInvoice } from './voidDentalInvoice';
+import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -197,6 +198,10 @@ describe('DE-008 InvoicePaid — audit-row marker only on transition to fully pa
     const createRes = await createInvoiceViaApi(app, visit.id);
     const invoice = await createRes.json() as any;
 
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue
+    // invoices, so issue the freshly-created draft before paying.
+    await new DentalInvoiceRepository(db).issue(invoice.id);
+
     // Pay the full balance (50000) → status transitions to 'paid'
     const payRes = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
       method: 'POST',
@@ -216,6 +221,10 @@ describe('DE-008 InvoicePaid — audit-row marker only on transition to fully pa
     const visit = await seedBillableVisit();
     const createRes = await createInvoiceViaApi(app, visit.id);
     const invoice = await createRes.json() as any;
+
+    // V-BIL-105/BR-012: payments are valid only on issued/partial/overdue
+    // invoices, so issue the freshly-created draft before paying.
+    await new DentalInvoiceRepository(db).issue(invoice.id);
 
     const payRes = await app.request(`/dental/billing/invoices/${invoice.id}/payments`, {
       method: 'POST',
