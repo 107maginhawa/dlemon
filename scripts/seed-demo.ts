@@ -7,6 +7,8 @@
  * Demo login: demo@dentalemon.com / DemoClinic1!  →  PIN 1 2 3 4 5 6
  */
 
+import { S3Client } from 'bun'
+
 const API = 'http://localhost:7213'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -33,6 +35,77 @@ const patch = (p: string, b: unknown, c: string) => req('PATCH', p, b, c)
 function must<T>(r: { ok: boolean; status: number; data: T }, label: string): T {
   if (!r.ok) throw new Error(`${label} → ${r.status}: ${JSON.stringify(r.data).slice(0, 300)}`)
   return r.data
+}
+
+// ─── Demo imaging upload ──────────────────────────────────────────────────────
+// POST /dental/imaging/studies persists an imaging_study_image whose `fileId` IS the
+// S3 object key (no stored_file row, no /complete step — that's the generic storage
+// flow, not imaging). The image is served via a presigned GET on the key, so all the
+// viewer needs is the bytes present. We PutObject directly (no SSE) because the API's
+// presigned PUT signs ServerSideEncryption:AES256, which this dev MinIO (no KMS) 501s.
+const DEMO_CEPH_IMAGE = `${import.meta.dir}/seed-assets/imaging/ceph-lateral-demo.jpg`
+let demoImageBytes: ArrayBuffer | null = null
+
+const seedS3 = new S3Client({
+  accessKeyId: process.env['STORAGE_ACCESS_KEY_ID'] ?? 'minioadmin',
+  secretAccessKey: process.env['STORAGE_SECRET_ACCESS_KEY'] ?? 'minioadmin',
+  bucket: process.env['STORAGE_BUCKET'] ?? 'monobase-files',
+  endpoint: process.env['STORAGE_ENDPOINT'] ?? 'http://localhost:9000',
+  region: process.env['STORAGE_REGION'] ?? 'us-east-1',
+  virtualHostedStyle: false, // path-style: required for MinIO
+})
+
+async function uploadDemoImage(fileId: string, mimeType: string): Promise<void> {
+  if (!demoImageBytes) demoImageBytes = await Bun.file(DEMO_CEPH_IMAGE).arrayBuffer()
+  await seedS3.write(fileId, demoImageBytes, { type: mimeType })
+}
+
+// Seeds a complete cephalometric chain (study + uploaded image + 11 landmarks with
+// A/B/Go/Po confirmed + S locked + analysis + report). Visit-independent so it never
+// gets blocked by the visit-completion cascade. CLASS_I golden coords produce
+// SNA≈82/SNB≈80/ANB≈2 (CEPH_EXPECTED in _journey-helpers → B02/B04 PASS). Throws on failure.
+async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string): Promise<string> {
+  const studyR = await post('/dental/imaging/studies', {
+    patientId, ...(visitId ? { visitId } : {}), branchId,
+    modality: 'cephalometric', filename: 'torres-miguel-ceph-lateral.jpg',
+    mimeType: 'image/jpeg', size: 2048000,
+  }, cookie)
+  if (!studyR.ok) throw new Error(`ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0, 160)}`)
+  const imageId: string | undefined = studyR.data.image?.id ?? studyR.data.imageId
+  if (!imageId) throw new Error(`ceph study missing imageId: ${JSON.stringify(studyR.data).slice(0, 160)}`)
+  await uploadDemoImage(studyR.data.fileId, 'image/jpeg')
+  log(`  ✓ Ceph imaging study + image uploaded (imageId: ${imageId.slice(0, 8)}…)`)
+
+  const landmarks = [
+    { landmarkCode: 'S', x: 100, y: 200 }, { landmarkCode: 'N', x: 300, y: 200 },
+    { landmarkCode: 'A', x: 290, y: 271 }, { landmarkCode: 'B', x: 288, y: 268 },
+    { landmarkCode: 'Pog', x: 285, y: 280 }, { landmarkCode: 'Me', x: 282, y: 310 },
+    { landmarkCode: 'Go', x: 220, y: 310 }, { landmarkCode: 'ANS', x: 430, y: 390 },
+    { landmarkCode: 'PNS', x: 520, y: 385 }, { landmarkCode: 'Po', x: 575, y: 295 },
+    { landmarkCode: 'Or', x: 540, y: 300 },
+  ].map(lm => ({ ...lm, status: 'placed' }))
+  const lmBatchR = await post(`/dental/imaging/images/${imageId}/ceph/landmarks`, { landmarks }, cookie)
+  if (!lmBatchR.ok) throw new Error(`ceph landmarks → ${lmBatchR.status}: ${JSON.stringify(lmBatchR.data).slice(0, 160)}`)
+  for (const code of ['A', 'B', 'Go', 'Po']) {
+    const r = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/${code}`, { status: 'confirmed' }, cookie)
+    if (!r.ok) throw new Error(`ceph confirm ${code} → ${r.status}: ${JSON.stringify(r.data).slice(0, 120)}`)
+  }
+  // B03 precondition: confirm then lock S (placed→confirmed→locked)
+  const cS = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'confirmed' }, cookie)
+  if (!cS.ok) throw new Error(`ceph confirm S → ${cS.status}`)
+  const lS = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'locked' }, cookie)
+  if (!lS.ok) throw new Error(`ceph lock S → ${lS.status}`)
+  // Calibrate (within the 0.05–0.50 mm/px guard) so recompute succeeds and mm-metrics
+  // (overjet/overbite) populate. Analysis already exists from the landmark write, so
+  // calibration + recompute are best-effort; the report is the required artifact.
+  const calR = await patch(`/dental/imaging/images/${imageId}/calibration`, { pixelSpacingMm: 0.25 }, cookie)
+  if (!calR.ok) log(`  ⚠ ceph calibration → ${calR.status} (continuing)`)
+  const rc = await post(`/dental/imaging/images/${imageId}/ceph/analysis/recompute`, {}, cookie)
+  if (!rc.ok) log(`  ⚠ ceph recompute → ${rc.status} (analysis already computed on write; continuing)`)
+  const rep = await post(`/dental/imaging/images/${imageId}/ceph/reports`, {}, cookie)
+  if (!rep.ok) throw new Error(`ceph report → ${rep.status}: ${JSON.stringify(rep.data).slice(0, 120)}`)
+  log(`  ✓ Ceph: 11 landmarks, A/B/Go/Po confirmed, S locked, calibrated, analysis + report v1`)
+  return imageId
 }
 
 function getCookie(res: Response): string {
@@ -337,6 +410,19 @@ async function seed() {
   } catch {
     try { await fetch(`${API}/dental/org/context`, { signal: AbortSignal.timeout(4000) }); log(`✓ API up`) }
     catch { throw new Error(`API not reachable at ${API}.\nStart: cd services/api-ts && bun dev`) }
+  }
+
+  // MinIO (storage) preflight — imaging/ceph need it; never fail silently.
+  if (process.env['SEED_SKIP_STORAGE'] === '1') {
+    log('⚠ SEED_SKIP_STORAGE=1 — imaging/ceph image uploads will be skipped')
+  } else {
+    try {
+      const m = await fetch('http://localhost:9000/minio/health/live', { signal: AbortSignal.timeout(4000) })
+      log(`✓ MinIO up at http://localhost:9000 (${m.status})`)
+    } catch {
+      log('⚠⚠ MinIO NOT reachable at http://localhost:9000 — imaging/ceph images will NOT load.')
+      log('    Fix: cd services/api-ts && bun run dev:deps:up   (or SEED_SKIP_STORAGE=1 to silence)')
+    }
   }
 
   // ── 1. Auth ──────────────────────────────────────────────────────────────
@@ -958,6 +1044,10 @@ async function seed() {
       await addNotes(v1id, v1tpl.soap, cookie)
       await completeVisit(v1id, p6.id, cookie)
       completedCount++
+      // Ceph chain seeds off V1 (always created) so it never gets blocked by the
+      // V2 visit-completion cascade (see seedCephChain). Non-fatal if storage is down.
+      try { await seedCephChain(p6.id, branch.id, v1id, cookie) }
+      catch (e: any) { log(`  ⚠ P6 ceph skipped: ${String(e?.message).slice(0, 140)}`) }
     }
 
     // V2 — ortho + imaging + ceph + lab order (while active)
@@ -967,90 +1057,8 @@ async function seed() {
       await addChart(v2id, p6.id, v2tpl.teeth, cookie)
       await addTreatments(v2id, p6.id, v2tpl.treatments, cookie, 'mixed')
 
-      // ── Imaging: cephalometric study ──
-      // Wrapped in try-catch: MinIO (storage) may not be running in dev/CI.
-      // Failure here is non-fatal — P6 visits still seed; ceph journeys (B02/B04)
-      // will be skipped/broken without MinIO, which is expected.
-      let imageId: string | null = null
-      try {
-      const studyR = await post('/dental/imaging/studies', {
-        patientId: p6.id, visitId: v2id, branchId: branch.id,
-        modality: 'cephalometric',
-        filename: 'torres-miguel-ceph-lateral.jpg',
-        mimeType: 'image/jpeg',
-        size: 2048000,
-      }, cookie)
-      if (!studyR.ok) throw new Error(`P6 ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0,200)}`)
-      imageId = studyR.data.image?.id ?? studyR.data.imageId
-      if (!imageId) throw new Error(`P6 ceph study response missing imageId: ${JSON.stringify(studyR.data).slice(0,200)}`)
-      log(`  ✓ Imaging study created (imageId: ${imageId.slice(0,8)}…)`)
-
-      {
-          // Finding: suspected → confirmed
-          const findingR = await post(`/dental/imaging/images/${imageId}/findings`, {
-            type: 'caries', visitId: v2id, patientId: p6.id, branchId: branch.id,
-            status: 'suspected',
-          }, cookie)
-          if (findingR.ok) {
-            await patch(`/dental/imaging/findings/${findingR.data.id}`, { status: 'confirmed' }, cookie)
-            log(`  ✓ Finding: suspected → confirmed`)
-          } else {
-            log(`  ⚠ Finding (${findingR.status}): ${JSON.stringify(findingR.data).slice(0,100)}`)
-          }
-
-          // Periapical attachment linked to this visit
-          await post(`/dental/visits/${v2id}/attachments`, {
-            visitId: v2id, patientId: p6.id, imageType: 'xray',
-            fileName: 'torres-ceph-lateral-print.jpg', filePath: '/uploads/p6/ceph-print.jpg',
-            fileSizeBytes: 512000, mimeType: 'image/jpeg',
-            note: 'Cephalometric lateral skull radiograph for orthodontic analysis',
-          }, cookie)
-
-          // Ceph: batch upsert landmarks.
-          // Core S/N/A/B/Pog/Me/Go use CLASS_I golden coords from packages/ceph-math
-          // so that computeCephAnalysis produces SNA≈82, SNB≈80, ANB≈2, convexity>0
-          // (matching CEPH_EXPECTED in _journey-helpers — required for B02/B04 PASS).
-          const landmarks = [
-            { landmarkCode: 'S',   x: 100, y: 200 },
-            { landmarkCode: 'N',   x: 300, y: 200 },
-            { landmarkCode: 'A',   x: 290, y: 271 },
-            { landmarkCode: 'B',   x: 288, y: 268 },
-            { landmarkCode: 'Pog', x: 285, y: 280 },
-            { landmarkCode: 'Me',  x: 282, y: 310 },
-            { landmarkCode: 'Go',  x: 220, y: 310 },
-            { landmarkCode: 'ANS', x: 430, y: 390 },
-            { landmarkCode: 'PNS', x: 520, y: 385 },
-            { landmarkCode: 'Po',  x: 575, y: 295 },
-            { landmarkCode: 'Or',  x: 540, y: 300 },
-          ].map(lm => ({ ...lm, status: 'placed' }))
-
-          const lmBatchR = await post(`/dental/imaging/images/${imageId}/ceph/landmarks`, { landmarks }, cookie)
-          if (!lmBatchR.ok) throw new Error(`P6 ceph landmarks batch POST → ${lmBatchR.status}: ${JSON.stringify(lmBatchR.data).slice(0,200)}`)
-          log(`  ✓ Ceph landmarks batch upsert (${landmarks.length} points)`)
-          // Confirm gate landmarks A, B, Go, Po
-          for (const code of ['A', 'B', 'Go', 'Po']) {
-            const confirmR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/${code}`, { status: 'confirmed' }, cookie)
-            if (!confirmR.ok) throw new Error(`P6 ceph landmark ${code} confirm PATCH → ${confirmR.status}: ${JSON.stringify(confirmR.data).slice(0,200)}`)
-          }
-          log(`  ✓ A, B, Go, Po → confirmed`)
-          // B03 precondition: lock landmark 'S' (Sella). Confirm it first (placed→confirmed→locked).
-          const confirmSR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'confirmed' }, cookie)
-          if (!confirmSR.ok) throw new Error(`P6 ceph landmark S confirm PATCH → ${confirmSR.status}: ${JSON.stringify(confirmSR.data).slice(0,200)}`)
-          const lockSR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'locked' }, cookie)
-          if (!lockSR.ok) throw new Error(`P6 ceph landmark S lock PATCH → ${lockSR.status}: ${JSON.stringify(lockSR.data).slice(0,200)}`)
-          log(`  ✓ Landmark S → locked (B03 precondition)`)
-          // Recompute analysis
-          const recomputeR = await post(`/dental/imaging/images/${imageId}/ceph/analysis/recompute`, {}, cookie)
-          if (!recomputeR.ok) throw new Error(`P6 ceph analysis recompute POST → ${recomputeR.status}: ${JSON.stringify(recomputeR.data).slice(0,200)}`)
-          log(`  ✓ Ceph analysis recomputed`)
-          // Create ceph report
-          const reportR = await post(`/dental/imaging/images/${imageId}/ceph/reports`, {}, cookie)
-          if (!reportR.ok) throw new Error(`P6 ceph report POST → ${reportR.status}: ${JSON.stringify(reportR.data).slice(0,200)}`)
-          log(`  ✓ Ceph report generated`)
-      }
-      } catch (cephErr: any) {
-        log(`  ⚠ P6 ceph/imaging skipped (storage unavailable): ${cephErr.message?.slice(0, 100)}`)
-      }
+      // Ceph chain seeds off V1 above (seedCephChain) — kept out of V2 so it isn't
+      // blocked by the visit-completion cascade and Miguel can't get a duplicate study.
 
       // Lab order for ortho appliance — stays at in_fabrication
       const labR = await post(`/dental/visits/${v2id}/lab-orders`, {
@@ -1278,8 +1286,14 @@ async function seed() {
       modality: def.modality, filename: def.filename,
       mimeType: 'image/jpeg', size: 1024000,
     }, cookie)
-    if (r.ok) log(`  ✓ ${def.p.displayName}: ${def.modality}`)
-    else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
+    if (r.ok) {
+      try {
+        await uploadDemoImage(r.data.fileId, 'image/jpeg')
+        log(`  ✓ ${def.p.displayName}: ${def.modality} (image available)`)
+      } catch (e: any) {
+        log(`  ⚠ ${def.p.displayName} ${def.modality} upload skipped: ${String(e?.message).slice(0, 80)}`)
+      }
+    } else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
   }
 
   // ── 9. Appointments ──────────────────────────────────────────────────────
