@@ -16,7 +16,7 @@
     "clean": "rm -rf node_modules bun.lock && find . -name 'node_modules' -type d -prune -exec rm -rf {} +",
     "seed": "bun scripts/seed-demo.ts",
     "db:reset": "bun scripts/reset-db.ts",
-    "db:reseed": "bun scripts/reset-db.ts && bun scripts/seed-demo.ts",
+    "db:reseed": "bun scripts/reset-db.ts && bun scripts/seed-demo.ts && (cd services/api-ts && bun scripts/seed-supplement.ts)",
     "test:contract": "bun scripts/run-contract-tests.ts",
     "test:contract:fuzz": "bun scripts/run-schemathesis.ts",
     "typecheck": "bun run --filter dentalemon typecheck",
