@@ -389,3 +389,5 @@ export function computeCephAnalysis(
 }
 
 export * from './coords'
+export * from './norms'
+export * from './pattern'
