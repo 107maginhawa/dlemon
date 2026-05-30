@@ -44,10 +44,13 @@ export async function updateDentalTreatment(
     throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
   }
 
-  // BR-007: verified treatment fields are immutable (status transitions still allowed)
-  if (treatment.status === 'verified') {
+  // BR-007 / AC-VIS-003: performed and verified treatment fields are immutable
+  // (code, tooth, surface, etc.) — status transitions are still allowed.
+  // MODULE_SPEC AC-VIS-003 is explicit: a PATCH changing cdt_code on a
+  // status==='performed' treatment must return 422 (TREATMENT_IMMUTABLE).
+  if (treatment.status === 'performed' || treatment.status === 'verified') {
     const fieldEdit = body.cdtCode || body.toothNumber !== undefined || body.surfaces || body.description || body.conditionCode;
-    if (fieldEdit) throw new BusinessLogicError('Verified treatment is immutable', 'TREATMENT_IMMUTABLE');
+    if (fieldEdit) throw new BusinessLogicError('Performed treatment is immutable', 'TREATMENT_IMMUTABLE');
   }
 
   // Validate status transition if a new status is requested

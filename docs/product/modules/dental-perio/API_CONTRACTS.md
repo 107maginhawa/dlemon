@@ -22,7 +22,7 @@ All endpoints require Bearer token (Better-Auth session). `branchId` is derived 
 
 Create a new perio chart for a visit.
 
-**Auth:** dentist_owner | dentist_associate
+**Auth:** dentist_owner | dentist_associate | hygienist
 
 **Request Body:**
 ```json
@@ -63,7 +63,7 @@ Create a new perio chart for a visit.
 
 Get a perio chart with all tooth readings.
 
-**Auth:** dentist_owner | dentist_associate | staff_full
+**Auth:** dentist_owner | dentist_associate | hygienist | staff_full
 
 **Success 200:**
 ```json
@@ -112,7 +112,7 @@ Get a perio chart with all tooth readings.
 
 Get the perio chart for a specific visit (convenience endpoint).
 
-**Auth:** dentist_owner | dentist_associate | staff_full
+**Auth:** dentist_owner | dentist_associate | hygienist | staff_full
 
 **Success 200:** Same shape as GET /dental/perio-charts/:id
 
@@ -130,7 +130,7 @@ Get the perio chart for a specific visit (convenience endpoint).
 
 Upsert tooth-level periodontal readings. Idempotent — safe to call repeatedly.
 
-**Auth:** dentist_owner | dentist_associate
+**Auth:** dentist_owner | dentist_associate | hygienist
 
 **Path Params:**
 - `chartId` — UUID of the perio chart
@@ -199,7 +199,7 @@ All fields are optional — send only what changed. Existing values preserved fo
 
 Mark a perio chart as completed. Computes summary statistics.
 
-**Auth:** dentist_owner | dentist_associate
+**Auth:** dentist_owner | dentist_associate | hygienist
 
 **Request Body:** `{}` (empty — no body needed)
 
