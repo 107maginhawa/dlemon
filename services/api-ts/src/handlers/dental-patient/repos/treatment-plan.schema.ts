@@ -21,6 +21,33 @@ export const TREATMENT_PLAN_FSM: Record<TreatmentPlanStatus, TreatmentPlanStatus
   cancelled: [],
 };
 
+/**
+ * TP-BR-005 derivation — given a plan's current status and its item (treatment)
+ * statuses, derive the plan status. Pure & DB-free.
+ *
+ * Rule: completing ONE item must not complete the whole plan unless ALL items are
+ * complete. `dismissed`/`declined` items are excluded from the denominator (a
+ * fully-declined plan does not auto-complete). Only the active lifecycle
+ * (approved/partially_completed/completed) is derived — draft/presented/cancelled
+ * are returned untouched so manual lifecycle control is preserved.
+ */
+const TREATMENT_DONE_STATUSES = new Set(['performed', 'verified']);
+const TREATMENT_EXCLUDED_STATUSES = new Set(['dismissed', 'declined']);
+
+export function deriveTreatmentPlanStatus(
+  current: TreatmentPlanStatus,
+  itemStatuses: readonly string[],
+): TreatmentPlanStatus {
+  if (current !== 'approved' && current !== 'partially_completed' && current !== 'completed') {
+    return current;
+  }
+  const active = itemStatuses.filter((s) => !TREATMENT_EXCLUDED_STATUSES.has(s));
+  const done = active.filter((s) => TREATMENT_DONE_STATUSES.has(s));
+  if (active.length > 0 && done.length === active.length) return 'completed';
+  if (done.length > 0) return 'partially_completed';
+  return 'approved';
+}
+
 export const dentalTreatmentPlans = pgTable('dental_treatment_plan', {
   ...baseEntityFields,
   patientId: uuid('patient_id').notNull().references(() => patients.id, { onDelete: 'cascade' }),
