@@ -128,6 +128,19 @@ function buildMockScheduler(): MockScheduler {
   return mock;
 }
 
+/**
+ * Deterministically drain fire-and-forget domain-event emissions.
+ *
+ * The handlers emit events without awaiting (non-blocking), so the test must
+ * yield until the event loop has settled those promises. `setImmediate` fires
+ * after all currently-queued microtasks (the emission promise chain) and I/O
+ * callbacks have run — making event-emission assertions deterministic instead
+ * of racing an arbitrary `setTimeout` delay.
+ */
+function flushPendingEvents(): Promise<void> {
+  return new Promise<void>(resolve => setImmediate(resolve));
+}
+
 // ---------------------------------------------------------------------------
 // Test app builder
 // ---------------------------------------------------------------------------
@@ -185,8 +198,8 @@ describe('DE-010: AppointmentBooked emitted after successful booking', () => {
     });
 
     expect(res.status).toBe(201);
-    // Allow the non-blocking promise to settle
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // Deterministically drain the fire-and-forget emission promise (no timing race)
+    await flushPendingEvents();
 
     const bookedCalls = scheduler.calls.filter(c => c.name === DENTAL_SCHEDULING_EVENTS_QUEUE);
     expect(bookedCalls.length).toBeGreaterThanOrEqual(1);
@@ -204,7 +217,7 @@ describe('DE-010: AppointmentBooked emitted after successful booking', () => {
 
     expect(res.status).toBe(201);
     const body = await res.json() as any;
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await flushPendingEvents();
 
     const call = scheduler.calls.find(
       c => c.name === DENTAL_SCHEDULING_EVENTS_QUEUE &&
@@ -230,7 +243,7 @@ describe('DE-010: AppointmentBooked emitted after successful booking', () => {
     });
 
     expect(res.status).toBe(400);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await flushPendingEvents();
 
     const bookedCalls = scheduler.calls.filter(
       c => (c.data as any)?.event === DENTAL_SCHEDULING_EVENT_TYPES.APPOINTMENT_BOOKED,
@@ -280,7 +293,7 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     });
 
     expect(res.status).toBe(204);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await flushPendingEvents();
 
     const cancelledCalls = scheduler.calls.filter(c => c.name === DENTAL_SCHEDULING_EVENTS_QUEUE);
     expect(cancelledCalls.length).toBeGreaterThanOrEqual(1);
@@ -296,7 +309,7 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     });
 
     expect(res.status).toBe(204);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await flushPendingEvents();
 
     const call = scheduler.calls.find(
       c => c.name === DENTAL_SCHEDULING_EVENTS_QUEUE &&
@@ -321,7 +334,7 @@ describe('DE-011: AppointmentCancelled emitted after successful cancellation', (
     });
 
     expect(res.status).toBe(404);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await flushPendingEvents();
 
     const cancelledCalls = scheduler.calls.filter(
       c => (c.data as any)?.event === DENTAL_SCHEDULING_EVENT_TYPES.APPOINTMENT_CANCELLED,
