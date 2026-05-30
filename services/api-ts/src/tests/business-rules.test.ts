@@ -55,6 +55,7 @@ import { importPMD } from '@/handlers/dental-pmd/importPMD';
 import { getImportedPMD } from '@/handlers/dental-pmd/getImportedPMD';
 import { ImportedPMDRepository } from '@/handlers/dental-pmd/repos/imported-pmd.repo';
 import { recordDentalPayment } from '@/handlers/dental-billing/recordDentalPayment';
+import { markUncollectible } from '@/handlers/dental-billing/markUncollectible';
 import { cancelAppointment } from '@/handlers/dental-scheduling/cancelAppointment';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
@@ -183,6 +184,8 @@ function makeApp(user?: typeof TEST_USER) {
     zValidator('json', RecordDentalPaymentBody, validationErrorHandler),
     recordDentalPayment as any,
   );
+  // BR-013 deferred — mirrors generated routes.ts:497; handler always returns 501.
+  app.post('/dental/billing/invoices/:invoiceId/uncollectible', markUncollectible as any);
 
   // Consent
   app.post('/dental/visits/:visitId/consents',
@@ -1602,13 +1605,32 @@ describe('BR-022: imported PMD records are read-only', () => {
 describe.skip('BR-005: auto-discard draft visits [deferred v1.3]', () => {});
 
 // ===========================================================================
-// BR-013: Mark invoice as uncollectible
-// Not implemented — dental invoice status enum ('draft'|'issued'|'partial'|'paid'|'overdue'|'voided')
-// has no 'uncollectible' value. The base billing module has the handler but dental billing does not.
-// Deferred indefinitely; add when dental invoice schema adds 'uncollectible' status.
+// BR-013 / AC-BIL-005: Mark invoice as uncollectible — DEFERRED (returns 501)
+// The dental invoice status enum ('draft'|'issued'|'partial'|'paid'|'overdue'|'voided')
+// has no 'uncollectible' value; the write-off workflow is gated behind feature
+// flag `dental_billing_uncollectible` (default off) and intentionally deferred
+// (MODULE_SPEC BR-013, repeated in 6 places). Rather than skip, we ENFORCE the
+// deferral: the registered endpoint must return 501 NOT_IMPLEMENTED so the
+// contract stays honest until the flag is lifted. (TR-P1-06: keep-deferred ruling.)
 // ===========================================================================
 
-describe.skip('BR-013: markInvoiceUncollectible [deferred — not in dental invoice schema]', () => {});
+describe('BR-013: markUncollectible deferred → 501', () => {
+  test('POST /dental/billing/invoices/:id/uncollectible returns 501 NOT_IMPLEMENTED [AC-BIL-005]', async () => {
+    const visit = await seedActiveVisit();
+    const invoice = await seedInvoiceForVisit(visit!.id);
+    const app = makeApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(501);
+    const body = await res.json() as any;
+    expect(body.code).toBe('NOT_IMPLEMENTED');
+  });
+});
 
 // ===========================================================================
 // BR-020: Patient record merge and unmerge
