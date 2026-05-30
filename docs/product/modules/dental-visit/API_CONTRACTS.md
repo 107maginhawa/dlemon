@@ -136,7 +136,7 @@ Update treatment status. Enforces state machine (BR-006, BR-007).
 
 | Field | Type | Nullable | Required | Enum | Notes |
 |-------|------|----------|----------|------|-------|
-| `status` | string | NO | NO | `planned`, `performed`, `verified`, `dismissed`, `declined` | Forward-only FSM (BR-006): `diagnosed`→`planned`→`performed`→`verified`; any non-terminal→`dismissed`; `diagnosed`/`planned`→`declined` (patient refusal, terminal). `verified` treatments are field-immutable (BR-007). |
+| `status` | string | NO | NO | `planned`, `performed`, `verified`, `dismissed`, `declined` | Forward-only FSM (BR-006): `diagnosed`→`planned`→`performed`→`verified`; any non-terminal→`dismissed`; `diagnosed`/`planned`→`declined` (patient refusal, terminal). `performed` and `verified` treatments are field-immutable (BR-007 / AC-VIS-003): code, tooth, surface, and price cannot change once a treatment is performed; only status transitions (`performed`→`verified`/`dismissed`) remain allowed. |
 | `dismissReason` | string | YES | NO | — | Recorded when status→`dismissed` |
 | `refusalReason` | string | NO | YES* | — | *Required when status→`declined` (REFUSAL_REASON_REQUIRED) |
 | `clinicalNotes` | string | YES | NO | — | — |
