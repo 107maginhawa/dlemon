@@ -547,6 +547,44 @@ Stub. `POST /dental/patients/merge` returns 501. Event reserved for future.
 
 ---
 
+## 3b. Publisher Audit-Trace Status (TR-P1-04)
+
+Per ADR-006 each event is an **audit-log-only semantic marker**: its "publisher" is the
+producer writing a synchronous `dental_audit_log` row (action string below) via
+`logAuditEvent`. The table records which events have an *audit-row publisher trace test*
+(`handlers/*/*-events.test.ts`, keyed by exact `DE-0xx` ID). DE-001..016 were already
+traced; DE-017..022 are added this cycle; DE-021/023/024 are documented as
+deferred/inferred below.
+
+| Event | Producer (handler) | Audit action | Trace test | Status |
+|-------|--------------------|--------------|-----------|--------|
+| DE-017 PMDGenerated | `dental-pmd/generatePMD.ts` | `pmd.generated` | `dental-pmd/dental-pmd-events.test.ts` | ✅ TRACED |
+| DE-018 ImagingStudyUploaded | `dental-imaging/createImagingStudy.ts` | `imaging_study.create` | `dental-imaging/dental-imaging-events.test.ts` | ✅ TRACED |
+| DE-019 ImagingFindingConfirmed | `dental-imaging/updateFinding.ts` | `imaging_finding.confirmed` | `dental-imaging/dental-imaging-events.test.ts` | ✅ TRACED |
+| DE-020 CephAnalysisComputed | `dental-imaging/recomputeCephAnalysis.ts` | `imaging_ceph_analysis.computed` | `dental-imaging/dental-imaging-events.test.ts` | ✅ TRACED |
+| DE-021 PatientRegistered | `patient/createPatient.ts` | _(none — Pino `info` only)_ | — | ⚠️ DEFERRED |
+| DE-022 MembershipAssigned | `dental-org/createMember.ts` (+ routed `DentalMembershipManagement_create.ts`) | `membership.create` | `dental-org/dental-org-events.test.ts` (+ `membership-audit-regression.test.ts`) | ✅ TRACED |
+| DE-023 MembershipRevoked `[INFERRED]` | `dental-org/deactivateMember.ts` (+ routed `_deactivate.ts`) | `membership.deactivate` | `membership-audit-regression.test.ts` (action-keyed, not DE-ID-keyed) | ⚠️ INFERRED |
+| DE-024 PatientMergeRequested `[INFERRED — NOT IMPLEMENTED]` | `POST /dental/patients/merge` → 501 stub | _(no producer — 501)_ | — | ⛔ NOT IMPLEMENTED |
+
+**DE-021 (DEFERRED):** the `dental-patient` MODULE_SPEC §Events states DE-021 is "written as
+a `patient.registered` audit row", but `createPatient.ts` currently emits only a Pino
+`logger.info({ action: 'create' })` line — it does **not** write a `dental_audit_log`
+row. There is therefore no audit-row marker to assert against, so no publisher-trace test
+can be added without first introducing that producer (a behavior change). Wiring a
+`patient.registered` audit write is tracked as a follow-up; until then DE-021 has no
+audit-row publisher and is intentionally untraced.
+
+**DE-023 (INFERRED):** the deactivate path (`membership.deactivate`) is the closest
+existing producer and is already audit-locked by `membership-audit-regression.test.ts`,
+but the `MembershipRevoked@1` event itself is `[INFERRED]` (not a first-class implemented
+event) so it is not given a dedicated DE-ID-keyed trace test.
+
+**DE-024 (NOT IMPLEMENTED):** the merge endpoint returns 501; no producer exists, so no
+audit-row marker and no trace test are possible until the feature ships.
+
+---
+
 ## 4. Consumer Subscription Table
 
 | Consumer | Subscribes to |
