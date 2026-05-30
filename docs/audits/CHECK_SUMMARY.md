@@ -1,47 +1,94 @@
 ---
 oli-version: "1.0"
 based-on:
-  - docs/audits/codebase-map/.map-meta.json (knowledge graph, engine-produced)
-  - docs/audits/COMPLIANCE_REPORT.md (carried forward — PASS)
+  - docs/audits/codebase-map/ (CODE_*.json — rebuilt from scratch via @oli/engine)
+  - docs/product/CONSISTENCY_REPORT.md
+  - docs/execution/RUNTIME_TEST_PLAN.md
+  - docs/audits/COMPLIANCE_REPORT.md
+  - docs/audits/CONFIDENCE_REPORT.md
+  - docs/audits/ENFORCEMENT_REPORT.md
+  - docs/audits/JOURNEY_COVERAGE_REPORT.md
+  - docs/trace/TRACE_REPORT.md
 last-modified: 2026-05-30
 last-modified-by: oli-check
 ---
 
-# OLI Check — Summary
+# OLI Check — Cycle-4 Summary (Audit + Auto-Fix)
 
-## Run Context
-- **Invocation:** `/oli-check --discovery` (isolated), within an `/oli-magic` guided re-audit of Cycle 2.
-- **Detected state:** fully-spec'd, **executed** brownfield project (Cycle 2 of 3). 12 MODULE_SPECs, 287 test files, 23 backend modules. All ROADMAP waves (G1–G8) complete.
-- **This session also produced:** the engine knowledge graph (`docs/audits/codebase-map/`).
+Thorough, first-pass-style run: all 8 verification dimensions executed per-module
+against every file (no sampling), aligned to a freshly-rebuilt knowledge graph,
+then P0/P1 auto-remediated via TDD. Orchestrated by background multi-agent
+workflows (audit: 32 agents / 6.2M tokens / ~60 min; fix: 15 agents + targeted repair).
 
-## Dimension Results
+## 1. Run Context
 
-| Dimension | Verdict | Report | Findings |
-|-----------|---------|--------|----------|
-| Discovery | ⏭️ **SKIPPED** (stop condition) | — | 12 MODULE_SPECs present → re-baselining inappropriate; dimension defers to `--compliance` |
-| Compliance | 🟢 **PASS** (carried fwd) | [COMPLIANCE_REPORT.md](./COMPLIANCE_REPORT.md) | 0 P0 / 0 P1 open (commit 01f83918); ~55 P2/P3 non-blocking |
-| Confidence | 🟡 **WARN** (8.0 < 9.0 bar) | [CONFIDENCE_REPORT.md](./CONFIDENCE_REPORT.md) | L1=8 L2=8 L3=9 L4=8.75; gated by coverage breadth (imaging/pmd/patient) + event traceability; **0 fabrication** in 17 TDD proofs |
-| Traceability | 🟡 **WARN** (71% chain) | [TRACE_REPORT.md](../trace/TRACE_REPORT.md) | 661 nodes/1043 edges; **0 dangling endpoints, 0 cross-module blind spots**; 1 P0 (patient-merge auth-drift), 9 P1 (all *reach*), 14 P2 |
-| Journeys (stale 05-29) / Enforcement / Runtime | ⏭️ not refreshed | [JOURNEY_COVERAGE_REPORT.md](./JOURNEY_COVERAGE_REPORT.md) | journey report predates G7/G8 — refresh in cycle 3 |
+- **State:** specs (12 `MODULE_SPEC.md`), source (`services/api-ts`, `apps/dentalemon`,
+  `apps/account`), 303 tests, UI + runtime targets, knowledge graph — all present.
+- **Dimensions:** all 8 applicable (no flags → auto-select).
+- **Knowledge graph:** rebuilt from scratch (`@oli/engine` AST, 542 files,
+  git_sha 86f9cbaa). Spec-trace **237/237 (100%)** · 0 spec-only · 0 code-only ·
+  0 phantom · 0 circular deps · CVE scan run.
+- **Flags:** none for audit; `--fix` applied for P0/P1 remediation.
+- **Branch:** `oli/cycle-4-audit-fix` (28 fix commits; **not** merged to main).
 
-## Overall — updated post cycle-3
-🟢 **GRADUATED (cycle 3, 2026-05-30).** Cycle-3 waves G9/G10/G11 closed the gap: Confidence **8.0→9.0**, Trace **71%→80%** chain (P0 1→0), Compliance PASS with C4/C7 resolved, +142 tests (full suite **2684/0**, 0 regressions), GAP-DENTAL-027 closed. All graduation gates MET (P0=0, audit/compliance/confidence ≥9.0). `execution_state = graduated` — use `/oli` going forward. Non-blocking backlog: L4 release-infra 8.75, 5 trace P1s, ~43 P2.
+## 2. Dimension Results (as audited, pre-fix)
 
-## Knowledge Graph (built this session)
-Engine-produced AST map at `docs/audits/codebase-map/` (git_sha 01f83918):
+| Dimension | Verdict | Report | P0 | P1 |
+|-----------|---------|--------|----|----|
+| Discovery | 🟢 PASS | `docs/audits/codebase-map/` | 0 | 0 |
+| Consistency | 🟡 WARN | `docs/product/CONSISTENCY_REPORT.md` | 0 | 1 |
+| Runtime | 🟢 PASS (boot-smoke PASS) | `docs/execution/RUNTIME_TEST_PLAN.md` | 0 | 2¹ |
+| Compliance | 🟡 WARN | `docs/audits/COMPLIANCE_REPORT.md` | 0 | 15 |
+| Confidence | 🟡 WARN | `docs/audits/CONFIDENCE_REPORT.md` | 1 | ~10 |
+| Enforcement | 🟡 WARN | `docs/audits/ENFORCEMENT_REPORT.md` | 0 | 3² |
+| Journeys | 🟡 WARN | `docs/audits/JOURNEY_COVERAGE_REPORT.md` | 0 | 2 |
+| Traceability | 🟡 WARN | `docs/trace/TRACE_REPORT.md` | 1³ | 7 |
 
-| Metric | Value |
-|--------|-------|
-| Modules / endpoints | 23 / 237 |
-| Drizzle tables / enums | 75 / 58 |
-| State machines | 28 |
-| Spec-trace | **237 matched · 0 spec-only · 0 code-only** |
-| Auth drift | **2** → `POST /patients/merge`, `/patients/unmerge` (logged GAP-DENTAL-027, P2 latent) |
+¹ Pre-existing runtime OPEN items (T-001 PHI-in-logs redaction, T-002 email-verify bypass) — outside the --fix scope, flagged for follow-up.
+² 3 dependency CVEs (drizzle-orm SQL-injection, happy-dom RCE, axios MITM).
+³ Same root as the Confidence P0 (EMR PHI audit-logging has zero asserting test coverage; surfaced in Confidence + Traceability).
 
-## What's Next — Mandatory Re-Audit Sequence (execution_state = executed)
-1. ✅ Knowledge graph — built.
-2. ✅ Compliance — PASS (fresh, committed).
-3. ⬜ **Confidence** — `/oli-check --confidence` (MISSING, required).
-4. ⬜ **Journeys** — `/oli-check --journeys --all` (stale 05-29, refresh).
-5. ⬜ **Traceability** — `/oli-check --traceability` (MISSING; backed by `CODE_SPEC_TRACE` 237/0/0).
-6. ⬜ **Graduation** — `/oli-magic --update` → Cycle-2 verdict vs ≥9.0 thresholds.
+**Pre-fix confidence gauges:** Test-Confidence **7/10** · Release-Readiness **6/10** · Ship-Readiness **6/10**.
+
+**Pre-fix overall: 🟡 WARN — 1 P0 (EMR PHI audit coverage) + ~33 P1** (deduped to 31 finding-groups across the modules above). 0 BLOCK.
+
+## 3. Auto-Fix Outcome (`--fix`, TDD per-module, atomic commits)
+
+**26 FIXED · 5 BLOCKED (deferred) · 1 regression caught & repaired.**
+Post-fix gate: **`bun test` 196 files / 2747 pass / 0 fail**, api + web `typecheck` 0 errors, tree clean.
+
+### Fixed (highlights — 26 finding-groups, 28 commits)
+- **P0 — EMR PHI audit coverage** (`emr-audit.test.ts`): asserts all 6 PHI ops write an audit row with `tenant_id === EMR_AUDIT_TENANT_SENTINEL` (not patient UUID) + field-names-only. `0a196905`
+- **3 CVEs:** drizzle-orm→0.45.2, happy-dom→20.9.0, axios→1.16.1 (root override). `79876dfc` `c6ecea59`
+- **2 broken FE→API chains:** invoice "Issue" POST→PATCH; ceph `/report`→`/reports`. `e8d017ac` `54abe034`
+- **Billing FSM:** reject payment on draft invoice (422) + regression-repaired fixtures. `4701cfcf` `b8d35655`
+- **EMR FSM:** collapsed dormant `validateStatusTransition` table to terminal machine; fixed tautology test. `a6908646`
+- **Org:** guarded membership state machine + reconcile `revoked`; audit rows on fee/branch/consent mutations; typed `working_hours`; pushed filters/LIMIT into repo queries. `d7c80f51` `b2a9e6c4` `8f3e1d77` `4564c0a2`
+- **Patient:** `assertBranchAccess`→`assertBranchRole` on create + narrowed import roles + wrong-role 403 deny tests. `92e0f15e` `ae7e89b0`
+- **Clinical:** removed over-permissioned hygienist; added 501 amendment-approval endpoint; `tooth_fdi` column+migration. `17153054` `c3ee8915` `e76055bb`
+- **Audit:** PHI sanitizer moved into `AuditLogRepository.insert` (single choke point) + consumer test. `ae53edc9`
+- **PMD:** Hurl contract 400→422; AC-PMD-004 immutability test. **Scheduling:** doc fix + flake fix. **Perio:** API_CONTRACTS hygienist doc. **EMR admin** read/list branches + tests. **Events** publisher audit-trace tests. **Imaging** FE error-surfacing.
+
+### Blocked — deferred for product/human decision (5; **not** auto-changed)
+| ID | Why deferred |
+|----|--------------|
+| TR-P1-07 | Roadmap feature: dentition-init UI (new workspace action), not a binding fix |
+| TR-P1-08 | Roadmap feature: item-level treatment-plan completion + CR-05 approval record |
+| TR-P1-06 | `markUncollectible`/BR-013 — explicitly deferred in MODULE_SPEC (6+ places) |
+| V-CLI-015 | Spec-decision: attachment image-type enum vs radiograph taxonomy needs canonical direction (recommend reconcile spec→code; code→spec needs impossible backfill) |
+| V-VIS-101 | Spec-decision: performed-vs-verified treatment immutability — documented MODULE_SPEC ↔ API_CONTRACTS contradiction; needs a canonical ruling before changing behavior |
+
+### Follow-ups noted (out of --fix scope)
+- `@monobase/api-ts-embedded` resolves drizzle-orm@0.44.7 transitively — bump if embedded ORM exposure matters.
+- Runtime OPEN P1s T-001 (PHI-in-logs / Pino redaction) and T-002 (email-verify bypass) remain in `RUNTIME_TEST_PLAN.md`.
+
+## 4. Overall
+
+- **Pre-fix:** 🟡 WARN — 1 P0 + ~33 P1, 0 circular deps, strong structure (100% spec-trace).
+- **Post-fix:** 🟢 the P0 and all auto-fixable P1s are resolved with the suite green; **5 items remain deferred** (3 roadmap features, 2 spec-decisions) for product input. Re-running `--confidence`/`--traceability` after merge will lift the EMR-audit-gated gauges.
+
+## 5. What's Next
+
+- Review branch `oli/cycle-4-audit-fix` (28 commits) → `/ship` or open a PR.
+- Decide the 5 deferred items (2 spec rulings: V-CLI-015, V-VIS-101; 3 feature scopings).
+- Re-run `/oli-check --confidence --traceability` post-merge to refresh gauges.
