@@ -100,9 +100,9 @@ export function CephWorkspacePanel({
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">Cephalometric</span>
-          {/* D-G */}
+          {/* D-G: driven from analysis (not hard-coded) so it tracks the active protocol */}
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-[#FFE97D] font-medium">
-            steiner_hybrid_sn
+            {analysis?.analysisType ?? 'steiner_hybrid_sn'}
           </span>
         </div>
         <button

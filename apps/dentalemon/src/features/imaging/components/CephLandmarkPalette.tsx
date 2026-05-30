@@ -7,13 +7,25 @@ export interface CephLandmarkPaletteProps {
   onSelect: (code: CephLandmarkCode) => void
 }
 
-// D-P single-point / construction tooltips
-const D_P_TOOLTIPS: Partial<Record<CephLandmarkCode, string>> = {
-  Go: 'Gonion — single-point approximation of bilateral landmark',
-  Po: 'Porion — single-point approximation of bilateral landmark',
-  Or: 'Orbitale — single-point approximation of bilateral landmark',
+// One-line anatomical hint per landmark — shown inline under the active landmark and
+// as a hover title. Go/Po/Or/Gn/Me keep their D-P single-point/construction notes.
+const D_P_TOOLTIPS: Record<CephLandmarkCode, string> = {
+  S: 'Sella — center of the sella turcica (pituitary fossa)',
+  N: 'Nasion — most anterior point of the frontonasal suture',
+  A: 'A-point (Subspinale) — deepest point on the maxillary curve below ANS',
+  B: 'B-point (Supramentale) — deepest point on the mandibular curve above Pogonion',
+  ANS: 'Anterior nasal spine — tip of the anterior nasal spine',
+  PNS: 'Posterior nasal spine — tip of the posterior nasal spine',
+  Go: 'Gonion — single-point approximation of bilateral landmark (mandibular angle)',
+  Po: 'Porion — single-point approximation of bilateral landmark (auditory meatus)',
+  Or: 'Orbitale — single-point approximation of bilateral landmark (lowest orbital rim)',
+  Me: 'Menton — lowest point of the mandibular symphysis (Y-axis substitute when Gnathion absent)',
+  Pog: 'Pogonion — most anterior point of the bony chin',
   Gn: 'Gnathion — constructed midpoint of Pogonion and Menton when both present; otherwise Menton',
-  Me: 'Menton — used as Y-axis substitute when Gnathion not constructed',
+  U1T: 'Upper incisor tip — incisal edge of the most prominent upper central incisor',
+  U1A: 'Upper incisor apex — root apex of that upper central incisor',
+  L1T: 'Lower incisor tip — incisal edge of the most prominent lower central incisor',
+  L1A: 'Lower incisor apex — root apex of that lower central incisor',
 }
 
 type Status = 'unplaced' | 'placed' | 'confirmed' | 'locked'
@@ -39,6 +51,9 @@ export function CephLandmarkPalette({
   const byCode = new Map(landmarks.map((l) => [l.landmarkCode, l]))
   const codes = LANDMARK_CODES as readonly CephLandmarkCode[]
   const nextUnplaced = codes.find((c) => !byCode.has(c)) ?? null
+  // Show the anatomical hint for the landmark the clinician is about to place
+  // (the selected one, or the next unplaced) — active landmark only, not all 16.
+  const activeCode = selectedCode ?? nextUnplaced
 
   return (
     <div className="flex flex-col gap-1 px-4 py-3 overflow-y-auto">
@@ -53,9 +68,10 @@ export function CephLandmarkPalette({
         const locked = status === 'locked'
         const isDisabled = locked || status === 'confirmed'
         const tooltip = D_P_TOOLTIPS[code]
+        const showHint = code === activeCode
         return (
+          <div key={code} className="flex flex-col">
           <button
-            key={code}
             type="button"
             disabled={isDisabled}
             title={tooltip}
@@ -85,6 +101,15 @@ export function CephLandmarkPalette({
               </span>
             )}
           </button>
+          {showHint && (
+            <p
+              data-landmark-hint={code}
+              className="px-3 pt-1 pb-0.5 text-[10px] text-zinc-500 leading-snug"
+            >
+              {tooltip}
+            </p>
+          )}
+          </div>
         )
       })}
     </div>

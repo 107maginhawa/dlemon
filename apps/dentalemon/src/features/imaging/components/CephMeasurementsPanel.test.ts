@@ -73,16 +73,51 @@ describe('CephMeasurementsPanel', () => {
     expect(container.textContent).toContain('calibrate for mm')
   })
 
-  test('no "Class" text anywhere — D-H', () => {
+  // Revised D-H: the WORKING panel surfaces the industry-standard Class read-out as an
+  // informational aid, but it must always carry the non-diagnostic framing. The frozen
+  // EXPORTED report stays fully conservative (no Class verdict — enforced in
+  // CephReportView.test.tsx), since that is the clinical/legal artifact.
+  test('skeletal pattern read-out is labeled informational, not a diagnosis — revised D-H', () => {
     const { container } = renderPanel(
-      mkAnalysis({ measurements: { sna: 82, snb: 78, anb: 4 } }),
+      mkAnalysis({ measurements: { anb: 6, sn_gome: 42, u1_sn: 112 } }),
     )
+    expect(container.textContent).toContain('Class II')
+    expect(container.textContent).toContain('Hyperdivergent')
+    expect(container.textContent?.toLowerCase()).toContain('not a diagnosis')
+  })
+
+  test('shows no pattern block when nothing is classifiable', () => {
+    const { container } = renderPanel(mkAnalysis({ measurements: {} }))
     expect(container.textContent).not.toContain('Class')
   })
 
   test('shows mm magnification footnote text — D-J', () => {
     const { container } = renderPanel(mkAnalysis())
     expect(container.textContent).toContain('magnification')
+  })
+
+  test('shows an amber deviation chip with signed delta for a 1–2 SD value', () => {
+    // SNA norm 82±2; value 86 → +4 → 2.0 SD → mild
+    const { container } = renderPanel(mkAnalysis({ measurements: { sna: 86 } }))
+    expect(container.textContent).toContain('+4.0°')
+  })
+
+  test('shows a deviation chip for a >2 SD value (severe)', () => {
+    // SNA norm 82±2; value 90 → +8 → 4.0 SD → severe
+    const { container } = renderPanel(mkAnalysis({ measurements: { sna: 90 } }))
+    expect(container.textContent).toContain('+8.0°')
+  })
+
+  test('shows NO deviation chip when value is within 1 SD (no traffic-light green)', () => {
+    // SNA 82 is exactly the mean → normal → no chip / no delta shown
+    const { container } = renderPanel(mkAnalysis({ measurements: { sna: 82 } }))
+    expect(container.textContent).not.toContain('+0.0')
+    expect(container.textContent).toContain('82.00')
+  })
+
+  test('shows the "reference ranges, not a diagnosis" disclaimer', () => {
+    const { container } = renderPanel(mkAnalysis())
+    expect(container.textContent?.toLowerCase()).toContain('reference ranges')
   })
 
   test('renders skeleton when isLoading=true', () => {

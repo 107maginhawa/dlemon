@@ -37,6 +37,27 @@ function renderPalette(
   return { onSelect, container }
 }
 
+describe('CephLandmarkPalette — reference hints', () => {
+  test('every landmark button has an anatomical title (Sella for S)', () => {
+    const { container } = renderPalette()
+    const sBtn = container.querySelector('[data-landmark-code="S"]')
+    expect(sBtn?.getAttribute('title')?.toLowerCase()).toContain('sella')
+  })
+
+  test('shows the inline hint for the next-unplaced landmark (S) when nothing selected', () => {
+    const { container } = renderPalette([])
+    const hint = container.querySelector('[data-landmark-hint="S"]')
+    expect(hint).not.toBeNull()
+    expect(hint?.textContent?.toLowerCase()).toContain('sella')
+  })
+
+  test('shows the inline hint for the selected landmark, not the next-unplaced', () => {
+    const { container } = renderPalette([], 'N')
+    expect(container.querySelector('[data-landmark-hint="N"]')).not.toBeNull()
+    expect(container.querySelector('[data-landmark-hint="S"]')).toBeNull()
+  })
+})
+
 describe('CephLandmarkPalette', () => {
   test('renders all 16 LANDMARK_CODES', () => {
     const { container } = renderPalette()
