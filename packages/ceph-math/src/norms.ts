@@ -56,9 +56,26 @@ const STEINER_HYBRID_SN: Record<string, CephNorm> = {
   overbite: { mean: 2.5, sd: 2, source: 'Clinical norm' },
 };
 
+const RICKETTS = 'Ricketts (1960)';
+
+/**
+ * Ricketts analysis (Frankfort-Horizontal referenced). Only the subset of metrics
+ * the engine computes from the D-A landmark set is normed; metrics needing
+ * Basion/Pterygoid are omitted (the engine does not emit them).
+ */
+const RICKETTS_NORMS: Record<string, CephNorm> = {
+  facial_angle: { mean: 87, sd: 3, source: RICKETTS },
+  mandibular_plane_fh: { mean: 26, sd: 4, source: RICKETTS },
+  convexity_mm: { mean: 2, sd: 2, source: RICKETTS },
+  l1_apog_angle: { mean: 22, sd: 4, source: RICKETTS },
+  l1_apog_mm: { mean: 1, sd: 2, source: RICKETTS },
+  interincisal: { mean: 130, sd: 6, source: RICKETTS },
+};
+
 /** Norm tables keyed by analysis type, then by measurement key. */
 export const CEPH_NORMS: Record<string, Record<string, CephNorm>> = {
   steiner_hybrid_sn: STEINER_HYBRID_SN,
+  ricketts: RICKETTS_NORMS,
 };
 
 /** Look up a norm for a metric within an analysis type. Returns null if none exists. */

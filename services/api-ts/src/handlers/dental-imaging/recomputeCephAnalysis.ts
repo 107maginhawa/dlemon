@@ -15,7 +15,7 @@ import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } 
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { logAuditEvent } from '@/core/audit-logger';
-import { computeCephAnalysis } from '@monobase/ceph-math';
+import { computeAnalysis, ANALYSIS_TYPES } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
 
@@ -24,6 +24,15 @@ export async function recomputeCephAnalysis(ctx: BaseContext): Promise<Response>
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const { imageId } = ctx.req.param() as { imageId: string };
+
+  // #15: recompute the requested protocol (default Steiner). Reject unknown types.
+  const analysisType = ctx.req.query('analysisType') ?? 'steiner_hybrid_sn';
+  if (!(ANALYSIS_TYPES as readonly string[]).includes(analysisType)) {
+    throw new BusinessLogicError(
+      `Unsupported analysis type "${analysisType}". Supported: ${ANALYSIS_TYPES.join(', ')}.`,
+      'UNSUPPORTED_ANALYSIS_TYPE',
+    );
+  }
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -56,15 +65,17 @@ export async function recomputeCephAnalysis(ctx: BaseContext): Promise<Response>
 
   const allLandmarks = await cephRepo.listByImage(imageId);
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));
-  const result = computeCephAnalysis(landmarkMap, image.pixelSpacingMm ?? null);
+  const result = computeAnalysis(analysisType, landmarkMap, image.pixelSpacingMm ?? null);
 
   // V-IMG-004 / §13 / §15: recompute must enforce preconditions rather than silently
   // returning 200 with an all-null analysis.
   //
-  // INSUFFICIENT_LANDMARKS (422): the Steiner-hybrid-SN analysis is anchored on the
-  // S–N reference line. Without S and N every angle is uncomputable, so a recompute is
-  // meaningless. We surface the list of missing reference landmarks to the client.
-  const REQUIRED_REFERENCE_LANDMARKS = ['S', 'N'] as const;
+  // INSUFFICIENT_LANDMARKS (422): each analysis is anchored on a reference frame —
+  // Steiner-hybrid-SN on the S–N line, Ricketts on Frankfort Horizontal (Po-Or-N).
+  // Without those, every angle is uncomputable, so a recompute is meaningless. We
+  // surface the list of missing reference landmarks to the client.
+  const REQUIRED_REFERENCE_LANDMARKS =
+    analysisType === 'ricketts' ? (['Po', 'Or', 'N'] as const) : (['S', 'N'] as const);
   const placedCodes = new Set(allLandmarks.map((l) => l.landmarkCode));
   const missingReference = REQUIRED_REFERENCE_LANDMARKS.filter((code) => !placedCodes.has(code));
   if (missingReference.length > 0) {
@@ -85,11 +96,15 @@ export async function recomputeCephAnalysis(ctx: BaseContext): Promise<Response>
   }
 
   // upsert analysis — does NOT touch any ceph_report rows (D-I)
-  const analysisRow = await cephRepo.upsertAnalysis(imageId, {
-    measurements: result.measurements,
-    calibrationValue: image.pixelSpacingMm,
-    calibrationMethod: image.pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
-  });
+  const analysisRow = await cephRepo.upsertAnalysis(
+    imageId,
+    {
+      measurements: result.measurements,
+      calibrationValue: image.pixelSpacingMm,
+      calibrationMethod: image.pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
+    },
+    analysisType,
+  );
 
   logger?.info(
     { imageId, action: 'ceph_analysis_recompute', by: user.id },

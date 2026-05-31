@@ -109,6 +109,7 @@ import { listConsentForms } from '../../handlers/dental-clinical/consent/listCon
 import { listLabOrders } from '../../handlers/dental-clinical/lab-orders/listLabOrders';
 import { listMedicalHistory } from '../../handlers/dental-clinical/medical-history/listMedicalHistory';
 import { listPrescriptions } from '../../handlers/dental-clinical/prescriptions/listPrescriptions';
+import { revokeConsentForm } from '../../handlers/dental-clinical/consent/revokeConsentForm';
 import { signConsentForm } from '../../handlers/dental-clinical/consent/signConsentForm';
 import { updateLabOrder } from '../../handlers/dental-clinical/lab-orders/updateLabOrder';
 import { updateMedicalHistoryEntry } from '../../handlers/dental-clinical/medical-history/updateMedicalHistoryEntry';
@@ -364,6 +365,7 @@ export const registry = {
   listLabOrders,
   listMedicalHistory,
   listPrescriptions,
+  revokeConsentForm,
   signConsentForm,
   updateLabOrder,
   updateMedicalHistoryEntry,

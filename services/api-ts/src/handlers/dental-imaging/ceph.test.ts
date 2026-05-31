@@ -1370,3 +1370,63 @@ describe('Pino audit emission', () => {
     expect(infoCalls.some((c) => c.by === DENTIST_USER.id)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #15 Ricketts analysis switcher — analysisType dispatch
+// ---------------------------------------------------------------------------
+
+// Frankfort-clean fixture: FH (Po-Or) horizontal vs facial line (N-Pog) vertical → 90°.
+const RICKETTS_LANDMARKS = (
+  [
+    ['Po', 100, 300],
+    ['Or', 300, 300],
+    ['N', 300, 100],
+    ['Pog', 300, 400],
+  ] as const
+).map(([code, x, y], i) => ({
+  ...MOCK_LANDMARK,
+  id: `rk-${i}`,
+  landmarkCode: code as CephLandmarkStatus extends never ? never : string,
+  x,
+  y,
+  status: 'confirmed' as const,
+}));
+
+describe('#15 getCephAnalysis analysisType switcher', () => {
+  test('?analysisType=ricketts dispatches to the Ricketts engine (facial_angle, no SNA)', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const db = makeCephDb({ landmarks: RICKETTS_LANDMARKS as any });
+    const app = buildCephApp(CephMgmt_getCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'GET', path: '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis?analysisType=ricketts`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.analysis.analysisType).toBe('ricketts');
+    expect(body.analysis.measurements.facial_angle).toBe(90);
+    expect(body.analysis.measurements.sna).toBeUndefined();
+  });
+
+  test('defaults to steiner_hybrid_sn when analysisType is omitted', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const db = makeCephDb({ landmarks: RICKETTS_LANDMARKS as any });
+    const app = buildCephApp(CephMgmt_getCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'GET', path: '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.analysis.analysisType).toBe('steiner_hybrid_sn');
+    expect(body.analysis.measurements.sna).not.toBeUndefined();
+  });
+
+  test('rejects an unsupported analysisType with 422 (no fabricated analysis)', async () => {
+    const { CephMgmt_getCephAnalysis } = await import('./CephMgmt_getCephAnalysis');
+    const db = makeCephDb({ landmarks: RICKETTS_LANDMARKS as any });
+    const app = buildCephApp(CephMgmt_getCephAnalysis as any, {
+      user: DENTIST_USER, db, method: 'GET', path: '/:imageId/analysis',
+    });
+    const res = await app.request(`/${IMAGE_ID}/analysis?analysisType=mcnamara`);
+    expect(res.status).toBe(422);
+  });
+});

@@ -21,6 +21,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: TEST_IDS.visitId,
     toothNumbers: [],
     createdAt: '2026-01-01T00:00:00.000Z',
+    downloadUrl: null,
   },
   {
     id: 'test-image-id-2',
@@ -33,6 +34,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: null,
     toothNumbers: [],
     createdAt: '2026-01-02T00:00:00.000Z',
+    downloadUrl: null,
   },
   {
     id: 'test-image-id-3',
@@ -45,6 +47,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: null,
     toothNumbers: [14],
     createdAt: '2026-01-03T00:00:00.000Z',
+    downloadUrl: null,
   },
 ]
 

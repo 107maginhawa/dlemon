@@ -42,8 +42,10 @@ export const cephLandmarkStatusEnum = pgEnum('ceph_landmark_status', [
   'locked',
 ]);
 
-// D-G: use explicit hybrid label — never 'standard' (clinical MUST-FIX #1)
-export const cephAnalysisTypeEnum = pgEnum('ceph_analysis_type', ['steiner_hybrid_sn']);
+// D-G: use explicit hybrid label — never 'standard' (clinical MUST-FIX #1).
+// 'ricketts' (#15) is Frankfort-referenced — a genuinely distinct protocol, keyed
+// norms in @monobase/ceph-math prevent cross-analysis norm bleed.
+export const cephAnalysisTypeEnum = pgEnum('ceph_analysis_type', ['steiner_hybrid_sn', 'ricketts']);
 
 // D-J calibration provenance
 export const cephCalibrationMethodEnum = pgEnum('ceph_calibration_method', [

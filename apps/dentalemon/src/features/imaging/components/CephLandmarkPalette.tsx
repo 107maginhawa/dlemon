@@ -66,7 +66,9 @@ export function CephLandmarkPalette({
         const isSelected = selectedCode === code
         const isNext = nextUnplaced === code
         const locked = status === 'locked'
-        const isDisabled = locked || status === 'confirmed'
+        // Only locked points are immutable. Confirmed (not locked) stay selectable
+        // so the clinician can re-select them for arrow-key nudging (#13).
+        const isDisabled = locked
         const tooltip = D_P_TOOLTIPS[code]
         const showHint = code === activeCode
         return (

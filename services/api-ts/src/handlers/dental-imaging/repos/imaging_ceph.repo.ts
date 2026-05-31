@@ -121,26 +121,33 @@ export class ImagingCephRepository {
   // Analysis
   // -------------------------------------------------------------------------
 
-  async findAnalysis(imageId: string): Promise<ImagingCephAnalysis | null> {
+  async findAnalysis(
+    imageId: string,
+    analysisType = 'steiner_hybrid_sn',
+  ): Promise<ImagingCephAnalysis | null> {
     const [row] = await this.db
       .select()
       .from(imagingCephAnalyses)
       .where(
         and(
           eq(imagingCephAnalyses.imageId, imageId),
-          eq(imagingCephAnalyses.analysisType, 'steiner_hybrid_sn'),
+          eq(imagingCephAnalyses.analysisType, analysisType as 'steiner_hybrid_sn' | 'ricketts'),
         ),
       )
       .limit(1);
     return row ?? null;
   }
 
-  async upsertAnalysis(imageId: string, data: UpsertAnalysisInput): Promise<ImagingCephAnalysis> {
+  async upsertAnalysis(
+    imageId: string,
+    data: UpsertAnalysisInput,
+    analysisType = 'steiner_hybrid_sn',
+  ): Promise<ImagingCephAnalysis> {
     const [row] = await this.db
       .insert(imagingCephAnalyses)
       .values({
         imageId,
-        analysisType: 'steiner_hybrid_sn',
+        analysisType: analysisType as 'steiner_hybrid_sn' | 'ricketts',
         measurements: data.measurements,
         calibrationValue: data.calibrationValue ?? null,
         calibrationMethod: data.calibrationMethod ?? 'not_calibrated',

@@ -12,6 +12,7 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
+import type { StorageProvider } from '@/core/storage';
 import type { User } from '@/types/auth';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -40,6 +41,7 @@ export interface PatientImageItem {
   visitId: string | null;
   toothNumbers: number[];
   createdAt: Date;
+  downloadUrl: string | null;
 }
 
 export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageItem {
@@ -54,6 +56,8 @@ export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageIte
     visitId: att.visitId ?? null,
     toothNumbers: Array.isArray(att.toothNumbers) ? (att.toothNumbers as number[]) : [],
     createdAt: att.createdAt,
+    // Legacy attachments are stored by filePath, not object-store fileId — no presigned URL.
+    downloadUrl: null,
   };
 }
 
@@ -80,22 +84,38 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   // 1. Fetch new imaging images filtered by branch
   const imagingRows = await repo.listImagingImagesForPatient(patientId, branchId);
 
+  // Presigned GET URL per imaging object so the viewer can load the bytes directly.
+  // generateDownloadUrl signs the object key (= fileId) and does NOT require a
+  // stored_file row, so it works for seeded images written straight to the bucket.
+  const storage = ctx.get('storage') as StorageProvider | undefined;
+  async function downloadUrlFor(fileId: string | null): Promise<string | null> {
+    if (!fileId || !storage) return null;
+    try {
+      return await storage.generateDownloadUrl(fileId);
+    } catch {
+      return null;
+    }
+  }
+
   // Map imaging rows
-  const imagingItems: PatientImageItem[] = imagingRows.map((row) => {
-    const meta = row.dicomMetadata as { fileName?: string; mimeType?: string } | null;
-    return {
-      id: row.id,
-      source: 'imaging',
-      modality: row.modality,
-      fileName: meta?.fileName ?? (row.fileId ?? ''),
-      mimeType: meta?.mimeType ?? '',
-      fileSizeBytes: row.fileSizeBytes,
-      studyId: row.studyId,
-      visitId: null,
-      toothNumbers: [],
-      createdAt: row.createdAt,
-    };
-  });
+  const imagingItems: PatientImageItem[] = await Promise.all(
+    imagingRows.map(async (row) => {
+      const meta = row.dicomMetadata as { fileName?: string; mimeType?: string } | null;
+      return {
+        id: row.id,
+        source: 'imaging' as const,
+        modality: row.modality,
+        fileName: meta?.fileName ?? (row.fileId ?? ''),
+        mimeType: meta?.mimeType ?? '',
+        fileSizeBytes: row.fileSizeBytes,
+        studyId: row.studyId,
+        visitId: null,
+        toothNumbers: [],
+        createdAt: row.createdAt,
+        downloadUrl: await downloadUrlFor(row.fileId),
+      };
+    }),
+  );
 
   // 2. Fetch legacy dental_attachment rows for patient, filtered by branch via visit join
   const legacyRows = await getLegacyAttachmentImages(db, patientId, branchId);

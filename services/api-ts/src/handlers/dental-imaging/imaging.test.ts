@@ -66,6 +66,8 @@ function makeStorage() {
   return {
     generateUploadUrl: async (_fileId: string, _mime: string) =>
       'https://storage.example.com/presigned-upload-url',
+    generateDownloadUrl: async (fileId: string) =>
+      `https://storage.example.com/presigned-get/${fileId}`,
   };
 }
 
@@ -716,6 +718,8 @@ describe('union adapter legacy mapping', () => {
 
     expect(mapped.source).toBe('legacy');
     expect(mapped.modality).toBe('other');
+    // Legacy attachments have no object-store backing → no presigned URL.
+    expect(mapped.downloadUrl).toBeNull();
   });
 
   test('dental_attachment photo maps to source:legacy modality:intraoral_photo', async () => {

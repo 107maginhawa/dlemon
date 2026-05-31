@@ -526,6 +526,13 @@
       "when": 1780114090896,
       "tag": "0074_black_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1780151274792,
+      "tag": "0075_gifted_vector",
+      "breakpoints": true
     }
   ]
 }

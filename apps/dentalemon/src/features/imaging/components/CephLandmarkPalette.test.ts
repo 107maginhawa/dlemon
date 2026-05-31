@@ -103,6 +103,15 @@ describe('CephLandmarkPalette', () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  test('clicking a CONFIRMED (not locked) code calls onSelect — re-select for arrow-nudge', async () => {
+    const user = userEvent.setup()
+    const { onSelect, container } = renderPalette([mk('S', 'confirmed')])
+    const btn = container.querySelector('[data-landmark-code="S"]') as HTMLButtonElement
+    expect(btn.disabled).toBe(false)
+    await user.click(btn)
+    expect(onSelect).toHaveBeenCalledWith('S')
+  })
+
   test('selected code button has visual selection class', () => {
     const { container } = renderPalette([], 'N')
     const btn = container.querySelector('[data-landmark-code="N"]') as HTMLButtonElement

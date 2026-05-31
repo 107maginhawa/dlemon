@@ -80,6 +80,9 @@ namespace DentalImagingModule {
     visitId: string | null;
     toothNumbers: int32[];
     createdAt: utcDateTime;
+    // Presigned GET URL for the image bytes (imaging source). null for legacy
+    // attachments that have no object-store backing.
+    downloadUrl: string | null;
   }
 
   model ListPatientImagesResponse {
@@ -424,15 +427,16 @@ namespace DentalImagingModule {
     @useAuth(bearerAuth)
     deleteCephLandmark(@path imageId: string, @path landmarkCode: CephLandmarkCode): void | ErrorResponse;
 
+    // analysisType selects the protocol (steiner_hybrid_sn | ricketts). Omitted = default.
     @get
     @route("/dental/imaging/images/{imageId}/ceph/analysis")
     @useAuth(bearerAuth)
-    getCephAnalysis(@path imageId: string): CephLandmarkListResponse | ErrorResponse;
+    getCephAnalysis(@path imageId: string, @query analysisType?: string): CephLandmarkListResponse | ErrorResponse;
 
     @post
     @route("/dental/imaging/images/{imageId}/ceph/analysis/recompute")
     @useAuth(bearerAuth)
-    recomputeCephAnalysis(@path imageId: string): CephAnalysis | ErrorResponse;
+    recomputeCephAnalysis(@path imageId: string, @query analysisType?: string): CephAnalysis | ErrorResponse;
 
     @post
     @route("/dental/imaging/images/{imageId}/ceph/reports")

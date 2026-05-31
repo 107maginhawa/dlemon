@@ -12,44 +12,45 @@ export interface CephMeasurementsPanelProps {
   isLoading?: boolean
 }
 
+interface MetricRow {
+  key: string
+  label: string
+  mm?: boolean
+  landmarks: string[]
+}
+
 // D-F labels — SN-referenced naming. NOT Frankfort (no FMA, no Mandibular Plane Angle).
-const METRIC_ROWS: { key: string; label: string; mm?: boolean }[] = [
-  { key: 'sna', label: 'SNA' },
-  { key: 'snb', label: 'SNB' },
-  { key: 'anb', label: 'ANB' },
-  { key: 'convexity_napog', label: 'N-A-Pog Convexity' },
-  { key: 'sn_gome', label: 'SN-GoMe' },
-  { key: 'facial_angle_sn', label: 'Facial Angle (SN)' },
-  { key: 'y_axis_sn', label: 'Y-Axis (S-Me / SN)' },
-  { key: 'u1_sn', label: 'U1-SN' },
-  { key: 'impa', label: 'IMPA (L1-GoMe)' },
-  { key: 'u1_na_angle', label: 'U1-NA°' },
-  { key: 'l1_nb_angle', label: 'L1-NB°' },
-  { key: 'interincisal', label: 'Interincisal' },
-  { key: 'u1_na_mm', label: 'U1-NA (mm)', mm: true },
-  { key: 'l1_nb_mm', label: 'L1-NB (mm)', mm: true },
-  { key: 'overjet', label: 'Overjet (mm)', mm: true },
-  { key: 'overbite', label: 'Overbite (mm)', mm: true },
+const STEINER_ROWS: MetricRow[] = [
+  { key: 'sna', label: 'SNA', landmarks: ['S', 'N', 'A'] },
+  { key: 'snb', label: 'SNB', landmarks: ['S', 'N', 'B'] },
+  { key: 'anb', label: 'ANB', landmarks: ['S', 'N', 'A', 'B'] },
+  { key: 'convexity_napog', label: 'N-A-Pog Convexity', landmarks: ['N', 'A', 'Pog'] },
+  { key: 'sn_gome', label: 'SN-GoMe', landmarks: ['S', 'N', 'Go', 'Me'] },
+  { key: 'facial_angle_sn', label: 'Facial Angle (SN)', landmarks: ['S', 'N', 'Pog'] },
+  { key: 'y_axis_sn', label: 'Y-Axis (S-Me / SN)', landmarks: ['S', 'N', 'Me'] },
+  { key: 'u1_sn', label: 'U1-SN', landmarks: ['S', 'N', 'U1A', 'U1T'] },
+  { key: 'impa', label: 'IMPA (L1-GoMe)', landmarks: ['Go', 'Me', 'L1A', 'L1T'] },
+  { key: 'u1_na_angle', label: 'U1-NA°', landmarks: ['N', 'A', 'U1A', 'U1T'] },
+  { key: 'l1_nb_angle', label: 'L1-NB°', landmarks: ['N', 'B', 'L1A', 'L1T'] },
+  { key: 'interincisal', label: 'Interincisal', landmarks: ['U1A', 'U1T', 'L1A', 'L1T'] },
+  { key: 'u1_na_mm', label: 'U1-NA (mm)', mm: true, landmarks: ['N', 'A', 'U1T'] },
+  { key: 'l1_nb_mm', label: 'L1-NB (mm)', mm: true, landmarks: ['N', 'B', 'L1T'] },
+  { key: 'overjet', label: 'Overjet (mm)', mm: true, landmarks: ['U1T', 'L1T'] },
+  { key: 'overbite', label: 'Overbite (mm)', mm: true, landmarks: ['U1T', 'L1T'] },
 ]
 
-// Landmarks each metric depends on — used to surface "missing: {code}".
-const METRIC_LANDMARKS: Record<string, string[]> = {
-  sna: ['S', 'N', 'A'],
-  snb: ['S', 'N', 'B'],
-  anb: ['S', 'N', 'A', 'B'],
-  convexity_napog: ['N', 'A', 'Pog'],
-  sn_gome: ['S', 'N', 'Go', 'Me'],
-  facial_angle_sn: ['S', 'N', 'Pog'],
-  y_axis_sn: ['S', 'N', 'Me'],
-  u1_sn: ['S', 'N', 'U1A', 'U1T'],
-  impa: ['Go', 'Me', 'L1A', 'L1T'],
-  u1_na_angle: ['N', 'A', 'U1A', 'U1T'],
-  l1_nb_angle: ['N', 'B', 'L1A', 'L1T'],
-  interincisal: ['U1A', 'U1T', 'L1A', 'L1T'],
-  u1_na_mm: ['N', 'A', 'U1T'],
-  l1_nb_mm: ['N', 'B', 'L1T'],
-  overjet: ['U1T', 'L1T'],
-  overbite: ['U1T', 'L1T'],
+// Ricketts (Frankfort-referenced). Distinct frame (Po-Or) + A-Pog facial line.
+const RICKETTS_ROWS: MetricRow[] = [
+  { key: 'facial_angle', label: 'Facial Angle (FH)', landmarks: ['Po', 'Or', 'N', 'Pog'] },
+  { key: 'mandibular_plane_fh', label: 'Mandibular Plane (FH)', landmarks: ['Po', 'Or', 'Go', 'Me'] },
+  { key: 'convexity_mm', label: 'Convexity (A–NPog, mm)', mm: true, landmarks: ['A', 'N', 'Pog'] },
+  { key: 'l1_apog_angle', label: 'L1–APog°', landmarks: ['A', 'Pog', 'L1A', 'L1T'] },
+  { key: 'l1_apog_mm', label: 'L1–APog (mm)', mm: true, landmarks: ['A', 'Pog', 'L1T'] },
+  { key: 'interincisal', label: 'Interincisal', landmarks: ['U1A', 'U1T', 'L1A', 'L1T'] },
+]
+
+function rowsForAnalysis(analysisType: string): MetricRow[] {
+  return analysisType === 'ricketts' ? RICKETTS_ROWS : STEINER_ROWS
 }
 
 // Amber (1–2 SD) / red (>2 SD) only — no green for "normal" (avoids training clinicians
@@ -64,16 +65,11 @@ function formatDelta(delta: number, mm?: boolean): string {
   return `${sign}${delta.toFixed(1)}${mm ? '' : '°'}`
 }
 
-function valueText(
-  row: { key: string; mm?: boolean },
-  analysis: CephAnalysis,
-): string {
+function valueText(row: MetricRow, analysis: CephAnalysis): string {
   const value = analysis.measurements[row.key]
   if (typeof value === 'number') return value.toFixed(2)
   // null → diagnose why
-  const missing = (METRIC_LANDMARKS[row.key] ?? []).find((code) =>
-    analysis.missing.includes(code),
-  )
+  const missing = row.landmarks.find((code) => analysis.missing.includes(code))
   if (missing) return `missing: ${missing}`
   if (row.mm && analysis.uncalibrated) return 'calibrate for mm'
   return '—'
@@ -143,7 +139,7 @@ export function CephMeasurementsPanel({
 
       <table className="w-full text-xs">
         <tbody>
-          {METRIC_ROWS.map((row) => {
+          {rowsForAnalysis(analysis.analysisType).map((row) => {
             const value = analysis.measurements[row.key]
             const norm =
               typeof value === 'number' ? getNorm(analysis.analysisType, row.key) : null

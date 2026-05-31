@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { X, Lock, FileText, Download } from 'lucide-react'
-import { Button } from '@monobase/ui'
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@monobase/ui'
+import { ANALYSIS_TYPES } from '@monobase/ceph-math'
+import { apiBaseUrl } from '@/lib/config'
 import { useMutation } from '@tanstack/react-query'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
@@ -17,10 +26,24 @@ export interface CephWorkspacePanelProps {
   onExportPng?: (reportVersion: number) => void
   /** Called when a layer toggle changes; parent uses this to show/hide canvas overlays */
   onLayerChange?: (key: keyof LayerState, value: boolean) => void
+  /**
+   * Controlled landmark selection. When provided, the workspace owns selection
+   * (shared with the canvas landmark layer + keyboard flow + loupe). Omit for
+   * the uncontrolled fallback (internal state) used by isolated tests.
+   */
+  selectedCode?: CephLandmarkCode | null
+  onSelectCode?: (code: CephLandmarkCode | null) => void
 }
 
 // D-L: report gate landmarks
 const GATE_CODES: CephLandmarkCode[] = ['A', 'B', 'Go', 'Po']
+
+// #15: human-readable protocol labels for the analysis switcher. Wits is a single
+// metric (AO-BO), NOT a protocol — it is not listed here. McNamara is skipped.
+const ANALYSIS_LABELS: Record<string, string> = {
+  steiner_hybrid_sn: 'Steiner (SN)',
+  ricketts: 'Ricketts (FH)',
+}
 
 function isAddonError(err: unknown): boolean {
   if (!err) return false
@@ -35,11 +58,20 @@ export function CephWorkspacePanel({
   onClose,
   onExportPng,
   onLayerChange,
+  selectedCode: controlledSelectedCode,
+  onSelectCode,
 }: CephWorkspacePanelProps) {
   const { landmarks, commitLandmark } = useCephLandmarks(imageId)
-  const { analysis, isError } = useCephAnalysis(imageId)
+  // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
+  const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
+  const { analysis, isError } = useCephAnalysis(imageId, analysisType)
 
-  const [selectedCode, setSelectedCode] = useState<CephLandmarkCode | null>(null)
+  // Controlled/uncontrolled selection: when the parent passes selectedCode +
+  // onSelectCode the workspace owns it (shared with canvas/keyboard/loupe);
+  // otherwise fall back to local state (isolated component tests).
+  const [internalSelectedCode, setInternalSelectedCode] = useState<CephLandmarkCode | null>(null)
+  const selectedCode = controlledSelectedCode !== undefined ? controlledSelectedCode : internalSelectedCode
+  const setSelectedCode = onSelectCode ?? setInternalSelectedCode
   const [layers, setLayers] = useState<LayerState>({
     landmarks: true,
     tracing: true,
@@ -49,8 +81,9 @@ export function CephWorkspacePanel({
 
   const createReport = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/reports`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/reports`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       })
       if (!res.ok) throw new Error(await res.text())
@@ -100,10 +133,22 @@ export function CephWorkspacePanel({
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">Cephalometric</span>
-          {/* D-G: driven from analysis (not hard-coded) so it tracks the active protocol */}
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-[#FFE97D] font-medium">
-            {analysis?.analysisType ?? 'steiner_hybrid_sn'}
-          </span>
+          {/* #15: analysis-protocol switcher (was a static D-G badge). Data-driven. */}
+          <Select value={analysisType} onValueChange={setAnalysisType}>
+            <SelectTrigger
+              aria-label="Analysis protocol"
+              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-[#FFE97D]"
+            >
+              <SelectValue>{ANALYSIS_LABELS[analysisType] ?? analysisType}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="border-zinc-700 bg-zinc-800 text-zinc-100">
+              {ANALYSIS_TYPES.map((t) => (
+                <SelectItem key={t} value={t} className="text-xs">
+                  {ANALYSIS_LABELS[t] ?? t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <button
           onClick={onClose}

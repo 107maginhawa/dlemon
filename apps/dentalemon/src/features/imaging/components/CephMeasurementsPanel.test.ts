@@ -120,6 +120,25 @@ describe('CephMeasurementsPanel', () => {
     expect(container.textContent?.toLowerCase()).toContain('reference ranges')
   })
 
+  test('renders Ricketts metric rows (Facial Angle) and NOT Steiner-only rows (SNA) for a ricketts analysis', () => {
+    const { container } = renderPanel(
+      mkAnalysis({
+        analysisType: 'ricketts',
+        measurements: { facial_angle: 87, mandibular_plane_fh: 26 },
+      }),
+    )
+    expect(container.textContent).toContain('Facial Angle')
+    expect(container.textContent).not.toContain('SNA')
+  })
+
+  test('Ricketts norm chip uses the Ricketts norm (facial_angle 87±3), not a Steiner norm', () => {
+    // facial_angle 93 → +6 → 2 SD → mild chip with +6.0°
+    const { container } = renderPanel(
+      mkAnalysis({ analysisType: 'ricketts', measurements: { facial_angle: 93 } }),
+    )
+    expect(container.textContent).toContain('+6.0°')
+  })
+
   test('renders skeleton when isLoading=true', () => {
     const { container } = renderPanel(null, true)
     // shadcn Skeleton uses data-slot="skeleton" or animate-pulse class

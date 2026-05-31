@@ -1,5 +1,6 @@
 import { describe, test, expect, afterEach, mock } from 'bun:test'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { CephWorkspacePanel } from './CephWorkspacePanel'
 import {
@@ -77,7 +78,7 @@ describe('CephWorkspacePanel', () => {
   test('renders null when isOpen=false', () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     const { container } = renderPanel({ isOpen: false })
     expect(container.firstChild).toBeNull()
@@ -86,7 +87,7 @@ describe('CephWorkspacePanel', () => {
   test('renders header "Cephalometric" when open', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     renderPanel()
     expect(await screen.findByText('Cephalometric')).not.toBeNull()
@@ -95,7 +96,7 @@ describe('CephWorkspacePanel', () => {
   test('shows steiner_hybrid_sn badge — D-G', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     const { container } = renderPanel()
     await screen.findByText('Cephalometric')
@@ -105,7 +106,7 @@ describe('CephWorkspacePanel', () => {
   test('shows close button with aria-label', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     renderPanel()
     expect(
@@ -127,7 +128,7 @@ describe('CephWorkspacePanel', () => {
   test('shows D-L gate message when A, B, Go, Po not all confirmed', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([mk('A'), mk('B')])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     const { container } = renderPanel()
     await waitFor(() =>
@@ -143,7 +144,7 @@ describe('CephWorkspacePanel', () => {
         jsonResponse(
           okLandmarks([mk('A'), mk('B'), mk('Go'), mk('Po')]),
         ),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     const { container } = renderPanel()
     await waitFor(() => expect(container.textContent).toContain('Cephalometric'))
@@ -157,7 +158,7 @@ describe('CephWorkspacePanel', () => {
   test('Generate Report button disabled when gate landmarks not confirmed', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([mk('A')])),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     renderPanel()
     const btn = (await screen.findByRole('button', {
@@ -172,7 +173,7 @@ describe('CephWorkspacePanel', () => {
         jsonResponse(
           okLandmarks([mk('A'), mk('B'), mk('Go'), mk('Po')]),
         ),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     renderPanel()
     await waitFor(async () => {
@@ -183,13 +184,49 @@ describe('CephWorkspacePanel', () => {
     })
   })
 
+  test('controlled selection: clicking a palette item calls onSelectCode (lifted state)', async () => {
+    const user = userEvent.setup()
+    const onSelectCode = mock(() => {})
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    const { container } = renderPanel({ selectedCode: null, onSelectCode })
+    await screen.findByText('Cephalometric')
+    const sBtn = container.querySelector('[data-landmark-code="S"]') as HTMLButtonElement
+    await user.click(sBtn)
+    expect(onSelectCode).toHaveBeenCalledWith('S')
+  })
+
+  test('controlled selectedCode highlights the selected palette item', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    const { container } = renderPanel({ selectedCode: 'N', onSelectCode: mock(() => {}) })
+    await screen.findByText('Cephalometric')
+    const nBtn = container.querySelector('[data-landmark-code="N"]') as HTMLButtonElement
+    expect(nBtn.className).toContain('border-[#FFE97D]')
+  })
+
+  test('#15 renders the analysis-protocol switcher defaulting to Steiner', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    renderPanel()
+    const switcher = await screen.findByLabelText('Analysis protocol')
+    expect(switcher).not.toBeNull()
+    expect(switcher.textContent).toContain('Steiner')
+  })
+
   test('no "Class" / no norm verdict text — D-H', async () => {
     setFetch(
       () =>
         jsonResponse(
           okLandmarks([mk('A'), mk('B'), mk('Go'), mk('Po')]),
         ),
-      () => jsonResponse(mkAnalysis()),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
     )
     const { container } = renderPanel()
     await screen.findByText('Cephalometric')

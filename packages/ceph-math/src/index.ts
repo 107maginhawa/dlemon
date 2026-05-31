@@ -388,6 +388,29 @@ export function computeCephAnalysis(
   return { measurements, missing: [...new Set(missing)], uncalibrated };
 }
 
+import { computeRickettsAnalysis } from './ricketts'
+
+/** Supported cephalometric analysis protocols (keys for compute + norms). */
+export const ANALYSIS_TYPES = ['steiner_hybrid_sn', 'ricketts'] as const
+export type CephAnalysisType = (typeof ANALYSIS_TYPES)[number]
+
+/**
+ * Dispatch to the engine for a given analysis type. Unknown types fall back to
+ * the Steiner-hybrid-SN engine (the shipped default).
+ */
+export function computeAnalysis(
+  analysisType: string,
+  landmarks: LandmarkMap,
+  pixelSpacingMm: number | null,
+  anisotropy?: AnisotropyOptions,
+): CephResult {
+  if (analysisType === 'ricketts') {
+    return computeRickettsAnalysis(landmarks, pixelSpacingMm, anisotropy)
+  }
+  return computeCephAnalysis(landmarks, pixelSpacingMm, anisotropy)
+}
+
 export * from './coords'
 export * from './norms'
 export * from './pattern'
+export * from './ricketts'

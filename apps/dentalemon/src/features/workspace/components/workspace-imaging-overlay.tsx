@@ -54,7 +54,7 @@ export function WorkspaceImagingOverlay({
           ) : selectedImageItem ? (
             <ImagingWorkspace
               imageId={selectedImageItem.id}
-              imageUrl={selectedImageItem.fileName}
+              imageUrl={selectedImageItem.downloadUrl ?? selectedImageItem.fileName}
               className="h-full w-full"
               visitId={currentVisitId ?? ''}
               patientId={patientId}

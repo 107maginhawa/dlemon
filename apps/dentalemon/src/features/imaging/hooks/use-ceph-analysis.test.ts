@@ -30,7 +30,7 @@ describe('useCephAnalysis — query', () => {
 
   test('returns analysis on successful fetch', async () => {
     const analysis = makeAnalysis({ measurements: { sna: 82, snb: 80, anb: 2 } })
-    global.fetch = mock(() => jsonResponse(analysis))
+    global.fetch = mock(() => jsonResponse({ items: [], analysis }))
 
     const qc = freshClient()
     const { result } = renderHook(() => useCephAnalysis('img-1'), { wrapper: makeWrapper(qc) })
@@ -44,7 +44,7 @@ describe('useCephAnalysis — query', () => {
     let capturedUrl = ''
     global.fetch = mock((req: Request | string | URL) => {
       capturedUrl = req instanceof Request ? req.url : String(req)
-      return jsonResponse(makeAnalysis())
+      return jsonResponse({ items: [], analysis: makeAnalysis() })
     })
 
     const qc = freshClient()
@@ -54,8 +54,25 @@ describe('useCephAnalysis — query', () => {
     expect(capturedUrl).toContain('/dental/imaging/images/img-42/ceph/analysis')
   })
 
+  test('passes analysisType through as a query param', async () => {
+    let capturedUrl = ''
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = req instanceof Request ? req.url : String(req)
+      return jsonResponse({ items: [], analysis: makeAnalysis({ analysisType: 'ricketts' }) })
+    })
+
+    const qc = freshClient()
+    const { result } = renderHook(() => useCephAnalysis('img-9', 'ricketts'), {
+      wrapper: makeWrapper(qc),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(capturedUrl).toContain('analysisType=ricketts')
+    expect(result.current.analysis?.analysisType).toBe('ricketts')
+  })
+
   test('is disabled when imageId is empty', async () => {
-    const fetchSpy = mock(() => jsonResponse(makeAnalysis()))
+    const fetchSpy = mock(() => jsonResponse({ items: [], analysis: makeAnalysis() }))
     global.fetch = fetchSpy
 
     const qc = freshClient()
@@ -68,7 +85,7 @@ describe('useCephAnalysis — query', () => {
 
   test('surfaces uncalibrated state from response', async () => {
     const analysis = makeAnalysis({ uncalibrated: true, measurements: { sna: null, snb: null, anb: null } })
-    global.fetch = mock(() => jsonResponse(analysis))
+    global.fetch = mock(() => jsonResponse({ items: [], analysis }))
 
     const qc = freshClient()
     const { result } = renderHook(() => useCephAnalysis('img-1'), { wrapper: makeWrapper(qc) })
@@ -79,7 +96,7 @@ describe('useCephAnalysis — query', () => {
 
   test('surfaces missing landmarks from response', async () => {
     const analysis = makeAnalysis({ missing: ['A', 'B', 'Go', 'Po'], measurements: {} })
-    global.fetch = mock(() => jsonResponse(analysis))
+    global.fetch = mock(() => jsonResponse({ items: [], analysis }))
 
     const qc = freshClient()
     const { result } = renderHook(() => useCephAnalysis('img-1'), { wrapper: makeWrapper(qc) })
