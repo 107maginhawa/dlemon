@@ -368,7 +368,11 @@ export const CEPH_GOLDEN: Record<string, { x: number; y: number }> = {
   L1A: { x: 293, y: 285 },
 }
 
-// Expected derived measurements for CEPH_GOLDEN (contract §Set B header).
-export const CEPH_EXPECTED = { sna: 82.0, snb: 80.0, anb: 2.0 } as const
+// Expected derived measurements for the seeded ceph chain. The demo now traces a
+// REAL lateral cephalogram (scripts/seed-assets/imaging/ceph-lateral-demo.jpg) with
+// anatomically-placed landmarks → a mild Class II reading (deterministic, rounded
+// to 2dp by the isomorphic ceph-math engine). Update both here and seed-demo.ts
+// together if the seeded landmark coordinates change.
+export const CEPH_EXPECTED = { sna: 79.51, snb: 75.94, anb: 3.57 } as const
 
 export { pwRequest }

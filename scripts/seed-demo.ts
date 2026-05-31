@@ -60,10 +60,14 @@ async function uploadDemoImage(fileId: string, mimeType: string): Promise<void> 
   await seedS3.write(fileId, demoImageBytes, { type: mimeType })
 }
 
-// Seeds a complete cephalometric chain (study + uploaded image + 11 landmarks with
+// Seeds a complete cephalometric chain (study + uploaded image + 14 landmarks with
 // A/B/Go/Po confirmed + S locked + analysis + report). Visit-independent so it never
-// gets blocked by the visit-completion cascade. CLASS_I golden coords produce
-// SNA≈82/SNB≈80/ANB≈2 (CEPH_EXPECTED in _journey-helpers → B02/B04 PASS). Throws on failure.
+// gets blocked by the visit-completion cascade. Landmarks are placed on the REAL
+// lateral cephalogram seed asset (ceph-lateral-demo.jpg, 1000×800) at anatomically
+// estimated positions → SNA≈79.5/SNB≈75.9/ANB≈3.6 (a mild Class II reading;
+// CEPH_EXPECTED in _journey-helpers → B02/B04). U1A/L1A apices are left unplaced
+// (not visible without expert annotation) so the panel shows them as "missing".
+// Throws on failure.
 async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string): Promise<string> {
   const studyR = await post('/dental/imaging/studies', {
     patientId, ...(visitId ? { visitId } : {}), branchId,
@@ -76,13 +80,15 @@ async function seedCephChain(patientId: string, branchId: string, visitId: strin
   await uploadDemoImage(studyR.data.fileId, 'image/jpeg')
   log(`  ✓ Ceph imaging study + image uploaded (imageId: ${imageId.slice(0, 8)}…)`)
 
+  // Image-space pixel coords on the 1000×800 real cephalogram (face pointing right).
   const landmarks = [
-    { landmarkCode: 'S', x: 100, y: 200 }, { landmarkCode: 'N', x: 300, y: 200 },
-    { landmarkCode: 'A', x: 290, y: 271 }, { landmarkCode: 'B', x: 288, y: 268 },
-    { landmarkCode: 'Pog', x: 285, y: 280 }, { landmarkCode: 'Me', x: 282, y: 310 },
-    { landmarkCode: 'Go', x: 220, y: 310 }, { landmarkCode: 'ANS', x: 430, y: 390 },
-    { landmarkCode: 'PNS', x: 520, y: 385 }, { landmarkCode: 'Po', x: 575, y: 295 },
-    { landmarkCode: 'Or', x: 540, y: 300 },
+    { landmarkCode: 'S', x: 560, y: 380 }, { landmarkCode: 'N', x: 815, y: 295 },
+    { landmarkCode: 'A', x: 845, y: 510 }, { landmarkCode: 'B', x: 840, y: 622 },
+    { landmarkCode: 'Pog', x: 865, y: 668 }, { landmarkCode: 'Me', x: 835, y: 702 },
+    { landmarkCode: 'Gn', x: 850, y: 690 }, { landmarkCode: 'Go', x: 560, y: 635 },
+    { landmarkCode: 'ANS', x: 855, y: 475 }, { landmarkCode: 'PNS', x: 700, y: 478 },
+    { landmarkCode: 'Po', x: 515, y: 400 }, { landmarkCode: 'Or', x: 805, y: 365 },
+    { landmarkCode: 'U1T', x: 865, y: 575 }, { landmarkCode: 'L1T', x: 858, y: 582 },
   ].map(lm => ({ ...lm, status: 'placed' }))
   const lmBatchR = await post(`/dental/imaging/images/${imageId}/ceph/landmarks`, { landmarks }, cookie)
   if (!lmBatchR.ok) throw new Error(`ceph landmarks → ${lmBatchR.status}: ${JSON.stringify(lmBatchR.data).slice(0, 160)}`)
@@ -104,7 +110,7 @@ async function seedCephChain(patientId: string, branchId: string, visitId: strin
   if (!rc.ok) log(`  ⚠ ceph recompute → ${rc.status} (analysis already computed on write; continuing)`)
   const rep = await post(`/dental/imaging/images/${imageId}/ceph/reports`, {}, cookie)
   if (!rep.ok) throw new Error(`ceph report → ${rep.status}: ${JSON.stringify(rep.data).slice(0, 120)}`)
-  log(`  ✓ Ceph: 11 landmarks, A/B/Go/Po confirmed, S locked, calibrated, analysis + report v1`)
+  log(`  ✓ Ceph: 14 landmarks, A/B/Go/Po confirmed, S locked, calibrated, analysis + report v1`)
   return imageId
 }
 

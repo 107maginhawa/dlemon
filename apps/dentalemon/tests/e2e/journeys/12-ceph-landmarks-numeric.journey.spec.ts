@@ -149,7 +149,11 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       // Persistence checkpoint: reload + re-read; numbers identical.
       await openWorkspace(page, patientId)
       const reResp = await apiReader.get(`/dental/imaging/images/${imageId}/ceph/analysis`)
-      const reM = (await reResp.json()).measurements ?? {}
+      // GET /ceph/analysis returns the list-response shape {items, analysis};
+      // measurements live under .analysis (the earlier first-read on line ~132
+      // already handles both shapes — this reload re-read must too).
+      const reBody = await reResp.json()
+      const reM = reBody.analysis?.measurements ?? reBody.measurements ?? {}
       const stable = close(Number(reM.sna), CEPH_EXPECTED.sna)
       if (stable) {
         recordJourneyPass(META)
