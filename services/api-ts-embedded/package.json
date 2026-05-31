@@ -5,7 +5,7 @@
   "description": "Embedded api-ts runtime — JS bundle + Rust JS engine for offline-first Tauri apps",
   "devDependencies": {
     "@monobase/api-ts": "workspace:*",
-    "drizzle-orm": "^0.44.6",
+    "drizzle-orm": "^0.45.2",
     "esbuild": "^0.25.0",
     "unenv": "^1.10.0"
   }

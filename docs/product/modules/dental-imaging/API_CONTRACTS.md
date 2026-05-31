@@ -75,183 +75,79 @@ List imaging studies (patient-scoped).
 
 ---
 
-### POST /api/v1/dental/imaging/studies/:id/images
+### GET /api/v1/dental/imaging/studies/:studyId
 
-Upload image(s) to a study.
+Get a single imaging study.
 
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (study uuid)
-**Content-Type:** `multipart/form-data`
-**Rate limit:** 10 req/min
+**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
+**Path params:** `studyId` (study uuid)
 
-**Request body:**
+**Response 200:** `{ data: ImagingStudy }`
 
-| Field | Type | Required | Format | Constraints |
-|-------|------|----------|--------|-------------|
-| `files` | file[] | YES | DICOM, JPEG, PNG, TIFF | Max 50 MB per file; max 20 files per request |
-| `tooth_numbers` | integer[] | NO | — | FDI notation, one per file (optional) |
-
-**Response 201:**
-
-| Field | Type | Nullable | Notes |
-|-------|------|----------|-------|
-| `uploaded` | integer | NO | Count of successfully uploaded images |
-| `image_ids` | string[] | NO | UUIDs of created image records |
-| `study_id` | string (uuid) | NO | |
-
-**Errors:** `NOT_FOUND(404)`, `UNSUPPORTED_MIME_TYPE(422)`, `FORBIDDEN(403)`, `IMAGING_TIER_REQUIRED(403)`
-**Events emitted:** DE-018 ImagingStudyUploaded
+**Errors:** `STUDY_NOT_FOUND(404)`, `FORBIDDEN(403)`
 
 ---
 
-### POST /api/v1/dental/imaging/studies/:id/annotations
+### GET /api/v1/dental/patients/:patientId/images
 
-Create an annotation on a study image.
+Patient-scoped union of imaging images and legacy clinical attachments surfaced in the imaging workspace.
 
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (study uuid)
+**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
+**Path params:** `patientId` (patient uuid)
 
-**Request body:**
+**Response 200:** Collection of image records (each tagged `source: 'imaging' | 'legacy'`)
 
-| Field | Type | Nullable | Required | Enum | Constraints | Example |
-|-------|------|----------|----------|------|-------------|---------|
-| `image_id` | string | NO | YES | — | uuid | `"01JX..."` |
-| `annotation_type` | string | NO | YES | `region`, `measurement`, `finding`, `arrow`, `text` | — | `"finding"` |
-| `coordinates` | object | NO | YES | — | `{ x, y, width?, height? }` | `{x:120,y:80,width:30,height:20}` |
-| `label` | string | YES | NO | — | max:200 | `"Caries - mesial" ` |
-| `finding_code` | string | YES | NO | — | ICD/dental code | `"K02.1"` |
-| `status` | string | NO | YES | `draft`, `confirmed` | — | `"draft"` |
-
-**Response 201:** `{ data: ImagingAnnotation }`
-
-| Field | Type | Nullable | Notes |
-|-------|------|----------|-------|
-| `id` | string (uuid) | NO | |
-| `study_id` | string (uuid) | NO | |
-| `image_id` | string (uuid) | NO | |
-| `annotation_type` | string | NO | |
-| `status` | string | NO | `draft` |
-| `created_at` | string (date-time) | NO | |
-
-**Errors:** `NOT_FOUND(404)`, `INVALID_STATUS_TRANSITION(422)`, `FORBIDDEN(403)`
+**Errors:** `FORBIDDEN(403)`
 
 ---
 
-### PATCH /api/v1/dental/imaging/studies/:id/annotations/:aid
+> **V-IMG-009 — image-centric surface.** Ceph state and clinical findings hang off an **image**, not a
+> standalone `ceph-analyses` resource, and there is no `studies/:id/images` or `studies/:id/annotations`
+> resource (those were stale earlier docs). The routes below match `generated/openapi/routes.ts` and
+> MODULE_SPEC §10. Auth for all of them: `dentist_associate`, `dentist_owner` (read endpoints also `staff_full`).
 
-Update annotation (promote to confirmed, edit label).
+### Image lifecycle
 
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (study uuid), `aid` (annotation uuid)
+| Method | Path | Purpose |
+|--------|------|---------|
+| DELETE | /api/v1/dental/imaging/images/:imageId | Delete an image |
+| PATCH | /api/v1/dental/imaging/images/:imageId/calibration | Set pixels-per-mm calibration |
+| PATCH | /api/v1/dental/imaging/images/:imageId/modality | Set/correct the image modality |
 
-**Request body:**
+### Findings (image-centric)
 
-| Field | Type | Nullable | Required | Enum | Example |
-|-------|------|----------|----------|------|---------|
-| `status` | string | YES | NO | `confirmed`, `dismissed` | `"confirmed"` |
-| `label` | string | YES | NO | — | `"Caries confirmed"` |
-| `finding_code` | string | YES | NO | — | `"K02.1"` |
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | /api/v1/dental/imaging/images/:imageId/findings | Add a clinical finding to an image |
+| GET | /api/v1/dental/imaging/images/:imageId/findings | List an image's findings |
+| PATCH | /api/v1/dental/imaging/findings/:findingId | Update a finding (e.g. status) |
+| DELETE | /api/v1/dental/imaging/findings/:findingId | Delete a finding |
 
-**Response 200:** `{ data: ImagingAnnotation }`
+**Errors:** `FINDING_NOT_FOUND(404)`, `INVALID_STATUS_TRANSITION(422)`, `FORBIDDEN(403)`
+**Events emitted:** DE-019 ImagingFindingConfirmed (when a finding is confirmed)
 
-**Errors:** `NOT_FOUND(404)`, `INVALID_STATUS_TRANSITION(422)`, `FORBIDDEN(403)`
-**Events emitted:** DE-019 ImagingFindingConfirmed (when status → confirmed)
+### Measurements (image-centric)
 
----
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | /api/v1/dental/imaging/images/:imageId/measurements | Add a measurement to an image |
+| GET | /api/v1/dental/imaging/images/:imageId/measurements | List an image's measurements |
+| DELETE | /api/v1/dental/imaging/measurements/:measurementId | Delete a measurement |
 
-### POST /api/v1/dental/imaging/studies/:id/findings
+**Errors:** `NOT_CALIBRATED(422)`, `NOT_FOUND(404)`, `FORBIDDEN(403)`
 
-Add a structured clinical finding to a study.
+### Cephalometric (hangs off the image)
 
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (study uuid)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/v1/dental/imaging/images/:imageId/ceph/analysis | Get the image's ceph analysis (angles, classification) |
+| POST | /api/v1/dental/imaging/images/:imageId/ceph/analysis/recompute | Recompute measurements (requires calibration + min landmarks) |
+| GET | /api/v1/dental/imaging/images/:imageId/ceph/landmarks | List landmarks |
+| POST | /api/v1/dental/imaging/images/:imageId/ceph/landmarks | Batch upsert landmarks |
+| PATCH | /api/v1/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode | Adjust one landmark |
+| DELETE | /api/v1/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode | Remove one landmark |
+| GET | /api/v1/dental/imaging/images/:imageId/ceph/reports | List ceph reports |
+| POST | /api/v1/dental/imaging/images/:imageId/ceph/reports | Generate a ceph report |
 
-**Request body:**
-
-| Field | Type | Nullable | Required | Constraints | Example |
-|-------|------|----------|----------|-------------|---------|
-| `tooth_number` | integer | YES | NO | FDI notation | `14` |
-| `finding_code` | string | NO | YES | max:20 | `"K02.1"` |
-| `description` | string | NO | YES | max:500 | `"Occlusal caries, moderate depth"` |
-| `severity` | string | NO | YES | enum: `minimal`, `moderate`, `severe` | `"moderate"` |
-| `annotation_id` | string | YES | NO | uuid | `"01JX..."` |
-
-**Response 201:** `{ data: ImagingFinding }`
-
-**Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`
-
----
-
-### POST /api/v1/dental/imaging/ceph-analyses
-
-Create a new cephalometric analysis.
-
-**Auth:** `dentist_associate`, `dentist_owner`
-
-**Request body:**
-
-| Field | Type | Nullable | Required | Constraints | Example |
-|-------|------|----------|----------|-------------|---------|
-| `branch_id` | string | NO | YES | uuid | `"01JX..."` |
-| `patient_id` | string | NO | YES | uuid | `"01JX..."` |
-| `study_id` | string | NO | YES | uuid (imaging study with ceph modality) | `"01JX..."` |
-| `image_id` | string | NO | YES | uuid | `"01JX..."` |
-| `analysis_type` | string | NO | YES | enum: `steiner`, `ricketts`, `tweed`, `mcnamara` | `"steiner"` |
-
-**Response 201:** `{ data: CephAnalysis }`
-
-| Field | Type | Nullable | Notes |
-|-------|------|----------|-------|
-| `id` | string (uuid) | NO | |
-| `study_id` | string (uuid) | NO | |
-| `patient_id` | string (uuid) | NO | |
-| `analysis_type` | string | NO | |
-| `status` | string | NO | `pending_landmarks` |
-| `is_calibrated` | boolean | NO | `false` |
-| `landmark_count` | integer | NO | `0` |
-| `created_at` | string (date-time) | NO | |
-
-**Errors:** `IMAGING_TIER_REQUIRED(403)`, `NOT_FOUND(404)`, `FORBIDDEN(403)`
-
----
-
-### PUT /api/v1/dental/imaging/ceph-analyses/:id/landmarks
-
-Batch upsert landmarks for a ceph analysis.
-
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (ceph analysis uuid)
-
-**Request body:**
-
-| Field | Type | Nullable | Required | Notes |
-|-------|------|----------|----------|-------|
-| `landmarks` | Landmark[] | NO | YES | Array of landmark points |
-| `calibration` | object | YES | NO | `{ pixels_per_mm: number }` |
-
-**Landmark fields:**
-
-| Field | Type | Nullable | Required | Constraints | Example |
-|-------|------|----------|----------|-------------|---------|
-| `landmark_code` | string | NO | YES | max:20, e.g., `"N"`, `"S"`, `"A"` | `"N"` |
-| `x` | number | NO | YES | — | `234.5` |
-| `y` | number | NO | YES | — | `189.2` |
-| `confidence` | number | YES | NO | 0.0–1.0 (AI-assisted) | `0.95` |
-
-**Response 200:** `{ data: { analysis_id: "uuid", landmark_count: N, is_calibrated: true } }`
-
-**Errors:** `NOT_FOUND(404)`, `CEPH_ANALYSIS_NOT_FOUND(404)`, `FORBIDDEN(403)`, `IMAGING_TIER_REQUIRED(403)`
-
----
-
-### POST /api/v1/dental/imaging/ceph-analyses/:id/recompute
-
-Trigger measurement recomputation (requires calibration and minimum landmarks).
-
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (ceph analysis uuid)
-
-**Response 202:** `{ data: { analysis_id: "uuid", status: "computing", estimated_seconds: 5 } }`
-
-**Errors:** `NOT_FOUND(404)`, `NOT_CALIBRATED(422)`, `INSUFFICIENT_LANDMARKS(422)`, `FORBIDDEN(403)`, `IMAGING_TIER_REQUIRED(403)`
-**Events emitted:** DE-020 CephAnalysisComputed (async, on completion)
+**Errors:** `NOT_CALIBRATED(422)`, `INSUFFICIENT_LANDMARKS(422)`, `NOT_FOUND(404)`, `FORBIDDEN(403)`, `IMAGING_TIER_REQUIRED(403)`
+**Events emitted:** DE-020 CephAnalysisComputed (on recompute completion)

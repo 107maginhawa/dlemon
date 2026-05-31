@@ -36,6 +36,12 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 
 ---
 
+> **Note — emr-consultation (`/emr`) is platform-role-governed.** The platform consultation-notes module is
+> governed by Better-Auth roles (`provider`/`patient`/`admin`, with `provider:owner`/`patient:owner`), NOT by
+> the dental membership matrix below.
+
+---
+
 ## Module Permission Matrix
 
 ### PRD-defined Role Access (FR6.2)

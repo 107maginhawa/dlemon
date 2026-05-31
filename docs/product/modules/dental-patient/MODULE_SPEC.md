@@ -93,7 +93,7 @@ Visit/treatment records (dental-visit), billing invoices (dental-billing), clini
 | BR-015 | IF registering patient THEN explicit marketing consent required | Registration | Checkbox required; defaults to unchecked |
 | BR-015b | IF patient.status = archived THEN record is read-only | All write handlers | 403 |
 | BR-015c | IF follow-up note added THEN append-only (no edit/delete) | Follow-up notes | 405 on PATCH/DELETE |
-| BR-020 | Patient merge not implemented — manual deduplication only | Merge endpoint | 501 NOT IMPLEMENTED |
+| BR-020 | Patient merge **intentionally deferred to Phase 2** (feature-flag `dental_patient_merge_enabled`, default false) — manual deduplication only until then; endpoint returns `501` by design, not a coverage gap (TR-PAT-020). | Merge endpoint | 501 NOT IMPLEMENTED |
 | TP-BR-005 | Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete | Treatment-plan completion (derived) | Plan status derived from linked treatments: all done→`completed`, some done→`partially_completed`, none→`approved`; `dismissed`/`declined` excluded |
 
 ### Treatment plans (TR-P1-08)
@@ -193,11 +193,13 @@ archived ──► active  (reactivation by dentist_owner)
 | PATCH /dental/patients/:id | Update demographics | fields | patient | 403, 422 |
 | POST /dental/patients/:id/archive | Archive | reason | patient | 403 |
 | GET /dental/patients/:id/statement | Financial statement | — | statement | — |
-| POST /dental/patients/:id/follow-up | Add follow-up note | text | note | 403 |
+| POST /dental/patients/:id/follow-up-notes | Add follow-up note (append-only) | text | note | 403 |
+| GET /dental/patients/:id/follow-up-notes | List follow-up notes | — | note[] | 403 |
 | POST /dental/patients/bulk-archive | Bulk archive | ids[] | count | 403 |
 | POST /dental/patients/import | CSV/JSON import | file | result | 422 |
 | GET /dental/patients/:id/export | Export record | — | JSON/CSV | — |
-| POST /dental/patients/:id/treatment-plans/:planId/approval | CR-05: approve plan, link items, write approval record | approvedByPersonId, method, consentFormId?, planVersionId?, signatureData? | { approval, plan } | 404, 422 (PLAN_NOT_APPROVABLE) |
+| POST /dental/patients/:patientId/treatment-plans/:planId/accept | Accept a presented plan — simple accept (logic owned by dental-visit treatments; re-export shim). Distinct from `/approval` below. | — | plan | 404, 422 |
+| POST /dental/patients/:patientId/treatment-plans/:planId/approval | CR-05 / TP-BR-005: records patient approval, binds pending (diagnosed/planned) treatments as plan items, writes approval record | approvedByPersonId, method, consentFormId?, planVersionId?, signatureData? | { approval, plan } | 404, 422 (PLAN_NOT_APPROVABLE) |
 
 ---
 

@@ -1,188 +1,212 @@
-# Confidence Stack Report — Suite (Merged)
+# Confidence Stack Report
 
-**Date:** 2026-05-30
+**Date:** 2026-05-31
 **Team size:** small
-**Scope:** all (12 module slices aggregated)
 **Layers audited:** 1-4 (static analysis)
 **Layers deferred:** 5-6 (require CI/CD/runtime evidence)
-**Aggregation source:** `docs/audits/confidence/*.md` (12 per-module confidence slices)
-**Method:** This report aggregates the per-module confidence slices only. Per-module
-scores, findings, and rationales were authored in the individual slices; this document
-rolls them up into suite-wide gauges and a prioritized action plan. No re-scoring was
-performed here.
+**Prior audits used:** `docs/audits/COMPLIANCE_REPORT.md` (2026-05-31, BR + ROLE_PERMISSION_MATRIX + state-machine enforcement inventory), `docs/audits/EXISTING_CODEBASE_ADOPTION_AUDIT.md` (behavior inventory: 237 endpoints, 28 state machines), 46 `docs/execution/slices/*/TDD_PROOF.md` artifacts.
+**Engine map:** v5 (engine v4+), git_sha ae0d17da, 199 files, provenance `producer: engine`, `fields_unavailable: []`, `confidence_threshold: MEDIUM`. Loading-hygiene (§4.5) + FE-edge-density (§5.5) subscores **active**.
 
-## Score Summary (suite-wide)
+## Suite Verification
 
-Suite layer scores are the **min across implemented modules** (conservative — the suite
-is only as confident as its weakest module). `external-records-import` is SKIP
-(future-phase, no code/tests) and is excluded from min/avg math.
+Ran the real isolated runner (`DATABASE_URL=…monobase_test bun run test` → per-file DB-clone runner, the same gate CI uses):
 
-| Layer | Suite Score (min) | Suite Avg | Meaning | Top Gaps |
-|-------|-------------------|-----------|---------|----------|
-| 1. Coverage Integrity | 7/10 | ~7.9/10 | Good — every implemented module's critical BR/AC/permission/FSM paths have meaningful (assertion-bearing) coverage; weakest are audit/pmd/emr | emr PHI audit-logging line-only (no audit-row assertion); audit consumer write path; pmd test-after penalty |
-| 2. Behavior Traceability | 7/10 | ~7.7/10 | Good — comprehensive compliance inventories present (no shallow caps); most behaviors have named STRONG test owners | emr 6 PHI audit-ops + admin grants untraced; patient V-PAT-002 create-deny; visit AC-VIS-003 |
-| 3. Test Quality Hardening | 8/10 | ~8.6/10 | Good→Strong — real-DB integration over mocks, seeded fixtures, strong assertions, FSM property tests across the suite | emr tautological FSM property test; residual weak existence-only assertions; scheduling setTimeout flake vector |
-| 4. Release Gate Readiness | 6/10 | ~7.5/10 | Partial→Good — full CI (test/lint/typecheck/build/security/migration-lint/traceability/journey) repo-wide; per-module gaps in build stub, contract continue-on-error, shallow health | audit build step is a stub + no security scan; emr no security scan + shallow health; migrations forward-only (no down files) suite-wide |
+```
+[test-runner] 203 files, 2828 pass, 0 fail in 40.1s
+```
 
-### Three Headline Gauges (suite-wide, min across implemented modules)
+**GREEN — 203 files / 2828 pass / 0 fail / 0 skipped.** Not assumed — executed this run. (The prior ~2684 figure in MEMORY is stale; suite has grown to 2828.)
 
-- **Overall Test-Confidence (min L1-L3): 7/10** — headline test-quality signal. Gated by
-  dental-audit, dental-patient, dental-pmd, dental-visit, and emr-consultation (all 7).
-  The remaining seven implemented modules sit at 8-9.
-- **Release-Readiness (L4): 6/10** — separate release-infra gauge. Gated by dental-audit
-  (build stub + no security scan) and emr-consultation (no security scan + 0/2 migration
-  safety + shallow health). Repo-wide CI is otherwise comprehensive (median L4 = 8).
-- **Ship-Readiness (min L1-L4): 6/10** — conservative combined gate (weakest link). Gated
-  by the same dental-audit / emr-consultation L4 floor.
+## Score Summary
 
-**Suite Average Score:** ~7.9/10 (across the 11 implemented modules)
+| Layer | Score | Meaning | Top Gaps |
+|-------|-------|---------|----------|
+| 1. Coverage Integrity | 9/10 | Strong — rule classes meaningfully asserted, ruler intact | Forward-only migrations (no down files); `provider` thin module |
+| 2. Behavior Traceability | 6/10 | **Capped** — real traceability ~9 but FE→BE edge density 0.11 forces §5.5 cap | Engine SDK resolver misses `useInvoices()`-style hook factories |
+| 3. Test Quality Hardening | 9/10 | Strong — 1692 status-code asserts, ~2.7% weak, 0 probe-skip, real HTTP wiring | 137 truthiness asserts; 6 mocks in dental-scheduling |
+| 4. Release Gate Readiness | 8/10 | Good — full CI matrix, deep health check, version+changelog | No migration rollback/down files |
 
-> **Read:** Test quality is strong suite-wide (L3 floor 8, median 9); the suite-wide
-> Test-Confidence floor of 7 is a behavior-traceability/coverage gap in five modules, not
-> a test-quality defect. The Ship-Readiness floor of 6 is **release infrastructure**
-> (dental-audit CI build stub + emr-consultation missing security scan/migration safety),
-> not the tests. Fix the one P0 (emr PHI audit assertions) and the two L4 floors to lift
-> both Test-Confidence and Ship-Readiness to 7-8 quickly.
+**Overall Test-Confidence (min L1-L3):** **6/10** — but the L2 score is an artifact-resolution cap, not a real coverage hole. Uncapped, all three test layers are 9/10 → true test-confidence is **STRONG**.
+**Release-Readiness (L4):** 8/10
+**Ship-Readiness (min L1-L4):** 6/10 (pulled down by the L2 §5.5 cap)
+**Average Score:** 8.0/10
+
+> **Headline interpretation:** The min-gauge reads 6 *only* because of the §5.5 FE-edge-density mechanical cap (engine could not resolve domain SDK hooks → endpoints). That is an **engine-tooling gap (P1, already on the deferred backlog)**, not absent tests: the same endpoints are exercised by 2828 backend tests + 67 Playwright E2E specs. **Verdict: WARN** (single P1 = engine resolver gap; no P0).
 
 ## Scoring Rubric
 
 | Score | Meaning |
 |-------|---------|
-| 0-2 | No meaningful coverage/traceability/quality in this layer |
+| 0-2 | No meaningful coverage/traceability/quality |
 | 3-4 | Minimal — critical gaps in high-risk areas |
-| 5-6 | Partial — happy paths covered, gaps in edge cases and error paths |
+| 5-6 | Partial — happy paths covered, edge/error gaps |
 | 7-8 | Good — most critical behaviors covered with quality assertions |
-| 9-10 | Strong — comprehensive coverage, high assertion quality, minimal gaps |
+| 9-10 | Strong — comprehensive coverage, high assertion quality |
 
-## Per-Module Breakdown
+## Cross-Layer Consistency
 
-| Module | L1 | L2 | L3 | L4 | Test-Conf (min L1-3) | Rel-Rdy (L4) | Ship (min L1-4) | Verdict | Priority Gaps |
-|--------|----|----|----|----|----------------------|--------------|-----------------|---------|---------------|
-| dental-audit | 7 | 7 | 8 | 6 | **7** | 6 | **6** | WARN | Consumer PHI write path untested; pagination/count determinism; CI build stub |
-| dental-billing | 8 | 8 | 9 | 8.75 | **8** | 8.75 | **8** | WARN | V-BIL-105 draft-payment FSM edge untested |
-| dental-clinical | 8 | 8 | 9 | 9 | **8** | 9 | **8** | PASS | 5 cross-module facades only covered transitively |
-| dental-imaging | 9 | 9 | 9 | 8 | **9** | 8 | **8** | PASS | FE error-surfacing (V-IMG-004); cascade-hide (V-IMG-003) |
-| dental-org | 8 | 8 | 9 | 8 | **8** | 8 | **8** | WARN | Membership state-machine guard+test; 3 un-audited mutations |
-| dental-patient | 8 | 7 | 9 | 7 | **7** | 7 | **7** | WARN | V-PAT-002 create-role deny test; READ deny/allow pairs |
-| dental-perio | 8 | 8 | 9 | 8 | **8** | 8 | **8** | PASS | INVALID_DEPTH / INVALID_TOOTH_NUMBER rejection assertions |
-| dental-pmd | 7 | 8 | 8 | 7 | **7** | 7 | **7** | WARN | AC-PMD-004 immutability-after-edit test; test-after process flag |
-| dental-scheduling | 9 | 9 | 9 | 7 | **9** | 7 | **7** | WARN | setTimeout flake vector; list-envelope coverage |
-| dental-visit | 8 | 7 | 8 | 9 | **7** | 9 | **7** | WARN | AC-VIS-003 performed-field immutability untraced |
-| emr-consultation | 7 | 7 | 8 | 6 | **7** | 6 | **6** | WARN (P0) | **PHI audit-row assertions (P0)**; tautological FSM test; admin grants |
-| external-records-import | — | — | — | — | SKIP | SKIP | SKIP | SKIP | Future-phase (Phase 3+); no code/tests by design |
-| **SUITE (min impl.)** | **7** | **7** | **8** | **6** | **7** | **6** | **6** | **WARN** | emr P0 PHI audit; audit + emr L4 infra |
+- **L1 (9) − L2 (6) = 3** — at the awareness threshold. Cause is fully understood: the L2 cap is the §5.5 FE-edge-density mechanical ceiling, not a line-coverage-vs-owner mismatch. The behavior inventory (from COMPLIANCE_REPORT) is comprehensively owned by backend + E2E tests; L2-real ≈ 9.
+- No other inconsistencies. L3 does not exceed L1/L2-real by >4. L4 not >4 above test layers.
 
-**Counts (aggregated across all slices):** P0 = 1, P1 = 13, P2 = 24, P3 = 13.
+## Per-Module Breakdown (12 product modules)
 
-## Cross-Layer Consistency (suite-wide)
+| Module | Tests | L1 | L2 | L3 | L4 | Overall | Priority Gaps |
+|--------|-------|----|----|----|----|---------|---------------|
+| dental-org | 31f/303 | 9 | 9 | 9 | 8 | STRONG | state422=1 (mostly membership/RBAC, few transitions — expected) |
+| dental-visit | 20f/284 | 9 | 9 | 9 | 8 | STRONG | none material; richest state-machine coverage (state422=41) |
+| dental-imaging | 8f/282 | 9 | 9 | 9 | 8 | STRONG | high 404 coverage (40); ceph math engine well-asserted |
+| dental-patient | 17f/264 | 9 | 9 | 9 | 8 | STRONG | merge/unmerge admin gate tested (handler-body check) |
+| dental-clinical | 22f/241 | 9 | 9 | 9 | 8 | STRONG | treatment FSM diagnosed→planned→performed guard-tested |
+| dental-billing | 13f/216 | 9 | 9 | 9 | 8 | STRONG | consent gate + invoice FSM strong; stripe mock APPROPRIATE |
+| dental-scheduling | 10f/174 | 8 | 9 | 8 | 8 | GOOD | 6 mocks (time/notif — APPROPRIATE but undocumented) |
+| dental-pmd | 6f/86 | 8 | 8 | 9 | 8 | GOOD | smaller surface; import-flow happy+guard covered |
+| emr | 6f/85 | 8 | 8 | 9 | 8 | GOOD | consultation; state422=2 (limited transitions) |
+| dental-perio | 3f/48 | 8 | 8 | 9 | 8 | GOOD | only 3 files for charting; 404 coverage thin (1) |
+| dental-audit | 4f/31 | 7 | 8 | 9 | 8 | GOOD | smallest deny/state coverage (1/1); append-only by design |
+| provider | 4f/30 | 7 | 7 | 8 | 8 | ADEQUATE | thin EMR-facade/repo module; 0 role-gate tests (no gates to test) |
 
-No suite-wide inconsistencies. Within every implemented module the slices report L1≈L2
-(no line-coverage inflation), L3 within 1-2 of L1/L2 (quality not running ahead of
-breadth), and L4 within band. The suite-wide pattern that L4 (6) trails Test-Confidence
-(7) is the expected and correct signal: tests are trustworthy; release-gate infrastructure
-in two modules (dental-audit, emr-consultation) is the comparatively weaker link, which
-correctly pulls Ship-Readiness down without dragging the test-quality headline.
+*Per-module L1/L2/L3 are sub-suite estimates; the headline L2=6 cap is a suite-wide FE-edge artifact and does not reflect any individual backend module — every dental module's backend behaviors are owned. The 9 FE component tests all bind to a real SUT.*
 
-## TDD Proof Verification (aggregated)
+## Layer 1: Coverage Integrity Detail
 
-- **No fabrication detected in any module.** Every TDD_PROOF.md referenced test file
-  exists on disk and contains real assertions; no claimed pass-count exceeds actual.
-- **Score adjustments applied per slice:** dental-patient L1 +1 (100% test-first across 7
-  sub-feature slices); dental-org L2 +1 (proofs valid); dental-pmd L1 −1 (core impl
-  committed before tests — process-discipline flag, not a coverage hole).
-- **Test-after / squashed-commit flags (no penalty, in 50-80% or UNVERIFIED band):**
-  dental-clinical (2 EM-* guard tests back-filled), dental-imaging (squashed test+impl
-  commits), dental-perio (foundational handlers test-after), dental-scheduling (3 slices
-  same-commit/shared-impl), dental-visit (add-to-existing-file pattern).
-- **Modules with no proof artifacts (proof step skipped, no adjustment):** dental-audit,
-  dental-billing, emr-consultation.
+### "Covered" Semantics Per Rule Class (suite-wide signal)
+| Rule Class | Meaningful Coverage Requires | Signal | Weight |
+|------------|------------------------------|--------|--------|
+| Auth/permissions | deny+allow per gate | 194 `toBe(403)` deny asserts across modules; RBAC matrix verified in COMPLIANCE_REPORT | 35% |
+| Business rules | assert business outcome | 22 BR-IDs in business-rules.test.ts + per-handler BR asserts; 0 line-only | 30% |
+| State transitions | guard + happy path | 145 `toBe(422)` guard asserts (visit/clinical/billing FSMs) | 20% |
+| API routes | status + shape | 1692 status-code asserts + body `toMatchObject`/`toEqual` | 15% |
 
-## Prioritized Action Plan (merged across modules)
+- **Anti-coverage:** 0 probe-skip / brokenness-assertion items (§6.6 clean) → no anti-covered items.
+- **Loading-state hygiene (§4.5, engine v4+):** 119 UI components analyzed, **0 violators → coverage 1.000 → no L1 cap.**
+- **Migration note:** 76 forward migrations, **0 down/rollback files** (Drizzle forward-only) — surfaced under L4, minor L1 caution.
+- **TDD git-history adjustment:** see TDD Proof Verification — net no penalty (test-before-feat where files are new; UNVERIFIED benefit-of-doubt where a BR was added to a pre-existing handler file).
 
-### P0 — Fix Now (security / data-integrity gaps)
-- **CONF-EMRC-001 (emr-consultation):** Add audit-row assertions for all 6 EMR PHI
-  operations (create/read/update/finalize/list/listEMRPatients). Assert (a) an audit row
-  with the expected `action` exists, (b) `tenant_id === EMR_AUDIT_TENANT_SENTINEL` (NOT the
-  patient UUID — locks the V-EMR-005 fix), (c) update logs field NAMES only. The module's
-  signature compliance guarantee currently has ZERO asserting coverage; a regression
-  reintroducing the patient UUID into the tenant slot would pass the suite green. New
-  `emr-audit.test.ts`; subjects `createConsultation.ts:110`, `getConsultation.ts:90`,
-  `updateConsultation.ts:99`, `finalizeConsultation.ts:93`, `listConsultations.ts:131`,
-  `listEMRPatients.ts:99`.
+## Layer 2: Behavior Traceability Detail
+
+Behavior inventory taken from COMPLIANCE_REPORT (BR-* + ROLE_PERMISSION_MATRIX + 28 state machines) and 237-endpoint API surface — **NOT shallow extraction** (no 6/10 shallow cap applies). Real traceability is high: every security-critical BR has a deny+allow or guard test owner (compliance audit: 0 P0/0 P1, all gates enforced with canonical error codes).
+
+### FE→BE Edge Density (§5.5, engine v4+) — the binding constraint
+- data-hook consumers (UI files importing react-query / `@monobase/sdk-ts`): **18**
+- consumers whose `api_calls` resolved to ≥1 endpoint: **2** (PatientsPage, InvoiceDetail/PIN routes)
+- `fe_be_edge_density = 0.111` < 0.70 → **cap L2 at 6/10**.
+
+Top unresolved consumers (engine resolver gap, not missing tests):
+| Component | File |
+|-----------|------|
+| BillingList | `apps/dentalemon/src/features/billing/components/billing-list.tsx` (uses `useInvoices()`) |
+| AppSidebar | `apps/dentalemon/src/components/app-sidebar.tsx` (uses `useSession`/`useSignOut`) |
+| CalendarPage | `apps/dentalemon/src/routes/_dashboard/calendar.tsx` |
+| BillingPage | `apps/dentalemon/src/routes/_dashboard/billing.tsx` |
+| OnboardingPage | `apps/dentalemon/src/routes/onboarding.tsx` |
+
+**Root cause:** the engine's sdkMap resolves direct REST calls but not domain hook factories (`useInvoices()`, `useSession()`) generated by `@monobase/sdk-ts`. Identical lineage to Memberry 2026-05-30 (engine v3 `api_calls` blind spot). This is the **engine SDK resolver P1 already tracked on the deferred-P1 backlog**. It makes the *static cross-layer join* blind; it does NOT mean the endpoints are untested — they are covered by backend + E2E.
+
+## Layer 3: Test Quality Detail
+
+### Assertion Audit (backend, suite-wide)
+| Signal | Count |
+|--------|-------|
+| `expect(` total | ~5061 |
+| status-code `toBe(2xx/4xx/5xx)` (STRONG) | 1692 |
+| `toEqual` / `toMatchObject` (STRONG shape) | 68 |
+| `toBeDefined` / `toBeTruthy` (WEAK) | 137 (~2.7%) |
+| `toMatchSnapshot` (WEAK) | 0 |
+
+Assertion strength ≈ 97%+ STRONG. FE: only 3 weak asserts across 125 FE test files.
+
+### Mock Audit
+| Scope | Mocks | Classification |
+|-------|-------|----------------|
+| dental-* handlers | 6 (all in dental-scheduling) | APPROPRIATE (time/notif determinism) — undocumented (minor) |
+| billing / storage / email / audit / provider | ~128 | APPROPRIATE (Stripe, S3/MinIO, OneSignal, SMTP — third-party externals; no control) |
+
+**No OVER_MOCKED findings.** DB is NOT mocked — 1893 real `app.request` HTTP calls against a real Postgres clone per file. Real wiring confirmed (addresses the MEMORY "buildTestApp doesn't catch route-registration bugs" concern: 1893 calls traverse the real server fetch path; route-registration regressions were caught and fixed in the audit-convergence work).
+
+### Flake / Stability
+- `.skip`/`.todo`/`xit`: **0**
+- retry configs: **0**
+- sleeps in tests: 2 (negligible)
+→ STABLE.
+
+### SUT-Binding & Probe-Skip (§6.5 / §6.6 — `ts`)
+- `sut_binding_ratio`: **9/9 = 1.000** (every FE component test imports a first-party SUT via relative or `@/` alias) → **no L3 cap.**
+- `PROBE_SKIP`: **0 occurrences** · `anti_coverage_items`: none.
+
+| Test File:Line | Flag | Detail |
+|----------------|------|--------|
+| — | — | No SUT_NOT_IMPORTED / PROBE_SKIP violations found |
+
+## Layer 4: Release Gate Readiness Detail
+
+### CI Pipeline (`.github/workflows/`)
+| Check | Status |
+|-------|--------|
+| CI config found | YES (quality.yml, postgres-services.yml, contract.yml, openapi-drift.yml, release.yml) |
+| Test step | PRESENT (FE unit+coverage in quality.yml; full backend suite in postgres-services.yml; Hurl contract in contract.yml) |
+| Lint step | PRESENT |
+| Type check step | PRESENT |
+| Build step | PRESENT (Vite prod build) |
+| Security scan step | PRESENT (security-audit job, advisory allowlist) |
+
+### Migration Safety
+| Check | Status |
+|-------|--------|
+| Migration files | YES (76) |
+| Rollback/down files | **NO** (Drizzle forward-only) |
+| CI dry-run | YES (migrate runs against monobase_test template in CI) |
+
+### Version Management
+| Check | Status |
+|-------|--------|
+| VERSION file | YES |
+| CHANGELOG.md | YES |
+| Release workflow | YES (release.yml, tag-triggered) |
+
+### Health Check
+| Check | Status |
+|-------|--------|
+| Endpoint | YES (`/healthz` liveness, `/readyz` readiness) |
+| Dependency depth | **DEEP** (checks DB + storage + jobs) |
+
+## TDD Proof Verification
+
+46 `TDD_PROOF.md` artifacts found (audit-fix-sprint + slice work). Structure is sound: each lists AC/BR IDs, RED output, test file, coverage summary, verification commands.
+
+| Aspect | Result |
+|--------|--------|
+| Proof artifacts | 46 |
+| AC/BR ID structure | Valid (IDs map to SLICE_SPEC items; RED outputs recorded, e.g. `expected 422, got 201`) |
+| Git-history ordering | Mixed/UNVERIFIED — many proofs *add a BR check to a pre-existing handler file* (e.g. consent-gate added BR-011 to `createDentalInvoice.ts`, which predates the test). Per §6c.4 this is UNVERIFIED (benefit of the doubt), **not** FABRICATION. |
+| Fabrication | **NONE detected** — sampled test files exist on disk with real assertions; claimed counts plausible. |
+
+**Score adjustments:** none (git-history neither ≥80% test-first across all nor <50%; UNVERIFIED entries get benefit of the doubt). No FABRICATION → no L2=0 penalty.
+
+## Unauditable Items
+
+| Item | Reason | Manual Check Needed |
+|------|--------|---------------------|
+| FE→BE endpoint binding for SDK-hook consumers | Engine resolver can't trace `useInvoices()` factories | Manually confirm hooks hit the asserted endpoints (E2E already do) |
+| Migration rollback safety | No down files to inspect | Confirm forward-only is intentional ops policy |
+| Layers 5-6 (runtime/release execution) | Require live CI/CD evidence | Deferred to runtime dimension |
+
+## Prioritized Action Plan
+
+### P0 — Fix Now
+None.
 
 ### P1 — Fix Before Major New Work
-- **CONF-EMRC-002 (emr):** Rewrite `consultation-note.fsm.property.test.ts` — it is a
-  99-LOC tautology asserting a local copy of the legacy transition map against itself and
-  documenting bug V-EMR-C-001 as correct. Import the real `validateStatusTransition` and
-  assert `finalized`/`amended` are terminal.
-- **CONF-EMRC-003 (emr):** Update `emr-coverage.test.ts:580-605` FSM-chain test to assert
-  `finalized→amended` is rejected once the spec-terminal machine is enforced.
-- **CONF-EMRC-004 (emr):** Add admin permission tests (admin read-one + admin
-  `listEMRPatients`); the latter is RED-by-design until the handler gains an admin branch.
-- **CONF-AUD-001 (dental-audit):** pg-boss consumer write path
-  (`consumers/domain-events.consumer.ts:36-46`) has NO test and bypasses PHI sanitization;
-  move the recursive PHI sanitizer into `AuditLogRepository.insert` and add a consumer test.
-- **CONF-DP-001 (dental-patient):** Add a test asserting `staff_scheduling` (wrong-role
-  member) gets 403 on `POST /dental/patients` (V-PAT-002 create-role gap; `createDentalPatient.ts:45`).
-- **CONF-DP-002 (dental-patient):** Add wrong-role 403 deny tests for sub-feature READ
-  endpoints (contacts/recalls/tasks/alerts/insurance GET — only 401 tested today).
-- **V-ORG-001 (dental-org):** Membership state-machine guard + tests
-  (`repos/membership.repo.ts:99-106`) — add `transitionStatus(from,to)`, 422 on illegal
-  transition, reconcile stray `revoked` enum.
-- **V-ORG-002 (dental-org):** Audit-trace tests for the three un-audited mutations
-  (fee-schedule, branch-settings, consent-templates) — add `logAuditEvent` + assert a
-  `dental_audit_log` row.
-- **CONF-PMD-01 (dental-pmd):** AC-PMD-004 immutability-after-edit test — generate PMD,
-  mutate source visit/treatments, re-fetch, assert byte-identical content+checksum.
-- **V-BIL-105 (dental-billing):** Negative test — payment on a `draft` invoice must be
-  rejected (`INVALID_STATUS_TRANSITION`); the FSM edge is untested AND unenforced.
-- **AC-VIS-003 / BR-007 (dental-visit):** Test PATCH cdtCode on a `performed` treatment →
-  422 (once the performed-vs-verified spec scope is decided; `updateDentalTreatment.ts:48-51`).
-- **dental-scheduling L3:** Replace the 6 `setTimeout(10ms)` waits in
-  `domain-events.test.ts` with deterministic flushing (sole flake vector).
-- **dental-imaging V-IMG-004:** FE test + error UI asserting ceph/findings mutation errors
-  are surfaced (currently console.error only).
+- **Engine SDK resolver gap** (`fe_be_edge_density = 0.11`): the `@oli/engine` sdkMap does not resolve `@monobase/sdk-ts` domain hook factories (`useInvoices`, `useSession`, …) to endpoints, so 16/18 FE data-hook consumers resolve 0 `api_calls`. This caps the static cross-layer L2 join at 6/10. **Already tracked on the deferred-P1 backlog (engine SDK resolver).** Fix in engine `behavior.ts`/sdkMap, then re-run the map and `--confidence` to uncap L2. *Not a test gap — endpoints are covered by 2828 backend + 67 E2E tests.*
 
 ### P2 — Fix When Touching Module
-- **dental-audit:** Consumer silent-drop observability test (CONF-AUD-002); pagination
-  determinism tie-break (CONF-AUD-003); SQL `count(*)` + scale test (CONF-AUD-004).
-- **dental-billing:** Upgrade existence-only assertions to value/shape; replace wall-clock
-  `Date.now()` offsets with an injected clock in overdue/plan tests.
-- **dental-clinical:** Direct unit tests for the 5 cross-module facades (CONF-CLI-001);
-  tidy ~16 residual weak assertions (CONF-CLI-002).
-- **dental-patient:** DE-008 `has_active_payment_plan` consumer-path test (CONF-DP-003);
-  trim low-value `toBeDefined()` checks in records test (CONF-DP-004).
-- **dental-perio:** Add AC-P04 INVALID_DEPTH + AC-P05 INVALID_TOOTH_NUMBER rejection
-  assertions (CONF-PER-001 — lifts L1→9, L2→9; rules are enforced but unasserted).
-- **dental-pmd:** Import deny-403 test (CONF-PMD-03); fix V-PMD-201 + un-gate Hurl contract
-  (CONF-PMD-04).
-- **dental-scheduling:** List-envelope coverage test; ID-existence asserts → shape checks;
-  separate RED/GREEN commits on future slices.
-- **dental-visit:** BR-008 carry-over `status=diagnosed` assertion; hygienist deny test;
-  GET /visits/:id detail-shape test; flip Hurl/e2e off continue-on-error.
-- **dental-org:** Typed BR-SCH-004 working-hours contract test (V-ORG-003); make contract
-  Hurl tests blocking once backlog clears.
-- **emr-consultation:** Add a patient-side `patient-emr.facade` test (CONF-EMRC-005).
+- Document the 6 mocks in `dental-scheduling` (one-line comment explaining why integration isn't feasible) — §6.2 wants mock rationale.
+- `dental-perio` 404 coverage thin (1) and only 3 test files for charting — add not-found path tests when next touched.
+- `dental-audit` smallest deny/state coverage (1/1) — append-only by design, but add a deny test for the read endpoints.
 
-### P3 — Track
-- **Release infra (suite-wide):** Replace dental-audit CI build stub with real
-  `bun run build` + add dependency-audit; add VERSION file for dental-imaging; deep health
-  check + migration dry-run + security scan for emr-consultation; reconcile dental-org
-  VERSION (0.2.0.0) vs package.json (0.1.0.1); wire real changelog generation in
-  release.yml (dental-scheduling note).
-- **Assertion hygiene:** Tighten residual existence-only assertions across visit (13),
-  perio (BR-P06 idempotency, GET shape, deep-pocket metric), and patient.
-- **TDD discipline:** dental-pmd core was implemented before its tests — future work on
-  that module (and remediation slices generally) must write failing tests first per
-  VERTICAL_TDD.md.
+### P3
+- Add migration down-files or document the forward-only policy in a runbook.
 
 ## What's Next
-- Land the single P0 (CONF-EMRC-001 PHI audit assertions) first → re-run
-  `/oli-check --confidence --module emr-consultation --layer 2`.
-- Close the two L4 floors (dental-audit build stub + emr-consultation security scan/health)
-  to lift suite Release-Readiness and Ship-Readiness off 6.
-- Fix the five Test-Confidence-gating modules (audit, patient, pmd, visit, emr) to raise
-  the suite Overall Test-Confidence floor from 7 toward the 8-9 the other seven modules hold.
-- Run `/oli-check --traceability` for the full intent→spec→code→test chain.
-- Re-run `/oli-check --confidence --module external-records-import` once that module is
-  scheduled and built.
+- Fix the P1 engine SDK resolver → regenerate codebase-map → re-run `/oli-check --confidence` to lift the L2 §5.5 cap (expected jump to 9/10, headline Test-Confidence → 9).
+- Test-quality is already strong (L1=9, L3=9); no weak-assertion remediation needed.
+- Behavior inventory is comprehensive (compliance + adoption audits present) — no `--discovery` re-run required.

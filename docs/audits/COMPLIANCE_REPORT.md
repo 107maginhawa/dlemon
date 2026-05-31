@@ -6,11 +6,12 @@ Audit Date: 2026-05-31
 Audit Type: code-vs-spec compliance (COMPLIANCE dimension of /oli-check) — fresh per-module re-audit
 Modules Audited: dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import (future_phase — not audited)
 Method: exhaustive cross-reference of DECLARED_API + BR-* + ROLE_PERMISSION_MATRIX gates + state machines against registered routes (generated/openapi/routes.ts AND manual app.ts registrations) and handler source
+Map provenance: engine v5 (git ae0d17da), fields_unavailable=[], confidence_threshold=MEDIUM — trust thesis IN FORCE
 last-modified: 2026-05-31
-last-modified-by: oli-check (compliance dimension)
+last-modified-by: oli-check (compliance dimension — fresh full re-run)
 ---
 
-## Verdict: **PASS** (0 P0 · 0 P1 · 5 P2 · 2 P3)
+## Verdict: **PASS** (0 P0 · 0 P1 · 6 P2 · 2 P3 · 0 unverified)
 
 The implemented surface is highly compliant. Every security-critical business rule
 (branch access, role gates, tier gates, immutability guards, state machines) checked was
@@ -73,9 +74,26 @@ naming drift** and **route-registration hygiene** — none are behavioral or sec
   "exactly 6 digits"; `pinRecovery.ts:25` accepts `^\d{4,6}$` for recover-pin newPin — recover path
   is more permissive than the reset path. Validator/spec mismatch.
 
+  *(Also noted under this finding: MODULE_SPEC §10 + API_CONTRACTS declare flat `POST /dental/orgs`,
+  `POST /dental/branches`, `POST /dental/memberships`; code implements `POST /dental/organizations`
+  and nested `/organizations/:orgId/branches/:branchId/members` — flat paths do not exist in code.
+  Same spec-path-drift class as P2-1; operations are all present under the nested shape.)*
+
 - **P2-5 · dental-audit · viewer query-param convention.** Known gap (EM-AUD-013): audit viewer
   uses camelCase `branchId`/`actorId` + `limit`/`offset` vs spec snake_case + `page`. Acknowledged
   in-spec; logged for completeness. Ref: `handlers/dental-audit/getAuditEvents.ts`.
+
+- **P2-6 · dental-imaging · API_CONTRACTS.md stale vs MODULE_SPEC + code.** Per-module
+  `API_CONTRACTS.md` still declares the old resource shape: `POST /dental/imaging/studies/:id/images`,
+  `POST /dental/imaging/studies/:id/annotations`, `POST /dental/imaging/ceph-analyses`,
+  `PUT /dental/imaging/ceph-analyses/:id/landmarks`, `POST .../ceph-analyses/:id/recompute`.
+  Neither code nor MODULE_SPEC use a standalone `ceph-analyses` resource. MODULE_SPEC §10 (V-IMG-009)
+  explicitly reconciles to the **image-centric** canonical routes (`/imaging/images/:imageId/ceph/landmarks`,
+  `.../ceph/analysis`, `.../ceph/reports`, measurements-as-annotations), and the code matches the
+  MODULE_SPEC. So this is intra-spec doc drift (API_CONTRACTS lags MODULE_SPEC); code is correct
+  against the authoritative spec. Recommend regenerating dental-imaging API_CONTRACTS.md from the
+  current MODULE_SPEC. Ref: `docs/product/modules/dental-imaging/API_CONTRACTS.md` lines 16–247 vs
+  `handlers/dental-imaging/*Ceph*.ts` + generated/manual route block.
 
 ### P3 (route-registration hygiene — currently safe, brittle)
 
@@ -153,3 +171,21 @@ Severity ≤ P2 (documentation).
 
 **Overall: 9.5 / 10 — PASS.** No P0/P1. The codebase faithfully implements its specs; remaining
 debt is spec-sync and route-registration hygiene, both non-blocking.
+
+---
+
+## Fresh-Run Verification (2026-05-31, full re-audit)
+
+This run independently re-derived findings from source — not a re-stamp. Confirmed via raw-code reads:
+- **Security gates fire:** 167 `assertBranchRole`/`assertBranchAccess`/role-array guards across the
+  dental + emr handler tree; imaging tier gate (`batchUpsertCephLandmarks.ts:54-62`, `getCephAnalysis.ts:53-61`)
+  `imagingTier !== 'addon'` → 403/IMAGING_TIER_REQUIRED; PMD/audit/medical-history 405 immutability
+  guards present; treatment consent gate (`treatment-fsm-http` → 422 TREATMENT_CONSENT_REQUIRED).
+- **Route surface:** 146 generated dental/emr routes + 57 manually registered in `app.ts` = full
+  declared surface accounted for (the routes.ts/app.ts split remains the source of P3-2).
+- **Map provenance trusted:** engine v5, fields_unavailable=[], MEDIUM threshold → 0 nodes routed to
+  `unverified`. All findings are source-anchored, not map-only inferences.
+- **external-records-import:** confirmed `future_phase` / no handler dir — spec-declared absence, NOT
+  a violation.
+- **New this run:** P2-6 (dental-imaging API_CONTRACTS.md stale vs MODULE_SPEC §10 + code) and the
+  dental-org flat-vs-nested path drift folded into P2-4. Net P2 count 5 → 6; P0/P1 unchanged at 0/0.

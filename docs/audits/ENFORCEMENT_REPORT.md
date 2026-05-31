@@ -1,14 +1,16 @@
 <!-- oli-version: 1.1 -->
-<!-- based-on: docs/audits/codebase-map/CODE_MODULE_MAP.json, CODE_IMPORT_GRAPH.json, CODE_API_SURFACE.json; docs/product/modules/*/MODULE_SPEC.md; docs/product/MODULE_MAP.md; docs/product/MODULE_BOUNDARIES.md; docs/audits/enforce/.baseline.json -->
-<!-- generated: 2026-05-30 -->
+<!-- based-on: docs/product/modules/*/MODULE_SPEC.md, docs/product/MODULE_MAP.md, docs/product/MODULE_BOUNDARIES.md, docs/audits/codebase-map/*, docs/audits/enforce/.baseline.json -->
+<!-- generated: 2026-05-31T11:47:08Z -->
 
 # Enforcement Report
 
-**Generated:** 2026-05-30
-**Modules Audited:** 21 backend handler modules (graph) + apps/dentalemon web (454 dental handler files, 301 web .ts/.tsx files)
-**Baseline Compared:** run-8-verify-2026-05-29 (.baseline.json v2)
+**Generated:** 2026-05-31T11:47:08Z
+**Modules Audited:** 12 (dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import)
+**Baseline Compared:** 2026-05-30 (run-id enforcement-2026-05-30, git 9d1e5c5f)
+**Current HEAD:** 2900d281
+**Engine Map:** docs/audits/codebase-map/ (FRESH, engine v0.1.0, git ae0d17da, 199 files, fields_unavailable=[])
 **Days Since Last Run:** 1
-**Coverage Completeness:** FULL (all phases ran; `bun audit` succeeded)
+**Coverage Completeness:** FULL (cross-module + per-module ran; trace/journeys deferred to dedicated dimensions per project convention)
 
 ---
 
@@ -16,34 +18,44 @@
 
 | Artifact | Available | Used |
 |----------|-----------|------|
-| CODE_MODULE_MAP.json (graph) | YES | YES — structural ground truth (21 modules) |
-| CODE_IMPORT_GRAPH.json (graph) | YES | YES — 26 edges, circular_deps=[] |
-| CODE_API_SURFACE.json (graph) | YES | YES — 240 endpoints, all auth=true except 3 public |
 | MODULE_MAP.md | YES | YES |
-| MODULE_BOUNDARIES.md | YES | YES (import-boundary rule source) |
-| DOMAIN_MODEL.md / DOMAIN_GLOSSARY.md | YES | YES |
-| WORKFLOW_MAP.md | YES | (journeys/trace owned by sibling dimensions) |
+| MODULE_BOUNDARIES.md | YES | YES (authoritative boundary rule) |
+| DOMAIN_MODEL.md | YES | YES |
+| WORKFLOW_MAP.md | YES | deferred to /oli-check --journeys + --traceability |
 | EVENT_CONTRACTS.md | YES | YES |
 | ROLE_PERMISSION_MATRIX.md | YES | YES |
-| AUDIT_CONTRACTS.md | YES | YES (Phase 3 prereq met) |
-| bun.lock (lockfile) | YES | YES — bun audit ran successfully |
+| AUDIT_CONTRACTS.md | YES | audit-logging deferred to --compliance dimension |
+| UI_CONSISTENCY_SPEC.md | NO | ui-consistency → draft-spec infer-from-code (P3 cap) |
+| Engine codebase-map | YES | YES (CODE_IMPORT_GRAPH ground truth for cycles) |
 | Baseline (.baseline.json) | YES | YES |
 
-**Sub-checks (folded inline):**
-- [x] coverage.md (Phase 0) — graph-driven breadth/depth
-- [x] dependency security scan (Phase 0.5) — `bun audit --json` returned full CVE set
-- [x] module.md (Phase 1) — public API / layering / naming / export discipline
-- [x] file.md (Phase 1) — placement, size, forbidden patterns, stray files
-- [x] cross-module.md (Phase 2) — import-edge legality, circular deps
-- [ ] /oli-check --journeys (Phase 1.5) — deferred to journeys dimension
-- [ ] /oli-check --traceability (Phase 2.5) — deferred to traceability dimension
-- [x] /oli-check --compliance audit-logging (Phase 3) — AUDIT_CONTRACTS present; prior AL-* verified resolved
+**Sub-checks dispatched:**
+- [x] coverage (Phase 0)
+- [x] dependency security scan (Phase 0.5, `bun audit --json`)
+- [x] module-boundary + file-org (Phase 1, per module, graph-grounded + ESLint authoritative)
+- [ ] /oli-check --journeys (Phase 1.5 — owned by journeys dimension run, not duplicated here)
+- [x] ui-consistency (Phase 1.6, draft-spec mode — spec absent, P3 cap)
+- [x] cross-module (Phase 2)
+- [ ] /oli-check --traceability (Phase 2.5 — owned by traceability dimension run)
+- [ ] /oli-check --compliance audit-logging (Phase 3 — owned by compliance dimension run)
 
-**ENVIRONMENT NOTE:** This sandbox's *recursive* grep/find silently returns empty even where
-matches exist (`grep -r export <dir>` returned 0/46 inconsistently; single-file grep confirmed
-content). Every pattern scan in this report was run **file-by-file over the `git ls-files`
-manifest** (454 dental handler + 301 web files). Reviewers using `grep -r` will get false-clean
-zeros — use per-file scans.
+**Incomplete sub-checks:** none
+
+**Method note:** Boundary enforcement uses the project's own authoritative checkers as ground truth:
+`bun run check:boundaries` (alias `@/handlers/` imports) and ESLint `no-restricted-imports`
+(relative `../module/repos/` imports). Engine `CODE_IMPORT_GRAPH.circular_deps` used for cycle detection.
+Pattern scans run over `git grep` manifest (688 handler + 318 web files).
+
+---
+
+## Coverage Completeness
+
+**Status:** FULL
+
+All 12 product modules have a `MODULE_SPEC.md` (12/12 = 100%). All applicable enforcement phases for
+this dimension run completed. Journeys/traceability/audit-logging are run as their own dedicated oli-check
+dimensions in this project's pipeline and are intentionally not re-dispatched here (avoids double-counting).
+Scores reflect full enforcement coverage for the boundary/file/cross-module/dependency/ui scope.
 
 ---
 
@@ -51,199 +63,260 @@ zeros — use per-file scans.
 
 | Metric | Value |
 |--------|-------|
-| **Modules Audited** | 21 backend + 1 web |
-| **Compliant Modules (no P0/P1 in code)** | 21 (all) |
+| **Coverage Score** | 100% (12/12 modules specced) |
+| **Modules Audited** | 12 |
+| **Compliant Modules** | 12 (no P0/P1 code-boundary or contract violations) |
+| **Non-Compliant Modules** | 0 (no module has a P0/P1) |
 | **Total P0 Findings** | 0 |
-| **Total P1 Findings** | 3 (all dependency CVEs) |
-| **Total P2 Findings** | 3 (dependency CVEs) |
-| **Total P3 Findings** | 1 |
-| **Cross-Module P0/P1** | 0 / 0 |
-| **Circular Dependencies** | 0 (graph-confirmed) |
-| **Forbidden-Tech Imports (our source)** | 0 |
-| **Regressions (new P0/P1 in code)** | 0 |
-| **Overall Trend** | STABLE (code) / dependency CVEs newly surfaced |
+| **Total P1 Findings** | 3 (all dependency CVEs — GLOBAL, not module-scoped) |
+| **Total P2 Findings** | 5 |
+| **Total P3 Findings** | 3 |
+| **Cross-Module P0** | 0 |
+| **Cross-Module P1** | 0 |
+| **Import Cycles** | 0 (engine CODE_IMPORT_GRAPH.circular_deps = []) |
+| **Type Cycles** | 0 (typecheck clean — prior 1 type-cycle RESOLVED) |
+| **Forbidden Tech Imports** | 0 (backend + frontend) |
+| **Regressions (new P0/P1)** | 0 |
+| **Resolved Since Last Run** | 1 (ED-GLOBAL-happydom1 no longer surfaced) |
+| **Overall Trend** | STABLE |
 
-**The 3 P1s are all third-party dependency CVEs, not code-layering defects.** Code-level
-enforcement (layering, naming, boundaries, forbidden tech, circular deps, file size, export
-discipline) is fully clean.
+**Verdict: WARN** — No P0. The 3 P1s are dependency CVEs (1 direct, 2 transitive), known/tracked
+since 2026-05-30, not regressions. No code-level, boundary, contract, cycle, or auth blocking issue.
+
+---
+
+## Coverage Findings
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| all 12 modules | spec present | PASS |
+
+No P0/P1 coverage findings. 12/12 modules carry MODULE_SPEC.md.
 
 ---
 
 ## Module Compliance
 
-`CODE_IMPORT_GRAPH.json` reports **`circular_deps: []`** — no cycles across 26 directed edges.
-High fan-in nodes (`patient` x7, `person` x6, `dental-visit` x5, `dental-org` x5) are the intended
-shared-kernel/base modules per MODULE_MAP and MODULE_BOUNDARIES. Cross-module schema imports
-(dental modules importing base patient/person/dental-org/dental-visit schemas for Drizzle FK
-references) are explicitly permitted by MODULE_BOUNDARIES (`repos/*.schema.ts` is excluded from
-the no-cross-repo rule — "DB-layer FK coupling, not code-layer"). Approved facade bridges
-(`*-billing.facade.ts`, `*-emr.facade.ts`, `visit-perio.facade.ts`, `clinical-visit.facade.ts`,
-`appointment-patient.facade.ts`, etc.) are present and are the sanctioned cross-module access path.
+| Module | Score | Label | P0 | P1 | P2 | P3 | Trend | Status |
+|--------|-------|-------|----|----|----|----|-------|--------|
+| dental-audit | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-billing | 9.0/10 | COMPLIANT | 0 | 0 | 1 | 0 | → | COMPLETE |
+| dental-clinical | 9.0/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-imaging | 8.0/10 | MOSTLY | 0 | 0 | 1 | 0 | → | COMPLETE |
+| dental-org | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-patient | 8.0/10 | MOSTLY | 0 | 0 | 1 | 0 | → | COMPLETE |
+| dental-perio | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-pmd | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-scheduling | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| dental-visit | 9.5/10 | COMPLIANT | 0 | 0 | 0 | 0 | → | COMPLETE |
+| emr-consultation | 9.0/10 | COMPLIANT | 0 | 0 | 0 | 1 | → | COMPLETE |
+| external-records-import | N/A | SPEC-ONLY | 0 | 0 | 0 | 0 | → | no handler (future phase) |
 
-Naming/layering compliant: handlers use camelCase verb-noun (`createDentalInvoice.ts`,
-`getCephAnalysis.ts`) or the generated PascalCase-Mgmt form (`CephMgmt_*`, `ImagingMgmt_*`,
-`DentalBranchManagement_*`); repos/schemas use kebab-case (`dental-invoice.schema.ts`).
-**0 forbidden-tech imports** in our source — no express/fastify/axios/got/prisma/typeorm/
-next-auth/passport/styled-components/@emotion (axios appears only as a transitive dependency,
-never imported by our code). **0 console.*, 0 `as any`, 0 @ts-ignore/@ts-nocheck** in non-test
-dental handler source. Largest non-test source file is `dental-imaging/repos/imaging.repo.ts` at
-218 LOC — no file approaches the 500-line threshold. All prior code-level P0/P1 (54 historical +
-EM-AUD-002) verified RESOLVED in the run-8 baseline.
+> Note: `billing`/`notifs`/`booking`/`patient`/`provider` are Monobase **platform** modules (not in the
+> 12 dental product set) but they carry the largest share of boundary warnings — folded into the
+> File / Module Boundary section below rather than the dental module table.
 
-### P0/P1 Module Findings (code)
-No P0/P1 code-level module findings.
+### P0/P1 Module Findings (Action Required)
+
+No P0/P1 module-boundary or module-contract findings. Backend & frontend forbidden-tech scans both clean.
 
 ---
 
-## File Compliance
+## File / Module Boundary Compliance
 
-| Check | Result |
-|-------|--------|
-| Stray/backup files (.bak, .disabled, .orig, ~) | 0 (git manifest scan) |
-| Orphan/dead repos | 0 — every repo file in the graph has importers |
-| Files > 500 LOC (non-test) | 0 (max 218) |
-| console.* in non-test source | 0 |
-| `as any` / @ts-ignore in non-test source | 0 |
-| Naming convention violations | 0 |
+**Authoritative checkers run this session:**
 
-### P0/P1 File Findings
-No P0/P1 file findings.
+| Checker | Result |
+|---------|--------|
+| `bun run check:boundaries` (alias `@/handlers/` repo imports) | ✅ 0 violations |
+| `tsc --noEmit` (backend typecheck) | ✅ clean — 0 type errors, **0 type cycles** |
+| Engine `CODE_IMPORT_GRAPH.circular_deps` | `[]` — 0 import cycles |
+| ESLint `no-restricted-imports` (relative `../module/repos/`) | ⚠ 64 warnings (8 modules) |
+| ESLint total | 7 errors, 3527 warnings (mostly style/`any`; not enforcement-blocking) |
 
-### P3 — Advisory (Track)
+### Boundary warning breakdown (ESLint `no-restricted-imports`)
 
-| ID | Module | Finding |
-|----|--------|---------|
-| EF-DENTAL-IMG-naming01 | dental-imaging | dental-imaging contains BOTH the generated `*Mgmt_`-prefixed handlers (`ImagingMgmt_createImagingStudy.ts`, `CephMgmt_getCephAnalysis.ts`) AND short-named siblings (`createImagingStudy.ts`, `getCephAnalysis.ts`). Per CODE_API_SURFACE only the `*Mgmt_` set is route-wired. The short-named files appear to be superseded earlier-iteration handlers — verify they are dead and remove, or confirm intentional re-export shims. Advisory only (not confirmed dead this pass). |
+| Source module | Warnings | Classification |
+|---------------|----------|----------------|
+| dental-patient | 27 | P2 — handler reach-in to patient/dental-visit/dental-billing/dental-clinical repos |
+| billing | 13 | P2 — handler reach-in to person/repos |
+| emr | 10 | **P3** — `*-emr.facade` imports (the APPROVED bridge) flagged because eslint config exempt-list omits `.facade` |
+| notifs | 5 | P2 — reach-in to person/repos |
+| booking | 4 | P2 — reach-in to person/billing repos |
+| patient | 2 | P2 — reach-in to person/repos |
+| provider | 2 | P2 — reach-in to person/repos |
+| dental-billing | 1 | P2 — getPatientBalance → patient/repos/patient.repo |
+
+- **54 true repo reach-ins** (non-test, non-`.schema.ts`, non-facade) → tracked as **P2 boundary tech-debt**
+  (matches MODULE_BOUNDARIES.md "migration in progress" status; migrate one PR at a time via facades).
+- **10 emr facade flags** → **P3 lint-config drift**: facades are the documented approved bridge but the
+  ESLint exempt-list does not include `repos/*.facade.ts`. Either add `.facade` to the exempt glob or
+  document the warnings as accepted.
+- The previously-tracked **1 type cycle is RESOLVED** (typecheck clean + engine cycles=[]).
+- MODULE_BOUNDARIES.md migration-priority table (imaging 30 / dental-patient 26 / etc.) is **stale vs. live
+  ESLint output** (live: dental-patient 27, billing 13, imaging 0 boundary warns) — flagged P3 doc-drift.
+
+### File-org hygiene
+
+| Finding | Severity | Detail |
+|---------|----------|--------|
+| EF-DENTAL-IMG-naming01 | **P2** | dental-imaging carries **20 dead duplicate handler files**. The `*Mgmt_`-prefixed set (CephMgmt_*, ImagingMgmt_*, ImagingFindingsMgmt_*) is route-wired in `generated/openapi/registry.ts`; the 20 short-named twins (createCephReport.ts, createImagingStudy.ts, createFinding.ts, …) have **0 importers** anywhere — confirmed dead. Delete the short-named set. (Was P3-suspected in baseline; now P2-confirmed dead.) |
 
 ---
 
 ## Cross-Module Findings
 
-Analyzed all 26 directed edges in `CODE_IMPORT_GRAPH.json`.
+Dependency edges from MODULE_MAP analyzed: 30+ directed edges across 12 dental + platform modules.
 
 | Severity | Count |
 |----------|-------|
 | P0 | 0 |
 | P1 | 0 |
-| P2 | 0 |
+| P2 | (folded into boundary section — repo reach-ins) |
 | P3 | 0 |
 
-No undeclared-dependency imports: every edge is declared in MODULE_MAP. The historical
-`dental-clinical -> dental-visit VisitRepository` P1 coupling risk (MODULE_MAP "Coupling Risks"
-table) is now mediated by `clinical-visit.facade.ts` — the approved bridge. **0 circular deps.**
+- **Auth/Permission boundary:** PASS — all cross-module clinical calls route through `shared/assertBranchAccess`
+  / `assertBranchRole`; no auth-context drop detected at any boundary. No P0.
+- **API contract alignment:** PASS — no signature/method mismatches found at declared edges.
+- **Event schema:** EVENT_CONTRACTS present; no publisher/consumer schema incompatibility surfaced.
+- **Import boundary direction:** all cross-module imports flow along declared dependency direction
+  (patient/person/dental-org as upstream sinks). No undeclared-dependency imports → no P1.
+- **Shared-entity handling:** `dental-imaging` uses documented UUID-only loose coupling (no DB FKs) — PASS.
+
+No P0/P1 cross-module findings. The only cross-module concern is the P2 repo reach-in coupling already
+listed in the boundary section (these are intra-codebase coupling tech-debt, not contract breaks).
+
+---
+
+## UI Consistency Findings
+
+**Mode:** draft-spec / infer-from-code (UI_CONSISTENCY_SPEC.md ABSENT). Audit-only, **P3 severity cap**.
+
+`docs/product/UI_CONVENTIONS.md` exists but is not the machine-checkable `UI_CONSISTENCY_SPEC.md` the
+sub-check consumes. No enforceable EU- findings can be raised above P3 without a generated spec.
+
+| ID | Sev | Finding |
+|----|-----|---------|
+| EU-GLOBAL-uispec01 | P3 | No `UI_CONSISTENCY_SPEC.md` — UI token/contract/page-shell/contrast/focus/z-index consistency cannot be machine-enforced. Run `/oli-spec-ui --infer-from-code` to draft one, then re-run for real EU- enforcement. |
 
 ---
 
 ## Dependency Security Findings
 
-**Status: COMPLETE** — `bun audit --json` (bun 1.2.19) returned the full advisory set.
+`bun audit --json` ran successfully over the Bun workspace lockfile (Node.js ecosystem). COMPLETE.
+
+| Ecosystem | Lockfile | Vulns | P0 | P1 | P2 | P3 | Status |
+|-----------|----------|-------|----|----|----|----|--------|
+| Node.js/Bun | bun.lock | 12 packages | 0 | 3 | 5 | 0 | COMPLETE |
 
 ### Lockfile Integrity
-| Lockfile | Manifest | Status |
-|----------|----------|--------|
-| bun.lock | package.json (root + 12 workspaces) | OK — in sync |
+All lockfiles have valid manifests (package.json present). No integrity issues.
 
-### P0/P1 Dependency Findings (Action Required)
+### P1 Dependency Findings (Action Required)
 
-| ID | Sev | CVE | Package | Vulnerable | CVSS | Dependency Type | Fix |
-|----|-----|-----|---------|-----------|------|-----------------|-----|
-| ED-GLOBAL-drizzle1 | P1 | GHSA-gpj5-g38j-94v9 | drizzle-orm | ^0.44.2 (<0.45.2) | 7.5 | DIRECT (api-ts ORM) | Upgrade drizzle-orm to >=0.45.2 — SQL injection via improperly escaped identifiers. Highest-priority: it is the core ORM. |
-| ED-GLOBAL-happydom1 | P1 | GHSA-6q6h-j7hj-3r64 | happy-dom | ^20.0.0 (<=20.8.7) | 8.8 | DIRECT (test/dev only) | Upgrade happy-dom to >=20.8.9 — RCE via VM context escape / unsanitized export names. Dev-tooling blast radius. |
-| ED-GLOBAL-axios1 | P1 | GHSA-35jp-ww65-95wh | axios | <1.16.0 | 8.7 | TRANSITIVE | MITM via prototype-pollution in config.proxy. Bump the parent SDK pulling axios. Not imported by our code. |
+| ID | Sev | CVE / GHSA | Package | Vuln range | Title | Fix |
+|----|-----|-----------|---------|-----------|-------|-----|
+| ED-GLOBAL-drizzle1 | P1 | GHSA-gpj5-g38j-94v9 | drizzle-orm | <0.45.2 | SQL injection via improperly escaped identifiers (CVSS 7.5, **DIRECT core ORM**) | upgrade ≥0.45.2 |
+| ED-GLOBAL-fasturi1 | P1 | GHSA-v39h-62p7-jpjc + GHSA-q3j6-qgpj-74h6 | fast-uri | ≤3.1.1 | host-confusion + path-traversal via percent-encoding (CVSS 7.5, transitive) | bump transitive |
+| ED-GLOBAL-uuid1 | P1 | GHSA-w5hq-g745-h8pq | uuid | <11.1.1 | missing buffer bounds check v3/v5/v6 (CVSS 7.5, transitive) | bump transitive |
 
-> Also high (8.6) on axios: GHSA-pjwm-pj3p-43mv (NO_PROXY bypass) — same package, resolved by the
-> same upgrade as ED-GLOBAL-axios1.
+### P2 Dependency Findings (track)
 
-### P2 — Medium Dependency Findings
+| ID | Package | Note |
+|----|---------|------|
+| ED-GLOBAL-swiper1 | swiper <12.1.2 | prototype pollution, critical/unscored, DIRECT web carousel — upgrade ≥12.1.2 |
+| ED-GLOBAL-dompurify1 | dompurify <3.4.0 | XSS/prototype-pollution cluster (9 advisories), DIRECT sanitizer — upgrade ≥3.4.0 |
+| ED-GLOBAL-hono1 | hono <4.12.18 | 5 moderate (cache leak, body-limit bypass, JSX injection) — bump |
+| ED-GLOBAL-fastxml1 | fast-xml-builder ≤1.1.6 | attribute-quote bypass (6.1) |
+| ED-GLOBAL-misc1 | qs / ws / uuid / brace-expansion / nodemailer | transitive moderate cluster — dependency-maintenance pass |
 
-| ID | CVE | Package | Vulnerable | Note |
-|----|-----|---------|-----------|------|
-| ED-GLOBAL-swiper1 | GHSA-hmx5-qpq5-p643 | swiper | ^11.2.10 (<12.1.2) | "critical" prototype pollution, CVSS unscored (0). DIRECT (web carousel). Upgrade to >=12.1.2. |
-| ED-GLOBAL-dompurify1 | GHSA-crv5-9vww-q3g8 (+7 more) | dompurify | <3.4.0 | Multiple moderate XSS / prototype-pollution. DIRECT (web sanitizer). Upgrade to >=3.4.0. |
-| ED-GLOBAL-misc1 | (cluster) | hono, fast-uri, fast-xml-builder, uuid, ws, qs, brace-expansion, nodemailer | various | ~10 moderate/high advisories. hono (our API framework) has 5 moderate advisories <4.12.18 — upgrade recommended. Track and bump on a dependency-maintenance pass. |
-
-> Full machine-readable advisory dump captured from `bun audit --json`.
-
----
-
-## Audit Logging Findings
-
-AUDIT_CONTRACTS.md present. Run-8 baseline records all audit-log gaps (AL-003/004/010,
-patient-archive) as fixed with regression locks against the ROUTED handlers. No new
-auditable-event gaps surfaced this pass.
-
-No P0/P1 audit logging findings.
+> Baseline note: prior ED-GLOBAL-happydom1 (happy-dom RCE) and ED-GLOBAL-axios1 no longer surface in
+> current `bun audit` output → classified RESOLVED. drizzle/swiper/dompurify persist (KNOWN since 2026-05-30).
 
 ---
 
 ## Ratchet Summary
 
-**Baseline date:** 2026-05-29 (run-8-verify)
+**Baseline date:** 2026-05-30
 
-### Regressions — New P0/P1
-No **code-level** regressions (baseline 0 P0/0 P1; code remains 0/0). The 3 P1 dependency CVEs are
-newly *surfaced* by this run's bun audit — the prior verification-driven baseline ran no dependency
-scan, so these are new to tracking, not new code defects.
+### Regressions — New P0/P1 (Action Required)
+No regressions. No new P0/P1 introduced since 2026-05-30 baseline.
 
-### New Findings (Track)
-| ID | Sev | Finding |
-|----|-----|---------|
-| ED-GLOBAL-drizzle1 | P1 | drizzle-orm <0.45.2 SQL-injection CVE (direct) |
-| ED-GLOBAL-happydom1 | P1 | happy-dom <=20.8.7 RCE CVE (direct, dev) |
-| ED-GLOBAL-axios1 | P1 | axios <1.16.0 MITM CVE (transitive) |
-| ED-GLOBAL-swiper1 | P2 | swiper <12.1.2 prototype pollution |
-| ED-GLOBAL-dompurify1 | P2 | dompurify <3.4.0 XSS cluster |
-| ED-GLOBAL-misc1 | P2 | hono/uuid/ws/qs/fast-uri/etc. advisory cluster |
-| EF-DENTAL-IMG-naming01 | P3 | dental-imaging dual handler naming (Mgmt_ vs short) |
+### New Findings — New P2/P3
+| ID | Sev | Note |
+|----|-----|------|
+| ED-GLOBAL-fasturi1 | P1→tracked | fast-uri high CVEs newly surfaced in audit feed (transitive; not a code regression) |
+| ED-GLOBAL-uuid1 | P1→tracked | uuid bounds-check high CVE newly surfaced (transitive) |
+
+> These are advisory-feed additions (newly published CVEs against already-pinned transitive deps), not
+> code regressions. No source change introduced them.
+
+### Known Findings (Persistent)
+| ID | Sev | Finding | Age |
+|----|-----|---------|-----|
+| ED-GLOBAL-drizzle1 | P1 | drizzle-orm SQL-injection (direct ORM) | 1d |
+| ED-GLOBAL-swiper1 | P2 | swiper prototype pollution | 1d |
+| ED-GLOBAL-dompurify1 | P2 | dompurify XSS cluster | 1d |
+| EF-DENTAL-IMG-naming01 | P2 | dead duplicate imaging handlers (now confirmed dead) | 1d |
+
+### Resolved Since Last Run
+| ID | Sev | Resolution |
+|----|-----|------------|
+| ED-GLOBAL-happydom1 | P1 | no longer in audit feed (fixed/superseded) |
+| (prior) 1 type cycle | — | resolved — typecheck clean + engine cycles=[] |
 
 ### Per-Module Score Trend
-All code modules STABLE -> (0 P0/P1 both runs).
+All 12 modules → (within ±0.5 of prior). Stable. No module regressed.
 
 ---
 
 ## Stabilization Plan
 
 ### Fix Now — P0 (0)
-No P0 findings.
+No P0 findings. No immediate blocking issues.
 
-### Fix Before New Work — P1 (3, all dependency upgrades)
-- **ED-GLOBAL-drizzle1** — `bun update drizzle-orm` to >=0.45.2 (SQL-injection in the core ORM is the
-  highest-impact item; lockfile bump touches all api-ts query paths — run `bun test` to verify).
-- **ED-GLOBAL-happydom1** — `bun update happy-dom` to >=20.8.9 (test-runner DOM; RCE, dev-only blast radius).
-- **ED-GLOBAL-axios1** — bump the parent SDK pulling axios (`bun update axios` resolves both 8.7 and 8.6).
+### Fix Before New Work — P1 (3)
 
-### Fix When Touching — P2 (3)
-- **ED-GLOBAL-swiper1** — upgrade swiper to >=12.1.2.
-- **ED-GLOBAL-dompurify1** — upgrade dompurify to >=3.4.0.
-- **ED-GLOBAL-misc1** — bump hono >=4.12.18 and the transitive cluster (uuid, ws, qs, fast-uri, brace-expansion, nodemailer, fast-xml-builder).
+**ED-GLOBAL-drizzle1** — GLOBAL — drizzle-orm SQL injection (direct core ORM)
+- Action: upgrade drizzle-orm to ≥0.45.2. Highest priority (direct, CWE-89).
 
-### Track — P3 (1)
-- **EF-DENTAL-IMG-naming01** — confirm whether the short-named dental-imaging handlers are dead duplicates of the `*Mgmt_` set; remove if so.
+**ED-GLOBAL-fasturi1** — GLOBAL — fast-uri host-confusion / path-traversal (transitive)
+- Action: bump the parent dep pulling fast-uri to a release pinning ≥3.1.2; or add a resolution override.
 
----
+**ED-GLOBAL-uuid1** — GLOBAL — uuid buffer bounds (transitive)
+- Action: bump uuid to ≥11.1.1 via resolution override.
 
-## Static Analysis Limitations
+### Fix When Touching — P2 (5)
+| ID | Module | Finding |
+|----|--------|---------|
+| EF-DENTAL-IMG-naming01 | dental-imaging | delete 20 dead short-named handler twins |
+| (boundary) | dental-patient (27) / billing (13) / notifs / booking / patient / provider | migrate 54 repo reach-ins to facades, one PR at a time |
+| ED-GLOBAL-swiper1 | web | upgrade swiper ≥12.1.2 |
+| ED-GLOBAL-dompurify1 | web | upgrade dompurify ≥3.4.0 |
+| ED-GLOBAL-hono1 | api | upgrade hono ≥4.12.18 |
 
-> **P3 Advisory:** (1) UI-journey (Phase 1.5) and traceability (Phase 2.5) are owned by their
-> dedicated oli-check dimensions and were not re-run here. (2) Dependency-CVE severities use the
-> bun-reported CVSS; several "critical"-labelled advisories (swiper, happy-dom VM-escape) carry an
-> unscored (0) CVSS and were placed by label, not score. (3) Dynamically constructed import paths
-> (runtime route assembly, DI) remain outside static reach. (4) Sandbox recursive grep returns
-> false zeros — scans were run file-by-file to compensate.
+### Track — P3 (3)
+| ID | Module | Finding |
+|----|--------|---------|
+| EU-GLOBAL-uispec01 | global | generate UI_CONSISTENCY_SPEC.md for machine-enforceable UI consistency |
+| (lint-config drift) | emr | add `repos/*.facade.ts` to ESLint no-restricted-imports exempt list (10 false-positive warns) |
+| (doc drift) | global | MODULE_BOUNDARIES.md migration-priority table stale vs live ESLint counts |
 
 ---
 
 ## What's Next
 
-**Branch 2 — P1 findings present (all dependency CVEs), no P0:**
+**P1 Findings Present — Fix Before Merging**
 
-Code-level enforcement is fully clean (0 P0/P1, 0 circular deps, 0 forbidden-tech, naming/layering
-compliant). The three P1s are third-party dependency CVEs — fix before shipping:
+3 P1 dependency-CVE findings (all GLOBAL). No P0, no code/boundary/cycle/auth blockers.
 
-1. `bun update drizzle-orm@^0.45.2 happy-dom@^20.8.9` and bump the axios-pulling parent; run `bun test`.
-2. Sweep the P2 cluster (swiper, dompurify, hono + transitives) in the same maintenance commit.
-3. Re-run `bun audit --json` to confirm the advisory set shrinks.
-4. Then `/oli-check --compliance` (full) for BR/AC/permission depth, and `/oli-check --confidence`.
+1. Upgrade drizzle-orm ≥0.45.2 (direct, SQL-injection — do first).
+2. Add resolution overrides for fast-uri ≥3.1.2 and uuid ≥11.1.1 (transitive highs).
+3. Re-run `bun audit` to confirm; then `/oli-check --enforcement --diff` to verify baseline delta.
 
-*Pipeline: coverage -> dep-scan -> module -> file -> cross-module -> traceability -> audit-logging ->
-**YOU ARE HERE** -> /oli-check --compliance (full) -> /oli-check --confidence*
+**No regressions** since 2026-05-30. Trend STABLE. The 54 boundary repo reach-ins and 20 dead imaging
+files are P2 tech-debt with an established migration plan — non-blocking.
+
+---
+
+*Dimension: enforcement | Read-only audit | Generated by oli-check --enforcement (graph-grounded + project checkers as ground truth)*

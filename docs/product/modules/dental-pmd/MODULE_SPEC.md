@@ -95,7 +95,8 @@ PMD list per patient: generated date, visit date, download button. Import: file 
 ---
 
 ## 10. API Expectations
-POST /dental/pmd/generate (visitId, BR-021 — visit must be completed), GET /dental/pmd/:patientId (list), GET /dental/pmd/:id/download, POST /dental/pmd/import (file upload, BR-022), GET /dental/pmd/imported/:id
+PMD generation/export is **visit-scoped** (matches API_CONTRACTS.md + generated routes; V-PMD-006). Canonical routes:
+POST /dental/visits/:visitId/pmd (generate, BR-021 — visit must be completed), GET /dental/visits/:visitId/pmd, GET /dental/visits/pmd?patientId= (list), GET /dental/visits/:visitId/pmd/export (download), POST /dental/pmd/import (file upload, BR-022), GET /dental/pmd/imported?patientId= (list), GET /dental/pmd/imported/:id
 
 ---
 

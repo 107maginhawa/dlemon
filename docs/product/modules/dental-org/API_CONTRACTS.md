@@ -13,7 +13,7 @@
 
 ## Endpoints
 
-### POST /api/v1/dental/orgs
+### POST /api/v1/dental/organizations
 
 Create a new dental organization.
 

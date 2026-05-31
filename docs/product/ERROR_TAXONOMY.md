@@ -176,8 +176,13 @@ interface ErrorResponse {
 
 | Code | HTTP | Trigger |
 |------|------|---------|
+| `CHART_EXISTS` | 409 | Second perio chart for the same visitId (BR-P01) |
 | `CHART_COMPLETED` | 409 | Write/edit attempt on a completed perio chart |
+| `INVALID_DEPTH` | 422 | Probing depth value < 0 or > 20 (BR-P03) |
+| `INVALID_TOOTH_NUMBER` | 422 | FDI tooth number not in the valid set (BR-P04) |
 | `INSUFFICIENT_READINGS` | 422 | Chart complete with fewer than the required readings |
+
+> `VISIT_LOCKED` (422) and `FORBIDDEN` (403) returned by perio handlers are shared platform codes — see §3 and dental-visit.
 
 ### dental-imaging
 
@@ -219,6 +224,14 @@ interface ErrorResponse {
 | `AUDIT_EVENT_IMMUTABLE` | 405 | Any write attempt on audit event |
 | `INVALID_DATE_RANGE` | 422 | date_from > date_to |
 | `BRANCH_ACCESS_DENIED` | 403 | Caller not member of requested branch |
+
+### emr-consultation
+
+| Code | HTTP | Trigger |
+|------|------|---------|
+| `CONSULTATION_NOT_DRAFT` | 422 | Finalize attempt on a non-draft consultation note |
+
+> This is the **platform** `/emr` consultation-notes module (Better-Auth `provider`/`patient`/`admin`), distinct from the dental `dental-emr` external-records-import range (`EMR-001 – EMR-099`, §4) which covers third-party EMR/EHR import.
 
 ---
 

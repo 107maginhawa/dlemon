@@ -86,6 +86,36 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 
 ---
 
+## §2b Periodontal & EMR-Consultation Workflows
+
+> Registered after the cross-cutting tables above were generated. Perio belongs to the already-counted
+> `dental-perio` module (one of the 10 dental domain modules — count unchanged). emr-consultation is a
+> **platform module** governed by Better-Auth roles (`provider`/`patient`/`admin`, with `provider:owner`/
+> `patient:owner`), intentionally **outside** the dental membership matrix.
+
+### Periodontal (dental-perio §3)
+
+| WF-ID | Name | Actor | Priority |
+|-------|------|-------|----------|
+| WF-P01 | Create perio chart for a visit | Dentist | P1 |
+| WF-P02 | Record tooth-level readings (probing, BOP, recession, mobility, furcation) | Dentist | P1 |
+| WF-P03 | Complete / lock perio chart | Dentist | P1 |
+| WF-P04 | View perio chart (historical) | Dentist, Staff Full | P1 |
+| WF-P05 | Print perio chart (PDF export) | Dentist, Staff Full | P1 |
+
+### EMR-Consultation (emr-consultation §3, platform module)
+
+| WF-ID | Name |
+|-------|------|
+| WF-EMRC-001 | Provider creates a draft consultation note for a patient. |
+| WF-EMRC-002 | Provider updates clinical fields on a draft note. |
+| WF-EMRC-003 | Provider finalizes a draft note (terminal). |
+| WF-EMRC-004 | ~~Provider amends a finalized note, then re-finalizes.~~ STRUCK (V-EMR-001) — no amend endpoint; finalize rejects non-draft notes. |
+| WF-EMRC-005 | Patient/provider/admin reads a note, optionally expanding patient/provider/person. |
+| WF-EMRC-006 | Provider lists the patients they have consulted (with consultation stats). |
+
+---
+
 ## §3 Heuristic 1: Entity CRUD Lifecycle Trace
 
 ### Visit
