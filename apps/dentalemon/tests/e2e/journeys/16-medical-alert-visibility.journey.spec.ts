@@ -7,7 +7,7 @@
  * Persona: dentist. Expected verdict: PASS.
  *
  * API pre-check: GET /dental/patients/:id/safety-floor must return hasAlerts=true
- * and at least one allergy for Pepe Cruz (penicillin allergy seeded in A3/P1-004).
+ * and at least one allergy for Juan dela Cruz (penicillin allergy seeded on P0).
  * DOM step: navigate to the patient workspace and look for any alert indicator.
  */
 import {
@@ -17,6 +17,7 @@ import {
   openWorkspace,
   readOrgContext,
   readPatientIdByName,
+  SEED_PATIENTS,
   expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
@@ -35,7 +36,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
   try {
     // ── Precondition resolution (independent read, no browser yet) ─────────
     const { branchId } = await readOrgContext(apiReader)
-    const patientId = await readPatientIdByName(apiReader, branchId, 'Pepe Cruz')
+    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.juan)
 
     // ── API pre-check: safety floor must show hasAlerts=true ───────────────
     // This is a seed precondition check, not part of the journey verdict.
@@ -50,13 +51,13 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const sfBody = await sfResp.json()
     if (!sfBody.hasAlerts) {
       throw new Error(
-        `Safety-floor API returned hasAlerts=false for Pepe Cruz (${patientId}). ` +
+        `Safety-floor API returned hasAlerts=false for Juan dela Cruz (${patientId}). ` +
           `The penicillin allergy seed is missing. Run: bun run db:reseed`,
       )
     }
     if (!Array.isArray(sfBody.allergies) || sfBody.allergies.length < 1) {
       throw new Error(
-        `Safety-floor API returned no allergies for Pepe Cruz (${patientId}). ` +
+        `Safety-floor API returned no allergies for Juan dela Cruz (${patientId}). ` +
           `Expected at least one allergy (penicillin). Seed may be incomplete.`,
       )
     }
@@ -95,7 +96,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
         page,
         META,
         'Safety floor alert not visible in workspace UI. ' +
-          'API returns hasAlerts=true (penicillin allergy) for Pepe Cruz but no UI indicator found. ' +
+          'API returns hasAlerts=true (penicillin allergy) for Juan dela Cruz but no UI indicator found. ' +
           'ENC-BR-004 / PAT-BR-003 gap: medical alerts must be displayed in the clinical workspace.',
       )
     }
