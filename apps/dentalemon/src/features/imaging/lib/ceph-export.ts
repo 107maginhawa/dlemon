@@ -1,5 +1,5 @@
-import type { CephLandmark } from '../features/imaging/hooks/use-ceph-landmarks'
-import { activeLinesForLandmarks } from '../features/imaging/lib/ceph-geometry'
+import type { CephLandmark } from '../hooks/use-ceph-landmarks'
+import { activeLinesForLandmarks } from './ceph-geometry'
 import { BRAND_GOLD } from '@/constants/brand'
 
 export interface CephExportOptions {
