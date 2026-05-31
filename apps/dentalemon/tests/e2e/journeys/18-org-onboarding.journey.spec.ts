@@ -53,6 +53,7 @@ test(`${META.id} — ${META.name}`, async ({ page }) => {
   const password = 'J18Owner1!pw'
   const clinicName = `J18 Smile Clinic ${stamp}`
   const dentistName = `Dr. J18 Owner ${stamp}`
+  const patientName = `J18 First Patient ${stamp}`
   const pin = '482913'
 
   try {
@@ -114,14 +115,12 @@ test(`${META.id} — ${META.name}`, async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Fee Schedule' })).toBeVisible({ timeout: 10_000 })
     await page.getByRole('button', { name: /^next$/i }).click()
 
-    // Step 4 — First patient is OPTIONAL. The org-onboarding workflow under test
-    // (WF-ORG-001) is creating the CLINIC — org → branch → owner-member → PIN.
-    // Patient registration is its own workflow (covered by J01) with its own
-    // prerequisites (the registering staff must already hold a Person profile;
-    // a brand-new owner does not yet), so we take the supported "Skip for now"
-    // path rather than coupling clinic setup to patient registration.
+    // Step 4 — Register the first patient (drives the full org → branch → member
+    // → set-pin → patient chain; consent is captured server-side by the wizard).
     await expect(page.getByRole('heading', { name: 'First Patient' })).toBeVisible({ timeout: 10_000 })
-    await page.getByRole('button', { name: /skip for now/i }).click()
+    await page.getByLabel('Full Name').fill(patientName)
+    await page.getByLabel('Date of Birth').fill('1990-06-15')
+    await page.getByRole('button', { name: /get started/i }).click()
 
     // On success the wizard removes its draft and navigates away (→ dashboard,
     // which bounces an as-yet-PIN-authenticated owner to the PIN flow). Leaving
@@ -148,6 +147,17 @@ test(`${META.id} — ${META.name}`, async ({ page }) => {
     expect(ctx.branch?.id, 'the wizard must have created a branch').toBeTruthy()
     expect(ctx.member?.id, 'the owner must hold the bootstrap membership').toBeTruthy()
     expect(ctx.member?.role, 'the owner member must be dentist_owner').toBe('dentist_owner')
+
+    // The first patient must have persisted too (no silent drop).
+    const branchId = ctx.branch.id as string
+    const patientsRes = await reader.get(`/dental/patients?branchId=${branchId}`)
+    expect(patientsRes.ok(), `patients list → ${patientsRes.status()}`).toBe(true)
+    const pBody = await patientsRes.json()
+    const items: any[] = Array.isArray(pBody) ? pBody : (pBody.items ?? pBody.data ?? [])
+    expect(
+      items.some((p) => p.displayName === patientName),
+      `the first patient "${patientName}" must persist`,
+    ).toBe(true)
     await reader.dispose()
 
     recordJourneyPass(META)

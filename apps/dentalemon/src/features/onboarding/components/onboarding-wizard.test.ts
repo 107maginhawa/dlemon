@@ -129,7 +129,13 @@ describe('OnboardingWizard — shipped component', () => {
       expect(f.calls.find(c => c.url.endsWith('/dental/organizations'))!.body.name).toBe('Bright Smiles');
       expect(f.calls.find(c => c.url.endsWith('/members'))!.body.displayName).toBe('Dr. Ana Reyes');
       expect(f.calls.find(c => c.url.endsWith('/set-pin'))!.body.pin).toBe('123456');
-      expect(f.calls.find(c => c.url.endsWith('/dental/patients'))!.body.displayName).toBe('Juan dela Cruz');
+      const patientBody = f.calls.find(c => c.url.endsWith('/dental/patients'))!.body;
+      expect(patientBody.displayName).toBe('Juan dela Cruz');
+      // Regression: the first-patient call must carry branchId + consentGiven, or
+      // createDentalPatient rejects it (branchId required / CONSENT_REQUIRED) and
+      // the patient the user entered is silently dropped.
+      expect(patientBody.branchId).toBe('branch-1');
+      expect(patientBody.consentGiven).toBe(true);
 
       // org context seeded from the created ids
       const ctx = useOrgContextStore.getState();

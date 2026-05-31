@@ -152,13 +152,19 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       useOrgContextStore.getState().setContext({ orgId: org.id, branchId: branch.id, memberId: member.id });
 
       if (!skipPatient && patientName.trim()) {
-        // branchId is REQUIRED by POST /dental/patients (createDentalPatient
-        // throws "branchId is required" otherwise) — send the branch just
-        // created so the first patient actually persists.
-        await fetch(`${API}/dental/patients`, {
+        // createDentalPatient REQUIRES branchId (the branch just created) AND
+        // consentGiven=true (BusinessLogicError CONSENT_REQUIRED otherwise).
+        // Registering the first patient implies the owner captured registration
+        // consent. Check the response and surface a failure instead of silently
+        // dropping the patient the user just entered.
+        const patRes = await fetch(`${API}/dental/patients`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender, branchId: branch.id }),
+          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender, branchId: branch.id, consentGiven: true }),
         });
+        if (!patRes.ok) {
+          const e = await patRes.json().catch(() => ({}));
+          throw new Error(e.message || `First patient could not be created (${patRes.status})`);
+        }
       }
 
       localStorage.removeItem(STORAGE_KEY);
