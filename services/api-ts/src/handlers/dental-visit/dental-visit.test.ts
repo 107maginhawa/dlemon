@@ -297,6 +297,24 @@ describe('createDentalVisit handler', () => {
     expect(body.status).toBe('draft');
     expect(body.chiefComplaint).toBe('Toothache upper left');
   });
+
+  // V-VIS-003 / BR-001: app-level guard returns 409 (not a raw 500 from the
+  // partial unique index) when a patient already has an ACTIVE visit.
+  test('returns 409 ACTIVE_VISIT_EXISTS when the patient already has an active visit', async () => {
+    const repo = new VisitRepository(db);
+    const existing = await repo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+    await repo.activate(existing.id);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/visits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID }),
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json() as any;
+    expect(body.code).toBe('ACTIVE_VISIT_EXISTS');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -418,6 +436,25 @@ describe('updateDentalVisit handler', () => {
     const body = await res.json() as any;
     expect(body.status).toBe('active');
     expect(body.activatedAt).not.toBeNull();
+  });
+
+  // V-VIS-003 / BR-001: activating a second visit while the patient already has
+  // a different active visit → 409, not a raw unique-index 500.
+  test('returns 409 ACTIVE_VISIT_EXISTS when activating a second visit for the same patient', async () => {
+    const repo = new VisitRepository(db);
+    const active = await repo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+    await repo.activate(active.id);
+    const second = await repo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${second.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active' }),
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json() as any;
+    expect(body.code).toBe('ACTIVE_VISIT_EXISTS');
   });
 
   test('returns 200 and completes visit', async () => {
