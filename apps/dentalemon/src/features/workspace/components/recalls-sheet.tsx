@@ -106,7 +106,7 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
               onClick={() => onUpdateStatus(recall.id, { status: next })}
               className="rounded px-2 py-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors disabled:opacity-50"
             >
-              {next === 'cancelled' ? 'Cancel' : TRANSITION_BUTTON_LABELS[next]}
+              {next === 'cancelled' ? 'Cancel' : TRANSITION_BUTTON_LABELS[recall.status]}
             </button>
           ))}
         </div>
