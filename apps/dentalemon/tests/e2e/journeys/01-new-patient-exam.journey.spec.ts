@@ -2,12 +2,14 @@
  * J01 — New-patient comprehensive oral evaluation + chart existing conditions.
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J01
- * Rubric: J1; Q6–Q10. Persona: dentist. Expected verdict: BROKEN.
- * P0 ref: P0-004 (note persistence), Gap #1 (status-collapse), Gap #2 (Existing-Other).
+ * Rubric: J1; Q6–Q10. Persona: dentist. Expected verdict: PASS.
+ * P0 ref: Gap #1 (status-collapse), Gap #2 (Existing-Other) — now FIXED at the
+ *         odontogram control layer (verified live), so this spec asserts the
+ *         flow with HARD expects instead of probe-and-skip: any regression in
+ *         the tooth → slideout → distinct-status-control chain fails the spec.
  *
- * The UI is driven DOM-only. Goal state is asserted via the independent
- * apiReader AFTER the UI flow. A known break (note persistence / status
- * collapse) is the deliverable — no shortcut repairs it.
+ * The UI is driven DOM-only. A missing affordance is a real test failure, not a
+ * silently-recorded BROKEN verdict.
  */
 import {
   test,
@@ -19,7 +21,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -52,54 +53,38 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Step 3-4: open a tooth, record a pre-existing restoration (Existing).
     const carousel = page.getByTestId('workspace-carousel-zone')
     await expect(carousel).toBeVisible()
+
+    // A clickable tooth must exist in the active carousel card.
     const tooth = getActiveTooth(page)
-    if (!(await tooth.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
-        'No clickable tooth element in TimelineCarousel — cannot open ToothSlideout to chart an Existing condition. UI step 3 impossible.',
-      )
-      return
-    }
+    await expect(
+      tooth,
+      'TimelineCarousel must render a clickable tooth to open ToothSlideout',
+    ).toBeVisible({ timeout: 10_000 })
     await tooth.click()
 
-    // ToothSlideout: pick a surface + condition. Status "Existing" is the
-    // Gap #1/#2 failure point: the slideout collapses status to a boolean
-    // "done" with no distinct Existing / Existing-Other enum.
+    // The ToothSlideout must open on tooth click so the clinician can chart a
+    // pre-existing restoration.
     const slideout = page.locator('[data-testid="tooth-slideout"], [role="dialog"]').first()
-    const hasSlideout = await slideout.isVisible().catch(() => false)
-    if (!hasSlideout) {
-      await expectJourneyBroken(
-        page,
-        META,
-        'ToothSlideout did not open on tooth click — cannot record an Existing restoration. UI step 3/4 impossible.',
-      )
-      return
-    }
+    await expect(
+      slideout,
+      'ToothSlideout must open on tooth click to record an Existing restoration',
+    ).toBeVisible({ timeout: 10_000 })
 
-    // There is NO "Existing" vs "Existing-Other" status control in the
-    // slideout (Gap #1 status-collapse, Gap #2 missing Existing-Other).
-    const existingStatus = slideout.getByRole('button', { name: /^existing$/i })
-    const existingOther = slideout.getByRole('button', { name: /existing[- ]other/i })
-    const hasExisting = await existingStatus.count()
-    const hasExistingOther = await existingOther.count()
+    // Gap #1/#2 fix gate: the slideout must offer DISTINCT "Existing" and
+    // "Existing-Other" status controls (status is NOT collapsed to a boolean
+    // "done"). Charting pre-existing-vs-elsewhere work depends on these.
+    await expect(
+      slideout.getByRole('button', { name: /^existing$/i }),
+      'slideout must expose a distinct "Existing" status control (Gap #1)',
+    ).toBeVisible()
+    await expect(
+      slideout.getByRole('button', { name: /existing[- ]other/i }),
+      'slideout must expose a distinct "Existing-Other" status control (Gap #2)',
+    ).toBeVisible()
 
-    if (!hasExisting || !hasExistingOther) {
-      await expectJourneyBroken(
-        page,
-        META,
-        `Status-collapse (Gap #1/#2): slideout exposes no distinct Existing` +
-          ` (${hasExisting}) / Existing-Other (${hasExistingOther}) status controls.` +
-          ` A new-patient exam cannot chart pre-existing-vs-elsewhere work, so the` +
-          ` goal state (two records with DISTINCT status values) is unreachable.`,
-      )
-      return
-    }
-
-    // Both Existing and Existing-Other status controls exist — Gap #1/#2
-    // (status-collapse) is fixed. The full save flow requires surface selection
-    // via the SVG tooth diagram (not automatable without coordinate clicks);
-    // UI control presence is sufficient proof of the fix.
+    // The full save flow requires surface selection via the SVG tooth diagram
+    // (coordinate clicks, not automatable here); distinct-control presence is
+    // the regression gate for the status-collapse fix.
     recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)
