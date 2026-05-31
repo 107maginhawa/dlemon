@@ -1,7 +1,50 @@
 <!-- oli-version: 1.0 -->
 <!-- generated: 2026-05-30 by /oli-check --runtime --live (executor.md) -->
+<!-- updated: 2026-05-31 by /oli-check --runtime (NO --live) @ HEAD f1b38d86 -->
 
 # Runtime Execution Report — Dentalemon
+
+---
+## 2026-05-31 run (RUNTIME dimension, NO --live) — VERDICT: SKIP (live) · tiers 1-2 PASS
+
+`RUNTIME-LIVE: skipped (app not running)`. The api-ts server is not listening on
+port 7213 (`GET /health` http=000; no api-ts/bun process). Per executor
+stop_conditions the live interaction loop SKIPs — never a false PASS. Falls back to
+tier-1 (plan) + tier-2 (static boot-smoke). No `ER-` produced this run (loop not
+run); no app source modified (read-only). The detailed live-run record below is the
+prior 2026-05-30 run, retained for history.
+
+**Counts this run:** ER- P0 0 · P1 0 · P2 0 · P3 0 (loop not executed).
+
+### Tier-1 — Runtime test PLAN (reference-only)
+`docs/execution/RUNTIME_TEST_PLAN.md` PRESENT & CURRENT (oli-runtime-plan,
+last-modified 2026-05-31, maps v5). All 8 sections present (Coverage, Load+k6,
+Per-Module Budgets, DAST, Auth Matrix, Accessibility, Cross-Layer Walker, Next).
+PERFORMANCE.md (required input) present. pg-boss background-job throughput is a
+planned load dimension. No regeneration needed; no edits made (TEMPLATES-only artifact).
+
+### Tier-2 — Static boot-smoke (no long-running server left behind) — PASS
+- **V-DG-001 cron wiring (static):** `registerRetentionJobs(jobs)` in `initializeApp`
+  (`services/api-ts/src/app.ts:574`, import :26); job `retention.enforcement` at cron
+  `30 3 * * *`, DRY-RUN default (`handlers/retention/jobs/index.ts:19`).
+- **Retention job unit suite GREEN** vs `monobase_test` (db-guard correctly refused the
+  demo DB): `3 pass / 0 fail` — confirms 03:30-daily registration + clean dry-run handler.
+- **Prior manual boot-smoke (in RUNTIME_TEST_PLAN.md, 2026-05-31):** api-ts bound
+  `0.0.0.0:7213`, scheduler started (9 jobs), no console-error/fatal/unhandled-rejection
+  at startup; `/livez` 200, sign-in 200, unauth `/dental/branches` → 401. `/readyz` 503 =
+  degraded optional-dep (MinIO/Valkey), NOT a boot crash.
+- **Caller corroboration:** V-DG-001 manually boot-smoked — registers with pg-boss,
+  scheduler healthy, clean shutdown, end-to-end dry-run actioned 0 records. Consistent.
+
+No boot crash / startup console-error in any tier-2 signal → boot-smoke PASS.
+
+### What's Next (live)
+Start api-ts (`bun dev`, :7213) + the app, then re-run `/oli-check --runtime --live`
+to execute the committed Playwright loop over the v5 route map (the only path that can
+surface `ER-` dead-nav / 401-false-empty / infinite-skeleton / `/undefined` / UUID-cell).
+
+---
+## 2026-05-30 run (live) — retained for history below
 
 **VERDICT: PASS (after fix)** — the loop originally **BLOCKed** on 2 × P1 `ER-` findings (recalls + plans 401), the bug was fixed, and a re-run is now **green** (36 pass, 0 P0/P1, 1 benign P3 skip). Full caught → fix → green cycle.
 

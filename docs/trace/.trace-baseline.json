@@ -1,14 +1,14 @@
 {
   "critical": 0,
   "high": 5,
-  "medium": 14,
-  "total": 19,
+  "medium": 15,
+  "total": 20,
   "chain_coverage_wf_to_test_pct": 80,
   "created": "2026-05-30",
-  "last_passed": "2026-05-30",
+  "last_passed": "2026-05-31",
   "oli_version": "trace-v1",
   "phase": "D",
   "cycle": 3,
-  "prior_baseline": { "critical": 1, "high": 9, "medium": 14, "total": 24, "chain_coverage_wf_to_test_pct": 71 },
-  "notes": "Cycle-3 refresh after G9/G10/G11 (+131 tests). CRITICAL 1→0: TR-P0-01 patient-merge auth-drift RESOLVED (in-handler admin guard in merge/unmergePatients.ts + patient-merge-auth.test.ts 22 assertions; CODE_SPEC_TRACE auth_drift=2 is a route-level-only detection false-positive; BR-020 formally deferred via describe.skip v2.0). HIGH 9→5: RESOLVED TR-P1-01 ceph BR-036..047 (12/12 tested, ceph-business-rules.test.ts), TR-P1-02 imaging (7 files/273 it, imaging-integration 55 real-DB/13 handlers), TR-P1-03 pmd deny (dental-pmd-auth.test.ts), TR-P1-09 person (25 unit+91 e2e); TR-P1-04 reduced 18→8 untraced events (DE-001..016 traced, DE-017..024 remain). Open P1: TR-P1-04 (DE-017..024), TR-P1-05 (BR-019 approval gate), TR-P1-06 (BR-013 uncollectible), TR-P1-07 (WF-032 dentition UI), TR-P1-08 (WF-048/049/050 item-level plan). MEDIUM 14 unchanged (AC exact-ID trace drift, perio 0-AC spec gap, inferred/orphan WFs). 0 dangling endpoints (237/237 parity), 0 cross-module blind spots (C4+C7 now PASS via G11 VisitService interface). Caveat: CONFIDENCE_REPORT(8.0) + CODE_SPEC_TRACE predate cycle-3 commits; deltas credited from direct test-source scan."
+  "prior_baseline": { "critical": 0, "high": 5, "medium": 14, "total": 19, "chain_coverage_wf_to_test_pct": 80, "as_of": "cycle-3 2026-05-30" },
+  "notes": "2026-05-31 (HEAD f1b38d8): new `retention` module (V-DG-001 data-retention enforcement, 11 files / 26 tests) landed. Recorded as TR-RET-001 P2 (medium 14→15): orphan code — no MODULE_SPEC, no WF/BR node, no TypeSpec endpoint; intentional internal cron job (registerRetentionJobs in app.ts) partially fulfilling governance gap WFG-006/V-DG-001. code→test chain COMPLETE; spec→code chain BROKEN at spec end (no anchor node). P0=0, P1=5 unchanged (TR-INFRA-001 engine-map empty + TR-PAT-020 BR-020 501 both carried). Verdict PASS. --- Cycle-3 refresh after G9/G10/G11 (+131 tests). CRITICAL 1→0: TR-P0-01 patient-merge auth-drift RESOLVED (in-handler admin guard in merge/unmergePatients.ts + patient-merge-auth.test.ts 22 assertions; CODE_SPEC_TRACE auth_drift=2 is a route-level-only detection false-positive; BR-020 formally deferred via describe.skip v2.0). HIGH 9→5: RESOLVED TR-P1-01 ceph BR-036..047 (12/12 tested, ceph-business-rules.test.ts), TR-P1-02 imaging (7 files/273 it, imaging-integration 55 real-DB/13 handlers), TR-P1-03 pmd deny (dental-pmd-auth.test.ts), TR-P1-09 person (25 unit+91 e2e); TR-P1-04 reduced 18→8 untraced events (DE-001..016 traced, DE-017..024 remain). Open P1: TR-P1-04 (DE-017..024), TR-P1-05 (BR-019 approval gate), TR-P1-06 (BR-013 uncollectible), TR-P1-07 (WF-032 dentition UI), TR-P1-08 (WF-048/049/050 item-level plan). MEDIUM 14 unchanged (AC exact-ID trace drift, perio 0-AC spec gap, inferred/orphan WFs). 0 dangling endpoints (237/237 parity), 0 cross-module blind spots (C4+C7 now PASS via G11 VisitService interface). Caveat: CONFIDENCE_REPORT(8.0) + CODE_SPEC_TRACE predate cycle-3 commits; deltas credited from direct test-source scan."
 }

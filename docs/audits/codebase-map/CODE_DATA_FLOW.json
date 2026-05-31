@@ -348,6 +348,7 @@
         {
           "parent": "BillingPage",
           "props": [
+            "canWrite",
             "invoiceId",
             "onClose",
             "onUpdated",

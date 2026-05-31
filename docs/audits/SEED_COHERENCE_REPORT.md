@@ -9,7 +9,29 @@ based_on:
   - docs/product/ROLE_PERMISSION_MATRIX.md
 last_modified: 2026-05-31
 last_modified_by: oli-check
+head: f1b38d86
 ---
+
+## 2026-05-31 re-run (this dimension run) — VERDICT: SKIP
+
+`SC-API-UNREACHABLE` (informational, NOT P0) — the api-ts API is not listening on
+`http://localhost:7213` (`GET /health` http=000; no api-ts/bun process). The
+persona-replay step requires a runnable API to log in and issue GETs; it could not
+run this time. Per the dimension stop_conditions this is an explicit SKIP — never a
+false PASS. The manifest is non-empty (3 quantitative claims) so there is something
+to verify; recommend `cd services/api-ts && bun dev` (+ `bun run db:reseed` if the
+demo DB is not seeded) and re-run `/oli-check --seed-coherence`. (The check must NOT
+boot a long-running server itself; this run leaves no server behind.)
+
+**Counts this run:** SC-EMPTY-DESPITE-SEED (P0) 0 · SC-FILTER-MISMATCH (P1) 0 ·
+SC-ROLE-GATE (P2) 0 · SC-API-UNREACHABLE (info) 1. Replay did not execute.
+
+The fully-replayed PASS record below is from the earlier 2026-05-31 run (API up);
+it is retained as corroborating history but does NOT substitute for a live replay
+at HEAD f1b38d86.
+
+---
+## Earlier 2026-05-31 run (API up) — VERDICT: PASS — retained for history
 
 ## Run Context
 - API booted: `services/api-ts` on `http://localhost:7213` (boot-smoke PASS).

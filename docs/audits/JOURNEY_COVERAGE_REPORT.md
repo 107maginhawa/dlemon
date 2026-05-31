@@ -1,28 +1,28 @@
 <!-- oli-version: 1.1 -->
-<!-- generated: 2026-05-31 -->
+<!-- generated: 2026-05-31 (re-verified @ HEAD f1b38d8 after V-DG-001 backend retention change) -->
 <!-- skill: oli-check --journeys (static, no --live) -->
 <!-- target: apps/dentalemon/src -->
 <!-- based-on: WORKFLOW_MAP.md, ROLE_PERMISSION_MATRIX.md, NAVIGATION_MAP.md, CODE_ROUTE_MAP.json v5, CODE_API_SURFACE.json, ERROR_TAXONOMY.md -->
 
 # Journey Coverage Report — Dentalemon (all-frontend)
 
-## Changes Since Last Run
-- **Resolved findings: 2**
-  - J-FE-001 (was P1) — Invoice "Issue" method mismatch. RESOLVED: `invoice-detail.tsx:73` now uses `method:'PATCH'`, matching backend `/dental/billing/invoices/:invoiceId/issue` (PATCH).
-  - J-FE-002 (was P1) — Ceph report path singular/plural. RESOLVED: all 3 FE call sites (`CephWorkspacePanel.tsx:84`, `imaging-ceph-report.$imageId.tsx:35-36`) use plural `/ceph/reports`, matching backend.
-- **New findings: 3** — J-RBAC-001 (P1), J-RBAC-002 (P1/P2), J-RBAC-003 (P2).
-- **Net change:** −2 prior P1 (resolved) +2 new P1 (RBAC). Verdict moves from prior to WARN (no P0).
+## Changes Since Last Run (re-verify @ f1b38d8)
+- **Resolved findings: 2 (the two known P1s — RBAC)**
+  - J-RBAC-001 (was P1) — staff_full ↔ /billing contradiction. **RESOLVED** in commit `60e7464e`: `rbac.ts:46-55` now sets `staff_full.billing = true`; route guard `requireRole('billing')` admits staff_full; issue/void/create-invoice gated by new `canWriteBilling()` (rbac.ts:201, owner/associate only) and consumed at `invoice-detail.tsx`. Record-payment journey now completable for staff_full while write actions stay hidden — matches ROLE_PERMISSION_MATRIX + NAVIGATION_MAP.
+  - J-RBAC-002 (was P1/P2) — extended roles unmapped in FE. **RESOLVED** in commit `60e7464e`: `DentalRole` union (rbac.ts:8-19) now covers all 9 context roles (dentist_owner, dentist_associate, staff_full, staff_scheduling, hygienist, dental_assistant, front_desk, billing_staff, read_only) with full ACCESS_MATRIX entries each. Route-guard behavior now defined for every provisioned role.
+- **Context:** This run re-verifies after the V-DG-001 backend data-retention change, which has **no UI surface** — all frontend journeys are otherwise unchanged from the prior run.
+- **Net change:** −2 P1 (both known RBAC P1s now resolved in code). Verdict improves WARN → **PASS** (P0=0, P1=0).
 
 ## Executive Summary
 
 | Severity | Count |
 |----------|-------|
 | P0 — Critical | 0 |
-| P1 — Major | 2 |
-| P2 — Minor | 4 |
+| P1 — Major | 0 |
+| P2 — Minor | 3 |
 | P3 — Info | 6 |
 
-**Verdict: WARN** (P0=0 → no BLOCK; P1>0 → WARN).
+**Verdict: PASS** (P0=0, P1=0; only P2/P3 advisories remain).
 
 ### Per-Registry Status
 | Registry | Status | Findings | Coverage |
@@ -30,32 +30,30 @@
 | 1. Action Registry | ACTIVE | 116 files / ~370 interactive elements | 33 with API calls, 13 with role gates |
 | 2. Journey Completion | ACTIVE | core WFs traced; 18 Playwright journey specs corroborate | high (no broken core journey) |
 | 3. Element→Action Binding | ACTIVE | 33 API-bound elements | 100% match CODE_API_SURFACE |
-| 4. Role Journey Completion | ACTIVE | 4 FE roles × modules | 3 findings (RBAC drift) |
+| 4. Role Journey Completion | ACTIVE | 9 FE roles × modules | RBAC drift RESOLVED (J-RBAC-001/002 fixed @60e7464e); J-RBAC-003 patient portal Phase-2 advisory only |
 | 5. Dead Interaction | ACTIVE | 0 substantive | — |
 | 6. Navigation Integrity | ACTIVE | 19 routes | router-level CLEAN; NAV_MAP doc-drift advisories |
 | 7. Executive Summary | ACTIVE | — | — |
 | 8. Scenario Coverage | ACTIVE | route×role×state | uncovered scenarios = extended roles (see Reg 4) |
 | 9. Error-UX | ACTIVE | 26 onError / 23 toasts vs 81 taxonomy codes | cluster advisory |
 
-### Top 3 Risks
-1. **J-RBAC-001 (P1)** — `staff_full` blocked from `/billing` despite ROLE_PERMISSION_MATRIX + NAVIGATION_MAP granting billing (record payments). FE `rbac.ts:37` `ACCESS_MATRIX.staff_full.billing=false`.
-2. **J-RBAC-002 (P1/P2)** — `hygienist`, `dental_assistant`, `front_desk`, `billing_staff` defined in ROLE_PERMISSION_MATRIX but absent from FE `DentalRole` (only 4 roles) → no route-guard representation; cannot complete any role-gated journey.
-3. **NAV_MAP documentation drift (P3 cluster)** — NAVIGATION_MAP documents `/imaging`, `/patients/new`, `/patients/import`, `/billing/invoices*` sub-routes that resolve via workspace tabs / modals / API paths, not TanStack route files.
+### Top Risks (post-fix — advisories only)
+1. **J-ERROR-CLUSTER-001 (P2)** — generic error-UX surface vs rich taxonomy (partially addressed by commit `bc387dd0` centralizing error toasts). Residual orphan taxonomy codes without FE surfacers.
+2. **NAV_MAP documentation drift (P3 cluster)** — NAVIGATION_MAP documents `/imaging`, `/patients/new`, `/patients/import`, `/billing/invoices*` sub-routes that resolve via workspace tabs / modals / API paths, not TanStack route files. Doc-only.
+3. **J-RBAC-003 (P2)** — `patient` portal role has no UI surface (documented Phase-2 gap). Advisory.
+
+> The two previously-known P1s (J-RBAC-001 staff_full→/billing, J-RBAC-002 extended-role coverage) are **RESOLVED** in current code — see "Changes Since Last Run".
 
 ## Findings (ordered by severity)
 
-### J-RBAC-001 (P1) — staff_full cannot reach /billing (route guard contradicts role matrix)
-- **File:** `apps/dentalemon/src/lib/rbac.ts:37` (`ACCESS_MATRIX.staff_full.billing = false`); guard applied at `routes/_dashboard/billing.tsx:19` (`beforeLoad: requireRole('billing')`).
-- **Conflict:** ROLE_PERMISSION_MATRIX.md ("Billing | … | Record payments only" for staff_full) and NAVIGATION_MAP.md (`/billing` ✅ for staff_full) both grant access. FE blocks it.
-- **Impact:** A staff_full member assigned the "record payment" journey is redirected away from `/billing`. Role assigned to workflow but cannot complete.
-- **Fix:** Set `staff_full.billing = true` in `rbac.ts` (scope write-vs-read at the action level if needed), or reconcile the matrix downward if billing is intentionally owner-only.
+### J-RBAC-001 (RESOLVED — was P1) — staff_full ↔ /billing reconciled
+- **Status:** RESOLVED in commit `60e7464e`, verified @ f1b38d8.
+- **Fix landed:** `rbac.ts:46-55` now `ACCESS_MATRIX.staff_full.billing = true`; route guard `routes/_dashboard/billing.tsx:21` (`requireRole('billing')`) admits staff_full. Invoice issue/void/create-invoice/payment-plan now gated by new `canWriteBilling()` (rbac.ts:201 — dentist_owner/associate only), consumed at `invoice-detail.tsx`. staff_full can complete the record-payment journey while write actions stay hidden — matches ROLE_PERMISSION_MATRIX + NAVIGATION_MAP.
 - **Confidence:** high.
 
-### J-RBAC-002 (P1 for hygienist/front_desk, P2 aggregate) — extended roles unmapped in FE
-- **File:** `apps/dentalemon/src/lib/rbac.ts:8` (`type DentalRole = 4 roles only`).
-- **Conflict:** ROLE_PERMISSION_MATRIX.md defines `hygienist`, `dental_assistant`, `front_desk`, `billing_staff` with explicit module access. None exist in the FE role union or ACCESS_MATRIX. No code references them outside tests.
-- **Impact:** Any user provisioned with these roles has undefined route-guard behavior (falls through / no canAccess entry) → cannot complete assigned role-gated journeys. `hygienist` (clinical R/W) and `front_desk` (check-in/scheduling) are the highest-impact gaps (P1); `dental_assistant`/`billing_staff` P2.
-- **Fix:** Extend `DentalRole` + `ACCESS_MATRIX` to cover all matrix roles, or document that extended roles map onto the 4 base roles at the membership layer.
+### J-RBAC-002 (RESOLVED — was P1/P2) — all 9 context roles now mapped in FE
+- **Status:** RESOLVED in commit `60e7464e`, verified @ f1b38d8.
+- **Fix landed:** `rbac.ts:8-19` `DentalRole` union now covers all 9 context roles (added hygienist, dental_assistant, front_desk, billing_staff, read_only); each has a complete ACCESS_MATRIX row (rbac.ts:66-127). Route-guard behavior is now defined for every provisioned role; no fall-through. Extended-role rationale documented inline (e.g., read_only reports stays owner-only per Administrative Operations table).
 - **Confidence:** high.
 
 ### J-RBAC-003 (P2) — `patient` role has no UI surface
@@ -106,7 +104,7 @@ No API call targets a non-existent endpoint. **P0 = 0.**
 Actual navigation targets in code (`navigate({to})` + sidebar `_dashboard.tsx` items): `/dashboard`, `/patients`, `/calendar`, `/billing`, `/reports`, `/staff`, `/settings`, `/patients/$patientId`, plus auth/onboarding/ceph-report routes. Every target has a real route file in CODE_ROUTE_MAP.json; role-gated routes (`billing`, `reports`, `staff`, `settings`) carry `requireRole` guards. No MISSING_ROUTE at the router level. NAV_MAP discrepancies are documentation drift (see J-NAV-001, P3).
 
 ## Registry 4 — Role Journey Completion (summary)
-FE ACCESS_MATRIX (rbac.ts) covers 4 roles. ROLE_PERMISSION_MATRIX defines up to 9. Findings: J-RBAC-001 (staff_full↔billing contradiction), J-RBAC-002 (5 unmapped roles), J-RBAC-003 (patient portal Phase 2). Owner/associate journeys are fully completable.
+FE ACCESS_MATRIX (rbac.ts) now covers all 9 context roles, matching ROLE_PERMISSION_MATRIX. J-RBAC-001 (staff_full↔billing) and J-RBAC-002 (extended-role coverage) are RESOLVED @60e7464e. Only J-RBAC-003 (patient portal Phase 2, P2 advisory) remains. All staff journeys are completable; `patient` portal is a documented Phase-2 gap.
 
 ## Registry 8 — Scenario Coverage
 Route × role × state cartesian over CODE_ROUTE_MAP (19 routes) × 4 FE roles. Covered: owner/associate/staff_full/staff_scheduling against their granted modules. Uncovered high-risk scenarios all trace to Registry 4 (extended roles with no FE representation + staff_full/billing contradiction). No additional novel uncovered auth/mutation scenario beyond the RBAC findings.
@@ -125,8 +123,8 @@ Route × role × state cartesian over CODE_ROUTE_MAP (19 routes) × 4 FE roles. 
 - Mode: static analysis (no --live)
 
 ## What's Next
-- Fix J-RBAC-001 + J-RBAC-002 (the two P1s) — reconcile FE rbac.ts with ROLE_PERMISSION_MATRIX.
-- Update NAVIGATION_MAP.md to match TanStack tab/modal structure (clears J-NAV-001).
-- Optionally run `/oli-check --traceability` (consumes this report) and `/oli-check --compliance --category ui` (now that UI_CONSISTENCY_SPEC.md exists).
+- No P0/P1 remain — journey coverage is GREEN. Both prior P1s (J-RBAC-001/002) resolved @60e7464e.
+- Optional cleanup: update NAVIGATION_MAP.md to match TanStack tab/modal structure (clears J-NAV-001 P3); finish wiring orphan ERROR_TAXONOMY codes to FE surfacers (J-ERROR-CLUSTER-001 P2, partially done @bc387dd0).
+- Run `/oli-check --traceability` (consumes this report).
 
 **Pipeline position:** Phase D → journeys ← YOU ARE HERE → traceability.

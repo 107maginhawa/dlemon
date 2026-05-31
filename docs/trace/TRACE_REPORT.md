@@ -11,9 +11,10 @@ Partial Staleness: CODE_SPEC_TRACE.json reports spec_source=null, 0 operations d
 ---
 
 ## Changes Since Last Run
-- New gaps: TR-INFRA-001 (engine spec-trace map went empty: spec_source=null / 0 ops).
-- Carried: TR-PAT-020 (BR-020 patient merge still 501 NOT IMPLEMENTED — intentional).
-- Net: prior "237/0/0 spec-trace clean" is now STALE; product trace unchanged (47/47 BRs tested).
+- New module: `retention` (V-DG-001 data-retention enforcement) added — 26 tests, code-only / untraced-to-spec (see TR-RET-001).
+- New gaps: TR-RET-001 (retention module has no MODULE_SPEC / no WF-NNN / no BR-NNN node — orphan code anchored only to governance gap WFG-006/V-DG-001).
+- Carried: TR-INFRA-001 (engine spec-trace map still empty: spec_source=null / 0 ops), TR-PAT-020 (BR-020 patient merge still 501 NOT IMPLEMENTED — intentional).
+- Net: product BR trace unchanged (47/47 BRs tested); one new orphan-code module flagged P2 (intentional internal job, partial intent via WFG-006).
 
 ## Summary
 
@@ -27,18 +28,23 @@ Partial Staleness: CODE_SPEC_TRACE.json reports spec_source=null, 0 operations d
 | BRs NOT_IMPLEMENTED (intentional) | 1 (BR-020, feature-flagged off) |
 | Total ACs | 55 |
 | ACs explicitly tagged in tests | 23 (42%) |
-| Orphan product code modules | 0 |
+| Orphan product code modules | 1 (retention — intentional internal job, no spec node) |
 | CRITICAL gaps (P0) | 0 |
 | HIGH gaps (P1) | 2 |
-| MEDIUM gaps (P2) | 34 |
+| MEDIUM gaps (P2) | 35 |
 | BR test coverage (any layer) | 47/47 = 100% |
 
 ## Verdict: PASS (WARN-adjacent)
 
+Recomputed at HEAD f1b38d8 (2026-05-31) after the new `retention` module landed.
 No P0 dangling references or cross-module blind spots. Every BR has at least one
 test. The two P1s are (1) a broken engine spec-trace map (tooling, not product),
-and (2) one intentionally-unimplemented BR. The 34 P2s are AC test-tagging gaps
-and missing-E2E for unit-covered BRs — report-only, non-blocking.
+and (2) one intentionally-unimplemented BR. The 35 P2s are AC test-tagging gaps,
+missing-E2E for unit-covered BRs, and the new orphan-code `retention` module
+(TR-RET-001) — all report-only, non-blocking. retention is honestly recorded as
+code-only / untraced-to-spec: its 26 tests give complete code→test coverage but
+there is no WF/BR/MODULE_SPEC node to anchor the spec end of the chain (it is an
+intentional internal cron job addressing governance gap WFG-006 / V-DG-001).
 
 ## Per-Module Coverage
 
@@ -56,6 +62,7 @@ and missing-E2E for unit-covered BRs — report-only, non-blocking.
 | dental-visit | 8 (BR-001-008,014) | 0 | 0 | 0 (BR-005,007,008 unit-only) |
 | emr-consultation | 0 BR / 4 AC | 0 | 0 (code in handlers/emr/) | 0 |
 | external-records-import | 1 (BR-022) | 0 | 0 | 0 (unit-only) |
+| retention (NEW) | 0 BR / 0 AC | n/a (no spec, intentional) | 1 (orphan code, P2) | 0 — 26 tests, code→test fully covered; anchored to V-DG-001 / WFG-006 gap only |
 
 Notes:
 - "Orphan-Code" assessed against handler dirs. The base-template handler modules
@@ -88,6 +95,7 @@ flows go through documented API endpoints / events).
 | TR-E2E-* | 5c | 31 BRs UNIT_COVERED with no E2E layer (BR-005,007,008,009,010,012,018,021,022,023,025,027,028,029,031,032,033,034,035,036,037,038,039,040,041,042,043,044,045,046,047). Mostly dental-imaging/ceph (BR-028..047) + visit/billing edge rules. | TRACEABILITY_MATRIX_AUTO.md |
 | TR-AC-UNTAGGED | 5c | 32 of 55 ACs have no explicit `AC-NNN` tag in any test file (23 tagged). Many implicitly covered by BR tests; tagging missing. | grep AC-NNN across src |
 | TR-BR-031-BEONLY | 5c | BR-031 has frontend-unit coverage only (no backend) — by design (UI-layer rule). | TRACEABILITY_MATRIX_AUTO.md |
+| TR-RET-001 | 5a orphan code | New `retention` module (services/api-ts/src/handlers/retention/, 11 files, 26 tests) has **no MODULE_SPEC, no WF-NNN, no BR-NNN, no TypeSpec/OpenAPI endpoint**. Code references `V-DG-001` (a DATA_GOVERNANCE requirement ID) and partially fulfils gap **WFG-006** (GDPR erasure — flagged HIGH/unimplemented in WORKFLOW_MAP:597). Trace status: **code→test COMPLETE (26 tests), spec→code BROKEN at spec end** (no spec node to anchor). Intentional — internal cron job (registerRetentionJobs in app.ts), not API-surface. | services/api-ts/src/handlers/retention/; docs/product/WORKFLOW_MAP.md:597; docs/product/DATA_GOVERNANCE.md:77 |
 
 ## Coverage Matrix (BR chain completeness)
 
@@ -126,17 +134,27 @@ flows go through documented API endpoints / events).
 | 2 | Decide BR-020 patient-merge: implement workflow or formally accept as deferred | TR-PAT-020 (P1) | product decision / WFG-007 |
 | 3 | Add E2E for high-value unit-only BRs (visit/billing/ceph) | 31 P2 | `/oli-check --confidence`, e2e-scaffold |
 | 4 | Tag tests with `AC-NNN` to close AC traceability | 32 P2 | edit test describe blocks |
+| 5 | Anchor `retention` to a spec node: either author a MODULE_SPEC for it, or formally bind it to WFG-006 in WORKFLOW_MAP so V-DG-001 chains spec→code→test | TR-RET-001 (P2) | `/oli-spec-modules --module retention` or edit WORKFLOW_MAP WFG-006 |
 
 ## Ratchet Status
 
-Baseline at docs/trace/.trace-baseline.json. No new P0/P1 *product* gaps vs prior
-clean run; TR-INFRA-001 is a tooling-map regression (engine map went empty), not
-a product trace regression.
+Baseline at docs/trace/.trace-baseline.json (recomputed 2026-05-31, HEAD f1b38d8).
+
+| Severity | Baseline | Current | Status |
+|----------|----------|---------|--------|
+| CRITICAL (P0) | 0 | 0 | PASS |
+| HIGH (P1) | 5 | 5 (gap categories: TR-INFRA-001, TR-PAT-020) | PASS |
+| MEDIUM (P2) | 15 | 15 (gap categories incl. new TR-RET-001) | PASS |
+
+No new P0/P1 gaps vs prior clean run. One new P2 category (TR-RET-001, retention
+orphan code) added — baseline medium bumped 14→15. TR-INFRA-001 remains the only
+tooling-map regression (engine spec-trace map empty), not a product trace
+regression.
 
 ## Trace Manifest
 - Spec IDs collected: BR=47, AC=55; WF defined in WORKFLOW_MAP
 - BRs with coverage (any layer): 47/47
 - Orphan BR nodes: 0
 - Dangling references: 0
-- Orphan product code: 0
-- Output: marked COMPLETE (all 47 BRs + 12 modules traced; engine map empty noted, did not block product trace)
+- Orphan product code modules: 1 (retention — intentional internal job, V-DG-001/WFG-006; 26 tests, code→test complete, no spec anchor — TR-RET-001 P2)
+- Output: marked COMPLETE (all 47 BRs + 12 spec modules traced + new retention module assessed; engine map empty noted, did not block product trace)

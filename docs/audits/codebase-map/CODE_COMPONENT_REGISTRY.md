@@ -33,7 +33,7 @@
 | `PinSelect` | routes | component | 5 | — | MEDIUM |
 | `PinSelectRoute` | routes | component | 0 | ✅ | MEDIUM |
 | `BillingList` | features | component | 2 | ✅ paired | MEDIUM |
-| `InvoiceDetail` | features | component | 5 | — | MEDIUM |
+| `InvoiceDetail` | features | component | 6 | — | MEDIUM |
 | `PaymentPlanView` | features | component | 3 | — | MEDIUM |
 | `useInvoiceDetail` | features | hook | 0 | — | MEDIUM |
 | `useInvoices` | features | hook | 0 | — | MEDIUM |
