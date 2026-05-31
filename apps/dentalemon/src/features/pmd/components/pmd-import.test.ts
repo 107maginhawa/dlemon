@@ -1,123 +1,149 @@
 /**
- * PMDImport component tests — pure logic helpers
+ * PMDImport component tests
+ *
+ * Renders the SHIPPED PMDImport and drives its real three-step flow
+ * (form → preview → confirm) against a mocked fetch. The previous version
+ * asserted re-declared copies of validateImportForm / extractSafetyFloorPreview
+ * that the component does not export — it proved nothing about shipped behaviour.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, afterEach, mock } from 'bun:test';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { PMDImport } from './pmd-import';
 
-interface ImportPMDForm {
-  sourceFacility: string;
-  sourceReference: string;
-  sourceDescription: string;
-  content: string;
+function installFetch(ok = true) {
+  const calls: Array<{ url: string; method: string; body: any }> = [];
+  const original = global.fetch;
+  global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+    const url = req instanceof Request ? req.url : String(req);
+    const method = (req instanceof Request ? req.method : init?.method ?? 'GET').toUpperCase();
+    const raw = req instanceof Request ? await req.clone().text() : (init?.body as string | undefined);
+    calls.push({ url, method, body: raw ? JSON.parse(raw) : undefined });
+    return new Response(JSON.stringify(ok ? { id: 'pmd-1' } : { message: 'fail' }), {
+      status: ok ? 201 : 422,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as unknown as typeof fetch;
+  return { calls, restore: () => { global.fetch = original; } };
 }
 
-function validateImportForm(form: ImportPMDForm): string[] {
-  const errors: string[] = [];
-  if (!form.sourceFacility.trim()) errors.push('Source facility is required');
-  // V-PMD-005: sourceDescription is required (NOT NULL on imported_pmd) and capped at 200.
-  if (!form.sourceDescription.trim()) errors.push('Source software/system is required');
-  if (form.sourceDescription.trim().length > 200) errors.push('Source software/system must be 200 characters or fewer');
-  if (!form.content.trim()) errors.push('PMD content is required');
-  // Try to parse content as JSON
-  if (form.content.trim()) {
+function renderImport(props: Partial<React.ComponentProps<typeof PMDImport>> = {}) {
+  const onImported = props.onImported ?? mock(() => {});
+  render(
+    React.createElement(PMDImport, {
+      patientId: 'p-1',
+      open: true,
+      onClose: () => {},
+      onImported,
+      ...props,
+    }),
+  );
+  return { onImported };
+}
+
+afterEach(cleanup);
+
+describe('PMDImport — shipped component', () => {
+  test('does not render when open=false', () => {
+    const f = installFetch();
     try {
-      JSON.parse(form.content);
-    } catch {
-      errors.push('PMD content must be valid JSON');
+      renderImport({ open: false });
+      expect(screen.queryByTestId('pmd-import')).toBeNull();
+    } finally {
+      f.restore();
     }
-  }
-  return errors;
-}
-
-interface SafetyFloorMergePreview {
-  conditions: string[];
-  medications: string[];
-  allergies: string[];
-}
-
-function extractSafetyFloorPreview(content: string): SafetyFloorMergePreview {
-  try {
-    const data = JSON.parse(content);
-    return {
-      conditions: Array.isArray(data.conditions) ? data.conditions : [],
-      medications: Array.isArray(data.medications) ? data.medications : [],
-      allergies: Array.isArray(data.allergies) ? data.allergies : [],
-    };
-  } catch {
-    return { conditions: [], medications: [], allergies: [] };
-  }
-}
-
-describe('PMDImport — form validation', () => {
-  const valid: ImportPMDForm = {
-    sourceFacility: 'City Dental Clinic',
-    sourceReference: 'REF-001',
-    sourceDescription: 'Open Dental v21.1',
-    content: '{"conditions":["I10"],"medications":["Amoxicillin"]}',
-  };
-
-  test('valid form produces no errors', () => {
-    expect(validateImportForm(valid)).toHaveLength(0);
   });
 
-  test('missing sourceFacility produces error', () => {
-    const errors = validateImportForm({ ...valid, sourceFacility: '' });
-    expect(errors).toContain('Source facility is required');
+  test('Preview surfaces validation errors for an empty form and stays on step 1', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderImport();
+      await user.click(screen.getByRole('button', { name: /^preview$/i }));
+
+      expect(screen.getByText('Source facility is required')).not.toBeNull();
+      expect(screen.getByText('Source software/system is required')).not.toBeNull();
+      expect(screen.getByText('PMD content is required')).not.toBeNull();
+      // never reached the import call
+      expect(f.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
   });
 
-  // V-PMD-005: sourceDescription is required
-  test('missing sourceDescription produces error', () => {
-    const errors = validateImportForm({ ...valid, sourceDescription: '' });
-    expect(errors).toContain('Source software/system is required');
+  test('rejects invalid-JSON content', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderImport();
+      await user.type(screen.getByLabelText(/Source Facility/i), 'City Dental');
+      await user.type(screen.getByLabelText(/Source Software/i), 'Open Dental v21.1');
+      await user.type(screen.getByLabelText(/PMD Content/i), 'not-json');
+      await user.click(screen.getByRole('button', { name: /^preview$/i }));
+
+      expect(screen.getByText('PMD content must be valid JSON')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
   });
 
-  test('sourceDescription over 200 chars produces error', () => {
-    const errors = validateImportForm({ ...valid, sourceDescription: 'x'.repeat(201) });
-    expect(errors).toContain('Source software/system must be 200 characters or fewer');
+  test('previews the Safety Floor items then confirms the import POST', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      const { onImported } = renderImport();
+      await user.type(screen.getByLabelText(/Source Facility/i), 'City Dental Clinic');
+      await user.type(screen.getByLabelText(/Source Software/i), 'Open Dental v21.1');
+      // JSON braces confuse userEvent.type's keyboard syntax → set the value directly.
+      fireEvent.change(screen.getByLabelText(/PMD Content/i), {
+        target: { value: '{"conditions":["I10"],"medications":["Amoxicillin"],"allergies":["Penicillin"]}' },
+      });
+      await user.click(screen.getByRole('button', { name: /^preview$/i }));
+
+      // preview step renders the extracted items
+      await waitFor(() => expect(screen.getByText('I10')).not.toBeNull());
+      expect(screen.getByText('Amoxicillin')).not.toBeNull();
+      expect(screen.getByText('Penicillin')).not.toBeNull();
+      // no request yet — preview is client-side only
+      expect(f.calls.length).toBe(0);
+
+      await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.endsWith('/dental/pmd/import'))).toBe(true),
+      );
+      const post = f.calls.find(c => c.url.endsWith('/dental/pmd/import'))!;
+      expect(post.body.patientId).toBe('p-1');
+      expect(post.body.sourceFacility).toBe('City Dental Clinic');
+      expect(post.body.sourceDescription).toBe('Open Dental v21.1');
+      expect(post.body.content).toContain('"conditions"');
+
+      await waitFor(() => expect(screen.getByText(/imported successfully/i)).not.toBeNull());
+      expect((onImported as any).mock.calls.length).toBe(1);
+    } finally {
+      f.restore();
+    }
   });
 
-  test('missing content produces error', () => {
-    const errors = validateImportForm({ ...valid, content: '' });
-    expect(errors).toContain('PMD content is required');
-  });
+  test('a failed import returns to the form with an error and does not call onImported', async () => {
+    const user = userEvent.setup();
+    const f = installFetch(false);
+    try {
+      const { onImported } = renderImport();
+      await user.type(screen.getByLabelText(/Source Facility/i), 'City Dental Clinic');
+      await user.type(screen.getByLabelText(/Source Software/i), 'Dentrix G7');
+      fireEvent.change(screen.getByLabelText(/PMD Content/i), {
+        target: { value: '{"conditions":["K02"]}' },
+      });
+      await user.click(screen.getByRole('button', { name: /^preview$/i }));
+      await user.click(await screen.findByRole('button', { name: /confirm import/i }));
 
-  test('invalid JSON content produces error', () => {
-    const errors = validateImportForm({ ...valid, content: 'not-valid-json' });
-    expect(errors).toContain('PMD content must be valid JSON');
-  });
-
-  test('sourceReference is optional', () => {
-    const errors = validateImportForm({ ...valid, sourceReference: '' });
-    expect(errors).toHaveLength(0);
-  });
-});
-
-describe('PMDImport — Safety Floor preview', () => {
-  test('extracts conditions from content', () => {
-    const preview = extractSafetyFloorPreview('{"conditions":["I10","K02"],"medications":[]}');
-    expect(preview.conditions).toEqual(['I10', 'K02']);
-  });
-
-  test('extracts medications from content', () => {
-    const preview = extractSafetyFloorPreview('{"medications":["Amoxicillin","Metformin"]}');
-    expect(preview.medications).toEqual(['Amoxicillin', 'Metformin']);
-  });
-
-  test('extracts allergies from content', () => {
-    const preview = extractSafetyFloorPreview('{"allergies":["Penicillin"]}');
-    expect(preview.allergies).toEqual(['Penicillin']);
-  });
-
-  test('returns empty arrays for invalid JSON', () => {
-    const preview = extractSafetyFloorPreview('bad-json');
-    expect(preview.conditions).toHaveLength(0);
-    expect(preview.medications).toHaveLength(0);
-    expect(preview.allergies).toHaveLength(0);
-  });
-
-  test('returns empty arrays for missing fields', () => {
-    const preview = extractSafetyFloorPreview('{}');
-    expect(preview.conditions).toHaveLength(0);
-    expect(preview.medications).toHaveLength(0);
+      await waitFor(() => expect(screen.getByText('Failed to import PMD')).not.toBeNull());
+      expect((onImported as any).mock.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
   });
 });

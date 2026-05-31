@@ -1,104 +1,78 @@
 /**
- * PMDViewer component tests — pure logic helpers
+ * PMDViewer component tests
+ *
+ * Renders the SHIPPED PMDViewer (a presentational component) and asserts what it
+ * actually shows for each PMD status and content shape. The previous version
+ * asserted re-declared isPMDSigned / parsePMDContent / getStatusBadgeLabel
+ * helpers that the component does not export — it never rendered anything.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, afterEach } from 'bun:test';
+import { render, screen, cleanup } from '@testing-library/react';
+import React from 'react';
+import { PMDViewer } from './pmd-viewer';
+import type { PMDDocument } from '../types';
 
-type PMDStatus = 'generated' | 'signed' | 'superseded';
-
-interface PMDDocument {
-  id: string;
-  visitId: string;
-  patientId: string;
-  status: PMDStatus;
-  content: string;
-  signature?: string | null;
-  signedAt?: string | null;
-  supersedesId?: string | null;
-  checksum: string;
-  createdAt: string;
-}
-
-function isPMDSigned(pmd: PMDDocument): boolean {
-  return pmd.status === 'signed' && !!pmd.signature;
-}
-
-function isPMDSuperseded(pmd: PMDDocument): boolean {
-  return pmd.status === 'superseded';
-}
-
-function parsePMDContent(pmd: PMDDocument): Record<string, unknown> {
-  try {
-    return JSON.parse(pmd.content);
-  } catch {
-    return {};
-  }
-}
-
-function getStatusBadgeLabel(status: PMDStatus): string {
-  switch (status) {
-    case 'generated': return 'Generated';
-    case 'signed': return 'Signed';
-    case 'superseded': return 'Superseded';
-  }
-}
-
-describe('PMDViewer — status helpers', () => {
-  const basePMD: PMDDocument = {
+function makePMD(overrides: Partial<PMDDocument> = {}): PMDDocument {
+  return {
     id: 'pmd-1',
     visitId: 'v-1',
     patientId: 'p-1',
     status: 'generated',
     content: '{"treatments":[],"prescriptions":[]}',
-    checksum: 'abc',
-    createdAt: '2025-01-01T00:00:00Z',
+    checksum: 'abc123def456',
+    createdAt: '2026-01-10T00:00:00.000Z',
+    ...overrides,
   };
+}
 
-  test('unsigned PMD is not signed', () => {
-    expect(isPMDSigned(basePMD)).toBe(false);
+afterEach(cleanup);
+
+describe('PMDViewer — shipped component', () => {
+  test('renders treatments and prescriptions parsed from content', () => {
+    render(React.createElement(PMDViewer, {
+      pmd: makePMD({
+        content: JSON.stringify({
+          treatments: [{ cdtCode: 'D2391', description: 'Composite Filling', toothNumber: 16, priceCents: 250000 }],
+          prescriptions: [{ drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', rxNormCode: '723' }],
+        }),
+      }),
+    }));
+
+    expect(screen.getByTestId('pmd-viewer')).not.toBeNull();
+    expect(screen.getByText('D2391')).not.toBeNull();
+    expect(screen.getByText('Composite Filling')).not.toBeNull();
+    expect(screen.getByText('Amoxicillin')).not.toBeNull();
+    expect(screen.getByText(/500mg · TID/)).not.toBeNull();
+    expect(screen.getByText(/SHA: abc123def456/)).not.toBeNull();
+    expect(screen.getByText('Generated')).not.toBeNull();
   });
 
-  test('signed PMD with signature is signed', () => {
-    const signed = { ...basePMD, status: 'signed' as PMDStatus, signature: 'base64data==' };
-    expect(isPMDSigned(signed)).toBe(true);
+  test('a signed PMD shows the Signed badge + signature banner', () => {
+    render(React.createElement(PMDViewer, {
+      pmd: makePMD({ status: 'signed', signature: 'base64sig==', signedAt: '2026-01-11T09:30:00.000Z' }),
+    }));
+    expect(screen.getByText('Signed')).not.toBeNull();
+    expect(screen.getByText(/Digitally signed on/)).not.toBeNull();
   });
 
-  test('superseded PMD is superseded', () => {
-    const sup = { ...basePMD, status: 'superseded' as PMDStatus };
-    expect(isPMDSuperseded(sup)).toBe(true);
+  test('a superseded PMD shows the supersession notice', () => {
+    render(React.createElement(PMDViewer, { pmd: makePMD({ status: 'superseded' }) }));
+    expect(screen.getByText('Superseded')).not.toBeNull();
+    expect(screen.getByText(/superseded by a newer version/i)).not.toBeNull();
   });
 
-  test('generated PMD is not superseded', () => {
-    expect(isPMDSuperseded(basePMD)).toBe(false);
-  });
-});
-
-describe('PMDViewer — content parsing', () => {
-  const basePMD: PMDDocument = {
-    id: 'pmd-1',
-    visitId: 'v-1',
-    patientId: 'p-1',
-    status: 'generated',
-    content: '{"treatments":[{"cdtCode":"D2391"}],"prescriptions":[]}',
-    checksum: 'abc',
-    createdAt: '2025-01-01T00:00:00Z',
-  };
-
-  test('parses valid JSON content', () => {
-    const data = parsePMDContent(basePMD);
-    expect(Array.isArray((data as any).treatments)).toBe(true);
-    expect((data as any).treatments).toHaveLength(1);
+  test('empty clinical content shows the no-data message', () => {
+    render(React.createElement(PMDViewer, {
+      pmd: makePMD({ content: '{"treatments":[],"prescriptions":[]}' }),
+    }));
+    expect(screen.getByText('No clinical data recorded.')).not.toBeNull();
   });
 
-  test('returns empty object for invalid JSON', () => {
-    const bad = { ...basePMD, content: 'not-json' };
-    const data = parsePMDContent(bad);
-    expect(data).toEqual({});
+  test('invalid JSON content renders without crashing (treated as empty)', () => {
+    render(React.createElement(PMDViewer, { pmd: makePMD({ content: 'not-json' }) }));
+    // Component must still render its shell + checksum rather than throw.
+    expect(screen.getByTestId('pmd-viewer')).not.toBeNull();
+    expect(screen.getByText(/SHA: abc123def456/)).not.toBeNull();
   });
-});
-
-describe('PMDViewer — status labels', () => {
-  test('generated label', () => expect(getStatusBadgeLabel('generated')).toBe('Generated'));
-  test('signed label', () => expect(getStatusBadgeLabel('signed')).toBe('Signed'));
-  test('superseded label', () => expect(getStatusBadgeLabel('superseded')).toBe('Superseded'));
 });
