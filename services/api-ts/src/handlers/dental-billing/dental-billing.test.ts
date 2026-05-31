@@ -1416,6 +1416,128 @@ describe('voidDentalInvoice role gate', () => {
   });
 });
 
+// ── Money-authorization role gates (V-BIL-003 / owner-only) — P1-2/3/4 ────────
+// These mutate money; the gates exist in the handlers but lacked deny tests.
+// Each deny request is valid enough to reach assertBranchRole so the 403 is the
+// role gate (not a 400/404). associate user seeded inline (idempotent).
+
+describe('billing money-authorization role gates', () => {
+  const ASSOC_USER = { id: '00000000-0000-0000-0000-000000000098', email: 'assoc@clinic.com' };
+  const ASSOC_MEMBER_ID = '7c000000-0000-4000-8000-000000000a98';
+
+  async function seedAssociate() {
+    const { dentalMemberships: dm } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dm).values({ id: ASSOC_MEMBER_ID, branchId: BRANCH_ID, personId: ASSOC_USER.id, displayName: 'Associate', role: 'dentist_associate', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  }
+
+  // createDentalInvoice — allow [dentist_owner, dentist_associate], deny staff_full (V-BIL-003)
+  test('createDentalInvoice: staff_full → 403', async () => {
+    const { visit } = await seedVisitAndTreatment();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: visit.id, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('createDentalInvoice: dentist_associate → not 403 (allowed role)', async () => {
+    await seedAssociate();
+    const { visit } = await seedVisitAndTreatment();
+    const app = buildTestApp(ASSOC_USER);
+    const res = await app.request('/dental/billing/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: visit.id, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+
+  // createDentalPaymentPlan — allow [owner, associate], deny staff_full (V-BIL-003)
+  test('createDentalPaymentPlan: staff_full → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 3, frequency: 'monthly', startDate: new Date().toISOString() }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('createDentalPaymentPlan: dentist_owner → not 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 3, frequency: 'monthly', startDate: new Date().toISOString() }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+
+  // applyDentalDiscount — owner-only: staff_full + associate → 403
+  test('applyDentalDiscount: staff_full → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('applyDentalDiscount: dentist_associate → 403 (owner-only)', async () => {
+    await seedAssociate();
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(ASSOC_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('applyDentalDiscount: dentist_owner → not 403', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Senior citizen discount', percentageRate: 20 }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+
+  // voidDentalPayment — owner-only: staff_full → 403
+  test('voidDentalPayment: staff_full → 403', async () => {
+    const { invoice } = await seedInvoice();
+    const { payment } = await seedPayment(invoice.id);
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments/${payment.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voidReason: 'Entry error correction' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('voidDentalPayment: dentist_owner → not 403', async () => {
+    const { invoice } = await seedInvoice();
+    const { payment } = await seedPayment(invoice.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments/${payment.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voidReason: 'Entry error correction' }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
 // ── GAP-009: Discount reason + discountedBy persistence (AC-001..AC-003) ──────
 
 describe('GAP-009: discount reason and actor persistence', () => {
