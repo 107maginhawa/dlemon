@@ -23,6 +23,7 @@ import { registerEmailJobs } from '@/handlers/email/jobs';
 import { registerNotifsJobs } from '@/handlers/notifs/jobs';
 import { registerAuditJobs } from '@/handlers/audit/jobs';
 import { registerBookingJobs } from '@/handlers/booking/jobs';
+import { registerRetentionJobs } from '@/handlers/retention/jobs';
 import { registerAuditDomainEventConsumer } from '@/handlers/dental-audit/consumers/domain-events.consumer';
 
 // Routes
@@ -570,7 +571,8 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
   registerAuditJobs(jobs);
   registerAuditDomainEventConsumer(jobs, database);
   registerBookingJobs(jobs, app.notifs);
-  
+  registerRetentionJobs(jobs);
+
   logger.debug('Starting background job scheduler...');
   await jobs.start();
   logger.debug('Background job scheduler started successfully');
