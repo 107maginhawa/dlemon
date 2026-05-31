@@ -74,8 +74,19 @@
 | `ConsentForm` | No — keep state | Mark as `[ERASED]`; consent record anonymized | Downstream consent checks may fail — requires care | Yes |
 | `Appointment` | Yes (after 1 year) | Hard delete | None | Audit event before delete |
 
-**Erasure Workflow:** [WFG-006 — not yet implemented]
-> Implementation required: orchestrated erasure across Patient, Visit, Treatment, Prescription, ImagingStudy, Invoice. Requires cross-module coordination. Tracked as G-012 (PHI encryption gap) and WFG-006 (erasure workflow).
+**Erasure Workflow:** [WFG-006 — backend implemented (V-DG-002), Person+Patient targets]
+> Implemented in `services/api-ts/src/handlers/erasure/`: a two-step audited
+> request→approve/reject workflow (`dental_erasure_request`) over an anonymize
+> engine. Hard invariants: anonymize-not-delete, audit trail never touched
+> (append-only), legal-hold blocks erasure, dry-run by default. Targets wired so
+> far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
+> kept) and **Patient** (emergency contact / provider / pharmacy / history /
+> comms-prefs nulled), via boundary-compliant `*-erasure.facade.ts`.
+> Still to add (per the §3 table — one facade+target per slice): Visit/Treatment,
+> Prescription, ImagingStudy (S3 object delete), Invoice, ConsentForm patient-
+> reference anonymization; an HTTP endpoint surface; and a real LegalHold store
+> (the hold check is currently a caller-supplied predicate). Related: G-012 (PHI
+> encryption gap).
 
 ---
 

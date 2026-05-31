@@ -1,7 +1,7 @@
 {
   "version": 5,
-  "timestamp": "2026-05-31T15:26:51.587Z",
-  "git_sha": "f1b38d864f5dffdd22260b035e816f261383886f",
+  "timestamp": "2026-05-31T22:04:15.350Z",
+  "git_sha": "73aa9fc5aeeac9093cef465b63c6f19c26befc59",
   "file_count": 200,
   "frameworks": [
     "generic",
@@ -11,13 +11,13 @@
   "phase_timings": {
     "structural": 9,
     "module-map": 1,
-    "react": 2076,
+    "react": 2204,
     "hono": 39,
-    "tanstack": 76,
-    "terminology": 1,
-    "data-model": 1,
-    "state-machines": 43,
-    "behavior": 90,
+    "tanstack": 77,
+    "terminology": 0,
+    "data-model": 2,
+    "state-machines": 41,
+    "behavior": 92,
     "data-flow": 78,
     "api-usage": 0,
     "spec-trace": 0
