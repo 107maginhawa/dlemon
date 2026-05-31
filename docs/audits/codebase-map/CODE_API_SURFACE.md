@@ -16,7 +16,7 @@
 | `PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code` | — | ? | 1 | ⚠️ | LOW |
 | `POST /dental/imaging/images/:imageId/ceph/landmarks` | — | ? | 1 | ⚠️ | LOW |
 | `DELETE /dental/imaging/images/:imageId/ceph/landmarks/:code` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/imaging/images/:imageId/ceph/analysis` | — | ? | 1 | ⚠️ | LOW |
+| `GET /dental/imaging/images/:imageId/ceph/analysis:qs` | — | ? | 1 | ⚠️ | LOW |
 | `PATCH /dental/imaging/images/:imageId/calibration` | — | ? | 1 | ⚠️ | LOW |
 | `GET /dental/imaging/images/:imageId/measurements` | — | ? | 1 | ⚠️ | LOW |
 | `POST /dental/imaging/images/:imageId/measurements` | — | ? | 1 | ⚠️ | LOW |

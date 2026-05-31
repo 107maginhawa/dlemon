@@ -48,10 +48,11 @@
 | `CephLandmarkLayer` | features | component | 8 | — | MEDIUM |
 | `CephLandmarkPalette` | features | component | 3 | — | MEDIUM |
 | `CephLayerPanel` | features | component | 2 | — | MEDIUM |
+| `CephLoupe` | features | component | 4 | — | MEDIUM |
 | `CephMeasurementsPanel` | features | component | 2 | — | MEDIUM |
 | `CephReportView` | features | component | 3 | — | MEDIUM |
 | `CephTracingOverlay` | features | component | 5 | — | MEDIUM |
-| `CephWorkspacePanel` | features | component | 5 | ✅ | MEDIUM |
+| `CephWorkspacePanel` | features | component | 7 | ✅ | MEDIUM |
 | `ComparisonView` | features | component | 3 | — | MEDIUM |
 | `FindingsSidebar` | features | component | 4 | ✅ paired | MEDIUM |
 | `ImageUpload` | features | component | 4 | — | MEDIUM |

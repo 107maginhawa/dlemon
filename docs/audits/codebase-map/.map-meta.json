@@ -1,8 +1,8 @@
 {
   "version": 5,
-  "timestamp": "2026-05-30T09:33:19.510Z",
-  "git_sha": "2e07553ea754bfc0459517a7e60886d43eba5632",
-  "file_count": 194,
+  "timestamp": "2026-05-31T01:14:27.934Z",
+  "git_sha": "d8745b9712f944e857e6cd2cdb646c1f2e4211e9",
+  "file_count": 198,
   "frameworks": [
     "generic",
     "react"
@@ -10,28 +10,34 @@
   "mode": "full",
   "phase_timings": {
     "structural": 10,
-    "module-map": 1,
-    "react": 1785,
-    "hono": 42,
-    "tanstack": 81,
+    "module-map": 2,
+    "react": 2142,
+    "hono": 36,
+    "tanstack": 70,
     "terminology": 1,
     "data-model": 2,
-    "state-machines": 45,
-    "behavior": 106,
-    "data-flow": 89,
-    "api-usage": 1,
+    "state-machines": 40,
+    "behavior": 86,
+    "data-flow": 74,
+    "api-usage": 0,
     "spec-trace": 0
   },
   "artifact_hashes": {
-    "CODE_MODULE_MAP": "1b01c0ee0bbb8fe0d63bd53ecf7a37d119d09fc060a4c66b8c6adfb07130db9d",
-    "CODE_COMPONENT_REGISTRY": "21987fc20dbf675bcb19e8c6380136ff653b218fcd110af13fda70957033ecf5",
+    "CODE_MODULE_MAP": "a6f36bf8c37dbdbceab6205ae2717c72bb572c11b117c11504c563ad844b3c33",
+    "CODE_COMPONENT_REGISTRY": "9bc52ac565b30ede1faedcc81f4a19ff31461ff687bd93eb517f480546644ce4",
     "CODE_ROUTE_MAP": "05648c579083e25286ff6a0a3ef4f06584b938e4f12eab942ee2b9fdad42a56d",
-    "CODE_DATA_FLOW": "5fff78d5e13784a83f5964c87ce417e267aa507f6cdc327f91c572aede831bcb",
-    "CODE_API_SURFACE": "dfe5b59db6c697f8adb10fde1b00aa4cddfc7c1078d7dd0c52f8fc8d59ce99ed",
+    "CODE_DATA_FLOW": "2910cb02d2a6310f4ee248f25996d5f59c221d0c9d38d65fa5a7b90b057ce1aa",
+    "CODE_API_SURFACE": "9a53525705d01a8f52f966c877eea92aae843dea6b4926430e625aff09566aa7",
     "CODE_IMPORT_GRAPH": "84e3e247903d02a059b738eb770d009a7c684a48fa93d5e04fa0388e0efabe68",
     "CODE_TERMINOLOGY_MAP": "7153a6e6a42370d4f72ef4b2bcf5b8ede63dcc03c6ac1b890b80564cf46c08a6",
     "CODE_STATE_MACHINES": "76b2f569ace3639fa678b2cb2c6f8e83fdbe72e7bcc9914908b00855b8705d18",
     "CODE_DATA_MODEL": "8cd6f5f2341a35549d4335bd255677ad0026f496baca89de9e47f12b0ae4c85d",
     "CODE_SPEC_TRACE": "3b8678699c75b4617ea75f77a05ce7489b484c09a6e0c8755a987368cf82f8ee"
+  },
+  "provenance": {
+    "producer": "engine",
+    "engine_version": "0.1.0",
+    "fields_unavailable": [],
+    "spec_trace_optin": false
   }
 }

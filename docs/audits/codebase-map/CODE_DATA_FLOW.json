@@ -686,6 +686,22 @@
       "store_writes": [],
       "api_calls": []
     },
+    "CephLoupe": {
+      "props_received_from": [
+        {
+          "parent": "ImagingWorkspace",
+          "props": [
+            "pointer",
+            "selectedCode",
+            "sourceCanvas"
+          ]
+        }
+      ],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
     "CephMeasurementsPanel": {
       "props_received_from": [
         {
@@ -741,7 +757,9 @@
             "isOpen",
             "onClose",
             "onExportPng",
-            "onLayerChange"
+            "onLayerChange",
+            "onSelectCode",
+            "selectedCode"
           ]
         }
       ],
@@ -751,7 +769,8 @@
           "events": [
             "onClose",
             "onExportPng",
-            "onLayerChange"
+            "onLayerChange",
+            "onSelectCode"
           ]
         }
       ],
@@ -927,7 +946,7 @@
       "api_calls": [
         {
           "method": "GET",
-          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs",
           "trigger": "queryFn"
         }
       ]

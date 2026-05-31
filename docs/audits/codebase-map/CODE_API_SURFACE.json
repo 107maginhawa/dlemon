@@ -301,9 +301,9 @@
         "last_modified_days_ago": 0
       }
     },
-    "GET /dental/imaging/images/:imageId/ceph/analysis": {
+    "GET /dental/imaging/images/:imageId/ceph/analysis:qs": {
       "method": "GET",
-      "path": "/dental/imaging/images/:imageId/ceph/analysis",
+      "path": "/dental/imaging/images/:imageId/ceph/analysis:qs",
       "handler_file": "",
       "handler_function": "",
       "auth_required": null,

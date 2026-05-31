@@ -48,6 +48,7 @@
 | `CephLandmarkLayer` | ImagingWorkspace | ImagingWorkspace | — | — | — |
 | `CephLandmarkPalette` | CephWorkspacePanel | CephWorkspacePanel | — | — | — |
 | `CephLayerPanel` | CephWorkspacePanel | CephWorkspacePanel | — | — | — |
+| `CephLoupe` | ImagingWorkspace | — | — | — | — |
 | `CephMeasurementsPanel` | CephWorkspacePanel | — | — | — | — |
 | `CephReportView` | CephReportPage | — | — | — | — |
 | `CephTracingOverlay` | ImagingWorkspace | — | — | — | — |
@@ -58,7 +59,7 @@
 | `ImagingWorkspace` | ComparisonView, WorkspaceImagingOverlay | — | — | — | PATCH /dental/imaging/images/:imageId/calibration |
 | `MeasurementToolbar` | ImagingWorkspace | ImagingWorkspace | — | — | — |
 | `PatientImageList` | WorkspaceImagingOverlay | WorkspaceImagingOverlay | — | — | — |
-| `useCephAnalysis` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/analysis |
+| `useCephAnalysis` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/analysis:qs |
 | `useCephLandmarks` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/landmarks, PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code, POST /dental/imaging/images/:imageId/ceph/landmarks, DELETE /dental/imaging/images/:imageId/ceph/landmarks/:code |
 | `useImagingFindings` | — | — | — | — | GET /dental/imaging/images/:imageId/findings, POST /dental/imaging/images/:imageId/findings, PATCH /dental/imaging/findings/:findingId, DELETE /dental/imaging/findings/:findingId |
 | `useImagingStudies` | — | — | — | — | GET /dental/patients/:patientId/images |

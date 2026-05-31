@@ -1745,6 +1745,46 @@
       },
       "confidence": "MEDIUM"
     },
+    "CephLoupe": {
+      "name": "CephLoupe",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CephLoupe.tsx",
+      "module": "features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "sourceCanvas",
+          "type": "HTMLCanvasElement | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pointer",
+          "type": "{ x: number; y: number } | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "selectedCode",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "size",
+          "type": "number",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
     "CephMeasurementsPanel": {
       "name": "CephMeasurementsPanel",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephMeasurementsPanel.tsx",
@@ -1804,7 +1844,13 @@
       "api_calls": [],
       "routes_used_in": [],
       "loading_state_hygiene": null,
-      "interaction_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
       "confidence": "MEDIUM"
     },
     "CephTracingOverlay": {
@@ -1888,6 +1934,18 @@
           "type": "(key: keyof LayerState, value: boolean) => void",
           "required": false,
           "default": null
+        },
+        {
+          "name": "selectedCode",
+          "type": "CephLandmarkCode | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSelectCode",
+          "type": "(code: CephLandmarkCode | null) => void",
+          "required": false,
+          "default": null
         }
       ],
       "events_out": [
@@ -1902,6 +1960,10 @@
         {
           "name": "onLayerChange",
           "payload_type": "(key: keyof LayerState, value: boolean) => void"
+        },
+        {
+          "name": "onSelectCode",
+          "payload_type": "(code: CephLandmarkCode | null) => void"
         }
       ],
       "slots": [],
@@ -1929,7 +1991,7 @@
         },
         {
           "method": "GET",
-          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs"
         }
       ],
       "routes_used_in": [],
@@ -2222,7 +2284,7 @@
         },
         {
           "method": "GET",
-          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs"
         },
         {
           "method": "GET",
@@ -2373,7 +2435,7 @@
       "api_calls": [
         {
           "method": "GET",
-          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis"
+          "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs"
         }
       ],
       "routes_used_in": [],
