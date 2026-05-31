@@ -6,7 +6,7 @@
 | `components` | react | 9 | MEDIUM |
 | `constants` | generic | 3 | LOW |
 | `features` | react | 151 | MEDIUM |
-| `hooks` | generic | 1 | LOW |
+| `hooks` | generic | 2 | LOW |
 | `lib` | generic | 8 | LOW |
 | `routes` | react | 21 | MEDIUM |
 | `stores` | generic | 1 | LOW |

@@ -9,9 +9,11 @@
 | `EmptyState` | TreatmentPlanTab | — | — | — | — |
 | `ImageCropperDialog` | PersonalInfoForm | PersonalInfoForm | — | — | — |
 | `useOneSignal` | — | — | — | — | — |
+| `usePatientProfile` | — | — | — | — | — |
 | `RootComponent` | — | — | — | — | — |
 | `DashboardLayout` | — | — | — | — | — |
 | `WorkspaceLayout` | — | — | — | — | — |
+| `DentalOnboardingPage` | — | — | — | — | — |
 | `CephReportPage` | — | — | — | — | — |
 | `HomePage` | — | — | — | — | — |
 | `OnboardingPage` | — | — | — | — | — |
@@ -19,7 +21,6 @@
 | `BillingPage` | — | — | — | — | — |
 | `CalendarPage` | — | — | — | — | — |
 | `DashboardPage` | — | — | — | — | — |
-| `DentalOnboardingPage` | — | — | — | — | — |
 | `PatientsPage` | — | — | — | — | POST /dental/patients |
 | `ReportsPage` | — | — | — | — | — |
 | `SettingsPage` | — | — | — | — | — |
@@ -85,7 +86,6 @@
 | `useBulkArchive` | — | — | — | — | — |
 | `useExportPatients` | — | — | — | — | — |
 | `usePatientBilling` | — | — | — | — | — |
-| `usePatientProfile` | — | — | — | — | — |
 | `usePatients` | — | — | — | — | — |
 | `AddressForm` | OnboardingPage | OnboardingPage | — | — | — |
 | `ContactInfoForm` | — | — | — | — | — |

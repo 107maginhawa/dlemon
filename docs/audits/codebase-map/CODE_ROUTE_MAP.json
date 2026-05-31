@@ -20,6 +20,17 @@
       "params": [],
       "module": "routes"
     },
+    "/dental-onboarding": {
+      "method": "*",
+      "page_component": "DentalOnboardingPage",
+      "layout": null,
+      "middleware": [
+        "requireAuth"
+      ],
+      "auth_required": true,
+      "params": [],
+      "module": "routes"
+    },
     "/imaging-ceph-report/$imageId": {
       "method": "*",
       "page_component": "CephReportPage",
@@ -90,15 +101,6 @@
     "/_dashboard/dashboard": {
       "method": "*",
       "page_component": "DashboardPage",
-      "layout": "DashboardLayout",
-      "middleware": [],
-      "auth_required": null,
-      "params": [],
-      "module": "routes"
-    },
-    "/_dashboard/dental-onboarding": {
-      "method": "*",
-      "page_component": "DentalOnboardingPage",
       "layout": "DashboardLayout",
       "middleware": [],
       "auth_required": null,

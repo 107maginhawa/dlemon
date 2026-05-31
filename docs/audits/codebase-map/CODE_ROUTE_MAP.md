@@ -7,6 +7,7 @@ Strategy: `file-based`
 |---|---|---|---|---|---|
 | `/_dashboard` | * | DashboardLayout | ? | — | routes |
 | `/_workspace` | * | WorkspaceLayout | ? | — | routes |
+| `/dental-onboarding` | * | DentalOnboardingPage | true | — | routes |
 | `/imaging-ceph-report/$imageId` | * | CephReportPage | ? | imageId | routes |
 | `/` | * | HomePage | ? | — | routes |
 | `/onboarding` | * | OnboardingPage | true | — | routes |
@@ -14,7 +15,6 @@ Strategy: `file-based`
 | `/_dashboard/billing` | * | BillingPage | ? | — | routes |
 | `/_dashboard/calendar` | * | CalendarPage | ? | — | routes |
 | `/_dashboard/dashboard` | * | DashboardPage | ? | — | routes |
-| `/_dashboard/dental-onboarding` | * | DentalOnboardingPage | ? | — | routes |
 | `/_dashboard/patients` | * | PatientsPage | ? | — | routes |
 | `/_dashboard/reports` | * | ReportsPage | ? | — | routes |
 | `/_dashboard/settings` | * | SettingsPage | ? | — | routes |

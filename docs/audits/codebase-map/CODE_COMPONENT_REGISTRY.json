@@ -350,6 +350,21 @@
       "interaction_hygiene": null,
       "confidence": "MEDIUM"
     },
+    "usePatientProfile": {
+      "name": "usePatientProfile",
+      "file_path": "apps/dentalemon/src/hooks/use-patient-profile.ts",
+      "module": "hooks",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
     "RootComponent": {
       "name": "RootComponent",
       "file_path": "apps/dentalemon/src/routes/__root.tsx",
@@ -403,6 +418,29 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "confidence": "MEDIUM"
+    },
+    "DentalOnboardingPage": {
+      "name": "DentalOnboardingPage",
+      "file_path": "apps/dentalemon/src/routes/dental-onboarding.tsx",
+      "module": "routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/dental-onboarding"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
       "confidence": "MEDIUM"
     },
     "CephReportPage": {
@@ -573,29 +611,6 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
-      "confidence": "MEDIUM"
-    },
-    "DentalOnboardingPage": {
-      "name": "DentalOnboardingPage",
-      "file_path": "apps/dentalemon/src/routes/_dashboard/dental-onboarding.tsx",
-      "module": "routes",
-      "type": "component",
-      "props_in": [],
-      "events_out": [],
-      "slots": [],
-      "state_access": [],
-      "api_calls": [],
-      "routes_used_in": [
-        "/_dashboard/dental-onboarding"
-      ],
-      "loading_state_hygiene": null,
-      "interaction_hygiene": {
-        "has_handler": true,
-        "handler_nonempty": true,
-        "reaches_api_or_nav": true,
-        "violation": false,
-        "confidence": "MEDIUM"
-      },
       "confidence": "MEDIUM"
     },
     "PatientsPage": {
@@ -3405,21 +3420,6 @@
     "usePatientBilling": {
       "name": "usePatientBilling",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-billing.ts",
-      "module": "features",
-      "type": "hook",
-      "props_in": [],
-      "events_out": [],
-      "slots": [],
-      "state_access": [],
-      "api_calls": [],
-      "routes_used_in": [],
-      "loading_state_hygiene": null,
-      "interaction_hygiene": null,
-      "confidence": "MEDIUM"
-    },
-    "usePatientProfile": {
-      "name": "usePatientProfile",
-      "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-profile.ts",
       "module": "features",
       "type": "hook",
       "props_in": [],

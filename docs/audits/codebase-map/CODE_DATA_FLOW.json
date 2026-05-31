@@ -99,6 +99,13 @@
       "store_writes": [],
       "api_calls": []
     },
+    "usePatientProfile": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
     "RootComponent": {
       "props_received_from": [],
       "events_emitted_to": [],
@@ -114,6 +121,13 @@
       "api_calls": []
     },
     "WorkspaceLayout": {
+      "props_received_from": [],
+      "events_emitted_to": [],
+      "store_reads": [],
+      "store_writes": [],
+      "api_calls": []
+    },
+    "DentalOnboardingPage": {
       "props_received_from": [],
       "events_emitted_to": [],
       "store_reads": [],
@@ -163,13 +177,6 @@
       "api_calls": []
     },
     "DashboardPage": {
-      "props_received_from": [],
-      "events_emitted_to": [],
-      "store_reads": [],
-      "store_writes": [],
-      "api_calls": []
-    },
-    "DentalOnboardingPage": {
       "props_received_from": [],
       "events_emitted_to": [],
       "store_reads": [],
@@ -1417,13 +1424,6 @@
       "api_calls": []
     },
     "usePatientBilling": {
-      "props_received_from": [],
-      "events_emitted_to": [],
-      "store_reads": [],
-      "store_writes": [],
-      "api_calls": []
-    },
-    "usePatientProfile": {
       "props_received_from": [],
       "events_emitted_to": [],
       "store_reads": [],

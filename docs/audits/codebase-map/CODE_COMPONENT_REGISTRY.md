@@ -9,9 +9,11 @@
 | `EmptyState` | components | component | 4 | — | MEDIUM |
 | `ImageCropperDialog` | components | component | 6 | — | MEDIUM |
 | `useOneSignal` | hooks | hook | 0 | — | MEDIUM |
+| `usePatientProfile` | hooks | hook | 0 | — | MEDIUM |
 | `RootComponent` | routes | component | 0 | — | MEDIUM |
 | `DashboardLayout` | routes | component | 0 | — | MEDIUM |
 | `WorkspaceLayout` | routes | component | 0 | — | MEDIUM |
+| `DentalOnboardingPage` | routes | component | 0 | — | MEDIUM |
 | `CephReportPage` | routes | component | 0 | ✅ paired | MEDIUM |
 | `HomePage` | routes | component | 0 | — | MEDIUM |
 | `OnboardingPage` | routes | component | 0 | ✅ paired | MEDIUM |
@@ -19,7 +21,6 @@
 | `BillingPage` | routes | component | 0 | — | MEDIUM |
 | `CalendarPage` | routes | component | 0 | ✅ paired | MEDIUM |
 | `DashboardPage` | routes | component | 0 | — | MEDIUM |
-| `DentalOnboardingPage` | routes | component | 0 | — | MEDIUM |
 | `PatientsPage` | routes | component | 0 | ✅ paired | MEDIUM |
 | `ReportsPage` | routes | component | 0 | — | MEDIUM |
 | `SettingsPage` | routes | component | 0 | — | MEDIUM |
@@ -85,7 +86,6 @@
 | `useBulkArchive` | features | hook | 0 | — | MEDIUM |
 | `useExportPatients` | features | hook | 0 | — | MEDIUM |
 | `usePatientBilling` | features | hook | 0 | — | MEDIUM |
-| `usePatientProfile` | features | hook | 0 | — | MEDIUM |
 | `usePatients` | features | hook | 0 | — | MEDIUM |
 | `AddressForm` | features | component | 8 | — | MEDIUM |
 | `ContactInfoForm` | features | component | 10 | — | MEDIUM |

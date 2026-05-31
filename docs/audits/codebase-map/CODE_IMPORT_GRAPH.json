@@ -2,49 +2,20 @@
   "version": 5,
   "edges": [
     {
-      "from_module": "features",
-      "to_module": "lib",
-      "import_count": 1,
-      "files": [
-        "apps/dentalemon/src/features/imaging/components/imaging-workspace.tsx"
-      ],
-      "confidence": "HIGH"
-    },
-    {
-      "from_module": "lib",
-      "to_module": "features",
-      "import_count": 1,
-      "files": [
-        "apps/dentalemon/src/lib/ceph-export.ts"
-      ],
-      "confidence": "HIGH"
-    },
-    {
       "from_module": "routes",
       "to_module": "features",
-      "import_count": 18,
+      "import_count": 17,
       "files": [
         "apps/dentalemon/src/routes/_dashboard/billing.tsx",
         "apps/dentalemon/src/routes/_dashboard/calendar.tsx",
         "apps/dentalemon/src/routes/_dashboard/dashboard.tsx",
-        "apps/dentalemon/src/routes/_dashboard/dental-onboarding.tsx",
         "apps/dentalemon/src/routes/_dashboard/reports.tsx",
         "apps/dentalemon/src/routes/_dashboard/settings.tsx"
       ],
       "confidence": "HIGH"
     }
   ],
-  "circular_deps": [
-    [
-      "lib",
-      "features"
-    ]
-  ],
-  "high_fan_in": [
-    {
-      "module": "features",
-      "importers": 2
-    }
-  ],
+  "circular_deps": [],
+  "high_fan_in": [],
   "high_fan_out": []
 }
