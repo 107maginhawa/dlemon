@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 import { DentalChartThumbnail } from './dental-chart-thumbnail';
 
 export interface PatientCardData {

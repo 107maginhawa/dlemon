@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
-import { usePatientProfile } from '../hooks/use-patient-profile';
+import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { FollowUpNotes } from './follow-up-notes';

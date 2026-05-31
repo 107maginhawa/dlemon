@@ -6,8 +6,11 @@
  */
 
 import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 
-export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';
+// ToothState now lives in the neutral lib layer (shared with the patients
+// feature). Re-exported here so existing workspace consumers keep their import.
+export type { ToothState };
 export type DentitionType = 'permanent' | 'primary';
 
 /**

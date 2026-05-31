@@ -28,7 +28,7 @@ import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-b
 import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
-import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile';
+import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';

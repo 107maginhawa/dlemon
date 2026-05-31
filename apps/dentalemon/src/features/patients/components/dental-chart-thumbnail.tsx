@@ -5,7 +5,7 @@
  * 2 rows × 16 columns (upper jaw + lower jaw) using FDI notation.
  */
 
-import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 
 // Upper jaw: 11–18 (patient's right) + 21–28 (patient's left)
 const UPPER_JAW = [11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28];

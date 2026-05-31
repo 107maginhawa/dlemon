@@ -9,7 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { listDentalPatientsOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { PatientCardData } from '../components/patient-folder-card';
-import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 
 // ─── Raw API shape ──────────────────────────────────────────────────────────
 
