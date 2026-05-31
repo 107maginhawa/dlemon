@@ -11,7 +11,7 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "swiper": "^11.2.10"
+    "swiper": "^12.1.2"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
