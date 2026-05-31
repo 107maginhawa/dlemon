@@ -922,4 +922,44 @@ describe('revokeConsentForm handler', () => {
 
     expect(secondRevoke.status).toBe(409);
   });
+
+  // BR: a SIGNED consent cannot be revoked (illegal signed→revoked transition).
+  // revokeConsentForm.ts:49 → 422 CONSENT_ALREADY_SIGNED. Signed-check precedes
+  // the already-revoked check, so signing then revoking surfaces this code.
+  test('returns 422 CONSENT_ALREADY_SIGNED when revoking a signed consent form', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        templateId: 'tpl-revoke-signed',
+        templateName: 'Signed Consent',
+      }),
+    });
+    const created = await createRes.json() as any;
+    expect(createRes.status).toBe(201);
+
+    // Sign it.
+    const signRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/sign`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureData: 'data:image/png;base64,abc123' }),
+      },
+    );
+    expect(signRes.status).toBe(200);
+
+    // Now revoking must be rejected with the signed-transition code.
+    const revokeRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+    expect(revokeRes.status).toBe(422);
+    const body = await revokeRes.json() as any;
+    expect(body.code).toBe('CONSENT_ALREADY_SIGNED');
+  });
 });
