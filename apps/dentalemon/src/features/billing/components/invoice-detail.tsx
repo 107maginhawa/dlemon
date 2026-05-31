@@ -11,14 +11,18 @@ import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/lib/config';
 import {
   type InvoiceData,
-  canIssue, canVoid, canRecord,
+  showIssueButton, showVoidButton, showRecordButton,
   validatePaymentForm, buildPaymentPayload,
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
-export { canIssue, canVoid, canRecord, validatePaymentForm, buildPaymentPayload, calcChangeAmount } from './invoice-detail.helpers';
+export {
+  canIssue, canVoid, canRecord,
+  showIssueButton, showVoidButton, showRecordButton,
+  validatePaymentForm, buildPaymentPayload, calcChangeAmount,
+} from './invoice-detail.helpers';
 
 const API = apiBaseUrl;
 
@@ -29,9 +33,18 @@ export interface InvoiceDetailProps {
   onUpdated?: () => void;
   /** Called when the user clicks "View Payment Plan" */
   onViewPlan?: () => void;
+  /**
+   * Whether the current role may perform billing WRITE lifecycle actions
+   * (issue / void). Defaults to `true` to preserve existing callers; the
+   * billing route passes `canWriteBilling(role)` so roles like `staff_full`
+   * and `billing_staff` see "Record Payment" but NOT "Issue"/"Void"
+   * (J-RBAC-001). Recording a payment is always allowed when the invoice
+   * status permits it.
+   */
+  canWrite?: boolean;
 }
 
-export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -353,16 +366,16 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
         {/* Footer */}
         {invoice && !loading && (
           <div className="flex items-center gap-3 px-5 h-16 border-t flex-shrink-0">
-            {canIssue(invoice.status) && (
+            {showIssueButton(invoice.status, canWrite) && (
               <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">Issue Invoice</button>
             )}
-            {canRecord(invoice.status) && !showPaymentForm && (
+            {showRecordButton(invoice.status) && !showPaymentForm && (
               <button type="button" onClick={() => setShowPaymentForm(true)} className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">Record Payment</button>
             )}
             {onViewPlan && (
               <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
             )}
-            {canVoid(invoice.status) && !showVoidForm && (
+            {showVoidButton(invoice.status, canWrite) && !showVoidForm && (
               <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
             )}
             <div className="flex-1" />

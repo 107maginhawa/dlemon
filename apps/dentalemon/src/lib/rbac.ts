@@ -5,7 +5,18 @@
  * Each role maps to a set of accessible modules.
  */
 
-export type DentalRole = 'dentist_owner' | 'dentist_associate' | 'staff_full' | 'staff_scheduling';
+export type DentalRole =
+  // PRD-defined roles (FR6.2)
+  | 'dentist_owner'
+  | 'dentist_associate'
+  | 'staff_full'
+  | 'staff_scheduling'
+  // Extended staff roles (G8-S3, member_role enum)
+  | 'hygienist'
+  | 'dental_assistant'
+  | 'front_desk'
+  | 'billing_staff'
+  | 'read_only';
 export type DentalModule = 'dashboard' | 'workspace' | 'patients' | 'calendar' | 'billing' | 'reports' | 'staff' | 'settings';
 
 const ACCESS_MATRIX: Record<DentalRole, Record<DentalModule, boolean>> = {
@@ -29,7 +40,32 @@ const ACCESS_MATRIX: Record<DentalRole, Record<DentalModule, boolean>> = {
     staff: false,
     settings: false,
   },
+  // staff_full reaches the billing module to "Record payments only" (matrix:
+  // Billing Write Operations). Issue/void/create-invoice actions are gated
+  // separately by canWriteBilling — see J-RBAC-001.
   staff_full: {
+    dashboard: true,
+    workspace: true,
+    patients: true,
+    calendar: true,
+    billing: true,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  staff_scheduling: {
+    dashboard: false,
+    workspace: false,
+    patients: true,
+    calendar: true,
+    billing: false,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // --- Extended staff roles (G8-S3 member_role enum) ---
+  // hygienist: clinical R/W for hygiene (perio/prophy); no billing edits.
+  hygienist: {
     dashboard: true,
     workspace: true,
     patients: true,
@@ -39,8 +75,48 @@ const ACCESS_MATRIX: Record<DentalRole, Record<DentalModule, boolean>> = {
     staff: false,
     settings: false,
   },
-  staff_scheduling: {
-    dashboard: false,
+  // dental_assistant: chairside chart updates under a dentist, imaging capture.
+  dental_assistant: {
+    dashboard: true,
+    workspace: true,
+    patients: true,
+    calendar: true,
+    billing: false,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // front_desk: check-in, scheduling, demographics; no clinical write, no billing.
+  front_desk: {
+    dashboard: true,
+    workspace: false,
+    patients: true,
+    calendar: true,
+    billing: false,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // billing_staff: invoices/payments/fee-schedule READ + patient read floor.
+  billing_staff: {
+    dashboard: true,
+    workspace: false,
+    patients: true,
+    calendar: false,
+    billing: true,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // read_only: read across granted modules (dashboard, patients, calendar).
+  // NOTE: reports stays false — the reports module is owner-only per the
+  // Administrative Operations table (Export reports ✅ owner only) and the
+  // existing owner-only `canAccessReports`. The matrix's coarse "reports view"
+  // for an observer is not wired as a separate read-only reports surface, so
+  // granting module access here would dead-end at the canAccessReports content
+  // guard. Treated as owner-only to stay consistent. (Assumption.)
+  read_only: {
+    dashboard: true,
     workspace: false,
     patients: true,
     calendar: true,
@@ -97,9 +173,32 @@ export function getDefaultRoute(role: DentalRole): string {
 }
 
 /**
- * Check if a role can view financial data (billing module access)
+ * Check if a role may see FINANCIAL FIGURES on the dashboard / morning briefing
+ * (daily collections, revenue). Per ROLE_PERMISSION_MATRIX.md Dashboard row,
+ * staff_full is "Schedule + follow-ups (no financials)" — so this is NOT the
+ * same as billing-module access. Only the two dentist roles see dashboard
+ * financials.
+ *
+ * NOTE: reaching the billing module to record payments is a separate concept —
+ * use canAccess(role, 'billing') for that, and canWriteBilling for issue/void.
  */
 export function canViewFinancials(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Check if a role can perform billing WRITE operations that mutate invoice
+ * lifecycle: create / issue / void invoice (and create payment plan).
+ *
+ * Per ROLE_PERMISSION_MATRIX.md "Billing Write Operations", only
+ * dentist_owner and dentist_associate may do these. staff_full and
+ * billing_staff can reach billing (canViewFinancials) and record payments,
+ * but must NOT see issue/void/create-invoice actions (J-RBAC-001).
+ *
+ * Note: recording a payment is intentionally NOT gated by this helper —
+ * staff_full has "Record payment ✅" in the matrix.
+ */
+export function canWriteBilling(role: DentalRole): boolean {
   return role === 'dentist_owner' || role === 'dentist_associate';
 }
 

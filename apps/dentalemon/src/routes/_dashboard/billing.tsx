@@ -11,6 +11,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import React, { useState } from 'react'
 import { requireRole } from '@/lib/guards'
 import { useQueryClient } from '@tanstack/react-query'
+import { canWriteBilling, type DentalRole } from '@/lib/rbac'
+import { useOrgContextStore } from '@/stores/org-context.store'
 import { BillingList } from '../../features/billing/components/billing-list'
 import { InvoiceDetail } from '../../features/billing/components/invoice-detail'
 import { PaymentPlanView } from '../../features/billing/components/payment-plan-view'
@@ -22,6 +24,10 @@ export const Route = createFileRoute('/_dashboard/billing')({
 
 function BillingPage() {
   const queryClient = useQueryClient()
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null
+  // J-RBAC-001: roles like staff_full / billing_staff reach billing to record
+  // payments but must NOT see issue/void actions.
+  const canWrite = role ? canWriteBilling(role) : false
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [planViewOpen, setPlanViewOpen] = useState(false)
@@ -58,6 +64,7 @@ function BillingPage() {
           onClose={handleDetailClose}
           onUpdated={handleUpdated}
           onViewPlan={() => setPlanViewOpen(true)}
+          canWrite={canWrite}
         />
       )}
 
