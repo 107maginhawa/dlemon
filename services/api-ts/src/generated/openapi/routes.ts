@@ -1245,6 +1245,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listConsentForms as unknown as Handler
   );
 
+  // revokeConsentForm
+  app.patch('/dental/visits/:visitId/consents/:cid/revoke',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RevokeConsentFormParams, validationErrorHandler),
+    registry.revokeConsentForm as unknown as Handler
+  );
+
   // signConsentForm
   app.post('/dental/visits/:visitId/consents/:consentId/sign',
     authMiddleware({ roles: ["user"] }),

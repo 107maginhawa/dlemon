@@ -116,7 +116,6 @@ import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
 import { recoverPin } from '@/handlers/dental-org/pinRecovery';
 import { RecoverPinParams, RecoverPinBody } from '@/generated/openapi/validators';
-import { revokeConsentForm } from '@/handlers/dental-clinical/consent/revokeConsentForm';
 
 
 /**
@@ -512,12 +511,9 @@ export function createApp(config: Config): App {
     recoverPin,
   );
 
-  // EM-CLI-001: revokeConsentForm — PATCH /dental/visits/:visitId/consents/:cid/revoke
-  // This route is absent from the generated OpenAPI routes; registered manually.
-  (app as any).patch('/dental/visits/:visitId/consents/:cid/revoke',
-    authMiddleware({ roles: ['user'] }),
-    revokeConsentForm,
-  );
+  // EM-CLI-001: revokeConsentForm is now declared in TypeSpec and registered via
+  // the generated OpenAPI routes (PATCH /dental/visits/:visitId/consents/:cid/revoke).
+  // The former hand-registration here was removed to avoid a duplicate route.
 
   // Register API routes
   registerOpenAPIRoutes(app as any);

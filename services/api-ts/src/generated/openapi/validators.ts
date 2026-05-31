@@ -19135,6 +19135,14 @@ export const ListConsentFormsResponse = z.object({
 })
 });
 
+export const RevokeConsentFormParams = z.object({
+  visitId: UUIDSchema,
+  cid: UUIDSchema,
+});
+export type RevokeConsentFormParams = z.infer<typeof RevokeConsentFormParams>;
+
+export const RevokeConsentFormResponse = ConsentFormSchema;
+
 export const SignConsentFormParams = z.object({
   visitId: UUIDSchema,
   consentId: UUIDSchema,

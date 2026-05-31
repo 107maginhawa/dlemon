@@ -403,6 +403,22 @@ namespace DentalClinicalModule {
       | ApiBadRequestResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
+
+    // EM-CLI-001: revoke an unsigned consent form. A signed form cannot be
+    // revoked (422 CONSENT_ALREADY_SIGNED). Path param is `cid` to match the
+    // handler's parameter contract. Previously hand-registered in app.ts only.
+    @patch
+    @route("/{visitId}/consents/{cid}/revoke")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("revokeConsentForm")
+    revoke(
+      @path visitId: UUID,
+      @path cid: UUID
+    ): ApiOkResponse<ConsentForm>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   interface AttachmentManagement {
