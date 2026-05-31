@@ -17,7 +17,7 @@ import {
   updateDentalTreatmentMutation,
   listDentalTreatmentsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
-import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 
 export function useUpdateTreatment(visitId: string) {
   const queryClient = useQueryClient();
@@ -29,8 +29,8 @@ export function useUpdateTreatment(visitId: string) {
         queryKey: listDentalTreatmentsQueryKey({ path: { visitId } }),
       });
     },
-    onError: () => {
-      toast.error('Failed to update treatment. Please try again.');
+    onError: (err) => {
+      toastError(err, 'Failed to update treatment. Please try again.');
     },
   });
 }

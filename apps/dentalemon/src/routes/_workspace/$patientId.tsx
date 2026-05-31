@@ -33,6 +33,7 @@ import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
@@ -152,8 +153,8 @@ function WorkspacePage() {
         onSuccess: (visit) => {
           setCurrentVisitId(visit.id);
         },
-        onError: () => {
-          toast.error('Could not start a new visit. Please try again.');
+        onError: (err) => {
+          toastError(err, 'Could not start a new visit. Please try again.');
         },
       },
     );

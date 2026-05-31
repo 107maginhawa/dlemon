@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { initializeDentition } from '@monobase/sdk-ts/generated';
 import { getDentalChartQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 
 interface InitializeDentitionInput {
   patientId: string;
@@ -38,8 +39,8 @@ export function useInitializeDentition() {
       });
       toast.success('Dental chart initialized.');
     },
-    onError: () => {
-      toast.error('Failed to initialize dentition. Please try again.');
+    onError: (err) => {
+      toastError(err, 'Failed to initialize dentition. Please try again.');
     },
   });
 }
