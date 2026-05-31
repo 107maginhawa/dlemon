@@ -41,6 +41,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
   const [receiptNumber, setReceiptNumber] = useState('');
   const [paymentErrors, setPaymentErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showVoidForm, setShowVoidForm] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && invoiceId) loadInvoice();
@@ -80,14 +83,29 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
 
   async function handleVoid() {
     if (!invoice) return;
+    // Contract (API_CONTRACTS §void): reason is required (min 5) so the void is
+    // auditable. Guard client-side before sending.
+    const reason = voidReason.trim();
+    if (reason.length < 5) {
+      setVoidError('Please enter a void reason (at least 5 characters).');
+      return;
+    }
+    setVoidError(null);
     setSaving(true);
     try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/void`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason }),
+      });
       if (!res.ok) throw new Error('Failed to void invoice');
+      setShowVoidForm(false);
+      setVoidReason('');
       await loadInvoice();
       onUpdated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed');
+      setVoidError(err instanceof Error ? err.message : 'Failed');
     } finally {
       setSaving(false);
     }
@@ -124,6 +142,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
   function handleClose() {
     setShowPaymentForm(false);
     setPaymentErrors([]);
+    setShowVoidForm(false);
+    setVoidReason('');
+    setVoidError(null);
     setError(null);
     onClose();
   }
@@ -305,6 +326,26 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
                   </div>
                 </div>
               )}
+
+              {/* Void reason form — the void contract requires an auditable reason */}
+              {showVoidForm && (
+                <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-red-600">Void Invoice</h4>
+                  {voidError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{voidError}</div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="void-reason">Reason *</label>
+                    <input id="void-reason" type="text" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="e.g. Duplicate invoice" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setShowVoidForm(false); setVoidReason(''); setVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" onClick={handleVoid} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
+                      {saving ? 'Voiding...' : 'Confirm Void'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -321,8 +362,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
             {onViewPlan && (
               <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
             )}
-            {canVoid(invoice.status) && (
-              <button type="button" onClick={handleVoid} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
+            {canVoid(invoice.status) && !showVoidForm && (
+              <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
             )}
             <div className="flex-1" />
             <button type="button" onClick={handleClose} className="h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>
