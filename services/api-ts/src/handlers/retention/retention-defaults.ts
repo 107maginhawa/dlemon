@@ -9,17 +9,24 @@
  *   - clinical / visit / attachment : ~10 years (archive)
  *   - prescription                  : ~5 years (archive)
  *   - audit                         : retain (append-only, never purged)
+ *
+ * Enablement is DERIVED from the target registry (SUPPORTED_RETENTION_ENTITY_TYPES):
+ * a default is seeded `enabled` ONLY when a real enforcement target is wired for
+ * it. Entity types without a target are still seeded (so the declared retention
+ * intent is visible in the registry) but `enabled: false`, so they never route
+ * to a silent `no-target` skip. When a target is added later, flip the row to
+ * enabled. (Closes V-RET-002.)
  */
 
 import { and, eq, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
-import {
-  dentalRetentionPolicies,
-  type RetentionAction,
-} from './repos/retention-policy.schema';
+import { dentalRetentionPolicies, type RetentionAction } from './repos/retention-policy.schema';
+import { SUPPORTED_RETENTION_ENTITY_TYPES } from './retention-targets';
 
 export const DEFAULT_RETENTION_DISCLAIMER =
   'DEFAULT — review against your jurisdiction (HIPAA min 6y; state dental laws vary).';
+
+const NO_TARGET_SUFFIX = ' [disabled: no enforcement target wired yet]';
 
 const YEAR_DAYS = 365;
 
@@ -39,6 +46,11 @@ export const DEFAULT_RETENTION_POLICIES: RetentionPolicyDefault[] = [
   // the protected `audit` target regardless of this row.
   { entityType: 'audit', retentionPeriodDays: 7 * YEAR_DAYS, action: 'retain' },
 ];
+
+/** A default is enabled only when a real enforcement target exists for it. */
+export function isDefaultEnabled(entityType: string): boolean {
+  return SUPPORTED_RETENTION_ENTITY_TYPES.includes(entityType);
+}
 
 /**
  * Idempotently seed the default policy set for a tenant. A policy is skipped if
@@ -66,15 +78,16 @@ export async function seedDefaultRetentionPolicies(
       );
     if (existing.length > 0) continue;
 
+    const enabled = isDefaultEnabled(def.entityType);
     await db.insert(dentalRetentionPolicies).values({
       tenantId,
       branchId: null,
       entityType: def.entityType,
       retentionPeriodDays: def.retentionPeriodDays,
       action: def.action,
-      enabled: true,
+      enabled,
       legalHoldExempt: false,
-      notes: DEFAULT_RETENTION_DISCLAIMER,
+      notes: enabled ? DEFAULT_RETENTION_DISCLAIMER : DEFAULT_RETENTION_DISCLAIMER + NO_TARGET_SUFFIX,
       createdBy: opts.createdBy ?? null,
       updatedBy: opts.createdBy ?? null,
     });
