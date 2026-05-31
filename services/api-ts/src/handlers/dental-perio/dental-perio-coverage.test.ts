@@ -219,6 +219,32 @@ describe('createPerioChart', () => {
     });
     expect(res.status).toBe(403);
   });
+
+  // BR-P02: cannot create a perio chart on a sealed (completed/locked) visit.
+  // The visit-status guard fires before the CHART_EXISTS / role checks.
+  test('returns 422 VISIT_LOCKED creating a chart on a completed visit', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: COMPLETED_VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
+  });
+
+  test('returns 422 VISIT_LOCKED creating a chart on a locked visit', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: LOCKED_VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
+  });
 });
 
 // We need a shared chartId across the reading and complete tests.
@@ -320,6 +346,21 @@ describe('upsertToothReading', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('INVALID_GRADE');
+  });
+
+  // BR-P04 / AC-P05: an FDI quadrant-gap number (19) passes the validator's
+  // numeric [11,85] range but the handler's assertValidToothNumber rejects it.
+  test('returns 422 INVALID_TOOTH_NUMBER for a quadrant-gap tooth (19)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/19`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_TOOTH_NUMBER');
   });
 
   test('accepts mobility/furcation at the boundary grade 3', async () => {
@@ -596,5 +637,11 @@ describe('getPerioChart', () => {
     const app = buildApp(NON_DENTIST);
     const res = await app.request(`/dental/perio-charts/${chartId}`);
     expect(res.status).toBe(403);
+  });
+
+  test('returns 404 NOT_FOUND for an unknown chartId', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts/ee000000-0000-1000-8000-0000000000ff');
+    expect(res.status).toBe(404);
   });
 });
