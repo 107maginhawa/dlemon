@@ -28,6 +28,7 @@ import { getDentalInvoice } from './getDentalInvoice';
 import { listDentalInvoices } from './listDentalInvoices';
 import { issueDentalInvoice } from './issueDentalInvoice';
 import { voidDentalInvoice } from './voidDentalInvoice';
+import { markUncollectible } from './markUncollectible';
 import { applyDentalDiscount } from './applyDentalDiscount';
 import { recordDentalPayment } from './recordDentalPayment';
 import { listDentalPayments } from './listDentalPayments';
@@ -42,6 +43,7 @@ import {
   IssueDentalInvoiceParams,
   VoidDentalInvoiceParams,
   VoidDentalInvoiceBody,
+  MarkUncollectibleParams,
   RecordDentalPaymentParams,
   RecordDentalPaymentBody,
   ListDentalPaymentsParams,
@@ -192,6 +194,13 @@ function buildTestApp(user?: typeof TEST_USER) {
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
     zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
+  );
+
+  // markUncollectible
+  app.post(
+    '/dental/billing/invoices/:invoiceId/uncollectible',
+    zValidator('param', MarkUncollectibleParams, validationErrorHandler),
+    markUncollectible as any,
   );
 
   return app;
@@ -686,6 +695,31 @@ describe('voidDentalInvoice handler', () => {
       .where(and(eq(dentalAuditLog.action, 'invoice.voided'), eq(dentalAuditLog.targetId, invoice.id)));
     expect(rows).toHaveLength(1);
     expect((rows[0]?.metadata as any)?.reason).toBe('Billing error correction');
+  });
+});
+
+// ===========================================================================
+// markUncollectible — AC-BIL-005 / BR-013: deferred write-off → 501
+// ===========================================================================
+
+describe('markUncollectible handler', () => {
+  test('returns 401 when unauthenticated', async () => {
+    const app = buildTestApp(undefined);
+    const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 501 NOT_IMPLEMENTED (write-off deferred, BR-013)', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(501);
+    const body = await res.json() as any;
+    expect(body.code).toBe('NOT_IMPLEMENTED');
   });
 });
 
