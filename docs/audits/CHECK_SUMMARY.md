@@ -1,96 +1,130 @@
 ---
 oli-version: "1.0"
 based-on:
-  - docs/audits/codebase-map/ (CODE_*.json — rebuilt from scratch via @oli/engine)
-  - docs/product/CONSISTENCY_REPORT.md
-  - docs/execution/RUNTIME_TEST_PLAN.md
+  - docs/audits/coverage/*.md (12 per-module test-coverage audits)
   - docs/audits/COMPLIANCE_REPORT.md
-  - docs/audits/CONFIDENCE_REPORT.md
-  - docs/audits/ENFORCEMENT_REPORT.md
-  - docs/audits/JOURNEY_COVERAGE_REPORT.md
-  - docs/trace/TRACE_REPORT.md
-last-modified: 2026-05-30
+  - docs/audits/CONSISTENCY_GATE_REPORT.md
+  - docs/audits/CROSS_MODULE_REPORT.md
+  - docs/audits/RUNTIME_READINESS_REPORT.md
+  - docs/audits/codebase-map/ (engine v5, regenerated at HEAD)
+last-modified: 2026-05-31T01:29:58Z
 last-modified-by: oli-check
 ---
 
-# OLI Check — Cycle-4 Summary (Audit + Auto-Fix)
+# OLI Check — Roll-up Summary
 
-Thorough, first-pass-style run: all 8 verification dimensions executed per-module
-against every file (no sampling), aligned to a freshly-rebuilt knowledge graph,
-then P0/P1 auto-remediated via TDD. Orchestrated by background multi-agent
-workflows (audit: 32 agents / 6.2M tokens / ~60 min; fix: 15 agents + targeted repair).
+## 0. TRUST STATUS
+
+| Field | Value |
+|-------|-------|
+| Map producer | **engine** (oli-engine v5, ts-morph) — not regex-fallback |
+| MAP-FRESHNESS | **FRESH** — `map@d8745b97` == `HEAD@d8745b97`, all artifacts unchanged on re-scan |
+| Confidence threshold | MEDIUM (`.oli/config.json`) |
+| Map scope | `apps/dentalemon/src/**` (frontend). Backend (`services/api-ts`) audited directly from source + specs, not from the graph. |
+| fields_unavailable | none (CODE_SPEC_TRACE came back empty — see note) |
+| unverified nodes (below-threshold) | 0 |
+
+> The map was STALE at the start of this run (`map@2e07553` vs `HEAD@d8745b97`, 5 commits + uncommitted ceph/imaging/reports/settings/workspace changes overlapped mapped files). Per the user's "start fresh" instruction it was **regenerated at HEAD** before any code dimension ran.
+>
+> **THESIS IN FORCE** for this run — code-dimension verdicts are graph-anchored for the frontend slice and source-anchored for the backend.
+>
+> Caveat: `CODE_SPEC_TRACE.json` is empty because dental routes are split across `generated/openapi/routes.ts` **and** hand-registered in `app.ts`; the spec-trace pass only parses the generated file. This is a tooling blind spot (recorded as a compliance P2), not a coverage gap — the per-module auditors compensated by reading `app.ts` directly.
 
 ## 1. Run Context
 
-- **State:** specs (12 `MODULE_SPEC.md`), source (`services/api-ts`, `apps/dentalemon`,
-  `apps/account`), 303 tests, UI + runtime targets, knowledge graph — all present.
-- **Dimensions:** all 8 applicable (no flags → auto-select).
-- **Knowledge graph:** rebuilt from scratch (`@oli/engine` AST, 542 files,
-  git_sha 86f9cbaa). Spec-trace **237/237 (100%)** · 0 spec-only · 0 code-only ·
-  0 phantom · 0 circular deps · CVE scan run.
-- **Flags:** none for audit; `--fix` applied for P0/P1 remediation.
-- **Branch:** `oli/cycle-4-audit-fix` (28 fix commits; **not** merged to main).
+- **Detected state:** specs (12 modules) + source (apps/packages/services) + tests + runnable app + PERFORMANCE.md → all code & spec dimensions applicable.
+- **Mode:** no dimension flags → full auto-select. User directive: *exhaustive, per-module, no skipping, all use cases tested on both backend and frontend.*
+- **Dimensions run:** Discovery (map regen), Traceability + Confidence + Enforcement-coverage (fused into 12 per-module auditors), Compliance, Consistency, Cross-module enforcement, Runtime (boot-smoke + release gates).
+- **Skipped:** Journeys standalone (`UI_BLUEPRINT.md` absent — journey coverage folded into per-module FE audits, which read the `tests/e2e/journeys/` suite). UI-consistency (`UI_CONSISTENCY_SPEC.md` absent — would require `/oli-spec-ui --infer-from-code`). Runtime `--live` interaction loop (not requested).
+- **Method:** 16 isolated subagents (12 module + 4 cross-cutting), each wrote its own report and returned a verdict; this file aggregates.
 
-## 2. Dimension Results (as audited, pre-fix)
+## 2. Dimension Results
 
-| Dimension | Verdict | Report | P0 | P1 |
-|-----------|---------|--------|----|----|
-| Discovery | 🟢 PASS | `docs/audits/codebase-map/` | 0 | 0 |
-| Consistency | 🟡 WARN | `docs/product/CONSISTENCY_REPORT.md` | 0 | 1 |
-| Runtime | 🟢 PASS (boot-smoke PASS) | `docs/execution/RUNTIME_TEST_PLAN.md` | 0 | 2¹ |
-| Compliance | 🟡 WARN | `docs/audits/COMPLIANCE_REPORT.md` | 0 | 15 |
-| Confidence | 🟡 WARN | `docs/audits/CONFIDENCE_REPORT.md` | 1 | ~10 |
-| Enforcement | 🟡 WARN | `docs/audits/ENFORCEMENT_REPORT.md` | 0 | 3² |
-| Journeys | 🟡 WARN | `docs/audits/JOURNEY_COVERAGE_REPORT.md` | 0 | 2 |
-| Traceability | 🟡 WARN | `docs/trace/TRACE_REPORT.md` | 1³ | 7 |
+| Dimension | Verdict | Report | P0 | P1 | P2 |
+|-----------|---------|--------|----|----|----|
+| Discovery (map) | ✅ PASS (FRESH) | `codebase-map/.map-meta.json` | 0 | 0 | 0 |
+| Per-module test coverage (Traceability+Confidence+Coverage) | ⛔ **BLOCK** | `coverage/*.md` (12) | **2** | **41** | 35 |
+| Compliance (spec↔code) | ✅ PASS | `COMPLIANCE_REPORT.md` | 0 | 0 | 5 |
+| Consistency (spec gate) | ✅ PASS | `CONSISTENCY_GATE_REPORT.md` | 0 (HIGH) | 0 | 5 (MED) |
+| Cross-module enforcement | ⚠️ WARN | `CROSS_MODULE_REPORT.md` | 0 | 4 | 2 |
+| Runtime (boot-smoke + gates) | ✅ PASS | `RUNTIME_READINESS_REPORT.md` | 0 | 1 | 2 |
 
-¹ Pre-existing runtime OPEN items (T-001 PHI-in-logs redaction, T-002 email-verify bypass) — outside the --fix scope, flagged for follow-up.
-² 3 dependency CVEs (drizzle-orm SQL-injection, happy-dom RCE, axios MITM).
-³ Same root as the Confidence P0 (EMR PHI audit-logging has zero asserting test coverage; surfaced in Confidence + Traceability).
+## 3. Overall
 
-**Pre-fix confidence gauges:** Test-Confidence **7/10** · Release-Readiness **6/10** · Ship-Readiness **6/10**.
+**Worst verdict: ⛔ BLOCK** (driven entirely by **dental-visit frontend** — completion-gate / informed-refusal UI is untested at both unit and E2E layers).
 
-**Pre-fix overall: 🟡 WARN — 1 P0 (EMR PHI audit coverage) + ~33 P1** (deduped to 31 finding-groups across the modules above). 0 BLOCK.
+- **Backend health: STRONG.** Compliance 0 P0 / 0 P1 (health 9.5/10): billing role matrix exact, treatment FSM byte-exact to spec, imaging tier gate enforced, scheduling role exclusions enforced, 405-immutability guards present. Typecheck clean both sides. CI gates 15/15.
+- **Frontend test coverage: the systemic gap.** Across nearly every module, backend has real deny+allow / FSM assertions, but the **frontend interaction layer is thin** and the **E2E journeys are demoability probes that `expectJourneyBroken()` / probe-skip rather than assert the gates work.** Many features have component files but no submit/render test; several "FE tests" assert inline-duplicated logic instead of the shipped component.
 
-## 3. Auto-Fix Outcome (`--fix`, TDD per-module, atomic commits)
+### Per-module scoreboard (backend / frontend)
 
-**26 FIXED · 5 BLOCKED (deferred) · 1 regression caught & repaired.**
-Post-fix gate: **`bun test` 196 files / 2747 pass / 0 fail**, api + web `typecheck` 0 errors, tree clean.
+| Module | BE | FE | use-cases | BE cov | FE cov | P0 | P1 |
+|--------|----|----|-----------|--------|--------|----|----|
+| dental-visit | WARN | ⛔ BLOCK | 37 | 35 | 15 | 2 | 4 |
+| dental-pmd | WARN | WARN | 34 | 22 | 2 | 0 | 6 |
+| dental-billing | WARN | WARN | 24 | 22 | 9 | 0 | 5 |
+| dental-clinical | WARN | WARN | 29 | 27 | 6 | 0 | 5 |
+| dental-imaging | PASS | WARN | 30 | 24 | 22 | 0 | 5 |
+| dental-perio | WARN | PASS* | 26 | 20 | 0* | 0 | 4 |
+| dental-scheduling | WARN | WARN | 51 | 43 | 15 | 0 | 3 |
+| dental-org | PASS | WARN | 42 | 30 | 6 | 0 | 3 |
+| dental-audit | PASS | PASS* | 25 | 23 | 1* | 0 | 3 |
+| emr-consultation | WARN | PASS* | 33 | 30 | 0* | 0 | 2 |
+| dental-patient | PASS | WARN | 26 | 24 | 17 | 0 | 1 |
+| external-records-import | PASS† | PASS† | 16 | 0† | 0† | 0 | 0 |
 
-### Fixed (highlights — 26 finding-groups, 28 commits)
-- **P0 — EMR PHI audit coverage** (`emr-audit.test.ts`): asserts all 6 PHI ops write an audit row with `tenant_id === EMR_AUDIT_TENANT_SENTINEL` (not patient UUID) + field-names-only. `0a196905`
-- **3 CVEs:** drizzle-orm→0.45.2, happy-dom→20.9.0, axios→1.16.1 (root override). `79876dfc` `c6ecea59`
-- **2 broken FE→API chains:** invoice "Issue" POST→PATCH; ceph `/report`→`/reports`. `e8d017ac` `54abe034`
-- **Billing FSM:** reject payment on draft invoice (422) + regression-repaired fixtures. `4701cfcf` `b8d35655`
-- **EMR FSM:** collapsed dormant `validateStatusTransition` table to terminal machine; fixed tautology test. `a6908646`
-- **Org:** guarded membership state machine + reconcile `revoked`; audit rows on fee/branch/consent mutations; typed `working_hours`; pushed filters/LIMIT into repo queries. `d7c80f51` `b2a9e6c4` `8f3e1d77` `4564c0a2`
-- **Patient:** `assertBranchAccess`→`assertBranchRole` on create + narrowed import roles + wrong-role 403 deny tests. `92e0f15e` `ae7e89b0`
-- **Clinical:** removed over-permissioned hygienist; added 501 amendment-approval endpoint; `tooth_fdi` column+migration. `17153054` `c3ee8915` `e76055bb`
-- **Audit:** PHI sanitizer moved into `AuditLogRepository.insert` (single choke point) + consumer test. `ae53edc9`
-- **PMD:** Hurl contract 400→422; AC-PMD-004 immutability test. **Scheduling:** doc fix + flake fix. **Perio:** API_CONTRACTS hygienist doc. **EMR admin** read/list branches + tests. **Events** publisher audit-trace tests. **Imaging** FE error-surfacing.
+\* FE=PASS *vacuously* — no UI surface exists by design (perio UI deferred §9; audit-viewer WF-028 unimplemented; emr-consultation has no native FE). Absence is a documented product deferral, not faked coverage.
+† `external-records-import` is **future_phase by design** (MODULE_SPEC §7/§20 — "do not implement until scheduled"). Zero impl/tests is spec-compliant.
 
-### Previously-deferred 5 — ALL RESOLVED (2026-05-30 follow-up session, +11 commits)
-| ID | Resolution | Commit |
-|----|-----------|--------|
-| V-CLI-015 | Ruling: reconcile spec→code. `dental_attachment.image_type` is a coarse FILE-category enum; the radiograph MODALITY taxonomy is owned by dental-imaging.ModalityEnum (system-of-record). MODULE_SPEC §7 fixed + enum-lock test. | `1e9c898d` |
-| V-VIS-101 | Ruling: field-immutability begins at `performed` (BR-007/AC-VIS-003 canonical; API_CONTRACTS:139 "verified" was wrong). Guard already correct — added performed-immutability tests + fixed contract wording. | `2a143431` |
-| TR-P1-06 | Keep deferred (spec explicit). Converted the skipped BR-013 placeholder into an active 501 NOT_IMPLEMENTED test (deferral now enforced). | `4b443343` |
-| TR-P1-07 | Built: chart empty-state "Initialize Dentition" action (auto-detect from patient DOB) + `useInitializeDentition` hook. | `92251753` |
-| TR-P1-08 | Built: item-level TP completion (TP-BR-005 derivation) + CR-05 approval record. Migration 0074, recompute trigger, `POST .../treatment-plans/:planId/approval`. Design doc in `slices/tr-p1-08-item-level-tp-completion/DESIGN.md`. | `4012ac9c`→`cb5c6dde` |
+## 3b. Re-verification — 2026-05-31 (post-fix, independently audited)
 
-Post-resolution gate: **api 199 files / 2768 pass / 0 fail**, web 1356 pass / 0 fail, api+web typecheck clean.
+> The per-module `coverage/*.md` reports below predate the gap-fix work and are now **STALE** for the items listed here. This section records the closures, each independently re-verified by a read-only auditor against the current tests (confirming they exercise the **shipped** handler/component, not re-declared logic). Branch `feat/ceph-demoable-and-manual-ux`. Backend suite: **202 files, 2807 pass / 0 fail**; api-ts + dentalemon typecheck clean.
 
-### Follow-ups noted (out of --fix scope)
-- `@monobase/api-ts-embedded` resolves drizzle-orm@0.44.7 transitively — bump if embedded ORM exposure matters.
-- Runtime OPEN P1s T-001 (PHI-in-logs / Pino redaction) and T-002 (email-verify bypass) remain in `RUNTIME_TEST_PLAN.md`.
+**P0 (both CLOSED earlier this session):** dental-visit completion-gate UI (`pre-completion-checklist.test.ts`) + informed-refusal/decline UI (`treatment-decline.test.ts`); E2E J01/J08 converted from probes to hard assertions (J05 left as an honest probe — status-collapse question, not a test-only fix).
 
-## 4. Overall
+**Theme C — backend deny-gates (CLOSED):**
+- dental-billing: `markUncollectible` 501 pinned (mutation-verified); **voidDentalInvoice now enforces the contract `reason` (min 5)** — spec-first `@body` + regen, handler records reason in audit metadata; empty/short body → 400.
+- dental-scheduling: check-in excludes `staff_scheduling`; cancel excludes `staff_scheduling` + `dentist_associate` (deny+allow pairs on the real `assertBranchRole`).
+- dental-visit: concurrent-active 409 `ACTIVE_VISIT_EXISTS` via HTTP (create + activate paths).
+- dental-pmd: imported-PMD-immutable 405 guard tested on the **real app** (`createApp(parseConfig())`).
+- dental-perio: BR-P02 VISIT_LOCKED (HTTP), BR-P03 INVALID_DEPTH (unit — zod shadows it at HTTP), BR-P04 INVALID_TOOTH_NUMBER (unit + HTTP tooth 19), getPerioChart 404. *(perio P1-1..P1-4 were the only P1s — all closed.)*
 
-- **Pre-fix:** 🟡 WARN — 1 P0 + ~33 P1, 0 circular deps, strong structure (100% spec-trace).
-- **Post-fix:** 🟢 the P0 and all auto-fixable P1s are resolved with the suite green; **5 items remain deferred** (3 roadmap features, 2 spec-decisions) for product input. Re-running `--confidence`/`--traceability` after merge will lift the EMR-audit-gated gauges.
+**Theme A — FE interaction tests on shipped components (CLOSED):** RecallsSheet, AmendmentForm, OnboardingWizard 5-call chain, invoice issue + record-payment. Two real bugs fixed: RecallsSheet transition-button mislabel (indexed by target not current status); AmendmentForm silent-failure (SDK client defaults `throwOnError=false` → resolves `{error}`; dead catch → failed saves silently closed the form; now inspects the error).
 
-## 5. What's Next
+**Theme B — test-quality (CLOSED):** pmd-import + pmd-viewer rewritten to render shipped components (rx-sheet/consent-sheet done pre-clear; onboarding rewritten under Theme A).
 
-- Review branch `oli/cycle-4-audit-fix` (28 commits) → `/ship` or open a PR.
-- Decide the 5 deferred items (2 spec rulings: V-CLI-015, V-VIS-101; 3 feature scopings).
-- Re-run `/oli-check --confidence --traceability` post-merge to refresh gauges.
+**Still open (NOT targeted — for a later pass):** billing P1-2/P1-3/P1-4 role gates (create-invoice / create-plan / discount + void-payment deny tests); per-module E2E journeys for scheduling/org; pmd P1-BE-2/3/4 (audit-write asserts, patient-self paths, list/read RBAC deny); clinical P1-1/P1-2 (consent revoke route + 422), P1-4 medical-history-sheet FE, P1-5 rx/consent FE assert non-imported validators; **Theme D (architecture/import cycles)** and **Theme E (migration rollback)** untouched.
+
+## 4. What's Next
+
+### ⛔ Fix Now — P0 (2)
+Both in **dental-visit frontend** — state-integrity gates with no test on either layer:
+1. **Completion-gate UI untested** — `apps/dentalemon/src/features/workspace/components/pre-completion-checklist.tsx` (`checkConsentSigned` / `checkNoUnstartedTreatments`) has no unit test; E2E 01/05 probe-skip. The 422-on-open-treatments + unsigned-consent hard gate is enforced in the backend but the UI that surfaces/overrides it is unverified.
+2. **Informed-refusal / decline UI untested anywhere** — grep `declin|refus` in FE `*.test.ts` = 0; only `08-informed-refusal.journey.spec.ts:49` probe-skips. Backend `updateDentalTreatment.ts:101` (422 REFUSAL_REASON_REQUIRED) is strong but unasserted via the UI or HTTP-from-UI.
+
+→ Add component tests for `pre-completion-checklist.tsx` + the decline flow, and convert journeys 01/05/08 from `expectJourneyBroken` probes to real gate assertions.
+
+### Fix Before New Work — P1 (46 total)
+**Theme A — Frontend interaction tests missing (largest cluster).** Representative:
+- `recalls-sheet.tsx` + `use-recalls.ts` no test (dental-patient); `amendment-form.tsx` write-path no test (dental-clinical/visit); onboarding 5-call submit chain untested (dental-org `onboarding-wizard.tsx:125-160`); billing issue/record-payment/void mutations interaction-untested.
+- **Latent bug found:** `invoice-detail.tsx:85` `handleVoid` POSTs with no `reason` body → 400 vs `API_CONTRACTS:175` (dental-billing).
+
+**Theme B — Tests that don't exercise shipped code (test-quality P1).** `rx-sheet.test.ts:25`, `consent-sheet.test.ts:25`, `pmd-import.test.ts`, `pmd-viewer.test.ts` redeclare/duplicate validation logic the component doesn't export — they assert a copy, not the real component.
+
+**Theme C — Backend deny-gate / guard gaps (real but lower-risk).** scheduling check-in/cancel role-exclusion 403s untested (`checkInAppointment.ts:39`, `cancelAppointment.ts:35`); billing `markUncollectible` 501 has zero tests; perio BR-P02/P03/P04 validation guards untested; pmd imported-PMD-immutable 405 guard untested; visit concurrent-active 409 untested via HTTP.
+
+**Theme D — Architecture (cross-module, 4× P1).** FE `patients`↔`workspace` circular dep; FE `lib/ceph-export.ts`→`features` layer inversion; BE handler-to-handler re-export shims (`dental-patient`→`dental-visit`, `dental-org`→`dental-scheduling`) bypassing service facades. Note: official `bun run check:boundaries` is green (facade-mediated) — these are import-hygiene cycles, not alias violations.
+
+**Theme E — Runtime.** No migration rollback story (forward-only drizzle) — notable for a PHI product.
+
+### Track — P2 (selected)
+- Spec/doc lag for the two newest modules: 9 perio glossary terms + PerioChart entity + perio/emr error codes missing from `DOMAIN_GLOSSARY`/`DOMAIN_MODEL`/`ERROR_TAXONOMY`; `WORKFLOW_MAP` still says "10 modules" (perio = 11th).
+- API path drift: pmd `/dental/pmd/generate` (spec) vs visit-scoped impl; patient `follow-up`→`follow-up-notes`.
+- `recover-pin` route registered without `authMiddleware` in `routes.ts:777` — safe only via `app.ts` auth-shadow ordering (brittle).
+- Split `routes.ts`/`app.ts` registration defeats the spec-trace engine pass (empty `CODE_SPEC_TRACE`).
+- 3 orphan migration SQL files not in `_journal.json` (inert).
+
+## Remediation routing
+- Re-run a single dimension after fixes: re-dispatch the relevant `coverage/<module>.md` audit, or `/oli-check --confidence` / `--compliance`.
+- The 2 P0s + Theme A/B are the highest-leverage work and directly answer the user's mandate ("every use case tested on both backend and frontend"). Backend is largely there; **the frontend interaction + real-E2E layer is what's missing.**
+- Coverage is **NOT 100%** — the knowledge-graph + per-module sweep covered all 12 modules with no module skipped, surfacing 2 P0 + 46 P1 + 35 P2 gaps. That is the "room for improvement" the mapping was meant to expose.
