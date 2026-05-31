@@ -148,7 +148,13 @@ function PinSelectRoute() {
     const { branchId: storeBranchId } = useOrgContextStore.getState();
     const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
     if (!branchId) {
+      // FR7.5/FR9.8: An authenticated owner with no clinic yet has nothing to
+      // pick here — guide them to the setup wizard instead of dead-ending on an
+      // empty "No staff members found" screen. (The _dashboard guard already
+      // bounced them here because they have no in-memory PIN session, and a PIN
+      // can't exist until the wizard mints the first member.)
       setIsLoading(false);
+      navigate({ to: '/dental-onboarding' as any });
       return;
     }
     setIsLoading(true);

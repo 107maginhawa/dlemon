@@ -152,9 +152,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       useOrgContextStore.getState().setContext({ orgId: org.id, branchId: branch.id, memberId: member.id });
 
       if (!skipPatient && patientName.trim()) {
+        // branchId is REQUIRED by POST /dental/patients (createDentalPatient
+        // throws "branchId is required" otherwise) — send the branch just
+        // created so the first patient actually persists.
         await fetch(`${API}/dental/patients`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender }),
+          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender, branchId: branch.id }),
         });
       }
 

@@ -69,7 +69,8 @@ export async function createMember(ctx: Context): Promise<Response> {
   // owner holds any membership, their membership role governs as normal.
   const callerIsOwner = user.id === org.ownerPersonId;
   const callerMembership = await memberRepo.findActiveByPersonAndBranch(user.id, resolvedBranchId);
-  if (!(callerIsOwner && !callerMembership)) {
+  const isOwnerBootstrap = callerIsOwner && !callerMembership;
+  if (!isOwnerBootstrap) {
     await assertBranchRole(db, user.id, resolvedBranchId, ['dentist_owner']);
   }
 
@@ -93,7 +94,10 @@ export async function createMember(ctx: Context): Promise<Response> {
     branchId: resolvedBranchId,
     displayName: body.displayName.trim(),
     role: body.role,
-    personId: body.personId ?? null,
+    // Owner bootstrap: the owner's first membership IS the owner — link it to
+    // their account so they gain branch access (set-pin and all subsequent
+    // owner operations assert an active membership for user.id).
+    personId: body.personId ?? (isOwnerBootstrap ? user.id : null),
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
     ...(pinHash ? { pinHash } : {}),

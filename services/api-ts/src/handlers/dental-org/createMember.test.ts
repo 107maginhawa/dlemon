@@ -175,6 +175,45 @@ describe('createMember handler', () => {
   });
 
   // --------------------------------------------------------------------------
+  // Owner bootstrap: the FIRST membership an owner creates IS the owner.
+  // It must be linked to the owner's account (personId = user.id) so they
+  // actually gain branch access — otherwise set-pin and every subsequent owner
+  // operation fails assertBranchAccess(user.id, branch) ("You do not have
+  // access to this branch"), which is exactly what breaks the onboarding wizard.
+  // --------------------------------------------------------------------------
+
+  test('owner-bootstrap: first membership is linked to the owner account (personId = user.id)', async () => {
+    // Seed org + branch but DO NOT seed the owner's membership — this is the
+    // genuine first-run state the onboarding wizard hits.
+    const orgRepo = new OrganizationRepository(db);
+    await orgRepo.createOne({
+      id: ORG_ID, name: 'Bootstrap Clinic', tier: 'solo',
+      ownerPersonId: PERSON_ID, countryCode: 'PH', active: true,
+    });
+    const branchRepo = new BranchRepository(db);
+    await branchRepo.createOne({
+      id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch',
+      timezone: 'Asia/Manila', active: true,
+    });
+
+    const app = buildTestApp(authedUser);
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // The wizard sends NO personId for the owner's first member.
+      body: JSON.stringify({ displayName: 'Dr. Owner', role: 'dentist_owner' }),
+    });
+
+    expect(res.status).toBe(201);
+
+    // The persisted membership must be linked to the owner so they have access.
+    const membershipRepo = new MembershipRepository(db);
+    const mine = await membershipRepo.findActiveByPersonAndBranch(PERSON_ID, BRANCH_ID);
+    expect(mine, 'owner must now hold an active membership in the branch').toBeTruthy();
+    expect(mine!.role).toBe('dentist_owner');
+  });
+
+  // --------------------------------------------------------------------------
   // EF-ORG-011: dentist_owner role enforcement
   // --------------------------------------------------------------------------
 
