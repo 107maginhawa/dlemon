@@ -49,10 +49,13 @@ export const VISIT_TYPE_OPTIONS = [
 
 /** Build start/end ISO timestamps from a date + time + duration (minutes). */
 export function buildTimeRange(date: string, time: string, durationMinutes: number) {
-  const startAt = `${date}T${time}:00`;
-  const start = new Date(startAt);
+  // Interpret the entered date+time as local wall-clock, then emit BOTH bounds as
+  // full ISO-8601 (UTC Z). The backend validates startAt/endAt with
+  // z.string().datetime(), which rejects a timezone-naive string like
+  // "2026-06-07T10:00:00" — so startAt must be normalised, not passed raw.
+  const start = new Date(`${date}T${time}:00`);
   const end = new Date(start.getTime() + (durationMinutes || 30) * 60_000);
-  return { startAt, endAt: end.toISOString() };
+  return { startAt: start.toISOString(), endAt: end.toISOString() };
 }
 
 export function buildAppointmentPayload(form: {
