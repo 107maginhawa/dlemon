@@ -45,7 +45,11 @@ export function AmendmentForm({
     setError('');
     setSaving(true);
     try {
-      await createAmendment({
+      // The generated client defaults to throwOnError=false: it resolves with
+      // `{ error }` on both network failures and non-2xx responses rather than
+      // throwing. Inspect that result so a failed amendment surfaces an error
+      // instead of silently closing the form as if it succeeded.
+      const { error: apiError } = await createAmendment({
         path: { visitId },
         body: {
           patientId,
@@ -55,6 +59,11 @@ export function AmendmentForm({
           content: content.trim(),
         } as Parameters<typeof createAmendment>[0]['body'],
       });
+      if (apiError) {
+        setError('Failed to save amendment. Please try again.');
+        console.error('Amendment save failed', apiError);
+        return;
+      }
       await Promise.resolve(onSaved?.());
       onClose();
     } catch (err) {
