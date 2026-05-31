@@ -26,6 +26,7 @@ import {
   CreateDentalInvoiceBody,
   RecordDentalPaymentParams, RecordDentalPaymentBody,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
 } from '@/generated/openapi/validators';
 import { createDentalInvoice } from './createDentalInvoice';
 import { recordDentalPayment } from './recordDentalPayment';
@@ -107,6 +108,7 @@ function buildTestApp() {
     recordDentalPayment as any);
   app.post('/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, ve),
+    zValidator('json', VoidDentalInvoiceBody, ve),
     voidDentalInvoice as any);
   return app;
 }
@@ -267,7 +269,7 @@ describe('DE-009 InvoiceVoided — audit-row marker on void', () => {
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT}/void`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'x' }),
+      body: JSON.stringify({ reason: 'Unknown invoice void attempt' }),
     });
     expect(res.status).toBe(404);
     expect(await auditRows('invoice.voided', NONEXISTENT)).toHaveLength(0);

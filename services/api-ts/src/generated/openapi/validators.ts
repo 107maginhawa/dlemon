@@ -1346,7 +1346,8 @@ export const DentalImagingModulePatientImageItemSchema = z.object({
   studyId: z.union([z.string(), z.null()]),
   visitId: z.union([z.string(), z.null()]),
   toothNumbers: z.array(z.number().int()),
-  createdAt: z.string().datetime().transform((str) => new Date(str))
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  downloadUrl: z.union([z.string(), z.null()])
 });
 
 export const DentalImagingModuleListPatientImagesResponseSchema = z.object({
@@ -17410,6 +17411,10 @@ export const VitalsDataSchema = z.object({
   notes: z.string().optional()
 });
 
+export const VoidDentalInvoiceRequestSchema = z.object({
+  reason: z.string().min(5).max(500)
+});
+
 export const VoidDentalPaymentRequestSchema = z.object({
   voidReason: z.string()
 });
@@ -18134,6 +18139,9 @@ export const VoidDentalInvoiceParams = z.object({
 });
 export type VoidDentalInvoiceParams = z.infer<typeof VoidDentalInvoiceParams>;
 
+export const VoidDentalInvoiceBody = VoidDentalInvoiceRequestSchema;
+export type VoidDentalInvoiceBody = z.infer<typeof VoidDentalInvoiceBody>;
+
 export const VoidDentalInvoiceResponse = DentalInvoiceSchema;
 
 export const GetPatientBalanceParams = z.object({
@@ -18293,12 +18301,22 @@ export const CephMgmt_getCephAnalysisParams = z.object({
 });
 export type CephMgmt_getCephAnalysisParams = z.infer<typeof CephMgmt_getCephAnalysisParams>;
 
+export const CephMgmt_getCephAnalysisQuery = z.object({
+  analysisType: z.string().optional(),
+});
+export type CephMgmt_getCephAnalysisQuery = z.infer<typeof CephMgmt_getCephAnalysisQuery>;
+
 export const CephMgmt_getCephAnalysisResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
 
 export const CephMgmt_recomputeCephAnalysisParams = z.object({
   imageId: z.string(),
 });
 export type CephMgmt_recomputeCephAnalysisParams = z.infer<typeof CephMgmt_recomputeCephAnalysisParams>;
+
+export const CephMgmt_recomputeCephAnalysisQuery = z.object({
+  analysisType: z.string().optional(),
+});
+export type CephMgmt_recomputeCephAnalysisQuery = z.infer<typeof CephMgmt_recomputeCephAnalysisQuery>;
 
 export const CephMgmt_recomputeCephAnalysisResponse = z.union([DentalImagingModuleCephAnalysisSchema, ErrorResponseSchema]);
 

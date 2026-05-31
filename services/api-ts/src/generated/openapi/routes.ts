@@ -504,6 +504,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/billing/invoices/:invoiceId/void',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', validators.VoidDentalInvoiceBody, validationErrorHandler),
     registry.voidDentalInvoice as unknown as Handler
   );
 
@@ -637,6 +638,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.get('/dental/imaging/images/:imageId/ceph/analysis',
     authMiddleware(),
     zValidator('param', validators.CephMgmt_getCephAnalysisParams, validationErrorHandler),
+    zValidator('query', validators.CephMgmt_getCephAnalysisQuery, validationErrorHandler),
     registry.CephMgmt_getCephAnalysis as unknown as Handler
   );
 
@@ -644,6 +646,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/imaging/images/:imageId/ceph/analysis/recompute',
     authMiddleware(),
     zValidator('param', validators.CephMgmt_recomputeCephAnalysisParams, validationErrorHandler),
+    zValidator('query', validators.CephMgmt_recomputeCephAnalysisQuery, validationErrorHandler),
     registry.CephMgmt_recomputeCephAnalysis as unknown as Handler
   );
 

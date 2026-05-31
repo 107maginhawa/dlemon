@@ -381,7 +381,9 @@ void_invoice_id: jsonpath "$.id"
 POST {{api}}/dental/billing/invoices/{{void_invoice_id}}/void
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
-{}
+{
+  "reason": "Duplicate invoice created in error"
+}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "voided"

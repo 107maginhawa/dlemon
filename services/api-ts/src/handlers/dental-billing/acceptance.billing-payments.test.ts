@@ -32,6 +32,7 @@ import {
   VoidDentalPaymentParams,
   VoidDentalPaymentBody,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
   CreateDentalPaymentPlanParams,
   CreateDentalPaymentPlanBody,
   GetDentalPaymentPlanParams,
@@ -138,6 +139,7 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.post(
     '/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
   );
   app.post(
@@ -351,6 +353,8 @@ describe('AC-PAY-05: active payment plan blocks invoice void', () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Active plan void attempt' }),
     });
 
     // BusinessLogicError maps to 422 in this codebase

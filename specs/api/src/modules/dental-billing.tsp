@@ -210,6 +210,15 @@ model VoidDentalPaymentRequest {
   voidReason: string;
 }
 
+// BR/AC: voiding an invoice is an auditable money correction — the caller MUST
+// supply a human reason (API_CONTRACTS: min 5, max 500). The handler records it
+// on the invoice.voided audit event. An empty body previously 200'd silently.
+model VoidDentalInvoiceRequest {
+  @minLength(5)
+  @maxLength(500)
+  reason: string;
+}
+
 model CreateDentalPaymentPlanRequest {
   patientId: UUID;
 
@@ -315,7 +324,8 @@ namespace DentalBillingModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("voidDentalInvoice")
     voidInvoice(
-      @path invoiceId: UUID
+      @path invoiceId: UUID,
+      @body body: VoidDentalInvoiceRequest
     ): ApiOkResponse<DentalInvoice>
       | ApiNotFoundResponse
       | ApiBadRequestResponse

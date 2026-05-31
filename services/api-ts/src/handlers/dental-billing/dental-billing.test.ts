@@ -41,6 +41,7 @@ import {
   ApplyDentalDiscountBody,
   IssueDentalInvoiceParams,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
   RecordDentalPaymentParams,
   RecordDentalPaymentBody,
   ListDentalPaymentsParams,
@@ -189,6 +190,7 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.post(
     '/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
   );
 
@@ -590,6 +592,8 @@ describe('voidDentalInvoice handler', () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Duplicate invoice' }),
     });
     expect(res.status).toBe(401);
   });
@@ -598,6 +602,8 @@ describe('voidDentalInvoice handler', () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Duplicate invoice' }),
     });
     expect(res.status).toBe(404);
   });
@@ -608,6 +614,8 @@ describe('voidDentalInvoice handler', () => {
 
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Duplicate invoice' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -623,10 +631,61 @@ describe('voidDentalInvoice handler', () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Duplicate invoice' }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const body = await res.json() as any;
     expect(body.code).toBe('ALREADY_VOIDED');
+  });
+
+  // P1 (Theme C) — void must capture the contract-required reason (API_CONTRACTS:175,
+  // min:5 max:500). Previously the handler accepted an empty body and 200'd, silently
+  // dropping the reason. These pin the enforcement at the real route stack.
+  test('rejects a void with no body (reason required)', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(400);
+    // invoice must NOT be voided
+    const after = await new DentalInvoiceRepository(db).findOneById(invoice.id);
+    expect(after?.status).not.toBe('voided');
+  });
+
+  test('rejects a void whose reason is shorter than 5 chars', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'dup' }),
+    });
+    expect(res.status).toBe(400);
+    const after = await new DentalInvoiceRepository(db).findOneById(invoice.id);
+    expect(after?.status).not.toBe('voided');
+  });
+
+  test('captures the void reason in the audit log metadata', async () => {
+    const { invoice } = await seedInvoice();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Billing error correction' }),
+    });
+    expect(res.status).toBe(200);
+
+    const { dentalAuditLog } = await import('@/handlers/dental-audit/repos/audit-log.schema');
+    const { and, eq } = await import('drizzle-orm');
+    const rows = await db.select().from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.action, 'invoice.voided'), eq(dentalAuditLog.targetId, invoice.id)));
+    expect(rows).toHaveLength(1);
+    expect((rows[0]?.metadata as any)?.reason).toBe('Billing error correction');
   });
 });
 
@@ -1289,10 +1348,12 @@ describe('issueDentalInvoice role gate', () => {
 });
 
 describe('voidDentalInvoice role gate', () => {
+  const voidBody = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Duplicate invoice' }) };
+
   test('staff_full → 403', async () => {
     const { invoice } = await seedInvoice();
     const app = buildTestApp(STAFF_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, voidBody);
     expect(res.status).toBe(403);
   });
 
@@ -1302,21 +1363,21 @@ describe('voidDentalInvoice role gate', () => {
     await db.insert(dm).values({ id: '7c000000-0000-4000-8000-000000000a98', branchId: BRANCH_ID, personId: associateUser.id, displayName: 'Associate', role: 'dentist_associate', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
     const { invoice } = await seedInvoice();
     const app = buildTestApp(associateUser);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, voidBody);
     expect(res.status).toBe(403);
   });
 
   test('staff_scheduling → 403', async () => {
     const { invoice } = await seedInvoice();
     const app = buildTestApp(SCHEDULING_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, voidBody);
     expect(res.status).toBe(403);
   });
 
   test('dentist_owner → passes role gate (not 403)', async () => {
     const { invoice } = await seedInvoice();
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, voidBody);
     expect(res.status).not.toBe(403);
   });
 });
