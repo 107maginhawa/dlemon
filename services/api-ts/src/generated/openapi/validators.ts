@@ -754,7 +754,8 @@ export const ToothChartStateSchema = z.object({
 export const CreateDentalChartRequestSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
-  teeth: z.array(ToothChartStateSchema)
+  teeth: z.array(ToothChartStateSchema),
+  localId: z.string().optional()
 });
 
 export const CreateDentalInvoiceRequestSchema = z.object({
@@ -763,7 +764,8 @@ export const CreateDentalInvoiceRequestSchema = z.object({
   branchId: UUIDSchema,
   dentistMemberId: UUIDSchema,
   taxRate: z.number().optional(),
-  dueDate: z.string().datetime().transform((str) => new Date(str)).optional()
+  dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
+  localId: z.string().optional()
 });
 
 export const PlanFrequencySchema = z.enum(["weekly", "biweekly", "monthly"]);
@@ -784,14 +786,16 @@ export const CreateDentalTreatmentRequestSchema = z.object({
   description: z.string(),
   conditionCode: z.string().optional(),
   priceCents: z.number().int(),
-  clinicalNotes: z.string().optional()
+  clinicalNotes: z.string().optional(),
+  localId: z.string().optional()
 });
 
 export const CreateDentalVisitRequestSchema = z.object({
   patientId: UUIDSchema,
   branchId: UUIDSchema,
   dentistMemberId: UUIDSchema,
-  chiefComplaint: z.string().optional()
+  chiefComplaint: z.string().optional(),
+  localId: z.string().optional()
 });
 
 export const CreateLineItemRequestSchema = z.object({

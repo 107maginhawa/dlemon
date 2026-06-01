@@ -105,6 +105,9 @@ model CreateDentalVisitRequest {
   branchId: UUID;
   dentistMemberId: UUID;
   chiefComplaint?: string;
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateDentalVisitRequest {
@@ -135,6 +138,9 @@ model CreateDentalChartRequest {
   visitId: UUID;
   patientId: UUID;
   teeth: ToothChartState[];
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateToothRequest {
@@ -194,6 +200,9 @@ model CreateDentalTreatmentRequest {
   conditionCode?: string;
   priceCents: int32;
   clinicalNotes?: string;
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateDentalTreatmentRequest {

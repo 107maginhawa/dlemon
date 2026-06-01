@@ -183,6 +183,9 @@ model CreateDentalInvoiceRequest {
   dentistMemberId: UUID;
   taxRate?: float32;
   dueDate?: utcDateTime;
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model RecordDentalPaymentRequest {
