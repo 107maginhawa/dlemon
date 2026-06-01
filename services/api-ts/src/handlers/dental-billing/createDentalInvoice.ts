@@ -89,6 +89,8 @@ export async function createDentalInvoice(
     totalCents,
     balanceCents: totalCents,
     dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+    // GAP-001: persist optional client-generated id for offline-first idempotent sync.
+    localId: body.localId,
   });
 
   // Create line items from treatments

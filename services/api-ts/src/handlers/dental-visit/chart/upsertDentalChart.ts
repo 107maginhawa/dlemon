@@ -43,6 +43,8 @@ export async function upsertDentalChart(
     visitId,
     patientId: body.patientId,
     teeth: body.teeth as ToothChartState[],
+    // GAP-001: persist optional client-generated id for offline-first idempotent sync.
+    localId: body.localId,
   });
 
   await repo.saveVersion(chart.id, body.teeth as ToothChartState[], user.id);

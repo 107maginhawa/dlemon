@@ -68,6 +68,8 @@ export async function createDentalTreatment(
     priceCents: body.priceCents,
     carriedOver: false,
     clinicalNotes: body.clinicalNotes,
+    // GAP-001: persist optional client-generated id for offline-first idempotent sync.
+    localId: body.localId,
   });
 
   // V-VIS-001 / DE-004 TreatmentDiagnosed: per ADR-006 this is an audit-log-only
