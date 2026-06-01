@@ -85,14 +85,21 @@ bun audit 0. The two P1s are both pre-existing or systemic, neither a functional
 
 1. **`TR-INFRA-001` (P1, carried)** — the engine's `CODE_SPEC_TRACE` is empty (spec_trace_optin
    off). This is a **tooling gap in the oli-engine repo** (`$OLI_ENGINE_HOME`), not dentalemon code.
-2. **`TR-DG-002` (P1, systemic — NOT erasure-specific)** — the erasure HTTP paths are hand-mounted in
-   `app.ts` and absent from the compiled `openapi.json` (only the component schemas emit). This is
-   the **same manual-routing divergence that affects EVERY dental module** (dental-audit's
-   `/dental/audit-events` etc. are also absent from compiled paths) — the project mounts dental
-   routes manually rather than via codegen. Runtime is correct (boot-smoke 401, 6 route tests).
-   The proper fix is the standing **"migrate manual dental routes → TypeSpec codegen"** structural
-   effort, tracked separately — fixing erasure alone would be inconsistent. Belongs to that debt
-   bucket, not this governance slice.
+2. **`TR-DG-002` (P1, systemic) — ✅ CLEARED 2026-06-01** (commits `fa703bc8`…`c90d007c` on
+   `feat/ceph-demoable-and-manual-ux`). The full manual-route→TypeSpec migration was executed.
+   - Root cause (docs/audits/TR-DG-002-FINDINGS.md): TypeSpec emits a path only when the operation is
+     reachable from the `@service` namespace (`MonobaseAPI`); data-governance modules were imported
+     but never re-declared there, and ~13 other features had no TypeSpec at all.
+   - Migrated: erasure (5), audit-events (1), legal-hold (3, new tsp) + 13 Cat-3 feature groups
+     (contacts/recalls/alerts/tasks/treatment-plans/sync-logs/insurance/claims/occlusion/postop/
+     inventory/fee-schedule/queue) + `GET /dental/branches`. **Dental paths in `openapi.json`:
+     103 → 140.** 191 generated dental routes, all in spec; 0 codegen stubs (291 handlers resolved).
+   - Remaining hand-mounted (8, all **unmodelable** Cat-1 exceptions — NOT the divergence this
+     finding targeted): audit/pmd `:id` **405 immutability method-guards** (the resource GETs ARE in
+     spec) and the two **operationId-collision** treatment-plan keeps (`GET :planId` + `/accept`
+     re-export dental-visit ops whose operationIds already emit).
+   - Verify: `bun run test` 239 files **2957 pass / 0 fail**, `typecheck` clean, `check:boundaries` 0,
+     no migration/better-auth drift; per-feature real-app boot-smoke (401-not-404).
 
 **Bottom line:** the data-governance work (V-DG-001/002 + LegalHold + GAP-001) is verified clean and
 introduced no new P0/P1. The gate's two P1s are a separate-repo tooling item and the project-wide
@@ -106,6 +113,6 @@ Plus the documented imaging **physical S3-delete** storage-service follow-up and
 
 ## 5. What's Next
 - Optional empirical backstop: boot the stack + `/oli-check --runtime --live --seed-coherence`.
-- Manual-route→TypeSpec migration (clears TR-DG-002 + the systemic class); oli-engine spec-trace
-  opt-in (clears TR-INFRA-001) — both separate efforts.
+- ~~Manual-route→TypeSpec migration (clears TR-DG-002 + the systemic class)~~ — ✅ DONE 2026-06-01
+  (see #2 above). oli-engine spec-trace opt-in (clears TR-INFRA-001) — still a separate-repo effort.
 - Tidy doc-drift: update DATA_GOVERNANCE §3 "Still to add" lines (consent/imaging/legal-hold now done).

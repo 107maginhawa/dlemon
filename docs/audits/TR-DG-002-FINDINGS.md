@@ -74,3 +74,45 @@ so authoring can parallelize but integration cannot).
 `bun run test` (2905/0) · `bun run typecheck` · `bun run check:boundaries` (0) ·
 boot-smoke migrated routes 401-not-404 · path present in `dist/openapi/openapi.json`.
 Final: refresh oli map + `/oli-check --traceability` → confirm TR-DG-002 cleared.
+
+---
+
+## OUTCOME — ✅ CLEARED 2026-06-01
+
+Executed the full migration on `feat/ceph-demoable-and-manual-ux` (5 commits
+`fa703bc8`…`c90d007c`):
+
+| Phase | Module(s) | Ops | Commit |
+|-------|-----------|-----|--------|
+| 1 spike | erasure | 5 | `fa703bc8` |
+| 2a | audit-events | 1 | `b5039daf` |
+| 2b | legal-hold (new tsp) | 3 | `2adb1af2` |
+| 2c | contacts/recalls/alerts/tasks/treatment-plans/sync-logs/insurance/claims/occlusion/postop/inventory/fee-schedule/queue | 38 | `5befec93` |
+| 2d | GET /dental/branches | 1 | `c90d007c` |
+
+**Dental paths in `openapi.json`: 103 → 140.** 191 generated dental routes, all
+in spec. 0 codegen stubs (291 handlers resolved via recursive glob — handlers were
+already in the right module dirs). No migration/better-auth drift on any regen.
+
+### The 4 new spec modules (Cat-3)
+`dental-patient-engagement.tsp`, `dental-patient-finance.tsp`,
+`dental-clinical-ops.tsp`, `dental-ops-extras.tsp` (+ `dental-legal-hold.tsp` for 2b).
+Authored by 4 parallel subagents; integrated + codegen'd serially (codegen rewrites
+global files, so authoring parallelizes but integration cannot).
+
+### Remaining hand-mounted dental routes (8) — all unmodelable Cat-1 exceptions
+- `DELETE/PUT/PATCH /dental/audit-events/:id` and `PATCH/PUT/DELETE /dental/pmd/imported/:id`
+  — **405 immutability method-guards**. The resource GETs ARE codegen-routed + in spec;
+  these method-shadows deliberately return 405 and have no meaningful TypeSpec form.
+- `GET /dental/patients/:patientId/treatment-plans/:planId` and `.../accept` —
+  **operationId-collision keeps**: their handlers re-export dental-visit's
+  `getTreatmentPlan`/`acceptTreatmentPlan`, whose operationIds already emit via the
+  singular `/treatment-plan` route. OpenAPI forbids duplicate operationIds, so these
+  plural paths cannot be re-emitted without renaming the singular ops (out of scope).
+
+(The tooth-history int-param shadow and recover-pin auth-shadow remain hand-mounted too,
+but their paths ARE in spec via the generated routes they shadow — not divergences.)
+
+### Final verify gate
+`bun run test` 239 files **2957 pass / 0 fail** · `typecheck` clean ·
+`check:boundaries` 0 · all migrated paths present in `dist/openapi/openapi.json`.
