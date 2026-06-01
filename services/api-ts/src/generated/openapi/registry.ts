@@ -88,6 +88,7 @@ import { createConsentTemplate } from '../../handlers/dental-org/createConsentTe
 import { createMember } from '../../handlers/dental-org/createMember';
 import { deleteConsentTemplate } from '../../handlers/dental-org/deleteConsentTemplate';
 import { getBranchSettings } from '../../handlers/dental-org/getBranchSettings';
+import { getBranchesByUser } from '../../handlers/dental-org/getBranchesByUser';
 import { getDashboardSummary } from '../../handlers/dental-org/getDashboardSummary';
 import { getFeeSchedule } from '../../handlers/dental-org/getFeeSchedule';
 import { getOrgContext } from '../../handlers/dental-org/getOrgContext';
@@ -395,6 +396,7 @@ export const registry = {
   createMember,
   deleteConsentTemplate,
   getBranchSettings,
+  getBranchesByUser,
   getDashboardSummary,
   getFeeSchedule,
   getOrgContext,

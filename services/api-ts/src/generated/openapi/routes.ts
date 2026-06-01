@@ -530,6 +530,12 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getPatientBalance as unknown as Handler
   );
 
+  // getBranchesByUser
+  app.get('/dental/branches',
+    authMiddleware({ roles: ["user"] }),
+    registry.getBranchesByUser as unknown as Handler
+  );
+
   // listConsentTemplates
   app.get('/dental/branches/:branchId/consent-templates',
     authMiddleware({ roles: ["user"] }),

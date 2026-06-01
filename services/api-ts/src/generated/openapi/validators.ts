@@ -18812,6 +18812,8 @@ export type GetPatientBalanceParams = z.infer<typeof GetPatientBalanceParams>;
 
 export const GetPatientBalanceResponse = PatientBalanceResponseSchema;
 
+export const GetBranchesByUserResponse = z.union([DentalOrgModuleBranchListSchema, ErrorResponseSchema]);
+
 export const ListConsentTemplatesParams = z.object({
   branchId: UUIDSchema,
 });

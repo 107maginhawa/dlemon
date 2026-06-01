@@ -47,7 +47,6 @@ import { metricsMiddleware } from '@/middleware/metrics-middleware';
 import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
-import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 // TR-DG-002: contacts/recalls/alerts/tasks/treatment-plans(create,list,update,approval)/
 // sync-logs/insurance/claims/occlusion/postop/inventory/fee-schedule/queue handlers are
 // now codegen-routed (registry → registerOpenAPIRoutes); their app.ts imports were removed.
@@ -130,10 +129,8 @@ export function createApp(config: Config): App {
       }
     );
   }
-  (app as any).get('/dental/branches',
-    authMiddleware({ roles: ['user'] }),
-    getBranchesByUser
-  );
+  // /dental/branches (user's branches) — MIGRATED to TypeSpec codegen (TR-DG-002):
+  // emits from dental-org.tsp BranchConfigManagement.getBranchesByUser in main.tsp.
   (app as any).get('/dental/visits/history/:patientId/teeth/:toothNumber',
     authMiddleware({ roles: ['user'] }),
     getToothHistory

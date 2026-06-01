@@ -684,6 +684,15 @@ namespace DentalOrgModule {
   }
 
   interface BranchConfigManagement {
+    @doc("List all branches the authenticated user has an active membership in")
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getBranchesByUser")
+    getBranchesByUser(): ApiOkResponse<BranchList>
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
+
     @get
     @route("/{branchId}/working-hours")
     @useAuth(bearerAuth)
