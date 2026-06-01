@@ -18,9 +18,10 @@
 import type { DatabaseInstance } from '@/core/database';
 import type { RetentionTarget, RetentionTargetRegistry } from './retention-engine';
 import {
-  findArchivableAttachmentIds,
+  findArchivableAttachmentSubjects,
   archiveAttachments,
 } from '@/handlers/dental-clinical/repos/attachment-retention.facade';
+import { personsUnderLegalHold } from '@/handlers/legal-hold/legal-hold.facade';
 
 /**
  * Imaging attachments (x-ray/photo/scan), scoped through the owning visit's
@@ -29,9 +30,11 @@ import {
 const attachmentTarget: RetentionTarget = {
   entityType: 'attachment',
   async findEligible(db: DatabaseInstance, { tenantId, branchId, cutoff }) {
-    const ids = await findArchivableAttachmentIds(db, { tenantId, branchId, cutoff });
-    // No legal-hold store yet → nothing is held. Surface it from the facade later.
-    return ids.map((id) => ({ id, legalHold: false }));
+    const subjects = await findArchivableAttachmentSubjects(db, { tenantId, branchId, cutoff });
+    // Legal-hold exclusion: attachments whose owning Person is under an active
+    // hold are flagged held, and the engine excludes them.
+    const held = await personsUnderLegalHold(db, subjects.map((s) => s.personId));
+    return subjects.map((s) => ({ id: s.id, legalHold: held.has(s.personId) }));
   },
   async archive(db: DatabaseInstance, ids: string[]) {
     return archiveAttachments(db, ids);

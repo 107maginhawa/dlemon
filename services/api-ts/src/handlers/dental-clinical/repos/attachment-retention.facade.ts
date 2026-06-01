@@ -15,11 +15,18 @@ import type { DatabaseInstance } from '@/core/database';
 import { dentalAttachments } from './attachment.schema';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import { dentalBranches } from '../../dental-org/repos/branch.schema';
+import { patients } from '../../patient/repos/patient.schema';
 
 export interface ArchivableAttachmentQuery {
   tenantId: string;
   branchId?: string | null;
   cutoff: Date;
+}
+
+export interface ArchivableAttachmentSubject {
+  id: string;
+  /** The owning patient's Person — used for the legal-hold check. */
+  personId: string;
 }
 
 /**
@@ -57,6 +64,45 @@ export async function findArchivableAttachmentIds(
         );
 
   return rows.map((r) => r.id);
+}
+
+/**
+ * Like findArchivableAttachmentIds but also returns each attachment's owning
+ * Person id (via patient), so the retention engine can apply the legal-hold
+ * exclusion per subject.
+ */
+export async function findArchivableAttachmentSubjects(
+  db: DatabaseInstance,
+  { tenantId, branchId, cutoff }: ArchivableAttachmentQuery,
+): Promise<ArchivableAttachmentSubject[]> {
+  const rows = branchId
+    ? await db
+        .select({ id: dentalAttachments.id, personId: patients.person })
+        .from(dentalAttachments)
+        .innerJoin(dentalVisits, eq(dentalAttachments.visitId, dentalVisits.id))
+        .innerJoin(patients, eq(dentalAttachments.patientId, patients.id))
+        .where(
+          and(
+            isNull(dentalAttachments.deletedAt),
+            lte(dentalAttachments.createdAt, cutoff),
+            eq(dentalVisits.branchId, branchId),
+          ),
+        )
+    : await db
+        .select({ id: dentalAttachments.id, personId: patients.person })
+        .from(dentalAttachments)
+        .innerJoin(dentalVisits, eq(dentalAttachments.visitId, dentalVisits.id))
+        .innerJoin(dentalBranches, eq(dentalVisits.branchId, dentalBranches.id))
+        .innerJoin(patients, eq(dentalAttachments.patientId, patients.id))
+        .where(
+          and(
+            isNull(dentalAttachments.deletedAt),
+            lte(dentalAttachments.createdAt, cutoff),
+            eq(dentalBranches.organizationId, tenantId),
+          ),
+        );
+
+  return rows.map((r) => ({ id: r.id, personId: r.personId }));
 }
 
 /** Soft-archive attachments by stamping `deletedAt`. Returns the count archived. */

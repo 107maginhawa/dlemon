@@ -54,6 +54,10 @@ import { rejectErasureHandler } from '@/handlers/erasure/rejectErasureHandler';
 import { getErasureRequestHandler } from '@/handlers/erasure/getErasureRequestHandler';
 import { listErasureRequestsHandler } from '@/handlers/erasure/listErasureRequestsHandler';
 import { RequestErasureBody, RejectErasureBody, ErasureIdParams, ListErasureQuery } from '@/handlers/erasure/utils/erasure-validators';
+import { placeLegalHoldHandler } from '@/handlers/legal-hold/placeLegalHoldHandler';
+import { releaseLegalHoldHandler } from '@/handlers/legal-hold/releaseLegalHoldHandler';
+import { listLegalHoldsHandler } from '@/handlers/legal-hold/listLegalHoldsHandler';
+import { PlaceLegalHoldBody, LegalHoldIdParams, ListLegalHoldQuery } from '@/handlers/legal-hold/utils/legal-hold-validators';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 import { getFeeSchedule, updateFeeScheduleEntry } from '@/handlers/dental-org/feeSchedule';
 import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
@@ -268,6 +272,24 @@ export function createApp(config: Config): App {
     zValidator('param', ErasureIdParams),
     zValidator('json', RejectErasureBody),
     rejectErasureHandler
+  );
+
+  // V-DG-002 support: legal holds (WFG-006) — admin-gated in-handler. An active
+  // hold blocks erasure of the subject.
+  (app as any).post('/dental/legal-holds',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('json', PlaceLegalHoldBody),
+    placeLegalHoldHandler
+  );
+  (app as any).get('/dental/legal-holds',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('query', ListLegalHoldQuery),
+    listLegalHoldsHandler
+  );
+  (app as any).post('/dental/legal-holds/:id/release',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', LegalHoldIdParams),
+    releaseLegalHoldHandler
   );
 
   // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)

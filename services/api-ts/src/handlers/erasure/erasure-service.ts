@@ -18,6 +18,7 @@ import { logAuditEvent } from '@/core/audit-logger';
 import { ErasureRequestRepository } from './repos/erasure-request.repo';
 import type { DentalErasureRequest } from './repos/erasure-request.schema';
 import { anonymizeSubject } from './erasure-engine';
+import { isPersonUnderLegalHold } from '@/handlers/legal-hold/legal-hold.facade';
 
 export interface RequestErasureInput {
   subjectPersonId: string;
@@ -90,6 +91,11 @@ export async function approveErasure(
     throw new ValidationError(`Cannot approve an erasure request in status '${req.status}'`);
   }
 
+  // Consult the real legal-hold store; a reviewer may also assert a hold
+  // out-of-band. Either blocks erasure.
+  const storeHold = await isPersonUnderLegalHold(db, req.subjectPersonId);
+  const legalHold = storeHold || (input.legalHold ?? false);
+
   const result = await anonymizeSubject(
     db,
     logger,
@@ -101,7 +107,7 @@ export async function approveErasure(
     },
     {
       dryRun: opts.dryRun ?? false, // approval IS the explicit opt-in
-      legalHold: input.legalHold ?? false,
+      legalHold,
       audit: opts.audit,
       actorId: input.reviewedBy,
     },
