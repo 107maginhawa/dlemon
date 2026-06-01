@@ -48,6 +48,12 @@ import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
+import { requestErasureHandler } from '@/handlers/erasure/requestErasureHandler';
+import { approveErasureHandler } from '@/handlers/erasure/approveErasureHandler';
+import { rejectErasureHandler } from '@/handlers/erasure/rejectErasureHandler';
+import { getErasureRequestHandler } from '@/handlers/erasure/getErasureRequestHandler';
+import { listErasureRequestsHandler } from '@/handlers/erasure/listErasureRequestsHandler';
+import { RequestErasureBody, RejectErasureBody, ErasureIdParams, ListErasureQuery } from '@/handlers/erasure/utils/erasure-validators';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 import { getFeeSchedule, updateFeeScheduleEntry } from '@/handlers/dental-org/feeSchedule';
 import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
@@ -235,6 +241,35 @@ export function createApp(config: Config): App {
   (app as any).delete('/dental/pmd/imported/:id', (c: any) =>
     c.json({ error: 'Imported PMDs are immutable and cannot be deleted.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
+  // V-DG-002: right-to-erasure (WFG-006) — admin-gated in-handler. Two-step
+  // audited workflow request → approve(anonymize)/reject; legal-hold blocks.
+  (app as any).post('/dental/erasure-requests',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('json', RequestErasureBody),
+    requestErasureHandler
+  );
+  (app as any).get('/dental/erasure-requests',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('query', ListErasureQuery),
+    listErasureRequestsHandler
+  );
+  (app as any).get('/dental/erasure-requests/:id',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ErasureIdParams),
+    getErasureRequestHandler
+  );
+  (app as any).post('/dental/erasure-requests/:id/approve',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ErasureIdParams),
+    approveErasureHandler
+  );
+  (app as any).post('/dental/erasure-requests/:id/reject',
+    authMiddleware({ roles: ['user'] }),
+    zValidator('param', ErasureIdParams),
+    zValidator('json', RejectErasureBody),
+    rejectErasureHandler
+  );
+
   // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
   (app as any).post('/dental/patients/:patientId/contacts',
     authMiddleware({ roles: ['user'] }),
