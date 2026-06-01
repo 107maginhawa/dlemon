@@ -1163,6 +1163,49 @@ export const DentalChartSchema = z.object({
   teeth: z.array(ToothChartStateSchema)
 });
 
+export const DentalErasureModuleApproveErasureRequestSchema = z.object({
+  legalHold: z.boolean().optional()
+});
+
+export const DentalErasureModuleErasureRequestSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  subjectPersonId: z.string().uuid(),
+  subjectPatientId: z.union([z.string().uuid(), z.null()]),
+  tenantId: z.string().uuid(),
+  branchId: z.union([z.string().uuid(), z.null()]),
+  status: z.enum(["requested", "approved", "anonymized", "rejected"]),
+  reason: z.string(),
+  requestedBy: z.string().uuid(),
+  reviewedBy: z.union([z.string().uuid(), z.null()]),
+  reviewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  processedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  rejectionReason: z.union([z.string(), z.null()]),
+  legalHoldBlocked: z.boolean()
+});
+
+export const DentalErasureModuleErasureRequestListSchema = z.object({
+  data: z.array(DentalErasureModuleErasureRequestSchema)
+});
+
+export const DentalErasureModuleErasureRequestStatusSchema = z.enum(["requested", "approved", "anonymized", "rejected"]);
+
+export const DentalErasureModuleRejectErasureRequestSchema = z.object({
+  rejectionReason: z.string()
+});
+
+export const DentalErasureModuleRequestErasureRequestSchema = z.object({
+  subjectPersonId: UUIDSchema,
+  subjectPatientId: UUIDSchema.optional(),
+  tenantId: UUIDSchema,
+  branchId: UUIDSchema.optional(),
+  reason: z.string()
+});
+
 export const DentalImagingModuleCephLandmarkCodeSchema = z.enum(["S", "N", "A", "B", "ANS", "PNS", "Go", "Po", "Me", "Or", "Pog", "Gn", "U1T", "U1A", "L1T", "L1A"]);
 
 export const DentalImagingModuleCephLandmarkSourceSchema = z.enum(["manual", "ai", "ai_corrected"]);
@@ -18265,6 +18308,47 @@ export const GetDashboardSummaryQuery = z.object({
 export type GetDashboardSummaryQuery = z.infer<typeof GetDashboardSummaryQuery>;
 
 export const GetDashboardSummaryResponse = DentalOrgModuleDashboardSummaryResponseSchema;
+
+export const RequestErasureBody = DentalErasureModuleRequestErasureRequestSchema;
+export type RequestErasureBody = z.infer<typeof RequestErasureBody>;
+
+export const RequestErasureResponse = ErrorResponseSchema;
+
+export const ListErasureRequestsQuery = z.object({
+  status: DentalErasureModuleErasureRequestStatusSchema.optional(),
+  subjectPersonId: UUIDSchema.optional(),
+  tenantId: UUIDSchema.optional(),
+});
+export type ListErasureRequestsQuery = z.infer<typeof ListErasureRequestsQuery>;
+
+export const ListErasureRequestsResponse = z.union([DentalErasureModuleErasureRequestListSchema, ErrorResponseSchema]);
+
+export const GetErasureRequestParams = z.object({
+  id: UUIDSchema,
+});
+export type GetErasureRequestParams = z.infer<typeof GetErasureRequestParams>;
+
+export const GetErasureRequestResponse = z.union([DentalErasureModuleErasureRequestSchema, ErrorResponseSchema]);
+
+export const ApproveErasureParams = z.object({
+  id: UUIDSchema,
+});
+export type ApproveErasureParams = z.infer<typeof ApproveErasureParams>;
+
+export const ApproveErasureBody = DentalErasureModuleApproveErasureRequestSchema;
+export type ApproveErasureBody = z.infer<typeof ApproveErasureBody>;
+
+export const ApproveErasureResponse = z.union([DentalErasureModuleErasureRequestSchema, ErrorResponseSchema]);
+
+export const RejectErasureParams = z.object({
+  id: UUIDSchema,
+});
+export type RejectErasureParams = z.infer<typeof RejectErasureParams>;
+
+export const RejectErasureBody = DentalErasureModuleRejectErasureRequestSchema;
+export type RejectErasureBody = z.infer<typeof RejectErasureBody>;
+
+export const RejectErasureResponse = z.union([DentalErasureModuleErasureRequestSchema, ErrorResponseSchema]);
 
 export const ImagingFindingsMgmt_updateFindingParams = z.object({
   findingId: z.string(),

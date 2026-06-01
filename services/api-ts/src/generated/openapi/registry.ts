@@ -114,6 +114,11 @@ import { signConsentForm } from '../../handlers/dental-clinical/consent/signCons
 import { updateLabOrder } from '../../handlers/dental-clinical/lab-orders/updateLabOrder';
 import { updateMedicalHistoryEntry } from '../../handlers/dental-clinical/medical-history/updateMedicalHistoryEntry';
 import { updatePrescription } from '../../handlers/dental-clinical/prescriptions/updatePrescription';
+import { approveErasure } from '../../handlers/dental-erasure/approveErasure';
+import { getErasureRequest } from '../../handlers/dental-erasure/getErasureRequest';
+import { listErasureRequests } from '../../handlers/dental-erasure/listErasureRequests';
+import { rejectErasure } from '../../handlers/dental-erasure/rejectErasure';
+import { requestErasure } from '../../handlers/dental-erasure/requestErasure';
 import { CephMgmt_batchUpsertCephLandmarks } from '../../handlers/dental-imaging/CephMgmt_batchUpsertCephLandmarks';
 import { CephMgmt_createCephReport } from '../../handlers/dental-imaging/CephMgmt_createCephReport';
 import { CephMgmt_deleteCephLandmark } from '../../handlers/dental-imaging/CephMgmt_deleteCephLandmark';
@@ -370,6 +375,13 @@ export const registry = {
   updateLabOrder,
   updateMedicalHistoryEntry,
   updatePrescription,
+
+  // Dental-erasure handlers
+  approveErasure,
+  getErasureRequest,
+  listErasureRequests,
+  rejectErasure,
+  requestErasure,
 
   // Dental-imaging handlers
   CephMgmt_batchUpsertCephLandmarks,

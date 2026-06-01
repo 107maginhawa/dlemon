@@ -48,12 +48,6 @@ import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
 import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
-import { requestErasureHandler } from '@/handlers/erasure/requestErasureHandler';
-import { approveErasureHandler } from '@/handlers/erasure/approveErasureHandler';
-import { rejectErasureHandler } from '@/handlers/erasure/rejectErasureHandler';
-import { getErasureRequestHandler } from '@/handlers/erasure/getErasureRequestHandler';
-import { listErasureRequestsHandler } from '@/handlers/erasure/listErasureRequestsHandler';
-import { RequestErasureBody, RejectErasureBody, ErasureIdParams, ListErasureQuery } from '@/handlers/erasure/utils/erasure-validators';
 import { placeLegalHoldHandler } from '@/handlers/legal-hold/placeLegalHoldHandler';
 import { releaseLegalHoldHandler } from '@/handlers/legal-hold/releaseLegalHoldHandler';
 import { listLegalHoldsHandler } from '@/handlers/legal-hold/listLegalHoldsHandler';
@@ -245,34 +239,10 @@ export function createApp(config: Config): App {
   (app as any).delete('/dental/pmd/imported/:id', (c: any) =>
     c.json({ error: 'Imported PMDs are immutable and cannot be deleted.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
-  // V-DG-002: right-to-erasure (WFG-006) — admin-gated in-handler. Two-step
-  // audited workflow request → approve(anonymize)/reject; legal-hold blocks.
-  (app as any).post('/dental/erasure-requests',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('json', RequestErasureBody),
-    requestErasureHandler
-  );
-  (app as any).get('/dental/erasure-requests',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('query', ListErasureQuery),
-    listErasureRequestsHandler
-  );
-  (app as any).get('/dental/erasure-requests/:id',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ErasureIdParams),
-    getErasureRequestHandler
-  );
-  (app as any).post('/dental/erasure-requests/:id/approve',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ErasureIdParams),
-    approveErasureHandler
-  );
-  (app as any).post('/dental/erasure-requests/:id/reject',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ErasureIdParams),
-    zValidator('json', RejectErasureBody),
-    rejectErasureHandler
-  );
+  // V-DG-002: right-to-erasure (WFG-006) — MIGRATED to TypeSpec codegen
+  // (TR-DG-002). Routes now emit from dental-erasure.tsp → DentalErasureMgmt in
+  // main.tsp and register via registerOpenAPIRoutes below. Admin RBAC stays
+  // in-handler. See handlers/dental-erasure/erasure-route-registration.test.ts.
 
   // V-DG-002 support: legal holds (WFG-006) — admin-gated in-handler. An active
   // hold blocks erasure of the subject.

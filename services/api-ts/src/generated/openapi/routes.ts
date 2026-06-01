@@ -604,6 +604,43 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getDashboardSummary as unknown as Handler
   );
 
+  // requestErasure
+  app.post('/dental/erasure-requests',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.RequestErasureBody, validationErrorHandler),
+    registry.requestErasure as unknown as Handler
+  );
+
+  // listErasureRequests
+  app.get('/dental/erasure-requests',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListErasureRequestsQuery, validationErrorHandler),
+    registry.listErasureRequests as unknown as Handler
+  );
+
+  // getErasureRequest
+  app.get('/dental/erasure-requests/:id',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetErasureRequestParams, validationErrorHandler),
+    registry.getErasureRequest as unknown as Handler
+  );
+
+  // approveErasure
+  app.post('/dental/erasure-requests/:id/approve',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ApproveErasureParams, validationErrorHandler),
+    zValidator('json', validators.ApproveErasureBody, validationErrorHandler),
+    registry.approveErasure as unknown as Handler
+  );
+
+  // rejectErasure
+  app.post('/dental/erasure-requests/:id/reject',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RejectErasureParams, validationErrorHandler),
+    zValidator('json', validators.RejectErasureBody, validationErrorHandler),
+    registry.rejectErasure as unknown as Handler
+  );
+
   // ImagingFindingsMgmt_updateFinding
   app.patch('/dental/imaging/findings/:findingId',
     authMiddleware(),

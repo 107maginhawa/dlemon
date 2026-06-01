@@ -19,11 +19,10 @@ using TypeSpec.OpenAPI;
  * erasure. Admin-only.
  *
  * Contract source: docs/product/DATA_GOVERNANCE.md §3.
- * NOTE: routes are wired manually in services/api-ts app.ts (the dental modules
- * are manually routed); this TypeSpec is the contract/doc surface.
+ * Routes emit via the `DentalErasureMgmt` interface re-declared in main.tsp
+ * (the @route/@tag live on that service-namespace interface, matching the other
+ * dental modules); operations below carry only relative sub-routes.
  */
-@route("/dental/erasure-requests")
-@tag("Dental Erasure")
 namespace DentalErasureModule {
 
   @doc("Lifecycle of an erasure request")
@@ -99,7 +98,7 @@ namespace DentalErasureModule {
     @operationId("requestErasure")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin"])
+    @extension("x-security-required-roles", #["user"])
     requestErasure(
       @body body: RequestErasureRequest,
     ): ApiCreatedResponse<ErasureRequest>
@@ -112,7 +111,7 @@ namespace DentalErasureModule {
     @operationId("listErasureRequests")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin"])
+    @extension("x-security-required-roles", #["user"])
     listErasureRequests(
       @query status?: ErasureRequestStatus,
       @query subjectPersonId?: UUID,
@@ -127,7 +126,7 @@ namespace DentalErasureModule {
     @get
     @route("/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin"])
+    @extension("x-security-required-roles", #["user"])
     getErasureRequest(
       @path id: UUID,
     ): ApiOkResponse<ErasureRequest>
@@ -141,7 +140,7 @@ namespace DentalErasureModule {
     @post
     @route("/{id}/approve")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin"])
+    @extension("x-security-required-roles", #["user"])
     approveErasure(
       @path id: UUID,
       @body body: ApproveErasureRequest,
@@ -157,7 +156,7 @@ namespace DentalErasureModule {
     @post
     @route("/{id}/reject")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin"])
+    @extension("x-security-required-roles", #["user"])
     rejectErasure(
       @path id: UUID,
       @body body: RejectErasureRequest,

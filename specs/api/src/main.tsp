@@ -455,6 +455,11 @@ namespace MonobaseAPI {
   @route("/dental/billing")
   interface BillingExtrasMgmt extends DentalBillingModule.BillingExtras {}
 
+  // Dental Erasure (right-to-erasure / V-DG-002 / WFG-006)
+  @tag("Dental:Erasure")
+  @route("/dental/erasure-requests")
+  interface DentalErasureMgmt extends DentalErasureModule.ErasureManagement {}
+
   // ========================================================================
   // PLATFORM INFRASTRUCTURE
   // ========================================================================
