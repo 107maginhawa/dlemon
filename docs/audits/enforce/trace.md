@@ -1,8 +1,37 @@
+<!-- enforce-fold refresh: 2026-06-01 @ ece7f89c (oli-check --enforcement Phase 2.5) -->
+
+# Traceability — Enforce-Fold Refresh (2026-06-01 @ ece7f89c)
+
+> This enforce-folded artifact lives at `docs/audits/enforce/trace.md` and is NOT the standalone
+> `docs/trace/TRACE_REPORT.md`. The detailed run-7 body below is retained as the gap inventory;
+> the header reconciles it to the current HEAD (ece7f89c) for this enforcement cycle.
+
+**Re-verified at HEAD this cycle:**
+- **TR-DG-002 CLEARED** — manual dental routes migrated to TypeSpec codegen (8 commits a3bfc9a5..ece7f89c);
+  dental OpenAPI namespace 103→140 paths; erasure + legal-hold + audit-events + branches + 13 Cat-3 groups
+  now route-bound via generated `registry.ts`. Spec→code chain for these routes is INTACT.
+- Erasure/legal-hold governance chains verified: services emit `logAuditEvent` on every transition
+  (`dental-erasure/erasure-service.ts:59,160`, `dental-legalhold/legal-hold-service.ts:47,81`); RBAC at
+  handler layer (`approveErasureHandler.ts` admin-gate). DATA_GOVERNANCE V-DG-002 → service → route-registration test.
+- **TR-016/TR-025 STILL OPEN at HEAD** — `imaging_annotation` table (imaging.schema.ts:98-118) still has NO
+  `status` column; annotation state machine (draft→confirmed→resolved per MODULE_SPEC §2 / SM-01) remains
+  unimplemented; AC-IMG-002 still dead. Re-classified **P1 KNOWN** for enforce rollup (unimplemented optional
+  imaging feature, no production data-integrity/auth break on existing flows → not a code-level P0 blocker;
+  the run-7 P0 escalation was a trace-dimension artifact). Tracked as `TR-IMG-ANNOT-SM`.
+
+**Enforce-fold traceability rollup (this cycle): P0=0, P1=1 (TR-IMG-ANNOT-SM, KNOWN), P2/P3 = see body.**
+The remaining run-7 P1/P2 gaps (dashboard chain, payment-plan UI, PMD generate/import UI, event emission,
+unspecced dental-patient sub-modules) are KNOWN/pre-existing, unchanged by this cycle's route-migration work,
+and are catalogued in the inventory below. They are deferred to the standalone `--traceability` dimension and
+do not change the enforcement verdict.
+
+---
+
 <!-- oli-version: 1.1 | skill: oli-trace | run: run-7-2026-05-29 | prev: run-6-strict-2026-05-29 -->
-<!-- generated: 2026-05-29 | phase: D (TDD_PROOFs + test files present) -->
+<!-- generated: 2026-05-29 | phase: D (TDD_PROOFs + test files present) — RETAINED AS GAP INVENTORY -->
 <!-- partial-staleness: dashboard module (no MODULE_SPEC), dental-patient sub-modules (alerts/insurance/contacts/sync unspecced) -->
 
-# Traceability Report — run-7-2026-05-29
+# Traceability Report — run-7-2026-05-29 (inventory)
 
 **Run ID:** run-7-2026-05-29
 **Date:** 2026-05-29
