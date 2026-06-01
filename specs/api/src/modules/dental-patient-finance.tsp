@@ -1,0 +1,661 @@
+import "@typespec/http";
+import "@typespec/rest";
+import "@typespec/openapi";
+import "../common/models.tsp";
+import "../common/errors.tsp";
+import "../common/pagination.tsp";
+import "../common/security.tsp";
+
+using TypeSpec.Http;
+using TypeSpec.OpenAPI;
+
+/**
+ * Dental Patient-Finance Module (TR-DG-002 manual-route migration)
+ *
+ * Migrates four previously hand-registered route families off `app.ts` and onto
+ * TypeSpec codegen:
+ *   1. Treatment plans (PLURAL header entity) — create / list / update / approval.
+ *      NOTE: the SINGULAR `/dental/patients/{patientId}/treatment-plan` resource
+ *      (presentation aggregate + accept + versions) is a *different* resource owned
+ *      by dental-visit (DentalVisitModule.TreatmentPlanPresentation) and keeps its
+ *      operationIds (`getTreatmentPlan`, `acceptTreatmentPlan`,
+ *      `getTreatmentPlanVersion`). The plural GET-by-id and accept routes are
+ *      re-export shims of those same dental-visit handlers, so they CANNOT be
+ *      re-emitted here without duplicating a global operationId — they remain
+ *      Category-1 manual keeps in app.ts. Only the four genuinely-new plural
+ *      operations are migrated.
+ *   2. Sync logs — local-first sync ledger (base /dental/sync-logs, NOT under /patients).
+ *   3. Insurance profiles — per-patient coverage records.
+ *   4. Claim drafts ("claims") — insurance claim drafts + readiness check + status FSM.
+ *
+ * RBAC is membership-based and enforced in-handler; every op declares
+ * `x-security-required-roles: ["user"]` (the Better-Auth role is always `user`).
+ * Namespaces carry no @route/@tag — the base prefix + tag live on the
+ * MonobaseAPI interface re-declarations; operations below use relative sub-routes.
+ *
+ * operationIds match the exact exported handler function names under
+ * services/api-ts/src/handlers/dental-patient/{treatment-plans,sync,insurance}/.
+ */
+namespace DentalPatientFinanceModule {
+  // ==========================================================================
+  // 1 — TREATMENT PLANS (plural header entity)
+  // ==========================================================================
+
+  @doc("Lifecycle of a treatment-plan header")
+  enum TreatmentPlanStatus {
+    draft: "draft",
+    presented: "presented",
+    approved: "approved",
+    partially_completed: "partially_completed",
+    completed: "completed",
+    cancelled: "cancelled",
+  }
+
+  @doc("How a treatment plan was approved")
+  enum TreatmentPlanApprovalMethod {
+    signature: "signature",
+    verbal: "verbal",
+    portal: "portal",
+  }
+
+  @doc("A treatment-plan header record")
+  model TreatmentPlan extends BaseEntity {
+    @doc("Patient this plan belongs to")
+    patientId: UUID;
+
+    @doc("Provider who authored the plan")
+    providerId: UUID;
+
+    @doc("Current lifecycle status")
+    status: TreatmentPlanStatus;
+
+    @doc("Total estimate in cents")
+    totalEstimateCents: int32;
+
+    @doc("Free-text notes")
+    notes: string | null;
+
+    @doc("When the plan was presented to the patient (ISO 8601 UTC)")
+    presentedAt: utcDateTime | null;
+
+    @doc("When the plan was approved (ISO 8601 UTC)")
+    approvedAt: utcDateTime | null;
+  }
+
+  @doc("An append-only treatment-plan approval record (CR-05 / TR-P1-08)")
+  model TreatmentPlanApproval extends BaseEntity {
+    @doc("Treatment plan that was approved")
+    treatmentPlanId: UUID;
+
+    @doc("Loose ref to the accepted plan-version snapshot, if any")
+    planVersionId: UUID | null;
+
+    @doc("Person (patient/guardian) who approved")
+    approvedByPersonId: UUID;
+
+    @doc("Approval method")
+    method: TreatmentPlanApprovalMethod;
+
+    @doc("Loose ref to the consent form, if the approval was consented")
+    consentFormId: UUID | null;
+
+    @doc("Captured signature payload, if method = signature")
+    signatureData: string | null;
+
+    @doc("When the approval was recorded (ISO 8601 UTC)")
+    approvedAt: utcDateTime;
+  }
+
+  @doc("Result of approving a treatment plan: the approval record plus the recomputed plan")
+  model TreatmentPlanApprovalResult {
+    @doc("The newly-written approval record")
+    approval: TreatmentPlanApproval;
+
+    @doc("The plan header after binding items + status derivation")
+    plan: TreatmentPlan;
+  }
+
+  @doc("Body to create a treatment-plan header (created in 'draft')")
+  model CreateTreatmentPlanRequest {
+    @doc("Provider who authors the plan")
+    providerId: UUID;
+
+    @doc("Total estimate in cents (default 0)")
+    @minValue(0)
+    totalEstimateCents?: int32;
+
+    @doc("Optional free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to update a treatment plan (at least one field required)")
+  model UpdateTreatmentPlanRequest {
+    @doc("New lifecycle status (FSM-validated)")
+    status?: TreatmentPlanStatus;
+
+    @doc("Updated total estimate in cents")
+    @minValue(0)
+    totalEstimateCents?: int32;
+
+    @doc("Updated free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to record a patient approval of a treatment plan (CR-05)")
+  model ApproveTreatmentPlanRequest {
+    @doc("Person (patient/guardian) who approved")
+    approvedByPersonId: UUID;
+
+    @doc("Approval method")
+    method: TreatmentPlanApprovalMethod;
+
+    @doc("Consent form linkage, if consented")
+    consentFormId?: UUID;
+
+    @doc("Accepted plan-version snapshot linkage, if any")
+    planVersionId?: UUID;
+
+    @doc("Captured signature payload, if method = signature")
+    signatureData?: string;
+  }
+
+  @doc("Treatment-plan (plural) header management")
+  interface TreatmentPlanHeaderManagement {
+    @doc("Create a treatment-plan header in 'draft' status")
+    @operationId("createTreatmentPlan")
+    @post
+    @route("/{patientId}/treatment-plans")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createTreatmentPlan(
+      @path patientId: UUID,
+      @body body: CreateTreatmentPlanRequest,
+    ):
+      | ApiCreatedResponse<TreatmentPlan>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a patient's treatment-plan headers")
+    @operationId("listPatientTreatmentPlans")
+    @get
+    @route("/{patientId}/treatment-plans")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listPatientTreatmentPlans(@path patientId: UUID):
+      | ApiOkResponse<TreatmentPlan[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Update a treatment-plan header (FSM-validated status transitions)")
+    @operationId("updateTreatmentPlan")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/treatment-plans/{planId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateTreatmentPlan(
+      @path patientId: UUID,
+      @path planId: UUID,
+      @body body: UpdateTreatmentPlanRequest,
+    ):
+      | ApiOkResponse<TreatmentPlan>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Record a patient approval of a treatment plan + bind its items (CR-05 / TP-BR-005)")
+    @operationId("approveTreatmentPlan")
+    @post
+    @route("/{patientId}/treatment-plans/{planId}/approval")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    approveTreatmentPlan(
+      @path patientId: UUID,
+      @path planId: UUID,
+      @body body: ApproveTreatmentPlanRequest,
+    ):
+      | ApiCreatedResponse<TreatmentPlanApprovalResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 2 — SYNC LOGS (base /dental/sync-logs)
+  // ==========================================================================
+
+  @doc("Lifecycle of a local-first sync entry")
+  enum SyncStatus {
+    pending: "pending",
+    syncing: "syncing",
+    synced: "synced",
+    failed: "failed",
+  }
+
+  @doc("A local-first sync ledger entry")
+  model SyncLog extends BaseEntity {
+    @doc("Client-assigned local identifier")
+    localId: string;
+
+    @doc("Server-assigned identifier once reconciled")
+    serverId: string | null;
+
+    @doc("Entity type being synced")
+    entityType: string;
+
+    @doc("Entity identifier being synced")
+    entityId: string;
+
+    @doc("Branch context, if any")
+    branchId: string | null;
+
+    @doc("Current sync status")
+    syncStatus: SyncStatus;
+
+    @doc("When the entry last reached 'synced' (ISO 8601 UTC)")
+    lastSyncAt: utcDateTime | null;
+
+    @doc("Last error message, if the sync failed")
+    error: string | null;
+  }
+
+  @doc("Body to register a local-first sync entry")
+  model CreateSyncLogRequest {
+    @doc("Client-assigned local identifier")
+    @minLength(1)
+    localId: string;
+
+    @doc("Entity type being synced")
+    @minLength(1)
+    entityType: string;
+
+    @doc("Entity identifier being synced")
+    @minLength(1)
+    entityId: string;
+
+    @doc("Server-assigned identifier, if already known")
+    serverId?: string;
+
+    @doc("Branch context, if any")
+    branchId?: string;
+  }
+
+  @doc("Body to transition a sync entry (at least one non-version field required)")
+  model UpdateSyncLogRequest {
+    @doc("New sync status (FSM-validated; 'synced' is terminal)")
+    syncStatus?: SyncStatus;
+
+    @doc("Server-assigned identifier")
+    serverId?: string;
+
+    @doc("Error message")
+    error?: string;
+
+    @doc("Expected current version for optimistic-lock conflict detection (LF-BR-004)")
+    version?: int32;
+  }
+
+  @doc("Local-first sync-log management")
+  interface SyncLogManagement {
+    @doc("Register a local-first sync entry (created in 'pending')")
+    @operationId("createSyncLog")
+    @post
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createSyncLog(@body body: CreateSyncLogRequest):
+      | ApiCreatedResponse<SyncLog>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ErrorResponse;
+
+    @doc("List sync-log entries")
+    @operationId("listSyncLogs")
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listSyncLogs():
+      | ApiOkResponse<SyncLog[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ErrorResponse;
+
+    @doc("Transition a sync entry's status (FSM-validated; stale version → 409)")
+    @operationId("updateSyncLog")
+    @patch(#{ implicitOptionality: false })
+    @route("/{logId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateSyncLog(@path logId: UUID, @body body: UpdateSyncLogRequest):
+      | ApiOkResponse<SyncLog>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ApiConflictResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 3 — INSURANCE PROFILES
+  // ==========================================================================
+
+  @doc("Subscriber relationship to the patient")
+  enum InsuranceRelationship {
+    self: "self",
+    spouse: "spouse",
+    child: "child",
+    other: "other",
+  }
+
+  @doc("A patient insurance-coverage profile")
+  model InsuranceProfile extends BaseEntity {
+    @doc("Patient this profile belongs to")
+    patientId: UUID;
+
+    @doc("Insurer / carrier name")
+    insurerName: string;
+
+    @doc("Policy number")
+    policyNumber: string;
+
+    @doc("Group number, if any")
+    groupNumber: string | null;
+
+    @doc("Subscriber full name")
+    subscriberName: string;
+
+    @doc("Subscriber date of birth (YYYY-MM-DD)")
+    subscriberDob: plainDate | null;
+
+    @doc("Subscriber relationship to the patient")
+    relationship: string;
+
+    @doc("Whether the profile is active")
+    active: boolean;
+
+    @doc("Free-text notes")
+    notes: string | null;
+  }
+
+  @doc("Body to create an insurance profile")
+  model CreateInsuranceProfileRequest {
+    @doc("Insurer / carrier name")
+    @minLength(1)
+    insurerName: string;
+
+    @doc("Policy number")
+    @minLength(1)
+    policyNumber: string;
+
+    @doc("Group number, if any")
+    groupNumber?: string;
+
+    @doc("Subscriber full name")
+    @minLength(1)
+    subscriberName: string;
+
+    @doc("Subscriber date of birth (YYYY-MM-DD)")
+    @pattern("^\\d{4}-\\d{2}-\\d{2}$")
+    subscriberDob?: string;
+
+    @doc("Subscriber relationship to the patient (default 'self')")
+    relationship?: InsuranceRelationship;
+
+    @doc("Free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to update an insurance profile (at least one field required)")
+  model UpdateInsuranceProfileRequest {
+    @doc("Insurer / carrier name")
+    @minLength(1)
+    insurerName?: string;
+
+    @doc("Policy number")
+    @minLength(1)
+    policyNumber?: string;
+
+    @doc("Group number")
+    groupNumber?: string;
+
+    @doc("Subscriber full name")
+    @minLength(1)
+    subscriberName?: string;
+
+    @doc("Subscriber date of birth (YYYY-MM-DD)")
+    @pattern("^\\d{4}-\\d{2}-\\d{2}$")
+    subscriberDob?: string;
+
+    @doc("Subscriber relationship to the patient")
+    relationship?: InsuranceRelationship;
+
+    @doc("Whether the profile is active")
+    active?: boolean;
+
+    @doc("Free-text notes")
+    notes?: string;
+  }
+
+  @doc("Patient insurance-profile management")
+  interface InsuranceProfileManagement {
+    @doc("Create an insurance profile for a patient")
+    @operationId("createInsuranceProfile")
+    @post
+    @route("/{patientId}/insurance-profiles")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createInsuranceProfile(
+      @path patientId: UUID,
+      @body body: CreateInsuranceProfileRequest,
+    ):
+      | ApiCreatedResponse<InsuranceProfile>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a patient's insurance profiles")
+    @operationId("listPatientInsuranceProfiles")
+    @get
+    @route("/{patientId}/insurance-profiles")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listPatientInsuranceProfiles(@path patientId: UUID):
+      | ApiOkResponse<InsuranceProfile[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Update a patient's insurance profile")
+    @operationId("updateInsuranceProfile")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/insurance-profiles/{profileId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateInsuranceProfile(
+      @path patientId: UUID,
+      @path profileId: UUID,
+      @body body: UpdateInsuranceProfileRequest,
+    ):
+      | ApiOkResponse<InsuranceProfile>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 4 — CLAIM DRAFTS ("claims")
+  // ==========================================================================
+
+  @doc("Lifecycle of a claim draft")
+  enum ClaimDraftStatus {
+    draft: "draft",
+    ready: "ready",
+    submitted: "submitted",
+    accepted: "accepted",
+    rejected: "rejected",
+  }
+
+  @doc("An insurance claim draft")
+  model ClaimDraft extends BaseEntity {
+    @doc("Patient this claim belongs to")
+    patientId: UUID;
+
+    @doc("Insurance profile backing the claim")
+    insuranceProfileId: UUID;
+
+    @doc("Visit the claim is anchored to, if any")
+    visitId: UUID | null;
+
+    @doc("CDT procedure code")
+    cdtCode: string;
+
+    @doc("ICD-10 diagnosis code, if any")
+    icd10Code: string | null;
+
+    @doc("Free-text diagnosis description, if any")
+    diagnosisDescription: string | null;
+
+    @doc("Fee amount in cents")
+    feeAmountCents: int32;
+
+    @doc("Current lifecycle status")
+    status: ClaimDraftStatus;
+
+    @doc("When the claim was submitted (ISO 8601 UTC)")
+    submittedAt: utcDateTime | null;
+
+    @doc("Free-text notes")
+    notes: string | null;
+  }
+
+  @doc("Claim-readiness checklist result")
+  model ClaimReadiness {
+    @doc("Claim being evaluated")
+    claimId: UUID;
+
+    @doc("Whether a CDT code is present")
+    hasCdtCode: boolean;
+
+    @doc("Whether an ICD-10 code is present")
+    hasIcd10Code: boolean;
+
+    @doc("Whether an active insurance profile backs the claim")
+    hasInsuranceProfile: boolean;
+
+    @doc("Whether a positive fee is present")
+    hasFee: boolean;
+
+    @doc("Overall readiness (all checks pass)")
+    ready: boolean;
+  }
+
+  @doc("Body to create a claim draft (created in 'draft')")
+  model CreateClaimDraftRequest {
+    @doc("Insurance profile backing the claim")
+    insuranceProfileId: UUID;
+
+    @doc("Visit the claim is anchored to, if any")
+    visitId?: UUID;
+
+    @doc("CDT procedure code")
+    @minLength(1)
+    cdtCode: string;
+
+    @doc("ICD-10 diagnosis code, if any")
+    icd10Code?: string;
+
+    @doc("Free-text diagnosis description, if any")
+    diagnosisDescription?: string;
+
+    @doc("Fee amount in cents")
+    @minValue(0)
+    feeAmountCents: int32;
+
+    @doc("Free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to transition a claim draft's status (FSM-validated)")
+  model UpdateClaimStatusRequest {
+    @doc("New lifecycle status")
+    status: ClaimDraftStatus;
+  }
+
+  @doc("Patient claim-draft management")
+  interface ClaimDraftManagement {
+    @doc("Create a claim draft for a patient")
+    @operationId("createClaimDraft")
+    @post
+    @route("/{patientId}/claims")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createClaimDraft(
+      @path patientId: UUID,
+      @body body: CreateClaimDraftRequest,
+    ):
+      | ApiCreatedResponse<ClaimDraft>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a patient's claim drafts")
+    @operationId("listPatientClaims")
+    @get
+    @route("/{patientId}/claims")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listPatientClaims(@path patientId: UUID):
+      | ApiOkResponse<ClaimDraft[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Compute a claim draft's submission-readiness checklist")
+    @operationId("getClaimReadiness")
+    @get
+    @route("/{patientId}/claims/{claimId}/readiness")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getClaimReadiness(@path patientId: UUID, @path claimId: UUID):
+      | ApiOkResponse<ClaimReadiness>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Transition a claim draft's status (FSM-validated)")
+    @operationId("updateClaimStatus")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/claims/{claimId}/status")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateClaimStatus(
+      @path patientId: UUID,
+      @path claimId: UUID,
+      @body body: UpdateClaimStatusRequest,
+    ):
+      | ApiOkResponse<ClaimDraft>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+}

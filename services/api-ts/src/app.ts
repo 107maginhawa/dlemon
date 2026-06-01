@@ -48,69 +48,13 @@ import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
-import { getFeeSchedule, updateFeeScheduleEntry } from '@/handlers/dental-org/feeSchedule';
-import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
-import { listPatientContacts } from '@/handlers/dental-patient/contacts/listPatientContacts';
-import { updatePatientContact } from '@/handlers/dental-patient/contacts/updatePatientContact';
-import { deletePatientContact } from '@/handlers/dental-patient/contacts/deletePatientContact';
-import { PatientContactParams, PatientContactContactParams, CreatePatientContactBody, UpdatePatientContactBody } from '@/handlers/dental-patient/utils/contact-validators';
-import { createRecall } from '@/handlers/dental-patient/recalls/createRecall';
-import { listPatientRecalls } from '@/handlers/dental-patient/recalls/listPatientRecalls';
-import { updateRecall } from '@/handlers/dental-patient/recalls/updateRecall';
-import { RecallParams, RecallRecallParams, CreateRecallBody, UpdateRecallBody } from '@/handlers/dental-patient/utils/recall-validators';
-import { createTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/createTreatmentPlan';
-import { listPatientTreatmentPlans } from '@/handlers/dental-patient/treatment-plans/listPatientTreatmentPlans';
+// TR-DG-002: contacts/recalls/alerts/tasks/treatment-plans(create,list,update,approval)/
+// sync-logs/insurance/claims/occlusion/postop/inventory/fee-schedule/queue handlers are
+// now codegen-routed (registry → registerOpenAPIRoutes); their app.ts imports were removed.
+// Only the two operationId-collision treatment-plan keeps remain hand-mounted:
 import { getTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/getTreatmentPlan';
-import { updateTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/updateTreatmentPlan';
 import { acceptTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
-import { approveTreatmentPlan } from '@/handlers/dental-patient/treatment-plans/approveTreatmentPlan';
-import { TreatmentPlanParams, TreatmentPlanPlanParams, CreateTreatmentPlanBody, UpdateTreatmentPlanBody, ApproveTreatmentPlanBody } from '@/handlers/dental-patient/utils/treatment-plan-validators';
-import { createSyncLog } from '@/handlers/dental-patient/sync/createSyncLog';
-import { listSyncLogs } from '@/handlers/dental-patient/sync/listSyncLogs';
-import { updateSyncLog } from '@/handlers/dental-patient/sync/updateSyncLog';
-import { SyncLogParams, SyncLogIdParams, CreateSyncLogBody, UpdateSyncLogBody } from '@/handlers/dental-patient/utils/sync-log-validators';
-import { createQueueItem } from '@/handlers/dental-scheduling/createQueueItem';
-import { listQueueBoard } from '@/handlers/dental-scheduling/listQueueBoard';
-import { updateQueueItemStatus } from '@/handlers/dental-scheduling/updateQueueItemStatus';
-import { QueueItemAppointmentParams, QueueItemIdParams, QueueBoardParams, CreateQueueItemBody, UpdateQueueItemStatusBody } from '@/handlers/dental-scheduling/queue-item-validators';
-import { createInsuranceProfile } from '@/handlers/dental-patient/insurance/createInsuranceProfile';
-import { listPatientInsuranceProfiles } from '@/handlers/dental-patient/insurance/listPatientInsuranceProfiles';
-import { updateInsuranceProfile } from '@/handlers/dental-patient/insurance/updateInsuranceProfile';
-import { createClaimDraft } from '@/handlers/dental-patient/insurance/createClaimDraft';
-import { listPatientClaims } from '@/handlers/dental-patient/insurance/listPatientClaims';
-import { getClaimReadiness } from '@/handlers/dental-patient/insurance/getClaimReadiness';
-import { updateClaimStatus } from '@/handlers/dental-patient/insurance/updateClaimStatus';
-import {
-  InsuranceProfileParams,
-  InsuranceProfileIdParams,
-  ClaimDraftParams,
-  ClaimDraftIdParams,
-  CreateInsuranceProfileBody,
-  UpdateInsuranceProfileBody,
-  CreateClaimDraftBody,
-  UpdateClaimDraftStatusBody,
-} from '@/handlers/dental-patient/utils/insurance-validators';
-import { createDentalAlert } from '@/handlers/dental-patient/alerts/createDentalAlert';
-import { listDentalAlerts } from '@/handlers/dental-patient/alerts/listDentalAlerts';
-import { updateDentalAlert } from '@/handlers/dental-patient/alerts/updateDentalAlert';
-import { DentalAlertParams, DentalAlertIdParams, CreateDentalAlertBody, UpdateDentalAlertBody } from '@/handlers/dental-patient/utils/dental-alert-validators';
-import { createTask } from '@/handlers/dental-patient/engagement/createTask';
-import { listPatientTasks } from '@/handlers/dental-patient/engagement/listPatientTasks';
-import { updateTask } from '@/handlers/dental-patient/engagement/updateTask';
-import { TaskParams, TaskTaskParams, CreateTaskBody, UpdateTaskBody } from '@/handlers/dental-patient/utils/task-validators';
-import { createOcclusionScreening } from '@/handlers/dental-clinical/occlusion/createOcclusionScreening';
-import { listOcclusionScreenings } from '@/handlers/dental-clinical/occlusion/listOcclusionScreenings';
-import { OcclusionParams, OcclusionIdParams, CreateOcclusionBody, UpdateOcclusionBody } from '@/handlers/dental-clinical/utils/occlusion-validators';
-import { createPostopTemplate } from '@/handlers/dental-clinical/postop/createPostopTemplate';
-import { listPostopTemplates } from '@/handlers/dental-clinical/postop/listPostopTemplates';
-import { updatePostopTemplate } from '@/handlers/dental-clinical/postop/updatePostopTemplate';
-import { PostopBranchParams, PostopTemplateIdParams, CreatePostopTemplateBody, UpdatePostopTemplateBody } from '@/handlers/dental-clinical/utils/postop-validators';
-import { createInventoryItem } from '@/handlers/dental-clinical/inventory/createInventoryItem';
-import { listInventoryItems } from '@/handlers/dental-clinical/inventory/listInventoryItems';
-import { updateInventoryItem } from '@/handlers/dental-clinical/inventory/updateInventoryItem';
-import { createInventoryAdjustment } from '@/handlers/dental-clinical/inventory/createInventoryAdjustment';
-import { listInventoryAdjustments } from '@/handlers/dental-clinical/inventory/listInventoryAdjustments';
-import { InventoryBranchParams, InventoryItemParams, CreateInventoryItemBody, UpdateInventoryItemBody, CreateAdjustmentBody } from '@/handlers/dental-clinical/utils/inventory-validators';
+import { TreatmentPlanPlanParams } from '@/handlers/dental-patient/utils/treatment-plan-validators';
 import { zValidator } from '@hono/zod-validator';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
@@ -198,15 +142,8 @@ export function createApp(config: Config): App {
   // TypeSpec codegen (TR-DG-002) — emits from dental-audit.tsp → DentalAuditMgmt
   // in main.tsp, registered via registerOpenAPIRoutes below. The append-only
   // /dental/audit-events/:id 405 guards stay here (Cat-1: method-shadow guards).
-  // Fee schedule (EF-ORG-P016 / WF-025, FR6.3) — CDT catalog with per-branch price overrides.
-  (app as any).get('/dental/fee-schedule',
-    authMiddleware({ roles: ['user'] }),
-    getFeeSchedule
-  );
-  (app as any).patch('/dental/fee-schedule/:cdt',
-    authMiddleware({ roles: ['user'] }),
-    updateFeeScheduleEntry
-  );
+  // Fee schedule (EF-ORG-P016 / WF-025, FR6.3) — MIGRATED to TypeSpec codegen
+  // (TR-DG-002): emits from dental-ops-extras.tsp → FeeScheduleMgmt in main.tsp.
   // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
   // V-AUD-005: code is AUDIT_EVENT_IMMUTABLE (matches ERROR_TAXONOMY §5 dental-audit).
   (app as any).delete('/dental/audit-events/:id', (c: any) =>
@@ -242,261 +179,28 @@ export function createApp(config: Config): App {
   // main.tsp; admin RBAC stays in-handler. An active hold blocks erasure of the
   // subject. See handlers/dental-legalhold/legal-hold-route-registration.test.ts.
 
-  // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
-  (app as any).post('/dental/patients/:patientId/contacts',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PatientContactParams),
-    zValidator('json', CreatePatientContactBody),
-    createPatientContact
-  );
-  (app as any).get('/dental/patients/:patientId/contacts',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PatientContactParams),
-    listPatientContacts
-  );
-  (app as any).patch('/dental/patients/:patientId/contacts/:contactId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PatientContactContactParams),
-    zValidator('json', UpdatePatientContactBody),
-    updatePatientContact
-  );
-  (app as any).delete('/dental/patients/:patientId/contacts/:contactId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PatientContactContactParams),
-    deletePatientContact
-  );
+  // ── TR-DG-002: the following dental endpoints are MIGRATED to TypeSpec codegen
+  // and now register via registerOpenAPIRoutes below (in-handler RBAC unchanged):
+  //   contacts/recalls/dental-alerts/tasks  → dental-patient-engagement.tsp
+  //   treatment-plans(create/list/update/approval), sync-logs, insurance-profiles,
+  //     claims                              → dental-patient-finance.tsp
+  //   occlusion-screenings/postop-templates/inventory → dental-clinical-ops.tsp
+  //   queue (queue-item/queue-board/status) → dental-ops-extras.tsp
+  // Boot-smoke per feature lives in each handler dir's *-route-registration.test.ts.
 
-  // Recall endpoints (P0-B)
-  (app as any).post('/dental/patients/:patientId/recalls',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', RecallParams),
-    zValidator('json', CreateRecallBody),
-    createRecall
-  );
-  (app as any).get('/dental/patients/:patientId/recalls',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', RecallParams),
-    listPatientRecalls
-  );
-  (app as any).patch('/dental/patients/:patientId/recalls/:recallId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', RecallRecallParams),
-    zValidator('json', UpdateRecallBody),
-    updateRecall
-  );
-
-  // DentalAlert endpoints (P2-001)
-  (app as any).post('/dental/patients/:patientId/dental-alerts',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', DentalAlertParams),
-    zValidator('json', CreateDentalAlertBody),
-    createDentalAlert
-  );
-  (app as any).get('/dental/patients/:patientId/dental-alerts',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', DentalAlertParams),
-    listDentalAlerts
-  );
-  (app as any).patch('/dental/patients/:patientId/dental-alerts/:alertId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', DentalAlertIdParams),
-    zValidator('json', UpdateDentalAlertBody),
-    updateDentalAlert
-  );
-
-  // OcclusionScreening endpoints (P2-002)
-  (app as any).post('/dental/patients/:patientId/occlusion-screenings',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', OcclusionParams),
-    zValidator('json', CreateOcclusionBody),
-    createOcclusionScreening
-  );
-  (app as any).get('/dental/patients/:patientId/occlusion-screenings',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', OcclusionParams),
-    listOcclusionScreenings
-  );
-
-  // Task endpoints (P2-003)
-  (app as any).post('/dental/patients/:patientId/tasks',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TaskParams),
-    zValidator('json', CreateTaskBody),
-    createTask
-  );
-  (app as any).get('/dental/patients/:patientId/tasks',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TaskParams),
-    listPatientTasks
-  );
-  (app as any).patch('/dental/patients/:patientId/tasks/:taskId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TaskTaskParams),
-    zValidator('json', UpdateTaskBody),
-    updateTask
-  );
-
-  // PostOp Template endpoints (P2-008)
-  (app as any).post('/dental/branches/:branchId/postop-templates',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PostopBranchParams),
-    zValidator('json', CreatePostopTemplateBody),
-    createPostopTemplate
-  );
-  (app as any).get('/dental/branches/:branchId/postop-templates',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PostopBranchParams),
-    listPostopTemplates
-  );
-  (app as any).patch('/dental/branches/:branchId/postop-templates/:templateId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', PostopTemplateIdParams),
-    zValidator('json', UpdatePostopTemplateBody),
-    updatePostopTemplate
-  );
-
-  // Inventory endpoints (P2-004)
-  (app as any).post('/dental/branches/:branchId/inventory',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InventoryBranchParams),
-    zValidator('json', CreateInventoryItemBody),
-    createInventoryItem
-  );
-  (app as any).get('/dental/branches/:branchId/inventory',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InventoryBranchParams),
-    listInventoryItems
-  );
-  (app as any).patch('/dental/branches/:branchId/inventory/:itemId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InventoryItemParams),
-    zValidator('json', UpdateInventoryItemBody),
-    updateInventoryItem
-  );
-  (app as any).post('/dental/branches/:branchId/inventory/:itemId/adjustments',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InventoryItemParams),
-    zValidator('json', CreateAdjustmentBody),
-    createInventoryAdjustment
-  );
-  (app as any).get('/dental/branches/:branchId/inventory/:itemId/adjustments',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InventoryItemParams),
-    listInventoryAdjustments
-  );
-
-  // TreatmentPlan endpoints (P0-C)
-  (app as any).post('/dental/patients/:patientId/treatment-plans',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TreatmentPlanParams),
-    zValidator('json', CreateTreatmentPlanBody),
-    createTreatmentPlan
-  );
-  (app as any).get('/dental/patients/:patientId/treatment-plans',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TreatmentPlanParams),
-    listPatientTreatmentPlans
-  );
+  // TreatmentPlan (plural) GET-one + accept stay hand-mounted: their handlers are
+  // re-export shims of dental-visit's getTreatmentPlan/acceptTreatmentPlan, whose
+  // operationIds already emit via the singular /treatment-plan route — codegen
+  // forbids duplicate operationIds, so these two routes remain Cat-1 manual keeps.
   (app as any).get('/dental/patients/:patientId/treatment-plans/:planId',
     authMiddleware({ roles: ['user'] }),
     zValidator('param', TreatmentPlanPlanParams),
     getTreatmentPlan
   );
-  (app as any).patch('/dental/patients/:patientId/treatment-plans/:planId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TreatmentPlanPlanParams),
-    zValidator('json', UpdateTreatmentPlanBody),
-    updateTreatmentPlan
-  );
   (app as any).post('/dental/patients/:patientId/treatment-plans/:planId/accept',
     authMiddleware({ roles: ['user'] }),
     zValidator('param', TreatmentPlanPlanParams),
     acceptTreatmentPlan
-  );
-  // CR-05 / TP-BR-005 (TR-P1-08): record patient approval + bind plan items
-  (app as any).post('/dental/patients/:patientId/treatment-plans/:planId/approval',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', TreatmentPlanPlanParams),
-    zValidator('json', ApproveTreatmentPlanBody),
-    approveTreatmentPlan
-  );
-
-  // SyncLog endpoints (P0-D)
-  (app as any).post('/dental/sync-logs',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('json', CreateSyncLogBody),
-    createSyncLog
-  );
-  (app as any).get('/dental/sync-logs',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('query', SyncLogParams),
-    listSyncLogs
-  );
-  (app as any).patch('/dental/sync-logs/:logId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', SyncLogIdParams),
-    zValidator('json', UpdateSyncLogBody),
-    updateSyncLog
-  );
-
-  // Queue board endpoints (A5 P1-003)
-  (app as any).post('/dental/appointments/:appointmentId/queue-item',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', QueueItemAppointmentParams),
-    zValidator('json', CreateQueueItemBody),
-    createQueueItem,
-  );
-  (app as any).get('/dental/branches/:branchId/queue-board',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', QueueBoardParams),
-    listQueueBoard,
-  );
-  (app as any).patch('/dental/queue-items/:itemId/status',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', QueueItemIdParams),
-    zValidator('json', UpdateQueueItemStatusBody),
-    updateQueueItemStatus,
-  );
-
-  // Insurance profiles + Claim drafts (B2 P1-007)
-  (app as any).post('/dental/patients/:patientId/insurance-profiles',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InsuranceProfileParams),
-    zValidator('json', CreateInsuranceProfileBody),
-    createInsuranceProfile
-  );
-  (app as any).get('/dental/patients/:patientId/insurance-profiles',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InsuranceProfileParams),
-    listPatientInsuranceProfiles
-  );
-  (app as any).patch('/dental/patients/:patientId/insurance-profiles/:profileId',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', InsuranceProfileIdParams),
-    zValidator('json', UpdateInsuranceProfileBody),
-    updateInsuranceProfile
-  );
-  (app as any).post('/dental/patients/:patientId/claims',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ClaimDraftParams),
-    zValidator('json', CreateClaimDraftBody),
-    createClaimDraft
-  );
-  (app as any).get('/dental/patients/:patientId/claims',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ClaimDraftParams),
-    listPatientClaims
-  );
-  (app as any).get('/dental/patients/:patientId/claims/:claimId/readiness',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ClaimDraftIdParams),
-    getClaimReadiness
-  );
-  (app as any).patch('/dental/patients/:patientId/claims/:claimId/status',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', ClaimDraftIdParams),
-    zValidator('json', UpdateClaimDraftStatusBody),
-    updateClaimStatus
   );
 
   // PHI cache headers — no-store on all API responses (ASVS V8 / F-025)
