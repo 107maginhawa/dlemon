@@ -44,8 +44,9 @@ from raw code reads and are unaffected by map trust. No R1-strict WARN-WITH-PROO
 | Traceability | **PASS** | 0 | 1⁴ | 34² | – | 1 | docs/trace/TRACE_REPORT.md |
 | Compliance | **PASS** (health 8.7/10)³ | 0 | 0 | 4 | 3 | 0 | docs/audits/COMPLIANCE_REPORT.md |
 
-¹ Enforcement reports 0 P0 and 0 *code-level* P1; it carries 1 KNOWN deferred traceability-class P1
-  (`TR-IMG-ANNOT-SM`, imaging annotation state machine unimplemented). Coverage completeness: **FULL**
+¹ Enforcement reports 0 P0 and 0 P1. The prior carried traceability-class P1 (`TR-IMG-ANNOT-SM`) was
+  **cleared 2026-06-01 as a false positive (spec doc-drift)** — SM-01 + AC-IMG-002 are implemented + tested
+  on `imaging_finding`; MODULE_SPEC §7 V-IMG-008 intentionally makes annotations stateless. Coverage completeness: **FULL**
   (all phases ran — coverage, dep-scan `bun audit` 0, module+file ×12, journeys, ui-consistency,
   cross-module `check:boundaries` 0, trace, audit-logging). Coverage score 95%. `tsc` 0.
 ² Traceability P2 rose 15→33 = **measurement re-baseline** (traced the full 58-BR/48-AC namespace this
@@ -102,10 +103,14 @@ re-verified at HEAD `26925ce2`. **All three dimensions now report PASS** (Enforc
 Traceability PASS, Compliance WARN→**PASS** health 8.7). Combined gates green: typecheck 0 (both
 packages), `check:boundaries` 0, backend **2977/0**, FE hook suite green.
 
-The literal roll-up rule (any P1 → FAIL) now trips on **2 standing P1s** — none blocking, none from
-this work, all left intentionally:
+The literal roll-up rule (any P1 → FAIL) now trips on **1 standing P1** — not blocking, not from
+this work, left intentionally:
 - `TR-INFRA-001` — **separate oli-engine repo** tooling gap (spec_trace_optin off).
-- `TR-IMG-ANNOT-SM` — imaging annotation state machine, unimplemented optional feature — product decision.
+
+(`TR-IMG-ANNOT-SM` — imaging annotation state machine — was **cleared 2026-06-01 as a false positive (spec
+doc-drift)**: SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding`; per MODULE_SPEC §7 V-IMG-008
+annotations are intentionally stateless, so no annotation FSM is to be built. The two drifted spec lines were
+corrected so the criteria trace to the finding FSM. No longer a standing P1.)
 
 (`TR-BR-013` — billing `markUncollectible` — was **formally deferred → P2 2026-06-01**: intentional 501 stub +
 feature-flag `dental_billing_uncollectible` off + deferral tests + AC-BIL-005 → 501; WORKFLOW_MAP §5/WFG-008
@@ -121,7 +126,7 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 > **Framing:** the data-governance + FE-error remediation (5 commits `0aa7f474`→`26925ce2`,
 > 3 of them via parallel worktrees) cleared 1 P0 + 4 P1 and introduced **zero new findings** —
 > enforcement 0 regressions, backend test count 2964→2977 (+13 new tests), all gates green. The
-> remaining 2 P1s are a separate-repo item + one acknowledged-optional feature (BR-013 deferred → P2 2026-06-01).
+> remaining 1 P1 is a separate-repo tooling item (TR-BR-013 deferred → P2; TR-IMG-ANNOT-SM cleared as false positive — both 2026-06-01).
 
 ### Gate drivers (verbatim, with NEW/standing classification)
 
@@ -136,7 +141,7 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 | ~~TR-BR-013~~ | ~~P1~~→**P2** | Trace | dental-billing | BR-013 `markUncollectible` transition acknowledged INCOMPLETE/orphan (WFG-008); tested but transition incomplete. | ⬇️ **DEFERRED→P2 2026-06-01** — formally deferred to Phase 2 (feature-flag `dental_billing_uncollectible` off; intentional 501 stub + deferral tests; AC-BIL-005 → 501; WORKFLOW_MAP §5/WFG-008 reconciled to DEFERRED, mirrors BR-019/BR-020). Not an implementation gap. |
 | ~~TR-WF-PLAN~~ | ~~P1~~ | Trace | dental-visit | WF-048/049/050 treatment FSM transitions tagged `[INFERRED]`. | ✅ **RESOLVED 2026-06-01** — promoted to confirmed in WORKFLOW_MAP; enforced (`updateDentalTreatment.ts` 422/BR-006) + tested (3 FSM test files). |
 | ~~TR-WF-DOCDRIFT~~ | ~~P1~~ | Trace | dental-clinical | WORKFLOW_MAP listed BR-019 ORPHAN; finding claimed code implements+tests it. | ✅ **RESOLVED (FALSE POSITIVE)** — `approveAmendment.test.ts` asserts **501** (BR-019 deferred, MODULE_SPEC §18). Doc was correct; clarified to "DEFERRED 501 stub". Not marked implemented. |
-| TR-IMG-ANNOT-SM | P1 | Enf | dental-imaging | Annotation state machine unimplemented — no `status` column; SM-01/AC-IMG-002 dead. | STANDING — unimplemented optional feature. |
+| ~~TR-IMG-ANNOT-SM~~ | ~~P1~~ | Enf | dental-imaging | Annotation state machine unimplemented — no `status` column; SM-01/AC-IMG-002 dead. | ✅ **CLEARED 2026-06-01 — FALSE POSITIVE (spec doc-drift).** SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding` (`updateFinding.ts` `FINDING_TRANSITIONS`; `imaging-finding.fsm.property.test.ts:71`, `imaging.test.ts:1704`). MODULE_SPEC §7 V-IMG-008 intentionally makes annotations stateless; the two drifted spec lines (glossary §2 + AC-IMG-002 §11) were corrected so the criteria trace to the finding FSM. No annotation FSM is intended. |
 
 ### Lower severity (P2/P3 — not gate-driving)
 - **Compliance P2/P3:** doc-drift in DATA_GOVERNANCE §3/§7 wording; minor governance comments.
@@ -163,8 +168,10 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 - ~~`TR-BR-013` — billing `markUncollectible` transition (finish WFG-008)~~ — ✅ **DEFERRED→P2 2026-06-01**
   (formally deferred to Phase 2: 501 stub + feature-flag off + deferral tests + AC-BIL-005 → 501;
   WORKFLOW_MAP §5/WFG-008 reconciled to DEFERRED).
-- **Remaining 2 standing P1s (out of scope, none blocking, all product/external decisions):**
-  - `TR-IMG-ANNOT-SM` — imaging annotation state machine (unimplemented optional feature): product decision.
+- ~~`TR-IMG-ANNOT-SM` — imaging annotation state machine~~ — ✅ **CLEARED 2026-06-01 (false positive / spec
+  doc-drift)**: SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding`; annotations are intentionally
+  stateless (MODULE_SPEC §7 V-IMG-008). Spec lines corrected; no annotation FSM to build.
+- **Remaining 1 standing P1 (out of scope, not blocking, external tooling decision):**
   - `TR-INFRA-001` — enable `spec_trace_optin` in the **separate oli-engine repo** (also unblocks the
     empty `response_shape` that dark-fails trace 5g FE-field-phantom).
 - Optional empirical backstop: boot the stack + `/oli-check --runtime --live --seed-coherence`.

@@ -71,7 +71,7 @@ All mandatory phases completed. Phase 2.5 (traceability) ran (WORKFLOW_MAP prese
 | **Compliant Modules** | 11 (score ≥ 9.0) |
 | **Non-Compliant Modules** | 0 (no P0/P1 code-level findings) |
 | **Total P0 Findings** | 0 |
-| **Total P1 Findings** | 0 (code-level) — 1 KNOWN traceability gap (TR-IMG-ANNOT-SM, deferred dimension) |
+| **Total P1 Findings** | 0 (TR-IMG-ANNOT-SM cleared 2026-06-01 — false positive / spec doc-drift; SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding`) |
 | **Total P2 Findings** | 1 (EB-BOUNDARY-reachins01 — 54 reach-ins) |
 | **Total P3 Findings** | 2 (EU-GLOBAL-uispec01, EB-EMR-facade-lintdrift01) |
 | **Cross-Module P0/P1** | 0 / 0 |
@@ -168,16 +168,16 @@ No P0/P1 UI consistency findings.
 |--------|-------|
 | TR-DG-002 (manual routes off-spec) | **CLEARED this cycle** (140 dental paths now codegen-traced) |
 | P0 Gaps | 0 |
-| P1 Gaps | 1 (TR-IMG-ANNOT-SM — KNOWN) |
+| P1 Gaps | 0 (TR-IMG-ANNOT-SM cleared — false positive / spec doc-drift) |
 | P2/P3 Gaps | KNOWN inventory (dashboard chain, event emission, unspecced dental-patient sub-modules) — deferred to standalone --traceability dimension |
 
 ### P0/P1 Traceability Findings (Action Required)
 
 | ID | Sev | Gap Type | Node | Module | Status |
 |----|-----|----------|------|--------|--------|
-| TR-IMG-ANNOT-SM | P1 | dead-spec + schema-absent | SM-01 / AC-IMG-002 | dental-imaging | KNOWN — `imaging_annotation` (imaging.schema.ts:98-118) has no `status` column; annotation FSM unimplemented. Non-blocking (unimplemented optional feature, no production data-integrity/auth break on existing flows). Re-classified P0→P1 for enforce rollup. |
+| ~~TR-IMG-ANNOT-SM~~ | ~~P1~~ | dead-spec + schema-absent | SM-01 / AC-IMG-002 | dental-imaging | ✅ **CLEARED 2026-06-01 — FALSE POSITIVE (spec doc-drift).** The "dead-spec" basis was a mislabel: MODULE_SPEC §7 V-IMG-008 intentionally makes `imaging_annotation` a stateless `visible`-only overlay; SM-01 + AC-IMG-002 belong to **`imaging_finding`**, which has the `status` enum + transition guard (`FINDING_TRANSITIONS`, `updateFinding.ts`) and tests (`imaging-finding.fsm.property.test.ts:71`, `imaging.test.ts:1704`). Corrected the two drifted spec lines (glossary §2 + AC-IMG-002 §11) so SM-01/AC-IMG-002 trace to the finding FSM. No annotation FSM is intended. |
 
-> Full gap inventory and coverage matrix: see [→ trace details](enforce/trace.md). The remaining KNOWN P1/P2 chain gaps are pre-existing and unchanged by this cycle.
+> Full gap inventory and coverage matrix: see [→ trace details](enforce/trace.md). No remaining KNOWN P1 chain gaps after the TR-IMG-ANNOT-SM doc-drift correction; P2/P3 items unchanged this cycle.
 
 ---
 
@@ -231,13 +231,13 @@ No new non-blocking findings this cycle.
 | EB-BOUNDARY-reachins01 | P2 | GLOBAL | 54 ESLint relative repo reach-ins across 8 modules (dental-patient 27, billing 13, notifs 5, booking 4, patient 2, provider 2, dental-billing 1). Alias check:boundaries = 0. | 1d |
 | EU-GLOBAL-uispec01 | P3 | GLOBAL | UI_CONSISTENCY_SPEC.md is DRAFT (infer-from-code); curate via oli-spec-gate to enable enforceable EU- findings. | 1d |
 | EB-EMR-facade-lintdrift01 | P3 | emr-consultation | 10 no-restricted-imports warnings flag *-emr.facade imports (the APPROVED bridge); add .facade to ESLint exempt glob. | 1d |
-| TR-IMG-ANNOT-SM | P1 | dental-imaging | Annotation state machine unimplemented (no status column on imaging_annotation). Deferred traceability dimension. | (carried from trace run-7) |
 
 ### Resolved Since Last Run
 
 | ID | Sev | Module | Resolution |
 |----|-----|--------|------------|
 | EF-DENTAL-IMG-naming01 | P2 | dental-imaging | **misclassification corrected** — short-named handlers are NOT dead; each has exactly 1 production importer (its `*Mgmt_` route-bound shim) in a deliberate wrapper/delegate pattern. Verified at HEAD. |
+| TR-IMG-ANNOT-SM | P1 | dental-imaging | **false positive (spec doc-drift) corrected** — SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding` (`updateFinding.ts` + `imaging-finding.fsm.property.test.ts`); MODULE_SPEC §7 V-IMG-008 intentionally makes annotations stateless. Fixed the two drifted spec lines (glossary §2 + AC-IMG-002 §11); no annotation FSM is intended. |
 
 ### Per-Module Score Trend
 
@@ -256,7 +256,7 @@ No P0 findings. No immediate blocking issues.
 
 ### Fix Before New Work — P1 Findings (0 code-level)
 
-No code-level P1 findings. One deferred-dimension P1 (TR-IMG-ANNOT-SM) tracked in traceability — implement annotation status FSM when the imaging annotation feature is scheduled.
+No P1 findings. TR-IMG-ANNOT-SM (the prior carried traceability-dimension P1) was cleared 2026-06-01 as a false positive: SM-01 + AC-IMG-002 are implemented + tested on `imaging_finding`, and per MODULE_SPEC §7 V-IMG-008 annotations are intentionally stateless — no annotation FSM is to be built. The two drifted spec lines were corrected so the criteria trace to the finding FSM.
 
 ### Fix When Touching — P2 Findings (1 cluster)
 

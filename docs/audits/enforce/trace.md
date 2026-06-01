@@ -13,13 +13,19 @@
 - Erasure/legal-hold governance chains verified: services emit `logAuditEvent` on every transition
   (`dental-erasure/erasure-service.ts:59,160`, `dental-legalhold/legal-hold-service.ts:47,81`); RBAC at
   handler layer (`approveErasureHandler.ts` admin-gate). DATA_GOVERNANCE V-DG-002 → service → route-registration test.
-- **TR-016/TR-025 STILL OPEN at HEAD** — `imaging_annotation` table (imaging.schema.ts:98-118) still has NO
-  `status` column; annotation state machine (draft→confirmed→resolved per MODULE_SPEC §2 / SM-01) remains
-  unimplemented; AC-IMG-002 still dead. Re-classified **P1 KNOWN** for enforce rollup (unimplemented optional
-  imaging feature, no production data-integrity/auth break on existing flows → not a code-level P0 blocker;
-  the run-7 P0 escalation was a trace-dimension artifact). Tracked as `TR-IMG-ANNOT-SM`.
+- **TR-016/TR-025 (TR-IMG-ANNOT-SM) — ✅ CLEARED 2026-06-01 as a FALSE POSITIVE (spec doc-drift).**
+  The detailed run-7 body below (TR-016/TR-025/TR-026, §"AC-IMG-002 dead spec") is **superseded**: it was
+  written before the V-IMG-007/V-IMG-008 spec reconciliation and mistook a doc-naming collision for a
+  missing feature. SM-01 + AC-IMG-002 belong to **`imaging_finding`**, not annotations. The finding FSM is
+  fully implemented — `imaging_finding.schema.ts` exposes `FINDING_STATUSES = ['draft','confirmed','resolved']`
+  with `FINDING_TRANSITIONS` (no `confirmed→draft` back-edge → 422), enforced in `updateFinding.ts`, and
+  tested by `imaging-finding.fsm.property.test.ts:71` + `imaging.test.ts:1704`. MODULE_SPEC §7 **V-IMG-008**
+  intentionally makes `imaging_annotation` a stateless `visible`-only overlay — **no annotation FSM is to be
+  built**. Per this doc's own recommended fix (TR-016/TR-025 §Fix item 5 + TR-033), the resolution is the
+  documentation clarification: the two drifted spec lines (glossary §2 + AC-IMG-002 §11) were corrected so
+  the criteria trace to the finding FSM. The run-7 detail rows below are retained for history only.
 
-**Enforce-fold traceability rollup (this cycle): P0=0, P1=1 (TR-IMG-ANNOT-SM, KNOWN), P2/P3 = see body.**
+**Enforce-fold traceability rollup (this cycle): P0=0, P1=0 (TR-IMG-ANNOT-SM cleared — false positive / spec doc-drift, see above), P2/P3 = see body.**
 The remaining run-7 P1/P2 gaps (dashboard chain, payment-plan UI, PMD generate/import UI, event emission,
 unspecced dental-patient sub-modules) are KNOWN/pre-existing, unchanged by this cycle's route-migration work,
 and are catalogued in the inventory below. They are deferred to the standalone `--traceability` dimension and

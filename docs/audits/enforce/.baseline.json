@@ -14,7 +14,7 @@
     "P0": 0,
     "P1": 0,
     "P1_code_level": 0,
-    "P1_deferred_dimension": 1,
+    "P1_deferred_dimension": 0,
     "P2": 1,
     "P3": 2,
     "code_level_P0": 0,
@@ -29,20 +29,20 @@
     "boundary_alias_violations": 0,
     "trend": "IMPROVING",
     "strict_violation": false,
-    "resolved_this_cycle": 1
+    "resolved_this_cycle": 2
   },
   "cross_module": { "P0": 0, "P1": 0, "P2": 0, "P3": 0 },
   "audit_compliance": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "note": "Phase 3 audit-logging-only: erasure/legal-hold governance routes emit logAuditEvent on every transition; admin RBAC at handler layer; full BR/AC coverage deferred to --compliance dimension" },
-  "traceability": { "P0": 0, "P1": 1, "P2": 0, "P3": 0, "note": "TR-DG-002 CLEARED this cycle (manual routes->TypeSpec). TR-IMG-ANNOT-SM (annotation status FSM unimplemented) carried as KNOWN P1, deferred to --traceability dimension. Full inventory in docs/audits/enforce/trace.md" },
+  "traceability": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "note": "TR-DG-002 CLEARED this cycle (manual routes->TypeSpec). TR-IMG-ANNOT-SM CLEARED 2026-06-01 as a FALSE POSITIVE (spec doc-drift): SM-01 + AC-IMG-002 are implemented + tested on imaging_finding (updateFinding.ts FINDING_TRANSITIONS; imaging-finding.fsm.property.test.ts, imaging.test.ts); MODULE_SPEC §7 V-IMG-008 intentionally makes annotations stateless. Corrected the two drifted spec lines (glossary §2 + AC-IMG-002 §11). Full inventory in docs/audits/enforce/trace.md" },
   "ui_consistency": { "P0": 0, "P1": 0, "P2": 0, "P3": 1, "note": "UI_CONSISTENCY_SPEC.md now present but DRAFT (infer-from-code) -> P3 cap; curate via oli-spec-gate to enable enforceable EU- findings" },
   "dependency_scanning": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "status": "COMPLETE", "note": "bun audit clean (0 vulnerabilities) @ ece7f89c — all prior ED-GLOBAL dep CVEs remain resolved" },
   "findings": {
     "EB-BOUNDARY-reachins01": { "first_seen": "2026-05-31", "severity": "P2", "description": "54 ESLint no-restricted-imports relative repo reach-ins across 8 modules (dental-patient 27, billing 13, notifs 5, booking 4, patient 2, provider 2, dental-billing 1). Handlers import ../module/repos/ directly instead of via facades. Migrate one PR at a time per MODULE_BOUNDARIES.md. Alias check:boundaries = 0 violations." },
     "EU-GLOBAL-uispec01": { "first_seen": "2026-05-31", "severity": "P3", "description": "UI_CONSISTENCY_SPEC.md present but in DRAFT (infer-from-code, audit_status DRAFT P3 cap) — machine-enforceable EU- findings not yet emitted. Curate via /oli-spec-gate to lift cap." },
-    "EB-EMR-facade-lintdrift01": { "first_seen": "2026-05-31", "severity": "P3", "description": "10 emr no-restricted-imports warnings flag *-emr.facade imports — the documented APPROVED bridge. ESLint exempt-list omits repos/*.facade.ts. Add .facade to exempt glob or accept warnings." },
-    "TR-IMG-ANNOT-SM": { "first_seen": "2026-05-29", "severity": "P1", "description": "dental-imaging annotation state machine unimplemented: imaging_annotation table (repos/imaging.schema.ts:98-118) has no status column; SM-01 (draft->confirmed->resolved per MODULE_SPEC §2) and AC-IMG-002 are dead. Non-blocking unimplemented optional feature (no production data-integrity/auth break). Deferred to --traceability dimension. Re-classified from run-7 P0->P1 for enforce rollup." }
+    "EB-EMR-facade-lintdrift01": { "first_seen": "2026-05-31", "severity": "P3", "description": "10 emr no-restricted-imports warnings flag *-emr.facade imports — the documented APPROVED bridge. ESLint exempt-list omits repos/*.facade.ts. Add .facade to exempt glob or accept warnings." }
   },
   "resolved_since_prev": [
-    { "id": "EF-DENTAL-IMG-naming01", "reason": "misclassification corrected", "note": "Prior claim '20 dead duplicate handler files, 0 importers, delete short set' is INACCURATE. Re-verified at HEAD: every short-named imaging handler has exactly 1 production importer — its *Mgmt_ route-bound shim (e.g. CephMgmt_createCephReport.ts:3 imports/delegates to ./createCephReport). The short set is the business-logic layer of a deliberate wrapper/delegate pattern, not dead code. Removed from findings." }
+    { "id": "EF-DENTAL-IMG-naming01", "reason": "misclassification corrected", "note": "Prior claim '20 dead duplicate handler files, 0 importers, delete short set' is INACCURATE. Re-verified at HEAD: every short-named imaging handler has exactly 1 production importer — its *Mgmt_ route-bound shim (e.g. CephMgmt_createCephReport.ts:3 imports/delegates to ./createCephReport). The short set is the business-logic layer of a deliberate wrapper/delegate pattern, not dead code. Removed from findings." },
+    { "id": "TR-IMG-ANNOT-SM", "reason": "false positive (spec doc-drift) corrected", "note": "Prior claim 'annotation state machine unimplemented; SM-01/AC-IMG-002 dead' was a mislabel. SM-01 + AC-IMG-002 belong to imaging_finding (not annotations), which has the status enum + transition guard (FINDING_TRANSITIONS, updateFinding.ts) and tests (imaging-finding.fsm.property.test.ts:71, imaging.test.ts:1704). MODULE_SPEC §7 V-IMG-008 intentionally makes imaging_annotation a stateless visible-only overlay. Corrected the two drifted spec lines (glossary §2 + AC-IMG-002 §11) so the criteria trace to the finding FSM. No annotation FSM is intended. Removed from findings." }
   ]
 }
