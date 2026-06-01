@@ -594,7 +594,7 @@ Applied to the 10 highest-impact core workflows:
 | WFG-003 | Missing error path | BR-001 concurrent visit conflict — client recovery UX undefined | MEDIUM | BR-001 |
 | WFG-004 | Missing error path | Concurrent invoice creation for same visit — two invoices possible | HIGH — billing integrity | BR-009, BR-012 |
 | WFG-005 | SLA undefined | PMD generation SLA unspecified — sync or async unclear | MEDIUM — UX impact | BR-021 |
-| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/erasure/` (Person+Patient targets, two-step audited, legal-hold blocks) + admin HTTP endpoints `/dental/erasure-requests`. Remaining: more entity targets, real LegalHold store | RESOLVED | — |
+| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person+Patient targets, two-step audited, legal-hold blocks) + admin HTTP endpoints `/dental/erasure-requests`. Remaining: more entity targets, real LegalHold store | RESOLVED | — |
 | WFG-007 | Missing workflow | Patient merge (BR-020) — no workflow, no cross-module cascade defined | HIGH — data integrity | BR-020 |
 | WFG-008 | Orphan BR | BR-013 markUncollectible — incomplete implementation, no documented error path | MEDIUM — billing ops | BR-013 |
 | WFG-009 | Missing notification | Appointment reminder (24h) — not implemented | LOW–MEDIUM | — |

@@ -120,15 +120,15 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Patient` | No — Anonymize | Unlink from Person; replace with `[ERASED]` marker | Visits/treatments retain clinical codes; patient name gone | Yes |
 | `Visit` / `Treatment` | No | Anonymize patient reference | CDT codes, procedure codes retain for statistical/billing compliance | Yes |
 | `Prescription` | No | Anonymize patient reference | Drug name retains; patient identity gone | Yes |
-| `ImagingStudy` | Partial — S3 delete | Delete S3 object (radiograph); retain metadata with anonymized patient ref | CephAnalysis anonymized | Yes |
+| `ImagingStudy` | Yes — S3 delete (implemented V-DG-002) | Delete S3 object (radiograph) + storage `file` row; retain anonymized metadata | CephAnalysis anonymized | Yes |
 | `PMDDocument` | **No** — legal hold | Cannot delete signed PMD | PMD remains; patient name may be anonymized in DB record | Yes |
 | `Invoice` | No | Anonymize patient name; retain for 7-year tax compliance | LineItems retain CDT codes; patient identity gone | Yes |
 | `AuditEvent` | **No** — never | Append-only; no deletion | None | N/A (is audit trail) |
 | `ConsentForm` | No — keep state | Mark as `[ERASED]`; consent record anonymized | Downstream consent checks may fail — requires care | Yes |
-| `Appointment` | Yes (after 1 year) | Hard delete | None | Audit event before delete |
+| `Appointment` | No — soft-delete (archive via `deletedAt`) | Retention auto-purge after 1yr from `scheduledAt` (V-DG-003); legal-hold subjects excluded | None | Audit event on archive |
 
 **Erasure Workflow:** [WFG-006 — backend implemented (V-DG-002), Person+Patient targets]
-> Implemented in `services/api-ts/src/handlers/erasure/`: a two-step audited
+> Implemented in `services/api-ts/src/handlers/dental-erasure/`: a two-step audited
 > request→approve/reject workflow (`dental_erasure_request`) over an anonymize
 > engine. Hard invariants: anonymize-not-delete, audit trail never touched
 > (append-only), legal-hold blocks erasure, dry-run by default. Targets wired so
@@ -145,10 +145,14 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
 > `POST /dental/erasure-requests/{id}/approve|reject`, plus
 > `POST|GET /dental/legal-holds`, `POST /dental/legal-holds/{id}/release`.
-> Still to add: the **physical S3 object deletion** of imaging radiographs — the
-> imaging facade archives metadata + surfaces the stored-file ids; a storage-
-> service job must delete the actual objects (a repo facade has no S3 client). The
-> remaining §3 entities are covered above. Related: G-012 (PHI encryption gap).
+> **Physical S3 object deletion of imaging radiographs — implemented (V-DG-002, 2026-06-01).**
+> The imaging facade surfaces `fileIdsPendingS3Delete`; `approveErasureHandler` (handler scope,
+> `ctx.get('storage')`) now calls `physicalDeleteErasedFiles` to delete the S3 objects AND their
+> storage `file` rows, with an `erasure.s3_deleted` audit event. Fail-open: anonymization is already
+> committed before delete runs, so a storage error records the object as pending (idempotent — the
+> id set is recomputed each run) rather than failing the erasure. See
+> `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts`. The remaining §3 entities are
+> covered above. (PHI at-rest encryption: resolved separately — AG-6/G-012, §1.1.)
 
 ---
 
@@ -162,6 +166,15 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Prescription` history | Yes | PDF | Yes — drug + dosage + date | **No** |
 | `ImagingStudy` | Yes | DICOM / JPEG | Yes — images + annotations | **Partial — download per image** |
 | `ConsentForm` | Yes | PDF | No | **No** |
+
+> **V-IMG-EXP-001 — DEFERRED (P1→P2), pending WFG-006 PRD decision (2026-06-01).** The bulk/multi-entity
+> GDPR Art. 20 portability export for `Patient` (bulk), `Prescription`, and `ConsentForm` is **not built**
+> and is **deferred by design**: WFG-006 (and the portability bundle format) requires a PRD-level decision —
+> see `WORKFLOW_MAP.md` ("WFG-006 … require PRD-level decisions … escalation to PRD amendment"). Building an
+> aggregated JSON/PDF portability bundle against an undecided format would be premature at this stage. Clinical
+> export is already covered per-visit by signed PMD (`dental-pmd/exportPMD.ts`); patient-list CSV exists
+> (`exportDentalPatients.ts`, FR2.8). **Tracked as a deferred item, not a P1 gap.** Re-classify to a build task
+> once the WFG-006 portability format is decided at PRD level.
 
 ---
 
@@ -211,6 +224,6 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | AG-1 | Exact retention periods per locale | [VERIFY]: PH=10y, EU=varies by record type, US=7y minimum |
 | AG-2 | Audit log retention period | **7 years** — HIPAA minimum; append-only, never deleted |
 | AG-3 | PMD deletion policy for signed documents | **Cannot delete** — signed PMD is non-repudiable; anonymize DB record only |
-| AG-4 | Data portability export format | PMD covers clinical; billing CSV needed; no bulk export workflow exists |
+| AG-4 | Data portability export format | **DEFERRED pending WFG-006 PRD decision** (V-IMG-EXP-001, see §4 note). PMD covers clinical per-visit; patient-list CSV exists; bulk/multi-entity Art. 20 bundle blocked on an undecided portability format — not a P1 gap until PRD resolves WFG-006. |
 | AG-5 | Session TTL (ADR-007) | [UNRESOLVED] — must define before compliance sign-off |
 | AG-6 / G-012 | PHI at-rest encryption | **SATISFIED-by-infra.** Control is storage-layer (transparent disk/volume / managed-Postgres + S3 SSE) encryption, defined in §1.1 — NOT column-level. Verified by a non-regressable startup attestation: `DB_AT_REST_ENCRYPTION` (`enabled`/`verified`) parsed in `services/api-ts/src/core/config.ts` (`config.database.atRestEncryption`) and asserted in the production boot guard — the server refuses to start if unattested. Evidence: `services/api-ts/src/core/config.test.ts` (V-DG-001 cases, RED-without/GREEN-with) + operator-set env (`.env.example`). Column-level encryption deferred as future defense-in-depth for a named ultra-sensitive subset only (§1.2). |
