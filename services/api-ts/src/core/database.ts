@@ -49,6 +49,18 @@ export interface DatabaseConfig {
   ssl?: boolean;
   logging?: boolean;
   /**
+   * V-DG-001 — PHI at-rest encryption attestation. The PHI at-rest control is
+   * storage-layer (transparent disk/volume / managed-Postgres storage)
+   * encryption, NOT column-level. This field records the operator's attestation
+   * that the control is in force, parsed from `DB_AT_REST_ENCRYPTION`:
+   *   - `enabled`    — encrypted volume / managed storage encryption provisioned
+   *   - `verified`   — provisioned AND independently verified (cloud/KMS evidence)
+   *   - `unverified` — not attested (default; refused at startup in production)
+   * Asserted in the production guard in `parseConfig()` so it cannot silently
+   * regress. See docs/product/DATA_GOVERNANCE.md §1 / §2 / §7 (AG-6 / G-012).
+   */
+  atRestEncryption?: 'enabled' | 'verified' | 'unverified';
+  /**
    * Pre-built Drizzle instance. Used by `services/api-ts-embedded` to inject
    * a sqlite-proxy backend bridged to the host's native SQLite. When set,
    * `createApp` does not call `createDatabase` and `runMigrations` is skipped

@@ -15,7 +15,7 @@
 
 | Entity | Data Type | Sensitivity | Encryption Required | Access Restrictions |
 |--------|-----------|------------|--------------------|--------------------|
-| `Person` (name, DOB, contact) | PII — High | PHI when linked to dental record | Yes (at rest + transit) | Dental members of linked branch only |
+| `Person` (name, DOB, contact) | PII — High | PHI when linked to dental record | Yes — storage-layer at rest + TLS transit (see §1.1) | Dental members of linked branch only |
 | `Patient` | PHI — Critical | Directly identifiable | Yes | assertBranchAccess (BR-016) |
 | `Visit` | PHI — Critical | Dental encounter record | Yes | Branch member with workspace access |
 | `Treatment` | PHI — Critical | Clinical procedure data | Yes | Dentist, Dentist-Owner |
@@ -36,6 +36,59 @@
 | `Organization` / `Branch` | Operational | Practice metadata | Standard | Admin |
 | `ConsentRecord` (Person JSONB) | PII / Legal | Marketing + data sharing consent | Yes | Patient, Dentist-Owner |
 | `EMRRecord` | PHI — Critical | External medical import | Yes | Dentist, Dentist-Owner |
+
+> In the **Encryption Required** column, "Yes" for PHI/PII at rest is satisfied
+> by the storage-layer control defined in §1.1 below (not column-level
+> encryption). "Transit" is satisfied by TLS terminated in front of the API.
+
+### §1.1 PHI Encryption-at-Rest Control (G-012 / AG-6)
+
+**Control type — storage-layer (transparent disk/volume) encryption.** PHI/PII
+at rest (e.g. `Person.first_name/last_name/date_of_birth/contact_info`,
+`dental_patient_contact.name/phone/email`, and all PHI tables in §1) is
+protected by **transparent encryption of the database storage volume** — an
+encrypted block device / filesystem (LUKS/dm-crypt) for self-hosted Postgres, or
+managed-storage encryption (e.g. AWS RDS encryption with KMS, GCP Cloud SQL
+CMEK, Azure Database for PostgreSQL storage encryption) for managed deployments,
+plus encrypted S3/object storage for imaging (`ImagingStudy` server-side
+encryption). This is the HIPAA-recognized addressable safeguard for
+encryption-at-rest; HIPAA does **not** require column-level encryption.
+
+**Why not column-level.** Encrypting `name`/`date_of_birth`/`contact` columns
+in the application or via `pgcrypto` would break the search, sort, and
+range-query paths those fields drive (e.g. patient name search, DOB filters) for
+no incremental compliance benefit over volume encryption. Column-level
+encryption is therefore **deferred** — see §1.2.
+
+**How it is verified (non-regressable attestation).** Because volume encryption
+is an infrastructure/provisioning control rather than application code, the API
+records an explicit **operator attestation** that the control is in force:
+- Env var **`DB_AT_REST_ENCRYPTION`** (`enabled` | `verified` | `unverified`),
+  parsed into typed config at
+  `services/api-ts/src/core/config.ts` → `config.database.atRestEncryption`
+  (type in `services/api-ts/src/core/database.ts` `DatabaseConfig.atRestEncryption`).
+- **Startup assertion:** in production (`NODE_ENV=production`) `parseConfig()`
+  **refuses to boot** unless the attestation is `enabled` or `verified` — the
+  same guard that already rejects weak `AUTH_SECRET` / default infra
+  credentials. This makes the §1 "Yes (at rest)" claim a deterministic startup
+  invariant that cannot silently regress.
+- **Test evidence:** `services/api-ts/src/core/config.test.ts` (V-DG-001
+  cases) — asserts the attestation parses, defaults to `unverified`, and that
+  production boot throws when it is absent/disabled and passes when attested.
+- **Deployment evidence:** operators provision the encrypted volume / managed
+  storage encryption out-of-band and set `DB_AT_REST_ENCRYPTION=verified` once
+  the cloud/KMS encryption status is confirmed (see `services/api-ts/.env.example`).
+
+### §1.2 Deferred: column-level encryption (future defense-in-depth)
+
+Column-level / field-level encryption (e.g. `pgcrypto` or application-layer
+envelope encryption) is a **deferred future option**, scoped only to a named
+**ultra-sensitive subset** if/when required: government identifiers and any
+free-text clinical fields that do not need to be searchable
+(`MedicalHistoryEntry` systemic-health notes, `Prescription` free-text). It is
+**not** planned for searchable demographics (`name`, `date_of_birth`,
+`contact`), because that would break search/sort with no HIPAA requirement to
+justify it. Tracked as defense-in-depth, not a compliance blocker.
 
 ---
 
@@ -160,4 +213,4 @@
 | AG-3 | PMD deletion policy for signed documents | **Cannot delete** — signed PMD is non-repudiable; anonymize DB record only |
 | AG-4 | Data portability export format | PMD covers clinical; billing CSV needed; no bulk export workflow exists |
 | AG-5 | Session TTL (ADR-007) | [UNRESOLVED] — must define before compliance sign-off |
-| AG-6 | PHI at-rest encryption | G-012 in brownfield wave G1 — currently unimplemented |
+| AG-6 / G-012 | PHI at-rest encryption | **SATISFIED-by-infra.** Control is storage-layer (transparent disk/volume / managed-Postgres + S3 SSE) encryption, defined in §1.1 — NOT column-level. Verified by a non-regressable startup attestation: `DB_AT_REST_ENCRYPTION` (`enabled`/`verified`) parsed in `services/api-ts/src/core/config.ts` (`config.database.atRestEncryption`) and asserted in the production boot guard — the server refuses to start if unattested. Evidence: `services/api-ts/src/core/config.test.ts` (V-DG-001 cases, RED-without/GREEN-with) + operator-set env (`.env.example`). Column-level encryption deferred as future defense-in-depth for a named ultra-sensitive subset only (§1.2). |
