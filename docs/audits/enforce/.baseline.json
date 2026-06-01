@@ -4,9 +4,10 @@
   "generated_at": "2026-06-01T00:00:00Z",
   "generated_by": "oli-check --enforcement (graph-grounded; project checkers as ground truth: check:boundaries + ESLint no-restricted-imports + tsc + bun audit)",
   "method": "bun audit now reports 0 vulnerabilities (all prior dep CVEs resolved via pinned versions/overrides). bun run check:boundaries = 0 alias violations. tsc --noEmit clean (0 type cycles). ESLint no-restricted-imports authoritative for relative repo reach-ins (54 true P2 + 10 emr-facade P3).",
-  "git_sha_baseline_prev": "2900d281",
-  "git_sha": "0635e0f5",
-  "predecessor_baseline": "enforcement-2026-05-31",
+  "git_sha_baseline_prev": "0635e0f5",
+  "git_sha": "a3bfc9a5",
+  "predecessor_baseline": "enforcement-2026-06-01",
+  "new_work_verified": "erasure + legal-hold handler modules and 5 *-erasure/*-retention facades added; check:boundaries GREEN (0 alias), new files 0 lint errors, typecheck clean — no new findings at any severity",
   "coverage_completeness": "FULL",
   "verdict": "WARN",
   "summary": {

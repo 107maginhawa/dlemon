@@ -80,15 +80,22 @@
 > engine. Hard invariants: anonymize-not-delete, audit trail never touched
 > (append-only), legal-hold blocks erasure, dry-run by default. Targets wired so
 > far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
-> kept) and **Patient** (emergency contact / provider / pharmacy / history /
-> comms-prefs nulled), via boundary-compliant `*-erasure.facade.ts`.
+> kept), **Patient** (emergency contact / provider / pharmacy / history /
+> comms-prefs nulled), **ConsentForm** (signature + name snapshot redacted, state
+> kept), and **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
+> archived), all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
+> store** (`dental_legal_hold`) blocks erasure of held subjects (and is consulted
+> by retention). Visit/Treatment/Prescription/Invoice are verified NO-OP (they
+> only reference patientId → resolves to the anonymized Person; clinical/billing
+> codes retained per the §3 table).
 > HTTP surface (admin-only, manual routes + `dental-erasure.tsp` contract):
 > `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
-> `POST /dental/erasure-requests/{id}/approve|reject`.
-> Still to add (per the §3 table — one facade+target per slice): Visit/Treatment,
-> Prescription, ImagingStudy (S3 object delete), Invoice, ConsentForm patient-
-> reference anonymization; and a real LegalHold store (the hold check is
-> currently a reviewer-supplied predicate). Related: G-012 (PHI encryption gap).
+> `POST /dental/erasure-requests/{id}/approve|reject`, plus
+> `POST|GET /dental/legal-holds`, `POST /dental/legal-holds/{id}/release`.
+> Still to add: the **physical S3 object deletion** of imaging radiographs — the
+> imaging facade archives metadata + surfaces the stored-file ids; a storage-
+> service job must delete the actual objects (a repo facade has no S3 client). The
+> remaining §3 entities are covered above. Related: G-012 (PHI encryption gap).
 
 ---
 

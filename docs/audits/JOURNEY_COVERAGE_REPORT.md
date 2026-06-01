@@ -1,12 +1,16 @@
 <!-- oli-version: 1.1 -->
-<!-- generated: 2026-05-31 (re-verified @ HEAD f1b38d8 after V-DG-001 backend retention change) -->
+<!-- generated: 2026-05-31; re-verified @ HEAD a3bfc9a5 (2026-06-01) after V-DG-002 erasure/legal-hold + GAP-001 localId — all backend/spec, 0 FE files changed -->
 <!-- skill: oli-check --journeys (static, no --live) -->
 <!-- target: apps/dentalemon/src -->
 <!-- based-on: WORKFLOW_MAP.md, ROLE_PERMISSION_MATRIX.md, NAVIGATION_MAP.md, CODE_ROUTE_MAP.json v5, CODE_API_SURFACE.json, ERROR_TAXONOMY.md -->
 
 # Journey Coverage Report — Dentalemon (all-frontend)
 
-## Changes Since Last Run (re-verify @ f1b38d8)
+## Changes Since Last Run (re-verify @ a3bfc9a5, 2026-06-01)
+- **Net change: 0.** `git diff f1b38d8..a3bfc9a5 -- apps/dentalemon/src` = **0 files**. The 5 intervening commits (V-DG-002 erasure/legal-hold, GAP-001 DB-backed localId) are entirely `services/api-ts` + `specs/api` — no UI surface. All journey findings carry forward unchanged. `rbac.ts` untouched since `60e7464e`.
+- **J-RBAC-001 / J-RBAC-002 remain RESOLVED** (re-confirmed against current `rbac.ts`: 9-role union @8-19, `staff_full.billing=true` @46-55, `canWriteBilling` owner/associate-only @201). Verdict holds **PASS**.
+
+### Prior run's resolution (preserved)
 - **Resolved findings: 2 (the two known P1s — RBAC)**
   - J-RBAC-001 (was P1) — staff_full ↔ /billing contradiction. **RESOLVED** in commit `60e7464e`: `rbac.ts:46-55` now sets `staff_full.billing = true`; route guard `requireRole('billing')` admits staff_full; issue/void/create-invoice gated by new `canWriteBilling()` (rbac.ts:201, owner/associate only) and consumed at `invoice-detail.tsx`. Record-payment journey now completable for staff_full while write actions stay hidden — matches ROLE_PERMISSION_MATRIX + NAVIGATION_MAP.
   - J-RBAC-002 (was P1/P2) — extended roles unmapped in FE. **RESOLVED** in commit `60e7464e`: `DentalRole` union (rbac.ts:8-19) now covers all 9 context roles (dentist_owner, dentist_associate, staff_full, staff_scheduling, hygienist, dental_assistant, front_desk, billing_staff, read_only) with full ACCESS_MATRIX entries each. Route-guard behavior now defined for every provisioned role.

@@ -1,5 +1,6 @@
-# UI Consistency Report — 2026-05-31 (PR #1, HEAD f1b38d8)
+# UI Consistency Report — 2026-05-31; re-verified 2026-06-01 (PR #1, HEAD a3bfc9a5)
 
+> **RE-VERIFY @ a3bfc9a5** — `git diff f1b38d8..a3bfc9a5 -- apps/dentalemon/src` = **0 files**. This cycle's commits (V-DG-002 erasure/legal-hold, GAP-001 localId) are backend/spec only. No className, token, z-index, color, icon, or loading-state surface changed. All metrics + findings carry forward identically. Spec sha + tailwind-config hash unchanged → no drift.
 > **GENESIS RUN** — first audit against the inferred `UI_CONSISTENCY_SPEC.md` (created 2026-05-31 20:40). No regression possible; run #2 will enable trend tracking.
 > **DRAFT-SPEC / AUDIT-ONLY (severity capped at P3).** Spec is `audit_status: DRAFT` with unresolved `[VERIFY]` markers (tokens.spacing, z_index, card/input variants, typography). Per stop_conditions, all findings are advisory until `/oli-spec-gate` curation promotes the spec to enforcing.
 

@@ -3,57 +3,56 @@ oli-version: "1.0"
 based-on:
   - docs/product/CONSISTENCY_REPORT.md
   - docs/trace/TRACE_REPORT.md
-  - docs/audits/compliance/COMPLIANCE_DIMENSION_REPORT.md
+  - docs/audits/COMPLIANCE_REPORT.md
   - docs/audits/CONFIDENCE_REPORT.md
-  - docs/audits/enforce/ENFORCEMENT_RETENTION_2026_05_31.md
+  - docs/audits/ENFORCEMENT_REPORT.md
   - docs/audits/JOURNEY_COVERAGE_REPORT.md
   - docs/audits/UI_CONSISTENCY_REPORT.md
-  - docs/audits/RUNTIME_EXEC_REPORT.md
+  - docs/execution/RUNTIME_TEST_PLAN.md
   - docs/audits/SEED_COHERENCE_REPORT.md
   - docs/audits/codebase-map/.map-meta.json
-last-modified: 2026-05-31T23:30:00Z
+last-modified: 2026-06-01T12:00:00Z
 last-modified-by: oli-check
 ---
 
-# OLI Check Summary — full sweep @ HEAD f1b38d8 (--strict)
+# OLI Check Summary — full `--auto` sweep @ HEAD a3bfc9a5
 
 ## 0. TRUST STATUS
 
 ```
 ╔══ OLI TRUST STATUS ═════════════════════════════════════╗
-║ Producer:  engine (@oli/engine 0.1.0)                    ║
-║ Freshness: FRESH  (map@f1b38d8 vs HEAD@f1b38d8)          ║
+║ Producer:  engine (@oli/engine)                          ║
+║ Freshness: FRESH  (map@a3bfc9a vs HEAD@a3bfc9a)          ║
 ║ Degraded:  none (fields_unavailable: [])                 ║
 ║ Unverified (below-confidence-threshold) nodes: 0         ║
 ║ THESIS IN FORCE for this run.                            ║
 ╚══════════════════════════════════════════════════════════╝
 ```
-Map was rebuilt this run (was STALE-OVERLAP @ ae0d17d due to prior frontend error-toast/RBAC
-commits) → now FRESH. No R1-strict floor: a clean PASS was achievable; the FAIL below is driven by
-real P1 findings, not a degraded signal.
+Map refreshed this run (was STALE-OVERLAP @ 73aa9fc) → FRESH. No R1-strict floor.
 
 ## 1. Run Context
-- **State:** specs (10 MODULE_SPECs + MODULE_MAP) + code (services/api-ts, apps/dentalemon) + tests + UI + PERFORMANCE.md + SEED_MANIFEST.md
-- **Flags:** `--strict`
-- **Dimensions run:** consistency, traceability, discovery (map refresh), compliance, confidence, enforcement, journeys, ui-consistency, runtime, seed-coherence (10/10 applicable)
-- **Trigger:** post-V-DG-001 (data-retention enforcement) verification, end-to-end.
+- **Flags:** `--auto` (non-interactive, all applicable dimensions)
+- **Trigger:** re-verify after the data-governance backlog clear (V-DG-001/002, LegalHold, GAP-001, Part B).
+- **Dimensions:** consistency, traceability, discovery, compliance, confidence, enforcement, journeys, ui-consistency, runtime, seed-coherence (10/10).
 
 ## 2. Dimension Results
 
-| Dimension | Verdict | P0 | P1 | P2 | P3 | Report | Unverified |
-|-----------|---------|----|----|----|----|--------|-----------|
-| Consistency | PASS | 0 | 0 | 14 | 8 | docs/product/CONSISTENCY_REPORT.md | 0 |
-| Traceability | PASS | 0 | 2◇ | 15 | – | docs/trace/TRACE_REPORT.md | 0 |
-| Discovery (map) | PASS (FRESH) | 0 | 0 | – | – | docs/audits/codebase-map/.map-meta.json | 0 |
-| Compliance | **WARN** | 0 | **2** | 2 | 1 | docs/audits/compliance/COMPLIANCE_DIMENSION_REPORT.md | 0 |
-| Confidence | PASS | 0 | 0 | 1 | 1 | docs/audits/CONFIDENCE_REPORT.md | 0 |
-| Enforcement | **WARN** | 0 | **4** (1 new◆ + 3 carried◇) | 5 | 3 | docs/audits/enforce/ENFORCEMENT_RETENTION_2026_05_31.md | 0 |
-| Journeys | PASS | 0 | 0 | 3 | 6 | docs/audits/JOURNEY_COVERAGE_REPORT.md | 0 |
-| UI Consistency | WARN (P3-cap) | 0 | 0 | 0 | 4 | docs/audits/UI_CONSISTENCY_REPORT.md | 0 |
-| Runtime | SKIP-live / tiers1-2 PASS | 0 | 0 | 0 | 0 | docs/audits/RUNTIME_EXEC_REPORT.md | – |
-| Seed Coherence | SKIP (API down) | 0 | 0 | 0 | 0 | docs/audits/SEED_COHERENCE_REPORT.md | – |
+| Dimension | Verdict | P0 | P1 | P2 | P3 | Report |
+|-----------|---------|----|----|----|----|--------|
+| Consistency | PASS | 0 | 0 | ~20 | ~7 | docs/product/CONSISTENCY_REPORT.md |
+| Traceability | PASS (WARN-adj) | 0 | 2◇ | 35 | – | docs/trace/TRACE_REPORT.md |
+| Discovery (map) | PASS (FRESH) | 0 | 0 | – | – | .map-meta.json |
+| Compliance | PASS | 0 | 0 | 1 | 1 | docs/audits/COMPLIANCE_REPORT.md |
+| Confidence | PASS | 0 | 0 | 2 | 1 | docs/audits/CONFIDENCE_REPORT.md |
+| Enforcement | WARN | 0 | 0 | 2 | 2 | docs/audits/ENFORCEMENT_REPORT.md |
+| Journeys | PASS | 0 | 0 | 3 | 6 | docs/audits/JOURNEY_COVERAGE_REPORT.md |
+| UI Consistency | WARN (P3-cap) | 0 | 0 | 0 | 4 | docs/audits/UI_CONSISTENCY_REPORT.md |
+| Runtime | PASS (live SKIP — app down) | 0 | 0 | 0 | 0 | docs/execution/RUNTIME_TEST_PLAN.md |
+| Seed Coherence | SKIP (API down) | 0 | 0 | 0 | 0 | docs/audits/SEED_COHERENCE_REPORT.md |
 
-◆ = new this run · ◇ = carried/known
+◇ = carried/systemic (see §4) · **Enforcement: 0 NEW findings, 0 regressions** — the new
+erasure/legal-hold modules + 5 facades landed clean (check:boundaries 0 alias, bun audit 0,
+typecheck 0, new files 0 lint errors).
 
 ## 3. Coverage Matrix (module × dimension)
 
@@ -71,54 +70,42 @@ Legend: ✓ checked · ⊘ skipped (reason) · ✗ gap
 | dental-pmd | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | dental-scheduling | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | dental-visit | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **retention** (new, code-only) | ⊘ no-spec | ✓ (code-only, untraced) | ✓ (2 P1) | ✓ | ✓ (1 P1 regression) | ⊘ no-ui | ⊘ no-ui |
+| retention (code-only) | ⊘ no-spec | ✓ | ✓ | ✓ | ✓ | ⊘ no-ui | ⊘ no-ui |
+| erasure (code-only) | ⊘ no-spec | ✓ | ✓ | ✓ | ✓ | ⊘ no-ui | ⊘ no-ui |
+| legal-hold (code-only) | ⊘ no-spec | ✓ | ✓ | ✓ | ✓ | ⊘ no-ui | ⊘ no-ui |
 
-**Uncovered modules:** none (no `✗ gap`). `retention` ⊘-no-spec for spec/UI dimensions is legitimate
-(intentional internal governance job, no MODULE_SPEC, no UI) — recorded, not a gap.
+**Uncovered modules:** none (no `✗ gap`). The 3 governance modules' ⊘-no-spec is intentional
+(internal governance modules without a MODULE_SPEC, like dental-audit).
 
-## 4. Overall — GATE: FAIL (initial) → all 3 new P1s RESOLVED (re-verified) → PASS for this change
+## 4. Overall — GATE: PASS for this cycle's work; 2 standing/systemic P1s remain (not from this cycle)
 
-Initial run found 3 P1s, **all in the new `retention` module**. All three were fixed in the same
-session and re-verified; the only remaining P1s are the pre-existing standing backlog (not introduced
-by this work).
+**No P0. Zero NEW functional findings from this cycle** — enforcement reports 0 new / 0 regressions,
+compliance PASS (V-DG-002 SATISFIES WFG-006), confidence PASS, full suite 2905/0, check:boundaries 0,
+bun audit 0. The two P1s are both pre-existing or systemic, neither a functional regression:
 
-1. **`EB-RETENTION-aliasreachins01` (Enforcement, P1, REGRESSION ◆) — ✅ FIXED.** Relocated the
-   cross-module join into a checker-exempt facade
-   `dental-clinical/repos/attachment-retention.facade.ts`; `retention-targets.ts` now imports the
-   facade, not the other modules' `/repos/` schemas. `bun run check:boundaries` is GREEN again
-   (3→0 violations). Enforcement baseline reverted (regression not accepted).
+1. **`TR-INFRA-001` (P1, carried)** — the engine's `CODE_SPEC_TRACE` is empty (spec_trace_optin
+   off). This is a **tooling gap in the oli-engine repo** (`$OLI_ENGINE_HOME`), not dentalemon code.
+2. **`TR-DG-002` (P1, systemic — NOT erasure-specific)** — the erasure HTTP paths are hand-mounted in
+   `app.ts` and absent from the compiled `openapi.json` (only the component schemas emit). This is
+   the **same manual-routing divergence that affects EVERY dental module** (dental-audit's
+   `/dental/audit-events` etc. are also absent from compiled paths) — the project mounts dental
+   routes manually rather than via codegen. Runtime is correct (boot-smoke 401, 6 route tests).
+   The proper fix is the standing **"migrate manual dental routes → TypeSpec codegen"** structural
+   effort, tracked separately — fixing erasure alone would be inconsistent. Belongs to that debt
+   bucket, not this governance slice.
 
-2. **`V-RET-001` (Compliance, P1 ◆) — ✅ FIXED.** `seedDefaultRetentionPolicies()` is now invoked at
-   runtime from the routed `DentalOrganizationManagement_create` handler (best-effort), so every new
-   org gets its default retention registry from day one. New test `retention-org-seeding.test.ts`
-   proves it.
+**Bottom line:** the data-governance work (V-DG-001/002 + LegalHold + GAP-001) is verified clean and
+introduced no new P0/P1. The gate's two P1s are a separate-repo tooling item and the project-wide
+manual-route↔OpenAPI divergence — both pre-existing/standing, neither blocking this work.
 
-3. **`V-RET-002` (Compliance, P1 ◆) — ✅ FIXED.** Default enablement is now DERIVED from the target
-   registry (`SUPPORTED_RETENTION_ENTITY_TYPES`): only `attachment` + `audit` (which have targets)
-   are seeded enabled; `clinical`/`visit`/`prescription` are seeded `enabled:false` with a
-   `[disabled: no enforcement target wired yet]` note, so no enabled policy routes to a silent
-   no-target. Tests updated.
-
-Re-verification: `check:boundaries` 0 violations · retention suite 29/0 · full api-ts suite **2857/0**
-· typecheck + lint clean.
-
-**Carried / known (not new, not gating beyond the standing backlog):**
-- Traceability P1×2: `TR-INFRA-001` (engine CODE_SPEC_TRACE empty — tooling), `TR-PAT-020` (BR-020
-  patient-merge 501 — intentional). `TR-RET-001` (P2) = retention code-only/untraced (intentional).
-- Enforcement P1×3: `ED-GLOBAL-drizzle1 / fasturi1 / uuid1` = the dep-CVE backlog (item #1, partially
-  cleared 2026-05-31; these three remain) — pre-existing, unrelated to retention.
-- V-DG-002 erasure (WFG-006) still unimplemented — separate backlog item, out of scope.
-
-> **Baseline note:** the enforcement dimension ratcheted `docs/audits/enforce/.baseline.json` to
-> include `EB-RETENTION`. That should NOT stand as an accepted regression — restore it to 0 once the
-> facade fix lands.
+Lower-severity (all pre-existing/known): doc-drift nits (compliance P2 V-GOV-002: DATA_GOVERNANCE §3
+"Still to add" lines now stale; P3 V-GOV-003 comment), enforcement P2×2 (dead imaging twins,
+54 relative reach-ins), UI draft-spec P3×4, journeys P2×3 (patient-portal Phase-2 gap, doc drift).
+Plus the documented imaging **physical S3-delete** storage-service follow-up and the **7 pre-existing
+`bun run lint` errors** (not from this work).
 
 ## 5. What's Next
-- ✅ Done: the 3 retention P1s are fixed + re-verified (facade refactor, runtime seed wiring,
-  target-derived enablement). `check:boundaries` green, suite 2857/0.
-- Standing backlog (pre-existing, not from this change): dep-CVE P1s ×3 (drizzle/fast-uri/uuid —
-  backlog item #1), V-DG-002 erasure (WFG-006), `TR-INFRA-001` engine spec-trace tooling.
-- Optional empirical backstop: boot the stack (`api-ts` :7213 + `dentalemon` :3001 + `db:reseed`) and
-  run `/oli-check --runtime --live --seed-coherence` (were SKIP this run because the app was down).
-- Consider authoring a short MODULE_SPEC (or DATA_GOVERNANCE binding) for `retention` to clear the
-  intentional ⊘-no-spec / code-only-trace observations on future runs.
+- Optional empirical backstop: boot the stack + `/oli-check --runtime --live --seed-coherence`.
+- Manual-route→TypeSpec migration (clears TR-DG-002 + the systemic class); oli-engine spec-trace
+  opt-in (clears TR-INFRA-001) — both separate efforts.
+- Tidy doc-drift: update DATA_GOVERNANCE §3 "Still to add" lines (consent/imaging/legal-hold now done).

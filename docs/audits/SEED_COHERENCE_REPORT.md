@@ -2,15 +2,24 @@
 
 ---
 oli-version: seed-coherence-v1
-report_date: 2026-05-31
+report_date: 2026-06-01
 based_on:
   - docs/product/SEED_MANIFEST.md
   - docs/audits/codebase-map/CODE_API_SURFACE.json (v5)
   - docs/product/ROLE_PERMISSION_MATRIX.md
-last_modified: 2026-05-31
+last_modified: 2026-06-01
 last_modified_by: oli-check
-head: f1b38d86
+head: a3bfc9a5
 ---
+
+## 2026-06-01 re-run (--auto, HEAD a3bfc9a5) — VERDICT: SKIP
+
+`SC-API-UNREACHABLE` (informational, NOT P0) — API still not listening (`GET /health`
+http=000 on :7213/:3001/:3002; no api-ts/bun process). Persona-replay could not run;
+explicit SKIP per stop_conditions, never a false PASS. Manifest non-empty (20
+quantitative claims). No server booted; none left behind. Recommend
+`cd services/api-ts && bun dev` (+ `bun run db:reseed`) then re-run
+`/oli-check --seed-coherence`. **Counts:** P0 0 · P1 0 · P2 0 · SC-API-UNREACHABLE 1.
 
 ## 2026-05-31 re-run (this dimension run) — VERDICT: SKIP
 

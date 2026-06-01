@@ -7,8 +7,9 @@ based-on:
   - docs/product/modules/*/API_CONTRACTS.md
   - docs/audits/codebase-map/CODE_ROUTE_MAP.json (v5)
   - docs/audits/codebase-map/CODE_COMPONENT_REGISTRY.json (v5)
-last-modified: 2026-05-31T00:00:00Z
+last-modified: 2026-06-01T00:00:00Z
 last-modified-by: oli-runtime-plan
+runtime-live-status: "skipped — app not running on :7213 (GET /health http=000); static boot-smoke PASS (app.ts imports clean, governance routes wired). HEAD a3bfc9a5."
 ---
 
 # Runtime Test Plan — Dentalemon

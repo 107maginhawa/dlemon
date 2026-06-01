@@ -1,6 +1,6 @@
 # Dentalemon — Requirements Traceability Matrix (Auto-Generated)
 
-**Generated:** 2026-05-31  
+**Generated:** 2026-06-01  
 **Script:** `bun run audit:trace`  
 **Note:** BR coverage is inferred from tag mentions (`BR-NNN`) in test files.
           Add `// @BR-NNN` to test descriptions for intentional traceability.
@@ -62,7 +62,7 @@
 | BR-002 | Visit state transitions are strictly linear: `draft` → `acti | ✅ (8) | ❌ | ✅ (1) | ✅ FULLY_COVERED |
 | BR-003 | — | ✅ (5) | ✅ (1) | ✅ (3) | ✅ FULLY_COVERED |
 | BR-004 | An appointment check-in creates a visit record. Deleting the | ✅ (5) | ✅ (1) | ✅ (2) | ✅ FULLY_COVERED |
-| BR-005 | `business-rules.test.ts` — describe.skip (placeholder) | ✅ (8) | ❌ | ❌ | ⚠️ UNIT_COVERED |
+| BR-005 | `business-rules.test.ts` — describe.skip (placeholder) | ✅ (9) | ❌ | ❌ | ⚠️ UNIT_COVERED |
 | BR-006 | Treatment state transitions are forward-only: `diagnosed` →  | ✅ (2) | ✅ (3) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-007 | `business-rules.test.ts` — describe('BR-007') field-edit gua | ✅ (2) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
 | BR-008 | Carried-over treatments from a treatment plan appear in the  | ✅ (2) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
