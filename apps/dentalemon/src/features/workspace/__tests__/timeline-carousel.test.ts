@@ -18,6 +18,12 @@ import { TimelineCarousel } from '../components/timeline-carousel';
 // useInitializeDentition's success/error paths call sonner toasts — stub them.
 mock.module('sonner', () => ({ toast: { error: () => {}, success: () => {} } }));
 
+// NOTE: useUpdateVisit is intentionally NOT mock.module()'d here. Bun's
+// mock.module is process-global and persists across files regardless of run
+// order, so stubbing it would shadow use-update-visit's own unit test. The real
+// hook works fine in these component tests: it only needs a QueryClientProvider
+// (supplied by renderCarousel) and the stubbed global.fetch above.
+
 // Access swiper captures from test-setup.ts (accessed lazily — preload sets this up)
 const getCaptures = () => (globalThis as any).__swiperCaptures as Record<string, unknown>;
 

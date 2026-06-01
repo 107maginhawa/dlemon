@@ -17,6 +17,7 @@ import {
   updateDentalVisitMutation,
   listDentalVisitsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
+import { toast } from 'sonner';
 
 export function useUpdateVisit(patientId: string) {
   const queryClient = useQueryClient();
@@ -27,6 +28,12 @@ export function useUpdateVisit(patientId: string) {
       queryClient.invalidateQueries({
         queryKey: listDentalVisitsQueryKey({ query: { patientId } }),
       });
+    },
+    // V-FE-ERR-001: surface failures (e.g. lock conflict) instead of swallowing
+    // them silently. Call sites such as TimelineCarousel's lock action have no
+    // per-call .catch, so the hook-level handler is the safety net.
+    onError: () => {
+      toast.error('Failed to update visit. Please try again.');
     },
   });
 }

@@ -183,9 +183,12 @@ mock.module('@/features/workspace/components/dental-chart', () => ({
   DentalChart: () => React.createElement('div', { 'data-testid': 'dental-chart-stub' }),
 }))
 
-mock.module('@/features/workspace/hooks/use-update-visit', () => ({
-  useUpdateVisit: () => ({ mutate: () => {}, isPending: false, error: null }),
-}))
+// NOTE: use-update-visit is intentionally NOT mocked here. Per the convention
+// documented at the top of this file, hook mocks must NOT live in the global
+// preload — doing so shadows the real hook for its own unit test
+// (use-update-visit.test.ts). Component tests that need a stub (e.g.
+// timeline-carousel) declare a per-file mock.module() instead; those test files
+// sort after hooks/ so the real hook unit test runs first against the real impl.
 
 // ─── Imaging workspace (comparison-view dep) ──────────────────────────────
 

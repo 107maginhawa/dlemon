@@ -10,6 +10,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { createDentalInvoice } from '@monobase/sdk-ts/generated';
+import { toast } from 'sonner';
 
 export interface WorkspaceInvoice {
   id: string;
@@ -55,6 +56,10 @@ export function useCreateInvoice(patientId: string | null) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: listDentalInvoicesQueryKey({ query: { patientId: patientId ?? undefined } }) });
+    },
+    // V-FE-ERR-001: surface invoice-creation failures instead of swallowing them.
+    onError: () => {
+      toast.error('Failed to create invoice. Please try again.');
     },
   });
 }
