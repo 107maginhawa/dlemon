@@ -57,9 +57,10 @@ describe('seedDefaultRetentionPolicies', () => {
       expect(p.enabled).toBe(shouldBeEnabled);
     }
 
-    // attachment + audit have targets → enabled; clinical/visit/prescription → disabled.
+    // appointment + attachment + audit have targets → enabled;
+    // clinical/visit/prescription → disabled (no enforcement target wired).
     const enabled = (await repo.findEnabled(TENANT)).map((p) => p.entityType).sort();
-    expect(enabled).toEqual(['attachment', 'audit']);
+    expect(enabled).toEqual(['appointment', 'attachment', 'audit']);
   });
 
   test('no ENABLED seeded policy lacks an enforcement target (no silent no-target)', async () => {

@@ -38,6 +38,10 @@ export const dentalAppointments = pgTable('dental_appointment', {
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   cancellationReason: text('cancellation_reason'),
   noShowAt: timestamp('no_show_at', { withTimezone: true }),
+  // Soft-archive marker for data-retention enforcement (V-DG-003). The retention
+  // engine's archive action stamps this; it is NOT part of the status state
+  // machine (a completed/cancelled appointment can still be archived). NULL = live.
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
   branchIdx: index('dental_appointment_branch_id_idx').on(table.branchId),
   dentistIdx: index('dental_appointment_dentist_member_id_idx').on(table.dentistMemberId),

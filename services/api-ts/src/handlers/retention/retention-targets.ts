@@ -21,6 +21,10 @@ import {
   findArchivableAttachmentSubjects,
   archiveAttachments,
 } from '@/handlers/dental-clinical/repos/attachment-retention.facade';
+import {
+  findArchivableAppointmentSubjects,
+  archiveAppointments,
+} from '@/handlers/dental-scheduling/repos/dental-appointment-retention.facade';
 import { personsUnderLegalHold } from '@/handlers/dental-legalhold/legal-hold.facade';
 
 /**
@@ -38,6 +42,25 @@ const attachmentTarget: RetentionTarget = {
   },
   async archive(db: DatabaseInstance, ids: string[]) {
     return archiveAttachments(db, ids);
+  },
+};
+
+/**
+ * Appointments (V-DG-003). DATA_GOVERNANCE §2 declares "1 year from date" —
+ * the appointment DATE — so eligibility filters on `scheduledAt`, not createdAt.
+ * Reads/writes via the dental-scheduling facade; soft-archives only (set
+ * `deletedAt`). Legal-hold: an appointment whose owning patient's Person is
+ * under an active hold is flagged held, and the engine excludes it.
+ */
+const appointmentTarget: RetentionTarget = {
+  entityType: 'appointment',
+  async findEligible(db: DatabaseInstance, { tenantId, branchId, cutoff }) {
+    const subjects = await findArchivableAppointmentSubjects(db, { tenantId, branchId, cutoff });
+    const held = await personsUnderLegalHold(db, subjects.map((s) => s.personId));
+    return subjects.map((s) => ({ id: s.id, legalHold: held.has(s.personId) }));
+  },
+  async archive(db: DatabaseInstance, ids: string[]) {
+    return archiveAppointments(db, ids);
   },
 };
 
@@ -60,6 +83,7 @@ const auditTarget: RetentionTarget = {
 
 export const RETENTION_TARGETS: RetentionTargetRegistry = {
   attachment: attachmentTarget,
+  appointment: appointmentTarget,
   audit: auditTarget,
 };
 

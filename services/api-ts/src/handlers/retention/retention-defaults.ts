@@ -8,6 +8,7 @@
  * Defaults:
  *   - clinical / visit / attachment : ~10 years (archive)
  *   - prescription                  : ~5 years (archive)
+ *   - appointment                   : 1 year from the appointment date (archive; V-DG-003)
  *   - audit                         : retain (append-only, never purged)
  *
  * Enablement is DERIVED from the target registry (SUPPORTED_RETENTION_ENTITY_TYPES):
@@ -41,6 +42,8 @@ export const DEFAULT_RETENTION_POLICIES: RetentionPolicyDefault[] = [
   { entityType: 'visit', retentionPeriodDays: 10 * YEAR_DAYS, action: 'archive' },
   { entityType: 'attachment', retentionPeriodDays: 10 * YEAR_DAYS, action: 'archive' },
   { entityType: 'prescription', retentionPeriodDays: 5 * YEAR_DAYS, action: 'archive' },
+  // Appointments: 1 year from the appointment date (DATA_GOVERNANCE §2; V-DG-003).
+  { entityType: 'appointment', retentionPeriodDays: YEAR_DAYS, action: 'archive' },
   // The audit trail is append-only and must never be purged — declared
   // explicitly so operators see it in the registry. The engine also hard-refuses
   // the protected `audit` target regardless of this row.
