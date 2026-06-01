@@ -60,7 +60,7 @@ describe('erasure workflow service', () => {
 
   test('approveErasure anonymizes person + patient and marks the request anonymized', async () => {
     const req = await requestErasure(db, noopLogger, baseInput);
-    const approved = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER });
+    const { request: approved } = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER });
 
     expect(approved.status).toBe('anonymized');
     expect(approved.processedAt).not.toBeNull();
@@ -75,7 +75,7 @@ describe('erasure workflow service', () => {
 
   test('legal hold blocks approval: request rejected, subject NOT anonymized', async () => {
     const req = await requestErasure(db, noopLogger, baseInput);
-    const result = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER, legalHold: true });
+    const { request: result } = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER, legalHold: true });
 
     expect(result.status).toBe('rejected');
     expect(result.legalHoldBlocked).toBe(true);

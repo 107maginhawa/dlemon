@@ -13,6 +13,8 @@ import { openTestTx } from '@/core/test-tx';
 import { AppError } from '@/core/errors';
 import { persons } from '../person/repos/person.schema';
 import { patients } from '../patient/repos/patient.schema';
+import { storedFiles } from '../storage/repos/file.schema';
+import { imagingStudies, imagingStudyImages } from '../dental-imaging/repos/imaging.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasureHandler } from './requestErasureHandler';
 import { approveErasureHandler } from './approveErasureHandler';
@@ -31,7 +33,11 @@ const validationErrorHandler = (result: any, c: any) => {
   if (!result.success) return c.json({ error: 'Validation failed', issues: result.error.issues }, 400);
 };
 
-function makeApp(db: NodePgDatabase, user: { id: string; email: string; role: string }) {
+function makeApp(
+  db: NodePgDatabase,
+  user: { id: string; email: string; role: string },
+  storage?: unknown,
+) {
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
@@ -42,6 +48,7 @@ function makeApp(db: NodePgDatabase, user: { id: string; email: string; role: st
     ctx.set('database', db);
     ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
     ctx.set('user', user);
+    if (storage) ctx.set('storage', storage);
     await next();
   });
   app.post('/dental/erasure-requests', zValidator('json', RequestErasureBody, validationErrorHandler), requestErasureHandler as any);
@@ -132,5 +139,37 @@ describe('erasure HTTP routes (V-DG-002)', () => {
     const app = makeApp(db, ADMIN);
     const res = await app.request('/dental/erasure-requests/e3000000-0000-4000-8000-0000000000ff/approve', J({}));
     expect(res.status).toBe(404);
+  });
+
+  test('approve physically deletes the radiograph S3 object + storage row via ctx storage (V-DG-002)', async () => {
+    // Seed a radiograph: stored_file → imaging_study → imaging_study_image.
+    // (Reuse the patient row created in beforeEach so the person→patient link
+    // the imaging facade resolves matches the study's patientId.)
+    const FILE_ID = 'f3000000-0000-4000-8000-000000000001';
+    const [pat] = await db.select().from(patients).where(eq(patients.person, PID));
+    await db.insert(storedFiles).values({
+      id: FILE_ID, filename: 'rg.dcm', mimeType: 'application/dicom', size: 10, status: 'available', owner: ADMIN.id,
+    });
+    const studyId = 'f8000000-0000-4000-8000-000000000003';
+    await db.insert(imagingStudies).values({
+      id: studyId, patientId: pat!.id, branchId: 'b3000000-0000-4000-8000-000000000001',
+      acquiredBy: 'e8000000-0000-4000-8000-000000000003', modality: 'periapical',
+    });
+    await db.insert(imagingStudyImages).values({ studyId, fileId: FILE_ID });
+
+    const deleted: string[] = [];
+    const storage = { async deleteFile(id: string) { deleted.push(id); } };
+    const app = makeApp(db, ADMIN, storage);
+
+    const created = await app.request('/dental/erasure-requests', J(reqBody));
+    const reqRow = (await created.json()) as { id: string };
+    const approved = await app.request(`/dental/erasure-requests/${reqRow.id}/approve`, J({}));
+    expect(approved.status).toBe(200);
+    expect(((await approved.json()) as any).status).toBe('anonymized');
+
+    // S3 object physically deleted + storage row hard-deleted.
+    expect(deleted).toContain(FILE_ID);
+    const rows = await db.select().from(storedFiles).where(eq(storedFiles.id, FILE_ID));
+    expect(rows).toHaveLength(0);
   });
 });

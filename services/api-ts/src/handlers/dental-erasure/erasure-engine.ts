@@ -23,10 +23,26 @@ import { logAuditEvent } from '@/core/audit-logger';
 /** System actor recorded as the audit personId for erasure actions. */
 export const ERASURE_SYSTEM_ACTOR = '00000000-0000-4000-8000-0000000000e2';
 
+/**
+ * What a target reports after anonymizing. A bare `number` is the count of rows
+ * acted on (the common case). A target whose anonymization leaves backing S3
+ * objects requiring a physical follow-up delete returns the richer object form,
+ * surfacing those storage `file` ids up to handler scope (where the storage
+ * client lives) — the repo-layer engine never touches S3 itself.
+ */
+export interface ErasureTargetReport {
+  count: number;
+  /** Storage `file` ids whose S3 objects + rows must be physically deleted. */
+  fileIdsPendingS3Delete?: string[];
+}
+
 export interface ErasureTarget {
   entityType: string;
   /** Anonymize this entity's PII for the subject person. Returns count acted on. */
-  anonymize(db: DatabaseInstance, subjectPersonId: string): Promise<number>;
+  anonymize(
+    db: DatabaseInstance,
+    subjectPersonId: string,
+  ): Promise<number | ErasureTargetReport>;
 }
 
 export type ErasureTargetRegistry = Record<string, ErasureTarget>;
@@ -53,6 +69,14 @@ export interface ErasureResult {
   outcome: ErasureOutcome;
   targets: ErasureTargetResult[];
   totalAnonymized: number;
+  /**
+   * Storage `file` ids whose S3 objects (and storage `file` rows) the caller
+   * MUST physically delete AFTER the anonymization commits — the engine runs at
+   * the repo layer and has no storage client. Aggregated across all targets;
+   * recomputed each run so a retry re-deletes (idempotent). Empty on dry-run /
+   * legal-hold-block / when no target surfaces storage handles.
+   */
+  fileIdsPendingS3Delete: string[];
 }
 
 export interface AnonymizeOptions {
@@ -87,6 +111,7 @@ export async function anonymizeSubject(
     blockedByLegalHold: false,
     targets: [] as ErasureTargetResult[],
     totalAnonymized: 0,
+    fileIdsPendingS3Delete: [] as string[],
   };
 
   // (4) LEGAL-HOLD: a held subject is never anonymized.
@@ -103,11 +128,17 @@ export async function anonymizeSubject(
     return result;
   }
 
-  // Live anonymization: walk every target.
+  // Live anonymization: walk every target, aggregating any storage `file` ids
+  // that still need a physical S3 delete (the engine never touches S3 itself).
   const targetResults: ErasureTargetResult[] = [];
+  const fileIdsPendingS3Delete: string[] = [];
   let total = 0;
   for (const target of Object.values(targets)) {
-    const anonymizedCount = await target.anonymize(db, subject.subjectPersonId);
+    const report = await target.anonymize(db, subject.subjectPersonId);
+    const anonymizedCount = typeof report === 'number' ? report : report.count;
+    if (typeof report !== 'number' && report.fileIdsPendingS3Delete?.length) {
+      fileIdsPendingS3Delete.push(...report.fileIdsPendingS3Delete);
+    }
     targetResults.push({ entityType: target.entityType, anonymizedCount });
     total += anonymizedCount;
   }
@@ -116,6 +147,7 @@ export async function anonymizeSubject(
     ...base,
     targets: targetResults,
     totalAnonymized: total,
+    fileIdsPendingS3Delete,
     outcome: total > 0 ? 'anonymized' : 'noop',
   };
 
@@ -150,6 +182,7 @@ async function writeAudit(
       outcome: result.outcome,
       totalAnonymized: result.totalAnonymized,
       targets: result.targets,
+      filesPendingS3Delete: result.fileIdsPendingS3Delete.length,
     },
   });
 }

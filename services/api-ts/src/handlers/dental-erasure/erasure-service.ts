@@ -35,6 +35,17 @@ export interface ServiceOpts {
   dryRun?: boolean;
 }
 
+/**
+ * Approve result: the updated request row plus the storage `file` ids whose S3
+ * objects (and storage rows) the CALLER must physically delete after this
+ * commits — the service/engine layer has no storage client. Empty when blocked,
+ * dry-run, or the subject has no imaging. Recomputed each run → retry-safe.
+ */
+export interface ApproveErasureResult {
+  request: DentalErasureRequest;
+  fileIdsPendingS3Delete: string[];
+}
+
 /** Create a `requested` erasure request. Mutates no subject data. */
 export async function requestErasure(
   db: DatabaseInstance,
@@ -83,7 +94,7 @@ export async function approveErasure(
   requestId: string,
   input: { reviewedBy: string; legalHold?: boolean },
   opts: ServiceOpts = {},
-): Promise<DentalErasureRequest> {
+): Promise<ApproveErasureResult> {
   const repo = new ErasureRequestRepository(db, logger);
   const req = await repo.findOneById(requestId);
   if (!req) throw new NotFoundError('Erasure request not found');
@@ -114,7 +125,7 @@ export async function approveErasure(
   );
 
   if (result.blockedByLegalHold) {
-    return repo.updateOneById(requestId, {
+    const request = await repo.updateOneById(requestId, {
       status: 'rejected',
       legalHoldBlocked: true,
       rejectionReason: 'Subject under an active legal hold — erasure refused',
@@ -122,15 +133,21 @@ export async function approveErasure(
       reviewedAt: new Date(),
       updatedBy: input.reviewedBy,
     } as Partial<DentalErasureRequest>);
+    return { request, fileIdsPendingS3Delete: [] };
   }
 
-  return repo.updateOneById(requestId, {
+  const request = await repo.updateOneById(requestId, {
     status: 'anonymized',
     reviewedBy: input.reviewedBy,
     reviewedAt: new Date(),
     processedAt: new Date(),
     updatedBy: input.reviewedBy,
   } as Partial<DentalErasureRequest>);
+
+  // Anonymization is COMMITTED + audited above. The physical S3 delete of these
+  // file ids is a fail-open follow-up performed by the caller (handler scope,
+  // where the storage client lives) — see approveErasureHandler.
+  return { request, fileIdsPendingS3Delete: result.fileIdsPendingS3Delete };
 }
 
 /** Reject a `requested` erasure with a reason. Mutates no subject data. */

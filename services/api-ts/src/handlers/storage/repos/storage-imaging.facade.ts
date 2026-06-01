@@ -27,3 +27,24 @@ export async function getFileSizesByIds(
 
   return new Map(rows.map((r) => [r.id, r.size]));
 }
+
+/**
+ * Hard-delete the storage `file` rows for the given ids and return the ids that
+ * actually existed (and were removed). Used by the erasure flow (V-DG-002) after
+ * the matching S3 objects are physically deleted, so the storage metadata row no
+ * longer dangles. Idempotent: ids with no row are a no-op (omitted from the
+ * result). Caller is responsible for the S3 object delete (storage client).
+ */
+export async function deleteStoredFileRowsByIds(
+  db: DatabaseInstance,
+  fileIds: string[],
+): Promise<string[]> {
+  if (fileIds.length === 0) return [];
+
+  const deleted = await db
+    .delete(storedFiles)
+    .where(inArray(storedFiles.id, fileIds))
+    .returning({ id: storedFiles.id });
+
+  return deleted.map((r) => r.id);
+}

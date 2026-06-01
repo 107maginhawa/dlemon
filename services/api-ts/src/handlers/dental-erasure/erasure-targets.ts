@@ -21,7 +21,7 @@ import type { ErasureTarget, ErasureTargetRegistry } from './erasure-engine';
 import { anonymizePersonPii } from '@/handlers/person/repos/person-erasure.facade';
 import { anonymizePatientPiiByPerson } from '@/handlers/patient/repos/patient-erasure.facade';
 import { anonymizeConsentFormsByPerson } from '@/handlers/dental-clinical/repos/clinical-erasure.facade';
-import { anonymizeImagingByPerson } from '@/handlers/dental-imaging/repos/imaging-erasure.facade';
+import { anonymizeImagingByPersonDetailed } from '@/handlers/dental-imaging/repos/imaging-erasure.facade';
 
 /** The central PII record. Name → pseudonym, all other identifiers nulled. */
 const personTarget: ErasureTarget = {
@@ -49,14 +49,18 @@ const consentFormTarget: ErasureTarget = {
 };
 
 /**
- * Imaging: null DICOM/finding/annotation identifiers + archive image rows.
- * NOTE: physical S3 radiograph deletion is a storage-service follow-up — the
- * facade surfaces the stored-file ids that must be deleted out-of-band.
+ * Imaging: null DICOM/finding/annotation identifiers + archive image rows, and
+ * surface the storage `file` ids whose S3 objects still need a physical delete.
+ * The engine aggregates these and the approve handler (which holds the storage
+ * client) performs the physical S3 + storage-row delete after the anonymization
+ * commits — see DATA_GOVERNANCE.md §3 "Delete S3 object (radiograph)".
  */
 const imagingTarget: ErasureTarget = {
   entityType: 'imaging',
   async anonymize(db: DatabaseInstance, subjectPersonId: string) {
-    return anonymizeImagingByPerson(db, subjectPersonId);
+    const { rowsAnonymized, fileIdsPendingS3Delete } =
+      await anonymizeImagingByPersonDetailed(db, subjectPersonId);
+    return { count: rowsAnonymized, fileIdsPendingS3Delete };
   },
 };
 

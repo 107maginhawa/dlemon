@@ -47,7 +47,7 @@ describe('erasure respects the legal-hold store', () => {
       initiatedBy: ACTOR,
     });
 
-    const blocked = await approveErasure(db, noopLogger, req.id, { reviewedBy: ACTOR });
+    const { request: blocked } = await approveErasure(db, noopLogger, req.id, { reviewedBy: ACTOR });
     expect(blocked.status).toBe('rejected');
     expect(blocked.legalHoldBlocked).toBe(true);
     const [held] = await db.select().from(persons).where(eq(persons.id, PID));
@@ -61,7 +61,7 @@ describe('erasure respects the legal-hold store', () => {
       reason: 'Art.17 retry',
       requestedBy: ACTOR,
     });
-    const approved = await approveErasure(db, noopLogger, req2.id, { reviewedBy: ACTOR });
+    const { request: approved } = await approveErasure(db, noopLogger, req2.id, { reviewedBy: ACTOR });
     expect(approved.status).toBe('anonymized');
     const [erased] = await db.select().from(persons).where(eq(persons.id, PID));
     expect(erased!.firstName).toBe(ERASED_MARKER);

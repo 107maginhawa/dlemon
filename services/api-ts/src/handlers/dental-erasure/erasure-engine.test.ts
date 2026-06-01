@@ -126,4 +126,44 @@ describe('anonymizeSubject — safety invariants', () => {
       ]),
     );
   });
+
+  test('a target reporting fileIdsPendingS3Delete surfaces them up the result (V-DG-002)', async () => {
+    // imaging-like target returns the richer report form; the engine must
+    // aggregate the file ids so the handler can physically delete the S3 objects.
+    const imagingTarget: ErasureTarget = {
+      entityType: 'imaging',
+      async anonymize() {
+        return { count: 2, fileIdsPendingS3Delete: ['f1', 'f2'] };
+      },
+    };
+    const person = makeTarget('person', 1);
+    const { audit, events } = auditSpy();
+
+    const res = await anonymizeSubject({} as any, noopLogger, SUBJECT, {
+      dryRun: false,
+      targets: { person: person.target, imaging: imagingTarget },
+      audit,
+    });
+
+    expect(res.fileIdsPendingS3Delete).toEqual(['f1', 'f2']);
+    expect(res.totalAnonymized).toBe(3); // 1 person + 2 imaging rows
+    expect(res.targets).toEqual(
+      expect.arrayContaining([{ entityType: 'imaging', anonymizedCount: 2 }]),
+    );
+    // audit metadata records the pending-delete count.
+    expect(events[0].metadata.filesPendingS3Delete).toBe(2);
+  });
+
+  test('dry-run / number-only targets leave fileIdsPendingS3Delete empty', async () => {
+    const person = makeTarget('person', 1);
+    const { audit } = auditSpy();
+
+    const res = await anonymizeSubject({} as any, noopLogger, SUBJECT, {
+      dryRun: false,
+      targets: { person: person.target },
+      audit,
+    });
+
+    expect(res.fileIdsPendingS3Delete).toEqual([]);
+  });
 });
