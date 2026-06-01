@@ -10,7 +10,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listAttachmentsOptions, listAttachmentsQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { uploadFile, completeFileUpload, createAttachment, deleteAttachment } from '@monobase/sdk-ts/generated';
-import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 
 export type AttachmentImageType = 'xray' | 'photo' | 'scan' | 'document' | 'other';
 
@@ -106,8 +106,8 @@ export function useUploadAttachment(visitId: string | null, patientId: string) {
     },
     // V-FE-ERR-001: surface upload failures (presign/PUT/complete/record) instead
     // of swallowing the rejected promise at the call site.
-    onError: () => {
-      toast.error('Failed to upload attachment. Please try again.');
+    onError: (err) => {
+      toastError(err, 'Failed to upload attachment. Please try again.');
     },
   });
 }
@@ -121,8 +121,8 @@ export function useDeleteAttachment(visitId: string | null) {
       qc.invalidateQueries({ queryKey: listAttachmentsQueryKey({ path: { visitId: visitId! } }) });
     },
     // V-FE-ERR-001: surface delete failures rather than failing silently.
-    onError: () => {
-      toast.error('Failed to delete attachment. Please try again.');
+    onError: (err) => {
+      toastError(err, 'Failed to delete attachment. Please try again.');
     },
   });
 }
