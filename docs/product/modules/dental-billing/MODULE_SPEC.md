@@ -178,7 +178,7 @@ Integration: treatment performed → invoice creation → payment recording → 
 - Payment plan with 0 installments → 422
 - Invoice for visit with no dentist assigned [VERIFY]
 - Overdue cron fires on already-paid invoice → idempotent (no-op)
-- markUncollectible: returns 501 — do not attempt to implement (BR-013 deferred)
+- markUncollectible: returns 501 — do not attempt to implement (BR-013 **deferred to Phase 2**, tracked TR-BR-013; feature-flag `dental_billing_uncollectible` §18). The `uncollectible` state is intentionally absent from the invoice status enum until the flag is lifted.
 
 ---
 

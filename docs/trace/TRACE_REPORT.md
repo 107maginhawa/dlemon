@@ -24,7 +24,7 @@ Regression evidence this pass: backend `bun run test` 241 files / 2977 pass / 0 
 
 - **New gaps:** 0
 - **Resolved gaps:** 1 P1 (TR-DG-002), 1 P2 (TR-LH-001 → anchored/informational)
-- **Net change:** P1 5 → 4 → **2** (TR-WF-PLAN + TR-WF-DOCDRIFT cleared 2026-06-01; see below). Remaining P1: TR-INFRA-001 (separate-repo tooling), TR-BR-013 (billing WFG-008 incomplete).
+- **Net change:** P1 5 → 4 → 2 → **1** (TR-WF-PLAN + TR-WF-DOCDRIFT cleared 2026-06-01; **TR-BR-013 formally deferred → P2 2026-06-01**, see below). Remaining P1: TR-INFRA-001 (separate-repo tooling).
 - **TR-DG-002 RESOLVED (was the standing P1).** The dental manual-route → TypeSpec migration on this branch (OpenAPI 103→140 dental paths, suite 2957/0) landed the erasure + legal-hold **HTTP path operations into the compiled OpenAPI contract**. Verified present: `/dental/erasure-requests` (+`/{id}`, `/approve`, `/reject`) and `/dental/legal-holds` (+`/{id}/release`) — 6 path operations, not just the component schemas that were the prior residual gap. SDK/clients can now discover the WFG-006 erasure surface. Spec→code→test→contract chain now COMPLETE.
 - **TR-LH-001 downgraded (P2 → anchored/informational).** Legal-hold endpoints are now in the OpenAPI contract and have a TypeSpec source; residual is only the absence of a *product* MODULE_SPEC/WF node. code→test→contract COMPLETE.
 - **BR-019 — CORRECTION 2026-06-01: prior "now TESTED" was a FALSE POSITIVE.** `approveAmendment.test.ts` asserts **501 NOT_IMPLEMENTED** — a *deferral-stub* test, not an implementation. BR-019 supervisor approval is deliberately deferred (feature flag `dental_clinical_amendment_approval` off, MODULE_SPEC §18). WORKFLOW_MAP's not-enforced status was CORRECT; the read mistook the 501-stub test for implementation. WORKFLOW_MAP §5 clarified to "DEFERRED — 501 stub + deferral test" so doc and code agree → **TR-WF-DOCDRIFT resolved (false positive)**.
@@ -39,8 +39,8 @@ Regression evidence this pass: backend `bun run test` 241 files / 2977 pass / 0 
 | Total nodes | 405 |
 | Total edges | 612 |
 | CRITICAL gaps (P0) | 0 |
-| HIGH gaps (P1) | 2 |
-| MEDIUM gaps (P2) | 33 |
+| HIGH gaps (P1) | 1 |
+| MEDIUM gaps (P2) | 34 |
 | unverified (5g, map-degenerate) | 1 cluster |
 | Chain coverage (WF → test) | 80% |
 
@@ -48,7 +48,7 @@ Node manifest: WF=109 (98 numbered + WF-P01..05 + WF-EMRC-001..006), BR=58 (BR-0
 
 ## Verdict: PASS
 
-No P0 dangling references and no cross-module blind spots (all 16 §12 cross-module flows have an integration mechanism — sync API, pg-boss event, or UUID-ref). Every canonical BR (58/58) has at least one test at some layer. The prior standing P1 (TR-DG-002, erasure paths absent from OpenAPI) is **RESOLVED** by this branch's route migration. TR-WF-PLAN (WF-048/049/050 promoted to confirmed) and TR-WF-DOCDRIFT (BR-019 false-positive — clarified to DEFERRED-501-stub) were cleared 2026-06-01. The **2 remaining P1s** are: 1 tooling (engine spec-trace opt-in/off — separate repo) and TR-BR-013 (billing `markUncollectible` WFG-008 incomplete — product decision). All P2s are AC-tag drift, missing-E2E for unit-only BRs, orphan/inferred WFs, and the legal-hold/retention spec-anchoring items — all report-only.
+No P0 dangling references and no cross-module blind spots (all 16 §12 cross-module flows have an integration mechanism — sync API, pg-boss event, or UUID-ref). Every canonical BR (58/58) has at least one test at some layer. The prior standing P1 (TR-DG-002, erasure paths absent from OpenAPI) is **RESOLVED** by this branch's route migration. TR-WF-PLAN (WF-048/049/050 promoted to confirmed) and TR-WF-DOCDRIFT (BR-019 false-positive — clarified to DEFERRED-501-stub) were cleared 2026-06-01. TR-BR-013 (billing `markUncollectible` WFG-008) was **formally deferred to Phase 2 → P2 2026-06-01** (feature-flag `dental_billing_uncollectible` off, intentional 501 stub + deferral tests, documented error path AC-BIL-005 → 501; reconciled in WORKFLOW_MAP §5/WFG-008 mirroring BR-019/BR-020). The **1 remaining P1** is tooling (engine spec-trace opt-in/off — separate repo). All P2s are AC-tag drift, missing-E2E for unit-only BRs, orphan/inferred WFs, the legal-hold/retention spec-anchoring items, and the BR-013 deferral — all report-only.
 
 ## Per-Phase Health Contribution
 
@@ -89,7 +89,7 @@ None. No dangling spec references (all WF/BR/AC/SM/DE IDs referenced in artifact
 | Gap ID | Algorithm | Description | Source | Suggested Fix |
 |--------|-----------|-------------|--------|---------------|
 | TR-INFRA-001 | engine trace off | `CODE_SPEC_TRACE.json` `spec_source: null`, `matched: []`; map-meta `spec_trace_optin: false`, spec-trace phase 0ms. Engine spec→code trace is opt-in and disabled — not run this map build. Tooling/config item, not a product regression. **Carried.** | docs/audits/codebase-map/CODE_SPEC_TRACE.json; .map-meta.json:provenance | Enable `spec_trace_optin` and re-run engine map against the 210-path OpenAPI; verify matched>0. |
-| TR-BR-013 | 5c coverage | BR-013 `markUncollectible` flagged INCOMPLETE in WORKFLOW_MAP §5 (ORPHAN) + WFG-008. Has 7 backend test refs but the invoice→uncollectible transition is acknowledged incomplete; no enforcing workflow doc. | WORKFLOW_MAP.md:326,599; dental-billing MODULE_SPEC | Complete the uncollectible transition + author WF; or formally defer like BR-020. |
+| ~~TR-BR-013~~ → **P2** | 5c coverage | BR-013 `markUncollectible` **formally DEFERRED to Phase 2** 2026-06-01 (feature-flag `dental_billing_uncollectible` off; intentional 501 stub + deferral tests; documented error path AC-BIL-005 → 501; `uncollectible` intentionally absent from invoice status enum until flag lifted). Reconciled in WORKFLOW_MAP §5/WFG-008 to DEFERRED (mirrors BR-019/BR-020). Not an implementation gap. | WORKFLOW_MAP.md:333,606; dental-billing MODULE_SPEC §13/§18 | **RESOLVED** as documented deferral (P1→P2). |
 | ~~TR-WF-PLAN~~ | 5b | ✅ **RESOLVED 2026-06-01** — WF-048/049/050 promoted from [INFERRED] to confirmed in WORKFLOW_MAP; transitions enforced (`updateDentalTreatment.ts`, 422/BR-006) + tested (`treatment.fsm.property.test.ts`, `treatment-fsm-http.test.ts`, `dental-visit.treatment-status-transitions.test.ts`). | WORKFLOW_MAP.md:142-146 | Done. |
 | ~~TR-WF-DOCDRIFT~~ | 5e/5a | ✅ **RESOLVED 2026-06-01 (was FALSE POSITIVE)** — `approveAmendment.test.ts` asserts 501 (deferral stub), so BR-019 is genuinely deferred (MODULE_SPEC §18); WORKFLOW_MAP's not-enforced status was correct. Clarified §5 to "DEFERRED — 501 stub + deferral test" so doc⇄code agree. | WORKFLOW_MAP.md:332 | Done. |
 
@@ -117,7 +117,7 @@ None. No dangling spec references (all WF/BR/AC/SM/DE IDs referenced in artifact
 | Priority | Action | Gaps Fixed | Command |
 |----------|--------|-----------|---------|
 | 1 | Enable engine `spec_trace_optin` + re-run codebase map against 210-path OpenAPI; verify matched>0 and response_shape populated | TR-INFRA-001 (P1) + unblocks 5g unverified | re-run oli-codebase-map |
-| 2 | Update WORKFLOW_MAP §5: BR-019 implemented (WF-038); reconcile BR-013 (complete or formally defer) | TR-WF-DOCDRIFT, TR-BR-013 (P1) | edit WORKFLOW_MAP.md |
+| 2 | ~~Update WORKFLOW_MAP §5: reconcile BR-013 (complete or formally defer)~~ ✅ DONE 2026-06-01 — BR-013 formally deferred to Phase 2 (501 stub + flag); WORKFLOW_MAP §5/WFG-008 reconciled to DEFERRED | TR-WF-DOCDRIFT, TR-BR-013 (P1→P2) | edit WORKFLOW_MAP.md |
 | 3 | Promote WF-048/049/050 to explicit workflows or confirm CRUD coverage | TR-WF-PLAN (P1) | edit WORKFLOW_MAP.md §2 |
 | 4 | Author MODULE_SPEC nodes for legal-hold + retention governance modules | TR-LH-001, TR-RET-001 (P2) | /oli-spec-modules |
 | 5 | Add E2E for high-value unit-only BRs (imaging annotation, scheduling); add perio ACs | TR-E2E-*, TR-PERIO-AC (P2) | e2e-scaffold / module-specs |
