@@ -33,6 +33,7 @@ import "./modules/dental-billing.tsp";
 import "./modules/dental-imaging.tsp";
 import "./modules/dental-perio.tsp";
 import "./modules/dental-erasure.tsp";
+import "./modules/dental-audit.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -459,6 +460,11 @@ namespace MonobaseAPI {
   @tag("Dental:Erasure")
   @route("/dental/erasure-requests")
   interface DentalErasureMgmt extends DentalErasureModule.ErasureManagement {}
+
+  // Dental Audit viewer (append-only; read-only via API)
+  @tag("Dental:Audit")
+  @route("/dental/audit-events")
+  interface DentalAuditMgmt extends DentalAuditModule.DentalAuditManagement {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

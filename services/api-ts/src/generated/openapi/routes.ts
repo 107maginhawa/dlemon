@@ -405,6 +405,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.checkInAppointment as unknown as Handler
   );
 
+  // getAuditEvents
+  app.get('/dental/audit-events',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetAuditEventsQuery, validationErrorHandler),
+    registry.getAuditEvents as unknown as Handler
+  );
+
   // getCollectionsSummary
   app.get('/dental/billing/collections/summary',
     authMiddleware({ roles: ["user"] }),

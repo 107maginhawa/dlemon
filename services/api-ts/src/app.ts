@@ -47,7 +47,6 @@ import { metricsMiddleware } from '@/middleware/metrics-middleware';
 import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
-import { getAuditEvents } from '@/handlers/dental-audit/getAuditEvents';
 import { placeLegalHoldHandler } from '@/handlers/legal-hold/placeLegalHoldHandler';
 import { releaseLegalHoldHandler } from '@/handlers/legal-hold/releaseLegalHoldHandler';
 import { listLegalHoldsHandler } from '@/handlers/legal-hold/listLegalHoldsHandler';
@@ -199,12 +198,10 @@ export function createApp(config: Config): App {
     authMiddleware({ roles: ['user'] }),
     getToothHistory
   );
-  // G8-S4: canonical audit viewer path is /dental/audit-events (matches MODULE_SPEC §10
-  // + AUDIT_CONTRACTS §5 + the append-only /dental/audit-events/:id guards below).
-  (app as any).get('/dental/audit-events',
-    authMiddleware({ roles: ['user'] }),
-    getAuditEvents
-  );
+  // G8-S4: canonical audit viewer GET /dental/audit-events is MIGRATED to
+  // TypeSpec codegen (TR-DG-002) — emits from dental-audit.tsp → DentalAuditMgmt
+  // in main.tsp, registered via registerOpenAPIRoutes below. The append-only
+  // /dental/audit-events/:id 405 guards stay here (Cat-1: method-shadow guards).
   // Fee schedule (EF-ORG-P016 / WF-025, FR6.3) — CDT catalog with per-branch price overrides.
   (app as any).get('/dental/fee-schedule',
     authMiddleware({ roles: ['user'] }),

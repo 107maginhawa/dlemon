@@ -1154,6 +1154,45 @@ export const DentalAttachmentSchema = z.object({
   note: z.string().optional()
 });
 
+export const DentalAuditModuleDentalAuditEventSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  branchId: z.union([z.string().uuid(), z.null()]),
+  tenantId: z.string().uuid(),
+  actorId: z.string().uuid(),
+  actorRole: z.union([z.string(), z.null()]),
+  eventType: z.union([z.enum(["authentication", "data-access", "data-modification", "security", "compliance", "system-config"]), z.null()]),
+  action: z.string(),
+  resourceType: z.string(),
+  resourceId: z.union([z.string().uuid(), z.null()]),
+  reason: z.union([z.string(), z.null()]),
+  ipAddress: z.union([z.string(), z.null()]),
+  userAgent: z.union([z.string(), z.null()]),
+  metadata: z.union([z.record(z.string(), z.unknown()), z.null()]),
+  timestamp: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalAuditModuleDentalAuditEventTypeSchema = z.enum(["authentication", "data-access", "data-modification", "security", "compliance", "system-config"]);
+
+export const DentalAuditModuleDentalAuditEventsMetaSchema = z.object({
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int()
+});
+
+export const DentalAuditModuleDentalAuditEventsResponseSchema = z.object({
+  data: z.array(DentalAuditModuleDentalAuditEventSchema),
+  meta: z.object({
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int()
+})
+});
+
 export const DentalChartSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -18050,6 +18089,22 @@ export const CheckInAppointmentParams = z.object({
 export type CheckInAppointmentParams = z.infer<typeof CheckInAppointmentParams>;
 
 export const CheckInAppointmentResponse = CheckInResponseSchema;
+
+export const GetAuditEventsQuery = z.object({
+  branchId: UUIDSchema,
+  actorId: UUIDSchema.optional(),
+  eventType: DentalAuditModuleDentalAuditEventTypeSchema.optional(),
+  action: SafeQueryStringSchema.optional(),
+  targetType: SafeQueryStringSchema.optional(),
+  targetId: UUIDSchema.optional(),
+  from: StrictUtcDateTimeSchema.optional(),
+  to: StrictUtcDateTimeSchema.optional(),
+  limit: z.coerce.number().int().optional(),
+  offset: z.coerce.number().int().optional(),
+});
+export type GetAuditEventsQuery = z.infer<typeof GetAuditEventsQuery>;
+
+export const GetAuditEventsResponse = z.union([DentalAuditModuleDentalAuditEventsResponseSchema, ErrorResponseSchema]);
 
 export const GetCollectionsSummaryQuery = z.object({
   branchId: UUIDSchema.optional(),

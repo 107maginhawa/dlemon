@@ -54,6 +54,7 @@ import { createAppointment } from '../../handlers/dental-scheduling/createAppoin
 import { getAppointment } from '../../handlers/dental-scheduling/getAppointment';
 import { listAppointments } from '../../handlers/dental-scheduling/listAppointments';
 import { updateAppointment } from '../../handlers/dental-scheduling/updateAppointment';
+import { getAuditEvents } from '../../handlers/dental-audit/getAuditEvents';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
 import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
@@ -309,6 +310,9 @@ export const registry = {
   getAppointment,
   listAppointments,
   updateAppointment,
+
+  // Dental-audit handlers
+  getAuditEvents,
 
   // Dental-billing handlers
   applyDentalDiscount,
