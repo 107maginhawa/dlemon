@@ -10,7 +10,7 @@ import { openTestTx } from '@/core/test-tx';
 import { seedClinicalChain, CHAIN_IDS } from '@/tests/fixtures/seed-clinical-chain';
 import { dentalAttachments } from '@/handlers/dental-clinical/repos/attachment.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
-import { placeLegalHold } from '@/handlers/legal-hold/legal-hold-service';
+import { placeLegalHold } from '@/handlers/dental-legalhold/legal-hold-service';
 import { RETENTION_TARGETS } from './retention-targets';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 

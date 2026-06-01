@@ -1493,6 +1493,36 @@ export const DentalInvoiceSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const DentalLegalHoldModuleLegalHoldSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  tenantId: z.string().uuid(),
+  branchId: z.union([z.string().uuid(), z.null()]),
+  subjectPersonId: z.string().uuid(),
+  name: z.string(),
+  reason: z.string(),
+  status: z.enum(["active", "released"]),
+  initiatedBy: z.string().uuid(),
+  releasedBy: z.union([z.string().uuid(), z.null()]),
+  releasedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  note: z.union([z.string(), z.null()])
+});
+
+export const DentalLegalHoldModuleLegalHoldStatusSchema = z.enum(["active", "released"]);
+
+export const DentalLegalHoldModulePlaceLegalHoldRequestSchema = z.object({
+  tenantId: UUIDSchema,
+  subjectPersonId: UUIDSchema,
+  branchId: UUIDSchema.optional(),
+  name: z.string(),
+  reason: z.string(),
+  note: z.string().optional()
+});
+
 export const DentalOrgModuleDentalBranchSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -18580,6 +18610,27 @@ export const ImagingMgmt_getImagingStudyParams = z.object({
 export type ImagingMgmt_getImagingStudyParams = z.infer<typeof ImagingMgmt_getImagingStudyParams>;
 
 export const ImagingMgmt_getImagingStudyResponse = z.union([DentalImagingModuleImagingStudyWithImagesSchema, ErrorResponseSchema]);
+
+export const PlaceLegalHoldBody = DentalLegalHoldModulePlaceLegalHoldRequestSchema;
+export type PlaceLegalHoldBody = z.infer<typeof PlaceLegalHoldBody>;
+
+export const PlaceLegalHoldResponse = ErrorResponseSchema;
+
+export const ListLegalHoldsQuery = z.object({
+  status: DentalLegalHoldModuleLegalHoldStatusSchema.optional(),
+  subjectPersonId: UUIDSchema.optional(),
+  tenantId: UUIDSchema.optional(),
+});
+export type ListLegalHoldsQuery = z.infer<typeof ListLegalHoldsQuery>;
+
+export const ListLegalHoldsResponse = z.union([z.array(DentalLegalHoldModuleLegalHoldSchema), ErrorResponseSchema]);
+
+export const ReleaseLegalHoldParams = z.object({
+  id: UUIDSchema,
+});
+export type ReleaseLegalHoldParams = z.infer<typeof ReleaseLegalHoldParams>;
+
+export const ReleaseLegalHoldResponse = z.union([DentalLegalHoldModuleLegalHoldSchema, ErrorResponseSchema]);
 
 export const GetOrgContextResponse = DentalOrgModuleOrgContextResponseSchema;
 

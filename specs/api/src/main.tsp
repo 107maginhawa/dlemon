@@ -34,6 +34,7 @@ import "./modules/dental-imaging.tsp";
 import "./modules/dental-perio.tsp";
 import "./modules/dental-erasure.tsp";
 import "./modules/dental-audit.tsp";
+import "./modules/dental-legal-hold.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -465,6 +466,11 @@ namespace MonobaseAPI {
   @tag("Dental:Audit")
   @route("/dental/audit-events")
   interface DentalAuditMgmt extends DentalAuditModule.DentalAuditManagement {}
+
+  // Dental Legal Hold (V-DG-002 support / WFG-006)
+  @tag("Dental:LegalHold")
+  @route("/dental/legal-holds")
+  interface DentalLegalHoldMgmt extends DentalLegalHoldModule.LegalHoldManagement {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

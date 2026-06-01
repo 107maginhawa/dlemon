@@ -18,7 +18,7 @@ import { logAuditEvent } from '@/core/audit-logger';
 import { ErasureRequestRepository } from './repos/erasure-request.repo';
 import type { DentalErasureRequest } from './repos/erasure-request.schema';
 import { anonymizeSubject } from './erasure-engine';
-import { isPersonUnderLegalHold } from '@/handlers/legal-hold/legal-hold.facade';
+import { isPersonUnderLegalHold } from '@/handlers/dental-legalhold/legal-hold.facade';
 
 export interface RequestErasureInput {
   subjectPersonId: string;

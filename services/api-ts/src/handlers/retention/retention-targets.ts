@@ -21,7 +21,7 @@ import {
   findArchivableAttachmentSubjects,
   archiveAttachments,
 } from '@/handlers/dental-clinical/repos/attachment-retention.facade';
-import { personsUnderLegalHold } from '@/handlers/legal-hold/legal-hold.facade';
+import { personsUnderLegalHold } from '@/handlers/dental-legalhold/legal-hold.facade';
 
 /**
  * Imaging attachments (x-ray/photo/scan), scoped through the owning visit's

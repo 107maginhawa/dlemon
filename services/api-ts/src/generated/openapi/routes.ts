@@ -798,6 +798,27 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingMgmt_getImagingStudy as unknown as Handler
   );
 
+  // placeLegalHold
+  app.post('/dental/legal-holds',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.PlaceLegalHoldBody, validationErrorHandler),
+    registry.placeLegalHold as unknown as Handler
+  );
+
+  // listLegalHolds
+  app.get('/dental/legal-holds',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListLegalHoldsQuery, validationErrorHandler),
+    registry.listLegalHolds as unknown as Handler
+  );
+
+  // releaseLegalHold
+  app.post('/dental/legal-holds/:id/release',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ReleaseLegalHoldParams, validationErrorHandler),
+    registry.releaseLegalHold as unknown as Handler
+  );
+
   // getOrgContext
   app.get('/dental/org/context',
     authMiddleware({ roles: ["user"] }),

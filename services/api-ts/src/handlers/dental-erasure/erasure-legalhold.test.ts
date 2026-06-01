@@ -9,7 +9,7 @@ import { openTestTx } from '@/core/test-tx';
 import { persons } from '../person/repos/person.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasure, approveErasure } from './erasure-service';
-import { placeLegalHold, releaseLegalHold } from '../legal-hold/legal-hold-service';
+import { placeLegalHold, releaseLegalHold } from '../dental-legalhold/legal-hold-service';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 const noopLogger = { info() {}, warn() {}, error() {}, debug() {} } as any;

@@ -141,6 +141,9 @@ import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/Imag
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
 import { ImagingMgmt_updateImageModality } from '../../handlers/dental-imaging/ImagingMgmt_updateImageModality';
 import { PatientImageMgmt_listPatientImages } from '../../handlers/dental-imaging/PatientImageMgmt_listPatientImages';
+import { listLegalHolds } from '../../handlers/dental-legalhold/listLegalHolds';
+import { placeLegalHold } from '../../handlers/dental-legalhold/placeLegalHold';
+import { releaseLegalHold } from '../../handlers/dental-legalhold/releaseLegalHold';
 import { acceptTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
 import { addFollowUpNote } from '../../handlers/dental-patient/engagement/addFollowUpNote';
 import { archiveDentalPatient } from '../../handlers/dental-patient/identity/archiveDentalPatient';
@@ -409,6 +412,11 @@ export const registry = {
   ImagingMgmt_updateImageCalibration,
   ImagingMgmt_updateImageModality,
   PatientImageMgmt_listPatientImages,
+
+  // Dental-legalhold handlers
+  listLegalHolds,
+  placeLegalHold,
+  releaseLegalHold,
 
   // Dental-patient handlers
   acceptTreatmentPlan,

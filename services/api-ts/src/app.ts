@@ -47,10 +47,6 @@ import { metricsMiddleware } from '@/middleware/metrics-middleware';
 import { metricsHandler } from '@/handlers/metrics';
 import { authMiddleware } from '@/middleware/auth';
 import { getToothHistory } from '@/handlers/dental-visit/chart/getToothHistory';
-import { placeLegalHoldHandler } from '@/handlers/legal-hold/placeLegalHoldHandler';
-import { releaseLegalHoldHandler } from '@/handlers/legal-hold/releaseLegalHoldHandler';
-import { listLegalHoldsHandler } from '@/handlers/legal-hold/listLegalHoldsHandler';
-import { PlaceLegalHoldBody, LegalHoldIdParams, ListLegalHoldQuery } from '@/handlers/legal-hold/utils/legal-hold-validators';
 import { getBranchesByUser } from '@/handlers/dental-org/getBranchesByUser';
 import { getFeeSchedule, updateFeeScheduleEntry } from '@/handlers/dental-org/feeSchedule';
 import { createPatientContact } from '@/handlers/dental-patient/contacts/createPatientContact';
@@ -241,23 +237,10 @@ export function createApp(config: Config): App {
   // main.tsp and register via registerOpenAPIRoutes below. Admin RBAC stays
   // in-handler. See handlers/dental-erasure/erasure-route-registration.test.ts.
 
-  // V-DG-002 support: legal holds (WFG-006) — admin-gated in-handler. An active
-  // hold blocks erasure of the subject.
-  (app as any).post('/dental/legal-holds',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('json', PlaceLegalHoldBody),
-    placeLegalHoldHandler
-  );
-  (app as any).get('/dental/legal-holds',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('query', ListLegalHoldQuery),
-    listLegalHoldsHandler
-  );
-  (app as any).post('/dental/legal-holds/:id/release',
-    authMiddleware({ roles: ['user'] }),
-    zValidator('param', LegalHoldIdParams),
-    releaseLegalHoldHandler
-  );
+  // V-DG-002 support: legal holds (WFG-006) — MIGRATED to TypeSpec codegen
+  // (TR-DG-002). Routes emit from dental-legal-hold.tsp → DentalLegalHoldMgmt in
+  // main.tsp; admin RBAC stays in-handler. An active hold blocks erasure of the
+  // subject. See handlers/dental-legalhold/legal-hold-route-registration.test.ts.
 
   // PatientContact / Guardian endpoints (PAT-BR-002 — P0-A)
   (app as any).post('/dental/patients/:patientId/contacts',
