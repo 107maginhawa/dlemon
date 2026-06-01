@@ -32,6 +32,7 @@ import "./modules/dental-scheduling.tsp";
 import "./modules/dental-billing.tsp";
 import "./modules/dental-imaging.tsp";
 import "./modules/dental-perio.tsp";
+import "./modules/dental-erasure.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
