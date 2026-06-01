@@ -19,7 +19,7 @@
 |--------|-------|
 | Total workflows | 98 |
 | Explicit (PRD) | 44 |
-| Inferred | 54 |
+| Inferred | 51 |
 | Cross-module flows | 16 |
 | Orphan BRs | 2 (BR-013, BR-019) |
 | Missing error paths | 6 |
@@ -139,11 +139,18 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 |----|-----|-------|-----------|
 | Create (diagnose) | Dentist | WF-009 | BR-006 (forward-only state) |
 | Read (treatment table) | Dentist, Staff Full | WF-008 | — |
-| Update (plan) | Dentist | WF-048 [INFERRED] | BR-006 |
+| Update (plan) | Dentist | WF-048 | BR-006 |
 | Update (mark performed) | Dentist | WF-010 | BR-006, BR-007 (immutable after performed) |
-| Update (verify) | Dentist-Owner | WF-049 [INFERRED] | BR-006 |
-| Dismiss | Dentist | WF-050 [INFERRED] | BR-006 |
+| Update (verify) | Dentist-Owner | WF-049 | BR-006 |
+| Dismiss | Dentist | WF-050 | BR-006 |
 | Archive / bulk | N/A | — | — |
+
+> **WF-048/049/050 confirmed (was [INFERRED], TR-WF-PLAN cleared 2026-06-01):** the treatment FSM
+> transitions `diagnosed→planned` (WF-048), `performed→verified` (WF-049), and `any→dismissed`
+> (WF-050) are enforced in `dental-visit/treatments/updateDentalTreatment.ts` (forward-only
+> transition validation → 422 on invalid per BR-006; dismiss/decline are audited terminal
+> transitions) and covered by `treatment.fsm.property.test.ts`, `treatment-fsm-http.test.ts`, and
+> `dental-visit.treatment-status-transitions.test.ts`. They are real workflows, not inferred.
 
 ### Invoice
 
@@ -329,7 +336,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | BR-016 | assertBranchAccess every handler | All clinical WFs | 403 | No |
 | BR-017 | prescriberMemberId required | WF-016 | 422 | No |
 | BR-018 | Lab order lifecycle | WF-017, WF-036, WF-063 | 422 | No |
-| BR-019 | Supervisor amendment approval | WF-038 | **ORPHAN** — not implemented | — |
+| BR-019 | Supervisor amendment approval | WF-038 | **DEFERRED** — feature-flagged off (`dental_clinical_amendment_approval`, MODULE_SPEC §18); endpoint is an intentional **501 NOT_IMPLEMENTED stub** with a deferral test (`approveAmendment.test.ts` asserts the 501). NOT a wire gap. | — |
 | BR-020 | Patient merge | WF-057 [INFERRED] | **ORPHAN** — not implemented | — |
 | BR-021 | PMD = visit snapshot, immutable | WF-021 | Checksum verification | No |
 | BR-022 | Imported PMD read-only | WF-022 | 405 PUT/PATCH/DELETE | No |

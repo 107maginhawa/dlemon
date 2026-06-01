@@ -41,7 +41,7 @@ from raw code reads and are unaffected by map trust. No R1-strict WARN-WITH-PROO
 | Dimension | Verdict | P0 | P1 | P2 | P3 | unverified | Report |
 |-----------|---------|----|----|----|----|:--:|--------|
 | Enforcement | **PASS** (IMPROVING; 0 regressions, 1 resolved) | 0 | 0¹ | 1 | 2 | 0 | docs/audits/ENFORCEMENT_REPORT.md |
-| Traceability | **PASS** | 0 | 4 | 33² | – | 1 | docs/trace/TRACE_REPORT.md |
+| Traceability | **PASS** | 0 | 2⁴ | 33² | – | 1 | docs/trace/TRACE_REPORT.md |
 | Compliance | **PASS** (health 8.7/10)³ | 0 | 0 | 4 | 3 | 0 | docs/audits/COMPLIANCE_REPORT.md |
 
 ¹ Enforcement reports 0 P0 and 0 *code-level* P1; it carries 1 KNOWN deferred traceability-class P1
@@ -50,6 +50,11 @@ from raw code reads and are unaffected by map trust. No R1-strict WARN-WITH-PROO
   cross-module `check:boundaries` 0, trace, audit-logging). Coverage score 95%. `tsc` 0.
 ² Traceability P2 rose 15→33 = **measurement re-baseline** (traced the full 58-BR/48-AC namespace this
   run vs 47/55 prior), surfacing pre-existing untagged/unit-only items — **not** new regressions.
+⁴ Traceability P1 4→2 (2026-06-01): **TR-WF-PLAN cleared** (WF-048/049/050 promoted [INFERRED]→confirmed
+  in WORKFLOW_MAP — transitions enforced in `updateDentalTreatment.ts` + 3 FSM test files) and
+  **TR-WF-DOCDRIFT cleared as a FALSE POSITIVE** (`approveAmendment.test.ts` asserts 501 — BR-019 is
+  deliberately deferred per MODULE_SPEC §18; WORKFLOW_MAP was correct, clarified to "DEFERRED 501 stub").
+  Remaining 2: TR-INFRA-001 (separate oli-engine repo), TR-BR-013 (billing WFG-008 incomplete).
 ³ **Compliance WARN→PASS 2026-06-01** — full P0+P1 remediation landed on `feat` (commits
   `0aa7f474`→`26925ce2`), re-verified at HEAD `26925ce2`. Health 7.8→8.7 (data-governance 3→9,
   error-boundary 6→8). Cleared: **V-DG-001** (P0 — PHI at-rest attestation + prod boot guard,
@@ -87,7 +92,7 @@ Legend: ✓ checked · ⊘ skipped (reason) · ✗ gap
 module. The 3 governance code modules have no MODULE_SPEC but were audited by all three dimensions
 (erasure → V-DG-002, retention → V-DG-003; audit-logging verified for all governance routes).
 
-## 4. Overall — GATE: **FAIL (literal)** / **PASS (severity)** → all 3 dimension verdicts PASS; 5 standing out-of-scope P1s remain → updated 2026-06-01 post-remediation
+## 4. Overall — GATE: **FAIL (literal)** / **PASS (severity)** → all 3 dimension verdicts PASS; 3 standing out-of-scope P1s remain → updated 2026-06-01 post-remediation
 
 **P0: 0. Compliance P1: 0.** Every requested finding is cleared: the P0 (V-DG-001) **plus all 4
 compliance/FE P1s** (V-DG-002, V-DG-003, V-FE-ERR-001 resolved; V-IMG-EXP-001 downgraded P1→P2),
@@ -95,12 +100,15 @@ re-verified at HEAD `26925ce2`. **All three dimensions now report PASS** (Enforc
 Traceability PASS, Compliance WARN→**PASS** health 8.7). Combined gates green: typecheck 0 (both
 packages), `check:boundaries` 0, backend **2977/0**, FE hook suite green.
 
-The literal roll-up rule (any P1 → FAIL) still trips on **5 standing P1s that were explicitly
-OUT OF SCOPE** of this remediation — none blocking, none from this work:
+The literal roll-up rule (any P1 → FAIL) now trips on **3 standing P1s** — none blocking, none from
+this work, all left intentionally:
 - `TR-INFRA-001` — **separate oli-engine repo** tooling gap (spec_trace_optin off).
-- `TR-WF-PLAN`, `TR-WF-DOCDRIFT` — **doc-drift** (WORKFLOW_MAP behind the code; cheap to close).
-- `TR-BR-013` — billing `markUncollectible` transition acknowledged incomplete (WFG-008).
-- `TR-IMG-ANNOT-SM` — imaging annotation state machine, unimplemented optional feature.
+- `TR-BR-013` — billing `markUncollectible` transition acknowledged incomplete (WFG-008) — product decision.
+- `TR-IMG-ANNOT-SM` — imaging annotation state machine, unimplemented optional feature — product decision.
+
+(The 2 doc-drift trace P1s were cleared 2026-06-01: **TR-WF-PLAN** WF-048/049/050 promoted to confirmed;
+**TR-WF-DOCDRIFT** found to be a **false positive** — BR-019 is a deliberate 501 deferral stub, the doc
+was correct and was clarified rather than wrongly marked implemented.)
 
 No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality: PASS** — 0 P0,
 0 in-scope P1, all dimension verdicts PASS.
@@ -108,7 +116,7 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 > **Framing:** the data-governance + FE-error remediation (5 commits `0aa7f474`→`26925ce2`,
 > 3 of them via parallel worktrees) cleared 1 P0 + 4 P1 and introduced **zero new findings** —
 > enforcement 0 regressions, backend test count 2964→2977 (+13 new tests), all gates green. The
-> remaining 5 P1s are a separate-repo item + doc-drift + two acknowledged-incomplete/optional features.
+> remaining 3 P1s are a separate-repo item + two acknowledged-incomplete/optional features.
 
 ### Gate drivers (verbatim, with NEW/standing classification)
 
@@ -121,8 +129,8 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 | ~~V-FE-ERR-001~~ | ~~P1~~ | Compl | frontend/workspace | Mutation hooks lacked hook-level `onError`. | ✅ **RESOLVED** `cc8e687d`+`e6d8d897` — 5 hooks now `onError: toastError(err, …)` (taxonomy wrapper, matches siblings); new `use-update-visit.test.ts` + error-surface assertions. |
 | TR-INFRA-001 | P1 | Trace/Enf | infra | `CODE_SPEC_TRACE` empty (`spec_trace_optin: false`) — engine trace unused; fell back to project `audit:trace`. | STANDING / **out of scope** — **separate oli-engine repo** tooling gap, not dentalemon code. |
 | TR-BR-013 | P1 | Trace | dental-billing | BR-013 `markUncollectible` transition acknowledged INCOMPLETE/orphan (WFG-008); tested but transition incomplete. | STANDING. |
-| TR-WF-PLAN | P1 | Trace | dental-visit | WF-048/049/050 treatment-plan/verify/dismiss are `[INFERRED]` only — no formal workflow node. | Doc gap (code+tests exist). |
-| TR-WF-DOCDRIFT | P1 | Trace | dental-visit | WORKFLOW_MAP §5 still lists BR-019 as ORPHAN but code implements+tests it (`approveAmendment.test.ts`). | Doc drift — code is ahead of the map. |
+| ~~TR-WF-PLAN~~ | ~~P1~~ | Trace | dental-visit | WF-048/049/050 treatment FSM transitions tagged `[INFERRED]`. | ✅ **RESOLVED 2026-06-01** — promoted to confirmed in WORKFLOW_MAP; enforced (`updateDentalTreatment.ts` 422/BR-006) + tested (3 FSM test files). |
+| ~~TR-WF-DOCDRIFT~~ | ~~P1~~ | Trace | dental-clinical | WORKFLOW_MAP listed BR-019 ORPHAN; finding claimed code implements+tests it. | ✅ **RESOLVED (FALSE POSITIVE)** — `approveAmendment.test.ts` asserts **501** (BR-019 deferred, MODULE_SPEC §18). Doc was correct; clarified to "DEFERRED 501 stub". Not marked implemented. |
 | TR-IMG-ANNOT-SM | P1 | Enf | dental-imaging | Annotation state machine unimplemented — no `status` column; SM-01/AC-IMG-002 dead. | STANDING — unimplemented optional feature. |
 
 ### Lower severity (P2/P3 — not gate-driving)
@@ -145,12 +153,12 @@ No `--strict` → matrix + verdict written, **no hard exit**. **Severity reality
 - ~~**Compliance P1s:** S3 erasure delete (V-DG-002), Appointment retention (V-DG-003),
   FE `onError` (V-FE-ERR-001); GDPR export (V-IMG-EXP-001)~~ — ✅ **ALL DONE/DEFERRED 2026-06-01**
   (`d33ee8c3`→`26925ce2`), re-verified. Compliance dimension now PASS.
-- **Remaining 5 standing P1s (out of scope of this work, none blocking):**
-  - Cheap doc-drift, can close anytime: `TR-WF-PLAN` (add formal WF nodes for treatment-plan ops),
-    `TR-WF-DOCDRIFT` (WORKFLOW_MAP §5 BR-019 ORPHAN→implemented).
-  - `TR-BR-013` (billing `markUncollectible` transition — finish WFG-008) and `TR-IMG-ANNOT-SM`
-    (imaging annotation state machine — unimplemented optional feature): product decisions.
-  - `TR-INFRA-001`: enable `spec_trace_optin` in the **separate oli-engine repo** (also unblocks the
+- ~~Doc-drift trace P1s (TR-WF-PLAN, TR-WF-DOCDRIFT)~~ — ✅ **DONE 2026-06-01** (TR-WF-PLAN promoted to
+  confirmed; TR-WF-DOCDRIFT was a false positive — BR-019 deferral confirmed, doc clarified).
+- **Remaining 3 standing P1s (out of scope, none blocking, all product/external decisions):**
+  - `TR-BR-013` — billing `markUncollectible` transition (finish WFG-008): product decision.
+  - `TR-IMG-ANNOT-SM` — imaging annotation state machine (unimplemented optional feature): product decision.
+  - `TR-INFRA-001` — enable `spec_trace_optin` in the **separate oli-engine repo** (also unblocks the
     empty `response_shape` that dark-fails trace 5g FE-field-phantom).
 - Optional empirical backstop: boot the stack + `/oli-check --runtime --live --seed-coherence`.
 - Not re-checked this run: Consistency/Confidence/Journeys/UI/Runtime/Seed — re-run those or a
