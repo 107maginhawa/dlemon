@@ -82,11 +82,13 @@
 > far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
 > kept) and **Patient** (emergency contact / provider / pharmacy / history /
 > comms-prefs nulled), via boundary-compliant `*-erasure.facade.ts`.
+> HTTP surface (admin-only, manual routes + `dental-erasure.tsp` contract):
+> `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
+> `POST /dental/erasure-requests/{id}/approve|reject`.
 > Still to add (per the §3 table — one facade+target per slice): Visit/Treatment,
 > Prescription, ImagingStudy (S3 object delete), Invoice, ConsentForm patient-
-> reference anonymization; an HTTP endpoint surface; and a real LegalHold store
-> (the hold check is currently a caller-supplied predicate). Related: G-012 (PHI
-> encryption gap).
+> reference anonymization; and a real LegalHold store (the hold check is
+> currently a reviewer-supplied predicate). Related: G-012 (PHI encryption gap).
 
 ---
 
