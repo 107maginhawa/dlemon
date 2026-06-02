@@ -11,6 +11,18 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ComparisonView } from '../components/comparison-view';
+import { freshClientWithMutations, makeWrapper } from '@/test-utils';
+
+// ComparisonView now uses TanStack Query (latest-report + superimposition-preview
+// hooks). Wrap renders in a QueryClient and stub fetch → 404 so the report
+// queries resolve to "no report" (compare mode never reads them).
+const cvOriginalFetch = global.fetch;
+
+function renderCV(props: React.ComponentProps<typeof ComparisonView>) {
+  return render(React.createElement(ComparisonView, props), {
+    wrapper: makeWrapper(freshClientWithMutations()),
+  });
+}
 
 // ── IndexedDB fake helpers ──────────────────────────────────────────────────
 
@@ -126,8 +138,13 @@ const IMAGE_B = {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('ComparisonView', () => {
+  beforeEach(() => {
+    // Report-fetch hooks: 404 → null (no saved ceph report). Compare mode unaffected.
+    global.fetch = mock(async () => new Response('not found', { status: 404 })) as unknown as typeof fetch;
+  });
   afterEach(() => {
     cleanup();
+    global.fetch = cvOriginalFetch;
     // Reset indexedDB to original after each test
     (globalThis as Record<string, unknown>).indexedDB = originalIndexedDB;
   });
@@ -137,7 +154,7 @@ describe('ComparisonView', () => {
     (globalThis as Record<string, unknown>).indexedDB =
       createFakeIndexedDB('hang') as unknown as IDBFactory;
 
-    render(React.createElement(ComparisonView, { imageA: IMAGE_A, imageB: IMAGE_B }));
+    renderCV({ imageA: IMAGE_A, imageB: IMAGE_B });
     const paneA = screen.getByTestId('comparison-pane-a');
     const paneB = screen.getByTestId('comparison-pane-b');
     // Loading state = animate-pulse div
@@ -150,7 +167,7 @@ describe('ComparisonView', () => {
     (globalThis as Record<string, unknown>).indexedDB =
       createFakeIndexedDB(null) as unknown as IDBFactory;
 
-    render(React.createElement(ComparisonView, { imageA: IMAGE_A, imageB: IMAGE_B }));
+    renderCV({ imageA: IMAGE_A, imageB: IMAGE_B });
     await waitFor(() => {
       expect(screen.getAllByText(/not available offline/i).length).toBe(2);
     });
@@ -162,7 +179,7 @@ describe('ComparisonView', () => {
 
     const user = userEvent.setup();
     const onClose = mock(() => {});
-    render(React.createElement(ComparisonView, { imageA: IMAGE_A, imageB: IMAGE_B, onClose }));
+    renderCV({ imageA: IMAGE_A, imageB: IMAGE_B, onClose });
     const closeBtn = screen.getByLabelText(/close comparison/i);
     await user.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -172,7 +189,7 @@ describe('ComparisonView', () => {
     (globalThis as Record<string, unknown>).indexedDB =
       createFakeIndexedDB('hang') as unknown as IDBFactory;
 
-    render(React.createElement(ComparisonView, { imageA: IMAGE_A, imageB: IMAGE_B }));
+    renderCV({ imageA: IMAGE_A, imageB: IMAGE_B });
     expect(screen.getByText('xray-left.jpg')).not.toBeNull();
     expect(screen.getByText('xray-right.jpg')).not.toBeNull();
   });
