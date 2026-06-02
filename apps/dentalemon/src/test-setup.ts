@@ -82,6 +82,7 @@ const _lucideMock = {
   RefreshCw: _makeIcon('refreshcw'),
   Search: _makeIcon('search'),
   Shield: _makeIcon('shield'),
+  Star: _makeIcon('star'),
   Trash2: _makeIcon('trash2'),
   Upload: _makeIcon('upload'),
   Users: _makeIcon('users'),
