@@ -3,7 +3,8 @@ import { requireAuth } from '@/lib/guards'
 import { useOrgContextStore } from '@/stores/org-context.store'
 import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
-import { AppSidebar, type NavGroup } from '@/components/app-sidebar'
+import { AppSidebar, filterNavGroupsByRole, type NavGroup } from '@/components/app-sidebar'
+import type { DentalRole } from '@/lib/rbac'
 import {
   SidebarProvider,
   SidebarInset,
@@ -54,6 +55,14 @@ export const Route = createFileRoute('/_dashboard')({
 })
 
 function DashboardLayout() {
+  // Current org member role drives which nav links are shown. This is the SAME
+  // source the route `requireRole(module)` guards read (org-context store), so
+  // the sidebar and the route guards stay in lockstep (J-RBAC-NAV-001).
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null
+
+  // Each item declares the RBAC `module` that gates its route. `Dashboard` is
+  // intentionally ungated — it is the universal redirect fallback every guard
+  // bounces to, so it must always be reachable.
   const navGroups: NavGroup[] = [
     {
       label: "Clinical",
@@ -69,12 +78,14 @@ function DashboardLayout() {
           url: "/patients",
           icon: Users,
           badge: null,
+          module: "patients",
         },
         {
           title: "Calendar",
           url: "/calendar",
           icon: Calendar,
           badge: null,
+          module: "calendar",
         },
       ]
     },
@@ -86,12 +97,14 @@ function DashboardLayout() {
           url: "/billing",
           icon: Receipt,
           badge: null,
+          module: "billing",
         },
         {
           title: "Reports",
           url: "/reports",
           icon: BarChart3,
           badge: null,
+          module: "reports",
         },
       ]
     },
@@ -103,21 +116,25 @@ function DashboardLayout() {
           url: "/staff",
           icon: UserCog,
           badge: null,
+          module: "staff",
         },
         {
           title: "Settings",
           url: "/settings",
           icon: Settings,
           badge: null,
+          module: "settings",
         },
       ]
     }
   ]
 
+  const visibleNavGroups = filterNavGroupsByRole(navGroups, role)
+
   return (
     <SidebarProvider>
       <AppSidebar
-        navGroups={navGroups}
+        navGroups={visibleNavGroups}
         headerTitle="DENTALEMON"
         headerSubtitle="Dental Practice"
       />

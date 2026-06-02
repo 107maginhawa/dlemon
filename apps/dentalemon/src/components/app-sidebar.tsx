@@ -16,17 +16,49 @@ import {
 } from "@monobase/ui"
 import { Logo } from "@monobase/ui"
 import { useSession, useSignOut } from "@monobase/sdk-ts/react/hooks/use-auth"
+import { canAccess, type DentalModule, type DentalRole } from '@/lib/rbac'
 
 export interface NavItem {
   title: string
   url: string
   icon?: LucideIcon
   badge?: string | number | null
+  /**
+   * RBAC module that gates the item's route. When set, the link is only shown
+   * if the current role `canAccess` this module — the SAME ACCESS_MATRIX the
+   * route's `requireRole(module)` guard uses (single source of truth), so the
+   * sidebar never advertises a link the guard would bounce back (J-RBAC-NAV-001).
+   * Omit for links every authenticated role may see.
+   */
+  module?: DentalModule
 }
 
 export interface NavGroup {
   label: string
   items: NavItem[]
+}
+
+/**
+ * Filter nav groups by the current org member role using the RBAC ACCESS_MATRIX.
+ *
+ * - Items without a `module` are always kept (visible to everyone).
+ * - Items with a `module` are kept only when `canAccess(role, module)`.
+ * - While the role is still loading (`null`/`undefined`), module-gated items are
+ *   hidden so privileged links never flash before access resolves.
+ * - Groups left with no visible items are dropped entirely.
+ */
+export function filterNavGroupsByRole(
+  groups: NavGroup[],
+  role: DentalRole | null | undefined,
+): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.module == null || (role != null && canAccess(role, item.module)),
+      ),
+    }))
+    .filter((group) => group.items.length > 0)
 }
 
 interface AppSidebarProps {
