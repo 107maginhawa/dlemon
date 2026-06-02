@@ -11,11 +11,21 @@ import type { ToothState } from '@/lib/dental-chart-types';
 // ToothState now lives in the neutral lib layer (shared with the patients
 // feature). Re-exported here so existing workspace consumers keep their import.
 export type { ToothState };
-export type DentitionType = 'permanent' | 'primary';
 
 /**
- * Returns 'primary' if the patient is younger than 12 years old based on their
- * date of birth, otherwise 'permanent'. Returns 'permanent' when DOB is null.
+ * Dentition types:
+ *  - 'permanent' — adult 32-tooth arch (age 12+)
+ *  - 'primary'   — pediatric 20-tooth deciduous arch (age 0–5)
+ *  - 'mixed'     — transitional arch (ages 6–11): deciduous + erupted permanent
+ */
+export type DentitionType = 'permanent' | 'primary' | 'mixed';
+
+/**
+ * Returns the dentition type based on age:
+ *  - < 6  → 'primary'   (pure deciduous)
+ *  - 6–11 → 'mixed'     (transitional — deciduous + erupted permanents)
+ *  - ≥ 12 → 'permanent' (full adult arch)
+ *  - null DOB → 'permanent' (safe default)
  */
 export function getDentitionType(dateOfBirth: string | null): DentitionType {
   if (!dateOfBirth) return 'permanent';
@@ -24,7 +34,55 @@ export function getDentitionType(dateOfBirth: string | null): DentitionType {
   let age = today.getFullYear() - dob.getFullYear();
   const monthDiff = today.getMonth() - dob.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
-  return age < 12 ? 'primary' : 'permanent';
+  if (age >= 12) return 'permanent';
+  if (age >= 6)  return 'mixed';
+  return 'primary';
+}
+
+/**
+ * Mixed dentition tooth set (P1-17).
+ *
+ * Clinically, during mixed dentition (ages ~6–12) children have both remaining
+ * primary (deciduous) teeth AND erupted permanent teeth. The typical eruption
+ * sequence places the following permanent teeth first:
+ *   - First molars (16, 26, 36, 46) — "6-year molars", erupt ~age 6
+ *   - Central incisors (11, 21, 31, 41) — erupt ~age 6–7
+ *   - Lateral incisors (12, 22, 32, 42) — erupt ~age 7–8
+ *
+ * Remaining primary teeth fill the rest of the arch:
+ *   - Canines (53, 63, 73, 83), first molars (54, 64, 74, 84),
+ *     second molars (55, 65, 75, 85)
+ *
+ * This set represents the canonical mid-mixed-dentition (age ~8) snapshot.
+ * The frontend renders permanent teeth in their standard positions and primary
+ * teeth interleaved (canine + molar regions), making the dual-arch legible.
+ *
+ * Returns: sorted array of FDI tooth numbers (primary + permanent mixed set).
+ */
+export function getMixedDentitionTeeth(): number[] {
+  // Erupted permanent teeth (first wave: molars + incisors)
+  const permanentErupted = [
+    // Central incisors
+    11, 21, 31, 41,
+    // Lateral incisors
+    12, 22, 32, 42,
+    // First molars ("6-year molars")
+    16, 26, 36, 46,
+  ];
+
+  // Remaining primary teeth (canines + primary molars) — NOT yet replaced
+  const primaryRemaining = [
+    // Upper right: canine, first molar, second molar
+    53, 54, 55,
+    // Upper left: canine, first molar, second molar
+    63, 64, 65,
+    // Lower left: canine, first molar, second molar
+    73, 74, 75,
+    // Lower right: canine, first molar, second molar
+    83, 84, 85,
+  ];
+
+  return [...permanentErupted, ...primaryRemaining].sort((a, b) => a - b);
 }
 
 export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
@@ -43,6 +101,28 @@ export interface ToothData {
  * Chart layers for baseline/proposed/completed separation (CR-03, CHART-BR-001/002/006).
  */
 export type ChartLayer = 'baseline' | 'proposed' | 'completed';
+
+/**
+ * Default set of visible layers (P1-15): all three layers shown simultaneously.
+ * This is the sensible starting state — clinicians see existing + planned + completed.
+ */
+export const DEFAULT_VISIBLE_LAYERS: ReadonlySet<ChartLayer> = new Set<ChartLayer>([
+  'baseline',
+  'proposed',
+  'completed',
+]);
+
+/**
+ * Returns true if a tooth on `toothLayer` should be visible given the current
+ * set of active (visible) layers. Used by DentalChart for multi-select layer
+ * visibility (P1-15: combinable layers — replaces the single activeLayer model).
+ *
+ * A tooth is visible when its layer is in the visibleLayers set.
+ * An empty visibleLayers set hides all teeth.
+ */
+export function isToothVisible(toothLayer: ChartLayer, visibleLayers: ReadonlySet<ChartLayer>): boolean {
+  return visibleLayers.has(toothLayer);
+}
 
 /**
  * Map a tooth's entryClassification to its chart layer.
@@ -348,4 +428,85 @@ export function getToothDisplayLabel(fdiNumber: number, notation: ToothNotation 
     default:
       return String(fdiNumber);
   }
+}
+
+// ─── Chart diff / compare (P1-14: odontogram compare) ────────────────────
+
+/**
+ * A single tooth delta entry in a chart diff.
+ *
+ * - `added`:    tooth has a new or worsened condition in the focus snapshot
+ * - `resolved`: tooth condition improved/treated vs the base snapshot
+ * - `unchanged`: tooth state is the same in both snapshots
+ */
+export interface ChartDiffEntry {
+  toothNumber: number;
+  baseState: ToothState | undefined;
+  focusState: ToothState | undefined;
+}
+
+export interface ChartDiffResult {
+  /** Teeth that have a new or changed-to-worse condition in the focus snapshot. */
+  added: ChartDiffEntry[];
+  /** Teeth whose condition improved or was resolved (treated) vs the base. */
+  resolved: ChartDiffEntry[];
+  /** Teeth with identical state in both snapshots. */
+  unchanged: ChartDiffEntry[];
+}
+
+/**
+ * Compare two tooth snapshots (base = prior visit, focus = current/selected visit).
+ *
+ * Classification logic (client-side, P1-14):
+ *   - tooth absent in base, present in focus → `added`  (new finding)
+ *   - tooth present in base, absent in focus → `resolved` (condition gone)
+ *   - state changed healthy → anything        → `added`  (new condition)
+ *   - state changed anything → healthy/filled/crown → `resolved` (treated)
+ *   - any other change in state               → `added`  (worsening / reclassification)
+ *   - same state in both                      → `unchanged`
+ *
+ * The diff is purely client-side; it never touches the backend.
+ */
+export function computeChartDiff(
+  baseTeeth: Array<{ toothNumber: number; state: ToothState }>,
+  focusTeeth: Array<{ toothNumber: number; state: ToothState }>,
+): ChartDiffResult {
+  const IMPROVED_STATES: ReadonlySet<ToothState> = new Set<ToothState>([
+    'healthy', 'filled', 'crown', 'implant',
+  ]);
+
+  const baseMap = new Map(baseTeeth.map(t => [t.toothNumber, t.state]));
+  const focusMap = new Map(focusTeeth.map(t => [t.toothNumber, t.state]));
+
+  const added: ChartDiffEntry[] = [];
+  const resolved: ChartDiffEntry[] = [];
+  const unchanged: ChartDiffEntry[] = [];
+
+  const allTeeth = new Set([...baseMap.keys(), ...focusMap.keys()]);
+
+  for (const toothNumber of allTeeth) {
+    const baseState = baseMap.get(toothNumber);
+    const focusState = focusMap.get(toothNumber);
+    const entry: ChartDiffEntry = { toothNumber, baseState, focusState };
+
+    if (baseState === undefined && focusState !== undefined) {
+      // New tooth in focus → added
+      added.push(entry);
+    } else if (baseState !== undefined && focusState === undefined) {
+      // Tooth gone in focus → resolved
+      resolved.push(entry);
+    } else if (baseState === focusState) {
+      unchanged.push(entry);
+    } else {
+      // State changed — determine direction
+      const isImprovement = focusState !== undefined && IMPROVED_STATES.has(focusState);
+      if (isImprovement) {
+        resolved.push(entry);
+      } else {
+        added.push(entry);
+      }
+    }
+  }
+
+  return { added, resolved, unchanged };
 }

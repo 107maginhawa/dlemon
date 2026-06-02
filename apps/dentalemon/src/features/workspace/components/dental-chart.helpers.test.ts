@@ -233,12 +233,22 @@ describe('getDentitionType (P2-002)', () => {
     return d.toISOString().slice(0, 10);
   }
 
-  test('returns "primary" for a 6-year-old (age < 12)', () => {
-    expect(getDentitionType(dobYearsAgo(6))).toBe('primary');
+  // Updated for P1-17 three-tier model: primary (< 6) | mixed (6–11) | permanent (≥ 12)
+
+  test('returns "primary" for a 2-year-old (pure deciduous, age < 6)', () => {
+    expect(getDentitionType(dobYearsAgo(2))).toBe('primary');
   });
 
-  test('returns "primary" for an 11-year-old (age < 12)', () => {
-    expect(getDentitionType(dobYearsAgo(11))).toBe('primary');
+  test('returns "primary" for a 5-year-old (age < 6)', () => {
+    expect(getDentitionType(dobYearsAgo(5))).toBe('primary');
+  });
+
+  test('returns "mixed" for a 6-year-old (mixed dentition begins)', () => {
+    expect(getDentitionType(dobYearsAgo(6))).toBe('mixed');
+  });
+
+  test('returns "mixed" for an 11-year-old (still in mixed phase)', () => {
+    expect(getDentitionType(dobYearsAgo(11))).toBe('mixed');
   });
 
   test('returns "permanent" for a 12-year-old (age === 12)', () => {
@@ -462,5 +472,285 @@ describe('getToothLayer (CR-03)', () => {
 
   test('undefined (unclassified/legacy) → baseline', () => {
     expect(getToothLayer(undefined)).toBe('baseline');
+  });
+});
+
+// ─── isToothVisible (P1-15: combinable layers) ────────────────────────────
+// RED: this function does not yet exist — tests will fail until implemented.
+
+import { isToothVisible } from './dental-chart.helpers';
+
+describe('isToothVisible (P1-15 combinable layers)', () => {
+  const ALL_LAYERS = new Set<import('./dental-chart.helpers').ChartLayer>(['baseline', 'proposed', 'completed']);
+  const BASELINE_ONLY = new Set<import('./dental-chart.helpers').ChartLayer>(['baseline']);
+  const PROPOSED_ONLY = new Set<import('./dental-chart.helpers').ChartLayer>(['proposed']);
+  const COMPLETED_ONLY = new Set<import('./dental-chart.helpers').ChartLayer>(['completed']);
+  const BASELINE_AND_PROPOSED = new Set<import('./dental-chart.helpers').ChartLayer>(['baseline', 'proposed']);
+  const EMPTY = new Set<import('./dental-chart.helpers').ChartLayer>();
+
+  test('baseline tooth is visible when all layers are active', () => {
+    expect(isToothVisible('baseline', ALL_LAYERS)).toBe(true);
+  });
+
+  test('proposed tooth is visible when all layers are active', () => {
+    expect(isToothVisible('proposed', ALL_LAYERS)).toBe(true);
+  });
+
+  test('completed tooth is visible when all layers are active', () => {
+    expect(isToothVisible('completed', ALL_LAYERS)).toBe(true);
+  });
+
+  test('baseline tooth is visible when only baseline is active', () => {
+    expect(isToothVisible('baseline', BASELINE_ONLY)).toBe(true);
+  });
+
+  test('proposed tooth is NOT visible when only baseline is active', () => {
+    expect(isToothVisible('proposed', BASELINE_ONLY)).toBe(false);
+  });
+
+  test('completed tooth is NOT visible when only baseline is active', () => {
+    expect(isToothVisible('completed', BASELINE_ONLY)).toBe(false);
+  });
+
+  test('proposed tooth is visible when baseline+proposed are active', () => {
+    expect(isToothVisible('proposed', BASELINE_AND_PROPOSED)).toBe(true);
+  });
+
+  test('completed tooth is NOT visible when baseline+proposed are active', () => {
+    expect(isToothVisible('completed', BASELINE_AND_PROPOSED)).toBe(false);
+  });
+
+  test('baseline tooth is visible when only proposed is active (layer mismatch → not dimmed by layer)', () => {
+    // When only proposed is active, baseline teeth are NOT in the set → hidden
+    expect(isToothVisible('baseline', PROPOSED_ONLY)).toBe(false);
+  });
+
+  test('completed tooth is visible when only completed is active', () => {
+    expect(isToothVisible('completed', COMPLETED_ONLY)).toBe(true);
+  });
+
+  test('all teeth are hidden when visibleLayers is empty', () => {
+    expect(isToothVisible('baseline', EMPTY)).toBe(false);
+    expect(isToothVisible('proposed', EMPTY)).toBe(false);
+    expect(isToothVisible('completed', EMPTY)).toBe(false);
+  });
+});
+
+// ─── DEFAULT_VISIBLE_LAYERS (P1-15: sensible default) ─────────────────────
+
+import { DEFAULT_VISIBLE_LAYERS } from './dental-chart.helpers';
+
+describe('DEFAULT_VISIBLE_LAYERS (P1-15)', () => {
+  test('includes all three layers by default', () => {
+    expect(DEFAULT_VISIBLE_LAYERS.has('baseline')).toBe(true);
+    expect(DEFAULT_VISIBLE_LAYERS.has('proposed')).toBe(true);
+    expect(DEFAULT_VISIBLE_LAYERS.has('completed')).toBe(true);
+  });
+
+  test('has exactly 3 members', () => {
+    expect(DEFAULT_VISIBLE_LAYERS.size).toBe(3);
+  });
+});
+
+// ─── getDentitionType mixed (P1-17) ────────────────────────────────────────
+// RED: 'mixed' return value does not yet exist — these tests will fail.
+
+describe('getDentitionType mixed dentition (P1-17)', () => {
+  function dobYearsAgo(years: number, offsetDays = 0): string {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - years);
+    d.setDate(d.getDate() - offsetDays);
+    return d.toISOString().slice(0, 10);
+  }
+
+  test('returns "mixed" for a 6-year-old (mixed dentition begins ~age 6)', () => {
+    expect(getDentitionType(dobYearsAgo(6))).toBe('mixed');
+  });
+
+  test('returns "mixed" for a 7-year-old', () => {
+    expect(getDentitionType(dobYearsAgo(7))).toBe('mixed');
+  });
+
+  test('returns "mixed" for an 11-year-old (still in mixed phase)', () => {
+    expect(getDentitionType(dobYearsAgo(11))).toBe('mixed');
+  });
+
+  test('returns "primary" for a 5-year-old (pure primary)', () => {
+    expect(getDentitionType(dobYearsAgo(5))).toBe('primary');
+  });
+
+  test('returns "primary" for a 2-year-old', () => {
+    expect(getDentitionType(dobYearsAgo(2))).toBe('primary');
+  });
+
+  test('returns "permanent" for a 12-year-old (permanent dentition)', () => {
+    expect(getDentitionType(dobYearsAgo(12))).toBe('permanent');
+  });
+
+  test('returns "permanent" for null DOB', () => {
+    expect(getDentitionType(null)).toBe('permanent');
+  });
+});
+
+// ─── getMixedDentitionTeeth (P1-17) ────────────────────────────────────────
+// Returns the set of tooth numbers for a mixed dentition arch.
+// Primary teeth coexist with erupted permanent teeth (typically 1s, 2s, 6s).
+// RED: function does not yet exist.
+
+import { getMixedDentitionTeeth } from './dental-chart.helpers';
+
+describe('getMixedDentitionTeeth (P1-17)', () => {
+  test('returns an array of tooth numbers', () => {
+    const teeth = getMixedDentitionTeeth();
+    expect(Array.isArray(teeth)).toBe(true);
+  });
+
+  test('includes primary teeth (51–85)', () => {
+    const teeth = getMixedDentitionTeeth();
+    const hasPrimary = teeth.some(n => n >= 51 && n <= 85);
+    expect(hasPrimary).toBe(true);
+  });
+
+  test('includes some permanent teeth (erupted incisors 11–18, 21–28, 31–38, 41–48)', () => {
+    const teeth = getMixedDentitionTeeth();
+    const hasPermanent = teeth.some(n => n >= 11 && n <= 48);
+    expect(hasPermanent).toBe(true);
+  });
+
+  test('permanent incisors (11,21,31,41) are in the mixed set (first to erupt)', () => {
+    const teeth = new Set(getMixedDentitionTeeth());
+    // Central incisors erupt first (~age 6–7)
+    expect(teeth.has(11)).toBe(true); // UR central
+    expect(teeth.has(21)).toBe(true); // UL central
+    expect(teeth.has(31)).toBe(true); // LL central
+    expect(teeth.has(41)).toBe(true); // LR central
+  });
+
+  test('permanent first molars (16,26,36,46) are in the mixed set (6-year molars)', () => {
+    const teeth = new Set(getMixedDentitionTeeth());
+    expect(teeth.has(16)).toBe(true);
+    expect(teeth.has(26)).toBe(true);
+    expect(teeth.has(36)).toBe(true);
+    expect(teeth.has(46)).toBe(true);
+  });
+
+  test('total tooth count is between 24 and 52 (some primary + some permanent)', () => {
+    const teeth = getMixedDentitionTeeth();
+    expect(teeth.length).toBeGreaterThanOrEqual(24);
+    expect(teeth.length).toBeLessThanOrEqual(52);
+  });
+
+  test('no duplicate tooth numbers', () => {
+    const teeth = getMixedDentitionTeeth();
+    const unique = new Set(teeth);
+    expect(unique.size).toBe(teeth.length);
+  });
+});
+
+// ─── computeChartDiff (P1-14: odontogram compare) ─────────────────────────
+// RED: function does not yet exist.
+
+import { computeChartDiff, type ChartDiffResult } from './dental-chart.helpers';
+
+describe('computeChartDiff (P1-14 odontogram compare)', () => {
+  const baseTeeth = [
+    { toothNumber: 11, state: 'healthy' as const },
+    { toothNumber: 21, state: 'caries' as const },
+    { toothNumber: 36, state: 'filled' as const },
+    { toothNumber: 46, state: 'missing' as const },
+  ];
+
+  test('returns an object with added, resolved, and unchanged arrays', () => {
+    const diff = computeChartDiff(baseTeeth, baseTeeth);
+    expect(Array.isArray(diff.added)).toBe(true);
+    expect(Array.isArray(diff.resolved)).toBe(true);
+    expect(Array.isArray(diff.unchanged)).toBe(true);
+  });
+
+  test('identical snapshots produce no added or resolved entries', () => {
+    const diff = computeChartDiff(baseTeeth, baseTeeth);
+    expect(diff.added).toHaveLength(0);
+    expect(diff.resolved).toHaveLength(0);
+  });
+
+  test('identical snapshots put all teeth in unchanged', () => {
+    const diff = computeChartDiff(baseTeeth, baseTeeth);
+    expect(diff.unchanged).toHaveLength(baseTeeth.length);
+  });
+
+  test('a tooth that changed from healthy to caries appears in added', () => {
+    const focusTeeth = [
+      { toothNumber: 11, state: 'caries' as const },  // was healthy → new condition
+      { toothNumber: 21, state: 'caries' as const },  // unchanged
+      { toothNumber: 36, state: 'filled' as const },  // unchanged
+      { toothNumber: 46, state: 'missing' as const },  // unchanged
+    ];
+    const diff = computeChartDiff(baseTeeth, focusTeeth);
+    expect(diff.added.some(d => d.toothNumber === 11)).toBe(true);
+  });
+
+  test('a tooth that changed from caries to filled appears in resolved', () => {
+    const focusTeeth = [
+      { toothNumber: 11, state: 'healthy' as const },
+      { toothNumber: 21, state: 'filled' as const },  // caries → filled (treated)
+      { toothNumber: 36, state: 'filled' as const },
+      { toothNumber: 46, state: 'missing' as const },
+    ];
+    const diff = computeChartDiff(baseTeeth, focusTeeth);
+    expect(diff.resolved.some(d => d.toothNumber === 21)).toBe(true);
+  });
+
+  test('a tooth present in focus but absent in base appears as added (new finding)', () => {
+    const focusTeeth = [
+      ...baseTeeth,
+      { toothNumber: 48, state: 'caries' as const }, // new tooth not in base
+    ];
+    const diff = computeChartDiff(baseTeeth, focusTeeth);
+    expect(diff.added.some(d => d.toothNumber === 48)).toBe(true);
+  });
+
+  test('a tooth present in base but absent in focus appears as resolved (condition gone)', () => {
+    const focusTeeth = baseTeeth.filter(t => t.toothNumber !== 21); // tooth 21 removed
+    const diff = computeChartDiff(baseTeeth, focusTeeth);
+    expect(diff.resolved.some(d => d.toothNumber === 21)).toBe(true);
+  });
+
+  test('added entries carry the focus state', () => {
+    const focusTeeth = [
+      { toothNumber: 11, state: 'caries' as const },
+    ];
+    const diff = computeChartDiff([{ toothNumber: 11, state: 'healthy' as const }], focusTeeth);
+    const entry = diff.added.find(d => d.toothNumber === 11);
+    expect(entry?.focusState).toBe('caries');
+  });
+
+  test('resolved entries carry the base state', () => {
+    const baseLine = [{ toothNumber: 21, state: 'caries' as const }];
+    const focusTeeth = [{ toothNumber: 21, state: 'healthy' as const }];
+    const diff = computeChartDiff(baseLine, focusTeeth);
+    const entry = diff.resolved.find(d => d.toothNumber === 21);
+    expect(entry?.baseState).toBe('caries');
+  });
+
+  test('healthy→healthy is unchanged (no false positives)', () => {
+    const diff = computeChartDiff(
+      [{ toothNumber: 11, state: 'healthy' as const }],
+      [{ toothNumber: 11, state: 'healthy' as const }],
+    );
+    expect(diff.unchanged.some(d => d.toothNumber === 11)).toBe(true);
+    expect(diff.added).toHaveLength(0);
+    expect(diff.resolved).toHaveLength(0);
+  });
+
+  test('empty base + non-empty focus → all focus teeth are added', () => {
+    const diff = computeChartDiff([], baseTeeth);
+    expect(diff.added).toHaveLength(baseTeeth.length);
+    expect(diff.resolved).toHaveLength(0);
+  });
+
+  test('non-empty base + empty focus → all base teeth are resolved', () => {
+    const diff = computeChartDiff(baseTeeth, []);
+    expect(diff.resolved).toHaveLength(baseTeeth.length);
+    expect(diff.added).toHaveLength(0);
   });
 });

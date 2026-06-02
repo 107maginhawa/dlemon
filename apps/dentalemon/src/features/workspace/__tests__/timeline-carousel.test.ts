@@ -364,4 +364,82 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(clicked).toBe(true);
     });
   });
+
+  // ── P1-14: Compare affordance ───────────────────────────────────────────
+  // RED: compare button and overlay do not yet exist — tests will fail until
+  // the compare feature is implemented in timeline-carousel.tsx.
+
+  describe('compare affordance (P1-14)', () => {
+    test('renders a Compare button when there are at least 2 visits', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.getByTestId('compare-btn')).not.toBeNull();
+    });
+
+    test('does NOT render a Compare button when there is only 1 visit', () => {
+      renderCarousel({
+        visits: [VISIT_NEW],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.queryByTestId('compare-btn')).toBeNull();
+    });
+
+    test('clicking Compare opens the compare overlay', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      expect(screen.getByTestId('compare-overlay')).not.toBeNull();
+    });
+
+    test('compare overlay shows a reference visit selector', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      // Overlay should show a way to pick the reference visit
+      expect(screen.getByTestId('compare-reference-picker')).not.toBeNull();
+    });
+
+    test('compare overlay can be dismissed', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      expect(screen.getByTestId('compare-overlay')).not.toBeNull();
+      await user.click(screen.getByTestId('compare-close-btn'));
+      expect(screen.queryByTestId('compare-overlay')).toBeNull();
+    });
+
+    test('compare overlay shows diff summary (added / resolved counts)', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      // Diff summary should be visible in the overlay
+      expect(screen.getByTestId('compare-diff-summary')).not.toBeNull();
+    });
+  });
 });
