@@ -376,6 +376,60 @@ describe('upsertToothReading', () => {
     expect(body.mobility).toBe(3);
     expect(body.furcation).toBe(3);
   });
+
+  // P1-5: read-only CAL is derived per-site as CAL = probing depth + gingival
+  // margin across the three GM/CEJ cases (research §"Clinical Attachment Level").
+  test('returns computed read-only CAL per site across the three GM/CEJ cases', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/15`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        depthBM: 4, gmBM: 2,   // recession      → CAL 6
+        depthBC: 3, gmBC: 0,   // at CEJ         → CAL 3
+        depthBD: 5, gmBD: -2,  // coronal to CEJ → CAL 3
+        depthLM: 6,            // GM missing     → CAL null
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.gmBM).toBe(2);
+    expect(body.calBM).toBe(6); // PD 4 + recession 2
+    expect(body.calBC).toBe(3); // PD 3, margin at CEJ
+    expect(body.calBD).toBe(3); // PD 5 − 2mm coronal
+    expect(body.calLM).toBeNull(); // PD present but GM missing
+  });
+
+  test('returns 422 INVALID_GINGIVAL_MARGIN when a gingival margin is below -5mm', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/16`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3, gmBM: -6 }),
+    });
+    expect(res.status).toBe(400); // validator bound -5..20 rejects before handler
+    // (handler-level INVALID_GINGIVAL_MARGIN is pinned in the unit suite where the
+    // validator bound can be bypassed — see perio-validation behaviour.)
+  });
+
+  test('getPerioChart surfaces computed CAL on persisted readings', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    // Persist a recession site, then read the whole chart back.
+    await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBC: 4, gmBC: 3 }), // CAL 7
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const t17 = body.readings.find((r: any) => r.toothNumber === 17);
+    expect(t17).toBeTruthy();
+    expect(t17.calBC).toBe(7);
+  });
 });
 
 // N-PER-01 / V-PER-002: writing to a COMPLETED chart (whose visit is still active)

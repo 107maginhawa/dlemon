@@ -64,6 +64,28 @@ export function assertValidDepths(body: Record<string, unknown>): void {
   }
 }
 
+const GM_FIELDS = ['gmBM', 'gmBC', 'gmBD', 'gmLM', 'gmLC', 'gmLD'] as const;
+
+/**
+ * P1-5: per-site gingival-margin position relative to the CEJ (mm, signed).
+ * positive = margin apical to CEJ (recession), negative = coronal to CEJ
+ * (overgrowth). Bounded -5..20 to mirror the recession sanity range: a margin
+ * more than 5mm coronal to the CEJ is not physiologically meaningful, and 20mm
+ * is the depth ceiling. Used to derive read-only CAL (utils/perio-cal.ts).
+ */
+export function assertValidGingivalMargins(body: Record<string, unknown>): void {
+  for (const f of GM_FIELDS) {
+    const v = body[f];
+    if (v === undefined || v === null) continue;
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < -5 || v > 20) {
+      throw new BusinessLogicError(
+        `Invalid gingival margin value: ${f} must be an integer between -5 and 20mm`,
+        'INVALID_GINGIVAL_MARGIN',
+      );
+    }
+  }
+}
+
 const GRADE_FIELDS = ['mobility', 'furcation'] as const;
 
 /**

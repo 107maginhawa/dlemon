@@ -13,6 +13,7 @@ import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { cascadeChartLockFromVisit } from './utils/perio-lock-cascade';
+import { computeReadingCal } from './utils/perio-cal';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { GetVisitPerioChartParams } from '@/generated/openapi/validators';
@@ -49,5 +50,8 @@ export async function getVisitPerioChart(
   const readingRepo = new PerioReadingRepository(db);
   const readings = await readingRepo.findMany({ chartId: chart.id });
 
-  return ctx.json({ ...chart, readings });
+  // P1-5: attach read-only per-site CAL (derived from PD + gingival margin).
+  const readingsWithCal = readings.map((r) => ({ ...r, ...computeReadingCal(r) }));
+
+  return ctx.json({ ...chart, readings: readingsWithCal });
 }

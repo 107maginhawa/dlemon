@@ -44,6 +44,10 @@ enum PerioChartStatus {
   bopBM: true, bopBC: false, bopBD: true,
   bopLM: false, bopLC: false, bopLD: false,
   recession: 1,
+  gmBM: 2, gmBC: 0, gmBD: 2,
+  gmLM: 1, gmLC: 0, gmLD: 1,
+  calBM: 6, calBC: 3, calBD: 7,
+  calLM: 4, calLC: 3, calLD: 5,
   mobility: 0,
   furcation: 1,
   plaque: true,
@@ -94,6 +98,39 @@ model PerioToothReading {
   @maxValue(20)
   recession?: int32;
 
+  @doc("P1-5: per-site gingival-margin position vs CEJ (mm). Buccal-mesial. positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20.")
+  @minValue(-5)
+  @maxValue(20)
+  gmBM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBD?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLD?: int32;
+
+  @doc("P1-5: read-only Clinical Attachment Level (mm) per site, derived as CAL = probing depth + gingival margin. null when either input is missing. Never persisted.")
+  calBM?: int32 | null;
+  calBC?: int32 | null;
+  calBD?: int32 | null;
+  calLM?: int32 | null;
+  calLC?: int32 | null;
+  calLD?: int32 | null;
+
   @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility: int32;
 
@@ -143,6 +180,31 @@ model UpsertToothReadingRequest {
   @minValue(-5)
   @maxValue(20)
   recession?: int32;
+
+  @doc("P1-5: per-site gingival-margin position vs CEJ (mm). positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20. Feeds read-only CAL.")
+  @minValue(-5)
+  @maxValue(20)
+  gmBM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBD?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLD?: int32;
 
   @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility?: int32;

@@ -26,6 +26,16 @@ export const dentalPerioToothReadings = pgTable('dental_perio_tooth_reading', {
   bopLC: boolean('bop_lc'),
   bopLD: boolean('bop_ld'),
   recession: smallint('recession'),
+  // P1-5: per-site gingival-margin position relative to the CEJ (mm, signed).
+  // positive = margin APICAL to CEJ (recession); 0 = at CEJ; negative = CORONAL
+  // to CEJ (overgrowth/edema). Read-only Clinical Attachment Level is derived
+  // per-site as CAL = probing depth + gingival margin (see utils/perio-cal.ts).
+  gmBM: smallint('gm_bm'),
+  gmBC: smallint('gm_bc'),
+  gmBD: smallint('gm_bd'),
+  gmLM: smallint('gm_lm'),
+  gmLC: smallint('gm_lc'),
+  gmLD: smallint('gm_ld'),
   mobility: smallint('mobility').notNull().default(0),
   furcation: smallint('furcation').notNull().default(0),
   plaque: boolean('plaque').notNull().default(false),
