@@ -1,16 +1,20 @@
 /**
  * DentalChart — interactive SVG dental chart
  *
- * Renders 32 teeth in FDI notation as clickable SVG elements.
- * Each tooth is color-coded by its state.
+ * Renders 32 teeth with tooth numbers displayed in the notation selected in
+ * branch settings (FDI / Universal / Palmer). Tooth identity (key, click
+ * callbacks, API data) always uses the canonical FDI number — only the
+ * visible label changes.
  *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
 import React, { useState } from 'react';
-import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo, getToothLayer } from './dental-chart.helpers';
-import type { ToothData, ToothState, DentitionType, ChartLayer } from './dental-chart.helpers';
+import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo, getToothLayer, getToothDisplayLabel } from './dental-chart.helpers';
+import type { ToothData, ToothState, DentitionType, ChartLayer, ToothNotation } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { useBranchSettings } from '@/features/settings/hooks/use-branch-settings';
 
 export interface DentalChartProps {
   teeth: ToothData[];
@@ -35,6 +39,15 @@ const CHART_LAYERS: { layer: ChartLayer; label: string }[] = [
 ];
 
 export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true, dentitionType = 'permanent', showLayerToggle = true, completedToothNumbers }: DentalChartProps) {
+  // ── Notation preference (QW-5) ───────────────────────────────────────────
+  // Read from branch settings so the chart respects the locale/notation toggle
+  // saved in Settings → Locale. Falls back to FDI when settings are loading or
+  // not yet configured. Tooth identity stays FDI throughout — only labels change.
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const { settings } = useBranchSettings(branchId);
+  const notation: ToothNotation =
+    (settings?.toothNotation as ToothNotation | undefined) ?? 'FDI';
+
   const toothMap = buildToothMap(teeth);
   // Per-tooth entryClassification lookup for layer resolution (CR-03).
   const toothByNumber = new Map<number, ToothData>(teeth.map((t) => [t.toothNumber, t]));
@@ -80,6 +93,9 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
     const isDimmed = (filterStates.size > 0 && !filterStates.has(state)) || isOffLayer;
     // Proposed work stays visually distinct (dashed outline) when on its layer — CHART-BR-006.
     const isProposedOnLayer = toothLayer === 'proposed' && !isOffLayer;
+    // Display label for the current notation preference (QW-5).
+    // FDI identity is preserved; only the visible label changes.
+    const displayLabel = getToothDisplayLabel(toothNumber, notation);
 
     return (
       <button
@@ -87,8 +103,9 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
         type="button"
         data-testid={`tooth-${toothNumber}`}
         data-tooth-layer={toothLayer}
+        data-tooth-label={displayLabel}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${toothNumber} — ${name} (${state}, ${toothLayer})`}
+        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer})`}
         style={{
           flex: '1 1 0',
           minWidth: 0,
@@ -103,11 +120,12 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
           !isLastInQuadrant ? 'border-r border-border/20' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
-        aria-label={`Tooth ${toothNumber}: ${name}, ${state}, ${toothLayer}`}
+        aria-label={`Tooth ${displayLabel}: ${name}, ${state}, ${toothLayer}`}
         aria-pressed={isSelected}
       >
         <UniversalToothFdi
           fdiToothNumber={toothNumber}
+          label={displayLabel}
           fillColor={getToothFillColor(state) || undefined}
           size={toothSize}
           interactive={false}

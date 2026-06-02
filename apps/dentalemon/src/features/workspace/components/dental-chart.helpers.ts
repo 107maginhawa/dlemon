@@ -272,3 +272,80 @@ export function getToothFillColor(state: ToothState): string {
   };
   return colors[state] ?? '#ffffff';
 }
+
+// ─── Tooth notation display (QW-5) ───────────────────────────────────────────
+//
+// The canonical key for every tooth is its FDI number (11–48 permanent,
+// 51–85 primary). Only the *displayed label* changes per notation preference.
+// Tooth identity (clicks, data, API) always uses the FDI number.
+//
+// Supported notations:
+//   FDI      — ISO 3950 (international standard, used by backend)
+//   Universal — American numbering (1–32 adult, 1–20 primary)
+//   Palmer    — Quadrant symbol + position digit, e.g. "1|" = UR central
+//
+// Palmer encoding (text-safe approximation):
+//   Upper right (Q1): position|   e.g. "1|", "8|"
+//   Upper left  (Q2): |position   e.g. "|1", "|8"
+//   Lower left  (Q3): |position   e.g. "|1", "|8"  (lower quadrant implicit from row)
+//   Lower right (Q4): position|   e.g. "1|", "8|"
+//
+// In the original Palmer system the quadrant is conveyed by a bracket/grid,
+// not the digit alone. Our text-safe labels mirror that: UR/LR use "n|"
+// (digit left of bar) and UL/LL use "|n" (digit right of bar). The chart
+// renders upper/lower teeth in separate rows, so row position disambiguates
+// upper vs lower — exactly as a paper Palmer chart does.
+
+export type ToothNotation = 'FDI' | 'Universal' | 'Palmer';
+
+/**
+ * Convert an FDI tooth number to a Palmer text-safe label.
+ *
+ * Upper right (Q1) and Lower right (Q4): "position|"  e.g. FDI 11 → "1|"
+ * Upper left  (Q2) and Lower left  (Q3): "|position"  e.g. FDI 21 → "|1"
+ *
+ * Returns '' for invalid FDI numbers.
+ */
+export function fdiToPalmer(fdiNumber: number): string {
+  const quadrant = Math.floor(fdiNumber / 10);
+  const position = fdiNumber % 10;
+  if (position < 1 || position > 8) return '';
+  switch (quadrant) {
+    case 1: // Upper right
+    case 4: // Lower right
+      return `${position}|`;
+    case 2: // Upper left
+    case 3: // Lower left
+      return `|${position}`;
+    default:
+      return '';
+  }
+}
+
+/**
+ * Return the display label for a tooth given a notation preference.
+ *
+ * - FDI:       returns the FDI number as a string (unchanged)
+ * - Universal: converts via fdiToUniversal / fdiPrimaryToUniversal
+ * - Palmer:    converts via fdiToPalmer; falls back to FDI string if conversion fails
+ * - unknown:   falls back to FDI string
+ *
+ * Tooth identity (clicks, API calls) must always use the original FDI number —
+ * this function only affects what is *displayed* to the user.
+ */
+export function getToothDisplayLabel(fdiNumber: number, notation: ToothNotation | string): string {
+  switch (notation) {
+    case 'Universal': {
+      const isPrimary = fdiNumber >= 51 && fdiNumber <= 85;
+      const uni = isPrimary ? fdiPrimaryToUniversal(fdiNumber) : fdiToUniversal(fdiNumber);
+      return isNaN(uni) ? String(fdiNumber) : String(uni);
+    }
+    case 'Palmer': {
+      const palmer = fdiToPalmer(fdiNumber);
+      return palmer || String(fdiNumber);
+    }
+    case 'FDI':
+    default:
+      return String(fdiNumber);
+  }
+}

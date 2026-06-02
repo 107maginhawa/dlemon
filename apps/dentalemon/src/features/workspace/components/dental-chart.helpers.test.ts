@@ -331,6 +331,114 @@ describe('getToothFillColor', () => {
   });
 });
 
+// ─── getToothDisplayLabel / fdiToPalmer (QW-5 notation toggle) ────────────
+
+import { getToothDisplayLabel, fdiToPalmer } from './dental-chart.helpers';
+
+describe('fdiToPalmer', () => {
+  test('FDI 11 (UR central) → "1|"', () => {
+    expect(fdiToPalmer(11)).toBe('1|');
+  });
+
+  test('FDI 18 (UR wisdom) → "8|"', () => {
+    expect(fdiToPalmer(18)).toBe('8|');
+  });
+
+  test('FDI 21 (UL central) → "|1"', () => {
+    expect(fdiToPalmer(21)).toBe('|1');
+  });
+
+  test('FDI 28 (UL wisdom) → "|8"', () => {
+    expect(fdiToPalmer(28)).toBe('|8');
+  });
+
+  test('FDI 31 (LL central) → "|1"', () => {
+    expect(fdiToPalmer(31)).toBe('|1');
+  });
+
+  test('FDI 38 (LL wisdom) → "|8"', () => {
+    expect(fdiToPalmer(38)).toBe('|8');
+  });
+
+  test('FDI 41 (LR central) → "1|"', () => {
+    expect(fdiToPalmer(41)).toBe('1|');
+  });
+
+  test('FDI 48 (LR wisdom) → "8|"', () => {
+    expect(fdiToPalmer(48)).toBe('8|');
+  });
+
+  test('all 32 FDI numbers return a non-empty string', () => {
+    for (const n of TOOTH_NUMBERS) {
+      const label = fdiToPalmer(n);
+      expect(typeof label).toBe('string');
+      expect(label.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('returns empty string for invalid FDI number', () => {
+    expect(fdiToPalmer(99)).toBe('');
+  });
+});
+
+describe('getToothDisplayLabel (QW-5 notation toggle)', () => {
+  test('FDI notation: returns FDI number as string for tooth 11', () => {
+    expect(getToothDisplayLabel(11, 'FDI')).toBe('11');
+  });
+
+  test('FDI notation: returns FDI number as string for all permanent teeth', () => {
+    for (const n of TOOTH_NUMBERS) {
+      expect(getToothDisplayLabel(n, 'FDI')).toBe(String(n));
+    }
+  });
+
+  test('Universal notation: FDI 11 (UR central) → "8"', () => {
+    expect(getToothDisplayLabel(11, 'Universal')).toBe('8');
+  });
+
+  test('Universal notation: FDI 18 (UR wisdom) → "1"', () => {
+    expect(getToothDisplayLabel(18, 'Universal')).toBe('1');
+  });
+
+  test('Universal notation: FDI 21 (UL central) → "9"', () => {
+    expect(getToothDisplayLabel(21, 'Universal')).toBe('9');
+  });
+
+  test('Universal notation: FDI 48 (LR wisdom) → "32"', () => {
+    expect(getToothDisplayLabel(48, 'Universal')).toBe('32');
+  });
+
+  test('Universal notation: all 32 FDI numbers produce valid Universal labels 1–32', () => {
+    for (const n of TOOTH_NUMBERS) {
+      const label = getToothDisplayLabel(n, 'Universal');
+      const num = Number(label);
+      expect(num >= 1 && num <= 32).toBe(true);
+    }
+  });
+
+  test('Palmer notation: FDI 11 returns a non-empty string', () => {
+    const label = getToothDisplayLabel(11, 'Palmer');
+    expect(typeof label).toBe('string');
+    expect(label.length).toBeGreaterThan(0);
+  });
+
+  test('Palmer notation: FDI 21 produces a different label from FDI 11 (different quadrant)', () => {
+    expect(getToothDisplayLabel(11, 'Palmer')).not.toBe(getToothDisplayLabel(21, 'Palmer'));
+  });
+
+  test('unknown notation falls back to FDI string', () => {
+    expect(getToothDisplayLabel(11, 'unknown' as any)).toBe('11');
+  });
+
+  test('primary tooth FDI 51 with FDI notation returns "51"', () => {
+    expect(getToothDisplayLabel(51, 'FDI')).toBe('51');
+  });
+
+  test('primary tooth FDI 51 with Universal notation returns "5"', () => {
+    expect(getToothDisplayLabel(51, 'Universal')).toBe('5');
+  });
+});
+
 // ─── getToothLayer (CR-03 chart layer separation) ─────────────────────────
 
 import { getToothLayer } from './dental-chart.helpers';
