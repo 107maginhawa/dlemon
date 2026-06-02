@@ -284,6 +284,12 @@ model LabOrder {
   toothFdi?: string;
   labName: string;
   description: string;
+  /** P2-12: restoration shade (e.g. VITA "A2") */
+  shade?: string;
+  /** P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max") */
+  material?: string;
+  /** P2-12: date the case is needed chairside (distinct from expectedDeliveryDate). */
+  dueDate?: utcDateTime;
   status: LabOrderStatus;
   orderedAt: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
@@ -302,11 +308,20 @@ model CreateLabOrderRequest {
   toothFdi?: string;
   labName: string;
   description: string;
+  /** P2-12: restoration shade (e.g. VITA "A2") */
+  shade?: string;
+  /** P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max") */
+  material?: string;
+  /** P2-12: date the case is needed chairside. */
+  dueDate?: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
 }
 
 model UpdateLabOrderRequest {
   status?: LabOrderStatus;
+  shade?: string;
+  material?: string;
+  dueDate?: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
   cancelReason?: string;
   isDefective?: boolean;

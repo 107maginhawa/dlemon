@@ -69,6 +69,10 @@ export async function updateLabOrder(
   // Non-status fields update
   const updated = await repo.update(orderId, {
     expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,
+    // P2-12: editable restoration detail fields
+    dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+    shade: body.shade,
+    material: body.material,
     cancelReason: body.cancelReason,
     isDefective: body.isDefective,
   });

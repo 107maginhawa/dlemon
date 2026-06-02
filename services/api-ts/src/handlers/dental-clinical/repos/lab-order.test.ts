@@ -61,6 +61,37 @@ describe('LabOrderRepository', () => {
       const order = await repo.createOne(baseOrder);
       expect(order.toothFdi).toBeNull();
     });
+
+    // P2-12: restoration shade / material / due date
+    test('stores shade, material and dueDate when provided', async () => {
+      const due = new Date('2026-01-15');
+      const order = await repo.createOne({
+        ...baseOrder,
+        shade: 'A2',
+        material: 'Zirconia',
+        dueDate: due,
+      });
+      expect(order.shade).toBe('A2');
+      expect(order.material).toBe('Zirconia');
+      expect(order.dueDate).toBeInstanceOf(Date);
+    });
+
+    test('shade/material/dueDate default to null when omitted', async () => {
+      const order = await repo.createOne(baseOrder);
+      expect(order.shade).toBeNull();
+      expect(order.material).toBeNull();
+      expect(order.dueDate).toBeNull();
+    });
+
+    test('update() can edit shade, material and dueDate without a status change', async () => {
+      const order = await repo.createOne(baseOrder);
+      const due = new Date('2026-02-01');
+      const updated = await repo.update(order.id, { shade: 'B1', material: 'E.max', dueDate: due });
+      expect(updated!.shade).toBe('B1');
+      expect(updated!.material).toBe('E.max');
+      expect(updated!.dueDate).toBeInstanceOf(Date);
+      expect(updated!.status).toBe('ordered');
+    });
   });
 
   describe('state machine transitions', () => {

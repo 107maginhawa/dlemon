@@ -76,7 +76,7 @@ export class LabOrderRepository extends DatabaseRepository<LabOrder, NewLabOrder
 
   async update(
     id: string,
-    patch: Partial<Pick<LabOrder, 'expectedDeliveryDate' | 'cancelReason' | 'isDefective' | 'replacedByOrderId'>>,
+    patch: Partial<Pick<LabOrder, 'expectedDeliveryDate' | 'dueDate' | 'shade' | 'material' | 'cancelReason' | 'isDefective' | 'replacedByOrderId'>>,
   ): Promise<LabOrder | null> {
     const [updated] = await this.db
       .update(labOrders)

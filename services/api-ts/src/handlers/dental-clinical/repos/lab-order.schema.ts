@@ -26,6 +26,12 @@ export const labOrders = pgTable('lab_order', {
   toothFdi: text('tooth_fdi'),
   labName: text('lab_name').notNull(),
   description: text('description').notNull(),
+  // P2-12: restoration order detail fields
+  shade: text('shade'),
+  material: text('material'),
+  // P2-12: clinically-required due date (when the case is needed chairside),
+  // distinct from expectedDeliveryDate (the lab's promised delivery).
+  dueDate: timestamp('due_date'),
   status: labOrderStatusEnum('status').notNull().default('ordered'),
   orderedAt: timestamp('ordered_at').notNull().defaultNow(),
   expectedDeliveryDate: timestamp('expected_delivery_date'),
