@@ -2,13 +2,25 @@
 
 ---
 oli-version: trace-v1
-Report Date: 2026-06-01
+Report Date: 2026-06-02 (re-verified; prior substantive run 2026-06-01)
 Phase: D (code + tests exist)
 Modules Traced: all 12 (dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import) + governance chains (erasure, legal-hold, retention)
 Mode: standalone (artifact + code, engine-map-enriched for frontend scope)
 Data Sources: WORKFLOW_MAP.md (98 WF + WF-P01..05 + WF-EMRC-001..006), DOMAIN_MODEL.md (24 DE, 6 SM), 12 MODULE_SPECs, ROLE_PERMISSION_MATRIX.md, EVENT_CONTRACTS.md, ERROR_TAXONOMY.md, OpenAPI (specs/api/dist/openapi/openapi.json — 210 paths / 140 dental), codebase-map engine v5 (FRESH: producer=engine, fields_unavailable=[], git_sha a3bfc9a5), COMPLIANCE_REPORT.md (governance pass), CONFIDENCE_REPORT.md, JOURNEY_COVERAGE_REPORT.md
 Partial Staleness: CODE_SPEC_TRACE.json reports `spec_source: null` / `matched: []` because `spec_trace_optin: false` in map-meta (spec-trace phase ran 0ms — opt-in, disabled by config, NOT a regression). CODE_API_SURFACE response_shape is empty for all 43 frontend-scope endpoints and api_calls carry no field-access data → algorithm 5g cannot produce verified edges; 5g findings route to `unverified` per R1 (confidence_threshold=MEDIUM). Trace relied on direct ID grep across spec + test source.
-HEAD: 26925ce2 (re-verify pass over ece7f89c → 26925ce2)
+HEAD: c26d37bd (re-verify pass over 26925ce2 → c26d37bd)
+---
+
+## Re-verify Pass (2026-06-02, 26925ce2 → c26d37bd, fresh engine map git_sha c26d37bd)
+
+Re-ran the full chain against the FRESH codebase-map (engine v5, .map-meta git_sha c26d37bd, fields_unavailable=[], producer=engine). The 5 commits since the prior substantive run (901deb63, e20e5b2f, 04162602, c26d37bd, 7b7c740e) are **docs(trace)/docs(audits) only — zero source or spec deltas** (`git log --oneline 26925ce2..HEAD` = 5 docs commits). No new gaps, no resolved gaps, no count movement. **VERDICT UNCHANGED: PASS.** Re-grep verification of all standing-finding anchors against current source:
+- **TR-BR-013 (P2 deferral) confirmed:** `dental-billing/markUncollectible.ts:24-28` — `// BR-013: deferred — always 501.` → `NOT_IMPLEMENTED` 501, feature flag `dental_billing_uncollectible`.
+- **TR-WF-DOCDRIFT (false-positive) confirmed:** `dental-clinical/amendments/approveAmendment.ts:26-30` — `// BR-019: supervisor approval deferred — always 501.`, flag `dental_clinical_amendment_approval`.
+- **TR-WF-PLAN (resolved) confirmed:** `dental-visit/treatments/updateDentalTreatment.ts` + 3 FSM tests (`treatment-fsm-http.test.ts`, `treatment.fsm.property.test.ts`, `dental-visit.treatment-status-transitions.test.ts`).
+- **TR-DG-002 (resolved) confirmed:** 6 governance path ops present in `specs/api/dist/openapi/openapi.json` — `/dental/erasure-requests`(+`/{id}`,`/approve`,`/reject`), `/dental/legal-holds`(+`/{id}/release`); 140 dental paths total.
+- **TR-LH-001 / TR-RET-001 (P2 orphan-by-design) confirmed:** no `legal-hold`/`retention` MODULE_SPEC under docs/product/modules/.
+- **TR-INFRA-001 (EXTERNAL) confirmed:** `.map-meta.json:provenance.spec_trace_optin: false`, `CODE_SPEC_TRACE.json spec_source=null / coverage.matched=[]` — engine-config item, unchanged.
+- Spec namespace recount stable: WF/BR/AC/SM totals match prior run (BR namespace BR-001..047 + BR-P01..07 + BR-SCH-001..004 = 58 canonical).
 ---
 
 ## Re-verify Pass (2026-06-01, ece7f89c → 26925ce2) — governance/FE-error chains

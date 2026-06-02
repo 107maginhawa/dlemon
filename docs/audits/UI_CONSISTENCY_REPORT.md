@@ -1,5 +1,7 @@
-# UI Consistency Report — 2026-05-31; re-verified 2026-06-01 (PR #1, HEAD a3bfc9a5)
+# UI Consistency Report — 2026-05-31; re-verified 2026-06-01 (PR #1, a3bfc9a5); re-run 2026-06-02 (enforcement, HEAD c26d37bd)
 
+> **RE-RUN @ c26d37bd (2026-06-02)** — `git diff a3bfc9a5..HEAD -- apps/dentalemon/src` = 13 files, all workspace **hooks/tests + 1 route** (`$patientId.tsx`) + `test-setup.ts`. Diff of the changed route shows **zero** new className overrides, z-[], bg-[#…], or raw primitives. className-override (3), z-index-arbitrary (3) carry forward identically. **CORRECTION:** the `lemon-literal` finding was under-counted in the prior run (claimed "1 instance" — only onboarding-wizard was scanned). A project-wide grep finds the brand hex `#FFE97D`/`#4A4018` used as arbitrary Tailwind literals (`bg-[#FFE97D]`, `text-[#4A4018]`, `border-[#FFE97D]`, `focus:border-[#FFE97D]`) in **174 occurrences across 59 files**. This is pre-existing (files date to 2026-05-04; present at a3bfc9a5) — KNOWN, not a regression — and remains **P3-capped** by DRAFT-spec mode. See `EU-COLOR-lemon-literal-wide` below.
+>
 > **RE-VERIFY @ a3bfc9a5** — `git diff f1b38d8..a3bfc9a5 -- apps/dentalemon/src` = **0 files**. This cycle's commits (V-DG-002 erasure/legal-hold, GAP-001 localId) are backend/spec only. No className, token, z-index, color, icon, or loading-state surface changed. All metrics + findings carry forward identically. Spec sha + tailwind-config hash unchanged → no drift.
 > **GENESIS RUN** — first audit against the inferred `UI_CONSISTENCY_SPEC.md` (created 2026-05-31 20:40). No regression possible; run #2 will enable trend tracking.
 > **DRAFT-SPEC / AUDIT-ONLY (severity capped at P3).** Spec is `audit_status: DRAFT` with unresolved `[VERIFY]` markers (tokens.spacing, z_index, card/input variants, typography). Per stop_conditions, all findings are advisory until `/oli-spec-gate` curation promotes the spec to enforcing.
@@ -11,7 +13,7 @@
 |-----------------------|-------|
 | Component contracts (Button) | 0.94 (46/49 conformant; 3 className overrides) |
 | Spacing scale         | n/a (allow_tailwind_default; spec spacing `[VERIFY]`) |
-| Color tokens          | ~0.98 (1 arbitrary `bg-[#FFE97D]` literal — equals brand token, off-class form) |
+| Color tokens          | ~0.82 (CORRECTED: 174 arbitrary `#FFE97D`/`#4A4018` literals across 59 files — all equal the brand `lemon` token, off-class form; pre-existing/KNOWN) |
 | z-index scale         | 0.99 (3 arbitrary `z-[N]` page-level) |
 | Icon size lock        | 1.00 (lucide auto-sized via `[&_svg]:size-4`) |
 | Page-shell coverage   | 1.00 (DashboardLayout/WorkspaceLayout pathless layouts wrap all child routes via `<Outlet/>`) |
@@ -24,7 +26,7 @@
 | P0  | 0   | 0     |
 | P1  | 0   | 0     |
 | P2  | 0   | 0     |
-| P3  | 0   | 4 (genesis: all KNOWN) |
+| P3  | 0   | 5 (genesis: all KNOWN; +1 corrected lemon-literal-wide) |
 
 (All findings P3-capped by DRAFT-spec mode. Underlying severity in parentheses below would apply once spec is curated to enforcing.)
 
@@ -47,6 +49,12 @@
 
 ### P3 KNOWN — color literal off-class (would-be P2; page-level)
 `EU-COLOR-onbwiz-lemon` — `onboarding-wizard.tsx:248` uses arbitrary `bg-[#FFE97D]`/`text-[#4A4018]`. Value MATCHES the brand `lemon` token but is expressed as an arbitrary hex class instead of the `bg-primary` / cva path. Consolidate to the token class.
+
+### P3 KNOWN (corrected — was under-counted) — brand-color literal drift, codebase-wide (would-be P2; token consistency)
+`EU-COLOR-lemon-literal-wide` — the brand `lemon` palette (`#FFE97D` / hover `#F5DC60` / foreground `#4A4018`) is hard-coded as **arbitrary Tailwind literals in 174 occurrences across 59 files** rather than the declared token class (`bg-primary` / `text-primary-foreground` / `border-primary`, or a cva variant). Hot zones: `features/scheduling/*` (calendar-day/week/month, appointment-card/modal, queue-board), `features/patients/*` (filter-tabs, profile-page, folder-card), `features/settings/*` (clinic/locale/notification settings, fee-schedule, working-hours), `features/workspace/*` (payment-modal, soap-notes-sheet, lab-orders-sheet, treatment-table, dental-chart). Forms include `focus:border-[#FFE97D]`. 
+- **Status:** PRE-EXISTING (introduced 2026-05-04; identical at prior audit point a3bfc9a5). KNOWN, not a regression. The prior run's "1 instance" count was a scoping error — only `onboarding-wizard.tsx` was scanned.
+- **Severity:** P3-capped by DRAFT spec; underlying severity P2 (every `bg-[#FFE97D]` defeats theming/dark-mode and duplicates the `brand.lemon` token). A `globals.css` token (`--primary: ...lemon`) already exists, so the migration target is in place.
+- **Fix (human-judgment, NOT auto-fixed):** sweep `bg-[#FFE97D]`→`bg-primary`, `text-[#4A4018]`→`text-primary-foreground`, `border-[#FFE97D]`→`border-primary` / `focus:border-primary`; add a cva `lemon` Button variant for the button cases. Do one feature folder per PR.
 
 ### P3 KNOWN — placeholder-string regex hits (FALSE POSITIVE, informational)
 `EU-PLACEHOLDER-skipfornow` — "Skip for now" at `onboarding-wizard.tsx:246`, `routes/onboarding.tsx:300`, `features/person/components/address-form.tsx:259`. These are **functional onboarding skip buttons that advance the wizard**, not incomplete-feature markers. Check-13 regex matches the literal but intent is legitimate. No action; suppress via `// oli-ui: placeholder-ok` if noise persists.

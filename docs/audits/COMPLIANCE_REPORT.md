@@ -1,17 +1,17 @@
 <!--
-oli: oli-check/compliance v1.0 | generated: 2026-06-01 (re-verify pass: 2026-06-01) | HEAD: 26925ce2
-producer-trust: engine v0.1.0 | map: a3bfc9a5 (FRESH, frontend-only scope) | confidence_threshold: MEDIUM
+oli: oli-check/compliance v1.0 | generated: 2026-06-01 | RE-VERIFIED: 2026-06-02 | HEAD: c26d37bd
+producer-trust: engine v0.1.0 (map v5) | map: c26d37bd (FRESH, frontend-only scope) | confidence_threshold: MEDIUM
 regulated: ACTIVE (HIPAA/GDPR/RA 10173) | dimension: compliance (of /oli-check)
-re-verify: V-DG-001 RESOLVED (0aa7f474), V-DG-002 RESOLVED (2a710069), V-DG-003 RESOLVED (d33ee8c3), V-IMG-EXP-001 DOWNGRADED P1→P2 (26925ce2), V-FE-ERR-001 RESOLVED (cc8e687d/e6d8d897). Backend suite 2977/0, FE hook suite 41/0, typecheck clean, check:boundaries clean.
+2026-06-02 re-verify (26925ce2..c26d37bd = 5 DOCS-ONLY commits, ZERO non-docs source files changed): compliance posture byte-identical to the 2026-06-01 PASS. Spot-re-verified against current code: V-DG-001 boot guard (config.ts:285-287), V-DG-002 physicalDeleteErasedFiles+erasure.s3_deleted (erasure-storage.ts:51,95), V-DG-003 appointmentTarget (retention-targets.ts:55-86), V-FE-ERR-001 onError on all 5 workspace hooks, treatment/visit immutability guards (dental-visit/treatments/updateDentalTreatment.ts:44-64, visits/updateDentalVisit.ts:38-104), void-invoice owner-only (assertBranchRole), V-EVT-001 publishAuditEvent still 0 non-test call sites, V-CONS-001 emr API_CONTRACTS still absent. VERDICT: PASS (0 P0 / 0 P1).
 -->
 
 # Compliance Report
 
 ---
-Audit Date: 2026-06-01
+Audit Date: 2026-06-01 (re-verified 2026-06-02)
 Modules Audited: dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import (12)
 Spec Version: oli-version 1.1 (module specs generated 2026-05-24)
-Branch: feat/ceph-demoable-and-manual-ux @ 26925ce2 (re-verify pass over 0aa7f474..26925ce2)
+Branch: feat/ceph-demoable-and-manual-ux @ c26d37bd (re-verify over 26925ce2..c26d37bd — 5 docs-only commits, no source change)
 ---
 
 ## Trust Preamble (R1)

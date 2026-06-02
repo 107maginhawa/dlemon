@@ -1,133 +1,101 @@
-# Runtime + Release-Gate Readiness Report
+# Runtime Readiness Report (boot-smoke tier)
 
-**Dimension:** RUNTIME + RELEASE-GATE (Confidence Layer 4) of `/oli-check`
-**Date:** 2026-05-31
+**Dimension:** RUNTIME (boot-smoke + plan) of `/oli-check`
+**Date:** 2026-06-02
 **Branch:** `feat/ceph-demoable-and-manual-ux`
-**Mode:** Read-only static verification (no `--live` loop, no full test suite)
+**Mode:** LIVE boot-smoke (API + Web actually booted and probed). No `--live`
+interaction loop, no full test suite.
+**Verdict:** PASS
 
 ---
 
-## JOB 1 — Boot-Smoke Readiness
+## JOB 1 — API Boot-Smoke (services/api-ts, :7213)
 
-### Typecheck
+**Command:** `cd services/api-ts && bun src/index.ts` (DB → `monobase`).
+**Result: PASS.**
 
-| Target | Command | Result |
-|--------|---------|--------|
-| API service | `cd services/api-ts && bun run typecheck` (`tsc --noEmit`) | **PASS** — 0 errors |
-| Frontend | `cd apps/dentalemon && bun run typecheck` (`tsc --noEmit`) | **PASS** — 0 errors |
+- Server bound cleanly: `🚀 Server running on http://0.0.0.0:7213`.
+- Job scheduler started: **10 jobs** (email.cleanup, notifs.processScheduled,
+  notifs.cleanup, audit.retention, booking.slotGenerator, booking.slotCleanup,
+  retention.enforcement, booking.confirmationTimer, + workers ready).
+- Email template init from filesystem completed.
+- **Zero errors/fatals/unhandled-rejections in the boot phase** (verified: 0
+  ERROR/FATAL/exception/ECONNREFUSED lines before the "Server running" line).
 
-Both sides compile clean. No type-level boot blockers.
+**Health probes:**
+| Probe | Result | Interpretation |
+|---|---|---|
+| `GET /livez` | 200 | process alive — PASS |
+| `GET /readyz` | 503 `failed` | readiness degraded (see below) |
+| `GET /readyz?verbose` | `database: pass`, `jobs: pass`, `storage: fail` | only storage check fails |
 
-### Config / Env Boot Blockers
+**Post-boot log noise (NOT boot crashes):**
+- `ERROR: Error checking bucket existence — ECONNREFUSED` — emitted by the
+  `/readyz` `storage.healthCheck()` against MinIO/S3, which is unreachable in
+  this environment. **Known infra quirk** (MEMORY: "MinIO SSE 501 → direct S3
+  write"; storage not provisioned locally). Does not affect API serving — all
+  DB-backed endpoints replied 200. Not flagged as BLOCK.
+- `WARN: Application error … VALIDATION_ERROR` on `/dental/appointments` and
+  `/dental/patients` — these are the **seed-coherence replay's own** initial
+  malformed probes (missing `branchId`/`date_from`); expected request-time
+  validation, not a server fault.
 
-`services/api-ts/src/core/config.ts` is **safe-by-default**: every env var has a
-sensible development fallback (`SERVER_PORT`→7213, `DATABASE_URL`→local postgres,
-`STORAGE_*`→minio defaults, `AUTH_SECRET`→random fallback). The service therefore
-boots with zero required env vars in dev.
-
-A **production hard-guard** exists (lines 252–276): when `NODE_ENV=production`,
-startup is *refused* (`throw`) if any of `AUTH_SECRET` (<32 chars), `INTERNAL_SERVICE_TOKEN`
-(<32 chars), `DATABASE_URL` (default localhost/password), `STORAGE_ACCESS_KEY_ID`
-(`minioadmin`), or `STORAGE_SECRET_ACCESS_KEY` (`minioadmin`) are weak/unset. This is
-a correct fail-closed posture — no insecure defaults can reach prod. **No boot blocker.**
-
-### Migration Drift
-
-- Journaled migrations: **76** entries in `_journal.json` (latest `0075_gifted_vector`).
-- SQL files on disk: **79**.
-- **3 orphan SQL files NOT in the journal:** `0059_gap003_treatment_plan_partial.sql`,
-  `0059a_gap003_treatment_plan_partial.sql`, `0067_ef_pmd_005_source_description.sql`.
-
-Migrations are applied by drizzle-orm's `migrate()` (`src/core/database.ts:212`), which
-is **journal-driven** — it only applies entries listed in `_journal.json`. The 3 orphan
-files are therefore inert (superseded hand-written SQL). Verified: the `source_description`
-column from orphan `0067_ef_pmd_005` was re-issued in the journaled `0069_kind_triton.sql`,
-so the live schema is intact. **Not a boot blocker** — file-hygiene clutter only (P2).
-
-### Runtime Targets
-
-`docs/product/PERFORMANCE.md` exists and CI enforces a **Performance Ratchet**
-(`services/api-ts/bun run tests/perf/run.ts`) on every push/PR. Runtime budgets are gated.
-
-**Boot-smoke verdict: PASS.**
+> The 503 readyz is storage-only and is the documented MinIO-absent condition.
+> It is recorded as an advisory, not a boot BLOCK; `database` and `jobs` checks
+> pass and every seeded surface returned 200 (see SEED_COHERENCE_REPORT.md).
 
 ---
 
-## JOB 2 — Release-Gate Readiness
+## JOB 2 — Web Boot-Smoke (apps/dentalemon)
 
-### CI Gate Inventory (`.github/workflows/`)
+**Command:** `cd apps/dentalemon && bun run dev` (Vite).
+**Port:** **3003** (per `vite.config.ts` `server.port: 3003` — note: the
+task's stated `:3001` is stale; the app's configured dev port is 3003).
+**Result: PASS.**
 
-| Gate | Present? | Where |
-|------|----------|-------|
-| Typecheck | ✅ | `quality.yml` (TypeScript job) + `postgres-services.yml` |
-| Lint | ✅ | `quality.yml` (Lint job) |
-| Unit tests (frontend) | ✅ | `quality.yml` (Unit Tests, `bun test --coverage`) |
-| Unit tests (API + coverage) | ✅ | `postgres-services.yml` (`test:coverage` w/ real Postgres) |
-| Production build | ✅ | `quality.yml` (Production Build, `bun run build`) |
-| Contract tests (Hurl) | ✅ | `contract.yml` (`test:contract` + fuzz/Schemathesis) |
-| Security audit (deps) | ✅ | `quality.yml` (`scripts/check-audit.sh`) + `bun audit` in `contract.yml` |
-| Migration safety lint | ✅ | `quality.yml` (`lint:migrations`) |
-| Duplicate operationId check | ✅ | `quality.yml` (`check:duplicate-ops`) |
-| BR traceability gate | ✅ | `quality.yml` (`audit:trace:ci`) |
-| OpenAPI drift detection | ✅ | `openapi-drift.yml` |
-| E2E (Playwright) | ✅ | `quality.yml` (E2E Tests, chromium) |
-| Journey harness | ✅ | `quality.yml` (Journey Harness w/ reseed) |
-| Performance ratchet | ✅ | `quality.yml` (Performance Ratchet) |
-| Release build | ✅ | `release.yml` (on `v*` tag → gh-release) |
+- `VITE v7.3.2 ready in 821 ms`, `Local: http://localhost:3003/`.
+- `GET /` → **200**, valid SPA shell (`<title>Dentalemon</title>`, `#root`
+  mount, `/@vite/client`, react-refresh hook, `/src/app.tsx` entry).
+- Client entry `GET /src/app.tsx` → **200**, transformed cleanly (valid ESM with
+  HMR wrapper). **Zero** `Transform failed` / `Failed to resolve` /
+  `Internal Server Error` / `Pre-transform error` markers in served HTML or
+  entry module.
+- Boot log: 0 error/transform-failure lines.
 
-**CI gate coverage: 15/15 expected gates PRESENT.** This is a strong, comprehensive
-pipeline — typecheck, lint, unit, contract, security, build, E2E, perf, and drift all gate `main`.
-
-Triggers: `quality.yml` runs on push-to-main + all PRs. `release.yml` runs on `v*` tags.
-
-### Migration Safety
-
-- **Forward path:** ✅ journal-driven, auto-applies pending migrations on server start;
-  `lint:migrations` gates migration safety in CI.
-- **Rollback story:** ❌ **No down/rollback migrations** present (drizzle-kit doesn't emit
-  them by default). Recovery in prod would be manual/restore-from-backup. P1 for a healthcare
-  product handling PHI.
-
-### Version Management
-
-- `VERSION` file: ✅ `0.2.0.0`
-- `CHANGELOG.md`: ✅ present, maintained (latest `[0.2.0.0] - 2026-05-18`, Keep-a-Changelog format)
-- Release script: ✅ `release.yml` on tag push (builds + `softprops/action-gh-release`)
-
-### Health Endpoint
-
-- `/livez` (liveness) and `/readyz` (readiness) implemented in `src/core/health.ts`.
-- **`/readyz` checks DB** (`checkDatabaseConnection`), **storage** (`storage.healthCheck()`),
-  and **background jobs** (`jobs.getHealth()`); returns 503 when any fail. RFC-compliant
-  `application/health+json` verbose mode + k8s-style plaintext. **Excellent — DB-aware readiness.**
+No page-crash, no console-error in the served boot output → web boot-smoke PASS
+(not SKIP).
 
 ---
 
-## Findings
+## JOB 3 — Runtime Test Plan (design-time)
 
-### P0 (boot/release blockers) — NONE
+`docs/execution/RUNTIME_TEST_PLAN.md` is **present and fresh** (newer than all
+inputs: PERFORMANCE.md, THREAT_MODEL.md, ROLE_PERMISSION_MATRIX.md, per-module
+API_CONTRACTS, CODE_ROUTE_MAP v5, CODE_COMPONENT_REGISTRY v5).
 
-### P1
-- **P1-1 — No migration rollback story.** Drizzle migrations are forward-only; no down
-  migrations or documented restore runbook. For a PHI-handling healthcare product, a failed
-  prod migration has no scripted recovery path. *Recommend: document a backup/restore runbook
-  and/or adopt reversible migration discipline.*
-
-### P2
-- **P2-1 — 3 orphan migration SQL files** not in `_journal.json`
-  (`0059_`, `0059a_gap003_treatment_plan_partial`, `0067_ef_pmd_005_source_description`).
-  Inert (drizzle is journal-driven; columns re-issued in journaled migrations) but should be
-  deleted to avoid confusion. *File hygiene.*
-- **P2-2 — Frontend has no production typecheck in its own `build`** beyond the standalone
-  `typecheck` job; CI covers it via `quality.yml` TypeScript job, so low risk.
+- Full **FE↔BE Cross-Layer Contract Walker** mode (registry version 5 ≥ 4):
+  every declared `api_call` per route must fire + 5 s infinite-skeleton ceiling.
+- Sections present: Test Coverage Summary, Load Test Scenarios (k6 templates),
+  Per-Module Performance Budgets, Security/DAST + OWASP checklist, Auth Matrix,
+  Accessibility (axe-core), Cross-Layer Walker, What's Next. All artifacts are
+  TEMPLATES with placeholders.
+- This run **refreshed the `runtime-live-status` header** to record the live
+  boot-smoke above (plan body unchanged — it was already current; design-time
+  template content not regenerated).
 
 ---
 
-## Overall Verdict: **PASS**
+## Verdicts
+| Tier | Verdict |
+|---|---|
+| API boot-smoke | **PASS** (clean boot; readyz storage 503 = known MinIO-absent advisory) |
+| Web boot-smoke | **PASS** (root 200, entry transforms clean, no console/transform errors) |
+| Runtime plan | **PRESENT & FRESH** (full-walker mode, v5 maps) |
+| **Overall RUNTIME** | **PASS** |
 
-Both API and frontend typecheck clean (0 errors). No hard boot blockers — config is
-safe-by-default with a fail-closed production secret guard. Release gates are comprehensive
-(15/15: typecheck, lint, unit, contract, security, build, E2E, perf, drift, traceability).
-Health endpoints are DB-aware. The sole non-trivial gap is the absence of a migration
-rollback/restore story (P1) — notable for a healthcare/PHI product but not a release blocker
-for the current demo-stage milestone.
+---
+
+## Artifacts
+- `docs/audits/RUNTIME_READINESS_REPORT.md` (this file)
+- `docs/audits/SEED_COHERENCE_REPORT.md` (companion — API replay)
+- `docs/execution/RUNTIME_TEST_PLAN.md` (live-status header refreshed)

@@ -7,9 +7,9 @@ based-on:
   - docs/product/modules/*/API_CONTRACTS.md
   - docs/audits/codebase-map/CODE_ROUTE_MAP.json (v5)
   - docs/audits/codebase-map/CODE_COMPONENT_REGISTRY.json (v5)
-last-modified: 2026-06-01T00:00:00Z
+last-modified: 2026-06-02T00:00:00Z
 last-modified-by: oli-runtime-plan
-runtime-live-status: "skipped — app not running on :7213 (GET /health http=000); static boot-smoke PASS (app.ts imports clean, governance routes wired). HEAD a3bfc9a5."
+runtime-live-status: "LIVE boot-smoke PASS (2026-06-02) — API (services/api-ts, :7213, bun src/index.ts) booted clean: '🚀 Server running on http://0.0.0.0:7213', 10 jobs scheduled, zero errors/fatals in startup log; GET /livez=200, GET /readyz=503 (storage/MinIO check fails — known infra quirk; database=pass, jobs=pass). WEB (apps/dentalemon, :3003, bun run dev) booted clean: 'VITE ready in 821ms', GET /=200 valid SPA shell, /src/app.tsx transforms 200 with no Vite transform/resolve errors. Plan content unchanged (design-time, fresh vs all inputs)."
 ---
 
 # Runtime Test Plan — Dentalemon
