@@ -3165,6 +3165,14 @@ export type DentalImagingModuleBatchUpsertLandmarksBody = {
     landmarks: Array<DentalImagingModuleCephLandmarkInput>;
 };
 
+export type DentalImagingModuleCbctViewerLinkResponse = {
+    viewerKind: 'download';
+    downloadUrl: string;
+    expiresAt: Date;
+    isVolume: boolean;
+    frameCount: number | null;
+};
+
 export type DentalImagingModuleCephAnalysis = {
     imageId: string;
     analysisType: string;
@@ -3311,6 +3319,7 @@ export type DentalImagingModuleCreateFindingBody = {
     visitId: string;
     patientId: string;
     branchId: string;
+    frameIndex?: number;
 };
 
 export type DentalImagingModuleCreateImagingStudyBody = {
@@ -3348,6 +3357,15 @@ export type DentalImagingModuleCreateMeasurementBody = {
     measurementUnit?: string;
 };
 
+export type DentalImagingModuleFinalizeCbctStudyBody = {
+    imageId: string;
+    dicomBase64: string;
+};
+
+export type DentalImagingModuleFinalizeCbctStudyResponse = {
+    image: DentalImagingModuleImagingStudyImage;
+};
+
 export type DentalImagingModuleImagingAnnotation = {
     id: string;
     imageId: string;
@@ -3376,6 +3394,7 @@ export type DentalImagingModuleImagingFinding = {
     toothNumber: number | null;
     surfaces: Array<string> | null;
     note: string | null;
+    frameIndex?: number | null;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -3412,6 +3431,12 @@ export type DentalImagingModuleImagingStudyImage = {
     modality: DentalImagingModuleModalityEnum;
     status: 'active' | 'archived';
     createdAt: Date;
+    isVolume?: boolean;
+    sliceThicknessMm?: number | null;
+    frameCount?: number | null;
+    seriesInstanceUid?: string | null;
+    studyInstanceUid?: string | null;
+    viewerKind?: 'image' | 'volume';
 };
 
 export type DentalImagingModuleImagingStudyWithImages = {
@@ -3450,6 +3475,9 @@ export type DentalImagingModulePatientImageItem = {
     toothNumbers: Array<number>;
     createdAt: Date;
     downloadUrl: string | null;
+    isVolume?: boolean;
+    frameCount?: number | null;
+    viewerKind?: 'image' | 'volume';
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
@@ -66774,6 +66802,42 @@ export type ImagingMgmtGetImagingStudyResponses = {
 };
 
 export type ImagingMgmtGetImagingStudyResponse = ImagingMgmtGetImagingStudyResponses[keyof ImagingMgmtGetImagingStudyResponses];
+
+export type ImagingMgmtFinalizeCbctStudyData = {
+    body: DentalImagingModuleFinalizeCbctStudyBody;
+    path: {
+        studyId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/studies/{studyId}/cbct/finalize';
+};
+
+export type ImagingMgmtFinalizeCbctStudyResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleFinalizeCbctStudyResponse | ErrorResponse;
+};
+
+export type ImagingMgmtFinalizeCbctStudyResponse = ImagingMgmtFinalizeCbctStudyResponses[keyof ImagingMgmtFinalizeCbctStudyResponses];
+
+export type ImagingMgmtGetCbctViewerLinkData = {
+    body?: never;
+    path: {
+        studyId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/studies/{studyId}/cbct/viewer-link';
+};
+
+export type ImagingMgmtGetCbctViewerLinkResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCbctViewerLinkResponse | ErrorResponse;
+};
+
+export type ImagingMgmtGetCbctViewerLinkResponse = ImagingMgmtGetCbctViewerLinkResponses[keyof ImagingMgmtGetCbctViewerLinkResponses];
 
 export type ListLegalHoldsData = {
     body?: never;

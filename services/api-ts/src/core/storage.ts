@@ -35,6 +35,31 @@ export interface StorageConfig {
   };
   uploadUrlExpiry: number;
   downloadUrlExpiry: number;
+  // P2-7: per-class upload size ceilings (bytes). Ordinary images stay at the
+  // default cap; `application/dicom` (CBCT volumes are 100 MB – multiple GB) gets
+  // a higher, env-configurable cap bounded by an absolute hard cap to limit abuse.
+  maxFileSizeBytes: number;
+  dicomMaxFileSizeBytes: number;
+  absoluteMaxFileSizeBytes: number;
+}
+
+/**
+ * P2-7: resolve the upload size ceiling for a given MIME type. `application/dicom`
+ * uses the higher CBCT cap; everything else uses the default image cap. The result
+ * is clamped to the absolute hard cap so a misconfigured env can never disable the
+ * abuse bound.
+ */
+export function maxUploadSizeForMime(config: StorageConfig, mimeType: string | undefined): number {
+  const cap = mimeType === 'application/dicom' ? config.dicomMaxFileSizeBytes : config.maxFileSizeBytes;
+  return Math.min(cap, config.absoluteMaxFileSizeBytes);
+}
+
+/** Human-readable byte size for error messages (e.g. "2 GB", "100 MB"). */
+export function formatByteCeiling(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+  const mb = bytes / (1024 * 1024);
+  return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
 }
 
 export interface StorageProvider {

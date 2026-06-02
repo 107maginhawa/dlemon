@@ -11,6 +11,8 @@ import {
 } from '@/core/errors';
 import { type FileUploadResponse, type NewStoredFile } from './repos/file.schema';
 import type { StorageProvider } from '@/core/storage';
+import { maxUploadSizeForMime, formatByteCeiling } from '@/core/storage';
+import type { Config } from '@/core/config';
 import { StorageFileRepository } from './repos/file.repo';
 import { addMinutes } from 'date-fns';
 
@@ -36,10 +38,14 @@ export async function uploadFile(
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new StorageFileRepository(db, logger);
   
-  // Check file size limit (100MB)
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
-  if (body.size > MAX_FILE_SIZE) {
-    throw new ValidationError('File size exceeds maximum limit of 100MB');
+  // P2-7: per-MIME size ceiling. Images stay at 100 MB; application/dicom (CBCT)
+  // gets the higher DICOM cap, clamped to the absolute hard cap.
+  const config = ctx.get('config') as Config | undefined;
+  const maxFileSize = config
+    ? maxUploadSizeForMime(config.storage, body.mimeType)
+    : 100 * 1024 * 1024;
+  if (body.size > maxFileSize) {
+    throw new ValidationError(`File size exceeds maximum limit of ${formatByteCeiling(maxFileSize)}`);
   }
   
   // Generate unique file ID

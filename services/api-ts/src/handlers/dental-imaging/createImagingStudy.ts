@@ -14,6 +14,8 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import type { StorageProvider } from '@/core/storage';
+import { maxUploadSizeForMime, formatByteCeiling } from '@/core/storage';
+import type { Config } from '@/core/config';
 import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
@@ -64,23 +66,50 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   // Branch-level authorization + role gate (CLINICAL_WRITE)
   await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
 
+  const requestedModality = (body.modality ?? 'other') as string;
+  const isDicom = body.mimeType === DICOM_MIME_TYPE;
+  // P2-7: CBCT is treated as a volume modality (3-D cone-beam). A DICOM upload
+  // tagged as cbct routes through the volume path on finalize.
+  const isCbct = requestedModality === 'cbct';
+
   // V-IMG-001 / AC-IMG-001 / BR-016c: cephalometric studies are addon-tier only.
-  // Gate at study create — not just on downstream ceph endpoints — so a free/basic
-  // org cannot create the ceph study record at all. Uses the same tier helper the
-  // ceph handlers use; throws the dedicated IMAGING_TIER_REQUIRED code (§9 upgrade UI).
-  if ((body.modality ?? 'other') === 'cephalometric') {
+  // P2-7 / AC: CBCT joins the same addon gate (cone-beam is a premium modality).
+  // Gate at study create — not just on downstream endpoints — so a free/basic
+  // org cannot create the record at all. Uses the same tier helper the ceph
+  // handlers use; throws the dedicated IMAGING_TIER_REQUIRED code (§9 upgrade UI).
+  if (requestedModality === 'cephalometric' || isCbct) {
     const logger = ctx.get('logger');
     const imagingTier = await getImagingTierForBranch(db, body.branchId);
     if (imagingTier !== 'addon') {
       logger?.warn(
-        { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'cephalometric_study_create', currentTier: imagingTier },
+        { event: 'dental-imaging.tier-blocked', userId: user.id, feature: `${requestedModality}_study_create`, currentTier: imagingTier },
         'Tier gate blocked access',
       );
       throw new ForbiddenError(
-        'Cephalometric imaging requires an imaging add-on. Upgrade your plan.',
+        isCbct
+          ? 'CBCT imaging requires an imaging add-on. Upgrade your plan.'
+          : 'Cephalometric imaging requires an imaging add-on. Upgrade your plan.',
         'IMAGING_TIER_REQUIRED',
       );
     }
+  }
+
+  // P2-7: per-class upload size ceiling. Images stay at 100 MB; application/dicom
+  // (CBCT volumes are 100 MB – several GB) gets the higher DICOM cap, clamped to the
+  // absolute hard cap. Reject oversized payloads BEFORE issuing any upload URL.
+  const config = ctx.get('config') as Config | undefined;
+  const maxFileSize = config
+    ? maxUploadSizeForMime(config.storage, body.mimeType)
+    : isDicom
+      ? 2 * 1024 * 1024 * 1024
+      : 100 * 1024 * 1024;
+  if (typeof body.size === 'number' && body.size > maxFileSize) {
+    // 422 (mirrors the UNSUPPORTED_MIME_TYPE gate in this handler — a semantic
+    // rejection of the payload, per plan §5 "> hard-cap → 422/validation").
+    throw new BusinessLogicError(
+      `File size exceeds maximum limit of ${formatByteCeiling(maxFileSize)}`,
+      'FILE_TOO_LARGE',
+    );
   }
 
   const storage = ctx.get('storage') as StorageProvider;
@@ -96,7 +125,6 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
 
   const fileId = uuidv4();
   const expiresAt = addMinutes(new Date(), 5);
-  const isDicom = body.mimeType === DICOM_MIME_TYPE;
 
   // P1-9: DICOM-tag calibration. When the client parsed a plausible PixelSpacing
   // from the DICOM (0028,0030) tag, persist it as the calibration value so mm

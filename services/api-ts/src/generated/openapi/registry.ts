@@ -254,6 +254,8 @@ import { ImagingMgmt_createImagingStudy } from '../../handlers/dental-imaging/Im
 import { ImagingMgmt_createMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_createMeasurement';
 import { ImagingMgmt_deleteImage } from '../../handlers/dental-imaging/ImagingMgmt_deleteImage';
 import { ImagingMgmt_deleteMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_deleteMeasurement';
+import { ImagingMgmt_finalizeCbctStudy } from '../../handlers/dental-imaging/ImagingMgmt_finalizeCbctStudy';
+import { ImagingMgmt_getCbctViewerLink } from '../../handlers/dental-imaging/ImagingMgmt_getCbctViewerLink';
 import { ImagingMgmt_getImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_getImagingStudy';
 import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/ImagingMgmt_listMeasurements';
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
@@ -627,6 +629,8 @@ export const registry = {
   ImagingMgmt_createMeasurement,
   ImagingMgmt_deleteImage,
   ImagingMgmt_deleteMeasurement,
+  ImagingMgmt_finalizeCbctStudy,
+  ImagingMgmt_getCbctViewerLink,
   ImagingMgmt_getImagingStudy,
   ImagingMgmt_listMeasurements,
   ImagingMgmt_updateImageCalibration,

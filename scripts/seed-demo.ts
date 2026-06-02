@@ -1302,6 +1302,45 @@ async function seed() {
     } else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
   }
 
+  // ── 8.5b CBCT volume (P2-7) — seed one cone-beam study so the volume card +
+  // finalize + viewer-link routes are actually exercised (avoid the ceph
+  // "untested because unseeded" gap). Routes through multipart + server-side
+  // DICOM parse via the synthetic fixture; finalize flips is_volume=true.
+  if (P[4]) {
+    try {
+      const { buildSyntheticDicom } = await import(
+        '../services/api-ts/src/handlers/dental-imaging/repos/dicom-fixture'
+      )
+      const dicomBytes = buildSyntheticDicom()
+      // 6 MB so it routes through the multipart envelope (DICOM > 5 MB threshold).
+      const cbctR = await post('/dental/imaging/studies', {
+        patientId: P[4].id, branchId: branch.id,
+        modality: 'cbct', filename: 'mendoza-carlos-cbct-volume.dcm',
+        mimeType: 'application/dicom', size: 6 * 1024 * 1024,
+      }, cookie)
+      if (cbctR.ok) {
+        const imageId: string | undefined = cbctR.data.image?.id ?? cbctR.data.imageId
+        // Write the DICOM bytes straight to the object store (same direct-PutObject
+        // approach as uploadDemoImage; the presigned multipart parts aren't needed
+        // for a local seed). The fileId IS the object key.
+        await seedS3.write(cbctR.data.fileId, dicomBytes.buffer as ArrayBuffer, { type: 'application/dicom' })
+        const finR = await post(`/dental/imaging/studies/${cbctR.data.study.id}/cbct/finalize`, {
+          imageId,
+          dicomBase64: Buffer.from(dicomBytes).toString('base64'),
+        }, cookie)
+        if (finR.ok) {
+          log(`  ✓ ${P[4].displayName}: CBCT volume (is_volume=${finR.data.image?.isVolume}, frames=${finR.data.image?.frameCount})`)
+        } else {
+          log(`  ⚠ ${P[4].displayName} CBCT finalize (${finR.status}): ${JSON.stringify(finR.data).slice(0, 100)}`)
+        }
+      } else {
+        log(`  ⚠ ${P[4].displayName} CBCT study (${cbctR.status}): ${JSON.stringify(cbctR.data).slice(0, 100)}`)
+      }
+    } catch (e: any) {
+      log(`  ⚠ CBCT seed skipped: ${String(e?.message).slice(0, 100)}`)
+    }
+  }
+
   // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
 
   // ── 9. Appointments ──────────────────────────────────────────────────────

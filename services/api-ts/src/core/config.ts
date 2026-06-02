@@ -200,6 +200,12 @@ export function parseConfig(): Config {
       },
       uploadUrlExpiry: parseIntValue(process.env['STORAGE_UPLOAD_URL_EXPIRY'] || '300', 300), // 5 minutes
       downloadUrlExpiry: parseIntValue(process.env['STORAGE_DOWNLOAD_URL_EXPIRY'] || '900', 900), // 15 minutes
+      // P2-7: per-class upload ceilings. Images stay at 100 MB; DICOM/CBCT gets a
+      // higher cap (default 2 GB) for cone-beam volumes. The absolute cap (default
+      // 8 GB) bounds abuse even if the DICOM cap is misconfigured upward.
+      maxFileSizeBytes: parseIntValue(process.env['STORAGE_MAX_FILE_SIZE_BYTES'], 100 * 1024 * 1024),
+      dicomMaxFileSizeBytes: parseIntValue(process.env['STORAGE_DICOM_MAX_FILE_SIZE_BYTES'], 2 * 1024 * 1024 * 1024),
+      absoluteMaxFileSizeBytes: parseIntValue(process.env['STORAGE_ABSOLUTE_MAX_FILE_SIZE_BYTES'], 8 * 1024 * 1024 * 1024),
     },
     
     // Email configuration

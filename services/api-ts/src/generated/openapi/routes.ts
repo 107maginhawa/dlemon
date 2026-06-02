@@ -1085,6 +1085,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingMgmt_getImagingStudy as unknown as Handler
   );
 
+  // ImagingMgmt_finalizeCbctStudy
+  app.post('/dental/imaging/studies/:studyId/cbct/finalize',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_finalizeCbctStudyParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_finalizeCbctStudyBody, validationErrorHandler),
+    registry.ImagingMgmt_finalizeCbctStudy as unknown as Handler
+  );
+
+  // ImagingMgmt_getCbctViewerLink
+  app.get('/dental/imaging/studies/:studyId/cbct/viewer-link',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_getCbctViewerLinkParams, validationErrorHandler),
+    registry.ImagingMgmt_getCbctViewerLink as unknown as Handler
+  );
+
   // placeLegalHold
   app.post('/dental/legal-holds',
     authMiddleware({ roles: ["user"] }),

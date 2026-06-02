@@ -8,6 +8,8 @@ import {
 } from '@/core/errors';
 import type { NewStoredFile } from './repos/file.schema';
 import type { StorageProvider } from '@/core/storage';
+import { maxUploadSizeForMime, formatByteCeiling } from '@/core/storage';
+import type { Config } from '@/core/config';
 import { StorageFileRepository } from './repos/file.repo';
 import type { InitiateMultipartUploadBody } from '@/generated/openapi/validators';
 
@@ -32,10 +34,14 @@ export async function initiateMultipartUpload(
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new StorageFileRepository(db, logger);
 
-  // 100MB cap
-  const MAX_FILE_SIZE = 100 * 1024 * 1024;
-  if (body.size > MAX_FILE_SIZE) {
-    throw new ValidationError('File size exceeds maximum limit of 100MB');
+  // P2-7: per-MIME size ceiling. Images stay at 100 MB; application/dicom (CBCT)
+  // gets the higher DICOM cap, clamped to the absolute hard cap.
+  const config = ctx.get('config') as Config | undefined;
+  const maxFileSize = config
+    ? maxUploadSizeForMime(config.storage, body.mimeType)
+    : 100 * 1024 * 1024;
+  if (body.size > maxFileSize) {
+    throw new ValidationError(`File size exceeds maximum limit of ${formatByteCeiling(maxFileSize)}`);
   }
 
   const user = ctx.get('user') as User;

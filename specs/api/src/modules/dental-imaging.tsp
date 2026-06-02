@@ -63,6 +63,15 @@ namespace DentalImagingModule {
     modality: ModalityEnum;
     status: "active" | "archived";
     createdAt: utcDateTime;
+    // P2-7 CBCT volume descriptor. is_volume marks a 3-D/multi-frame object so the
+    // frontend renders a volume card + viewer handoff, NEVER a flat <img>. viewerKind
+    // is the explicit discriminator ('volume' | 'image').
+    isVolume?: boolean;
+    sliceThicknessMm?: float64 | null;
+    frameCount?: int32 | null;
+    seriesInstanceUid?: string | null;
+    studyInstanceUid?: string | null;
+    viewerKind?: "image" | "volume";
   }
 
   model ImagingStudyWithImages extends ImagingStudy {
@@ -83,6 +92,11 @@ namespace DentalImagingModule {
     // Presigned GET URL for the image bytes (imaging source). null for legacy
     // attachments that have no object-store backing.
     downloadUrl: string | null;
+    // P2-7 CBCT: surfaced so the list can render the right affordance (volume card
+    // vs flat thumbnail) without a follow-up fetch.
+    isVolume?: boolean;
+    frameCount?: int32 | null;
+    viewerKind?: "image" | "volume";
   }
 
   model ListPatientImagesResponse {
@@ -137,6 +151,38 @@ namespace DentalImagingModule {
     modality: ModalityEnum;
   }
 
+  // =========================================================================
+  // P2-7 CBCT / 3-D imaging (Phase 1 = Option A1: ingest + store + link +
+  // download handoff). The CBCT upload itself reuses createImagingStudy's
+  // multipart envelope (modality='cbct' / mimeType='application/dicom').
+  // =========================================================================
+
+  // finalizeCbctStudy: called AFTER the storage multipart completeMultipartUpload.
+  // Triggers the server-side DICOM parse, populates the volume metadata columns,
+  // and sets is_volume=true. imageId identifies the image row created at study create.
+  model FinalizeCbctStudyBody {
+    imageId: string;
+    // Base64-encoded DICOM bytes for the server-side parse. The client already
+    // holds the bytes from the multipart upload; for large volumes a future phase
+    // may parse server-side from the object store, but A1 accepts them inline.
+    dicomBase64: string;
+  }
+
+  model FinalizeCbctStudyResponse {
+    image: ImagingStudyImage;
+  }
+
+  // getCbctViewerLink (A1): a presigned GET download of the DICOM object so the
+  // clinician opens it in their own DICOM viewer. viewerKind='download' in v1
+  // (Phase 2 will add a hosted-viewer 'deeplink').
+  model CbctViewerLinkResponse {
+    viewerKind: "download";
+    downloadUrl: string;
+    expiresAt: utcDateTime;
+    isVolume: boolean;
+    frameCount: int32 | null;
+  }
+
   model ImagingAnnotation {
     id: string;
     imageId: string;
@@ -186,6 +232,19 @@ namespace DentalImagingModule {
     @route("/images/{imageId}/modality")
     @useAuth(bearerAuth)
     updateImageModality(@path imageId: string, @body body: UpdateImageModalityBody): ImagingStudyImage | ErrorResponse;
+
+    // P2-7 CBCT finalize: server-side DICOM parse + populate volume metadata + set
+    // is_volume=true. Called after the storage multipart upload completes.
+    @post
+    @route("/studies/{studyId}/cbct/finalize")
+    @useAuth(bearerAuth)
+    finalizeCbctStudy(@path studyId: string, @body body: FinalizeCbctStudyBody): FinalizeCbctStudyResponse | ErrorResponse;
+
+    // P2-7 CBCT viewer handoff (A1): presigned GET download for an external DICOM viewer.
+    @get
+    @route("/studies/{studyId}/cbct/viewer-link")
+    @useAuth(bearerAuth)
+    getCbctViewerLink(@path studyId: string): CbctViewerLinkResponse | ErrorResponse;
 
     @patch
     @route("/images/{imageId}/calibration")
@@ -254,6 +313,9 @@ namespace DentalImagingModule {
     toothNumber: int32 | null;
     surfaces: string[] | null;
     note: string | null;
+    // P2-7 CBCT: the slice/frame index this finding was placed on (multi-frame
+    // volume). null for flat 2-D findings.
+    frameIndex?: int32 | null;
     createdAt: utcDateTime;
     updatedAt: utcDateTime;
   }
@@ -273,6 +335,8 @@ namespace DentalImagingModule {
     visitId: string;
     patientId: string;
     branchId: string;
+    // P2-7 CBCT: optional slice index for a finding placed on a volume frame.
+    frameIndex?: int32;
   }
 
   model UpdateFindingBody {

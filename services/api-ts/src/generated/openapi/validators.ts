@@ -1557,6 +1557,14 @@ export const DentalImagingModuleBatchUpsertLandmarksBodySchema = z.object({
   landmarks: z.array(DentalImagingModuleCephLandmarkInputSchema)
 });
 
+export const DentalImagingModuleCbctViewerLinkResponseSchema = z.object({
+  viewerKind: z.enum(["download"]),
+  downloadUrl: z.string(),
+  expiresAt: z.string().datetime().transform((str) => new Date(str)),
+  isVolume: z.boolean(),
+  frameCount: z.union([z.number().int(), z.null()])
+});
+
 export const DentalImagingModuleCephAnalysisSchema = z.object({
   imageId: z.string(),
   analysisType: z.string(),
@@ -1685,7 +1693,8 @@ export const DentalImagingModuleCreateFindingBodySchema = z.object({
   treatmentId: z.string().optional(),
   visitId: z.string(),
   patientId: z.string(),
-  branchId: z.string()
+  branchId: z.string(),
+  frameIndex: z.number().int().optional()
 });
 
 export const DentalImagingModuleModalityEnumSchema = z.enum(["periapical", "bitewing", "panoramic", "cephalometric", "cbct", "intraoral_photo", "extraoral_photo", "other"]);
@@ -1724,7 +1733,13 @@ export const DentalImagingModuleImagingStudyImageSchema = z.object({
   dicomMetadata: z.union([z.record(z.string(), z.unknown()), z.null()]),
   modality: DentalImagingModuleModalityEnumSchema,
   status: z.enum(["active", "archived"]),
-  createdAt: z.string().datetime().transform((str) => new Date(str))
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  isVolume: z.boolean().optional(),
+  sliceThicknessMm: z.union([z.number(), z.null()]).optional(),
+  frameCount: z.union([z.number().int(), z.null()]).optional(),
+  seriesInstanceUid: z.union([z.string(), z.null()]).optional(),
+  studyInstanceUid: z.union([z.string(), z.null()]).optional(),
+  viewerKind: z.enum(["image", "volume"]).optional()
 });
 
 export const DentalImagingModuleCreateImagingStudyResponseSchema = z.object({
@@ -1745,6 +1760,15 @@ export const DentalImagingModuleCreateMeasurementBodySchema = z.object({
   geometry: z.record(z.string(), z.unknown()),
   measurementValue: z.number().optional(),
   measurementUnit: z.string().optional()
+});
+
+export const DentalImagingModuleFinalizeCbctStudyBodySchema = z.object({
+  imageId: z.string(),
+  dicomBase64: z.string()
+});
+
+export const DentalImagingModuleFinalizeCbctStudyResponseSchema = z.object({
+  image: DentalImagingModuleImagingStudyImageSchema
 });
 
 export const DentalImagingModuleImagingAnnotationSchema = z.object({
@@ -1773,6 +1797,7 @@ export const DentalImagingModuleImagingFindingSchema = z.object({
   toothNumber: z.union([z.number().int(), z.null()]),
   surfaces: z.union([z.array(z.string()), z.null()]),
   note: z.union([z.string(), z.null()]),
+  frameIndex: z.union([z.number().int(), z.null()]).optional(),
   createdAt: z.string().datetime().transform((str) => new Date(str)),
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
@@ -1805,7 +1830,10 @@ export const DentalImagingModulePatientImageItemSchema = z.object({
   visitId: z.union([z.string(), z.null()]),
   toothNumbers: z.array(z.number().int()),
   createdAt: z.string().datetime().transform((str) => new Date(str)),
-  downloadUrl: z.union([z.string(), z.null()])
+  downloadUrl: z.union([z.string(), z.null()]),
+  isVolume: z.boolean().optional(),
+  frameCount: z.union([z.number().int(), z.null()]).optional(),
+  viewerKind: z.enum(["image", "volume"]).optional()
 });
 
 export const DentalImagingModuleListPatientImagesResponseSchema = z.object({
@@ -20515,6 +20543,23 @@ export const ImagingMgmt_getImagingStudyParams = z.object({
 export type ImagingMgmt_getImagingStudyParams = z.infer<typeof ImagingMgmt_getImagingStudyParams>;
 
 export const ImagingMgmt_getImagingStudyResponse = z.union([DentalImagingModuleImagingStudyWithImagesSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_finalizeCbctStudyParams = z.object({
+  studyId: z.string(),
+});
+export type ImagingMgmt_finalizeCbctStudyParams = z.infer<typeof ImagingMgmt_finalizeCbctStudyParams>;
+
+export const ImagingMgmt_finalizeCbctStudyBody = DentalImagingModuleFinalizeCbctStudyBodySchema;
+export type ImagingMgmt_finalizeCbctStudyBody = z.infer<typeof ImagingMgmt_finalizeCbctStudyBody>;
+
+export const ImagingMgmt_finalizeCbctStudyResponse = z.union([DentalImagingModuleFinalizeCbctStudyResponseSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_getCbctViewerLinkParams = z.object({
+  studyId: z.string(),
+});
+export type ImagingMgmt_getCbctViewerLinkParams = z.infer<typeof ImagingMgmt_getCbctViewerLinkParams>;
+
+export const ImagingMgmt_getCbctViewerLinkResponse = z.union([DentalImagingModuleCbctViewerLinkResponseSchema, ErrorResponseSchema]);
 
 export const PlaceLegalHoldBody = DentalLegalHoldModulePlaceLegalHoldRequestSchema;
 export type PlaceLegalHoldBody = z.infer<typeof PlaceLegalHoldBody>;

@@ -610,6 +610,13 @@
       "when": 1780413044355,
       "tag": "0086_serious_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1780416319214,
+      "tag": "0087_solid_colleen_wing",
+      "breakpoints": true
     }
   ]
 }

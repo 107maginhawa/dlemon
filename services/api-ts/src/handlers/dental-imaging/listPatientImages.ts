@@ -18,6 +18,7 @@ import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
+import { viewerKindFor, type ImagingViewerKind } from './repos/imaging.schema';
 import { getLegacyAttachmentImages, type LegacyAttachmentImage } from '@/handlers/dental-clinical/repos/clinical-imaging.facade';
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,10 @@ export interface PatientImageItem {
   toothNumbers: number[];
   createdAt: Date;
   downloadUrl: string | null;
+  // P2-7 CBCT: volume affordance discriminator (legacy/2-D = 'image').
+  isVolume: boolean;
+  frameCount: number | null;
+  viewerKind: ImagingViewerKind;
 }
 
 export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageItem {
@@ -58,6 +63,10 @@ export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageIte
     createdAt: att.createdAt,
     // Legacy attachments are stored by filePath, not object-store fileId — no presigned URL.
     downloadUrl: null,
+    // Legacy attachments are always flat 2-D rasters.
+    isVolume: false,
+    frameCount: null,
+    viewerKind: 'image',
   };
 }
 
@@ -101,6 +110,7 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   const imagingItems: PatientImageItem[] = await Promise.all(
     imagingRows.map(async (row) => {
       const meta = row.dicomMetadata as { fileName?: string; mimeType?: string } | null;
+      const isVolume = row.isVolume === true;
       return {
         id: row.id,
         source: 'imaging' as const,
@@ -113,6 +123,11 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
         toothNumbers: [],
         createdAt: row.createdAt,
         downloadUrl: await downloadUrlFor(row.fileId),
+        // P2-7 CBCT: surface the volume affordance so the list renders a volume card
+        // (never a flat thumbnail) for CBCT / multi-frame objects.
+        isVolume,
+        frameCount: row.frameCount ?? null,
+        viewerKind: viewerKindFor({ isVolume, modality: row.modality }),
       };
     }),
   );

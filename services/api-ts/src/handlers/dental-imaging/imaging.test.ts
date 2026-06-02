@@ -783,6 +783,60 @@ describe('P1-9 DICOM ingest', () => {
 });
 
 // ---------------------------------------------------------------------------
+// P2-7 size ceiling — per-class cap (images 100 MB, DICOM higher, hard cap).
+// Tests rely on createImagingStudy's no-config fallback (DICOM 2 GB / image 100 MB).
+// ---------------------------------------------------------------------------
+
+describe('P2-7 per-class upload size ceiling', () => {
+  test('DICOM above 100 MB but within the DICOM cap is accepted', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom',
+        size: 500 * 1024 * 1024, // 500 MB ≤ 2 GB DICOM cap
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('MULTIPART');
+  });
+
+  test('DICOM above the absolute hard cap → 422 validation error', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom',
+        size: 3 * 1024 * 1024 * 1024, // 3 GB > 2 GB fallback DICOM cap
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  test('non-DICOM image above 100 MB is still rejected', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID,
+        filename: 'huge.tiff', mimeType: 'image/tiff',
+        size: 200 * 1024 * 1024, // 200 MB > 100 MB image cap
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BR-026 delete roles - hygienist forbidden
 // @BR-026 Only dentists and admins may delete images; hygienists get 403
 // @BR-028 Soft delete only (deletion sets status='archived', no hard delete)

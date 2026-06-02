@@ -88,6 +88,9 @@ export const imagingFindings = pgTable(
     toothNumber: integer('tooth_number'),
     surfaces: jsonb('surfaces').$type<string[]>(),
     note: text('note'),
+    // P2-7 CBCT: the slice/frame index a finding was placed on (multi-frame volume),
+    // so a CBCT finding is reproducible. Nullable — flat 2-D findings leave it null.
+    frameIndex: integer('frame_index'),
   },
   (table) => ({
     imageStatusIdx: index('imaging_finding_image_status_idx').on(table.imageId, table.status),

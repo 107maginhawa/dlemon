@@ -89,6 +89,12 @@ export class ImagingRepository {
         dicomMetadata: imagingStudyImages.dicomMetadata,
         modality: imagingStudyImages.modality,
         status: imagingStudyImages.status,
+        // P2-7 CBCT volume descriptor columns
+        isVolume: imagingStudyImages.isVolume,
+        sliceThicknessMm: imagingStudyImages.sliceThicknessMm,
+        frameCount: imagingStudyImages.frameCount,
+        seriesInstanceUid: imagingStudyImages.seriesInstanceUid,
+        studyInstanceUid: imagingStudyImages.studyInstanceUid,
         createdAt: imagingStudyImages.createdAt,
         updatedAt: imagingStudyImages.updatedAt,
         version: imagingStudyImages.version,
@@ -121,6 +127,42 @@ export class ImagingRepository {
       .update(imagingStudyImages)
       .set({ status: 'archived', updatedAt: new Date() })
       .where(eq(imagingStudyImages.id, id));
+  }
+
+  /**
+   * P2-7: persist CBCT volume metadata parsed from DICOM tags + flip is_volume.
+   * Single update so finalize is atomic (no half-written volume state).
+   */
+  async updateVolumeMetadata(
+    id: string,
+    data: {
+      isVolume: boolean;
+      pixelSpacingMm: number | null;
+      sliceThicknessMm: number | null;
+      frameCount: number | null;
+      seriesInstanceUid: string | null;
+      studyInstanceUid: string | null;
+      modality?: string;
+      dicomMetadata: NewImagingStudyImage['dicomMetadata'];
+    },
+  ): Promise<ImagingStudyImage> {
+    const [updated] = await this.db
+      .update(imagingStudyImages)
+      .set({
+        isVolume: data.isVolume,
+        pixelSpacingMm: data.pixelSpacingMm,
+        sliceThicknessMm: data.sliceThicknessMm,
+        frameCount: data.frameCount,
+        seriesInstanceUid: data.seriesInstanceUid,
+        studyInstanceUid: data.studyInstanceUid,
+        ...(data.modality ? { modality: data.modality as any } : {}),
+        dicomMetadata: data.dicomMetadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(imagingStudyImages.id, id))
+      .returning();
+    if (!updated) throw new Error(`Image ${id} not found`);
+    return updated;
   }
 
   async updateModality(id: string, modality: string): Promise<ImagingStudyImage> {
