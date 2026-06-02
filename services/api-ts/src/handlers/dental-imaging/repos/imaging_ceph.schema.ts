@@ -55,6 +55,14 @@ export const cephCalibrationMethodEnum = pgEnum('ceph_calibration_method', [
   'not_calibrated', // TypeSpec enum value; TypeSpec reserved 'unknown' → renamed
 ]);
 
+// P1-11 superimposition reference frame. v1 persists only 'cranial_base';
+// maxillary/mandibular are reserved for v2 (handler rejects them).
+export const cephSuperimpositionReferenceEnum = pgEnum('ceph_superimposition_reference', [
+  'cranial_base',
+  'maxillary',
+  'mandibular',
+]);
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -133,6 +141,45 @@ export const imagingCephReports = pgTable(
   }),
 );
 
+// P1-11 Cephalometric superimposition (v1: cranial-base S–N two-point similarity).
+//
+// CLINICAL HONESTY: this is a SIMPLIFIED, reproducible alignment artifact, NOT
+// ABO-grade structural superimposition. It references two IMMUTABLE report
+// snapshots so it is itself effectively immutable per (pair, reference);
+// recompute mints a NEW row rather than mutating (mirrors D-I append-only).
+export const imagingCephSuperimpositions = pgTable(
+  'imaging_ceph_superimposition',
+  {
+    ...baseEntityFields,
+    patientId: uuid('patient_id').notNull(),
+    reportFromId: uuid('report_from_id')
+      .notNull()
+      .references(() => imagingCephReports.id),
+    reportToId: uuid('report_to_id')
+      .notNull()
+      .references(() => imagingCephReports.id),
+    referenceType: cephSuperimpositionReferenceEnum('reference_type')
+      .notNull()
+      .default('cranial_base'),
+    // similarity transform {scale, rotationRad, tx, ty, basis[]} mapping B→A image-space
+    transform: jsonb('transform').notNull().$type<Record<string, unknown>>(),
+    // per-landmark mm/px + per-metric Δ (denormalized math output for audit/report)
+    deltas: jsonb('deltas').notNull().$type<Record<string, unknown>>().default({}),
+    // the two calibration provenances used → mm validity is traceable (D-J)
+    calibrationBasis: jsonb('calibration_basis')
+      .notNull()
+      .$type<Record<string, unknown>>()
+      .default({}),
+  },
+  (table) => ({
+    patientIdx: index('imaging_ceph_superimposition_patient_idx').on(table.patientId),
+    pairIdx: index('imaging_ceph_superimposition_pair_idx').on(
+      table.reportFromId,
+      table.reportToId,
+    ),
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // State machines + constants
 // ---------------------------------------------------------------------------
@@ -162,3 +209,5 @@ export type ImagingCephAnalysis = typeof imagingCephAnalyses.$inferSelect;
 export type NewImagingCephAnalysis = typeof imagingCephAnalyses.$inferInsert;
 export type ImagingCephReport = typeof imagingCephReports.$inferSelect;
 export type NewImagingCephReport = typeof imagingCephReports.$inferInsert;
+export type ImagingCephSuperimposition = typeof imagingCephSuperimpositions.$inferSelect;
+export type NewImagingCephSuperimposition = typeof imagingCephSuperimpositions.$inferInsert;

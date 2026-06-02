@@ -343,6 +343,86 @@ jsonpath "$.snapshot.branch_name" == "{{snapshot_branch_name}}"
 
 
 # ============================================================
+# CEPH SUPERIMPOSITION (P1-11, v1 cranial-base S–N only)
+# ============================================================
+# Self-pair (from == to) → identity registration, all deltas ~0. Exercises the
+# full path + v1 honesty label + the v1 reference gate without a 2nd timepoint.
+
+# 17a. Non-cranial_base reference rejected in v1 → 422
+POST {{api}}/dental/imaging/ceph/superimpositions/preview
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "reportFromId": "{{report_id}}",
+  "reportToId": "{{report_id}}",
+  "reference": "maxillary"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "SUPERIMPOSITION_NOT_IMPLEMENTED"
+
+
+# 17b. Preview (compute-on-the-fly) → 200, id null, v1 label, identity transform
+POST {{api}}/dental/imaging/ceph/superimpositions/preview
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "reportFromId": "{{report_id}}",
+  "reportToId": "{{report_id}}",
+  "reference": "cranial_base"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == null
+jsonpath "$.reference" == "cranial_base"
+jsonpath "$.transform.basis" count == 2
+jsonpath "$.label" contains "simplified superimposition"
+jsonpath "$.label" contains "not a diagnosis"
+
+
+# 17c. Create (persist) → 201 with id + createdAt
+POST {{api}}/dental/imaging/ceph/superimpositions
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "reportFromId": "{{report_id}}",
+  "reportToId": "{{report_id}}",
+  "reference": "cranial_base"
+}
+HTTP 201
+[Captures]
+superimposition_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.id" isString
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.reference" == "cranial_base"
+jsonpath "$.createdAt" isString
+
+
+# 17d. Get persisted superimposition by id → 200
+GET {{api}}/dental/imaging/ceph/superimpositions/{{superimposition_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{superimposition_id}}"
+jsonpath "$.reference" == "cranial_base"
+jsonpath "$.label" contains "simplified superimposition"
+
+
+# 17e. List patient superimpositions → 200, includes the created one
+GET {{api}}/dental/imaging/patients/{{patient_id}}/ceph/superimpositions
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count >= 1
+
+
+# 17f. Superimposition auth check (no cookie) → 401
+GET {{api}}/dental/imaging/patients/{{patient_id}}/ceph/superimpositions
+HTTP 401
+
+
+# ============================================================
 # IMAGING STUDY — GET BY ID
 # ============================================================
 
