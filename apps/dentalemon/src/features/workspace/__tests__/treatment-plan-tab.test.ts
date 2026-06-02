@@ -117,4 +117,40 @@ describe('TreatmentPlanTab', () => {
     renderTab(() => Promise.resolve(new Response('error', { status: 500 })));
     await waitFor(() => expect(screen.getByTestId('treatment-plan-error')).not.toBeNull());
   });
+
+  // ── P1-18: clinical phase grouping ────────────────────────────────────────
+
+  const URGENT_ITEM: TreatmentPlanItem = {
+    ...DIAGNOSED_ITEM, id: 'urgent-1', cdtCode: 'D9110', description: 'Palliative pain relief',
+    phase: 'systemic', priority: 0,
+  };
+  const CONTROL_ITEM: TreatmentPlanItem = {
+    ...DIAGNOSED_ITEM, id: 'control-1', cdtCode: 'D2391', description: 'Caries control filling',
+    phase: 'disease_control', priority: 1,
+  };
+  const DEFINITIVE_ITEM: TreatmentPlanItem = {
+    ...PLANNED_ITEM, id: 'def-1', cdtCode: 'D2740', description: 'Crown',
+    phase: 'definitive', priority: 0,
+  };
+
+  test('P1-18: groups by clinical phase when items carry a phase', async () => {
+    renderTab(() => jsonResponse({
+      ...PLAN_RESPONSE,
+      treatments: [URGENT_ITEM, CONTROL_ITEM, DEFINITIVE_ITEM],
+      treatmentCount: 3,
+    }));
+    await waitFor(() => expect(screen.getByTestId('group-phase-systemic')).not.toBeNull());
+    expect(screen.getByTestId('group-phase-disease_control')).not.toBeNull();
+    expect(screen.getByTestId('group-phase-definitive')).not.toBeNull();
+    // status-grouped sections must NOT render in phase mode
+    expect(screen.queryByTestId('group-diagnosed')).toBeNull();
+    expect(screen.queryByTestId('group-planned')).toBeNull();
+    expect(screen.getByText(/Phase 1 · Systemic/i)).not.toBeNull();
+  });
+
+  test('P1-18: falls back to status grouping when no phases set', async () => {
+    renderTab(() => jsonResponse(PLAN_RESPONSE));
+    await waitFor(() => expect(screen.getByTestId('group-diagnosed')).not.toBeNull());
+    expect(screen.queryByTestId('group-phase-systemic')).toBeNull();
+  });
 });

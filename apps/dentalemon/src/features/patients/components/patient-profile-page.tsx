@@ -14,6 +14,7 @@ import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { FollowUpNotes } from './follow-up-notes';
+import { HouseholdCard } from './household-card';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,9 @@ function OverviewTab({ patientId }: { patientId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Household / guarantor — P1-27 */}
+      <HouseholdCard patientId={patientId} />
+
       {/* Recent Visits — PROF-02 */}
       <div
         data-testid="visit-history-section"

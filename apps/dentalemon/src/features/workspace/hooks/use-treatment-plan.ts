@@ -9,6 +9,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiBaseUrl } from '@/lib/config';
 
+/** P1-18: clinical sequencing phase (industry-standard 5-phase model). */
+export type TreatmentPhase =
+  | 'systemic'
+  | 'disease_control'
+  | 're_evaluation'
+  | 'definitive'
+  | 'maintenance';
+
 export interface TreatmentPlanItem {
   id: string;
   toothNumber: number | null;
@@ -20,6 +28,10 @@ export interface TreatmentPlanItem {
   conditionCode: string | null;
   visitId: string;
   carriedOver: boolean;
+  /** P1-18: clinical phase (null = unphased) */
+  phase?: TreatmentPhase | null;
+  /** P1-18: intra-phase ordering */
+  priority?: number;
   reason?: string;
 }
 

@@ -401,6 +401,147 @@ namespace DentalPatientFinanceModule {
   }
 
   // ==========================================================================
+  // 1d — HOUSEHOLD / GUARANTOR (P1-27 family file)
+  // ==========================================================================
+
+  @doc("A household member: a patient + their relationship to the guarantor")
+  model HouseholdMember extends BaseEntity {
+    @doc("Household this membership belongs to")
+    householdId: UUID;
+
+    @doc("The patient in the household")
+    patientId: UUID;
+
+    @doc("Relationship to the guarantor (self/spouse/child/dependent/…)")
+    relationship: string;
+
+    @doc("True for the household's guarantor member")
+    isGuarantor: boolean;
+  }
+
+  @doc("A household (family file) for shared billing under one guarantor")
+  model Household extends BaseEntity {
+    @doc("Branch the household is scoped to")
+    branchId: UUID;
+
+    @doc("Family / household display name")
+    name: string;
+
+    @doc("The guarantor patient (financially responsible party)")
+    guarantorPatientId: UUID;
+
+    @doc("Free-text notes")
+    notes: string | null;
+  }
+
+  @doc("A household plus its members")
+  model HouseholdWithMembers {
+    @doc("The household")
+    household: Household;
+
+    @doc("The household's members (guarantor first)")
+    members: HouseholdMember[];
+  }
+
+  @doc("Body to create a household (the guarantor becomes its first member)")
+  model CreateHouseholdRequest {
+    @doc("Branch the household is scoped to")
+    branchId: UUID;
+
+    @doc("Family / household display name")
+    @minLength(1)
+    name: string;
+
+    @doc("The guarantor patient — financially responsible party")
+    guarantorPatientId: UUID;
+
+    @doc("Optional free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to add a patient to a household")
+  model AddHouseholdMemberRequest {
+    @doc("The patient to add")
+    patientId: UUID;
+
+    @doc("Relationship to the guarantor (default 'dependent')")
+    relationship?: string;
+  }
+
+  @doc("Household / guarantor management (P1-27)")
+  interface HouseholdManagement {
+    @doc("Create a household with a guarantor")
+    @operationId("createHousehold")
+    @post
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createHousehold(@body body: CreateHouseholdRequest):
+      | ApiCreatedResponse<HouseholdWithMembers>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Get a household with its members")
+    @operationId("getHousehold")
+    @get
+    @route("/{householdId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getHousehold(@path householdId: UUID):
+      | ApiOkResponse<HouseholdWithMembers>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Add a patient to a household")
+    @operationId("addHouseholdMember")
+    @post
+    @route("/{householdId}/members")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    addHouseholdMember(@path householdId: UUID, @body body: AddHouseholdMemberRequest):
+      | ApiCreatedResponse<HouseholdMember>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Remove a patient from a household (the guarantor cannot be removed)")
+    @operationId("removeHouseholdMember")
+    @delete
+    @route("/{householdId}/members/{patientId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    removeHouseholdMember(@path householdId: UUID, @path patientId: UUID):
+      | ApiOkResponse<HouseholdMember>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  @doc("Patient → household lookup (P1-27)")
+  interface PatientHouseholdManagement {
+    @doc("Get the household a patient belongs to (404 if none)")
+    @operationId("getPatientHousehold")
+    @get
+    @route("/{patientId}/household")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getPatientHousehold(@path patientId: UUID):
+      | ApiOkResponse<HouseholdWithMembers>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
   // 2 — SYNC LOGS (base /dental/sync-logs)
   // ==========================================================================
 

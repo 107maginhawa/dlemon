@@ -367,4 +367,72 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
     })) as PatientWithPerson[];
   }
 
+  /**
+   * P2-16: duplicate-patient detection. Scans the active patients in a branch and
+   * clusters likely duplicates by a normalized match key:
+   *   - "strong"  — same lower(firstName)+lower(lastName)+dateOfBirth, OR same
+   *                 name + a shared phone/email (a DOB-less but contact-confirmed dup)
+   *   - "name"    — same lower(firstName)+lower(lastName) but DOB differs/missing
+   * Returns one group per cluster of 2+ patients for staff to review/merge. Merge
+   * itself already exists (patient/mergePatients.ts) — this only surfaces candidates.
+   */
+  async findDuplicateCandidates(branchId: string): Promise<
+    Array<{
+      matchType: 'strong' | 'name';
+      matchKey: string;
+      patients: PatientWithPerson[];
+    }>
+  > {
+    const rows = await this.db
+      .select({ patient: patients, person: persons })
+      .from(patients)
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .where(and(eq(patients.preferredBranchId, branchId), eq(patients.status, 'active')));
+
+    const records = rows.map(({ patient, person }) => ({ ...patient, person })) as PatientWithPerson[];
+
+    const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
+    const nameKey = (p: PatientWithPerson) => `${norm(p.person.firstName)}|${norm(p.person.lastName)}`;
+    const contactValues = (p: PatientWithPerson): string[] => {
+      const c = p.person.contactInfo as { email?: string; phone?: string } | null | undefined;
+      return [norm(c?.email), norm(c?.phone)].filter((v) => v.length > 0);
+    };
+
+    // Cluster by strong key (name + DOB) and by name-only key.
+    const strong = new Map<string, PatientWithPerson[]>();
+    const byName = new Map<string, PatientWithPerson[]>();
+    for (const r of records) {
+      byName.set(nameKey(r), [...(byName.get(nameKey(r)) ?? []), r]);
+      if (r.person.dateOfBirth) {
+        const k = `${nameKey(r)}|${r.person.dateOfBirth}`;
+        strong.set(k, [...(strong.get(k) ?? []), r]);
+      }
+    }
+
+    const groups: Array<{ matchType: 'strong' | 'name'; matchKey: string; patients: PatientWithPerson[] }> = [];
+    const claimed = new Set<string>();
+
+    // Strong groups first (name + DOB).
+    for (const [key, members] of strong) {
+      if (members.length < 2) continue;
+      members.forEach((m) => claimed.add(m.id));
+      groups.push({ matchType: 'strong', matchKey: key, patients: members });
+    }
+
+    // Name-only groups: same name, plus either a shared contact (→ strong) or
+    // simply not already claimed by a strong DOB group.
+    for (const [key, members] of byName) {
+      const unclaimed = members.filter((m) => !claimed.has(m.id));
+      if (unclaimed.length < 2) continue;
+      // Promote to "strong" if any two share a contact value.
+      const contactCounts = new Map<string, number>();
+      for (const m of unclaimed) for (const v of contactValues(m)) contactCounts.set(v, (contactCounts.get(v) ?? 0) + 1);
+      const sharesContact = [...contactCounts.values()].some((n) => n >= 2);
+      unclaimed.forEach((m) => claimed.add(m.id));
+      groups.push({ matchType: sharesContact ? 'strong' : 'name', matchKey: key, patients: unclaimed });
+    }
+
+    return groups;
+  }
+
 }

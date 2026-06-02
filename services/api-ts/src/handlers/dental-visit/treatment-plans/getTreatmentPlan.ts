@@ -11,7 +11,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalTreatments } from '../repos/treatment.schema';
+import { dentalTreatments, TREATMENT_PHASE_ORDER, type DentalTreatmentPhase } from '../repos/treatment.schema';
 import { dentalVisits } from '../repos/visit.schema';
 import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
 import { eq, and, inArray, desc } from 'drizzle-orm';
@@ -64,6 +64,19 @@ export async function getTreatmentPlan(ctx: BaseContext) {
 
   const totalEstimateCents = pendingTreatments.reduce((sum, t) => sum + t.priceCents, 0);
 
+  // P1-18: sort by clinical phase order, then intra-phase priority, then insertion.
+  // Unphased items sort last (rank 99). This drives the proposed-care sequence the
+  // plan UI renders ("stabilise before crown").
+  const phaseRank = (p: DentalTreatmentPhase | null): number =>
+    p ? TREATMENT_PHASE_ORDER[p] : 99;
+  pendingTreatments.sort((a, b) => {
+    const pa = phaseRank(a.phase as DentalTreatmentPhase | null);
+    const pb = phaseRank(b.phase as DentalTreatmentPhase | null);
+    if (pa !== pb) return pa - pb;
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
+
   // Group by tooth
   const byTooth: Record<string | number, any[]> = {};
   for (const t of pendingTreatments) {
@@ -78,6 +91,8 @@ export async function getTreatmentPlan(ctx: BaseContext) {
       status: t.status,
       conditionCode: t.conditionCode,
       visitId: t.visitId,
+      phase: t.phase,
+      priority: t.priority,
       reason: t.refusalReason ?? undefined,
     });
   }
@@ -102,6 +117,8 @@ export async function getTreatmentPlan(ctx: BaseContext) {
       conditionCode: t.conditionCode,
       visitId: t.visitId,
       carriedOver: t.carriedOver,
+      phase: t.phase,
+      priority: t.priority,
       reason: t.refusalReason ?? undefined,
     })),
   }, 200);

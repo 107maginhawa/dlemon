@@ -68,6 +68,9 @@ export async function createDentalTreatment(
     priceCents: body.priceCents,
     carriedOver: false,
     clinicalNotes: body.clinicalNotes,
+    // P1-18: clinical sequencing phase + intra-phase ordering.
+    phase: body.phase,
+    priority: body.priority ?? 0,
     // GAP-001: persist optional client-generated id for offline-first idempotent sync.
     localId: body.localId,
   });

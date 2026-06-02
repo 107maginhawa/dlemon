@@ -19,6 +19,44 @@ export const dentalTreatmentStatusEnum = pgEnum('dental_treatment_status', [
   'declined',
 ]);
 
+/**
+ * P1-18: explicit clinical sequencing phases (industry-standard 5-phase model:
+ * Dentrix / Open Dental / Curve). A treatment plan should be delivered in
+ * clinical order — stabilise first, then control disease, re-evaluate, deliver
+ * definitive care, then maintain. The phase groups + orders plan items so a
+ * clinician can communicate "stabilise before crown".
+ *   systemic        — systemic / urgent (pain, infection, trauma)
+ *   disease_control — caries control, perio control, extractions
+ *   re_evaluation   — explicit holding step to assess response
+ *   definitive      — definitive restorative / prosthetic / ortho
+ *   maintenance     — recall, hygiene, continuing care
+ */
+export const dentalTreatmentPhaseEnum = pgEnum('dental_treatment_phase', [
+  'systemic',
+  'disease_control',
+  're_evaluation',
+  'definitive',
+  'maintenance',
+]);
+
+export const VALID_TREATMENT_PHASES = [
+  'systemic',
+  'disease_control',
+  're_evaluation',
+  'definitive',
+  'maintenance',
+] as const;
+export type DentalTreatmentPhase = typeof VALID_TREATMENT_PHASES[number];
+
+/** Canonical clinical order of the phases (drives default sequencing). */
+export const TREATMENT_PHASE_ORDER: Record<DentalTreatmentPhase, number> = {
+  systemic: 0,
+  disease_control: 1,
+  re_evaluation: 2,
+  definitive: 3,
+  maintenance: 4,
+};
+
 export const dentalTreatments = pgTable('dental_treatment', {
   ...baseEntityFields,
   ...syncableEntityFields,
@@ -64,6 +102,17 @@ export const dentalTreatments = pgTable('dental_treatment', {
   optionGroupId: uuid('option_group_id'),
   /** P1-19: marks the clinician-recommended option within its group. */
   recommended: boolean('recommended').notNull().default(false),
+  /**
+   * P1-18: clinical sequencing phase. NULL = unphased (treated as the lowest
+   * priority bucket in the UI). Drives the phase grouping on the treatment plan.
+   */
+  phase: dentalTreatmentPhaseEnum('phase'),
+  /**
+   * P1-18: intra-phase ordering. Lower = scheduled sooner. Defaults to 0; the
+   * plan sorts by (phase order, priority, insertion) so a clinician can hand-rank
+   * items within a phase to drive schedule order.
+   */
+  priority: integer('priority').notNull().default(0),
 }, (table) => ({
   visitIdx: index('dental_treatment_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_treatment_patient_id_idx').on(table.patientId),
