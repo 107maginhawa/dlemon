@@ -24,6 +24,7 @@ import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { TreatmentTable } from '@/features/workspace/components/treatment-table';
 import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
+import { PerioChartOverlay } from '@/features/workspace/components/perio/perio-chart-overlay';
 import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
 import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
@@ -67,6 +68,7 @@ function WorkspacePage() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [imagingOpen, setImagingOpen] = useState(false);
   const [recallsOpen, setRecallsOpen] = useState(false);
+  const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
@@ -246,6 +248,18 @@ function WorkspacePage() {
           className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
         >
           Imaging
+        </button>
+
+        {/* P0-1: Perio tab trigger — per-visit, disabled without an active visit */}
+        <button
+          type="button"
+          data-testid="perio-tab-btn"
+          onClick={() => setPerioOpen(true)}
+          disabled={currentVisitId === null}
+          title={currentVisitId === null ? 'Select a visit to chart perio' : 'Periodontal chart'}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+        >
+          Perio
         </button>
 
         {/* B3: Recalls tab trigger */}
@@ -467,6 +481,16 @@ function WorkspacePage() {
           patientId={patientId}
           open={attachmentsOpen}
           onClose={() => setAttachmentsOpen(false)}
+        />
+      )}
+
+      {/* P0-1: Perio chart overlay */}
+      {currentVisitId && (
+        <PerioChartOverlay
+          patientId={patientId}
+          visitId={currentVisitId}
+          open={perioOpen}
+          onClose={() => setPerioOpen(false)}
         />
       )}
 
