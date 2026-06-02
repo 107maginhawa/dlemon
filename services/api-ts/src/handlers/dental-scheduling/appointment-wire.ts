@@ -36,6 +36,7 @@ export interface AppointmentWire {
   operatoryId: string | null;
   walkIn: boolean;
   status: string;
+  confirmedAt: Date | string | null;
   checkInTime: Date | string | null;
   visitId: string | null;
   notes: string | null;
@@ -78,6 +79,7 @@ export function toWire<T extends Partial<DentalAppointment> & { patientName?: st
     operatoryId: (row.operatoryId as string) ?? null,
     walkIn: (row.walkIn as boolean) ?? false,
     status: row.status as string,
+    confirmedAt: (row.confirmedAt as Date) ?? null,
     checkInTime: (row.checkInTime as Date) ?? null,
     visitId: (row.visitId as string) ?? null,
     notes: (row.notes as string) ?? null,

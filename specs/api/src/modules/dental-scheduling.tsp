@@ -26,6 +26,7 @@ using TypeSpec.OpenAPI;
 
 enum AppointmentStatus {
   scheduled,
+  confirmed,
   checked_in,
   completed,
   cancelled,
@@ -78,6 +79,7 @@ model DentalAppointment {
   operatoryId?: UUID;
   walkIn: boolean;
   status: AppointmentStatus;
+  confirmedAt?: utcDateTime;
   checkInTime?: utcDateTime;
   visitId?: UUID;
   notes?: string;

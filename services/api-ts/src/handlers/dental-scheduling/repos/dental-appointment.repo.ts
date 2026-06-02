@@ -59,7 +59,26 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
   }
 
   /**
+   * Confirm an appointment: records the patient acknowledged they will attend.
+   * Guard: only a `scheduled` appointment can be confirmed.
+   */
+  async confirm(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
+    const [updated] = await this.db
+      .update(dentalAppointments)
+      .set({
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
+      })
+      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'scheduled')))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
    * Check in an appointment: sets status to checkedIn and records checkInTime.
+   * Guard: a scheduled OR confirmed appointment can be checked in.
    */
   async checkIn(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -70,14 +89,17 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         updatedAt: new Date(),
         ...(updatedBy ? { updatedBy } : {}),
       })
-      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'scheduled')))
+      .where(and(
+        eq(dentalAppointments.id, id),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'confirmed')),
+      ))
       .returning();
     return updated ?? null;
   }
 
   /**
    * Cancel an appointment: sets status to cancelled and records cancelledAt + optional reason.
-   * Guard: only scheduled or checkedIn appointments can be cancelled.
+   * Guard: only scheduled, confirmed or checkedIn appointments can be cancelled.
    */
   async cancel(id: string, reason?: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -91,7 +113,11 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
+        or(
+          eq(dentalAppointments.status, 'scheduled'),
+          eq(dentalAppointments.status, 'confirmed'),
+          eq(dentalAppointments.status, 'checked_in'),
+        ),
       ))
       .returning();
     return updated ?? null;
@@ -99,7 +125,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
 
   /**
    * Mark an appointment as no-show.
-   * Guard: only scheduled or checkedIn appointments can be marked as no-show.
+   * Guard: only scheduled, confirmed or checkedIn appointments can be marked as no-show.
    */
   async markNoShow(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -112,7 +138,11 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
+        or(
+          eq(dentalAppointments.status, 'scheduled'),
+          eq(dentalAppointments.status, 'confirmed'),
+          eq(dentalAppointments.status, 'checked_in'),
+        ),
       ))
       .returning();
     return updated ?? null;
@@ -160,6 +190,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       sql`${dentalAppointments.scheduledAt} + (${dentalAppointments.durationMinutes} * interval '1 minute') > ${startTime.toISOString()}::timestamptz`,
       or(
         eq(dentalAppointments.status, 'scheduled'),
+        eq(dentalAppointments.status, 'confirmed'),
         eq(dentalAppointments.status, 'checked_in'),
       )!,
     ];

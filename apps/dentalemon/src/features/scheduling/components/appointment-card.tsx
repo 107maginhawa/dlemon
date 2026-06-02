@@ -25,6 +25,8 @@ export function getStatusBadgeProps(status: string): { label: string; className:
   switch (status) {
     case 'scheduled':
       return { label: 'Scheduled', className: 'bg-blue-100 text-blue-700' };
+    case 'confirmed':
+      return { label: 'Confirmed', className: 'bg-teal-100 text-teal-700' };
     case 'checked_in':
       return { label: 'Checked In', className: 'bg-green-100 text-green-700' };
     case 'completed':
@@ -39,6 +41,10 @@ export function getStatusBadgeProps(status: string): { label: string; className:
 }
 
 export function canCheckIn(status: string): boolean {
+  return status === 'scheduled' || status === 'confirmed';
+}
+
+export function canConfirm(status: string): boolean {
   return status === 'scheduled';
 }
 
@@ -61,16 +67,20 @@ interface AppointmentCardProps {
   appointment: Appointment;
   onClick?: (appointment: Appointment) => void;
   onCheckIn?: (appointmentId: string) => void;
+  onConfirm?: (appointmentId: string) => void;
   compact?: boolean;
 }
 
-export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, compact }: AppointmentCardProps) {
   const badge = getStatusBadgeProps(appointment.status);
   const time = formatTime(appointment.scheduledAt);
-  const isScheduled = canCheckIn(appointment.status);
+  const checkInAllowed = canCheckIn(appointment.status);
+  const confirmAllowed = canConfirm(appointment.status);
 
   const statusStyles: Record<string, string> = {
     scheduled: 'border-l-blue-500 bg-blue-50/60',
+    confirmed: 'border-l-teal-500 bg-teal-50/60',
+    checked_in: 'border-l-green-500 bg-green-50/60',
     checkedIn: 'border-l-green-500 bg-green-50/60',
     completed: 'border-l-gray-400 bg-gray-50/40',
     cancelled: 'border-l-gray-300 bg-gray-50/30 opacity-60',
@@ -109,19 +119,34 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, compact }: Ap
       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-1 ${badge.className}`}>
         {badge.label}
       </span>
-      {isScheduled && onCheckIn && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCheckIn(appointment.id);
-          }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FFE97D] text-[#4A4018] text-[11px] font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-          aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
-        >
-          Check In
-        </button>
-      )}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {confirmAllowed && onConfirm && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirm(appointment.id);
+            }}
+            className="bg-secondary text-foreground text-[11px] font-semibold px-2.5 py-1 rounded-md border border-border hover:bg-background transition-colors"
+            aria-label={`Confirm ${appointment.patientName ?? truncateId(appointment.patientId)}`}
+          >
+            Confirm
+          </button>
+        )}
+        {checkInAllowed && onCheckIn && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCheckIn(appointment.id);
+            }}
+            className="bg-[#FFE97D] text-[#4A4018] text-[11px] font-semibold px-2.5 py-1 rounded-md"
+            aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
+          >
+            Check In
+          </button>
+        )}
+      </div>
     </div>
   );
 }

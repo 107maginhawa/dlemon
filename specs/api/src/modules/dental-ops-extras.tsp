@@ -5,6 +5,7 @@ import "../common/models.tsp";
 import "../common/errors.tsp";
 import "../common/pagination.tsp";
 import "../common/security.tsp";
+import "./dental-scheduling.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;
@@ -224,6 +225,168 @@ namespace DentalQueueModule {
       @body body: UpdateQueueItemStatusRequest,
     ):
       | ApiOkResponse<QueueItem>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+}
+
+/**
+ * Dental Scheduling Waitlist Module (P2-15 — ASAP fill)
+ *
+ * A waitlist entry records a patient who wants an earlier / short-notice slot
+ * at a branch. When a cancellation opens a slot, an `active` entry is promoted —
+ * which books an appointment for the supplied window and marks the entry
+ * `scheduled`. Lifecycle: active → scheduled | cancelled (both terminal).
+ *
+ * RBAC is branch-membership based and enforced in-handler; routes emit via
+ * three interfaces in main.tsp (distinct @route bases). Operations carry only
+ * relative sub-routes.
+ *
+ * Handlers: handlers/dental-scheduling/{createWaitlistEntry,listWaitlist,promoteWaitlistEntry}.ts
+ */
+namespace DentalWaitlistModule {
+  @doc("Lifecycle status of a waitlist entry")
+  enum WaitlistEntryStatus {
+    @doc("Waiting to be filled")
+    active: "active",
+
+    @doc("Promoted into a booked appointment (terminal)")
+    scheduled: "scheduled",
+
+    @doc("Removed from the waitlist (terminal)")
+    cancelled: "cancelled",
+  }
+
+  @doc("How urgently the patient wants an earlier slot")
+  enum WaitlistUrgency {
+    routine: "routine",
+    soon: "soon",
+    asap: "asap",
+  }
+
+  @doc("A scheduling waitlist entry for short-notice / ASAP fill")
+  model WaitlistEntry extends BaseEntity {
+    @doc("Patient waiting for an earlier slot")
+    patientId: UUID;
+
+    @doc("Branch this waitlist belongs to")
+    branchId: UUID;
+
+    @doc("Preferred provider (null = any provider)")
+    preferredProviderId: UUID | null;
+
+    @doc("Preferred visit type (checkup/treatment/emergency/recall), if any")
+    visitType: string | null;
+
+    @doc("Urgency of the request")
+    urgency: WaitlistUrgency;
+
+    @doc("Current lifecycle status")
+    status: WaitlistEntryStatus;
+
+    @doc("Optional free-text note")
+    notes: string | null;
+
+    @doc("Appointment booked when this entry was promoted (null until promoted)")
+    promotedAppointmentId: UUID | null;
+
+    @doc("When the entry was promoted into an appointment (ISO 8601 UTC)")
+    scheduledAt: utcDateTime | null;
+
+    @doc("When the entry was cancelled (ISO 8601 UTC)")
+    cancelledAt: utcDateTime | null;
+  }
+
+  @doc("Body to add a patient to the waitlist")
+  model CreateWaitlistEntryRequest {
+    patientId: UUID;
+    preferredProviderId?: UUID;
+    visitType?: string;
+    urgency?: WaitlistUrgency;
+
+    @maxLength(500)
+    notes?: string;
+  }
+
+  @doc("Body to promote a waitlist entry into a booked appointment")
+  model PromoteWaitlistEntryRequest {
+    @doc("Slot start (ISO 8601 UTC)")
+    startAt: utcDateTime;
+
+    @doc("Slot end (ISO 8601 UTC) — must be after startAt")
+    endAt: utcDateTime;
+
+    @doc("Provider to book (defaults to the entry's preferredProviderId; required if none)")
+    providerId?: UUID;
+
+    @doc("Visit type override (defaults to the entry's stored visitType)")
+    visitType?: string;
+
+    @doc("Operatory to assign, if any")
+    operatoryId?: UUID;
+  }
+
+  @doc("Result of promoting a waitlist entry")
+  model PromoteWaitlistEntryResponse {
+    entry: WaitlistEntry;
+    appointment: DentalAppointment;
+  }
+
+  @doc("Add a patient to a branch's waitlist")
+  interface WaitlistEntryCreation {
+    @doc("Create a waitlist entry (status defaults to 'active')")
+    @operationId("createWaitlistEntry")
+    @post
+    @route("/{branchId}/waitlist")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createWaitlistEntry(
+      @path branchId: UUID,
+      @body body: CreateWaitlistEntryRequest,
+    ):
+      | ApiCreatedResponse<WaitlistEntry>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  @doc("List a branch's waitlist entries")
+  interface WaitlistListing {
+    @doc("List waitlist entries for a branch (defaults to active entries)")
+    @operationId("listWaitlist")
+    @get
+    @route("/{branchId}/waitlist")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listWaitlist(
+      @path branchId: UUID,
+      @query status?: WaitlistEntryStatus,
+    ):
+      | ApiOkResponse<WaitlistEntry[]>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ErrorResponse;
+  }
+
+  @doc("Promote a waitlist entry into a booked appointment")
+  interface WaitlistPromotion {
+    @doc("Fill a short-notice slot from the waitlist (active entries only)")
+    @operationId("promoteWaitlistEntry")
+    @post
+    @route("/{entryId}/promote")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    promoteWaitlistEntry(
+      @path entryId: UUID,
+      @body body: PromoteWaitlistEntryRequest,
+    ):
+      | ApiCreatedResponse<PromoteWaitlistEntryResponse>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
