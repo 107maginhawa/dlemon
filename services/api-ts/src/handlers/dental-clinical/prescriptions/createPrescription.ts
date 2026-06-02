@@ -88,6 +88,11 @@ export async function createPrescription(
     quantity: body.quantity,
     instructions: body.instructions,
     dispenseAsWritten: body.dispenseAsWritten ?? false,
+    // P2-13: US-context legal Rx fields (record-only). Optional + additive;
+    // `controlledSubstanceSchedule` defaults to 'none' when omitted.
+    controlledSubstanceSchedule: body.controlledSubstanceSchedule ?? 'none',
+    prescriberDea: body.prescriberDea,
+    prescriberNpi: body.prescriberNpi,
   });
 
   ctx.get('logger')?.info(

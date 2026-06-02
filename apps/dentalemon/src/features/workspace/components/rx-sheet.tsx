@@ -24,6 +24,18 @@ const FREQUENCY_OPTIONS = [
   'Stat (immediately)',
 ] as const;
 
+/** P2-13: DEA controlled-substance schedule (21 CFR 1308). `none` is the
+ *  default for non-controlled drugs (incl. the ₱/PH flow). Record-only. */
+const SCHEDULE_OPTIONS = [
+  { value: 'none', label: 'None (not controlled)' },
+  { value: 'II', label: 'Schedule II' },
+  { value: 'III', label: 'Schedule III' },
+  { value: 'IV', label: 'Schedule IV' },
+  { value: 'V', label: 'Schedule V' },
+] as const;
+
+type ControlledSubstanceSchedule = (typeof SCHEDULE_OPTIONS)[number]['value'];
+
 /** Narrow local type for the subset of the response that carries warnings.
  *  The generated Prescription type omits `warnings` because it is not yet in
  *  the OpenAPI spec — we read it via an intersection cast so we do not touch
@@ -63,6 +75,10 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
   const [quantity, setQuantity] = useState('');
   const [instructions, setInstructions] = useState('');
   const [dispenseAsWritten, setDispenseAsWritten] = useState(false);
+  // P2-13: US-context legal Rx fields (record-only). Optional + additive.
+  const [controlledSubstanceSchedule, setControlledSubstanceSchedule] = useState<ControlledSubstanceSchedule>('none');
+  const [prescriberDea, setPrescriberDea] = useState('');
+  const [prescriberNpi, setPrescriberNpi] = useState('');
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   /** Non-empty when the server flagged allergy conflicts; clinician must acknowledge. */
@@ -100,6 +116,11 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           quantity: quantity.trim() || undefined,
           instructions: instructions.trim() || undefined,
           dispenseAsWritten,
+          // P2-13: only send schedule when controlled; DEA/NPI when provided.
+          controlledSubstanceSchedule:
+            controlledSubstanceSchedule !== 'none' ? controlledSubstanceSchedule : undefined,
+          prescriberDea: prescriberDea.trim() || undefined,
+          prescriberNpi: prescriberNpi.trim() || undefined,
         } as Parameters<typeof createPrescription>[0]['body'],
       });
 
@@ -364,6 +385,64 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
             />
             <span className="text-sm">Dispense as written (no substitution)</span>
           </label>
+
+          {/* P2-13 — Legal fields (US-context, optional). Hidden from the
+              non-controlled PH flow until needed; kept compact + optional. */}
+          <fieldset className="mt-1 rounded-xl border border-border p-3 flex flex-col gap-3">
+            <legend className="px-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Legal (US, optional)
+            </legend>
+
+            {/* Controlled-substance schedule */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="rx-cs-schedule">
+                Controlled-Substance Schedule
+              </label>
+              <select
+                id="rx-cs-schedule"
+                value={controlledSubstanceSchedule}
+                onChange={e => setControlledSubstanceSchedule(e.target.value as ControlledSubstanceSchedule)}
+                aria-label="Controlled-substance schedule"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              >
+                {SCHEDULE_OPTIONS.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* DEA + NPI side by side */}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="rx-dea">
+                  Prescriber DEA
+                </label>
+                <input
+                  id="rx-dea"
+                  type="text"
+                  value={prescriberDea}
+                  onChange={e => setPrescriberDea(e.target.value)}
+                  placeholder="e.g. AB1234567"
+                  aria-label="Prescriber DEA number"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="rx-npi">
+                  Prescriber NPI
+                </label>
+                <input
+                  id="rx-npi"
+                  type="text"
+                  value={prescriberNpi}
+                  onChange={e => setPrescriberNpi(e.target.value)}
+                  placeholder="10-digit NPI"
+                  aria-label="Prescriber NPI"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                />
+              </div>
+            </div>
+          </fieldset>
         </div>
 
         {/* Footer */}

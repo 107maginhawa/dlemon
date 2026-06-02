@@ -68,6 +68,11 @@ export async function updatePrescription(
     duration: body.duration,
     quantity: body.quantity,
     instructions: body.instructions,
+    // P2-13: US-context legal Rx fields (record-only). undefined values are
+    // skipped by Drizzle .set(), so omitted fields keep their stored value.
+    controlledSubstanceSchedule: body.controlledSubstanceSchedule,
+    prescriberDea: body.prescriberDea,
+    prescriberNpi: body.prescriberNpi,
   });
   return ctx.json(updated);
 }

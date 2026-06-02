@@ -50,6 +50,20 @@ enum MedicalHistoryEntryType {
   family_history,
 }
 
+/**
+ * DEA controlled-substance schedule for a prescription.
+ * `none` is the default for non-controlled drugs. II–V follow the US DEA
+ * classification (21 CFR 1308). Additive/optional — does not affect the
+ * non-controlled ₱/PH prescribing flow.
+ */
+enum ControlledSubstanceSchedule {
+  none,
+  ii: "II",
+  iii: "III",
+  iv: "IV",
+  v: "V",
+}
+
 // ---------------------------------------------------------------------------
 // Models — Prescription
 // ---------------------------------------------------------------------------
@@ -70,6 +84,7 @@ enum MedicalHistoryEntryType {
   quantity: "21 capsules",
   instructions: "Take with food. Complete the full course.",
   dispenseAsWritten: true,
+  controlledSubstanceSchedule: ControlledSubstanceSchedule.none,
 }, #{ title: "Amoxicillin prescription post-extraction" })
 model Prescription {
   id: UUID;
@@ -87,6 +102,17 @@ model Prescription {
   quantity?: string;
   instructions?: string;
   dispenseAsWritten: boolean;
+
+  /**
+   * P2-13: US-context legal Rx fields (record-only; EPCS/Surescripts
+   * transmission is out of scope). All optional + additive so the ₱/PH
+   * non-controlled flow is unaffected.
+   */
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  /** Prescriber DEA registration number (controlled substances). */
+  prescriberDea?: string;
+  /** Prescriber National Provider Identifier (10-digit NPI). */
+  prescriberNpi?: string;
 }
 
 model CreatePrescriptionRequest {
@@ -101,6 +127,11 @@ model CreatePrescriptionRequest {
   quantity?: string;
   instructions?: string;
   dispenseAsWritten?: boolean;
+
+  // P2-13 legal fields (optional, US-context)
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  prescriberDea?: string;
+  prescriberNpi?: string;
 }
 
 model UpdatePrescriptionRequest {
@@ -111,6 +142,11 @@ model UpdatePrescriptionRequest {
   duration?: string;
   quantity?: string;
   instructions?: string;
+
+  // P2-13 legal fields (optional, US-context)
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  prescriberDea?: string;
+  prescriberNpi?: string;
 }
 
 // ---------------------------------------------------------------------------

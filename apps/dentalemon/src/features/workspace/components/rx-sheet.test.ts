@@ -170,6 +170,66 @@ describe('RxSheet — shipped component', () => {
     }
   });
 
+  // ── P2-13: legal fields (US-context, optional) ─────────────────────────────
+
+  test('renders the optional legal fields (schedule, DEA, NPI)', async () => {
+    const f = installFetch();
+    try {
+      renderSheet();
+      expect(screen.getByLabelText('Controlled-substance schedule')).not.toBeNull();
+      expect(screen.getByLabelText('Prescriber DEA number')).not.toBeNull();
+      expect(screen.getByLabelText('Prescriber NPI')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('omits legal fields from the POST body when left at defaults', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderSheet();
+      await fillAndSave(user);
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
+      );
+      const post = f.calls.find(c => c.url.includes('/prescriptions'))!;
+      const body = post.body as Record<string, unknown>;
+      // schedule 'none' is not transmitted; DEA/NPI blank → undefined (dropped)
+      expect(body['controlledSubstanceSchedule']).toBeUndefined();
+      expect(body['prescriberDea']).toBeUndefined();
+      expect(body['prescriberNpi']).toBeUndefined();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('sends the legal fields when the clinician fills them in', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderSheet();
+      await user.type(screen.getByLabelText('Drug name'), 'Codeine');
+      await user.type(screen.getByLabelText('Dosage'), '30mg');
+      await user.selectOptions(screen.getByLabelText('Frequency selection'), 'PRN (as needed)');
+      await user.selectOptions(screen.getByLabelText('Controlled-substance schedule'), 'III');
+      await user.type(screen.getByLabelText('Prescriber DEA number'), 'AB1234567');
+      await user.type(screen.getByLabelText('Prescriber NPI'), '1234567893');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
+      );
+      const post = f.calls.find(c => c.url.includes('/prescriptions'))!;
+      const body = post.body as Record<string, unknown>;
+      expect(body['controlledSubstanceSchedule']).toBe('III');
+      expect(body['prescriberDea']).toBe('AB1234567');
+      expect(body['prescriberNpi']).toBe('1234567893');
+    } finally {
+      f.restore();
+    }
+  });
+
   test('does not show allergy banner when response has no warnings field', async () => {
     const user = userEvent.setup();
     const onSaved = mock(() => {});
