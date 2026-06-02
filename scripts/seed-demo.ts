@@ -1302,6 +1302,8 @@ async function seed() {
     } else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
   }
 
+  // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
+
   // ── 9. Appointments ──────────────────────────────────────────────────────
   section('9. Appointments')
 
@@ -1418,7 +1420,7 @@ async function seed() {
   console.log('║  App:   http://localhost:3003                        ║')
   console.log('╠══════════════════════════════════════════════════════╣')
   console.log('║  Coverage:                                           ║')
-  console.log('║  • 10 patients, ~40 visits, full clinical data       ║')
+  console.log('║  • 20 patients, full clinical data                   ║')
   console.log('║  • Treatment Breakdown: visible on EVERY patient     ║')
   console.log('║  • Treatment Plan: P3/P4/P5 (planned/carried)        ║')
   console.log('║  • Carry-over: P3 (Elena) + P5 (Ana)                 ║')
@@ -1430,6 +1432,7 @@ async function seed() {
   console.log('║  • Medical history, recall, follow-up, NPS reviews   ║')
   console.log('║  • Guardian: Elena Garcia (P3) → Rosario Garcia      ║')
   console.log('║  • Sync log: demo pending row (GAP-007)               ║')
+  console.log('║  • Longitudinal multi-visit: see seed-supplement.ts  ║')
   console.log('╚══════════════════════════════════════════════════════╝\n')
 }
 
