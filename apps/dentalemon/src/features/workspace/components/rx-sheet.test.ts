@@ -3,8 +3,13 @@
  *
  * Renders the SHIPPED RxSheet and exercises its real validation + submit wiring
  * (drug/dosage/frequency required → error banner; valid save → createPrescription
- * POST with the entered fields). Replaces the prior version, which asserted a
- * re-declared copy of the validation/payload logic and never mounted the component.
+ * POST with the entered fields).
+ *
+ * QW-1/P1-1: allergy conflict surfacing
+ * When the server returns warnings.allergyConflicts, the sheet must:
+ *   a) render a visible allergy warning banner listing the allergens, and
+ *   b) gate the final close/save on an explicit acknowledgment — the sheet
+ *      must NOT call onSaved/onClose until the clinician confirms.
  */
 
 import { describe, test, expect, afterEach, mock } from 'bun:test';
@@ -13,7 +18,8 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { RxSheet } from './rx-sheet';
 
-function installFetch() {
+/** Build a global.fetch stub returning the given response JSON at status 201. */
+function installFetch(responseBody: Record<string, unknown> = {}) {
   const calls: Array<{ url: string; method: string; body: unknown }> = [];
   const original = global.fetch;
   global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
@@ -28,6 +34,7 @@ function installFetch() {
         drugName: 'Amoxicillin',
         createdAt: '2024-01-10T09:00:00Z',
         updatedAt: '2024-01-10T09:00:00Z',
+        ...responseBody,
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } },
     );
@@ -50,6 +57,17 @@ function renderSheet(overrides: Partial<{ onSaved: () => void; onClose: () => vo
   );
 }
 
+/** Fill in the minimum required fields and click Save. */
+async function fillAndSave(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('Drug name'), 'Amoxicillin');
+  await user.type(screen.getByLabelText('Dosage'), '500mg');
+  await user.selectOptions(
+    screen.getByLabelText('Frequency selection'),
+    'TID (three times daily)',
+  );
+  await user.click(screen.getByRole('button', { name: /save prescription/i }));
+}
+
 describe('RxSheet — shipped component', () => {
   test('blocks submit and shows required-field errors when fields are empty', async () => {
     const user = userEvent.setup();
@@ -68,21 +86,14 @@ describe('RxSheet — shipped component', () => {
     }
   });
 
-  test('submits createPrescription with the entered fields when valid', async () => {
+  test('submits createPrescription with the entered fields when valid (no allergy conflicts)', async () => {
     const user = userEvent.setup();
     const onSaved = mock(() => {});
     const onClose = mock(() => {});
-    const f = installFetch();
+    const f = installFetch(); // no warnings in response
     try {
       renderSheet({ onSaved, onClose });
-
-      await user.type(screen.getByLabelText('Drug name'), 'Amoxicillin');
-      await user.type(screen.getByLabelText('Dosage'), '500mg');
-      await user.selectOptions(
-        screen.getByLabelText('Frequency selection'),
-        'TID (three times daily)',
-      );
-      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+      await fillAndSave(user);
 
       await waitFor(() =>
         expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
@@ -91,8 +102,85 @@ describe('RxSheet — shipped component', () => {
       expect((post.body as { drugName: string }).drugName).toBe('Amoxicillin');
       expect((post.body as { dosage: string }).dosage).toBe('500mg');
       expect((post.body as { frequency: string }).frequency).toBe('TID (three times daily)');
+      // No allergy warning → sheet closes immediately.
       await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
       expect(onClose.mock.calls.length).toBe(1);
+    } finally {
+      f.restore();
+    }
+  });
+
+  // ── QW-1/P1-1: allergy conflict ────────────────────────────────────────────
+
+  test('shows allergy conflict warning banner when server returns allergyConflicts', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const onClose = mock(() => {});
+    const f = installFetch({ warnings: { allergyConflicts: ['Penicillin'] } });
+    try {
+      renderSheet({ onSaved, onClose });
+      await fillAndSave(user);
+
+      // Banner must appear listing the conflicting allergen.
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).not.toBeNull(),
+      );
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toContain('Penicillin');
+
+      // Sheet must NOT have closed yet — acknowledgment required.
+      expect(onSaved.mock.calls.length).toBe(0);
+      expect(onClose.mock.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('allows completion only after the clinician acknowledges the allergy conflict', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const onClose = mock(() => {});
+    const f = installFetch({ warnings: { allergyConflicts: ['Penicillin', 'Amoxicillin'] } });
+    try {
+      renderSheet({ onSaved, onClose });
+      await fillAndSave(user);
+
+      // Wait for the warning to appear.
+      await waitFor(() => expect(screen.getByRole('alert')).not.toBeNull());
+
+      // Both allergens must be listed.
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toContain('Penicillin');
+      expect(alert.textContent).toContain('Amoxicillin');
+
+      // An acknowledgment button must be present.
+      const ackBtn = screen.getByRole('button', { name: /acknowledge.*prescribe|prescribe anyway/i });
+      expect(ackBtn).not.toBeNull();
+
+      // Sheet still not closed before acknowledgment.
+      expect(onSaved.mock.calls.length).toBe(0);
+      expect(onClose.mock.calls.length).toBe(0);
+
+      // Clinician acknowledges → sheet closes.
+      await user.click(ackBtn);
+      await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
+      expect(onClose.mock.calls.length).toBe(1);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('does not show allergy banner when response has no warnings field', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const f = installFetch(); // response has no `warnings`
+    try {
+      renderSheet({ onSaved });
+      await fillAndSave(user);
+
+      await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
+      // No allergy alert should be in the DOM.
+      expect(screen.queryByRole('alert')).toBeNull();
     } finally {
       f.restore();
     }

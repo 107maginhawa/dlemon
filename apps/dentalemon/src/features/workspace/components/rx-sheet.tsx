@@ -4,6 +4,10 @@
  * Fields: Drug name, RxNorm code (optional), Dosage, Frequency,
  *         Duration, Quantity, Instructions, Dispense as written
  *
+ * QW-1/P1-1: when the server returns warnings.allergyConflicts the sheet
+ * shows a prominent alert banner and requires an explicit clinician
+ * acknowledgment before calling onSaved/onClose.
+ *
  * Wireframe: docs/prd/context/wireframes/ws-rx-sheet.html
  */
 
@@ -18,6 +22,16 @@ const FREQUENCY_OPTIONS = [
   'PRN (as needed)',
   'Stat (immediately)',
 ] as const;
+
+/** Narrow local type for the subset of the response that carries warnings.
+ *  The generated Prescription type omits `warnings` because it is not yet in
+ *  the OpenAPI spec — we read it via an intersection cast so we do not touch
+ *  any generated file. */
+type PrescriptionWithWarnings = {
+  warnings?: {
+    allergyConflicts?: string[];
+  };
+};
 
 export interface RxSheetProps {
   visitId: string;
@@ -39,6 +53,8 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
   const [dispenseAsWritten, setDispenseAsWritten] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  /** Non-empty when the server flagged allergy conflicts; clinician must acknowledge. */
+  const [allergyConflicts, setAllergyConflicts] = useState<string[]>([]);
 
   if (!open) return null;
 
@@ -56,7 +72,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
     setErrors([]);
     setSaving(true);
     try {
-      await createPrescription({
+      const result = await createPrescription({
         path: { visitId },
         body: {
           visitId,
@@ -72,11 +88,28 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           dispenseAsWritten,
         } as Parameters<typeof createPrescription>[0]['body'],
       });
+
+      // QW-1/P1-1: surface drug-allergy conflicts returned by the server.
+      // The generated type omits `warnings`; we cast narrowly to read it.
+      const data = result.data as unknown as PrescriptionWithWarnings | undefined;
+      const conflicts = data?.warnings?.allergyConflicts ?? [];
+      if (conflicts.length > 0) {
+        // Prescription was saved — hold the sheet open and require acknowledgment.
+        setAllergyConflicts(conflicts);
+        return;
+      }
+
       onSaved?.();
       onClose();
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleAcknowledge() {
+    setAllergyConflicts([]);
+    onSaved?.();
+    onClose();
   }
 
   return (
@@ -119,6 +152,31 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           {errors.length > 0 && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               {errors.map(e => <p key={e}>{e}</p>)}
+            </div>
+          )}
+
+          {/* QW-1/P1-1 — Allergy conflict warning banner */}
+          {allergyConflicts.length > 0 && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded-lg bg-amber-50 border-2 border-amber-400 px-4 py-3 flex flex-col gap-2"
+            >
+              <p className="text-sm font-semibold text-amber-900">
+                Allergy conflict: {allergyConflicts.join(', ')}
+              </p>
+              <p className="text-xs text-amber-800">
+                This patient has a recorded allergy to the prescribed drug or a related substance.
+                Review the patient&apos;s allergy history before proceeding.
+              </p>
+              <button
+                type="button"
+                onClick={handleAcknowledge}
+                className="self-start mt-1 px-4 h-9 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+                aria-label="Acknowledge conflict and prescribe anyway"
+              >
+                Prescribe anyway
+              </button>
             </div>
           )}
 
@@ -257,7 +315,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || allergyConflicts.length > 0}
             className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save prescription'}
