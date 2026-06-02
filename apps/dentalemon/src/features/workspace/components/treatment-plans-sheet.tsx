@@ -13,6 +13,7 @@ import {
   type TreatmentPlanDoc,
 } from '../hooks/use-treatment-plans';
 import { useTreatmentOptions } from '../hooks/use-treatment-options';
+import { useCasePresentations } from '@/features/case-presentation/use-case-presentations';
 import { formatCents } from '@/lib/format-currency';
 
 // ---------------------------------------------------------------------------
@@ -88,9 +89,12 @@ interface PlanRowProps {
   plan: TreatmentPlanDoc;
   onUpdate: (planId: string, body: { status: TreatmentPlanStatus }) => void;
   isUpdating: boolean;
+  /** P1-20: mint a patient-facing case presentation for a presented plan. */
+  onPresent?: (planId: string) => void;
+  isPresenting?: boolean;
 }
 
-function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
+function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting }: PlanRowProps) {
   const transitions = FSM[plan.status];
 
   return (
@@ -120,8 +124,20 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
         )}
       </div>
 
-      {transitions.length > 0 && (
+      {(transitions.length > 0 || (plan.status === 'presented' && onPresent)) && (
         <div className="flex flex-col gap-1 shrink-0">
+          {/* P1-20: a presented plan can be handed to the patient as a case presentation. */}
+          {plan.status === 'presented' && onPresent && (
+            <button
+              type="button"
+              data-testid="present-to-patient-btn"
+              disabled={isPresenting}
+              onClick={() => onPresent(plan.id)}
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 bg-[#FFE97D]"
+            >
+              {isPresenting ? 'Presenting…' : 'Present to patient'}
+            </button>
+          )}
           {transitions.map((next) => (
             <button
               key={next}
@@ -211,6 +227,8 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
   useSheetA11y({ open, onClose });
 
   const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
+  // P1-20: mint a patient-facing case presentation from a presented plan.
+  const { present, isPresenting } = useCasePresentations(patientId);
 
   if (!open) return null;
 
@@ -279,6 +297,8 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
                   plan={plan}
                   onUpdate={(id, body) => updatePlan(id, body)}
                   isUpdating={isUpdating}
+                  onPresent={(id) => { void present(id); }}
+                  isPresenting={isPresenting}
                 />
               ))}
             </div>
