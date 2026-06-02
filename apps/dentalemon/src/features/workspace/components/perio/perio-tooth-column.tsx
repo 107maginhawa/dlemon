@@ -34,6 +34,8 @@ export interface PerioToothColumnProps {
   /** Request focus advance after a single-digit depth on a site. */
   onAdvance?: (tooth: number, site: PerioSite) => void;
   registerCellRef?: (tooth: number, site: PerioSite, el: HTMLInputElement | null) => void;
+  /** Voice cursor highlight: the site currently targeted on THIS tooth (or null). */
+  activeSite?: PerioSite | null;
 }
 
 export function PerioToothColumn({
@@ -44,6 +46,7 @@ export function PerioToothColumn({
   onPatch,
   onAdvance,
   registerCellRef,
+  activeSite = null,
 }: PerioToothColumnProps) {
   const singleRooted = isSingleRooted(tooth);
 
@@ -59,6 +62,7 @@ export function PerioToothColumn({
             value={reading?.[depthField(site)] ?? null}
             threshold={threshold}
             readOnly={readOnly}
+            active={activeSite === site}
             inputRef={(el) => registerCellRef?.(tooth, site, el)}
             onCommit={(v) => onPatch({ [depthField(site)]: v } as UpsertToothReadingRequest)}
             onAdvance={() => onAdvance?.(tooth, site)}

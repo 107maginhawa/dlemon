@@ -8,7 +8,7 @@
  * no data fetching.
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { PerioToothColumn } from './perio-tooth-column';
 import {
   ADULT_FDI_TEETH,
@@ -26,6 +26,12 @@ export interface PerioChartGridProps {
   readOnly?: boolean;
   dentition?: Dentition;
   onPatchTooth: (toothNumber: number, patch: UpsertToothReadingRequest) => void;
+  /**
+   * Optional externally-driven active cell (voice cursor). When set, the matching
+   * depth cell is highlighted and focused — the SAME active-cell affordance the
+   * keyboard path uses, so voice and keyboard share one cursor (plan 09 §3.4).
+   */
+  activeCell?: { tooth: number; site: PerioSite } | null;
 }
 
 function cellKey(tooth: number, site: PerioSite) {
@@ -38,9 +44,20 @@ export function PerioChartGrid({
   readOnly = false,
   dentition = 'adult',
   onPatchTooth,
+  activeCell = null,
 }: PerioChartGridProps) {
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const sequence = useMemo(() => buildPerioSequence(dentition), [dentition]);
+
+  // Voice cursor: focus the matching depth cell whenever the external active
+  // cell changes (binds the voice sequencer to the same focusable cells the
+  // keyboard path drives — no parallel cursor).
+  useEffect(() => {
+    if (!activeCell) return;
+    const el = cellRefs.current.get(cellKey(activeCell.tooth, activeCell.site));
+    el?.focus();
+    el?.select?.();
+  }, [activeCell]);
 
   const teeth = dentition === 'primary' ? PRIMARY_FDI_TEETH : ADULT_FDI_TEETH;
   const half = teeth.length / 2;
@@ -86,6 +103,7 @@ export function PerioChartGrid({
               onPatch={(patch) => onPatchTooth(tooth, patch)}
               onAdvance={advance}
               registerCellRef={registerCellRef}
+              activeSite={activeCell?.tooth === tooth ? activeCell.site : null}
             />
           ))}
         </div>

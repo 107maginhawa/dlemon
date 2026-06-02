@@ -14,14 +14,18 @@
  *   - completed/locked → read-only grid + Stage/Grade/Extent chips
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { X, Activity } from 'lucide-react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { cn } from '@/lib/utils';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { usePerioChart } from '../../hooks/use-perio-chart';
+import { useVoicePerio } from '../../hooks/use-voice-perio';
 import { PerioChartGrid } from './perio-chart-grid';
 import { PerioSummaryBar } from './perio-summary-bar';
 import { PerioClassificationPanel } from './perio-classification-panel';
+import { VoicePerioControls } from './voice/voice-perio-controls';
+import { WebSpeechProvider, isSpeechRecognitionSupported, type SpeechProvider } from './voice/speech-provider';
 import { DEFAULT_DEPTH_THRESHOLD, countOverThreshold } from './perio-types';
 import type { CompletePerioChartRequest } from '@monobase/sdk-ts/generated';
 
@@ -30,11 +34,37 @@ export interface PerioChartOverlayProps {
   visitId: string;
   open: boolean;
   onClose: () => void;
+  /**
+   * Test/E2E seam: inject a SpeechProvider (e.g. FakeSpeechProvider). In
+   * production a WebSpeechProvider is created lazily when voice is engaged.
+   */
+  speechProvider?: SpeechProvider;
+  /** Force the voice flag on (tests/E2E). Defaults to the feature-flag value. */
+  voiceEnabled?: boolean;
 }
 
 const MIN_ADULT_READINGS = 16;
 
-export function PerioChartOverlay({ patientId, visitId, open, onClose }: PerioChartOverlayProps) {
+/** Stable no-op provider so useVoicePerio's hook order never changes. */
+const NOOP_PROVIDER: SpeechProvider = {
+  startListening() {},
+  stopListening() {},
+  onResult() {
+    return () => {};
+  },
+  onStateChange() {
+    return () => {};
+  },
+};
+
+export function PerioChartOverlay({
+  patientId,
+  visitId,
+  open,
+  onClose,
+  speechProvider,
+  voiceEnabled,
+}: PerioChartOverlayProps) {
   useSheetA11y({ open, onClose });
 
   const {
@@ -56,6 +86,45 @@ export function PerioChartOverlay({ patientId, visitId, open, onClose }: PerioCh
 
   const status = chart?.status ?? null;
   const readOnly = status === 'completed' || status === 'locked';
+
+  // --- Voice charting (P2-4) — additive, behind the feature flag + capability
+  // detection. Hidden entirely where unsupported (Safari/iPad) → keyboard only.
+  // E2E seam: a scripted provider may be injected on `window.__perioVoiceProvider`
+  // (never set in production) so the Playwright suite drives voice deterministically.
+  const injected =
+    speechProvider ??
+    (typeof window !== 'undefined'
+      ? (window as unknown as { __perioVoiceProvider?: SpeechProvider }).__perioVoiceProvider
+      : undefined);
+  const flagOn = voiceEnabled ?? (Boolean(injected) || isFeatureEnabled('perio.voice_charting'));
+  const supported = Boolean(injected) || isSpeechRecognitionSupported();
+  const voiceAvailable = flagOn && supported && !readOnly && Boolean(chart);
+
+  const providerRef = useRef<SpeechProvider | null>(injected ?? null);
+  if (voiceAvailable && !providerRef.current) {
+    providerRef.current = new WebSpeechProvider();
+  }
+  const provider = providerRef.current;
+
+  const [voiceActive, setVoiceActive] = useState(false);
+  const voice = useVoicePerio({
+    // A no-op provider keeps hook order stable when voice is unavailable.
+    provider: provider ?? NOOP_PROVIDER,
+    dentition: 'adult',
+    upsertReading,
+    enabled: voiceAvailable,
+  });
+
+  function toggleVoice() {
+    if (!voiceAvailable) return;
+    if (voiceActive) {
+      voice.stop();
+      setVoiceActive(false);
+    } else {
+      voice.start();
+      setVoiceActive(true);
+    }
+  }
   const readingCount = readings.length;
   const overThresholdCount = useMemo(() => countOverThreshold(readings, threshold), [readings, threshold]);
 
@@ -169,11 +238,28 @@ export function PerioChartOverlay({ patientId, visitId, open, onClose }: PerioCh
               depths show in red.
             </p>
 
+            {voiceAvailable && (
+              <VoicePerioControls
+                active={voiceActive}
+                micState={voice.micState}
+                transcriptLog={voice.transcriptLog}
+                pending={voice.pending}
+                onToggle={toggleVoice}
+                onConfirm={voice.confirmPending}
+                onDismiss={voice.dismissPending}
+              />
+            )}
+
             <PerioChartGrid
               readings={readings}
               threshold={threshold}
               readOnly={readOnly}
               onPatchTooth={(toothNumber, patch) => upsertReading(toothNumber, patch)}
+              activeCell={
+                voiceActive && voice.cursorTooth != null && voice.cursorSite != null
+                  ? { tooth: voice.cursorTooth, site: voice.cursorSite }
+                  : null
+              }
             />
 
             {!readOnly && (

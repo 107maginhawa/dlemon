@@ -25,6 +25,8 @@ export interface PerioSiteCellProps {
   value: number | null | undefined;
   threshold: number;
   readOnly?: boolean;
+  /** Voice cursor highlight — the active target cell (same affordance as focus). */
+  active?: boolean;
   /** Commit a validated value. Called with the clamped number. */
   onCommit: (value: number) => void;
   /** Request auto-advance to the next site (single-digit fast path / Tab). */
@@ -40,6 +42,7 @@ export function PerioSiteCell({
   value,
   threshold,
   readOnly = false,
+  active = false,
   onCommit,
   onAdvance,
   inputRef,
@@ -98,6 +101,7 @@ export function PerioSiteCell({
       data-testid="tooth-cell"
       data-perio-tooth={tooth}
       data-perio-site={site}
+      data-perio-active={active || undefined}
       readOnly={readOnly}
       defaultValue={value ?? ''}
       max={DEPTH_MAX}
@@ -108,6 +112,7 @@ export function PerioSiteCell({
         'focus:outline-none focus:ring-2 focus:ring-lemon-focus focus:border-lemon',
         'disabled:opacity-50 read-only:bg-muted/40 read-only:cursor-default',
         over && 'text-destructive font-semibold border-destructive/40',
+        active && 'ring-2 ring-info ring-offset-1 border-info',
       )}
     />
   );
