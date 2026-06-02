@@ -47,10 +47,29 @@ export const dentalTreatments = pgTable('dental_treatment', {
    * NULL = not part of any plan's completion math (TP-BR-005).
    */
   treatmentPlanId: uuid('treatment_plan_id'),
+  /**
+   * P1-21: the scheduled appointment this planned treatment is booked into, if any.
+   * Loose cross-module ref (dental_appointment lives in dental-scheduling) — no DB FK,
+   * mirroring treatmentPlanId/billedInvoiceId, so a plan item can flow to the calendar
+   * (proposed → scheduled → done) without coupling dental-visit to dental-scheduling.
+   * NULL = unscheduled.
+   */
+  appointmentId: uuid('appointment_id'),
+  /**
+   * P1-19: alternate-case grouping. Treatments sharing an `optionGroupId` are
+   * mutually-exclusive options for the SAME clinical need (e.g. implant vs bridge).
+   * Accepting one option (→ planned) rejects (→ declined) its siblings in the group.
+   * NULL = a standalone treatment, not part of any option set.
+   */
+  optionGroupId: uuid('option_group_id'),
+  /** P1-19: marks the clinician-recommended option within its group. */
+  recommended: boolean('recommended').notNull().default(false),
 }, (table) => ({
   visitIdx: index('dental_treatment_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_treatment_patient_id_idx').on(table.patientId),
   treatmentPlanIdx: index('dental_treatment_treatment_plan_id_idx').on(table.treatmentPlanId),
+  appointmentIdx: index('dental_treatment_appointment_id_idx').on(table.appointmentId),
+  optionGroupIdx: index('dental_treatment_option_group_id_idx').on(table.optionGroupId),
 }));
 
 export const visitNotes = pgTable('visit_notes', {

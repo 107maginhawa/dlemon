@@ -251,6 +251,15 @@ export function TreatmentTable({
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1.5">
                       <StatusBadge status={t.status} />
+                      {/* P1-21: scheduled-to-appointment indicator (proposed → scheduled → done). */}
+                      {t.appointmentId ? (
+                        <span
+                          className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                          title="Linked to a scheduled appointment"
+                        >
+                          Scheduled
+                        </span>
+                      ) : null}
                       {/* TXTBL-03: dismiss popover */}
                       {!readOnly && !isTerminal && (
                         <DismissTreatmentPopover
