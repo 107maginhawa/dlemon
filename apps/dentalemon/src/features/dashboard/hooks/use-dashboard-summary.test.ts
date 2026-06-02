@@ -253,4 +253,49 @@ describe('useDashboardSummary', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(typeof result.current.refetch).toBe('function');
   });
+
+  test('appointment fetches use date_from and date_to params, not date (QW-2/P1-23)', async () => {
+    const capturedUrls: string[] = [];
+    global.fetch = mock((url: string) => {
+      capturedUrls.push(url);
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ appointments: [] }) } as Response);
+    });
+
+    // also stub the summary fetch
+    let callIdx = 0;
+    const responses = [
+      { appointments: mockToday },
+      { appointments: mockTomorrow },
+      mockSummary,
+    ];
+    global.fetch = mock((url: string) => {
+      capturedUrls.push(url);
+      const resp = responses[callIdx++ % responses.length];
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) } as Response);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useDashboardSummary({ branchId: 'branch1', showFinancials: false }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // The first two fetches are appointment fetches (today + tomorrow)
+    const apptUrls = capturedUrls.filter((u) => u.includes('/dental/appointments'));
+    expect(apptUrls.length).toBeGreaterThanOrEqual(2);
+
+    for (const url of apptUrls) {
+      const parsed = new URL(url);
+      // Must NOT use the old `date` param
+      expect(parsed.searchParams.has('date')).toBe(false);
+      // Must use date_from and date_to
+      expect(parsed.searchParams.has('date_from')).toBe(true);
+      expect(parsed.searchParams.has('date_to')).toBe(true);
+      // Both must be YYYY-MM-DD ISO date strings
+      expect(parsed.searchParams.get('date_from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(parsed.searchParams.get('date_to')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
 });
