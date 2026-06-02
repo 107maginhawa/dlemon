@@ -575,6 +575,13 @@
       "when": 1780393831011,
       "tag": "0081_conscious_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1780398720526,
+      "tag": "0082_free_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }
