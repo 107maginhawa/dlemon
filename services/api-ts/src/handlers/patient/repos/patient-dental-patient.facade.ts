@@ -35,6 +35,46 @@ export async function findDuplicateDentalPatients(
   return results.map(p => ({ id: p.id }));
 }
 
+/**
+ * P2-16: surface likely duplicate-patient groups in a branch for staff review.
+ * Maps the repo clusters to a lean, PII-minimal shape (id, displayName, dob,
+ * email/phone) suitable for the dedup review UI.
+ */
+export async function findDuplicatePatientGroups(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<Array<{
+  matchType: 'strong' | 'name';
+  matchKey: string;
+  patients: Array<{
+    id: string;
+    displayName: string;
+    dateOfBirth: string | null;
+    email: string | null;
+    phone: string | null;
+    createdAt: string;
+  }>;
+}>> {
+  const repo = new PatientRepository(db);
+  const groups = await repo.findDuplicateCandidates(branchId);
+  return groups.map((g) => ({
+    matchType: g.matchType,
+    matchKey: g.matchKey,
+    patients: g.patients.map((p) => {
+      const contact = p.person.contactInfo as { email?: string; phone?: string } | null | undefined;
+      const displayName = [p.person.firstName, p.person.lastName].filter(Boolean).join(' ');
+      return {
+        id: p.id,
+        displayName,
+        dateOfBirth: p.person.dateOfBirth ?? null,
+        email: contact?.email ?? null,
+        phone: contact?.phone ?? null,
+        createdAt: (p.createdAt instanceof Date ? p.createdAt : new Date(p.createdAt as any)).toISOString(),
+      };
+    }),
+  }));
+}
+
 /** Create a patient record during registration. Returns the full Patient. */
 export async function createPatientForRegistration(
   db: DatabaseInstance,

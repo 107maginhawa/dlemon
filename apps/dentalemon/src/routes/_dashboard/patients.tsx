@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import { PatientFilterTabs, type PatientFilter } from '@/features/patients/components/patient-filter-tabs';
+import { DuplicatePatientsPanel } from '@/features/patients/components/duplicate-patients-panel';
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
 import { usePatients } from '@/features/patients/hooks/use-patients';
 import {
@@ -38,6 +39,8 @@ function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<PatientFilter>('all');
   const [showRegistration, setShowRegistration] = useState(false);
+  // P2-16: toggle the duplicate-detection review panel.
+  const [showDuplicates, setShowDuplicates] = useState(false);
 
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
 
@@ -103,15 +106,35 @@ function PatientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Patients</h1>
-        <button
-          onClick={() => setShowRegistration(true)}
-          className="px-4 py-2 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-medium hover:bg-[#F5DC60] transition-colors"
-          data-testid="register-patient-btn"
-        >
-          + New Patient
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDuplicates((v) => !v)}
+            aria-pressed={showDuplicates}
+            className={[
+              'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+              showDuplicates
+                ? 'border-[#FFE97D] bg-[#FFF9DB] text-[#4A4018]'
+                : 'border-border text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+            data-testid="find-duplicates-btn"
+          >
+            {showDuplicates ? 'Back to list' : 'Find duplicates'}
+          </button>
+          <button
+            onClick={() => setShowRegistration(true)}
+            className="px-4 py-2 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-medium hover:bg-[#F5DC60] transition-colors"
+            data-testid="register-patient-btn"
+          >
+            + New Patient
+          </button>
+        </div>
       </div>
 
+      {showDuplicates ? (
+        /* P2-16: duplicate-patient review */
+        <DuplicatePatientsPanel branchId={branchId ?? null} />
+      ) : (
+      <>
       {/* Filter tabs */}
       <PatientFilterTabs
         activeFilter={activeFilter}
@@ -141,6 +164,8 @@ function PatientsPage() {
         isActionPending={isArchivePending || isRestorePending || isBulkPending}
         isExporting={isExporting}
       />
+      </>
+      )}
 
       <PatientRegistrationModal
         open={showRegistration}
