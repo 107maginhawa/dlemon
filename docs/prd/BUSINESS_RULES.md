@@ -59,7 +59,7 @@ Companion to `docs/prd/v3-dentalemon.md`. Formalizes implicit business rules ext
 
 | ID | Rule | Type | Source | Status |
 |----|------|------|--------|--------|
-| BR-018 | Lab order state lifecycle: `ordered` → `in_progress` → `completed` / `cancelled`. A completed order cannot transition to any other state. | State machine | `dental-clinical` handlers | implemented |
+| BR-018 | Lab order state lifecycle: `ordered` → `in_fabrication` → `delivered` → `fitted`, with `cancelled` reachable from any non-terminal state. `fitted` and `cancelled` are terminal (no further transitions). | State machine | `dental-clinical` handlers (`lab-order.schema.ts` `VALID_LAB_ORDER_TRANSITIONS`) | implemented |
 
 ### Patient Records
 
