@@ -126,6 +126,9 @@ export const ALLOWED_IMAGING_MIME_TYPES = [
   'image/png',
   'image/tiff',
   'image/bmp',
+  // P1-9: DICOM ingest. application/dicom is the standard radiology interchange
+  // type; large DICOM/CBCT payloads route through the S3 multipart upload path.
+  'application/dicom',
 ] as const;
 
 export type AllowedImagingMimeType = (typeof ALLOWED_IMAGING_MIME_TYPES)[number];

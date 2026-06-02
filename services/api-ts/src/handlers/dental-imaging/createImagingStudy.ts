@@ -21,6 +21,16 @@ import { ImagingRepository } from './repos/imaging.repo';
 import { ALLOWED_IMAGING_MIME_TYPES } from './repos/imaging.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 
+// P1-9: route large DICOM/CBCT payloads (~50 MB pano) through the S3 multipart
+// path. Files at or below this stay on a single presigned PUT (behaviour unchanged
+// for ordinary X-ray/photo uploads). 5 MB part size = S3 minimum non-final part.
+const DICOM_MIME_TYPE = 'application/dicom';
+const MULTIPART_PART_SIZE_BYTES = 5 * 1024 * 1024;
+const MULTIPART_THRESHOLD_BYTES = MULTIPART_PART_SIZE_BYTES;
+// Plausible mm-per-pixel window for a DICOM-tag-derived calibration value.
+const DICOM_SPACING_MIN = 0.01;
+const DICOM_SPACING_MAX = 2.0;
+
 export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
@@ -35,6 +45,8 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     size: number;
     toothNumbers?: number[];
     sequenceNumber?: number;
+    // P1-9: PixelSpacing (mm/px) parsed client-side from the DICOM (0028,0030) tag.
+    pixelSpacingMm?: number;
   };
 
   // V-IMG-003 / §15: unsupported MIME → 422 UNSUPPORTED_MIME_TYPE (not 400 VALIDATION_ERROR).
@@ -82,18 +94,62 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     modality: (body.modality ?? 'other') as any,
   });
 
-  // Generate presigned upload URL for the image file
   const fileId = uuidv4();
-  const uploadUrl = await storage.generateUploadUrl(fileId, body.mimeType);
   const expiresAt = addMinutes(new Date(), 5);
+  const isDicom = body.mimeType === DICOM_MIME_TYPE;
+
+  // P1-9: DICOM-tag calibration. When the client parsed a plausible PixelSpacing
+  // from the DICOM (0028,0030) tag, persist it as the calibration value so mm
+  // measurements work without a manual ruler (provenance recorded in dicomMetadata).
+  const dicomSpacing =
+    isDicom &&
+    typeof body.pixelSpacingMm === 'number' &&
+    body.pixelSpacingMm >= DICOM_SPACING_MIN &&
+    body.pixelSpacingMm <= DICOM_SPACING_MAX
+      ? body.pixelSpacingMm
+      : null;
+
+  const dicomMetadata = body.filename
+    ? {
+        fileName: body.filename,
+        ...(isDicom ? { isDicom: true } : {}),
+        ...(dicomSpacing != null
+          ? { pixelSpacingMm: dicomSpacing, calibrationMethod: 'dicom_tag' as const }
+          : {}),
+      }
+    : null;
+
+  // P1-9: large DICOM/CBCT payloads use S3 multipart; everything else a single PUT.
+  const useMultipart = isDicom && body.size > MULTIPART_THRESHOLD_BYTES;
+
+  let uploadUrl = '';
+  let uploadMethod: 'PUT' | 'MULTIPART' = 'PUT';
+  let uploadId: string | undefined;
+  let partSize: number | undefined;
+  let partCount: number | undefined;
+  let partUrls: string[] | undefined;
+
+  if (useMultipart) {
+    uploadMethod = 'MULTIPART';
+    uploadId = await storage.initiateMultipartUpload(fileId, body.filename, body.mimeType);
+    partSize = MULTIPART_PART_SIZE_BYTES;
+    partCount = Math.ceil(body.size / MULTIPART_PART_SIZE_BYTES);
+    partUrls = [];
+    for (let part = 1; part <= partCount; part++) {
+      partUrls.push(await storage.generatePartUploadUrl(fileId, uploadId, part));
+    }
+  } else {
+    uploadUrl = await storage.generateUploadUrl(fileId, body.mimeType);
+  }
 
   // Persist the imaging_study_image row immediately so the image is queryable
-  // after the client completes the PUT to the presigned URL (BR-025)
+  // after the client completes the upload (BR-025)
   const image = await repo.createImage({
     studyId: study.id,
     fileId,
     modality: (body.modality ?? 'other') as any,
-    dicomMetadata: body.filename ? { fileName: body.filename } : null,
+    pixelSpacingMm: dicomSpacing,
+    dicomMetadata,
     sequenceNumber: body.sequenceNumber ?? 0,
   });
 
@@ -123,9 +179,10 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
       study,
       image,
       uploadUrl,
-      uploadMethod: 'PUT',
+      uploadMethod,
       fileId,
       expiresAt,
+      ...(uploadId ? { uploadId, partSize, partCount, partUrls } : {}),
     },
     201,
   );

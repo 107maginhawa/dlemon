@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@monobase/ui'
-import { ANALYSIS_TYPES } from '@monobase/ceph-math'
+import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
 import { apiBaseUrl } from '@/lib/config'
 import { useMutation } from '@tanstack/react-query'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
@@ -38,11 +38,15 @@ export interface CephWorkspacePanelProps {
 // D-L: report gate landmarks
 const GATE_CODES: CephLandmarkCode[] = ['A', 'B', 'Go', 'Po']
 
-// #15: human-readable protocol labels for the analysis switcher. Wits is a single
-// metric (AO-BO), NOT a protocol — it is not listed here. McNamara is skipped.
+// #15 / P1-8: human-readable protocol labels for the analysis switcher.
+// Wits is a single metric (AO-BO), NOT a protocol — intentionally not listed.
 const ANALYSIS_LABELS: Record<string, string> = {
   steiner_hybrid_sn: 'Steiner (SN)',
   ricketts: 'Ricketts (FH)',
+  downs: 'Downs (FH)',
+  tweed: 'Tweed (FH)',
+  mcnamara: 'McNamara',
+  jarabak: 'Jarabak',
 }
 
 function isAddonError(err: unknown): boolean {
@@ -64,6 +68,8 @@ export function CephWorkspacePanel({
   const { landmarks, commitLandmark } = useCephLandmarks(imageId)
   // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
   const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
+  // P2-6: reference-population selector for norm display (default = classic literature).
+  const [population, setPopulation] = useState<string>(DEFAULT_POPULATION)
   const { analysis, isError } = useCephAnalysis(imageId, analysisType)
 
   // Controlled/uncontrolled selection: when the parent passes selectedCode +
@@ -149,6 +155,22 @@ export function CephWorkspacePanel({
               ))}
             </SelectContent>
           </Select>
+          {/* P2-6: reference-population selector — switches the norm set used for chips. */}
+          <Select value={population} onValueChange={setPopulation}>
+            <SelectTrigger
+              aria-label="Norm population"
+              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-zinc-300"
+            >
+              <SelectValue>{getPopulationLabel(population)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="border-zinc-700 bg-zinc-800 text-zinc-100">
+              {NORM_POPULATIONS.map((p) => (
+                <SelectItem key={p} value={p} className="text-xs">
+                  {getPopulationLabel(p)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <button
           onClick={onClose}
@@ -169,7 +191,7 @@ export function CephWorkspacePanel({
         <>
           <CephLayerPanel layers={layers} onChange={handleLayerChange} />
 
-          <CephMeasurementsPanel analysis={analysis ?? null} />
+          <CephMeasurementsPanel analysis={analysis ?? null} population={population} />
 
           {/* D-L: confirm gate */}
           <div className="px-4 py-3 border-b border-zinc-700">

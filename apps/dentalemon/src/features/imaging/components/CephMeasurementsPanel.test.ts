@@ -22,9 +22,9 @@ function mkAnalysis(overrides: Partial<CephAnalysis> = {}): CephAnalysis {
   }
 }
 
-function renderPanel(analysis: CephAnalysis | null, isLoading = false) {
+function renderPanel(analysis: CephAnalysis | null, isLoading = false, population?: string) {
   return render(
-    React.createElement(CephMeasurementsPanel, { analysis, isLoading }),
+    React.createElement(CephMeasurementsPanel, { analysis, isLoading, population }),
   )
 }
 
@@ -137,6 +137,50 @@ describe('CephMeasurementsPanel', () => {
       mkAnalysis({ analysisType: 'ricketts', measurements: { facial_angle: 93 } }),
     )
     expect(container.textContent).toContain('+6.0°')
+  })
+
+  test('P1-8 renders Downs rows (Facial Angle (FH)) for a downs analysis, not SNA', () => {
+    const { container } = renderPanel(
+      mkAnalysis({
+        analysisType: 'downs',
+        measurements: { facial_angle: 87.8, mandibular_plane_angle: 22, interincisal: 135 },
+      }),
+    )
+    expect(container.textContent).toContain('Facial Angle (FH)')
+    expect(container.textContent).not.toContain('SNA')
+  })
+
+  test('P1-8 renders Tweed triangle rows (FMA / IMPA / FMIA)', () => {
+    const { container } = renderPanel(
+      mkAnalysis({ analysisType: 'tweed', measurements: { fma: 25, impa: 90, fmia: 65 } }),
+    )
+    expect(container.textContent).toContain('FMA')
+    expect(container.textContent).toContain('IMPA')
+    expect(container.textContent).toContain('FMIA')
+  })
+
+  test('P1-8 renders McNamara N-perp rows', () => {
+    const { container } = renderPanel(
+      mkAnalysis({ analysisType: 'mcnamara', measurements: { a_to_nperp: 1, pog_to_nperp: -2 } }),
+    )
+    expect(container.textContent).toContain('N-perp')
+  })
+
+  test('P1-8 renders Jarabak P/A facial-height row', () => {
+    const { container } = renderPanel(
+      mkAnalysis({ analysisType: 'jarabak', measurements: { pa_fhr: 64 } }),
+    )
+    expect(container.textContent).toContain('Facial Height')
+  })
+
+  test('P2-6 population selection swaps the norm set (African American SNA mean shifts the chip)', () => {
+    // SNA 86 is +4 (severe) under default (82±2) but on-mean (normal, no chip) under
+    // the African-American norm (86±3.7).
+    const def = renderPanel(mkAnalysis({ measurements: { sna: 86 } }), false, 'default')
+    expect(def.container.textContent).toContain('+4.0°')
+    cleanup()
+    const aa = renderPanel(mkAnalysis({ measurements: { sna: 86 } }), false, 'african_american')
+    expect(aa.container.textContent).not.toContain('+4.0°')
   })
 
   test('renders skeleton when isLoading=true', () => {

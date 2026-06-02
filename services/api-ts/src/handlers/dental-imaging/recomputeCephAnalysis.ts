@@ -74,8 +74,17 @@ export async function recomputeCephAnalysis(ctx: BaseContext): Promise<Response>
   // Steiner-hybrid-SN on the S–N line, Ricketts on Frankfort Horizontal (Po-Or-N).
   // Without those, every angle is uncomputable, so a recompute is meaningless. We
   // surface the list of missing reference landmarks to the client.
-  const REQUIRED_REFERENCE_LANDMARKS =
-    analysisType === 'ricketts' ? (['Po', 'Or', 'N'] as const) : (['S', 'N'] as const);
+  // Frankfort-referenced protocols (Ricketts/Downs/Tweed/McNamara) are anchored on
+  // the Porion-Orbitale plane; Jarabak needs S/N/Go/Me for its facial-height ratio;
+  // Steiner-hybrid-SN is anchored on the Sella-Nasion line.
+  const REQUIRED_REFERENCE_LANDMARKS: readonly string[] =
+    analysisType === 'ricketts' || analysisType === 'downs' || analysisType === 'tweed'
+      ? ['Po', 'Or', 'N']
+      : analysisType === 'mcnamara'
+        ? ['Po', 'Or', 'N']
+        : analysisType === 'jarabak'
+          ? ['S', 'N', 'Go', 'Me']
+          : ['S', 'N'];
   const placedCodes = new Set(allLandmarks.map((l) => l.landmarkCode));
   const missingReference = REQUIRED_REFERENCE_LANDMARKS.filter((code) => !placedCodes.has(code));
   if (missingReference.length > 0) {

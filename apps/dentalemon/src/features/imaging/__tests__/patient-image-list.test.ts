@@ -78,6 +78,24 @@ describe('PatientImageList', () => {
     expect(screen.getByText(/panoramic/i)).not.toBeNull();
   });
 
+  test('P2-5 FMX toggle switches the list to the anatomical mount', async () => {
+    global.fetch = mock(() => jsonResponse({
+      items: [makeItem('img-1', 'periapical')],
+      total: 1,
+    }));
+    const user = userEvent.setup();
+    render(React.createElement(PatientImageList, DEFAULT_PROPS), { wrapper: makeWrapper() });
+    await waitFor(() => expect(screen.getByText('img-1.jpg')).not.toBeNull());
+
+    // List view: no mount present yet
+    expect(screen.queryByTestId('fmx-mount')).toBeNull();
+
+    await user.click(screen.getByTestId('fmx-toggle'));
+    await waitFor(() => expect(screen.getByTestId('fmx-mount')).not.toBeNull());
+    // The flat list <ul> rows are gone in mount view
+    expect(screen.queryByTestId('select-image-img-1')).toBeNull();
+  });
+
   test('multi-select: 2 items shows Compare, 3rd is capped', async () => {
     global.fetch = mock(() => jsonResponse({
       items: [makeItem('a'), makeItem('b'), makeItem('c')],

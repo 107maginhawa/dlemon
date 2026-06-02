@@ -111,14 +111,26 @@ namespace DentalImagingModule {
     size: int64;
     toothNumbers?: int32[];
     sequenceNumber?: int32;
+    // P1-9: DICOM PixelSpacing (0028,0030) parsed client-side from the DICOM file.
+    // When present, the image is persisted pre-calibrated (calibrationMethod=dicom_tag),
+    // so mm measurements work without a manual ruler. Ignored for non-DICOM uploads.
+    pixelSpacingMm?: float64;
   }
 
+  // P1-9: a single PUT for small files; an S3 multipart envelope for large DICOM/CBCT
+  // payloads (~50 MB pano). When uploadMethod="MULTIPART", uploadUrl is empty and the
+  // client uploads parts to partUrls then completes via the storage multipart endpoint.
   model CreateImagingStudyResponse {
     study: ImagingStudy;
+    image: ImagingStudyImage;
     uploadUrl: string;
     uploadMethod: string;
     fileId: string;
     expiresAt: utcDateTime;
+    uploadId?: string;
+    partSize?: int64;
+    partCount?: int32;
+    partUrls?: string[];
   }
 
   model UpdateImageModalityBody {

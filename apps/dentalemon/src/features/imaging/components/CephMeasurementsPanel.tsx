@@ -3,6 +3,7 @@ import {
   getNorm,
   classifyDeviation,
   classifySkeletalPattern,
+  DEFAULT_POPULATION,
   type DeviationSeverity,
 } from '@monobase/ceph-math'
 import type { CephAnalysis } from '../hooks/use-ceph-analysis'
@@ -10,6 +11,8 @@ import type { CephAnalysis } from '../hooks/use-ceph-analysis'
 export interface CephMeasurementsPanelProps {
   analysis: CephAnalysis | null
   isLoading?: boolean
+  /** Reference population for norm lookup (P2-6). Defaults to classic literature. */
+  population?: string
 }
 
 interface MetricRow {
@@ -49,8 +52,42 @@ const RICKETTS_ROWS: MetricRow[] = [
   { key: 'interincisal', label: 'Interincisal', landmarks: ['U1A', 'U1T', 'L1A', 'L1T'] },
 ]
 
+// Downs (Frankfort-referenced): facial angle, mandibular plane, interincisal.
+const DOWNS_ROWS: MetricRow[] = [
+  { key: 'facial_angle', label: 'Facial Angle (FH)', landmarks: ['Po', 'Or', 'N', 'Pog'] },
+  { key: 'mandibular_plane_angle', label: 'Mandibular Plane (FH)', landmarks: ['Po', 'Or', 'Go', 'Me'] },
+  { key: 'interincisal', label: 'Interincisal', landmarks: ['U1A', 'U1T', 'L1A', 'L1T'] },
+]
+
+// Tweed triangle (Frankfort-referenced): FMA + IMPA + FMIA ≈ 180°.
+const TWEED_ROWS: MetricRow[] = [
+  { key: 'fma', label: 'FMA (FH-GoMe)', landmarks: ['Po', 'Or', 'Go', 'Me'] },
+  { key: 'impa', label: 'IMPA (L1-GoMe)', landmarks: ['Go', 'Me', 'L1A', 'L1T'] },
+  { key: 'fmia', label: 'FMIA (FH-L1)', landmarks: ['Po', 'Or', 'L1A', 'L1T'] },
+]
+
+// McNamara (Nasion-perpendicular-to-FH linear, mm).
+const MCNAMARA_ROWS: MetricRow[] = [
+  { key: 'a_to_nperp', label: 'A → N-perp (mm)', mm: true, landmarks: ['A', 'N', 'Po', 'Or'] },
+  { key: 'pog_to_nperp', label: 'Pog → N-perp (mm)', mm: true, landmarks: ['Pog', 'N', 'Po', 'Or'] },
+]
+
+// Jarabak posterior/anterior facial-height ratio (%).
+const JARABAK_ROWS: MetricRow[] = [
+  { key: 'pa_fhr', label: 'P/A Facial Height (%)', landmarks: ['S', 'Go', 'N', 'Me'] },
+]
+
+const ROWS_BY_ANALYSIS: Record<string, MetricRow[]> = {
+  steiner_hybrid_sn: STEINER_ROWS,
+  ricketts: RICKETTS_ROWS,
+  downs: DOWNS_ROWS,
+  tweed: TWEED_ROWS,
+  mcnamara: MCNAMARA_ROWS,
+  jarabak: JARABAK_ROWS,
+}
+
 function rowsForAnalysis(analysisType: string): MetricRow[] {
-  return analysisType === 'ricketts' ? RICKETTS_ROWS : STEINER_ROWS
+  return ROWS_BY_ANALYSIS[analysisType] ?? STEINER_ROWS
 }
 
 // Amber (1–2 SD) / red (>2 SD) only — no green for "normal" (avoids training clinicians
@@ -78,6 +115,7 @@ function valueText(row: MetricRow, analysis: CephAnalysis): string {
 export function CephMeasurementsPanel({
   analysis,
   isLoading = false,
+  population = DEFAULT_POPULATION,
 }: CephMeasurementsPanelProps) {
   if (isLoading) {
     return (
@@ -142,7 +180,7 @@ export function CephMeasurementsPanel({
           {rowsForAnalysis(analysis.analysisType).map((row) => {
             const value = analysis.measurements[row.key]
             const norm =
-              typeof value === 'number' ? getNorm(analysis.analysisType, row.key) : null
+              typeof value === 'number' ? getNorm(analysis.analysisType, row.key, population) : null
             const dev = norm && typeof value === 'number' ? classifyDeviation(value, norm) : null
             return (
               <tr key={row.key} className="border-b border-zinc-800/60">
