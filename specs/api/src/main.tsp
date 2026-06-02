@@ -553,6 +553,19 @@ namespace MonobaseAPI {
   @route("/dental/queue-items")
   interface QueueItemStatusMgmt extends DentalQueueModule.QueueItemStatusManagement {}
 
+  // ── P2-15: scheduling waitlist (ASAP fill) ───────────────────────────────
+  @tag("Dental:Scheduling")
+  @route("/dental/branches")
+  interface WaitlistEntryCreationMgmt extends DentalWaitlistModule.WaitlistEntryCreation {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/branches")
+  interface WaitlistListingMgmt extends DentalWaitlistModule.WaitlistListing {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/waitlist")
+  interface WaitlistPromotionMgmt extends DentalWaitlistModule.WaitlistPromotion {}
+
   // ========================================================================
   // PLATFORM INFRASTRUCTURE
   // ========================================================================
