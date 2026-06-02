@@ -9,8 +9,9 @@ consumer subscriptions (dental-billing, dental-pmd, dental-audit, notifs, dental
 In practice the system runs as a **single TypeScript runtime** (Hono + Drizzle on Bun) and is
 also embedded **offline-first** inside the Tauri/QuickJS host (`api-ts-embedded`). There is no
 event bus: no producer emits `DomainEvent` envelopes, there is no `dental_event_dlq` table, and
-the only "consumer" wired in `app.ts` (`registerAuditDomainEventConsumer`) is a no-op-style
-shim. ADR-005 already ratified that **audit writes are inline and synchronous, not pg-boss
+the only "consumer" that was wired in `app.ts` (`registerAuditDomainEventConsumer`) was a
+no-op-style shim with zero producers — it has since been removed (V-EVT-001; see Update
+below). ADR-005 already ratified that **audit writes are inline and synchronous, not pg-boss
 queued**. This ADR extends that decision to the broader domain-event catalog.
 
 ---
@@ -110,5 +111,20 @@ compliance gap (docs-vs-code drift) without deleting useful semantic documentati
 - ADR-005 — Audit Write Path (inline synchronous, not pg-boss queued)
 - `docs/product/EVENT_CONTRACTS.md` — domain-event catalog (retained as semantic vocabulary)
 - `services/api-ts/src/core/audit-logger.ts` — `logAuditEvent` (the inline write that records events)
-- `services/api-ts/src/app.ts` — `registerAuditDomainEventConsumer` (shim; no bus)
 - `services/api-ts-embedded/` — offline-first QuickJS embedding that precludes a broker process
+
+---
+
+## Update — 2026-06-02 (V-EVT-001)
+
+The dead async-audit scaffold this ADR described as a "shim" has been **removed**:
+`publishAuditEvent`, the `DENTAL_AUDIT_EVENTS_QUEUE` constant, the
+`DentalAuditDomainEvent` type, and `registerAuditDomainEventConsumer` (the
+`handlers/dental-audit/consumers/domain-events.consumer.ts` file) — plus its
+`app.ts` registration — are gone. The publisher half had **zero production call
+sites**, and the consumer could never fire because nothing published to the
+queue. PHI sanitization (V-AUD-101) is unaffected: it lives at the
+`AuditLogRepository.insert` choke point and is exercised by the active
+`logAuditEvent` path (`audit.test.ts` V-AUD-NEW-A). `AUDIT_CONTRACTS.md §4` now
+describes the synchronous reality. This is the decision in §Decision item 4 ("No
+emit/publisher scaffolding … should be added") applied to the residual scaffold.

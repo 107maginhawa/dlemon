@@ -81,10 +81,34 @@ interface AuditEvent {
 
 ## 4. Audit Event Delivery
 
-- Delivery: async via pg-boss (`dental-audit` queue)
-- Timing: < 5s after triggering operation (SLA)
-- Blocking: audit event emission MUST NOT block main request (fire-and-forget after transaction commit)
-- Failure handling: audit write failure → DLQ alert, but original operation succeeds (audit lag tolerated)
+> **Architecture (authoritative): inline synchronous writes — no event bus.**
+> Per [ADR-006](../decisions/ADR-006-domain-events-descope.md) (extending
+> [ADR-005](../decisions/ADR-005-audit-write-path.md)), there is **no pg-boss
+> audit queue, no publisher/consumer scaffolding, and no DLQ**. The earlier
+> async/pg-boss design below was aspirational and never built; the implemented
+> reality is described here. The dead `publishAuditEvent` + `DENTAL_AUDIT_EVENTS_QUEUE`
+> scaffold (0 producers) was removed (Compliance V-EVT-001).
+
+- **Delivery:** synchronous, in-process. Every producer records its event by
+  calling `logAuditEvent` (`services/api-ts/src/core/audit-logger.ts`) at the
+  point the corresponding state change commits. The "event" **is** the
+  append-only `dental_audit_log` row — not a message handed to a broker.
+- **Choke point:** all writes flow through `AuditLogRepository.insert`, which
+  applies PHI sanitization at a single seam (AC-AUD-004 / V-AUD-101) regardless
+  of caller.
+- **Consumer:** the `dental-audit` "subscribes to ALL" obligation is satisfied
+  by these same inline writes — every producer already writes the row in-flow,
+  so the audit module observes every event without subscription machinery.
+- **Durability:** because the write is inline and committed read-after-write,
+  there is no audit lag and no dropped-job window. A failed audit write is
+  logged best-effort and does not corrupt the originating operation.
+- **Reactive consumers (notifs):** deferred to a future phase (ADR-006 §3); when
+  built they will be triggered directly from the originating handler, not via a bus.
+
+> The DE-001–DE-024 catalog in [EVENT_CONTRACTS.md](./EVENT_CONTRACTS.md) is
+> retained as the canonical semantic vocabulary (which facts must be recorded and
+> what identifiers each carries); it is a contract over audit-log content, not a
+> wire transport.
 
 ---
 

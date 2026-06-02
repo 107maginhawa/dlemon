@@ -24,7 +24,6 @@ import { registerNotifsJobs } from '@/handlers/notifs/jobs';
 import { registerAuditJobs } from '@/handlers/audit/jobs';
 import { registerBookingJobs } from '@/handlers/booking/jobs';
 import { registerRetentionJobs } from '@/handlers/retention/jobs';
-import { registerAuditDomainEventConsumer } from '@/handlers/dental-audit/consumers/domain-events.consumer';
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
@@ -277,7 +276,6 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
   registerEmailJobs(jobs, app.email);
   registerNotifsJobs(jobs, app.notifs);
   registerAuditJobs(jobs);
-  registerAuditDomainEventConsumer(jobs, database);
   registerBookingJobs(jobs, app.notifs);
   registerRetentionJobs(jobs);
 
