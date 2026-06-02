@@ -17,25 +17,11 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { freshClientWithMutations, makeWrapper as makeWrapperBase } from '@/test-utils';
 
-// Radix Dialog portals + focus-trap don't behave under happy-dom; stub the
-// primitive to a plain open/closed container (same approach as the global
-// @/components/dialog mock). The real PreCompletionChecklist logic still runs.
-mock.module('@radix-ui/react-dialog', () => {
-  const Passthrough = ({ children }: { children?: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children);
-  return {
-    Root: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-      open ? React.createElement('div', { role: 'dialog' }, children) : null,
-    Portal: Passthrough,
-    Overlay: () => null,
-    Content: ({ children }: { children?: React.ReactNode }) =>
-      React.createElement('div', null, children),
-    Title: ({ children }: { children?: React.ReactNode }) =>
-      React.createElement('h2', null, children),
-    Description: ({ children }: { children?: React.ReactNode }) =>
-      React.createElement('p', null, children),
-  };
-});
+// Radix Dialog portals + focus-trap don't behave under happy-dom. The primitive
+// is stubbed GLOBALLY in src/test-setup.ts (mock.module is process-wide and
+// leaks across files, so a per-file partial stub here used to poison sibling
+// suites — see FE-FLAKE-CALIBRATION). The real PreCompletionChecklist logic
+// still runs against that shared stub.
 
 import { PreCompletionChecklist } from './pre-completion-checklist';
 

@@ -111,6 +111,51 @@ mock.module('@/components/dialog', () => ({
     React.createElement('div', null, children),
 }))
 
+// @radix-ui/react-dialog — Radix portal + focus-trap don't behave under
+// happy-dom. Stub the raw primitive globally so EVERY consumer is deterministic,
+// including @monobase/ui's Dialog (used by features/imaging/CalibrationDialog).
+//
+// This MUST be global, not per-file: `mock.module()` in Bun is a process-wide
+// registry override that persists across files and cannot be cleanly reverted.
+// A partial per-file stub (e.g. one that omits `Close`/`Trigger`) leaks into
+// sibling tests and makes @monobase/ui's DialogContent throw (it renders
+// DialogPrimitive.Close), which is what caused FE-FLAKE-CALIBRATION. Exporting
+// the full surface here keeps the suite order-independent.
+const _DialogPassthrough = ({ children }: { children?: React.ReactNode }) =>
+  React.createElement(React.Fragment, null, children)
+const _DialogPlainDiv = React.forwardRef<HTMLDivElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('div', { ref }, children),
+)
+_DialogPlainDiv.displayName = 'DialogStubDiv'
+const _DialogTitle = React.forwardRef<HTMLHeadingElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('h2', { ref }, children),
+)
+_DialogTitle.displayName = 'DialogStubTitle'
+const _DialogDescription = React.forwardRef<HTMLParagraphElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('p', { ref }, children),
+)
+_DialogDescription.displayName = 'DialogStubDescription'
+// The export surface below is a faithful SUPERSET covering every consumer in the
+// repo: @monobase/ui Dialog (Root/Trigger/Portal/Overlay/Close/Content/Title/
+// Description), @radix-ui/react-alert-dialog (adds WarningProvider +
+// createDialogScope), and pre-completion-checklist.tsx (namespace import). Keep
+// it complete — an omitted member silently breaks a leaking sibling test.
+mock.module('@radix-ui/react-dialog', () => ({
+  Root: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
+    open !== false ? React.createElement('div', { role: 'dialog' }, children) : null,
+  Trigger: _DialogPassthrough,
+  Portal: _DialogPassthrough,
+  Overlay: () => null,
+  Close: _DialogPlainDiv,
+  Content: _DialogPlainDiv,
+  Title: _DialogTitle,
+  Description: _DialogDescription,
+  WarningProvider: _DialogPassthrough,
+  // alert-dialog composes the dialog scope at module-eval time; return stub
+  // scope factories so its `* as DialogPrimitive` namespace import resolves.
+  createDialogScope: () => () => ({}),
+}))
+
 // @/components/sheet — Radix portal won't work in happy-dom
 mock.module('@/components/sheet', () => ({
   Sheet: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
