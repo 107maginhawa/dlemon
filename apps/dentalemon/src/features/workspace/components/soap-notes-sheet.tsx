@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Textarea } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
+import { APP_LOCALE } from '@/constants/brand';
 
 export interface SoapNotesSheetProps {
   visitId: string;
@@ -149,7 +150,7 @@ export function SoapNotesSheet({
   if (!open) return null;
 
   const signedAt = notes?.signedAt
-    ? new Date(notes.signedAt).toLocaleDateString('en-US', {
+    ? new Date(notes.signedAt).toLocaleDateString(APP_LOCALE, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -380,7 +381,7 @@ export function SoapNotesSheet({
                               Version {v.version}
                             </span>
                             <span className="text-muted-foreground">
-                              {new Date(v.createdAt).toLocaleDateString('en-US', {
+                              {new Date(v.createdAt).toLocaleDateString(APP_LOCALE, {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric',

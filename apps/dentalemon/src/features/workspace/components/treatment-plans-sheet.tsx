@@ -11,6 +11,7 @@ import {
   type TreatmentPlanStatus,
   type TreatmentPlanDoc,
 } from '../hooks/use-treatment-plans';
+import { formatCents } from '@/lib/format-currency';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,7 +91,7 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
         </div>
         {plan.totalEstimateCents !== undefined && plan.totalEstimateCents > 0 && (
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Estimate: {(plan.totalEstimateCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+            Estimate: {formatCents(plan.totalEstimateCents)}
           </p>
         )}
         {plan.notes && (

@@ -9,6 +9,7 @@
 
 import React from 'react';
 import type { Appointment } from './appointment-card';
+import { APP_LOCALE } from '@/constants/brand';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -117,7 +118,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
     byDate[d].push(appt);
   }
 
-  const monthTitle = selected.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthTitle = selected.toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' });
 
   return (
     <div className="flex-1 bg-background overflow-auto p-4" role="main" aria-label="Month schedule">

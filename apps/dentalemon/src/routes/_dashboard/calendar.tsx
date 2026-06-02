@@ -17,6 +17,7 @@ import type { Appointment } from '../../features/scheduling/components/appointme
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
 import { checkInAppointment } from '@monobase/sdk-ts/generated';
+import { APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
   component: CalendarPage,
@@ -42,7 +43,7 @@ function addDays(dateStr: string, days: number): string {
 
 function formatDateTitle(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(APP_LOCALE, {
     weekday: 'long',
     year: 'numeric',
     month: 'short',
@@ -54,14 +55,14 @@ function formatWeekTitle(weekStart: string): string {
   const start = new Date(weekStart + 'T12:00:00');
   const end = new Date(weekStart + 'T12:00:00');
   end.setDate(end.getDate() + 6);
-  const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const startStr = start.toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' });
+  const endStr = end.toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' });
   return `${startStr} - ${endStr}`;
 }
 
 function formatMonthTitle(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' });
 }
 
 function getFirstOfMonth(dateStr: string): string {
