@@ -16,7 +16,7 @@ import { AppointmentModal } from '../../features/scheduling/components/appointme
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
-import { checkInAppointment } from '@monobase/sdk-ts/generated';
+import { checkInAppointment, updateAppointment } from '@monobase/sdk-ts/generated';
 import { APP_LOCALE } from '@/constants/brand';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
@@ -138,6 +138,33 @@ function CalendarPage() {
       invalidateAppointments();
     } catch {
       // Network error — ignore silently
+    }
+  }
+
+  async function handleConfirm(appointmentId: string) {
+    try {
+      await updateAppointment({
+        path: { appointmentId },
+        body: { status: 'confirmed' } as unknown as Parameters<typeof updateAppointment>[0]['body'],
+      });
+      invalidateAppointments();
+    } catch {
+      // Network error — ignore silently
+    }
+  }
+
+  async function handleReschedule(appointmentId: string, newStartAt: string, newDurationMinutes: number) {
+    const startAt = new Date(newStartAt);
+    const endAt = new Date(startAt.getTime() + newDurationMinutes * 60_000);
+    try {
+      await updateAppointment({
+        path: { appointmentId },
+        body: { startAt, endAt } as unknown as Parameters<typeof updateAppointment>[0]['body'],
+      });
+      invalidateAppointments();
+    } catch {
+      // Reschedule conflict / network error — refetch to restore the original position
+      invalidateAppointments();
     }
   }
 
@@ -272,6 +299,8 @@ function CalendarPage() {
           onAppointmentClick={handleAppointmentClick}
           onSlotClick={handleSlotClick}
           onCheckIn={handleCheckIn}
+          onConfirm={handleConfirm}
+          onReschedule={handleReschedule}
         />
       ) : view === 'week' ? (
         <CalendarWeek
