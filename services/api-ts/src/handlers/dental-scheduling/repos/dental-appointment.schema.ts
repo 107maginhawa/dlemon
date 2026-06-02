@@ -6,7 +6,8 @@
  * scheduled can still go straight to checked_in. No-show is reversible (can revert to completed).
  */
 
-import { pgTable, uuid, text, timestamp, boolean, integer, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 import { patients } from '../../patient/repos/patient.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
@@ -34,6 +35,14 @@ export const dentalAppointments = pgTable('dental_appointment', {
   operatoryId: uuid('operatory_id').references(() => dentalOperatories.id, { onDelete: 'set null' }),
   walkIn: boolean('walk_in').notNull().default(false),
   status: appointmentStatusEnum('status').notNull().default('scheduled'),
+  // P1-25: provenance + confirmation tracking for self-service booking.
+  // `source` distinguishes staff-created from online/walk-in so staff can
+  // review/purge junk online bookings. `confirmationState` lets an online
+  // booking land as 'pending' (not masquerading as a staff-confirmed slot).
+  // `confirmationCode` is an unguessable bearer for the public lookup endpoint.
+  source: text('source').notNull().default('staff'), // 'staff' | 'online' | 'walk_in'
+  confirmationState: text('confirmation_state').notNull().default('confirmed'), // 'pending' | 'confirmed'
+  confirmationCode: text('confirmation_code'),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
   checkInTime: timestamp('check_in_time', { withTimezone: true }),
   visitId: uuid('visit_id').references(() => dentalVisits.id),
@@ -50,6 +59,12 @@ export const dentalAppointments = pgTable('dental_appointment', {
   dentistIdx: index('dental_appointment_dentist_member_id_idx').on(table.dentistMemberId),
   patientIdx: index('dental_appointment_patient_id_idx').on(table.patientId),
   scheduledAtIdx: index('dental_appointment_scheduled_at_idx').on(table.scheduledAt),
+  // P1-25: unguessable confirmation code is a bearer for the public lookup
+  // endpoint — must be unique. Partial (WHERE NOT NULL) so staff rows without a
+  // code don't collide on NULL.
+  confirmationCodeUnique: uniqueIndex('dental_appointment_confirmation_code_unique')
+    .on(table.confirmationCode)
+    .where(sql`${table.confirmationCode} IS NOT NULL`),
 }));
 
 export type DentalAppointment = typeof dentalAppointments.$inferSelect;

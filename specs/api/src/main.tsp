@@ -438,6 +438,12 @@ namespace MonobaseAPI {
   @route("/dental/appointments")
   interface AppointmentMgmt extends DentalSchedulingModule.AppointmentManagement {}
 
+  // P1-25: public self-service booking (unauthenticated, rate-limited).
+  // Tagged Dental:Scheduling so handlers resolve under handlers/dental-scheduling/.
+  @tag("Dental:Scheduling")
+  @route("/dental/public")
+  interface PublicBookingMgmt extends DentalSchedulingModule.PublicBookingManagement {}
+
   // Dental Billing
   // Dental Imaging
   @tag("Dental:Imaging")

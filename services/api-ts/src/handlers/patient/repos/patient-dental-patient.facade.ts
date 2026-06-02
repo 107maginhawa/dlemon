@@ -5,9 +5,10 @@
  * Isolates cross-module access behind typed functions.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { patients } from './patient.schema';
+import { persons } from '../../person/repos/person.schema';
 import { PatientRepository } from './patient.repo';
 
 /** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
@@ -86,6 +87,70 @@ export async function createPatientForRegistration(
     person: personId,
     ...(branchId ? { preferredBranchId: branchId } : {}),
   });
+}
+
+/**
+ * P1-25: match-or-create a patient from prospect contact details for online
+ * self-service booking. Matches an EXISTING patient when a person with the same
+ * (non-empty) email or phone already exists in the branch; otherwise creates a
+ * new person + patient flagged in `dentalHistorySummary` as self-booked so staff
+ * can review. Returns the patient id and whether it was newly created.
+ *
+ * Identity match is intentionally conservative (exact email/phone) — a fuzzy
+ * name-only match would risk attaching a prospect to the wrong record.
+ */
+export async function matchOrCreatePatientForOnlineBooking(
+  db: DatabaseInstance,
+  data: {
+    firstName: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    dateOfBirth?: string;
+    branchId: string;
+    actorId: string;
+  },
+): Promise<{ patientId: string; personId: string; created: boolean }> {
+  const email = data.email?.trim().toLowerCase() || undefined;
+  const phone = data.phone?.trim() || undefined;
+
+  if (email || phone) {
+    // Search persons whose contactInfo email/phone matches, joined to a patient
+    // in the same branch. contactInfo is JSONB { email, phone }.
+    const matchConds = [];
+    if (email) matchConds.push(sql`lower(${persons.contactInfo}->>'email') = ${email}`);
+    if (phone) matchConds.push(sql`${persons.contactInfo}->>'phone' = ${phone}`);
+    const [existing] = await db
+      .select({ patientId: patients.id, personId: persons.id })
+      .from(patients)
+      .innerJoin(persons, eq(patients.person, persons.id))
+      .where(and(eq(patients.preferredBranchId, data.branchId), sql`(${sql.join(matchConds, sql` OR `)})`))
+      .limit(1);
+    if (existing) return { patientId: existing.patientId, personId: existing.personId, created: false };
+  }
+
+  const personId = crypto.randomUUID();
+  await db.insert(persons).values({
+    id: personId,
+    firstName: data.firstName,
+    ...(data.lastName ? { lastName: data.lastName } : {}),
+    ...(data.dateOfBirth ? { dateOfBirth: data.dateOfBirth } : {}),
+    ...(email || phone ? { contactInfo: { ...(email ? { email } : {}), ...(phone ? { phone } : {}) } } : {}),
+    createdBy: data.actorId,
+    updatedBy: data.actorId,
+  });
+
+  const repo = new PatientRepository(db);
+  const patient = await repo.createOne({
+    person: personId,
+    preferredBranchId: data.branchId,
+    // Provenance marker so staff can review self-booked prospect records.
+    dentalHistorySummary: 'Self-booked online (unverified)',
+    createdBy: data.actorId,
+    updatedBy: data.actorId,
+  } as Parameters<PatientRepository['createOne']>[0]);
+
+  return { patientId: patient.id, personId, created: true };
 }
 
 /** Insert a patient row inside a Drizzle transaction (importPatients use case). */

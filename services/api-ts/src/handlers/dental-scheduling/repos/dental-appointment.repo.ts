@@ -59,6 +59,18 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
   }
 
   /**
+   * P1-25: resolve an online booking by its unguessable confirmation code (the
+   * bearer for the public lookup endpoint). Returns null when no row matches.
+   */
+  async findByConfirmationCode(confirmationCode: string): Promise<DentalAppointment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalAppointments)
+      .where(eq(dentalAppointments.confirmationCode, confirmationCode));
+    return row ?? null;
+  }
+
+  /**
    * Confirm an appointment: records the patient acknowledged they will attend.
    * Guard: only a `scheduled` appointment can be confirmed.
    */

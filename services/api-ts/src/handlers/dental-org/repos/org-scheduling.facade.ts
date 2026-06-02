@@ -94,6 +94,62 @@ export async function updateBranchWorkingHours(
     .where(eq(dentalBranches.id, branchId));
 }
 
+/**
+ * P1-25: full context needed by the public online-booking surface. Returns the
+ * branch name + timezone + working-hours blob + the raw `settings` JSONB (which
+ * carries the `onlineBooking` policy block), plus the active provider memberships
+ * eligible to be offered online. Returns null if the branch does not exist.
+ *
+ * Lives on the dental-org facade because it crosses into branch + membership
+ * tables which dental-org owns.
+ */
+export async function getBranchOnlineBookingContext(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<{
+  id: string;
+  name: string;
+  timezone: string;
+  workingHours: string | null;
+  settings: unknown;
+  active: boolean;
+  providers: { providerId: string; displayName: string }[];
+} | null> {
+  const [branch] = await db
+    .select({
+      id: dentalBranches.id,
+      name: dentalBranches.name,
+      timezone: dentalBranches.timezone,
+      workingHours: dentalBranches.workingHours,
+      settings: dentalBranches.settings,
+      active: dentalBranches.active,
+    })
+    .from(dentalBranches)
+    .where(eq(dentalBranches.id, branchId));
+  if (!branch) return null;
+
+  // Clinical/provider roles eligible to be booked online.
+  const CLINICAL_ROLES = ['dentist_owner', 'dentist_associate', 'hygienist'] as const;
+  const memberRows = await db
+    .select({ id: dentalMemberships.id, displayName: dentalMemberships.displayName, role: dentalMemberships.role })
+    .from(dentalMemberships)
+    .where(and(eq(dentalMemberships.branchId, branchId), eq(dentalMemberships.status, 'active')));
+
+  const providers = memberRows
+    .filter((m) => (CLINICAL_ROLES as readonly string[]).includes(m.role))
+    .map((m) => ({ providerId: m.id, displayName: m.displayName }));
+
+  return {
+    id: branch.id,
+    name: branch.name,
+    timezone: branch.timezone,
+    workingHours: branch.workingHours,
+    settings: branch.settings,
+    active: branch.active,
+    providers,
+  };
+}
+
 export async function getActiveBranchIdsForPerson(
   db: DatabaseInstance,
   personId: string,
