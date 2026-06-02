@@ -134,7 +134,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
               onChange={e => setDrugName(e.target.value)}
               placeholder="e.g. Amoxicillin"
               aria-label="Drug name"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -149,7 +149,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
               value={rxNormCode}
               onChange={e => setRxNormCode(e.target.value)}
               placeholder="e.g. 723"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -166,7 +166,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
                 onChange={e => setDosage(e.target.value)}
                 placeholder="e.g. 500mg"
                 aria-label="Dosage"
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
               />
             </div>
             <div className="flex-1">
@@ -178,7 +178,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
                 value={frequency}
                 onChange={e => setFrequency(e.target.value)}
                 aria-label="Frequency selection"
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
               >
                 <option value="">Select…</option>
                 {FREQUENCY_OPTIONS.map(f => (
@@ -199,7 +199,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
               value={duration}
               onChange={e => setDuration(e.target.value)}
               placeholder="e.g. 7 days"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -214,7 +214,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
               value={quantity}
               onChange={e => setQuantity(e.target.value)}
               placeholder="e.g. 21 tablets"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -229,7 +229,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
               onChange={e => setInstructions(e.target.value)}
               placeholder="Prescription instructions…"
               rows={2}
-              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none"
+              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
             />
           </div>
 
@@ -258,7 +258,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save prescription'}
           </button>

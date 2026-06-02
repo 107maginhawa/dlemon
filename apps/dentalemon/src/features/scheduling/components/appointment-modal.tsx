@@ -249,7 +249,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               value={patientId}
               onChange={e => setPatientId(e.target.value)}
               placeholder="Enter patient ID"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -264,7 +264,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               value={dentistMemberId}
               onChange={e => setDentistMemberId(e.target.value)}
               placeholder="Enter dentist member ID"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -278,7 +278,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               type="text"
               value={branchId}
               onChange={e => setBranchId(e.target.value)}
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -295,7 +295,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
               />
             </div>
             <div className="flex-1">
@@ -307,7 +307,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                 type="time"
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
               />
             </div>
           </div>
@@ -327,7 +327,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                   aria-pressed={durationMinutes === opt.value}
                   className={`flex-1 h-9 px-0 text-[13px] font-medium rounded-lg transition-colors ${
                     durationMinutes === opt.value
-                      ? 'bg-[#FFE97D] text-[#4A4018] font-semibold hover:bg-[#FFE97D]'
+                      ? 'bg-lemon text-lemon-foreground font-semibold hover:bg-lemon'
                       : 'text-muted-foreground hover:bg-background'
                   }`}
                 >
@@ -348,7 +348,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               value={serviceType}
               onChange={e => setServiceType(e.target.value)}
               placeholder="e.g. Cleaning, Filling, Crown"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -363,7 +363,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               onChange={e => setNotes(e.target.value)}
               placeholder="Any notes or special instructions..."
               rows={3}
-              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none"
+              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
             />
           </div>
 
@@ -393,7 +393,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
+              className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors"
             >
               Done
             </Button>
@@ -403,7 +403,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               variant="ghost"
               onClick={handleSave}
               disabled={saving}
-              className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+              className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Appointment'}
             </Button>

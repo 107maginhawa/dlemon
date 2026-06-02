@@ -227,7 +227,7 @@ export function SoapNotesSheet({
                   value={addendumForm.reason}
                   onChange={handleAddendumFieldChange('reason')}
                   placeholder="e.g. Correction, additional finding…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div>
@@ -243,7 +243,7 @@ export function SoapNotesSheet({
                   value={addendumForm.content}
                   onChange={handleAddendumFieldChange('content')}
                   placeholder="Addendum text…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none"
                 />
               </div>
             </>
@@ -265,7 +265,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('subjective')}
                   disabled={isLocked}
                   placeholder="Chief complaint and patient-reported symptoms…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -284,7 +284,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('objective')}
                   disabled={isLocked}
                   placeholder="Clinical findings, examination results…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -303,7 +303,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('assessment')}
                   disabled={isLocked}
                   placeholder="Diagnosis and clinical impression…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -322,7 +322,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('plan')}
                   disabled={isLocked}
                   placeholder="Treatment plan and next steps…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -341,7 +341,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('notes')}
                   disabled={isLocked}
                   placeholder="Any additional observations or notes…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -428,7 +428,7 @@ export function SoapNotesSheet({
                 onClick={handleSubmitAddendum}
                 disabled={isAddingAddendum || !addendumForm.content.trim()}
                 aria-label="Submit addendum"
-                className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
               >
                 {isAddingAddendum ? 'Submitting…' : 'Submit Addendum'}
               </Button>
@@ -448,7 +448,7 @@ export function SoapNotesSheet({
                 variant="ghost"
                 onClick={() => setShowAddendum(true)}
                 data-testid="add-addendum-btn"
-                className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
+                className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors"
               >
                 Add Addendum
               </Button>
@@ -480,7 +480,7 @@ export function SoapNotesSheet({
                 disabled={isSaving || isSigning || isLoading}
                 data-testid="sign-lock-btn"
                 aria-label="Sign and lock SOAP notes"
-                className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
               >
                 {isSigning || isSaving ? 'Signing…' : 'Sign & Lock'}
               </Button>
