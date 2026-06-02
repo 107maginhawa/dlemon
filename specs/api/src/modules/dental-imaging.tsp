@@ -416,6 +416,80 @@ namespace DentalImagingModule {
     createdAt: utcDateTime;
   }
 
+  // =========================================================================
+  // CEPHALOMETRIC SUPERIMPOSITION (P1-11, v1: cranial-base S–N only)
+  // =========================================================================
+  //
+  // CLINICAL HONESTY (plan §2/§8): v1 is a TWO-POINT (S–N) similarity
+  // registration on the cranial base — a SIMPLIFIED superimposition, NOT
+  // ABO-grade structural superimposition. Output is a measurement of change,
+  // never a diagnosis. mm deltas are gated on calibration of BOTH timepoints.
+  // Maxillary / mandibular structural registrations are v2 (rejected here).
+
+  // Registration reference frame. v1 implements `cranial_base` only.
+  enum CephSuperimpositionReference {
+    cranial_base,
+    maxillary, // v2 — rejected with SUPERIMPOSITION_NOT_IMPLEMENTED
+    mandibular, // v2 — rejected with SUPERIMPOSITION_NOT_IMPLEMENTED
+  }
+
+  // Similarity transform mapping timepoint-B image-space → timepoint-A.
+  model CephSimilarityTransform {
+    scale: float64;
+    rotationRad: float64;
+    tx: float64;
+    ty: float64;
+    basis: string[]; // registration-basis landmark codes (provenance)
+  }
+
+  // Per-landmark displacement in the registered frame. mm null = uncalibrated.
+  model CephLandmarkDelta {
+    landmarkCode: string;
+    dxPx: float64;
+    dyPx: float64;
+    magnitudePx: float64;
+    dxMm: float64 | null;
+    dyMm: float64 | null;
+    magnitudeMm: float64 | null;
+    directionDeg: float64;
+  }
+
+  // Signed per-metric Δ (to − from). delta null = missing on one side.
+  model CephMetricDelta {
+    metric: string;
+    from: float64 | null;
+    to: float64 | null;
+    delta: float64 | null;
+  }
+
+  model CephSuperimpositionInput {
+    reportFromId: string; // earlier timepoint report snapshot
+    reportToId: string; // later timepoint report snapshot
+    reference: CephSuperimpositionReference;
+  }
+
+  // Computed (and optionally persisted) superimposition artifact.
+  model CephSuperimposition {
+    id: string | null; // null for preview (compute-on-the-fly, not persisted)
+    patientId: string;
+    reportFromId: string;
+    reportToId: string;
+    reference: CephSuperimpositionReference;
+    transform: CephSimilarityTransform;
+    landmarkDeltas: CephLandmarkDelta[];
+    metricDeltas: CephMetricDelta[];
+    // mm validity is traceable per timepoint (D-J posture).
+    uncalibrated: boolean;
+    calibrationBasis: Record<unknown>;
+    // v1 disclosure label — consumers MUST surface this verbatim.
+    label: string;
+    createdAt: utcDateTime | null;
+  }
+
+  model CephSuperimpositionListResponse {
+    items: CephSuperimposition[];
+  }
+
   // NOTE: Full absolute paths on every operation — same route-gotcha as ImagingFindings above.
   // Missing /dental/imaging prefix = P0 auth bypass (routes fall outside /dental/* middleware).
   interface CephManagement {
@@ -459,5 +533,32 @@ namespace DentalImagingModule {
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
     getCephReport(@path imageId: string, @query version?: int32): CephReport | ErrorResponse;
+
+    // ── Superimposition (P1-11, v1 cranial-base only) ──────────────────────
+    // Compute-on-the-fly preview: returns transform + deltas WITHOUT persisting
+    // (plan §4.2 v1 variant). id/createdAt are null.
+    @post
+    @route("/dental/imaging/ceph/superimpositions/preview")
+    @useAuth(bearerAuth)
+    previewCephSuperimposition(@body body: CephSuperimpositionInput): CephSuperimposition | ErrorResponse;
+
+    // Persist a superimposition artifact (durable, auditable). 422 on missing
+    // basis landmarks (INSUFFICIENT_LANDMARKS) or non-cranial_base in v1
+    // (SUPERIMPOSITION_NOT_IMPLEMENTED).
+    @post
+    @route("/dental/imaging/ceph/superimpositions")
+    @useAuth(bearerAuth)
+    createCephSuperimposition(@body body: CephSuperimpositionInput): CephSuperimposition | ErrorResponse;
+
+    @get
+    @route("/dental/imaging/ceph/superimpositions/{superimpositionId}")
+    @useAuth(bearerAuth)
+    getCephSuperimposition(@path superimpositionId: string): CephSuperimposition | ErrorResponse;
+
+    // List persisted superimpositions for a patient (timeline host).
+    @get
+    @route("/dental/imaging/patients/{patientId}/ceph/superimpositions")
+    @useAuth(bearerAuth)
+    listCephSuperimpositions(@path patientId: string): CephSuperimpositionListResponse | ErrorResponse;
   }
 }

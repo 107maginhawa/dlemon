@@ -13,10 +13,12 @@ import {
   imagingCephLandmarks,
   imagingCephAnalyses,
   imagingCephReports,
+  imagingCephSuperimpositions,
   type ImagingCephLandmark,
   type NewImagingCephLandmark,
   type ImagingCephAnalysis,
   type ImagingCephReport,
+  type ImagingCephSuperimposition,
 } from './imaging_ceph.schema';
 
 export type UpdateLandmarkPayload = Partial<Pick<ImagingCephLandmark, 'x' | 'y' | 'status'>>;
@@ -208,5 +210,65 @@ export class ImagingCephRepository {
       )
       .limit(1);
     return row ?? null;
+  }
+
+  async getReportById(reportId: string): Promise<ImagingCephReport | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingCephReports)
+      .where(eq(imagingCephReports.id, reportId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Superimposition (P1-11; effectively immutable per (pair, reference) —
+  // recompute mints a new row, never mutates, mirroring D-I).
+  // -------------------------------------------------------------------------
+
+  async createSuperimposition(input: {
+    patientId: string;
+    reportFromId: string;
+    reportToId: string;
+    referenceType: 'cranial_base' | 'maxillary' | 'mandibular';
+    transform: Record<string, unknown>;
+    deltas: Record<string, unknown>;
+    calibrationBasis: Record<string, unknown>;
+    userId: string | null;
+  }): Promise<ImagingCephSuperimposition> {
+    const [row] = await this.db
+      .insert(imagingCephSuperimpositions)
+      .values({
+        patientId: input.patientId,
+        reportFromId: input.reportFromId,
+        reportToId: input.reportToId,
+        referenceType: input.referenceType,
+        transform: input.transform,
+        deltas: input.deltas,
+        calibrationBasis: input.calibrationBasis,
+        createdBy: input.userId,
+      })
+      .returning();
+    if (!row) throw new Error('Failed to create ceph superimposition');
+    return row;
+  }
+
+  async getSuperimpositionById(id: string): Promise<ImagingCephSuperimposition | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingCephSuperimpositions)
+      .where(eq(imagingCephSuperimpositions.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listSuperimpositionsByPatient(
+    patientId: string,
+  ): Promise<ImagingCephSuperimposition[]> {
+    return this.db
+      .select()
+      .from(imagingCephSuperimpositions)
+      .where(eq(imagingCephSuperimpositions.patientId, patientId))
+      .orderBy(desc(imagingCephSuperimpositions.createdAt));
   }
 }
