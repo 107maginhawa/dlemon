@@ -56,11 +56,26 @@ namespace DentalOrgModule {
     @doc("Associate dentist, clinical access for own patients")
     dentistAssociate: "dentist_associate",
 
+    @doc("Hygienist — clinical hygiene access")
+    hygienist: "hygienist",
+
     @doc("Full operations staff — billing, scheduling, patient records")
     staffFull: "staff_full",
 
     @doc("Scheduling-only staff")
     staffScheduling: "staff_scheduling",
+
+    @doc("Dental assistant — chairside clinical support")
+    dentalAssistant: "dental_assistant",
+
+    @doc("Front-desk reception staff")
+    frontDesk: "front_desk",
+
+    @doc("Billing-only staff")
+    billingStaff: "billing_staff",
+
+    @doc("Read-only access")
+    readOnly: "read_only",
   }
 
   @doc("Membership status")
@@ -197,6 +212,21 @@ namespace DentalOrgModule {
 
     @doc("Profile photo URL")
     avatarUrl?: string;
+
+    @doc("Provider license number (used on clinical records + claims). Null for non-clinical staff.")
+    @maxLength(64)
+    licenseNumber?: string;
+
+    @doc("National Provider Identifier (NPI) — 10 digits. Null for non-clinical staff.")
+    @pattern("^\\d{10}$")
+    npi?: string;
+
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'.")
+    @maxLength(32)
+    credentialType?: string;
+
+    @doc("License expiry date (ISO 8601 date).")
+    licenseExpiry?: utcDateTime;
   }
 
   // ==========================================================================
@@ -356,6 +386,35 @@ namespace DentalOrgModule {
 
     @doc("Profile photo URL")
     avatarUrl?: string;
+  }
+
+  @doc("Update a member's profile, role, and provider credentials")
+  model UpdateMemberRequest {
+    @doc("New display name")
+    @minLength(1)
+    @maxLength(80)
+    displayName?: string;
+
+    @doc("New role (dentist_owner only)")
+    role?: MemberRole;
+
+    @doc("Profile photo URL")
+    avatarUrl?: string;
+
+    @doc("Provider license number")
+    @maxLength(64)
+    licenseNumber?: string;
+
+    @doc("National Provider Identifier (NPI) — 10 digits")
+    @pattern("^\\d{10}$")
+    npi?: string;
+
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'")
+    @maxLength(32)
+    credentialType?: string;
+
+    @doc("License expiry date (ISO 8601 date)")
+    licenseExpiry?: utcDateTime;
   }
 
   @doc("Reset a member's PIN")
@@ -643,6 +702,19 @@ namespace DentalOrgModule {
     createMember(
       @body body: CreateFlatMemberRequest
     ): ApiCreatedResponse<DentalMembership>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @patch(#{implicitOptionality: true})
+    @route("/{memberId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateMember")
+    updateMember(
+      @path memberId: UUID,
+      @body body: UpdateMemberRequest
+    ): ApiOkResponse<DentalMembership>
+      | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
