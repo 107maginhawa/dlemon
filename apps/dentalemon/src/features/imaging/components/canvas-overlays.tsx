@@ -9,6 +9,19 @@ interface AnnotationShapeProps {
   onAnnotationClick?: (id: string) => void
 }
 
+/**
+ * Returns true when a distance/area measurement was stored in raw pixel units,
+ * meaning the image was not calibrated at draw time. We surface a warning glyph
+ * so clinicians never mistake a px value for a clinical mm measurement.
+ */
+function isUncalibratedPxMeasurement(annotation: ImagingAnnotation): boolean {
+  const unit = annotation.measurementUnit
+  return (
+    (annotation.type === 'distance' || annotation.type === 'line' || annotation.type === 'area') &&
+    (unit === 'px' || unit === 'px²' || unit == null)
+  )
+}
+
 export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps) {
   const geo = annotation.geometry as Record<string, unknown>
 
@@ -19,14 +32,17 @@ export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps)
     const p2 = pts[1]!
     const mx = (p1.x + p2.x) / 2
     const my = (p1.y + p2.y) / 2
+    const uncalibrated = isUncalibratedPxMeasurement(annotation)
+    const unit = annotation.measurementUnit ?? 'px'
     const label =
       annotation.measurementValue !== null
-        ? `${annotation.measurementValue.toFixed(1)} ${annotation.measurementUnit ?? 'px'}`
+        ? `${uncalibrated ? '⚠ ' : ''}${annotation.measurementValue.toFixed(1)} ${unit}`
         : ''
+    const labelColor = uncalibrated ? '#FCA5A5' : BRAND_GOLD
     return (
       <g>
-        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={BRAND_GOLD} strokeWidth={2} />
-        <text x={mx} y={my - 6} fill={BRAND_GOLD} fontSize={12} textAnchor="middle">
+        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={labelColor} strokeWidth={2} strokeDasharray={uncalibrated ? '5 3' : undefined} />
+        <text x={mx} y={my - 6} fill={labelColor} fontSize={12} textAnchor="middle" aria-label={uncalibrated ? `Uncalibrated measurement: ${label}` : label}>
           {label}
         </text>
         <circle
@@ -83,20 +99,24 @@ export function MeasurementShape({ annotation, onDelete }: AnnotationShapeProps)
     const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length
     const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
     const lastPt = pts[pts.length - 1]!
+    const uncalibrated = isUncalibratedPxMeasurement(annotation)
+    const unit = annotation.measurementUnit ?? 'px²'
     const label =
       annotation.measurementValue !== null
-        ? `${annotation.measurementValue.toFixed(1)} ${annotation.measurementUnit ?? 'px²'}`
+        ? `${uncalibrated ? '⚠ ' : ''}${annotation.measurementValue.toFixed(1)} ${unit}`
         : ''
+    const areaColor = uncalibrated ? '#FCA5A5' : BRAND_GOLD
     return (
       <g>
         <polygon
           points={pointsStr}
-          fill={BRAND_GOLD}
+          fill={areaColor}
           fillOpacity={0.2}
-          stroke={BRAND_GOLD}
+          stroke={areaColor}
           strokeWidth={2}
+          strokeDasharray={uncalibrated ? '5 3' : undefined}
         />
-        <text x={cx} y={cy} fill={BRAND_GOLD} fontSize={12} textAnchor="middle">
+        <text x={cx} y={cy} fill={areaColor} fontSize={12} textAnchor="middle" aria-label={uncalibrated ? `Uncalibrated measurement: ${label}` : label}>
           {label}
         </text>
         <circle
