@@ -515,6 +515,11 @@ namespace MonobaseAPI {
   @route("/dental/patients")
   interface DentalTreatmentOptionMgmt extends DentalPatientFinanceModule.TreatmentOptionManagement {}
 
+  // P1-20: patient-facing case presentation + e-signature accept/reject (staff bearerAuth)
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalCasePresentationMgmt extends DentalPatientFinanceModule.CasePresentationManagement {}
+
   // P1-27: household / guarantor (family file)
   @tag("Dental:Patient")
   @route("/dental/households")

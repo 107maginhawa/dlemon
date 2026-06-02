@@ -542,6 +542,287 @@ namespace DentalPatientFinanceModule {
   }
 
   // ==========================================================================
+  // 1e — CASE PRESENTATION (P1-20, patient-facing treatment acceptance)
+  // ==========================================================================
+  //
+  // Phase 1 (this pass) is ENTIRELY staff `bearerAuth`: a staff member opens the
+  // presentation on the operatory iPad and the patient taps Accept/Reject on the
+  // staff's authenticated session. The public shareable-link (`by-token`) family
+  // is DEFERRED to Phase 2 — see docs/reviews/plans/04-case-presentation.md §3.3.
+
+  @doc("Lifecycle of a case presentation (distinct from the plan FSM)")
+  enum CasePresentationStatus {
+    draft: "draft",
+    sent: "sent",
+    viewed: "viewed",
+    accepted: "accepted",
+    rejected: "rejected",
+    expired: "expired",
+    revoked: "revoked",
+  }
+
+  @doc("Terminal patient decision on a presented case")
+  enum CasePresentationDecision {
+    accepted: "accepted",
+    rejected: "rejected",
+  }
+
+  @doc("A patient-facing case-presentation record (P1-20)")
+  model CasePresentation extends BaseEntity {
+    @doc("Patient the presented case belongs to")
+    patientId: UUID;
+
+    @doc("Treatment-plan header being presented")
+    treatmentPlanId: UUID;
+
+    @doc("Loose ref to the immutable plan-version snapshot presented, if any")
+    planVersionId: UUID | null;
+
+    @doc("Presentation lifecycle status")
+    status: CasePresentationStatus;
+
+    @doc("Terminal patient decision, if decided")
+    decision: CasePresentationDecision | null;
+
+    @doc("When the decision was recorded (ISO 8601 UTC)")
+    decisionAt: utcDateTime | null;
+
+    @doc("Name typed at signing (patient/guardian), if accepted")
+    signerName: string | null;
+
+    @doc("Loose ref to the consent_form written on accept, if any")
+    consentFormId: UUID | null;
+
+    @doc("Optional free-text reason captured on reject")
+    rejectionReason: string | null;
+
+    @doc("When the presentation was first viewed (ISO 8601 UTC)")
+    firstViewedAt: utcDateTime | null;
+
+    @doc("When the presentation was last viewed (ISO 8601 UTC)")
+    lastViewedAt: utcDateTime | null;
+  }
+
+  @doc("One patient-readable line item within a presented phase")
+  model CasePresentationLineItem {
+    @doc("Treatment item id")
+    id: UUID;
+
+    @doc("Tooth number, if tooth-specific")
+    toothNumber: int32 | null;
+
+    @doc("Affected surfaces, if any")
+    surfaces: string[] | null;
+
+    @doc("Layperson procedure description (not the raw CDT code)")
+    description: string;
+
+    @doc("CDT procedure code")
+    cdtCode: string;
+
+    @doc("Item status (diagnosed/planned/declined/…)")
+    status: string;
+
+    @doc("Fee for this item in cents (₱)")
+    priceCents: int32;
+
+    @doc("Option-group id, if this item is one of a set of alternates")
+    optionGroupId: UUID | null;
+
+    @doc("Whether this item is the clinician-recommended alternate")
+    recommended: boolean;
+  }
+
+  @doc("A clinical phase grouping of line items with a subtotal")
+  model CasePresentationPhase {
+    @doc("Clinical phase key (systemic/disease_control/…), or null for unphased")
+    phase: string | null;
+
+    @doc("Line items in this phase, in clinical order")
+    items: CasePresentationLineItem[];
+
+    @doc("Phase subtotal in cents (₱)")
+    subtotalCents: int32;
+  }
+
+  @doc("An alternate-case option group surfaced for the patient to choose")
+  model CasePresentationOptionGroup {
+    @doc("Option-group identifier shared by mutually-exclusive options")
+    optionGroupId: UUID;
+
+    @doc("The alternate options in the group")
+    options: CasePresentationLineItem[];
+  }
+
+  @doc("A reference to one of the patient's own annotated images")
+  model CasePresentationImageRef {
+    @doc("Image id")
+    id: UUID;
+
+    @doc("Image type (e.g. radiograph, intraoral_photo)")
+    imageType: string;
+
+    @doc("Tooth number the image is associated with, if any")
+    toothNumber: int32 | null;
+
+    @doc("Number of clinician annotations/findings on this image")
+    findingCount: int32;
+  }
+
+  @doc("Denormalized, patient-readable case-presentation aggregate (P1-20)")
+  model CasePresentationAggregate {
+    @doc("The case-presentation record")
+    presentation: CasePresentation;
+
+    @doc("The plan header being presented")
+    plan: TreatmentPlan;
+
+    @doc("Patient first name (the only PII surfaced on the presentation)")
+    patientFirstName: string;
+
+    @doc("Line items grouped by clinical phase, in clinical order")
+    phases: CasePresentationPhase[];
+
+    @doc("Alternate-case option groups with the recommended option flagged")
+    optionGroups: CasePresentationOptionGroup[];
+
+    @doc("References to the patient's own annotated images")
+    images: CasePresentationImageRef[];
+
+    @doc("Grand total across all phases in cents (₱)")
+    grandTotalCents: int32;
+  }
+
+  @doc("Body to create a case presentation from a presented plan")
+  model CreateCasePresentationRequest {
+    @doc("Treatment-plan header to present")
+    treatmentPlanId: UUID;
+
+    @doc("Loose ref to the immutable plan-version snapshot presented, if any")
+    planVersionId?: UUID;
+  }
+
+  @doc("Body to accept a presented case (patient e-signs on the staff session)")
+  model AcceptCasePresentationRequest {
+    @doc("Name typed at signing (patient or guardian)")
+    @minLength(1)
+    signerName: string;
+
+    @doc("Captured signature payload (e-sig, immutable once recorded)")
+    @minLength(1)
+    signatureData: string;
+  }
+
+  @doc("Body to reject a presented case")
+  model RejectCasePresentationRequest {
+    @doc("Optional free-text reason for declining")
+    rejectionReason?: string;
+  }
+
+  @doc("Result of accepting a case presentation")
+  model AcceptCasePresentationResult {
+    @doc("The decided presentation record")
+    presentation: CasePresentation;
+
+    @doc("The plan after transitioning presented → approved")
+    plan: TreatmentPlan;
+
+    @doc("The immutable consent e-sig written on accept")
+    consentFormId: UUID;
+  }
+
+  @doc("Result of rejecting a case presentation")
+  model RejectCasePresentationResult {
+    @doc("The decided presentation record")
+    presentation: CasePresentation;
+
+    @doc("The plan after transitioning presented → rejected")
+    plan: TreatmentPlan;
+  }
+
+  @doc("Patient-facing case-presentation management (P1-20, staff bearerAuth)")
+  interface CasePresentationManagement {
+    @doc("Create a case presentation from a presented treatment plan")
+    @operationId("createCasePresentation")
+    @post
+    @route("/{patientId}/case-presentations")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createCasePresentation(
+      @path patientId: UUID,
+      @body body: CreateCasePresentationRequest,
+    ):
+      | ApiCreatedResponse<CasePresentation>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a patient's case presentations")
+    @operationId("listCasePresentations")
+    @get
+    @route("/{patientId}/case-presentations")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listCasePresentations(@path patientId: UUID):
+      | ApiOkResponse<CasePresentation[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Get the patient-readable case-presentation aggregate (records first/last view)")
+    @operationId("getCasePresentation")
+    @get
+    @route("/{patientId}/case-presentations/{presentationId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getCasePresentation(@path patientId: UUID, @path presentationId: UUID):
+      | ApiOkResponse<CasePresentationAggregate>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Accept a presented case: write immutable e-sig, plan presented → approved")
+    @operationId("acceptCasePresentation")
+    @post
+    @route("/{patientId}/case-presentations/{presentationId}/accept")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    acceptCasePresentation(
+      @path patientId: UUID,
+      @path presentationId: UUID,
+      @body body: AcceptCasePresentationRequest,
+    ):
+      | ApiOkResponse<AcceptCasePresentationResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Reject a presented case: plan presented → rejected (terminal)")
+    @operationId("rejectCasePresentation")
+    @post
+    @route("/{patientId}/case-presentations/{presentationId}/reject")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    rejectCasePresentation(
+      @path patientId: UUID,
+      @path presentationId: UUID,
+      @body body: RejectCasePresentationRequest,
+    ):
+      | ApiOkResponse<RejectCasePresentationResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
   // 2 — SYNC LOGS (base /dental/sync-logs)
   // ==========================================================================
 
