@@ -220,6 +220,33 @@ describe('CephWorkspacePanel', () => {
     expect(switcher.textContent).toContain('Steiner')
   })
 
+  test('P1-8 analysis switcher offers Downs, Tweed, McNamara, Jarabak', async () => {
+    const user = userEvent.setup()
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    renderPanel()
+    const switcher = await screen.findByLabelText('Analysis protocol')
+    await user.click(switcher)
+    // Radix Select renders options into a portal; assert the option labels exist.
+    expect(await screen.findByText('Downs (FH)')).not.toBeNull()
+    expect(screen.getByText('Tweed (FH)')).not.toBeNull()
+    expect(screen.getByText('McNamara')).not.toBeNull()
+    expect(screen.getByText('Jarabak')).not.toBeNull()
+  })
+
+  test('P2-6 renders a norm-population selector defaulting to classic literature', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    renderPanel()
+    const popSelector = await screen.findByLabelText('Norm population')
+    expect(popSelector).not.toBeNull()
+    expect(popSelector.textContent).toContain('Default')
+  })
+
   test('no "Class" / no norm verdict text — D-H', async () => {
     setFetch(
       () =>

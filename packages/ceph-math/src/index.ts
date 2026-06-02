@@ -389,9 +389,22 @@ export function computeCephAnalysis(
 }
 
 import { computeRickettsAnalysis } from './ricketts'
+import {
+  computeDownsAnalysis,
+  computeTweedAnalysis,
+  computeMcNamaraAnalysis,
+  computeJarabakAnalysis,
+} from './analyses'
 
 /** Supported cephalometric analysis protocols (keys for compute + norms). */
-export const ANALYSIS_TYPES = ['steiner_hybrid_sn', 'ricketts'] as const
+export const ANALYSIS_TYPES = [
+  'steiner_hybrid_sn',
+  'ricketts',
+  'downs',
+  'tweed',
+  'mcnamara',
+  'jarabak',
+] as const
 export type CephAnalysisType = (typeof ANALYSIS_TYPES)[number]
 
 /**
@@ -404,13 +417,24 @@ export function computeAnalysis(
   pixelSpacingMm: number | null,
   anisotropy?: AnisotropyOptions,
 ): CephResult {
-  if (analysisType === 'ricketts') {
-    return computeRickettsAnalysis(landmarks, pixelSpacingMm, anisotropy)
+  switch (analysisType) {
+    case 'ricketts':
+      return computeRickettsAnalysis(landmarks, pixelSpacingMm, anisotropy)
+    case 'downs':
+      return computeDownsAnalysis(landmarks, pixelSpacingMm, anisotropy)
+    case 'tweed':
+      return computeTweedAnalysis(landmarks, pixelSpacingMm, anisotropy)
+    case 'mcnamara':
+      return computeMcNamaraAnalysis(landmarks, pixelSpacingMm, anisotropy)
+    case 'jarabak':
+      return computeJarabakAnalysis(landmarks, pixelSpacingMm, anisotropy)
+    default:
+      return computeCephAnalysis(landmarks, pixelSpacingMm, anisotropy)
   }
-  return computeCephAnalysis(landmarks, pixelSpacingMm, anisotropy)
 }
 
 export * from './coords'
 export * from './norms'
 export * from './pattern'
 export * from './ricketts'
+export * from './analyses'
