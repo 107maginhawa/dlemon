@@ -114,6 +114,40 @@ model ImportPMDRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Models — Continuity-of-Care export (P2-18)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whole-patient continuity-of-care export (P2-18).
+ *
+ * Unlike `exportPMD` (a single visit's snapshot), this aggregates the patient's
+ * full longitudinal record into a portable **FHIR R4 document Bundle** suitable
+ * for records-release / care-transition to another provider (HIPAA right-of-access).
+ *
+ * The response body is a FHIR R4 `Bundle` resource (`resourceType: "Bundle"`,
+ * `type: "document"`) whose entries are a `Composition` (CCD header), a `Patient`
+ * resource, and per-visit `Encounter` / `Condition` / `Procedure` /
+ * `MedicationRequest` resources derived from each sealed per-visit PMD snapshot.
+ * Returned as a downloadable `application/fhir+json` attachment.
+ *
+ * It is modelled here as a free-form object because the wire shape is the FHIR R4
+ * Bundle schema (an external standard), not a Monobase-proprietary envelope.
+ */
+@example(#{
+  resourceType: "Bundle",
+  type: "document",
+}, #{ title: "FHIR R4 continuity-of-care document Bundle" })
+model PatientCareRecordBundle {
+  /** Always the FHIR literal "Bundle". */
+  resourceType: string;
+
+  /** Always "document" for a continuity-of-care document Bundle. */
+  type: string;
+
+  ...Record<unknown>;
+}
+
+// ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
 
@@ -194,6 +228,26 @@ namespace DentalPMDModule {
     getImportedPMD(
       @path id: UUID
     ): ApiOkResponse<ImportedPMD>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    /**
+     * P2-18: whole-patient continuity-of-care export.
+     *
+     * Aggregates the patient's full longitudinal record (all per-visit PMD
+     * snapshots) into a portable FHIR R4 document Bundle for transfer / care
+     * continuity. Returned as a downloadable `application/fhir+json` attachment.
+     * The export is itself audit-logged (`pmd.export`), and a patient may export
+     * their own record (HIPAA right-of-access) in addition to authorized staff.
+     */
+    @get
+    @route("/pmd/patient/{patientId}/care-record")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("exportPatientCareRecord")
+    exportPatientCareRecord(
+      @path patientId: UUID
+    ): ApiOkResponse<PatientCareRecordBundle>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

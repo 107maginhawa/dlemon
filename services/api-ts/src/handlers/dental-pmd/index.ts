@@ -6,6 +6,7 @@
  */
 
 export { exportPMD } from './exportPMD';
+export { exportPatientCareRecord } from './exportPatientCareRecord';
 export { generatePMD } from './generatePMD';
 export { getImportedPMD } from './getImportedPMD';
 export { getPMDForVisit } from './getPMDForVisit';
