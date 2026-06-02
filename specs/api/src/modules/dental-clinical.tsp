@@ -139,6 +139,16 @@ model ConsentForm {
   patientId: UUID;
   templateId: string;
   templateName: string;
+  /** ADA: nature of the proposed procedure (P1-3 structured consent) */
+  procedureNature?: string;
+  /** ADA: expected benefits of the procedure */
+  benefits?: string;
+  /** ADA: material risks of the procedure */
+  risks?: string;
+  /** ADA: reasonable alternatives to the procedure */
+  alternatives?: string;
+  /** ADA: risks of not receiving treatment */
+  risksOfNonTreatment?: string;
   signedAt?: utcDateTime;
   signatureData?: string;
   signed: boolean;
@@ -149,10 +159,67 @@ model CreateConsentFormRequest {
   patientId: UUID;
   templateId: string;
   templateName: string;
+  /** ADA: nature of the proposed procedure */
+  procedureNature?: string;
+  /** ADA: expected benefits of the procedure */
+  benefits?: string;
+  /** ADA: material risks of the procedure */
+  risks?: string;
+  /** ADA: reasonable alternatives */
+  alternatives?: string;
+  /** ADA: risks of not receiving treatment */
+  risksOfNonTreatment?: string;
 }
 
 model SignConsentFormRequest {
   signatureData: string;
+}
+
+// ---------------------------------------------------------------------------
+// Models — Informed Refusal (P1-3)
+// ---------------------------------------------------------------------------
+
+/**
+ * InformedRefusal — records a patient's explicit refusal of recommended treatment.
+ * Distinct from consent (which is granted); immutable once recorded.
+ * Required by ADA guidelines and medico-legal best practice.
+ */
+@example(#{
+  id: "ir-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  version: 1,
+  visitId: "vi-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  refusingMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  procedureDescription: "Extraction of tooth #48 (lower right wisdom tooth)",
+  refusalReason: "Patient requests conservative management first",
+  patientAcknowledgement: "I understand the risks of declining treatment and choose to do so.",
+  refusedAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+}, #{ title: "Patient informed refusal of tooth extraction" })
+model InformedRefusal {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  version: int32;
+  visitId: UUID;
+  patientId: UUID;
+  /** Member (dentist) who presented the treatment and recorded the refusal */
+  refusingMemberId: UUID;
+  procedureDescription: string;
+  refusalReason: string;
+  /** Verbatim patient acknowledgement that they understand risks of non-treatment */
+  patientAcknowledgement: string;
+  refusedAt: utcDateTime;
+}
+
+model RecordConsentRefusalRequest {
+  visitId: UUID;
+  patientId: UUID;
+  refusingMemberId: UUID;
+  procedureDescription: string;
+  refusalReason: string;
+  patientAcknowledgement: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +485,32 @@ namespace DentalClinicalModule {
     ): ApiOkResponse<ConsentForm>
       | ApiBadRequestResponse
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  // P1-3: Informed refusal management (distinct from consent — records explicit
+  // treatment refusal with patient acknowledgement)
+  interface InformedRefusalManagement {
+    @post
+    @route("/{visitId}/consent-refusals")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("recordConsentRefusal")
+    create(
+      @path visitId: UUID,
+      @body body: RecordConsentRefusalRequest
+    ): ApiCreatedResponse<InformedRefusal>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{visitId}/consent-refusals")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listConsentRefusals")
+    list(
+      @path visitId: UUID
+    ): ApiOkResponse<PaginatedResponse<InformedRefusal>>
       | ApiUnauthorizedResponse;
   }
 

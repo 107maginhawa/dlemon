@@ -14,6 +14,12 @@ export const consentForms = pgTable('consent_form', {
   patientId: uuid('patient_id').notNull().references(() => patients.id),
   templateId: text('template_id').notNull(),
   templateName: text('template_name').notNull(),
+  // P1-3: ADA-required structured consent content fields
+  procedureNature: text('procedure_nature'),
+  benefits: text('benefits'),
+  risks: text('risks'),
+  alternatives: text('alternatives'),
+  risksOfNonTreatment: text('risks_of_non_treatment'),
   signedAt: timestamp('signed_at'),
   signatureData: text('signature_data'),
   signed: boolean('signed').notNull().default(false),

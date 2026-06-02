@@ -42,6 +42,12 @@ export async function createConsentForm(
     patientId: body.patientId,
     templateId: body.templateId,
     templateName: body.templateName,
+    // P1-3: structured consent content (ADA-required fields)
+    procedureNature: body.procedureNature,
+    benefits: body.benefits,
+    risks: body.risks,
+    alternatives: body.alternatives,
+    risksOfNonTreatment: body.risksOfNonTreatment,
   });
 
   return ctx.json(form, 201);

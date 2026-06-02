@@ -399,6 +399,11 @@ namespace MonobaseAPI {
   @route("/dental/visits")
   interface AmendmentMgmt extends DentalClinicalModule.AmendmentManagement {}
 
+  // P1-3: Informed refusal management
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface InformedRefusalMgmt extends DentalClinicalModule.InformedRefusalManagement {}
+
   // PMD
   @tag("Dental:PMD")
   @route("/dental/visits")

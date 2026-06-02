@@ -425,6 +425,7 @@ function WorkspacePage() {
         <ConsentSheet
           visitId={currentVisitId}
           patientId={patientId}
+          currentMemberId={prescriberMemberId}
           open={consentSheetOpen}
           onClose={() => setConsentSheetOpen(false)}
         />
