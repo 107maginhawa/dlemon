@@ -28,9 +28,17 @@ const FREQUENCY_OPTIONS = [
  *  The generated Prescription type omits `warnings` because it is not yet in
  *  the OpenAPI spec — we read it via an intersection cast so we do not touch
  *  any generated file. */
+type DrugInteraction = {
+  interactingDrug: string;
+  severity: 'major' | 'moderate' | 'minor';
+  description: string;
+};
+
 type PrescriptionWithWarnings = {
   warnings?: {
     allergyConflicts?: string[];
+    /** P1-2: drug-drug interactions against active medications */
+    drugInteractions?: DrugInteraction[];
   };
 };
 
@@ -59,6 +67,8 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
   const [errors, setErrors] = useState<string[]>([]);
   /** Non-empty when the server flagged allergy conflicts; clinician must acknowledge. */
   const [allergyConflicts, setAllergyConflicts] = useState<string[]>([]);
+  /** Non-empty when the server flagged drug-drug interactions; clinician must acknowledge. */
+  const [drugInteractions, setDrugInteractions] = useState<DrugInteraction[]>([]);
 
   if (!open) return null;
 
@@ -94,12 +104,15 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
       });
 
       // QW-1/P1-1: surface drug-allergy conflicts returned by the server.
+      // P1-2: also surface drug-drug interaction warnings.
       // The generated type omits `warnings`; we cast narrowly to read it.
       const data = result.data as unknown as PrescriptionWithWarnings | undefined;
       const conflicts = data?.warnings?.allergyConflicts ?? [];
-      if (conflicts.length > 0) {
+      const interactions = data?.warnings?.drugInteractions ?? [];
+      if (conflicts.length > 0 || interactions.length > 0) {
         // Prescription was saved — hold the sheet open and require acknowledgment.
-        setAllergyConflicts(conflicts);
+        if (conflicts.length > 0) setAllergyConflicts(conflicts);
+        if (interactions.length > 0) setDrugInteractions(interactions);
         return;
       }
 
@@ -112,6 +125,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
 
   function handleAcknowledge() {
     setAllergyConflicts([]);
+    setDrugInteractions([]);
     onSaved?.();
     onClose();
   }
@@ -173,11 +187,56 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
                 This patient has a recorded allergy to the prescribed drug or a related substance.
                 Review the patient&apos;s allergy history before proceeding.
               </p>
+              {drugInteractions.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleAcknowledge}
+                  className="self-start mt-1 px-4 h-9 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+                  aria-label="Acknowledge conflict and prescribe anyway"
+                >
+                  Prescribe anyway
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* P1-2 — Drug-drug interaction warning banner */}
+          {drugInteractions.length > 0 && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded-lg bg-orange-50 border-2 border-orange-400 px-4 py-3 flex flex-col gap-2"
+            >
+              <p className="text-sm font-semibold text-orange-900">
+                Drug interaction warning
+              </p>
+              <ul className="text-xs text-orange-800 flex flex-col gap-1.5 list-none">
+                {drugInteractions.map((interaction, i) => (
+                  <li key={i} className="flex flex-col gap-0.5">
+                    <span className="font-semibold">
+                      {interaction.interactingDrug}
+                      <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        interaction.severity === 'major'
+                          ? 'bg-red-100 text-red-700'
+                          : interaction.severity === 'moderate'
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {interaction.severity}
+                      </span>
+                    </span>
+                    <span>{interaction.description}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-orange-700 italic">
+                Note: interaction data is curated for dental use — not a comprehensive drug database.
+              </p>
               <button
                 type="button"
                 onClick={handleAcknowledge}
-                className="self-start mt-1 px-4 h-9 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
-                aria-label="Acknowledge conflict and prescribe anyway"
+                className="self-start mt-1 px-4 h-9 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+                aria-label="Acknowledge drug interaction and prescribe anyway"
               >
                 Prescribe anyway
               </button>
@@ -319,7 +378,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || allergyConflicts.length > 0}
+            disabled={saving || allergyConflicts.length > 0 || drugInteractions.length > 0}
             className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save prescription'}
