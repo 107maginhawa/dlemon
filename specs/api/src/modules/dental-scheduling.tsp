@@ -133,6 +133,119 @@ model CheckInResponse {
 }
 
 // ---------------------------------------------------------------------------
+// P1-25: Online / self-service patient booking (public surface)
+// ---------------------------------------------------------------------------
+
+// Per-branch online-booking policy that drives the public booking form.
+// Mirrors the `onlineBooking` block stored on dental_branch.settings.
+model PublicBookingProvider {
+  providerId: UUID;
+  displayName: string;
+}
+
+model PublicBookingConfig {
+  branchId: UUID;
+  branchName: string;
+  timezone: string;
+  enabled: boolean;
+  bookableVisitTypes: VisitType[];
+  leadTimeMinutes: int32;
+  horizonDays: int32;
+  slotStepMinutes: int32;
+  requirePatientAuth: boolean;
+  providers: PublicBookingProvider[];
+}
+
+// A single computed open slot. Carries NO patient PII and no existing-appointment
+// detail — only free/bookable windows (plan §3.1.6 PII boundary).
+model PublicAvailabilitySlot {
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  providerId: UUID;
+  visitType: VisitType;
+}
+
+model PublicAvailabilityResponse {
+  branchId: UUID;
+  visitType: VisitType;
+  slots: PublicAvailabilitySlot[];
+}
+
+@example(#{
+  providerId: "m1a2b3c4-0000-4000-8000-000000000001",
+  startAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  visitType: VisitType.checkup,
+}, #{ title: "Hold a checkup slot" })
+model CreateHoldRequest {
+  providerId: UUID;
+  startAt: utcDateTime;
+  visitType: VisitType;
+}
+
+model HoldResponse {
+  holdId: UUID;
+  sessionToken: string;
+  providerId: UUID;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  expiresAt: utcDateTime;
+}
+
+@example(#{
+  providerId: "m1a2b3c4-0000-4000-8000-000000000001",
+  startAt: utcDateTime.fromISO("2026-03-15T09:00:00Z"),
+  visitType: VisitType.checkup,
+  firstName: "Jordan",
+  lastName: "Rivera",
+  phone: "+15551234567",
+  email: "jordan@example.com",
+}, #{ title: "Book online (prospect)" })
+model CreateOnlineBookingRequest {
+  providerId: UUID;
+  startAt: utcDateTime;
+  visitType: VisitType;
+
+  // Optional hold token (recommended path) — caps the read-then-write race.
+  sessionToken?: string;
+
+  @maxLength(120)
+  firstName: string;
+
+  @maxLength(120)
+  lastName?: string;
+
+  phone?: string;
+  email?: string;
+  dateOfBirth?: string;
+
+  @maxLength(500)
+  notes?: string;
+}
+
+model OnlineBookingResponse {
+  confirmationCode: string;
+  appointmentId: UUID;
+  branchId: UUID;
+  providerId: UUID;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  visitType: VisitType;
+  status: AppointmentStatus;
+}
+
+model BookingLookupResponse {
+  confirmationCode: string;
+  branchId: UUID;
+  branchName: string;
+  providerName: string;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  visitType: VisitType;
+  status: AppointmentStatus;
+  confirmationState: string;
+}
+
+// ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
 
@@ -218,5 +331,68 @@ namespace DentalSchedulingModule {
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
+  }
+
+  // P1-25: public self-service booking surface. No bearer auth — these routes
+  // are reachable unauthenticated and rely on per-branch online-booking config,
+  // application-level rate-limiting, short-TTL holds, and a transactional final
+  // overlap re-check. They write real `dental_appointment` rows in `scheduled`
+  // status that flow through the existing check-in → visit lifecycle.
+  interface PublicBookingManagement {
+    @get
+    @route("/branches/{branchId}/booking-config")
+    @operationId("getPublicBookingConfig")
+    getConfig(
+      @path branchId: UUID
+    ): ApiOkResponse<PublicBookingConfig>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse;
+
+    @get
+    @route("/branches/{branchId}/availability")
+    @operationId("getPublicAvailability")
+    availability(
+      @path branchId: UUID,
+      @query visitType: VisitType,
+      @query("date_from") dateFrom: string,
+      @query("date_to") dateTo: string,
+      @query providerId?: UUID
+    ): ApiOkResponse<PublicAvailabilityResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiRateLimitResponse;
+
+    @post
+    @route("/branches/{branchId}/holds")
+    @operationId("createBookingHold")
+    createHold(
+      @path branchId: UUID,
+      @body body: CreateHoldRequest
+    ): ApiCreatedResponse<HoldResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiConflictResponse
+      | ApiRateLimitResponse;
+
+    @post
+    @route("/branches/{branchId}/bookings")
+    @operationId("createOnlineBooking")
+    book(
+      @path branchId: UUID,
+      @body body: CreateOnlineBookingRequest
+    ): ApiCreatedResponse<OnlineBookingResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiConflictResponse
+      | ApiRateLimitResponse;
+
+    @get
+    @route("/bookings/{confirmationCode}")
+    @operationId("getOnlineBooking")
+    lookup(
+      @path confirmationCode: string
+    ): ApiOkResponse<BookingLookupResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse;
   }
 }

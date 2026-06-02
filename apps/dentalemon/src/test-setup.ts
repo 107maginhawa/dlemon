@@ -41,7 +41,9 @@ function _makeIcon(name: string) {
 }
 const _lucideMock = {
   Activity: _makeIcon('activity'),
+  AlertCircle: _makeIcon('alertcircle'),
   AlertTriangle: _makeIcon('alerttriangle'),
+  ArrowLeft: _makeIcon('arrowleft'),
   ArrowRight: _makeIcon('arrowright'),
   Calendar: _makeIcon('calendar'),
   CalendarClock: _makeIcon('calendarclock'),
