@@ -511,6 +511,15 @@ namespace MonobaseAPI {
   @route("/dental/patients")
   interface DentalTreatmentOptionMgmt extends DentalPatientFinanceModule.TreatmentOptionManagement {}
 
+  // P1-27: household / guarantor (family file)
+  @tag("Dental:Patient")
+  @route("/dental/households")
+  interface DentalHouseholdMgmt extends DentalPatientFinanceModule.HouseholdManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalPatientHouseholdMgmt extends DentalPatientFinanceModule.PatientHouseholdManagement {}
+
   @tag("Dental:Patient")
   @route("/dental/sync-logs")
   interface DentalSyncLogMgmt extends DentalPatientFinanceModule.SyncLogManagement {}

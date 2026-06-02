@@ -1,0 +1,37 @@
+/**
+ * removeHouseholdMember — DELETE /dental/households/{householdId}/members/{patientId}
+ *
+ * P1-27: remove a non-guarantor patient from a household. The guarantor cannot be
+ * removed (reassign the guarantor or delete the household instead).
+ */
+
+import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { HouseholdRepository } from '../repos/household.repo';
+import type { DatabaseInstance } from '@/core/database';
+
+export async function removeHouseholdMember(ctx: any): Promise<Response> {
+  const user = ctx.get('user');
+  if (!user?.id) throw new UnauthorizedError('Authentication required');
+
+  const { householdId, patientId } = ctx.req.valid('param');
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const repo = new HouseholdRepository(db, logger);
+  const household = await repo.findOneById(householdId);
+  if (!household) throw new NotFoundError('Household not found');
+
+  await assertBranchAccess(db, user.id, household.branchId);
+
+  if (household.guarantorPatientId === patientId) {
+    throw new BusinessLogicError('Cannot remove the guarantor from the household', 'GUARANTOR_NOT_REMOVABLE');
+  }
+
+  const removed = await repo.removeMember(householdId, patientId);
+  if (!removed) throw new NotFoundError('Household member not found');
+
+  logger?.info({ action: 'removeHouseholdMember', householdId, patientId }, 'Household member removed');
+
+  return ctx.json(removed, 200);
+}
