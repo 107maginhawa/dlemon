@@ -40,6 +40,12 @@ export const dentalMemberships = pgTable('dental_membership', {
   // FR9.7: PIN recovery — security question
   securityQuestion: text('security_question'),
   securityAnswerHash: text('security_answer_hash'),
+  // P2-17: Provider credentials — license/NPI on provider record for clinical
+  // records + claims. All nullable (non-clinical staff carry no credentials).
+  licenseNumber: text('license_number'),
+  npi: text('npi'),
+  credentialType: text('credential_type'),
+  licenseExpiry: timestamp('license_expiry'),
 }, (table) => ({
   // A person can only have one membership per branch (only enforced when personId is set)
   personBranchUnique: uniqueIndex('dental_membership_person_branch_unique')

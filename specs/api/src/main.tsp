@@ -426,6 +426,10 @@ namespace MonobaseAPI {
   interface FlatMemberMgmt extends DentalOrgModule.FlatMemberManagement {}
 
   @tag("Dental:Org")
+  @route("/dental/org/permissions")
+  interface PermissionMgmt extends DentalOrgModule.PermissionManagement {}
+
+  @tag("Dental:Org")
   @route("/dental/branches")
   interface BranchConfigMgmt extends DentalOrgModule.BranchConfigManagement {}
 

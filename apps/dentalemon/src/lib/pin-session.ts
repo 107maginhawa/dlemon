@@ -24,12 +24,18 @@ export interface StartSessionOptions {
   memberId: string;
   displayName: string;
   role: string;
+  /**
+   * Override the inactivity timeout for this session (ms). Defaults to
+   * INACTIVITY_TIMEOUT_MS. Primarily for tests; production uses the default.
+   */
+  timeoutMs?: number;
 }
 
 export class PinSessionManager {
   private session: PinSessionData | null = null;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private onExpireCallback: (() => void) | null = null;
+  private timeoutMs: number = INACTIVITY_TIMEOUT_MS;
 
   /** Register a callback to invoke when the inactivity timer fires. */
   onExpire(callback: () => void): void {
@@ -38,6 +44,7 @@ export class PinSessionManager {
 
   /** Start a new session for the given member. Replaces any existing session. */
   startSession(opts: StartSessionOptions): void {
+    this.timeoutMs = opts.timeoutMs ?? INACTIVITY_TIMEOUT_MS;
     this.session = {
       memberId: opts.memberId,
       displayName: opts.displayName,
@@ -58,16 +65,20 @@ export class PinSessionManager {
    * Call on any user interaction (mousemove, keydown, click, etc.).
    */
   updateActivity(now: number = Date.now()): void {
-    if (this.session) {
+    // Once locked, interaction must NOT silently re-arm the session — the user
+    // has to re-authenticate via PIN. This prevents a background activity event
+    // (or a stray pointer move on a locked screen) from re-firing auto-logoff
+    // or masking the locked state.
+    if (this.session && !this.session.locked) {
       this.session.lastActiveAt = now;
       this._resetTimer();
     }
   }
 
-  /** Returns true if the session has been inactive beyond INACTIVITY_TIMEOUT_MS. */
+  /** Returns true if the session has been inactive beyond the inactivity timeout. */
   isExpired(): boolean {
     if (!this.session) return false;
-    return Date.now() - this.session.lastActiveAt > INACTIVITY_TIMEOUT_MS;
+    return Date.now() - this.session.lastActiveAt > this.timeoutMs;
   }
 
   /** Returns true if the session is currently locked (pending re-auth). */
@@ -109,7 +120,7 @@ export class PinSessionManager {
         this.lockForReauth();
         this.onExpireCallback?.();
       }
-    }, INACTIVITY_TIMEOUT_MS);
+    }, this.timeoutMs);
   }
 
   /** Cancel any pending inactivity timer. */

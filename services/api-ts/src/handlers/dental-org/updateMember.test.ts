@@ -181,6 +181,85 @@ describe('updateMember handler', () => {
     expect(body.pinHash).toBeUndefined();
   });
 
+  // --------------------------------------------------------------------------
+  // P2-17: Provider credentials
+  // --------------------------------------------------------------------------
+
+  test('returns 200 and persists provider credentials', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Dr. Provider',
+      role: 'dentist_associate',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        licenseNumber: 'LIC-12345',
+        npi: '1234567890',
+        credentialType: 'DDS',
+        licenseExpiry: '2030-12-31T00:00:00Z',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.licenseNumber).toBe('LIC-12345');
+    expect(body.npi).toBe('1234567890');
+    expect(body.credentialType).toBe('DDS');
+    expect(new Date(body.licenseExpiry).getUTCFullYear()).toBe(2030);
+  });
+
+  test('returns 400 when NPI is not 10 digits', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Dr. Bad NPI',
+      role: 'dentist_associate',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ npi: '123' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('allows clearing credentials with null', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Dr. Clearable',
+      role: 'dentist_associate',
+      status: 'active',
+      pinFailedAttempts: 0,
+      licenseNumber: 'LIC-OLD',
+      npi: '9999999999',
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ licenseNumber: null, npi: null }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.licenseNumber).toBeNull();
+    expect(body.npi).toBeNull();
+  });
+
   test('returns 200 with updated role', async () => {
     const membershipRepo = await seedAll();
     const member = await membershipRepo.createOne({
