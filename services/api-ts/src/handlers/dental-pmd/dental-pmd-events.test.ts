@@ -91,7 +91,9 @@ async function auditRows(action: string, targetId: string) {
 }
 
 afterEach(async () => {
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE branch_id = ${BRANCH_ID}`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   await db.execute(sql`TRUNCATE TABLE pmd_document, imported_pmd, dental_visit CASCADE`);
 });
 

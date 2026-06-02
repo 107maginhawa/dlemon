@@ -120,7 +120,9 @@ afterEach(async () => {
   await db.execute(
     sql`TRUNCATE TABLE dental_treatment, dental_chart, visit_notes, dental_visit CASCADE`,
   );
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE target_type = 'dental_treatment'`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 });
 
 // V-VIS-006: helper to read audit rows written for a treatment transition.

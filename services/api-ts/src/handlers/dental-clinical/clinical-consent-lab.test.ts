@@ -151,7 +151,9 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_treatment WHERE visit_id IN ${visitIds}`);
   await db.execute(sql`DELETE FROM medical_history_entry WHERE patient_id = ${PATIENT_ID}`);
   await db.execute(sql`DELETE FROM dental_visit     WHERE patient_id = ${PATIENT_ID}`);
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE target_type = 'dental_lab_order'`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT cleaned here
 });
 
