@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, date, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, date, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
@@ -23,7 +23,14 @@ export const dentalRecalls = pgTable('dental_recall', {
   dueDate: text('due_date').notNull(),
   status: text('status').notNull().default('pending').$type<RecallStatus>(),
   notes: text('notes'),
+  // P1-24: recurrence interval (months) — drives auto-recompute of dueDate and
+  // next-cycle seeding on completion. NULL = one-off recall.
+  intervalMonths: integer('interval_months'),
   sentAt: timestamp('sent_at'),
+  // P1-24: re-attempt bookkeeping distinct from the single `sentAt`. `lastSentAt`
+  // is the most-recent outreach time; `sendAttempts` caps re-attempts.
+  lastSentAt: timestamp('last_sent_at'),
+  sendAttempts: integer('send_attempts').notNull().default(0),
   completedAt: timestamp('completed_at'),
 }, (table) => ({
   patientIdx: index('dental_recall_patient_idx').on(table.patientId),

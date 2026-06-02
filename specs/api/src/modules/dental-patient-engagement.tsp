@@ -209,8 +209,17 @@ namespace DentalPatientEngagementModule {
     @doc("Free-text notes")
     notes: string | null;
 
+    @doc("P1-24: recurrence interval in months (drives auto-recompute + next-cycle seeding); null = one-off")
+    intervalMonths: int32 | null;
+
     @doc("When the recall was sent (ISO 8601 UTC)")
     sentAt: utcDateTime | null;
+
+    @doc("P1-24: when the most recent outreach was dispatched (re-attempt cadence)")
+    lastSentAt: utcDateTime | null;
+
+    @doc("P1-24: number of outreach attempts made")
+    sendAttempts: int32;
 
     @doc("When the recall was completed (ISO 8601 UTC)")
     completedAt: utcDateTime | null;
@@ -224,6 +233,9 @@ namespace DentalPatientEngagementModule {
     @doc("Due date (YYYY-MM-DD)")
     dueDate: string;
 
+    @doc("P1-24: recurrence interval in months (e.g. cleaning = 6)")
+    intervalMonths?: int32;
+
     @doc("Free-text notes")
     notes?: string;
   }
@@ -236,11 +248,44 @@ namespace DentalPatientEngagementModule {
     @doc("Due date (YYYY-MM-DD)")
     dueDate?: string;
 
+    @doc("P1-24: recurrence interval in months")
+    intervalMonths?: int32;
+
     @doc("Current lifecycle status")
     status?: RecallStatus;
 
     @doc("Free-text notes")
     notes?: string;
+  }
+
+  @doc("P1-24: a due recall enriched with patient identity for the front-desk recare list")
+  model RecallDueItem {
+    @doc("Recall id")
+    id: UUID;
+
+    @doc("Patient this recall belongs to")
+    patientId: UUID;
+
+    @doc("Patient display name")
+    patientName: string;
+
+    @doc("Recall type")
+    type: RecallType;
+
+    @doc("Due date (YYYY-MM-DD)")
+    dueDate: string;
+
+    @doc("Current lifecycle status")
+    status: RecallStatus;
+
+    @doc("Recurrence interval in months; null = one-off")
+    intervalMonths: int32 | null;
+
+    @doc("Number of outreach attempts made")
+    sendAttempts: int32;
+
+    @doc("When the most recent outreach was dispatched (ISO 8601 UTC)")
+    lastSentAt: utcDateTime | null;
   }
 
   @doc("Patient recall management (P0-B)")
@@ -288,6 +333,28 @@ namespace DentalPatientEngagementModule {
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  @doc("P1-24: recare due-list — branch-scoped continuing-care queue for the front desk")
+  interface RecallDueListManagement {
+    @doc("List recalls that are due (pending/sent, dueDate within window) for a branch")
+    @operationId("listDueRecalls")
+    @get
+    @route("/due")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listDueRecalls(
+      @query branchId: UUID,
+      @query("from") from?: string,
+      @query("to") to?: string,
+      @query @minValue(1) page?: int32,
+      @query("per_page") @minValue(1) @maxValue(200) perPage?: int32,
+    ):
+      | ApiOkResponse<RecallDueItem[]>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
       | ErrorResponse;
   }
 

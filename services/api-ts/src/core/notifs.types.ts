@@ -6,8 +6,8 @@
 export interface Notification {
   id: string;
   recipient: string;
-  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
-  channel: 'email' | 'push' | 'in-app';
+  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message' | 'appointment.reminder' | 'appointment.confirmation-request' | 'recall.due' | 'recall.reminder';
+  channel: 'email' | 'push' | 'in-app' | 'sms';
   title: string;
   message: string;
   scheduledAt: Date | null;
@@ -26,8 +26,8 @@ export interface Notification {
 
 export interface CreateNotificationRequest {
   recipient: string;
-  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
-  channel: 'email' | 'push' | 'in-app';
+  type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message' | 'appointment.reminder' | 'appointment.confirmation-request' | 'recall.due' | 'recall.reminder';
+  channel: 'email' | 'push' | 'in-app' | 'sms';
   title: string;
   message: string;
   scheduledAt?: Date;

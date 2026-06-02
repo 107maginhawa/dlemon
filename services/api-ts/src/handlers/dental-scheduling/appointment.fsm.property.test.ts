@@ -78,6 +78,10 @@ describe('Appointment FSM property tests', () => {
     expect(isValidTransition('confirmed', 'scheduled')).toBe(false);
   });
 
+  test('confirmed cannot jump directly to completed (must check-in first) — P1-24', () => {
+    expect(isValidTransition('confirmed', 'completed')).toBe(false);
+  });
+
   test('no_show is reversible to completed (patient turns up late)', () => {
     expect(isValidTransition('no_show', 'completed')).toBe(true);
   });

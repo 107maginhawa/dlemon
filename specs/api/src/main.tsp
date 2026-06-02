@@ -500,6 +500,11 @@ namespace MonobaseAPI {
   @route("/dental/patients")
   interface RecallMgmt extends DentalPatientEngagementModule.RecallManagement {}
 
+  // P1-24: branch-scoped recare due-list (front-desk continuing-care queue)
+  @tag("Dental:Patient")
+  @route("/dental/recalls")
+  interface RecallDueListMgmt extends DentalPatientEngagementModule.RecallDueListManagement {}
+
   @tag("Dental:Patient")
   @route("/dental/patients")
   interface DentalAlertMgmt extends DentalPatientEngagementModule.DentalAlertManagement {}

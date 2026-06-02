@@ -50,6 +50,8 @@ import { sendChatMessage } from '../../handlers/comms/sendChatMessage';
 import { updateVideoCallParticipant } from '../../handlers/comms/updateVideoCallParticipant';
 import { cancelAppointment } from '../../handlers/dental-scheduling/cancelAppointment';
 import { checkInAppointment } from '../../handlers/dental-scheduling/checkInAppointment';
+import { confirmAppointment } from '../../handlers/dental-scheduling/confirmAppointment';
+import { confirmAppointmentByToken } from '../../handlers/dental-scheduling/confirmAppointmentByToken';
 import { createAppointment } from '../../handlers/dental-scheduling/createAppointment';
 import { createBookingHold } from '../../handlers/dental-scheduling/createBookingHold';
 import { createOnlineBooking } from '../../handlers/dental-scheduling/createOnlineBooking';
@@ -192,6 +194,7 @@ import { initializeDentition } from '../../handlers/dental-patient/identity/init
 import { listCasePresentations } from '../../handlers/dental-patient/case-presentation/listCasePresentations';
 import { listDentalAlerts } from '../../handlers/dental-patient/alerts/listDentalAlerts';
 import { listDentalPatients } from '../../handlers/dental-patient/identity/listDentalPatients';
+import { listDueRecalls } from '../../handlers/dental-patient/recalls/listDueRecalls';
 import { listFollowUpNotes } from '../../handlers/dental-patient/engagement/listFollowUpNotes';
 import { listPatientClaims } from '../../handlers/dental-patient/insurance/listPatientClaims';
 import { listPatientConditions } from '../../handlers/dental-patient/identity/listPatientConditions';
@@ -394,6 +397,8 @@ export const registry = {
   // Dental-scheduling handlers
   cancelAppointment,
   checkInAppointment,
+  confirmAppointment,
+  confirmAppointmentByToken,
   createAppointment,
   createBookingHold,
   createOnlineBooking,
@@ -548,6 +553,7 @@ export const registry = {
   listCasePresentations,
   listDentalAlerts,
   listDentalPatients,
+  listDueRecalls,
   listFollowUpNotes,
   listPatientClaims,
   listPatientConditions,

@@ -359,3 +359,82 @@ Content-Type: application/json
   "visitId": "{{patient_visit_id}}"
 }
 HTTP 401
+
+
+# ── P1-24: recall recurrence + recare due-list ───────────────────────────────
+# R0. Ensure the patient is assigned to the branch (recall handlers are branch-scoped)
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "preferredBranchId": "{{branch_id}}"
+}
+HTTP 200
+
+
+# R1. Create a recurring recall already due (past dueDate), interval 6 months
+POST {{api}}/dental/patients/{{patient_id}}/recalls
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "cleaning",
+  "dueDate": "2024-01-01",
+  "intervalMonths": 6
+}
+HTTP 201
+[Captures]
+recall_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.status" == "pending"
+jsonpath "$.intervalMonths" == 6
+
+
+# R2. Recare due-list for the branch returns the due recall (branch-scoped)
+GET {{api}}/dental/recalls/due?branchId={{branch_id}}&from=2000-01-01&to=2999-12-31
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$[0].patientName" isString
+
+
+# R3. Due-list requires auth
+GET {{api}}/dental/recalls/due?branchId={{branch_id}}
+HTTP 401
+
+
+# R4. Due-list missing branchId → 400 (query validator wired)
+GET {{api}}/dental/recalls/due
+Cookie: better-auth.session_token={{session_token}}
+HTTP 400
+
+
+# R5. Complete the recurring recall — must go through 'sent' first (FSM), then completed
+PATCH {{api}}/dental/patients/{{patient_id}}/recalls/{{recall_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "sent"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "sent"
+
+PATCH {{api}}/dental/patients/{{patient_id}}/recalls/{{recall_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "completed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "completed"
+
+
+# R6. Next-cycle recall was seeded (a new pending recall now exists)
+GET {{api}}/dental/patients/{{patient_id}}/recalls
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$[?(@.status=='pending')]" count >= 1

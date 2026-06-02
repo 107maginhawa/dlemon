@@ -405,6 +405,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.checkInAppointment as unknown as Handler
   );
 
+  // confirmAppointment
+  app.post('/dental/appointments/:appointmentId/confirm',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ConfirmAppointmentParams, validationErrorHandler),
+    registry.confirmAppointment as unknown as Handler
+  );
+
   // createQueueItem
   app.post('/dental/appointments/:appointmentId/queue-item',
     authMiddleware({ roles: ["user"] }),
@@ -1688,6 +1695,12 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.exportPatientCareRecord as unknown as Handler
   );
 
+  // confirmAppointmentByToken
+  app.post('/dental/public/appointments/:appointmentId/confirm/:token',
+    zValidator('param', validators.ConfirmAppointmentByTokenParams, validationErrorHandler),
+    registry.confirmAppointmentByToken as unknown as Handler
+  );
+
   // getOnlineBooking
   app.get('/dental/public/bookings/:confirmationCode',
     zValidator('param', validators.GetOnlineBookingParams, validationErrorHandler),
@@ -1727,6 +1740,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.UpdateQueueItemStatusParams, validationErrorHandler),
     zValidator('json', validators.UpdateQueueItemStatusBody, validationErrorHandler),
     registry.updateQueueItemStatus as unknown as Handler
+  );
+
+  // listDueRecalls
+  app.get('/dental/recalls/due',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListDueRecallsQuery, validationErrorHandler),
+    registry.listDueRecalls as unknown as Handler
   );
 
   // createSyncLog

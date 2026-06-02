@@ -150,6 +150,45 @@ export async function getBranchOnlineBookingContext(
   };
 }
 
+/**
+ * P1-24: the effective reminder/recall cadence policy for a branch. Reads the
+ * `reminderPolicy` block from `dental_branch.settings` (JSONB) and falls back to
+ * a hardcoded default when absent. Also returns the branch timezone (recall
+ * due-dates are computed against branch tz). Returns the default policy with a
+ * 'UTC' timezone if the branch is missing (never throws).
+ */
+export interface ReminderPolicy {
+  leadHours: number[];
+  channels: ('sms' | 'email' | 'push' | 'in-app')[];
+  recallReattemptDays: number;
+  recallMaxAttempts: number;
+}
+
+export const DEFAULT_REMINDER_POLICY: ReminderPolicy = {
+  leadHours: [72, 24, 2],
+  channels: ['email', 'in-app'],
+  recallReattemptDays: 14,
+  recallMaxAttempts: 3,
+};
+
+export async function getBranchReminderPolicy(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<{ policy: ReminderPolicy; timezone: string }> {
+  const [row] = await db
+    .select({ settings: dentalBranches.settings, timezone: dentalBranches.timezone })
+    .from(dentalBranches)
+    .where(eq(dentalBranches.id, branchId));
+  const raw = (row?.settings as { reminderPolicy?: Partial<ReminderPolicy> } | null)?.reminderPolicy;
+  const policy: ReminderPolicy = {
+    leadHours: raw?.leadHours ?? DEFAULT_REMINDER_POLICY.leadHours,
+    channels: raw?.channels ?? DEFAULT_REMINDER_POLICY.channels,
+    recallReattemptDays: raw?.recallReattemptDays ?? DEFAULT_REMINDER_POLICY.recallReattemptDays,
+    recallMaxAttempts: raw?.recallMaxAttempts ?? DEFAULT_REMINDER_POLICY.recallMaxAttempts,
+  };
+  return { policy, timezone: row?.timezone ?? 'UTC' };
+}
+
 export async function getActiveBranchIdsForPerson(
   db: DatabaseInstance,
   personId: string,

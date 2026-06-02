@@ -80,6 +80,8 @@ model DentalAppointment {
   walkIn: boolean;
   status: AppointmentStatus;
   confirmedAt?: utcDateTime;
+  // P1-24: how the appointment was confirmed — 'staff' | 'sms' | 'email' | 'link'.
+  confirmedVia?: string;
   checkInTime?: utcDateTime;
   visitId?: UUID;
   notes?: string;
@@ -245,6 +247,16 @@ model BookingLookupResponse {
   confirmationState: string;
 }
 
+// P1-24: response for the public, token-gated patient self-confirm link.
+// Carries no PII — only the appointment's new status + window.
+model PublicConfirmResponse {
+  appointmentId: UUID;
+  status: AppointmentStatus;
+  startAt: utcDateTime;
+  endAt: utcDateTime;
+  confirmedAt: utcDateTime;
+}
+
 // ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
@@ -331,6 +343,20 @@ namespace DentalSchedulingModule {
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
+
+    // P1-24: staff confirm action — moves a scheduled appointment to `confirmed`
+    // (sets confirmedVia='staff') and synchronously expires queued reminder rows.
+    @post
+    @route("/{appointmentId}/confirm")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("confirmAppointment")
+    confirm(
+      @path appointmentId: UUID
+    ): ApiOkResponse<DentalAppointment>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
   }
 
   // P1-25: public self-service booking surface. No bearer auth — these routes
@@ -394,5 +420,20 @@ namespace DentalSchedulingModule {
     ): ApiOkResponse<BookingLookupResponse>
       | ApiNotFoundResponse
       | ApiBadRequestResponse;
+
+    // P1-24: public, token-gated patient self-confirm. No auth; the single-use
+    // `confirmationToken` (random UUID embedded in the reminder link) is the
+    // bearer. Valid + unconfirmed → confirmed (confirmedVia='link'); reused or
+    // unknown token → 404. Rate-limited.
+    @post
+    @route("/appointments/{appointmentId}/confirm/{token}")
+    @operationId("confirmAppointmentByToken")
+    confirmByToken(
+      @path appointmentId: UUID,
+      @path token: UUID
+    ): ApiOkResponse<PublicConfirmResponse>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiRateLimitResponse;
   }
 }

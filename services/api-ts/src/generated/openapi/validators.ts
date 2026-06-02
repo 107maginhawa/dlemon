@@ -567,6 +567,7 @@ export const DentalAppointmentSchema = z.object({
   walkIn: z.boolean(),
   status: AppointmentStatusSchema,
   confirmedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  confirmedVia: z.string().optional(),
   checkInTime: z.string().datetime().transform((str) => new Date(str)).optional(),
   visitId: UUIDSchema.optional(),
   notes: z.string().optional(),
@@ -2111,6 +2112,7 @@ export const DentalPatientEngagementModuleCreatePatientContactRequestSchema = z.
 export const DentalPatientEngagementModuleCreateRecallRequestSchema = z.object({
   type: z.enum(["cleaning", "checkup", "treatment", "other"]),
   dueDate: z.string(),
+  intervalMonths: z.number().int().optional(),
   notes: z.string().optional()
 });
 
@@ -2187,8 +2189,23 @@ export const DentalPatientEngagementModuleRecallSchema = z.object({
   dueDate: z.string(),
   status: z.enum(["pending", "sent", "completed", "cancelled"]),
   notes: z.union([z.string(), z.null()]),
+  intervalMonths: z.union([z.number().int(), z.null()]),
   sentAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastSentAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  sendAttempts: z.number().int(),
   completedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+});
+
+export const DentalPatientEngagementModuleRecallDueItemSchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().uuid(),
+  patientName: z.string(),
+  type: z.enum(["cleaning", "checkup", "treatment", "other"]),
+  dueDate: z.string(),
+  status: z.enum(["pending", "sent", "completed", "cancelled"]),
+  intervalMonths: z.union([z.number().int(), z.null()]),
+  sendAttempts: z.number().int(),
+  lastSentAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
 });
 
 export const DentalPatientEngagementModuleRecallStatusSchema = z.enum(["pending", "sent", "completed", "cancelled"]);
@@ -2219,6 +2236,7 @@ export const DentalPatientEngagementModuleUpdatePatientContactRequestSchema = z.
 export const DentalPatientEngagementModuleUpdateRecallRequestSchema = z.object({
   type: z.enum(["cleaning", "checkup", "treatment", "other"]).optional(),
   dueDate: z.string().optional(),
+  intervalMonths: z.number().int().optional(),
   status: z.enum(["pending", "sent", "completed", "cancelled"]).optional(),
   notes: z.string().optional()
 });
@@ -17662,8 +17680,8 @@ export const NotificationSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   recipient: z.string().uuid(),
-  type: z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]),
-  channel: z.enum(["email", "push", "in-app"]),
+  type: z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message", "appointment.reminder", "appointment.confirmation-request", "recall.due", "recall.reminder"]),
+  channel: z.enum(["email", "push", "in-app", "sms"]),
   title: z.string().max(200),
   message: z.string().max(1000),
   scheduledAt: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -17677,11 +17695,11 @@ export const NotificationSchema = z.object({
   consentValidated: z.boolean()
 });
 
-export const NotificationChannelSchema = z.enum(["email", "push", "in-app"]);
+export const NotificationChannelSchema = z.enum(["email", "push", "in-app", "sms"]);
 
 export const NotificationStatusSchema = z.enum(["queued", "sent", "delivered", "read", "failed", "expired", "unread"]);
 
-export const NotificationTypeSchema = z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message"]);
+export const NotificationTypeSchema = z.enum(["billing", "security", "system", "booking.created", "booking.confirmed", "booking.rejected", "booking.cancelled", "booking.no-show-client", "booking.no-show-host", "comms.video-call-started", "comms.video-call-joined", "comms.video-call-left", "comms.video-call-ended", "comms.chat-message", "appointment.reminder", "appointment.confirmation-request", "recall.due", "recall.reminder"]);
 
 export const OffsetPaginationMetaSchema = z.object({
   offset: z.number().int(),
@@ -18255,6 +18273,14 @@ export const PublicBookingConfigSchema = z.object({
   slotStepMinutes: z.number().int(),
   requirePatientAuth: z.boolean(),
   providers: z.array(PublicBookingProviderSchema)
+});
+
+export const PublicConfirmResponseSchema = z.object({
+  appointmentId: UUIDSchema,
+  status: AppointmentStatusSchema,
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  confirmedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
 export const RateLimitErrorSchema = z.object({
@@ -19422,6 +19448,13 @@ export const CheckInAppointmentParams = z.object({
 export type CheckInAppointmentParams = z.infer<typeof CheckInAppointmentParams>;
 
 export const CheckInAppointmentResponse = CheckInResponseSchema;
+
+export const ConfirmAppointmentParams = z.object({
+  appointmentId: UUIDSchema,
+});
+export type ConfirmAppointmentParams = z.infer<typeof ConfirmAppointmentParams>;
+
+export const ConfirmAppointmentResponse = DentalAppointmentSchema;
 
 export const CreateQueueItemParams = z.object({
   appointmentId: UUIDSchema,
@@ -21004,6 +21037,14 @@ export type ExportPatientCareRecordParams = z.infer<typeof ExportPatientCareReco
 
 export const ExportPatientCareRecordResponse = PatientCareRecordBundleSchema;
 
+export const ConfirmAppointmentByTokenParams = z.object({
+  appointmentId: UUIDSchema,
+  token: UUIDSchema,
+});
+export type ConfirmAppointmentByTokenParams = z.infer<typeof ConfirmAppointmentByTokenParams>;
+
+export const ConfirmAppointmentByTokenResponse = PublicConfirmResponseSchema;
+
 export const GetOnlineBookingParams = z.object({
   confirmationCode: z.string(),
 });
@@ -21062,6 +21103,17 @@ export const UpdateQueueItemStatusBody = DentalQueueModuleUpdateQueueItemStatusR
 export type UpdateQueueItemStatusBody = z.infer<typeof UpdateQueueItemStatusBody>;
 
 export const UpdateQueueItemStatusResponse = z.union([DentalQueueModuleQueueItemSchema, ErrorResponseSchema]);
+
+export const ListDueRecallsQuery = z.object({
+  branchId: UUIDSchema,
+  from: z.string().optional(),
+  to: z.string().optional(),
+  page: z.coerce.number().int().gte(1).optional(),
+  per_page: z.coerce.number().int().gte(1).lte(200).optional(),
+});
+export type ListDueRecallsQuery = z.infer<typeof ListDueRecallsQuery>;
+
+export const ListDueRecallsResponse = z.union([z.array(DentalPatientEngagementModuleRecallDueItemSchema), ErrorResponseSchema]);
 
 export const CreateSyncLogBody = DentalPatientFinanceModuleCreateSyncLogRequestSchema;
 export type CreateSyncLogBody = z.infer<typeof CreateSyncLogBody>;

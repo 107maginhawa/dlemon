@@ -163,6 +163,60 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
   }
 
   /**
+   * P1-24: idempotently enqueue a scheduled notification keyed on
+   * (relatedEntity, type, channel, scheduledAt). If a row with that exact key
+   * already exists (any status), nothing is written and the existing row is
+   * returned — this is the duplicate-send guard for the reminder/recall jobs.
+   * Returns { created: boolean, notification }.
+   */
+  async enqueueScheduledIfAbsent(request: CreateNotificationRequest): Promise<{ created: boolean; notification: Notification }> {
+    const scheduledAt = request.scheduledAt ?? null;
+    const existingConds = [
+      eq(notifications.type, request.type as any),
+      eq(notifications.channel, request.channel as any),
+    ];
+    if (request.relatedEntity) existingConds.push(eq(notifications.relatedEntity, request.relatedEntity));
+    else existingConds.push(isNull(notifications.relatedEntity));
+    if (scheduledAt) existingConds.push(eq(notifications.scheduledAt, scheduledAt));
+    else existingConds.push(isNull(notifications.scheduledAt));
+
+    const [existing] = await this.db
+      .select()
+      .from(notifications)
+      .where(and(...existingConds))
+      .limit(1);
+
+    if (existing) {
+      return { created: false, notification: existing };
+    }
+
+    const notification = await this.createNotificationForModule(request);
+    return { created: true, notification };
+  }
+
+  /**
+   * P1-24: synchronously expire queued reminder/confirmation-request rows for an
+   * appointment (or any related entity). Called inside cancel/reschedule/check-in/
+   * confirm handlers so a reminder can never fire after the appointment moved on.
+   * Only touches `queued` rows (delivered/read are left intact for history).
+   * Returns the number of rows expired.
+   */
+  async expireQueuedByEntity(
+    relatedEntity: string,
+    types: readonly string[],
+  ): Promise<number> {
+    const result = await this.db
+      .update(notifications)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(and(
+        eq(notifications.relatedEntity, relatedEntity),
+        eq(notifications.status, 'queued'),
+        inArray(notifications.type, types as any),
+      ));
+    return result.rowCount ?? 0;
+  }
+
+  /**
    * Find notifications for a specific recipient with pagination
    */
   async findManyByRecipient(
@@ -468,6 +522,15 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
         }
         break;
         
+      case 'sms':
+        // P1-24: SMS channel enum lands now; the actual provider (Twilio/Vonage/
+        // OneSignal-SMS) is deferred to P4. Until then an `sms` row is a logged
+        // no-op marked `failed` ("no SMS provider configured") — mirrors the
+        // OneSignal-not-configured path. Consent/cadence logic is unaffected.
+        this.logger?.warn({ notificationId: notification.id }, 'No SMS provider configured — SMS notification not delivered (P4)');
+        await this.updateOneById(notification.id, { status: 'failed' });
+        break;
+
       case 'in-app':
         // In-app notifications are already available in database
         // Just update status to indicate they're ready
@@ -498,7 +561,11 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     const mapping: Record<string, string> = {
       'security': 'auth.password-reset',
       'system': 'auth.welcome',
-      // Add more mappings as needed
+      // P1-24: appointment reminder + recall (continuing-care) templates
+      'appointment.reminder': 'appointment.reminder',
+      'appointment.confirmation-request': 'appointment.confirmation-request',
+      'recall.due': 'recall.due',
+      'recall.reminder': 'recall.reminder',
     };
     
     return mapping[type] || null;

@@ -206,3 +206,53 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$" isCollection
+
+
+# ── P1-24: confirmation lifecycle ────────────────────────────────────────────
+# C1. Create an appointment to confirm
+POST {{api}}/dental/appointments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
+  "scheduledAt": "2025-07-01T09:00:00.000Z",
+  "durationMinutes": 30,
+  "serviceType": "Cleaning"
+}
+HTTP 201
+[Captures]
+confirm_appt_id: jsonpath "$.id"
+
+
+# C2. Staff confirm: scheduled → confirmed (sets confirmedAt)
+POST {{api}}/dental/appointments/{{confirm_appt_id}}/confirm
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "confirmed"
+jsonpath "$.confirmedAt" isString
+
+
+# C3. Illegal transition: confirmed → completed via PATCH is rejected (4xx)
+PATCH {{api}}/dental/appointments/{{confirm_appt_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "completed"
+}
+HTTP 422
+
+
+# C4. confirmed → checked_in is allowed (creates a visit)
+POST {{api}}/dental/appointments/{{confirm_appt_id}}/check-in
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.appointment.status" == "checked_in"
+
+
+# C5. Public token-confirm with an unknown token → 404 (route wired, public)
+POST {{api}}/dental/public/appointments/{{confirm_appt_id}}/confirm/a3000000-0000-4000-8000-0000000000a2
+HTTP 404

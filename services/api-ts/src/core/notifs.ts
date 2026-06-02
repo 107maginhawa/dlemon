@@ -47,6 +47,20 @@ export interface NotificationService {
    * Called periodically by the background job system
    */
   processScheduledNotifications(): Promise<void>;
+
+  /**
+   * P1-24: idempotently enqueue a scheduled notification keyed on
+   * (relatedEntity, type, channel, scheduledAt). Used by the reminder/recall
+   * jobs so re-runs never duplicate. Returns whether a new row was created.
+   */
+  enqueueScheduledIfAbsent(request: CreateNotificationRequest): Promise<{ created: boolean; notification: Notification }>;
+
+  /**
+   * P1-24: synchronously expire queued reminder/confirmation-request rows for an
+   * entity (called inside cancel/reschedule/check-in/confirm handlers). Returns
+   * the number of rows expired.
+   */
+  expireQueuedByEntity(relatedEntity: string, types: readonly string[]): Promise<number>;
   
   /**
    * Get unread notification count (for UI badges)
@@ -88,6 +102,8 @@ class NotificationServiceImpl implements NotificationService {
     this.processScheduledNotifications = this.repo.processScheduledNotifications.bind(this.repo);
     this.getUnreadCount = this.repo.getUnreadCount.bind(this.repo);
     this.cleanupExpiredNotifications = this.repo.cleanupExpiredNotifications.bind(this.repo);
+    this.enqueueScheduledIfAbsent = this.repo.enqueueScheduledIfAbsent.bind(this.repo);
+    this.expireQueuedByEntity = this.repo.expireQueuedByEntity.bind(this.repo);
   }
 
   /**
@@ -118,6 +134,8 @@ class NotificationServiceImpl implements NotificationService {
   processScheduledNotifications: NotificationService['processScheduledNotifications'];
   getUnreadCount: NotificationService['getUnreadCount'];
   cleanupExpiredNotifications: NotificationService['cleanupExpiredNotifications'];
+  enqueueScheduledIfAbsent: NotificationService['enqueueScheduledIfAbsent'];
+  expireQueuedByEntity: NotificationService['expireQueuedByEntity'];
 }
 
 /**

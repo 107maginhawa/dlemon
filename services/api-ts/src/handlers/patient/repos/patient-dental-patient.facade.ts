@@ -24,6 +24,22 @@ export async function getPatientForDentalPatient(
   return row ?? null;
 }
 
+/**
+ * P1-24: the patient's preferred communication channel (drives the reminder
+ * consent gate's primary-channel preference). Returns null when unset.
+ */
+export async function getPatientPreferredChannel(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<'sms' | 'email' | 'phone' | 'none' | null> {
+  const [row] = await db
+    .select({ communicationPreferences: patients.communicationPreferences })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  return (row?.communicationPreferences?.preferredChannel as 'sms' | 'email' | 'phone' | 'none' | undefined) ?? null;
+}
+
 /** Find potential duplicate patients by name. Returns id-only array. */
 export async function findDuplicateDentalPatients(
   db: DatabaseInstance,

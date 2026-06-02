@@ -7,9 +7,11 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
+import type { NotificationService } from '@/core/notifs';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
+import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -26,7 +28,15 @@ export async function updateAppointment(ctx: HandlerContext) {
   const body = ctx.req.valid('json') as UpdateAppointmentBody;
 
   const db = ctx.get('database') as DatabaseInstance;
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
   const repo = new DentalAppointmentRepository(db);
+
+  // P1-24: expire any queued reminders for this appointment (best-effort).
+  const expireReminders = async () => {
+    if (notifs) {
+      await notifs.expireQueuedByEntity(appointmentId, REMINDER_NOTIFICATION_TYPES).catch(() => {/* best-effort */});
+    }
+  };
 
   const existing = await repo.findOneById(appointmentId);
   if (!existing) throw new NotFoundError('Appointment');
@@ -45,14 +55,16 @@ export async function updateAppointment(ctx: HandlerContext) {
   }
 
   if (body.status === 'confirmed') {
-    const result = await repo.confirm(appointmentId, user.id);
+    const result = await repo.confirm(appointmentId, user.id, 'staff');
     if (!result) throw new NotFoundError('Appointment');
+    await expireReminders();
     return ctx.json(toWire(result));
   }
 
   if (body.status === 'no_show') {
     const result = await repo.markNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');
+    await expireReminders();
     return ctx.json(toWire(result));
   }
 
@@ -69,6 +81,7 @@ export async function updateAppointment(ctx: HandlerContext) {
   if (body.status === 'cancelled') {
     const result = await repo.cancel(appointmentId, body.cancellationReason, user.id);
     if (!result) throw new NotFoundError('Appointment');
+    await expireReminders();
     return ctx.json(toWire(result));
   }
 
@@ -134,5 +147,12 @@ export async function updateAppointment(ctx: HandlerContext) {
   }
 
   const updated = await repo.updateOneById(appointmentId, { ...patch, updatedBy: user.id });
+
+  // P1-24: on reschedule (the appointment time moved), expire the now-stale queued
+  // reminders. The reminderArmer re-arms for the new time on its next run.
+  if (newScheduledAt !== undefined) {
+    await expireReminders();
+  }
+
   return ctx.json(toWire(updated));
 }

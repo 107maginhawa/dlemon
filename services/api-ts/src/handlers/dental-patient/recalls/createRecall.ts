@@ -39,6 +39,8 @@ export async function createRecall(ctx: any): Promise<Response> {
     dueDate: body.dueDate,
     status: 'pending',
     notes: body.notes ?? null,
+    // P1-24: optional recurrence interval (drives next-cycle seeding on completion)
+    intervalMonths: body.intervalMonths ?? null,
     createdBy: user.id,
     updatedBy: user.id,
   });

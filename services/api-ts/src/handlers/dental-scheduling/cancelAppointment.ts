@@ -15,7 +15,9 @@ import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CancelAppointmentParams } from '@/generated/openapi/validators';
 import type { JobScheduler } from '@/core/jobs';
+import type { NotificationService } from '@/core/notifs';
 import { emitAppointmentCancelled } from './domain-events';
+import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 
 export async function cancelAppointment(
   ctx: ValidatedContext<never, never, CancelAppointmentParams>
@@ -65,6 +67,12 @@ export async function cancelAppointment(
       dentistMemberId: result.dentistMemberId,
     },
   });
+
+  // P1-24: synchronously expire queued reminders so none fire after cancellation.
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
+  if (notifs) {
+    await notifs.expireQueuedByEntity(result.id, REMINDER_NOTIFICATION_TYPES).catch(() => {/* best-effort */});
+  }
 
   // DE-011: emit AppointmentCancelled domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;

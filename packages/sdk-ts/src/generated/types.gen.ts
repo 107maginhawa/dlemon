@@ -2411,6 +2411,7 @@ export type DentalAppointment = {
     walkIn: boolean;
     status: AppointmentStatus;
     confirmedAt?: Date;
+    confirmedVia?: string;
     checkInTime?: Date;
     visitId?: Uuid;
     notes?: string;
@@ -4319,6 +4320,10 @@ export type DentalPatientEngagementModuleCreateRecallRequest = {
      */
     dueDate: string;
     /**
+     * P1-24: recurrence interval in months (e.g. cleaning = 6)
+     */
+    intervalMonths?: number;
+    /**
      * Free-text notes
      */
     notes?: string;
@@ -4587,13 +4592,67 @@ export type DentalPatientEngagementModuleRecall = {
      */
     notes: string | null;
     /**
+     * P1-24: recurrence interval in months (drives auto-recompute + next-cycle seeding); null = one-off
+     */
+    intervalMonths: number | null;
+    /**
      * When the recall was sent (ISO 8601 UTC)
      */
     sentAt: Date | null;
     /**
+     * P1-24: when the most recent outreach was dispatched (re-attempt cadence)
+     */
+    lastSentAt: Date | null;
+    /**
+     * P1-24: number of outreach attempts made
+     */
+    sendAttempts: number;
+    /**
      * When the recall was completed (ISO 8601 UTC)
      */
     completedAt: Date | null;
+};
+
+/**
+ * P1-24: a due recall enriched with patient identity for the front-desk recare list
+ */
+export type DentalPatientEngagementModuleRecallDueItem = {
+    /**
+     * Recall id
+     */
+    id: string;
+    /**
+     * Patient this recall belongs to
+     */
+    patientId: string;
+    /**
+     * Patient display name
+     */
+    patientName: string;
+    /**
+     * Recall type
+     */
+    type: 'cleaning' | 'checkup' | 'treatment' | 'other';
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate: string;
+    /**
+     * Current lifecycle status
+     */
+    status: 'pending' | 'sent' | 'completed' | 'cancelled';
+    /**
+     * Recurrence interval in months; null = one-off
+     */
+    intervalMonths: number | null;
+    /**
+     * Number of outreach attempts made
+     */
+    sendAttempts: number;
+    /**
+     * When the most recent outreach was dispatched (ISO 8601 UTC)
+     */
+    lastSentAt: Date | null;
 };
 
 /**
@@ -4684,6 +4743,10 @@ export type DentalPatientEngagementModuleUpdateRecallRequest = {
      * Due date (YYYY-MM-DD)
      */
     dueDate?: string;
+    /**
+     * P1-24: recurrence interval in months
+     */
+    intervalMonths?: number;
     /**
      * Current lifecycle status
      */
@@ -57164,11 +57227,11 @@ export type Notification = {
     /**
      * Notification type
      */
-    type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
+    type: 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message' | 'appointment.reminder' | 'appointment.confirmation-request' | 'recall.due' | 'recall.reminder';
     /**
      * Notification channel
      */
-    channel: 'email' | 'push' | 'in-app';
+    channel: 'email' | 'push' | 'in-app' | 'sms';
     /**
      * Notification title
      */
@@ -57220,7 +57283,7 @@ export type Notification = {
 /**
  * Notification delivery channel
  */
-export type NotificationChannel = 'email' | 'push' | 'in-app';
+export type NotificationChannel = 'email' | 'push' | 'in-app' | 'sms';
 
 /**
  * Notification delivery status
@@ -57230,7 +57293,7 @@ export type NotificationStatus = 'queued' | 'sent' | 'delivered' | 'read' | 'fai
 /**
  * Type of notification
  */
-export type NotificationType = 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message';
+export type NotificationType = 'billing' | 'security' | 'system' | 'booking.created' | 'booking.confirmed' | 'booking.rejected' | 'booking.cancelled' | 'booking.no-show-client' | 'booking.no-show-host' | 'comms.video-call-started' | 'comms.video-call-joined' | 'comms.video-call-left' | 'comms.video-call-ended' | 'comms.chat-message' | 'appointment.reminder' | 'appointment.confirmation-request' | 'recall.due' | 'recall.reminder';
 
 /**
  * Offset pagination navigation information
@@ -59161,6 +59224,14 @@ export type PublicBookingConfig = {
 export type PublicBookingProvider = {
     providerId: Uuid;
     displayName: string;
+};
+
+export type PublicConfirmResponse = {
+    appointmentId: Uuid;
+    status: AppointmentStatus;
+    startAt: Date;
+    endAt: Date;
+    confirmedAt: Date;
 };
 
 /**
@@ -63211,6 +63282,41 @@ export type CheckInAppointmentResponses = {
 };
 
 export type CheckInAppointmentResponse = CheckInAppointmentResponses[keyof CheckInAppointmentResponses];
+
+export type ConfirmAppointmentData = {
+    body?: never;
+    path: {
+        appointmentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/appointments/{appointmentId}/confirm';
+};
+
+export type ConfirmAppointmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ConfirmAppointmentError = ConfirmAppointmentErrors[keyof ConfirmAppointmentErrors];
+
+export type ConfirmAppointmentResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalAppointment;
+};
+
+export type ConfirmAppointmentResponse = ConfirmAppointmentResponses[keyof ConfirmAppointmentResponses];
 
 export type CreateQueueItemData = {
     body: DentalQueueModuleCreateQueueItemRequest;
@@ -69162,6 +69268,42 @@ export type ExportPatientCareRecordResponses = {
 
 export type ExportPatientCareRecordResponse = ExportPatientCareRecordResponses[keyof ExportPatientCareRecordResponses];
 
+export type ConfirmAppointmentByTokenData = {
+    body?: never;
+    path: {
+        appointmentId: Uuid;
+        token: Uuid;
+    };
+    query?: never;
+    url: '/dental/public/appointments/{appointmentId}/confirm/{token}';
+};
+
+export type ConfirmAppointmentByTokenErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Rate limit exceeded response
+     */
+    429: RateLimitError;
+};
+
+export type ConfirmAppointmentByTokenError = ConfirmAppointmentByTokenErrors[keyof ConfirmAppointmentByTokenErrors];
+
+export type ConfirmAppointmentByTokenResponses = {
+    /**
+     * Success response with data
+     */
+    200: PublicConfirmResponse;
+};
+
+export type ConfirmAppointmentByTokenResponse = ConfirmAppointmentByTokenResponses[keyof ConfirmAppointmentByTokenResponses];
+
 export type GetOnlineBookingData = {
     body?: never;
     path: {
@@ -69380,6 +69522,45 @@ export type UpdateQueueItemStatusResponses = {
 };
 
 export type UpdateQueueItemStatusResponse = UpdateQueueItemStatusResponses[keyof UpdateQueueItemStatusResponses];
+
+export type ListDueRecallsData = {
+    body?: never;
+    path?: never;
+    query: {
+        branchId: Uuid;
+        from?: string;
+        to?: string;
+        page?: number;
+        per_page?: number;
+    };
+    url: '/dental/recalls/due';
+};
+
+export type ListDueRecallsErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListDueRecallsError = ListDueRecallsErrors[keyof ListDueRecallsErrors];
+
+export type ListDueRecallsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientEngagementModuleRecallDueItem> | ErrorResponse;
+};
+
+export type ListDueRecallsResponse = ListDueRecallsResponses[keyof ListDueRecallsResponses];
 
 export type ListSyncLogsData = {
     body?: never;

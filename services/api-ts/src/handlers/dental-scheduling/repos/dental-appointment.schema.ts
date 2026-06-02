@@ -44,6 +44,12 @@ export const dentalAppointments = pgTable('dental_appointment', {
   confirmationState: text('confirmation_state').notNull().default('confirmed'), // 'pending' | 'confirmed'
   confirmationCode: text('confirmation_code'),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  // P1-24: how the appointment was confirmed — 'staff' | 'sms' | 'email' | 'link'.
+  // NULL until a confirm action occurs. Distinct from `confirmationState`/`confirmationCode`
+  // (P1-25 online-booking bearer for the public lookup) — `confirmationToken` below is the
+  // single-use bearer for the *reminder* self-confirm link.
+  confirmedVia: text('confirmed_via'),
+  confirmationToken: uuid('confirmation_token'),
   checkInTime: timestamp('check_in_time', { withTimezone: true }),
   visitId: uuid('visit_id').references(() => dentalVisits.id),
   notes: text('notes'),
@@ -65,6 +71,11 @@ export const dentalAppointments = pgTable('dental_appointment', {
   confirmationCodeUnique: uniqueIndex('dental_appointment_confirmation_code_unique')
     .on(table.confirmationCode)
     .where(sql`${table.confirmationCode} IS NOT NULL`),
+  // P1-24: the single-use reminder self-confirm token is a bearer — must be unique.
+  // Partial (WHERE NOT NULL) so rows without a token don't collide on NULL.
+  confirmationTokenUnique: uniqueIndex('dental_appointment_confirmation_token_unique')
+    .on(table.confirmationToken)
+    .where(sql`${table.confirmationToken} IS NOT NULL`),
 }));
 
 export type DentalAppointment = typeof dentalAppointments.$inferSelect;
