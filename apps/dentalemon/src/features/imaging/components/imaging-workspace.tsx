@@ -396,7 +396,7 @@ export function ImagingWorkspace({
         <button onClick={fullscreen} className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
       </div>
 
-      <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} />
+      <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} onRequestCalibrate={() => setToolMode('calibration')} />
       <AnnotationToolbar toolMode={toolMode} onToolChange={setToolMode} />
 
       <div className="flex flex-row flex-1 overflow-hidden">
