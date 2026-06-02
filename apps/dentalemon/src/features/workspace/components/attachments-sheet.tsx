@@ -8,6 +8,7 @@
  * Wireframe: docs/prd/context/wireframes/ws-attachments.html
  */
 import React, { useRef, useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { Paperclip, Upload, Trash2, Download, X, FileText, Image } from 'lucide-react';
 import { apiBaseUrl } from '@/lib/config';
 import {
@@ -261,6 +262,9 @@ function AttachmentRow({
 type Tab = 'visit' | 'all';
 
 export function AttachmentsSheet({ visitId, patientId, open, onClose }: AttachmentsSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const [tab, setTab] = useState<Tab>('visit');
   const [imageType, setImageType] = useState<AttachmentImageType>('xray');
   const [toothNumbers, setToothNumbers] = useState<number[]>([]);

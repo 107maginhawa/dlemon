@@ -4,6 +4,7 @@
  * B3: List recalls, create new recall, update status via FSM buttons.
  */
 import React, { useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { X, CalendarClock, Plus } from 'lucide-react';
 import {
   useRecalls,
@@ -120,6 +121,9 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
 // ---------------------------------------------------------------------------
 
 export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const { recalls, isLoading, isError, createRecall, updateRecall, isCreating, isUpdating } =
     useRecalls(patientId);
 

@@ -5,6 +5,7 @@
  * FSM: draft → presented → approved → partially_completed → completed | cancelled
  */
 import React from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { X, ClipboardList } from 'lucide-react';
 import {
   useTreatmentPlans,
@@ -127,6 +128,9 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
 // ---------------------------------------------------------------------------
 
 export function TreatmentPlansSheet({ patientId, open, onClose }: TreatmentPlansSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
 
   if (!open) return null;

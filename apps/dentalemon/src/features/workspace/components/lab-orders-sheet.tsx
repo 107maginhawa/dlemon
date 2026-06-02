@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listLabOrdersOptions,
@@ -64,6 +65,9 @@ export interface LabOrdersSheetProps {
 }
 
 export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const [form, setForm] = useState<CreateForm>({ labName: '', description: '', expectedDeliveryDate: '' });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [showCreate, setShowCreate] = useState(false);

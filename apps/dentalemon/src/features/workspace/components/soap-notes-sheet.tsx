@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { Button, Input, Textarea } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 import { APP_LOCALE } from '@/constants/brand';
@@ -50,6 +51,9 @@ export function SoapNotesSheet({
   onClose,
   onOpenMedicalHistory,
 }: SoapNotesSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const { notes, isLoading, save, isSaving, sign, isSigning, addendum, isAddingAddendum, history } =
     useVisitNotes(visitId);
 

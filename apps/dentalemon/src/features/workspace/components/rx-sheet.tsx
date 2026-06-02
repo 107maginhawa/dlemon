@@ -12,6 +12,7 @@
  */
 
 import React, { useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { createPrescription } from '@monobase/sdk-ts/generated';
 
 const FREQUENCY_OPTIONS = [
@@ -43,6 +44,9 @@ export interface RxSheetProps {
 }
 
 export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose, onSaved }: RxSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const [drugName, setDrugName] = useState('');
   const [rxNormCode, setRxNormCode] = useState('');
   const [dosage, setDosage] = useState('');

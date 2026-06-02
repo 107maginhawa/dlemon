@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { createConsentForm, signConsentForm } from '@monobase/sdk-ts/generated';
 import type { ConsentForm } from '@monobase/sdk-ts/generated';
 
@@ -27,6 +28,9 @@ export interface ConsentSheetProps {
 }
 
 export function ConsentSheet({ visitId, patientId, open, onClose, onSaved }: ConsentSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [signatureData, setSignatureData] = useState('');
