@@ -58,6 +58,7 @@ function PatientsPage() {
     dateOfBirth: string;
     gender: string;
     consentGiven: boolean;
+    communicationConsent?: { sms: boolean; email: boolean; phone: boolean; marketing: boolean };
   }) {
     const res = await fetch(`${API}/dental/patients`, {
       method: 'POST',
@@ -77,6 +78,19 @@ function PatientsPage() {
       const message = err?.message ?? `Registration failed (${res.status})`;
       alert(message);
       return;
+    }
+
+    // P1-28: persist per-channel communication consent on the new patient.
+    const created = (await res.json().catch(() => null)) as { id?: string } | null;
+    if (created?.id && data.communicationConsent) {
+      await fetch(`${API}/dental/patients/${created.id}/communication-consent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data.communicationConsent),
+      }).catch(() => {
+        /* non-blocking: registration already succeeded */
+      });
     }
 
     setShowRegistration(false);

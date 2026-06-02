@@ -9,11 +9,21 @@
 
 import React, { useState } from 'react';
 
+// P1-28: per-channel communication consent captured at registration.
+export interface CommunicationChannelConsent {
+  sms: boolean;
+  email: boolean;
+  phone: boolean;
+  marketing: boolean;
+}
+
 export interface PatientRegistrationData {
   displayName: string;
   dateOfBirth: string;
   gender: string;
   consentGiven: boolean;
+  /** P1-28: per-channel communication opt-ins. */
+  communicationConsent: CommunicationChannelConsent;
 }
 
 interface PatientRegistrationModalProps {
@@ -31,6 +41,13 @@ export function PatientRegistrationModal({
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
   const [consentGiven, setConsentGiven] = useState(false);
+  // P1-28: per-channel communication consent.
+  const [channelConsent, setChannelConsent] = useState<CommunicationChannelConsent>({
+    sms: false,
+    email: false,
+    phone: false,
+    marketing: false,
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,7 +67,13 @@ export function PatientRegistrationModal({
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      await onSubmit({ displayName: displayName.trim(), dateOfBirth, gender, consentGiven });
+      await onSubmit({
+        displayName: displayName.trim(),
+        dateOfBirth,
+        gender,
+        consentGiven,
+        communicationConsent: channelConsent,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -139,6 +162,36 @@ export function PatientRegistrationModal({
           {errors['consent'] && (
             <span className="text-xs text-destructive -mt-2">{errors['consent']}</span>
           )}
+
+          {/* P1-28: per-channel communication consent */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium">Communication consent</legend>
+            <p className="text-xs text-muted-foreground">
+              How may we contact this patient? (optional)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ['sms', 'SMS'],
+                  ['email', 'Email'],
+                  ['phone', 'Phone'],
+                  ['marketing', 'Marketing'],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    data-testid={`consent-channel-${key}`}
+                    checked={channelConsent[key]}
+                    onChange={(e) =>
+                      setChannelConsent((prev) => ({ ...prev, [key]: e.target.checked }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           {/* Buttons */}
           <div className="flex gap-3 justify-end mt-2">

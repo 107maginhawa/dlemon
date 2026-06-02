@@ -5,9 +5,11 @@
  * Isolates cross-module access behind typed functions.
  */
 
+import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { persons } from './person.schema';
-import type { PersonConsent } from './person.schema';
+import type { PersonConsent, CommunicationChannelConsent } from './person.schema';
+import { patients } from '../../patient/repos/patient.schema';
 
 export async function createPersonForDentalPatient(
   db: DatabaseInstance,
@@ -36,4 +38,64 @@ export async function createPersonForDentalPatient(
     })
     .returning();
   return person!;
+}
+
+/**
+ * P1-28: read the persisted consent (registration + per-channel) for the person
+ * backing a dental patient. Returns null if the patient/person isn't found.
+ */
+export async function getPatientPersonConsent(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<PersonConsent | null> {
+  const [row] = await db
+    .select({ consent: persons.consent })
+    .from(patients)
+    .innerJoin(persons, eq(persons.id, patients.person))
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (!row) return null;
+  return (row.consent as PersonConsent | null) ?? null;
+}
+
+/**
+ * P1-28: merge per-channel communication consent onto the person backing a dental
+ * patient. Only the channels supplied are changed (partial update); the
+ * registration consent and capturedAt are preserved. Returns the updated consent,
+ * or null if the patient/person isn't found.
+ */
+export async function updatePatientChannelConsent(
+  db: DatabaseInstance,
+  patientId: string,
+  channels: CommunicationChannelConsent,
+  actorId: string,
+): Promise<PersonConsent | null> {
+  const [link] = await db
+    .select({ personId: patients.person })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (!link?.personId) return null;
+
+  const [existingPerson] = await db
+    .select({ consent: persons.consent })
+    .from(persons)
+    .where(eq(persons.id, link.personId))
+    .limit(1);
+
+  const prev = (existingPerson?.consent as PersonConsent | null) ?? null;
+  const nextConsent: PersonConsent = {
+    registrationConsent: prev?.registrationConsent ?? false,
+    capturedAt: prev?.capturedAt ?? new Date().toISOString(),
+    channels: { ...(prev?.channels ?? {}), ...channels },
+    channelsUpdatedAt: new Date().toISOString(),
+  };
+
+  const [updated] = await db
+    .update(persons)
+    .set({ consent: nextConsent, updatedBy: actorId, updatedAt: new Date() })
+    .where(eq(persons.id, link.personId))
+    .returning({ consent: persons.consent });
+
+  return (updated?.consent as PersonConsent | null) ?? null;
 }
