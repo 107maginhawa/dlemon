@@ -50,6 +50,25 @@ Wired into `bun run db:reseed` (runs all three in order).
 - Not covered here (legacy seed owns them): patients, visits, treatments, imaging, consents, Rx, reviews, lab orders.
 - Future: a full `/oli-plan-seed` regeneration could replace the legacy API seed with one coherent DB-direct seed; deferred (legacy clinical scenarios are rich and working).
 
+## Imaging seed boundary (by design)
+
+The legacy seed creates **imaging study HEADERS only** — `dental_imaging_study`
+(~9–10 rows). It does **NOT** seed the per-image rows
+(`imaging_study_image` / `dental_attachment`). This is intentional: the demo needs
+study metadata to exist (so the imaging study list and study-header references are
+populated) without shipping or generating binary X-ray/photo assets.
+
+Consequence — **expected, not a bug**: the patient image gallery and
+`GET /dental/patients/{id}/images` return an **empty list** for seeded patients,
+because there are no per-image rows. The study headers exist; the images under them
+do not.
+
+This documents the recurring seed-coherence finding **SC-IMAGE-LIST-EMPTY** (P2) as a
+**known, intended expectation** rather than a defect. If a future demo needs visible
+gallery thumbnails, seed `imaging_study_image` rows pointing at sample assets
+(MinIO/S3) under the existing study headers — but that is out of scope for the
+current asset-free demo seed.
+
 ## What's next
 - `bun run db:reseed` reproduces the full demo (clinical + billing + calendar).
 - Run `/oli-check --confidence` if validating test confidence against seed scenarios.
