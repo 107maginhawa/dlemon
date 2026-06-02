@@ -51,9 +51,14 @@ import { updateVideoCallParticipant } from '../../handlers/comms/updateVideoCall
 import { cancelAppointment } from '../../handlers/dental-scheduling/cancelAppointment';
 import { checkInAppointment } from '../../handlers/dental-scheduling/checkInAppointment';
 import { createAppointment } from '../../handlers/dental-scheduling/createAppointment';
+import { createBookingHold } from '../../handlers/dental-scheduling/createBookingHold';
+import { createOnlineBooking } from '../../handlers/dental-scheduling/createOnlineBooking';
 import { createQueueItem } from '../../handlers/dental-scheduling/createQueueItem';
 import { createWaitlistEntry } from '../../handlers/dental-scheduling/createWaitlistEntry';
 import { getAppointment } from '../../handlers/dental-scheduling/getAppointment';
+import { getOnlineBooking } from '../../handlers/dental-scheduling/getOnlineBooking';
+import { getPublicAvailability } from '../../handlers/dental-scheduling/getPublicAvailability';
+import { getPublicBookingConfig } from '../../handlers/dental-scheduling/getPublicBookingConfig';
 import { listAppointments } from '../../handlers/dental-scheduling/listAppointments';
 import { listQueueBoard } from '../../handlers/dental-scheduling/listQueueBoard';
 import { listWaitlist } from '../../handlers/dental-scheduling/listWaitlist';
@@ -148,6 +153,7 @@ import { getErasureRequest } from '../../handlers/dental-erasure/getErasureReque
 import { listErasureRequests } from '../../handlers/dental-erasure/listErasureRequests';
 import { rejectErasure } from '../../handlers/dental-erasure/rejectErasure';
 import { requestErasure } from '../../handlers/dental-erasure/requestErasure';
+import { acceptCasePresentation } from '../../handlers/dental-patient/case-presentation/acceptCasePresentation';
 import { acceptTreatmentOption } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentOption';
 import { acceptTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
 import { addFollowUpNote } from '../../handlers/dental-patient/engagement/addFollowUpNote';
@@ -156,6 +162,7 @@ import { approveTreatmentPlan } from '../../handlers/dental-patient/treatment-pl
 import { archiveDentalPatient } from '../../handlers/dental-patient/identity/archiveDentalPatient';
 import { attachTreatmentAppointment } from '../../handlers/dental-patient/treatment-plans/attachTreatmentAppointment';
 import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/identity/bulkArchiveDentalPatients';
+import { createCasePresentation } from '../../handlers/dental-patient/case-presentation/createCasePresentation';
 import { createClaimDraft } from '../../handlers/dental-patient/insurance/createClaimDraft';
 import { createDentalAlert } from '../../handlers/dental-patient/alerts/createDentalAlert';
 import { createDentalPatient } from '../../handlers/dental-patient/identity/createDentalPatient';
@@ -170,6 +177,7 @@ import { deletePatientContact } from '../../handlers/dental-patient/contacts/del
 import { detachTreatmentAppointment } from '../../handlers/dental-patient/treatment-plans/detachTreatmentAppointment';
 import { detectDuplicatePatients } from '../../handlers/dental-patient/identity/detectDuplicatePatients';
 import { exportDentalPatients } from '../../handlers/dental-patient/identity/exportDentalPatients';
+import { getCasePresentation } from '../../handlers/dental-patient/case-presentation/getCasePresentation';
 import { getClaimReadiness } from '../../handlers/dental-patient/insurance/getClaimReadiness';
 import { getDentalPatient } from '../../handlers/dental-patient/identity/getDentalPatient';
 import { getDentalPatientSafetyFloor } from '../../handlers/dental-patient/identity/getDentalPatientSafetyFloor';
@@ -181,6 +189,7 @@ import { getTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/
 import { getTreatmentPlanVersion } from '../../handlers/dental-patient/treatment-plans/getTreatmentPlanVersion';
 import { importPatients } from '../../handlers/dental-patient/identity/importPatients';
 import { initializeDentition } from '../../handlers/dental-patient/identity/initializeDentition';
+import { listCasePresentations } from '../../handlers/dental-patient/case-presentation/listCasePresentations';
 import { listDentalAlerts } from '../../handlers/dental-patient/alerts/listDentalAlerts';
 import { listDentalPatients } from '../../handlers/dental-patient/identity/listDentalPatients';
 import { listFollowUpNotes } from '../../handlers/dental-patient/engagement/listFollowUpNotes';
@@ -195,6 +204,7 @@ import { listPatientVisits } from '../../handlers/dental-patient/identity/listPa
 import { listSyncLogs } from '../../handlers/dental-patient/sync/listSyncLogs';
 import { listTreatmentOptionGroup } from '../../handlers/dental-patient/treatment-plans/listTreatmentOptionGroup';
 import { listTreatmentPlanStatusHistory } from '../../handlers/dental-patient/treatment-plans/listTreatmentPlanStatusHistory';
+import { rejectCasePresentation } from '../../handlers/dental-patient/case-presentation/rejectCasePresentation';
 import { removeHouseholdMember } from '../../handlers/dental-patient/household/removeHouseholdMember';
 import { restoreDentalPatient } from '../../handlers/dental-patient/identity/restoreDentalPatient';
 import { updateClaimStatus } from '../../handlers/dental-patient/insurance/updateClaimStatus';
@@ -209,10 +219,14 @@ import { updateTask } from '../../handlers/dental-patient/engagement/updateTask'
 import { updateTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/updateTreatmentPlan';
 import { CephMgmt_batchUpsertCephLandmarks } from '../../handlers/dental-imaging/CephMgmt_batchUpsertCephLandmarks';
 import { CephMgmt_createCephReport } from '../../handlers/dental-imaging/CephMgmt_createCephReport';
+import { CephMgmt_createCephSuperimposition } from '../../handlers/dental-imaging/CephMgmt_createCephSuperimposition';
 import { CephMgmt_deleteCephLandmark } from '../../handlers/dental-imaging/CephMgmt_deleteCephLandmark';
 import { CephMgmt_getCephAnalysis } from '../../handlers/dental-imaging/CephMgmt_getCephAnalysis';
 import { CephMgmt_getCephReport } from '../../handlers/dental-imaging/CephMgmt_getCephReport';
+import { CephMgmt_getCephSuperimposition } from '../../handlers/dental-imaging/CephMgmt_getCephSuperimposition';
 import { CephMgmt_listCephLandmarks } from '../../handlers/dental-imaging/CephMgmt_listCephLandmarks';
+import { CephMgmt_listCephSuperimpositions } from '../../handlers/dental-imaging/CephMgmt_listCephSuperimpositions';
+import { CephMgmt_previewCephSuperimposition } from '../../handlers/dental-imaging/CephMgmt_previewCephSuperimposition';
 import { CephMgmt_recomputeCephAnalysis } from '../../handlers/dental-imaging/CephMgmt_recomputeCephAnalysis';
 import { CephMgmt_updateCephLandmark } from '../../handlers/dental-imaging/CephMgmt_updateCephLandmark';
 import { ImagingFindingsMgmt_createFinding } from '../../handlers/dental-imaging/ImagingFindingsMgmt_createFinding';
@@ -379,9 +393,14 @@ export const registry = {
   cancelAppointment,
   checkInAppointment,
   createAppointment,
+  createBookingHold,
+  createOnlineBooking,
   createQueueItem,
   createWaitlistEntry,
   getAppointment,
+  getOnlineBooking,
+  getPublicAvailability,
+  getPublicBookingConfig,
   listAppointments,
   listQueueBoard,
   listWaitlist,
@@ -488,6 +507,7 @@ export const registry = {
   requestErasure,
 
   // Dental-patient handlers
+  acceptCasePresentation,
   acceptTreatmentOption,
   acceptTreatmentPlan,
   addFollowUpNote,
@@ -496,6 +516,7 @@ export const registry = {
   archiveDentalPatient,
   attachTreatmentAppointment,
   bulkArchiveDentalPatients,
+  createCasePresentation,
   createClaimDraft,
   createDentalAlert,
   createDentalPatient,
@@ -510,6 +531,7 @@ export const registry = {
   detachTreatmentAppointment,
   detectDuplicatePatients,
   exportDentalPatients,
+  getCasePresentation,
   getClaimReadiness,
   getDentalPatient,
   getDentalPatientSafetyFloor,
@@ -521,6 +543,7 @@ export const registry = {
   getTreatmentPlanVersion,
   importPatients,
   initializeDentition,
+  listCasePresentations,
   listDentalAlerts,
   listDentalPatients,
   listFollowUpNotes,
@@ -535,6 +558,7 @@ export const registry = {
   listSyncLogs,
   listTreatmentOptionGroup,
   listTreatmentPlanStatusHistory,
+  rejectCasePresentation,
   removeHouseholdMember,
   restoreDentalPatient,
   updateClaimStatus,
@@ -551,10 +575,14 @@ export const registry = {
   // Dental-imaging handlers
   CephMgmt_batchUpsertCephLandmarks,
   CephMgmt_createCephReport,
+  CephMgmt_createCephSuperimposition,
   CephMgmt_deleteCephLandmark,
   CephMgmt_getCephAnalysis,
   CephMgmt_getCephReport,
+  CephMgmt_getCephSuperimposition,
   CephMgmt_listCephLandmarks,
+  CephMgmt_listCephSuperimpositions,
+  CephMgmt_previewCephSuperimposition,
   CephMgmt_recomputeCephAnalysis,
   CephMgmt_updateCephLandmark,
   ImagingFindingsMgmt_createFinding,

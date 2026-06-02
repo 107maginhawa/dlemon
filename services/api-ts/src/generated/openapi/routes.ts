@@ -819,6 +819,27 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.removeHouseholdMember as unknown as Handler
   );
 
+  // CephMgmt_createCephSuperimposition
+  app.post('/dental/imaging/ceph/superimpositions',
+    authMiddleware(),
+    zValidator('json', validators.CephMgmt_createCephSuperimpositionBody, validationErrorHandler),
+    registry.CephMgmt_createCephSuperimposition as unknown as Handler
+  );
+
+  // CephMgmt_previewCephSuperimposition
+  app.post('/dental/imaging/ceph/superimpositions/preview',
+    authMiddleware(),
+    zValidator('json', validators.CephMgmt_previewCephSuperimpositionBody, validationErrorHandler),
+    registry.CephMgmt_previewCephSuperimposition as unknown as Handler
+  );
+
+  // CephMgmt_getCephSuperimposition
+  app.get('/dental/imaging/ceph/superimpositions/:superimpositionId',
+    authMiddleware(),
+    zValidator('param', validators.CephMgmt_getCephSuperimpositionParams, validationErrorHandler),
+    registry.CephMgmt_getCephSuperimposition as unknown as Handler
+  );
+
   // ImagingFindingsMgmt_updateFinding
   app.patch('/dental/imaging/findings/:findingId',
     authMiddleware(),
@@ -953,6 +974,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware(),
     zValidator('param', validators.ImagingMgmt_deleteMeasurementParams, validationErrorHandler),
     registry.ImagingMgmt_deleteMeasurement as unknown as Handler
+  );
+
+  // CephMgmt_listCephSuperimpositions
+  app.get('/dental/imaging/patients/:patientId/ceph/superimpositions',
+    authMiddleware(),
+    zValidator('param', validators.CephMgmt_listCephSuperimpositionsParams, validationErrorHandler),
+    registry.CephMgmt_listCephSuperimpositions as unknown as Handler
   );
 
   // ImagingMgmt_createImagingStudy
@@ -1237,6 +1265,44 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetDentalPatientStatementParams, validationErrorHandler),
     registry.getDentalPatientStatement as unknown as Handler
+  );
+
+  // createCasePresentation
+  app.post('/dental/patients/:patientId/case-presentations',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.CreateCasePresentationParams, validationErrorHandler),
+    zValidator('json', validators.CreateCasePresentationBody, validationErrorHandler),
+    registry.createCasePresentation as unknown as Handler
+  );
+
+  // listCasePresentations
+  app.get('/dental/patients/:patientId/case-presentations',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListCasePresentationsParams, validationErrorHandler),
+    registry.listCasePresentations as unknown as Handler
+  );
+
+  // getCasePresentation
+  app.get('/dental/patients/:patientId/case-presentations/:presentationId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetCasePresentationParams, validationErrorHandler),
+    registry.getCasePresentation as unknown as Handler
+  );
+
+  // acceptCasePresentation
+  app.post('/dental/patients/:patientId/case-presentations/:presentationId/accept',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AcceptCasePresentationParams, validationErrorHandler),
+    zValidator('json', validators.AcceptCasePresentationBody, validationErrorHandler),
+    registry.acceptCasePresentation as unknown as Handler
+  );
+
+  // rejectCasePresentation
+  app.post('/dental/patients/:patientId/case-presentations/:presentationId/reject',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RejectCasePresentationParams, validationErrorHandler),
+    zValidator('json', validators.RejectCasePresentationBody, validationErrorHandler),
+    registry.rejectCasePresentation as unknown as Handler
   );
 
   // createClaimDraft
@@ -1606,6 +1672,39 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.ExportPatientCareRecordParams, validationErrorHandler),
     registry.exportPatientCareRecord as unknown as Handler
+  );
+
+  // getOnlineBooking
+  app.get('/dental/public/bookings/:confirmationCode',
+    zValidator('param', validators.GetOnlineBookingParams, validationErrorHandler),
+    registry.getOnlineBooking as unknown as Handler
+  );
+
+  // getPublicAvailability
+  app.get('/dental/public/branches/:branchId/availability',
+    zValidator('param', validators.GetPublicAvailabilityParams, validationErrorHandler),
+    zValidator('query', validators.GetPublicAvailabilityQuery, validationErrorHandler),
+    registry.getPublicAvailability as unknown as Handler
+  );
+
+  // getPublicBookingConfig
+  app.get('/dental/public/branches/:branchId/booking-config',
+    zValidator('param', validators.GetPublicBookingConfigParams, validationErrorHandler),
+    registry.getPublicBookingConfig as unknown as Handler
+  );
+
+  // createOnlineBooking
+  app.post('/dental/public/branches/:branchId/bookings',
+    zValidator('param', validators.CreateOnlineBookingParams, validationErrorHandler),
+    zValidator('json', validators.CreateOnlineBookingBody, validationErrorHandler),
+    registry.createOnlineBooking as unknown as Handler
+  );
+
+  // createBookingHold
+  app.post('/dental/public/branches/:branchId/holds',
+    zValidator('param', validators.CreateBookingHoldParams, validationErrorHandler),
+    zValidator('json', validators.CreateBookingHoldBody, validationErrorHandler),
+    registry.createBookingHold as unknown as Handler
   );
 
   // updateQueueItemStatus

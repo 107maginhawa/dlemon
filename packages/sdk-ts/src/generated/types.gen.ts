@@ -941,6 +941,18 @@ export type BookingEventUpdateRequest = {
     };
 };
 
+export type BookingLookupResponse = {
+    confirmationCode: string;
+    branchId: Uuid;
+    branchName: string;
+    providerName: string;
+    startAt: Date;
+    endAt: Date;
+    visitType: VisitType;
+    status: AppointmentStatus;
+    confirmationState: string;
+};
+
 /**
  * Booking status throughout lifecycle
  */
@@ -1806,6 +1818,12 @@ export type CreateDentalVisitRequest = {
     localId?: string;
 };
 
+export type CreateHoldRequest = {
+    providerId: Uuid;
+    startAt: Date;
+    visitType: VisitType;
+};
+
 /**
  * Request to create an invoice
  */
@@ -1931,6 +1949,19 @@ export type CreateMerchantAccountRequest = {
     metadata?: {
         [key: string]: unknown;
     };
+};
+
+export type CreateOnlineBookingRequest = {
+    providerId: Uuid;
+    startAt: Date;
+    visitType: VisitType;
+    sessionToken?: string;
+    firstName: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+    dateOfBirth?: string;
+    notes?: string;
 };
 
 /**
@@ -3084,6 +3115,17 @@ export type DentalImagingModuleCephLandmark = {
 
 export type DentalImagingModuleCephLandmarkCode = 'S' | 'N' | 'A' | 'B' | 'ANS' | 'PNS' | 'Go' | 'Po' | 'Me' | 'Or' | 'Pog' | 'Gn' | 'U1T' | 'U1A' | 'L1T' | 'L1A';
 
+export type DentalImagingModuleCephLandmarkDelta = {
+    landmarkCode: string;
+    dxPx: number;
+    dyPx: number;
+    magnitudePx: number;
+    dxMm: number | null;
+    dyMm: number | null;
+    magnitudeMm: number | null;
+    directionDeg: number;
+};
+
 export type DentalImagingModuleCephLandmarkInput = {
     landmarkCode: DentalImagingModuleCephLandmarkCode;
     x: number;
@@ -3102,6 +3144,13 @@ export type DentalImagingModuleCephLandmarkSource = 'manual' | 'ai' | 'ai_correc
 
 export type DentalImagingModuleCephLandmarkStatus = 'placed' | 'confirmed' | 'locked';
 
+export type DentalImagingModuleCephMetricDelta = {
+    metric: string;
+    from: number | null;
+    to: number | null;
+    delta: number | null;
+};
+
 export type DentalImagingModuleCephReport = {
     id: string;
     imageId: string;
@@ -3111,6 +3160,43 @@ export type DentalImagingModuleCephReport = {
     };
     createdAt: Date;
 };
+
+export type DentalImagingModuleCephSimilarityTransform = {
+    scale: number;
+    rotationRad: number;
+    tx: number;
+    ty: number;
+    basis: Array<string>;
+};
+
+export type DentalImagingModuleCephSuperimposition = {
+    id: string | null;
+    patientId: string;
+    reportFromId: string;
+    reportToId: string;
+    reference: DentalImagingModuleCephSuperimpositionReference;
+    transform: DentalImagingModuleCephSimilarityTransform;
+    landmarkDeltas: Array<DentalImagingModuleCephLandmarkDelta>;
+    metricDeltas: Array<DentalImagingModuleCephMetricDelta>;
+    uncalibrated: boolean;
+    calibrationBasis: {
+        [key: string]: unknown;
+    };
+    label: string;
+    createdAt: Date | null;
+};
+
+export type DentalImagingModuleCephSuperimpositionInput = {
+    reportFromId: string;
+    reportToId: string;
+    reference: DentalImagingModuleCephSuperimpositionReference;
+};
+
+export type DentalImagingModuleCephSuperimpositionListResponse = {
+    items: Array<DentalImagingModuleCephSuperimposition>;
+};
+
+export type DentalImagingModuleCephSuperimpositionReference = 'cranial_base' | 'maxillary' | 'mandibular';
 
 export type DentalImagingModuleCreateFindingBody = {
     type: DentalImagingModuleImagingFindingType;
@@ -4619,6 +4705,164 @@ export type DentalPatientEngagementModuleUpdateTaskRequest = {
 };
 
 /**
+ * Body to accept a presented case (patient e-signs on the staff session)
+ */
+export type DentalPatientFinanceModuleAcceptCasePresentationRequest = {
+    /**
+     * Name typed at signing (patient or guardian)
+     */
+    signerName: string;
+    /**
+     * Captured signature payload (e-sig, immutable once recorded)
+     */
+    signatureData: string;
+};
+
+/**
+ * Result of accepting a case presentation
+ */
+export type DentalPatientFinanceModuleAcceptCasePresentationResult = {
+    /**
+     * The decided presentation record
+     */
+    presentation: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient the presented case belongs to
+         */
+        patientId: string;
+        /**
+         * Treatment-plan header being presented
+         */
+        treatmentPlanId: string;
+        /**
+         * Loose ref to the immutable plan-version snapshot presented, if any
+         */
+        planVersionId: string | null;
+        /**
+         * Presentation lifecycle status
+         */
+        status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'revoked';
+        /**
+         * Terminal patient decision, if decided
+         */
+        decision: 'accepted' | 'rejected';
+        /**
+         * When the decision was recorded (ISO 8601 UTC)
+         */
+        decisionAt: Date | null;
+        /**
+         * Name typed at signing (patient/guardian), if accepted
+         */
+        signerName: string | null;
+        /**
+         * Loose ref to the consent_form written on accept, if any
+         */
+        consentFormId: string | null;
+        /**
+         * Optional free-text reason captured on reject
+         */
+        rejectionReason: string | null;
+        /**
+         * When the presentation was first viewed (ISO 8601 UTC)
+         */
+        firstViewedAt: Date | null;
+        /**
+         * When the presentation was last viewed (ISO 8601 UTC)
+         */
+        lastViewedAt: Date | null;
+    };
+    /**
+     * The plan after transitioning presented → approved
+     */
+    plan: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient this plan belongs to
+         */
+        patientId: string;
+        /**
+         * Provider who authored the plan
+         */
+        providerId: string;
+        /**
+         * Current lifecycle status
+         */
+        status: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+        /**
+         * Total estimate in cents
+         */
+        totalEstimateCents: number;
+        /**
+         * Free-text notes
+         */
+        notes: string | null;
+        /**
+         * ADA CDT code-set year the plan's procedure codes were authored against (P2-10)
+         */
+        cdtCodeSetYear: number;
+        /**
+         * When the plan was presented to the patient (ISO 8601 UTC)
+         */
+        presentedAt: Date | null;
+        /**
+         * When the plan was approved (ISO 8601 UTC)
+         */
+        approvedAt: Date | null;
+    };
+    /**
+     * The immutable consent e-sig written on accept
+     */
+    consentFormId: string;
+};
+
+/**
  * Body to accept one option in an alternate-case group
  */
 export type DentalPatientFinanceModuleAcceptTreatmentOptionRequest = {
@@ -4695,6 +4939,346 @@ export type DentalPatientFinanceModuleAttachTreatmentAppointmentRequest = {
      */
     appointmentId: string;
 };
+
+/**
+ * A patient-facing case-presentation record (P1-20)
+ */
+export type DentalPatientFinanceModuleCasePresentation = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient the presented case belongs to
+     */
+    patientId: string;
+    /**
+     * Treatment-plan header being presented
+     */
+    treatmentPlanId: string;
+    /**
+     * Loose ref to the immutable plan-version snapshot presented, if any
+     */
+    planVersionId: string | null;
+    /**
+     * Presentation lifecycle status
+     */
+    status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'revoked';
+    /**
+     * Terminal patient decision, if decided
+     */
+    decision: 'accepted' | 'rejected';
+    /**
+     * When the decision was recorded (ISO 8601 UTC)
+     */
+    decisionAt: Date | null;
+    /**
+     * Name typed at signing (patient/guardian), if accepted
+     */
+    signerName: string | null;
+    /**
+     * Loose ref to the consent_form written on accept, if any
+     */
+    consentFormId: string | null;
+    /**
+     * Optional free-text reason captured on reject
+     */
+    rejectionReason: string | null;
+    /**
+     * When the presentation was first viewed (ISO 8601 UTC)
+     */
+    firstViewedAt: Date | null;
+    /**
+     * When the presentation was last viewed (ISO 8601 UTC)
+     */
+    lastViewedAt: Date | null;
+};
+
+/**
+ * Denormalized, patient-readable case-presentation aggregate (P1-20)
+ */
+export type DentalPatientFinanceModuleCasePresentationAggregate = {
+    /**
+     * The case-presentation record
+     */
+    presentation: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient the presented case belongs to
+         */
+        patientId: string;
+        /**
+         * Treatment-plan header being presented
+         */
+        treatmentPlanId: string;
+        /**
+         * Loose ref to the immutable plan-version snapshot presented, if any
+         */
+        planVersionId: string | null;
+        /**
+         * Presentation lifecycle status
+         */
+        status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'revoked';
+        /**
+         * Terminal patient decision, if decided
+         */
+        decision: 'accepted' | 'rejected';
+        /**
+         * When the decision was recorded (ISO 8601 UTC)
+         */
+        decisionAt: Date | null;
+        /**
+         * Name typed at signing (patient/guardian), if accepted
+         */
+        signerName: string | null;
+        /**
+         * Loose ref to the consent_form written on accept, if any
+         */
+        consentFormId: string | null;
+        /**
+         * Optional free-text reason captured on reject
+         */
+        rejectionReason: string | null;
+        /**
+         * When the presentation was first viewed (ISO 8601 UTC)
+         */
+        firstViewedAt: Date | null;
+        /**
+         * When the presentation was last viewed (ISO 8601 UTC)
+         */
+        lastViewedAt: Date | null;
+    };
+    /**
+     * The plan header being presented
+     */
+    plan: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient this plan belongs to
+         */
+        patientId: string;
+        /**
+         * Provider who authored the plan
+         */
+        providerId: string;
+        /**
+         * Current lifecycle status
+         */
+        status: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+        /**
+         * Total estimate in cents
+         */
+        totalEstimateCents: number;
+        /**
+         * Free-text notes
+         */
+        notes: string | null;
+        /**
+         * ADA CDT code-set year the plan's procedure codes were authored against (P2-10)
+         */
+        cdtCodeSetYear: number;
+        /**
+         * When the plan was presented to the patient (ISO 8601 UTC)
+         */
+        presentedAt: Date | null;
+        /**
+         * When the plan was approved (ISO 8601 UTC)
+         */
+        approvedAt: Date | null;
+    };
+    /**
+     * Patient first name (the only PII surfaced on the presentation)
+     */
+    patientFirstName: string;
+    /**
+     * Line items grouped by clinical phase, in clinical order
+     */
+    phases: Array<DentalPatientFinanceModuleCasePresentationPhase>;
+    /**
+     * Alternate-case option groups with the recommended option flagged
+     */
+    optionGroups: Array<DentalPatientFinanceModuleCasePresentationOptionGroup>;
+    /**
+     * References to the patient's own annotated images
+     */
+    images: Array<DentalPatientFinanceModuleCasePresentationImageRef>;
+    /**
+     * Grand total across all phases in cents (₱)
+     */
+    grandTotalCents: number;
+};
+
+/**
+ * Terminal patient decision on a presented case
+ */
+export type DentalPatientFinanceModuleCasePresentationDecision = 'accepted' | 'rejected';
+
+/**
+ * A reference to one of the patient's own annotated images
+ */
+export type DentalPatientFinanceModuleCasePresentationImageRef = {
+    /**
+     * Image id
+     */
+    id: string;
+    /**
+     * Image type (e.g. radiograph, intraoral_photo)
+     */
+    imageType: string;
+    /**
+     * Tooth number the image is associated with, if any
+     */
+    toothNumber: number | null;
+    /**
+     * Number of clinician annotations/findings on this image
+     */
+    findingCount: number;
+};
+
+/**
+ * One patient-readable line item within a presented phase
+ */
+export type DentalPatientFinanceModuleCasePresentationLineItem = {
+    /**
+     * Treatment item id
+     */
+    id: string;
+    /**
+     * Tooth number, if tooth-specific
+     */
+    toothNumber: number | null;
+    /**
+     * Affected surfaces, if any
+     */
+    surfaces: Array<string> | null;
+    /**
+     * Layperson procedure description (not the raw CDT code)
+     */
+    description: string;
+    /**
+     * CDT procedure code
+     */
+    cdtCode: string;
+    /**
+     * Item status (diagnosed/planned/declined/…)
+     */
+    status: string;
+    /**
+     * Fee for this item in cents (₱)
+     */
+    priceCents: number;
+    /**
+     * Option-group id, if this item is one of a set of alternates
+     */
+    optionGroupId: string | null;
+    /**
+     * Whether this item is the clinician-recommended alternate
+     */
+    recommended: boolean;
+};
+
+/**
+ * An alternate-case option group surfaced for the patient to choose
+ */
+export type DentalPatientFinanceModuleCasePresentationOptionGroup = {
+    /**
+     * Option-group identifier shared by mutually-exclusive options
+     */
+    optionGroupId: string;
+    /**
+     * The alternate options in the group
+     */
+    options: Array<DentalPatientFinanceModuleCasePresentationLineItem>;
+};
+
+/**
+ * A clinical phase grouping of line items with a subtotal
+ */
+export type DentalPatientFinanceModuleCasePresentationPhase = {
+    /**
+     * Clinical phase key (systemic/disease_control/…), or null for unphased
+     */
+    phase: string | null;
+    /**
+     * Line items in this phase, in clinical order
+     */
+    items: Array<DentalPatientFinanceModuleCasePresentationLineItem>;
+    /**
+     * Phase subtotal in cents (₱)
+     */
+    subtotalCents: number;
+};
+
+/**
+ * Lifecycle of a case presentation (distinct from the plan FSM)
+ */
+export type DentalPatientFinanceModuleCasePresentationStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'revoked';
 
 /**
  * An insurance claim draft
@@ -4799,6 +5383,20 @@ export type DentalPatientFinanceModuleClaimReadiness = {
      * Overall readiness (all checks pass)
      */
     ready: boolean;
+};
+
+/**
+ * Body to create a case presentation from a presented plan
+ */
+export type DentalPatientFinanceModuleCreateCasePresentationRequest = {
+    /**
+     * Treatment-plan header to present
+     */
+    treatmentPlanId: string;
+    /**
+     * Loose ref to the immutable plan-version snapshot presented, if any
+     */
+    planVersionId?: string;
 };
 
 /**
@@ -5156,6 +5754,156 @@ export type DentalPatientFinanceModuleInsuranceProfile = {
  * Subscriber relationship to the patient
  */
 export type DentalPatientFinanceModuleInsuranceRelationship = 'self' | 'spouse' | 'child' | 'other';
+
+/**
+ * Body to reject a presented case
+ */
+export type DentalPatientFinanceModuleRejectCasePresentationRequest = {
+    /**
+     * Optional free-text reason for declining
+     */
+    rejectionReason?: string;
+};
+
+/**
+ * Result of rejecting a case presentation
+ */
+export type DentalPatientFinanceModuleRejectCasePresentationResult = {
+    /**
+     * The decided presentation record
+     */
+    presentation: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient the presented case belongs to
+         */
+        patientId: string;
+        /**
+         * Treatment-plan header being presented
+         */
+        treatmentPlanId: string;
+        /**
+         * Loose ref to the immutable plan-version snapshot presented, if any
+         */
+        planVersionId: string | null;
+        /**
+         * Presentation lifecycle status
+         */
+        status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'revoked';
+        /**
+         * Terminal patient decision, if decided
+         */
+        decision: 'accepted' | 'rejected';
+        /**
+         * When the decision was recorded (ISO 8601 UTC)
+         */
+        decisionAt: Date | null;
+        /**
+         * Name typed at signing (patient/guardian), if accepted
+         */
+        signerName: string | null;
+        /**
+         * Loose ref to the consent_form written on accept, if any
+         */
+        consentFormId: string | null;
+        /**
+         * Optional free-text reason captured on reject
+         */
+        rejectionReason: string | null;
+        /**
+         * When the presentation was first viewed (ISO 8601 UTC)
+         */
+        firstViewedAt: Date | null;
+        /**
+         * When the presentation was last viewed (ISO 8601 UTC)
+         */
+        lastViewedAt: Date | null;
+    };
+    /**
+     * The plan after transitioning presented → rejected
+     */
+    plan: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient this plan belongs to
+         */
+        patientId: string;
+        /**
+         * Provider who authored the plan
+         */
+        providerId: string;
+        /**
+         * Current lifecycle status
+         */
+        status: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+        /**
+         * Total estimate in cents
+         */
+        totalEstimateCents: number;
+        /**
+         * Free-text notes
+         */
+        notes: string | null;
+        /**
+         * ADA CDT code-set year the plan's procedure codes were authored against (P2-10)
+         */
+        cdtCodeSetYear: number;
+        /**
+         * When the plan was presented to the patient (ISO 8601 UTC)
+         */
+        presentedAt: Date | null;
+        /**
+         * When the plan was approved (ISO 8601 UTC)
+         */
+        approvedAt: Date | null;
+    };
+};
 
 /**
  * A local-first sync ledger entry
@@ -55470,6 +56218,15 @@ export type HealthcareSupportWorkflowAutomationWorkflowRule = {
     };
 };
 
+export type HoldResponse = {
+    holdId: Uuid;
+    sessionToken: string;
+    providerId: Uuid;
+    startAt: Date;
+    endAt: Date;
+    expiresAt: Date;
+};
+
 /**
  * ICE server configuration
  */
@@ -56521,6 +57278,17 @@ export type OnboardingResponse = {
     metadata?: {
         [key: string]: unknown;
     };
+};
+
+export type OnlineBookingResponse = {
+    confirmationCode: string;
+    appointmentId: Uuid;
+    branchId: Uuid;
+    providerId: Uuid;
+    startAt: Date;
+    endAt: Date;
+    visitType: VisitType;
+    status: AppointmentStatus;
 };
 
 /**
@@ -58343,6 +59111,37 @@ export type Provider = {
  * Type of provider (pre-FHIR enumeration)
  */
 export type ProviderType = 'dentist' | 'hygienist' | 'orthodontist' | 'endodontist' | 'periodontist' | 'oral_surgeon' | 'pediatric_dentist' | 'pharmacist' | 'other';
+
+export type PublicAvailabilityResponse = {
+    branchId: Uuid;
+    visitType: VisitType;
+    slots: Array<PublicAvailabilitySlot>;
+};
+
+export type PublicAvailabilitySlot = {
+    startAt: Date;
+    endAt: Date;
+    providerId: Uuid;
+    visitType: VisitType;
+};
+
+export type PublicBookingConfig = {
+    branchId: Uuid;
+    branchName: string;
+    timezone: string;
+    enabled: boolean;
+    bookableVisitTypes: Array<VisitType>;
+    leadTimeMinutes: number;
+    horizonDays: number;
+    slotStepMinutes: number;
+    requirePatientAuth: boolean;
+    providers: Array<PublicBookingProvider>;
+};
+
+export type PublicBookingProvider = {
+    providerId: Uuid;
+    displayName: string;
+};
 
 /**
  * Rate limit exceeded error
@@ -64503,6 +65302,56 @@ export type RemoveHouseholdMemberResponses = {
 
 export type RemoveHouseholdMemberResponse = RemoveHouseholdMemberResponses[keyof RemoveHouseholdMemberResponses];
 
+export type CephMgmtCreateCephSuperimpositionData = {
+    body: DentalImagingModuleCephSuperimpositionInput;
+    path?: never;
+    query?: never;
+    url: '/dental/imaging/ceph/superimpositions';
+};
+
+export type CephMgmtCreateCephSuperimpositionResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephSuperimposition | ErrorResponse;
+};
+
+export type CephMgmtCreateCephSuperimpositionResponse = CephMgmtCreateCephSuperimpositionResponses[keyof CephMgmtCreateCephSuperimpositionResponses];
+
+export type CephMgmtPreviewCephSuperimpositionData = {
+    body: DentalImagingModuleCephSuperimpositionInput;
+    path?: never;
+    query?: never;
+    url: '/dental/imaging/ceph/superimpositions/preview';
+};
+
+export type CephMgmtPreviewCephSuperimpositionResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephSuperimposition | ErrorResponse;
+};
+
+export type CephMgmtPreviewCephSuperimpositionResponse = CephMgmtPreviewCephSuperimpositionResponses[keyof CephMgmtPreviewCephSuperimpositionResponses];
+
+export type CephMgmtGetCephSuperimpositionData = {
+    body?: never;
+    path: {
+        superimpositionId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/ceph/superimpositions/{superimpositionId}';
+};
+
+export type CephMgmtGetCephSuperimpositionResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephSuperimposition | ErrorResponse;
+};
+
+export type CephMgmtGetCephSuperimpositionResponse = CephMgmtGetCephSuperimpositionResponses[keyof CephMgmtGetCephSuperimpositionResponses];
+
 export type ImagingFindingsMgmtDeleteFindingData = {
     body?: never;
     path: {
@@ -64850,6 +65699,24 @@ export type ImagingMgmtDeleteMeasurementResponses = {
 };
 
 export type ImagingMgmtDeleteMeasurementResponse = ImagingMgmtDeleteMeasurementResponses[keyof ImagingMgmtDeleteMeasurementResponses];
+
+export type CephMgmtListCephSuperimpositionsData = {
+    body?: never;
+    path: {
+        patientId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/patients/{patientId}/ceph/superimpositions';
+};
+
+export type CephMgmtListCephSuperimpositionsResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephSuperimpositionListResponse | ErrorResponse;
+};
+
+export type CephMgmtListCephSuperimpositionsResponse = CephMgmtListCephSuperimpositionsResponses[keyof CephMgmtListCephSuperimpositionsResponses];
 
 export type ImagingMgmtCreateImagingStudyData = {
     body: DentalImagingModuleCreateImagingStudyBody;
@@ -66142,6 +67009,200 @@ export type GetDentalPatientStatementResponses = {
 };
 
 export type GetDentalPatientStatementResponse = GetDentalPatientStatementResponses[keyof GetDentalPatientStatementResponses];
+
+export type ListCasePresentationsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/case-presentations';
+};
+
+export type ListCasePresentationsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListCasePresentationsError = ListCasePresentationsErrors[keyof ListCasePresentationsErrors];
+
+export type ListCasePresentationsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleCasePresentation> | ErrorResponse;
+};
+
+export type ListCasePresentationsResponse = ListCasePresentationsResponses[keyof ListCasePresentationsResponses];
+
+export type CreateCasePresentationData = {
+    body: DentalPatientFinanceModuleCreateCasePresentationRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/case-presentations';
+};
+
+export type CreateCasePresentationErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateCasePresentationError = CreateCasePresentationErrors[keyof CreateCasePresentationErrors];
+
+export type CreateCasePresentationResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleCasePresentation;
+};
+
+export type CreateCasePresentationResponse = CreateCasePresentationResponses[keyof CreateCasePresentationResponses];
+
+export type GetCasePresentationData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        presentationId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/case-presentations/{presentationId}';
+};
+
+export type GetCasePresentationErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetCasePresentationError = GetCasePresentationErrors[keyof GetCasePresentationErrors];
+
+export type GetCasePresentationResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleCasePresentationAggregate | ErrorResponse;
+};
+
+export type GetCasePresentationResponse = GetCasePresentationResponses[keyof GetCasePresentationResponses];
+
+export type AcceptCasePresentationData = {
+    body: DentalPatientFinanceModuleAcceptCasePresentationRequest;
+    path: {
+        patientId: Uuid;
+        presentationId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/case-presentations/{presentationId}/accept';
+};
+
+export type AcceptCasePresentationErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AcceptCasePresentationError = AcceptCasePresentationErrors[keyof AcceptCasePresentationErrors];
+
+export type AcceptCasePresentationResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleAcceptCasePresentationResult | ErrorResponse;
+};
+
+export type AcceptCasePresentationResponse = AcceptCasePresentationResponses[keyof AcceptCasePresentationResponses];
+
+export type RejectCasePresentationData = {
+    body: DentalPatientFinanceModuleRejectCasePresentationRequest;
+    path: {
+        patientId: Uuid;
+        presentationId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/case-presentations/{presentationId}/reject';
+};
+
+export type RejectCasePresentationErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type RejectCasePresentationError = RejectCasePresentationErrors[keyof RejectCasePresentationErrors];
+
+export type RejectCasePresentationResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleRejectCasePresentationResult | ErrorResponse;
+};
+
+export type RejectCasePresentationResponse = RejectCasePresentationResponses[keyof RejectCasePresentationResponses];
 
 export type ListPatientClaimsData = {
     body?: never;
@@ -68043,6 +69104,186 @@ export type ExportPatientCareRecordResponses = {
 };
 
 export type ExportPatientCareRecordResponse = ExportPatientCareRecordResponses[keyof ExportPatientCareRecordResponses];
+
+export type GetOnlineBookingData = {
+    body?: never;
+    path: {
+        confirmationCode: string;
+    };
+    query?: never;
+    url: '/dental/public/bookings/{confirmationCode}';
+};
+
+export type GetOnlineBookingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetOnlineBookingError = GetOnlineBookingErrors[keyof GetOnlineBookingErrors];
+
+export type GetOnlineBookingResponses = {
+    /**
+     * Success response with data
+     */
+    200: BookingLookupResponse;
+};
+
+export type GetOnlineBookingResponse = GetOnlineBookingResponses[keyof GetOnlineBookingResponses];
+
+export type GetPublicAvailabilityData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+    };
+    query: {
+        visitType: VisitType;
+        date_from: string;
+        date_to: string;
+        providerId?: Uuid;
+    };
+    url: '/dental/public/branches/{branchId}/availability';
+};
+
+export type GetPublicAvailabilityErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Rate limit exceeded response
+     */
+    429: RateLimitError;
+};
+
+export type GetPublicAvailabilityError = GetPublicAvailabilityErrors[keyof GetPublicAvailabilityErrors];
+
+export type GetPublicAvailabilityResponses = {
+    /**
+     * Success response with data
+     */
+    200: PublicAvailabilityResponse;
+};
+
+export type GetPublicAvailabilityResponse = GetPublicAvailabilityResponses[keyof GetPublicAvailabilityResponses];
+
+export type GetPublicBookingConfigData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/public/branches/{branchId}/booking-config';
+};
+
+export type GetPublicBookingConfigErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetPublicBookingConfigError = GetPublicBookingConfigErrors[keyof GetPublicBookingConfigErrors];
+
+export type GetPublicBookingConfigResponses = {
+    /**
+     * Success response with data
+     */
+    200: PublicBookingConfig;
+};
+
+export type GetPublicBookingConfigResponse = GetPublicBookingConfigResponses[keyof GetPublicBookingConfigResponses];
+
+export type CreateOnlineBookingData = {
+    body: CreateOnlineBookingRequest;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/public/branches/{branchId}/bookings';
+};
+
+export type CreateOnlineBookingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+    /**
+     * Rate limit exceeded response
+     */
+    429: RateLimitError;
+};
+
+export type CreateOnlineBookingError = CreateOnlineBookingErrors[keyof CreateOnlineBookingErrors];
+
+export type CreateOnlineBookingResponses = {
+    /**
+     * Resource created response
+     */
+    201: OnlineBookingResponse;
+};
+
+export type CreateOnlineBookingResponse = CreateOnlineBookingResponses[keyof CreateOnlineBookingResponses];
+
+export type CreateBookingHoldData = {
+    body: CreateHoldRequest;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/public/branches/{branchId}/holds';
+};
+
+export type CreateBookingHoldErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+    /**
+     * Rate limit exceeded response
+     */
+    429: RateLimitError;
+};
+
+export type CreateBookingHoldError = CreateBookingHoldErrors[keyof CreateBookingHoldErrors];
+
+export type CreateBookingHoldResponses = {
+    /**
+     * Resource created response
+     */
+    201: HoldResponse;
+};
+
+export type CreateBookingHoldResponse = CreateBookingHoldResponses[keyof CreateBookingHoldResponses];
 
 export type UpdateQueueItemStatusData = {
     body: DentalQueueModuleUpdateQueueItemStatusRequest;

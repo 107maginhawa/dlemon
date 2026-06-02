@@ -468,6 +468,20 @@ export const BookingEventUpdateRequestSchema = z.object({
   dailyConfigs: z.record(z.string(), z.unknown()).optional()
 });
 
+export const VisitTypeSchema = z.enum(["checkup", "treatment", "emergency", "recall"]);
+
+export const BookingLookupResponseSchema = z.object({
+  confirmationCode: z.string(),
+  branchId: UUIDSchema,
+  branchName: z.string(),
+  providerName: z.string(),
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  visitType: VisitTypeSchema,
+  status: AppointmentStatusSchema,
+  confirmationState: z.string()
+});
+
 export const BookingStatusSchema = z.enum(["pending", "confirmed", "rejected", "cancelled", "completed", "no_show_client", "no_show_host"]);
 
 export const CallParticipantSchema = z.object({
@@ -537,8 +551,6 @@ export const ChatRoomSchema = z.object({
 });
 
 export const ChatRoomStatusSchema = z.enum(["active", "archived"]);
-
-export const VisitTypeSchema = z.enum(["checkup", "treatment", "emergency", "recall"]);
 
 export const DentalAppointmentSchema = z.object({
   id: UUIDSchema,
@@ -857,6 +869,12 @@ export const CreateDentalVisitRequestSchema = z.object({
   localId: z.string().optional()
 });
 
+export const CreateHoldRequestSchema = z.object({
+  providerId: UUIDSchema,
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  visitType: VisitTypeSchema
+});
+
 export const CreateLineItemRequestSchema = z.object({
   description: z.string().max(500),
   quantity: z.number().int().gte(1).optional(),
@@ -906,6 +924,19 @@ export const CreateMerchantAccountRequestSchema = z.object({
   refreshUrl: z.string().url(),
   returnUrl: z.string().url(),
   metadata: z.record(z.string(), z.unknown()).optional()
+});
+
+export const CreateOnlineBookingRequestSchema = z.object({
+  providerId: UUIDSchema,
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  visitType: VisitTypeSchema,
+  sessionToken: z.string().optional(),
+  firstName: z.string().max(120),
+  lastName: z.string().max(120).optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  notes: z.string().max(500).optional()
 });
 
 export const HealthcareCoreHumanNameSchema = z.object({
@@ -1500,9 +1531,27 @@ export const DentalImagingModuleCephLandmarkSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const DentalImagingModuleCephLandmarkDeltaSchema = z.object({
+  landmarkCode: z.string(),
+  dxPx: z.number(),
+  dyPx: z.number(),
+  magnitudePx: z.number(),
+  dxMm: z.union([z.number(), z.null()]),
+  dyMm: z.union([z.number(), z.null()]),
+  magnitudeMm: z.union([z.number(), z.null()]),
+  directionDeg: z.number()
+});
+
 export const DentalImagingModuleCephLandmarkListResponseSchema = z.object({
   items: z.array(DentalImagingModuleCephLandmarkSchema),
   analysis: DentalImagingModuleCephAnalysisSchema
+});
+
+export const DentalImagingModuleCephMetricDeltaSchema = z.object({
+  metric: z.string(),
+  from: z.union([z.number(), z.null()]),
+  to: z.union([z.number(), z.null()]),
+  delta: z.union([z.number(), z.null()])
 });
 
 export const DentalImagingModuleCephReportSchema = z.object({
@@ -1511,6 +1560,41 @@ export const DentalImagingModuleCephReportSchema = z.object({
   version: z.number().int(),
   snapshot: z.record(z.string(), z.unknown()),
   createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleCephSimilarityTransformSchema = z.object({
+  scale: z.number(),
+  rotationRad: z.number(),
+  tx: z.number(),
+  ty: z.number(),
+  basis: z.array(z.string())
+});
+
+export const DentalImagingModuleCephSuperimpositionReferenceSchema = z.enum(["cranial_base", "maxillary", "mandibular"]);
+
+export const DentalImagingModuleCephSuperimpositionSchema = z.object({
+  id: z.union([z.string(), z.null()]),
+  patientId: z.string(),
+  reportFromId: z.string(),
+  reportToId: z.string(),
+  reference: DentalImagingModuleCephSuperimpositionReferenceSchema,
+  transform: DentalImagingModuleCephSimilarityTransformSchema,
+  landmarkDeltas: z.array(DentalImagingModuleCephLandmarkDeltaSchema),
+  metricDeltas: z.array(DentalImagingModuleCephMetricDeltaSchema),
+  uncalibrated: z.boolean(),
+  calibrationBasis: z.record(z.string(), z.unknown()),
+  label: z.string(),
+  createdAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+});
+
+export const DentalImagingModuleCephSuperimpositionInputSchema = z.object({
+  reportFromId: z.string(),
+  reportToId: z.string(),
+  reference: DentalImagingModuleCephSuperimpositionReferenceSchema
+});
+
+export const DentalImagingModuleCephSuperimpositionListResponseSchema = z.object({
+  items: z.array(DentalImagingModuleCephSuperimpositionSchema)
 });
 
 export const DentalImagingModuleImagingFindingTypeSchema = z.enum(["caries", "secondary_caries", "bone_loss", "furcation_involvement", "periapical_lesion", "root_resorption", "calculus", "crown_fracture", "root_fracture", "impacted_tooth", "over_eruption", "open_contact", "overhang", "crown_needed", "implant_needed"]);
@@ -2128,6 +2212,50 @@ export const DentalPatientEngagementModuleUpdateTaskRequestSchema = z.object({
   status: z.enum(["open", "in_progress", "done", "cancelled"]).optional()
 });
 
+export const DentalPatientFinanceModuleAcceptCasePresentationRequestSchema = z.object({
+  signerName: z.string().min(1),
+  signatureData: z.string().min(1)
+});
+
+export const DentalPatientFinanceModuleAcceptCasePresentationResultSchema = z.object({
+  presentation: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  treatmentPlanId: z.string().uuid(),
+  planVersionId: z.union([z.string().uuid(), z.null()]),
+  status: z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired", "revoked"]),
+  decision: z.union([z.enum(["accepted", "rejected"]), z.null()]),
+  decisionAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  signerName: z.union([z.string(), z.null()]),
+  consentFormId: z.union([z.string().uuid(), z.null()]),
+  rejectionReason: z.union([z.string(), z.null()]),
+  firstViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+}),
+  plan: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  providerId: z.string().uuid(),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
+  totalEstimateCents: z.number().int(),
+  notes: z.union([z.string(), z.null()]),
+  cdtCodeSetYear: z.number().int(),
+  presentedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  approvedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+}),
+  consentFormId: z.string().uuid()
+});
+
 export const DentalPatientFinanceModuleAcceptTreatmentOptionRequestSchema = z.object({
   chosenTreatmentId: z.string().uuid()
 });
@@ -2161,6 +2289,103 @@ export const DentalPatientFinanceModuleAttachTreatmentAppointmentRequestSchema =
   appointmentId: z.string().uuid()
 });
 
+export const DentalPatientFinanceModuleCasePresentationSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  treatmentPlanId: z.string().uuid(),
+  planVersionId: z.union([z.string().uuid(), z.null()]),
+  status: z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired", "revoked"]),
+  decision: z.union([z.enum(["accepted", "rejected"]), z.null()]),
+  decisionAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  signerName: z.union([z.string(), z.null()]),
+  consentFormId: z.union([z.string().uuid(), z.null()]),
+  rejectionReason: z.union([z.string(), z.null()]),
+  firstViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+});
+
+export const DentalPatientFinanceModuleCasePresentationLineItemSchema = z.object({
+  id: z.string().uuid(),
+  toothNumber: z.union([z.number().int(), z.null()]),
+  surfaces: z.union([z.array(z.string()), z.null()]),
+  description: z.string(),
+  cdtCode: z.string(),
+  status: z.string(),
+  priceCents: z.number().int(),
+  optionGroupId: z.union([z.string().uuid(), z.null()]),
+  recommended: z.boolean()
+});
+
+export const DentalPatientFinanceModuleCasePresentationPhaseSchema = z.object({
+  phase: z.union([z.string(), z.null()]),
+  items: z.array(DentalPatientFinanceModuleCasePresentationLineItemSchema),
+  subtotalCents: z.number().int()
+});
+
+export const DentalPatientFinanceModuleCasePresentationOptionGroupSchema = z.object({
+  optionGroupId: z.string().uuid(),
+  options: z.array(DentalPatientFinanceModuleCasePresentationLineItemSchema)
+});
+
+export const DentalPatientFinanceModuleCasePresentationImageRefSchema = z.object({
+  id: z.string().uuid(),
+  imageType: z.string(),
+  toothNumber: z.union([z.number().int(), z.null()]),
+  findingCount: z.number().int()
+});
+
+export const DentalPatientFinanceModuleCasePresentationAggregateSchema = z.object({
+  presentation: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  treatmentPlanId: z.string().uuid(),
+  planVersionId: z.union([z.string().uuid(), z.null()]),
+  status: z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired", "revoked"]),
+  decision: z.union([z.enum(["accepted", "rejected"]), z.null()]),
+  decisionAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  signerName: z.union([z.string(), z.null()]),
+  consentFormId: z.union([z.string().uuid(), z.null()]),
+  rejectionReason: z.union([z.string(), z.null()]),
+  firstViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+}),
+  plan: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  providerId: z.string().uuid(),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
+  totalEstimateCents: z.number().int(),
+  notes: z.union([z.string(), z.null()]),
+  cdtCodeSetYear: z.number().int(),
+  presentedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  approvedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+}),
+  patientFirstName: z.string(),
+  phases: z.array(DentalPatientFinanceModuleCasePresentationPhaseSchema),
+  optionGroups: z.array(DentalPatientFinanceModuleCasePresentationOptionGroupSchema),
+  images: z.array(DentalPatientFinanceModuleCasePresentationImageRefSchema),
+  grandTotalCents: z.number().int()
+});
+
+export const DentalPatientFinanceModuleCasePresentationDecisionSchema = z.enum(["accepted", "rejected"]);
+
+export const DentalPatientFinanceModuleCasePresentationStatusSchema = z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired", "revoked"]);
+
 export const DentalPatientFinanceModuleClaimDraftSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -2189,6 +2414,11 @@ export const DentalPatientFinanceModuleClaimReadinessSchema = z.object({
   hasInsuranceProfile: z.boolean(),
   hasFee: z.boolean(),
   ready: z.boolean()
+});
+
+export const DentalPatientFinanceModuleCreateCasePresentationRequestSchema = z.object({
+  treatmentPlanId: z.string().uuid(),
+  planVersionId: z.string().uuid().optional()
 });
 
 export const DentalPatientFinanceModuleCreateClaimDraftRequestSchema = z.object({
@@ -2294,6 +2524,48 @@ export const DentalPatientFinanceModuleInsuranceProfileSchema = z.object({
 });
 
 export const DentalPatientFinanceModuleInsuranceRelationshipSchema = z.enum(["self", "spouse", "child", "other"]);
+
+export const DentalPatientFinanceModuleRejectCasePresentationRequestSchema = z.object({
+  rejectionReason: z.string().optional()
+});
+
+export const DentalPatientFinanceModuleRejectCasePresentationResultSchema = z.object({
+  presentation: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  treatmentPlanId: z.string().uuid(),
+  planVersionId: z.union([z.string().uuid(), z.null()]),
+  status: z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired", "revoked"]),
+  decision: z.union([z.enum(["accepted", "rejected"]), z.null()]),
+  decisionAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  signerName: z.union([z.string(), z.null()]),
+  consentFormId: z.union([z.string().uuid(), z.null()]),
+  rejectionReason: z.union([z.string(), z.null()]),
+  firstViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastViewedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+}),
+  plan: z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  providerId: z.string().uuid(),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
+  totalEstimateCents: z.number().int(),
+  notes: z.union([z.string(), z.null()]),
+  cdtCodeSetYear: z.number().int(),
+  presentedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  approvedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+})
+});
 
 export const DentalPatientFinanceModuleSyncLogSchema = z.object({
   id: z.string().uuid(),
@@ -17057,6 +17329,15 @@ export const HealthcareSupportWorkflowAutomationWorkflowRuleSchema = z.object({
 }).optional()
 });
 
+export const HoldResponseSchema = z.object({
+  holdId: UUIDSchema,
+  sessionToken: z.string(),
+  providerId: UUIDSchema,
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  expiresAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const IceServerSchema = z.object({
   urls: z.union([z.string(), z.array(z.string())]),
   username: z.string().optional(),
@@ -17401,6 +17682,17 @@ export const OnboardingRequestSchema = z.object({
 export const OnboardingResponseSchema = z.object({
   onboardingUrl: z.string(),
   metadata: z.record(z.string(), z.unknown()).optional()
+});
+
+export const OnlineBookingResponseSchema = z.object({
+  confirmationCode: z.string(),
+  appointmentId: UUIDSchema,
+  branchId: UUIDSchema,
+  providerId: UUIDSchema,
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  visitType: VisitTypeSchema,
+  status: AppointmentStatusSchema
 });
 
 export const OrganizationContactSchema = z.object({
@@ -17913,6 +18205,37 @@ export const ProviderSchema = z.object({
 });
 
 export const ProviderTypeSchema = z.enum(["dentist", "hygienist", "orthodontist", "endodontist", "periodontist", "oral_surgeon", "pediatric_dentist", "pharmacist", "other"]);
+
+export const PublicAvailabilitySlotSchema = z.object({
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  providerId: UUIDSchema,
+  visitType: VisitTypeSchema
+});
+
+export const PublicAvailabilityResponseSchema = z.object({
+  branchId: UUIDSchema,
+  visitType: VisitTypeSchema,
+  slots: z.array(PublicAvailabilitySlotSchema)
+});
+
+export const PublicBookingProviderSchema = z.object({
+  providerId: UUIDSchema,
+  displayName: z.string()
+});
+
+export const PublicBookingConfigSchema = z.object({
+  branchId: UUIDSchema,
+  branchName: z.string(),
+  timezone: z.string(),
+  enabled: z.boolean(),
+  bookableVisitTypes: z.array(VisitTypeSchema),
+  leadTimeMinutes: z.number().int(),
+  horizonDays: z.number().int(),
+  slotStepMinutes: z.number().int(),
+  requirePatientAuth: z.boolean(),
+  providers: z.array(PublicBookingProviderSchema)
+});
 
 export const RateLimitErrorSchema = z.object({
   code: z.string(),
@@ -19588,6 +19911,23 @@ export type RemoveHouseholdMemberParams = z.infer<typeof RemoveHouseholdMemberPa
 
 export const RemoveHouseholdMemberResponse = z.union([DentalPatientFinanceModuleHouseholdMemberSchema, ErrorResponseSchema]);
 
+export const CephMgmt_createCephSuperimpositionBody = DentalImagingModuleCephSuperimpositionInputSchema;
+export type CephMgmt_createCephSuperimpositionBody = z.infer<typeof CephMgmt_createCephSuperimpositionBody>;
+
+export const CephMgmt_createCephSuperimpositionResponse = z.union([DentalImagingModuleCephSuperimpositionSchema, ErrorResponseSchema]);
+
+export const CephMgmt_previewCephSuperimpositionBody = DentalImagingModuleCephSuperimpositionInputSchema;
+export type CephMgmt_previewCephSuperimpositionBody = z.infer<typeof CephMgmt_previewCephSuperimpositionBody>;
+
+export const CephMgmt_previewCephSuperimpositionResponse = z.union([DentalImagingModuleCephSuperimpositionSchema, ErrorResponseSchema]);
+
+export const CephMgmt_getCephSuperimpositionParams = z.object({
+  superimpositionId: z.string(),
+});
+export type CephMgmt_getCephSuperimpositionParams = z.infer<typeof CephMgmt_getCephSuperimpositionParams>;
+
+export const CephMgmt_getCephSuperimpositionResponse = z.union([DentalImagingModuleCephSuperimpositionSchema, ErrorResponseSchema]);
+
 export const ImagingFindingsMgmt_updateFindingParams = z.object({
   findingId: z.string(),
 });
@@ -19751,6 +20091,13 @@ export const ImagingMgmt_deleteMeasurementParams = z.object({
 export type ImagingMgmt_deleteMeasurementParams = z.infer<typeof ImagingMgmt_deleteMeasurementParams>;
 
 export const ImagingMgmt_deleteMeasurementResponse = ErrorResponseSchema;
+
+export const CephMgmt_listCephSuperimpositionsParams = z.object({
+  patientId: z.string(),
+});
+export type CephMgmt_listCephSuperimpositionsParams = z.infer<typeof CephMgmt_listCephSuperimpositionsParams>;
+
+export const CephMgmt_listCephSuperimpositionsResponse = z.union([DentalImagingModuleCephSuperimpositionListResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_createImagingStudyBody = DentalImagingModuleCreateImagingStudyBodySchema;
 export type ImagingMgmt_createImagingStudyBody = z.infer<typeof ImagingMgmt_createImagingStudyBody>;
@@ -20098,6 +20445,53 @@ export const GetDentalPatientStatementParams = z.object({
 export type GetDentalPatientStatementParams = z.infer<typeof GetDentalPatientStatementParams>;
 
 export const GetDentalPatientStatementResponse = DentalPatientModuleDentalPatientStatementSchema;
+
+export const CreateCasePresentationParams = z.object({
+  patientId: UUIDSchema,
+});
+export type CreateCasePresentationParams = z.infer<typeof CreateCasePresentationParams>;
+
+export const CreateCasePresentationBody = DentalPatientFinanceModuleCreateCasePresentationRequestSchema;
+export type CreateCasePresentationBody = z.infer<typeof CreateCasePresentationBody>;
+
+export const CreateCasePresentationResponse = ErrorResponseSchema;
+
+export const ListCasePresentationsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type ListCasePresentationsParams = z.infer<typeof ListCasePresentationsParams>;
+
+export const ListCasePresentationsResponse = z.union([z.array(DentalPatientFinanceModuleCasePresentationSchema), ErrorResponseSchema]);
+
+export const GetCasePresentationParams = z.object({
+  patientId: UUIDSchema,
+  presentationId: UUIDSchema,
+});
+export type GetCasePresentationParams = z.infer<typeof GetCasePresentationParams>;
+
+export const GetCasePresentationResponse = z.union([DentalPatientFinanceModuleCasePresentationAggregateSchema, ErrorResponseSchema]);
+
+export const AcceptCasePresentationParams = z.object({
+  patientId: UUIDSchema,
+  presentationId: UUIDSchema,
+});
+export type AcceptCasePresentationParams = z.infer<typeof AcceptCasePresentationParams>;
+
+export const AcceptCasePresentationBody = DentalPatientFinanceModuleAcceptCasePresentationRequestSchema;
+export type AcceptCasePresentationBody = z.infer<typeof AcceptCasePresentationBody>;
+
+export const AcceptCasePresentationResponse = z.union([DentalPatientFinanceModuleAcceptCasePresentationResultSchema, ErrorResponseSchema]);
+
+export const RejectCasePresentationParams = z.object({
+  patientId: UUIDSchema,
+  presentationId: UUIDSchema,
+});
+export type RejectCasePresentationParams = z.infer<typeof RejectCasePresentationParams>;
+
+export const RejectCasePresentationBody = DentalPatientFinanceModuleRejectCasePresentationRequestSchema;
+export type RejectCasePresentationBody = z.infer<typeof RejectCasePresentationBody>;
+
+export const RejectCasePresentationResponse = z.union([DentalPatientFinanceModuleRejectCasePresentationResultSchema, ErrorResponseSchema]);
 
 export const CreateClaimDraftParams = z.object({
   patientId: UUIDSchema,
@@ -20574,6 +20968,55 @@ export const ExportPatientCareRecordParams = z.object({
 export type ExportPatientCareRecordParams = z.infer<typeof ExportPatientCareRecordParams>;
 
 export const ExportPatientCareRecordResponse = PatientCareRecordBundleSchema;
+
+export const GetOnlineBookingParams = z.object({
+  confirmationCode: z.string(),
+});
+export type GetOnlineBookingParams = z.infer<typeof GetOnlineBookingParams>;
+
+export const GetOnlineBookingResponse = BookingLookupResponseSchema;
+
+export const GetPublicAvailabilityParams = z.object({
+  branchId: UUIDSchema,
+});
+export type GetPublicAvailabilityParams = z.infer<typeof GetPublicAvailabilityParams>;
+
+export const GetPublicAvailabilityQuery = z.object({
+  visitType: VisitTypeSchema,
+  date_from: z.string(),
+  date_to: z.string(),
+  providerId: UUIDSchema.optional(),
+});
+export type GetPublicAvailabilityQuery = z.infer<typeof GetPublicAvailabilityQuery>;
+
+export const GetPublicAvailabilityResponse = PublicAvailabilityResponseSchema;
+
+export const GetPublicBookingConfigParams = z.object({
+  branchId: UUIDSchema,
+});
+export type GetPublicBookingConfigParams = z.infer<typeof GetPublicBookingConfigParams>;
+
+export const GetPublicBookingConfigResponse = PublicBookingConfigSchema;
+
+export const CreateOnlineBookingParams = z.object({
+  branchId: UUIDSchema,
+});
+export type CreateOnlineBookingParams = z.infer<typeof CreateOnlineBookingParams>;
+
+export const CreateOnlineBookingBody = CreateOnlineBookingRequestSchema;
+export type CreateOnlineBookingBody = z.infer<typeof CreateOnlineBookingBody>;
+
+export const CreateOnlineBookingResponse = OnlineBookingResponseSchema;
+
+export const CreateBookingHoldParams = z.object({
+  branchId: UUIDSchema,
+});
+export type CreateBookingHoldParams = z.infer<typeof CreateBookingHoldParams>;
+
+export const CreateBookingHoldBody = CreateHoldRequestSchema;
+export type CreateBookingHoldBody = z.infer<typeof CreateBookingHoldBody>;
+
+export const CreateBookingHoldResponse = HoldResponseSchema;
 
 export const UpdateQueueItemStatusParams = z.object({
   itemId: UUIDSchema,
