@@ -19,11 +19,18 @@
     "db:reseed": "bun scripts/reset-db.ts && bun scripts/seed-demo.ts && (cd services/api-ts && bun scripts/seed-supplement.ts)",
     "test:contract": "bun scripts/run-contract-tests.ts",
     "test:contract:fuzz": "bun scripts/run-schemathesis.ts",
+    "infra:up": "docker compose -f services/api-ts/docker-compose.deps.yml up -d --wait",
+    "infra:down": "docker compose -f services/api-ts/docker-compose.deps.yml down",
+    "infra:reset": "docker compose -f services/api-ts/docker-compose.deps.yml down -v && docker compose -f services/api-ts/docker-compose.deps.yml up -d --wait",
+    "infra:logs": "docker compose -f services/api-ts/docker-compose.deps.yml logs -f",
     "typecheck": "bun run --filter dentalemon typecheck",
     "lint": "bun run --filter dentalemon --filter '@monobase/api-ts' lint && bun run check:fsm-tokens",
     "check:fsm-tokens": "bun scripts/check-fsm-tokens.ts",
     "test": "bun run --filter dentalemon test",
     "test:e2e": "bun run --filter dentalemon test:e2e",
+    "turbo:typecheck": "turbo run typecheck --filter=dentalemon --filter=@monobase/api-ts",
+    "turbo:lint": "turbo run lint --filter=dentalemon --filter=@monobase/api-ts",
+    "turbo:test": "turbo run test --filter=dentalemon --filter=@monobase/api-ts",
     "audit:rust": "bash scripts/cargo-audit.sh",
     "audit:trace": "bun scripts/audit-traceability.ts",
     "audit:trace:ci": "bun scripts/audit-traceability.ts --ci"
@@ -52,6 +59,7 @@
     "@tauri-apps/cli-darwin-arm64": "^2.10.1",
     "@tauri-apps/cli-linux-x64-gnu": "^2.10.1",
     "pg-cloudflare": "^1.2.7",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "turbo": "^2"
   }
 }

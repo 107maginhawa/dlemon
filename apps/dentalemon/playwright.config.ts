@@ -59,10 +59,24 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'bun run dev',
-    url: 'http://localhost:3003',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // Boot BOTH the API (services/api-ts on :7213) and the web app (:3003) so
+  // `bun run test:e2e` runs the full stack with one command. Imaging specs mock
+  // the API via page.route and ignore the live one; the self-seed specs (perio,
+  // reminders, recall, insurance, voice) drive the real API. reuseExistingServer
+  // locally so an already-running dev server / API is reused instead of re-spawned.
+  webServer: [
+    {
+      command: 'bun run dev',
+      cwd: '../../services/api-ts',
+      url: 'http://localhost:7213/livez',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      command: 'bun run dev',
+      url: 'http://localhost:3003',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 })
