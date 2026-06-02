@@ -366,6 +366,59 @@ model UpdateMedicalHistoryEntryRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Models — Medical History Review (P1-4: ASA + periodic re-confirmation)
+// ---------------------------------------------------------------------------
+
+/**
+ * ASA Physical Status classification (American Society of Anesthesiologists).
+ * I–VI plus the "E" emergency modifier is captured separately (asaEmergency).
+ */
+enum AsaClassification {
+  asa_i: "I",
+  asa_ii: "II",
+  asa_iii: "III",
+  asa_iv: "IV",
+  asa_v: "V",
+  asa_vi: "VI",
+}
+
+/**
+ * MedicalHistoryReview — patient-level review attestation (P1-4).
+ * Captures the ASA Physical Status and the date the history was last reviewed,
+ * supporting the periodic (3–6 month) re-confirmation requirement. Latest review
+ * per patient is the current one; prior reviews are retained as history.
+ */
+@example(#{
+  id: "mr-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+  version: 1,
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  asaClassification: AsaClassification.asa_ii,
+  asaEmergency: false,
+  reviewedAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+}, #{ title: "ASA II review, no emergency modifier" })
+model MedicalHistoryReview {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  version: int32;
+  patientId: UUID;
+  /** ASA Physical Status I–VI; null when not yet classified */
+  asaClassification?: AsaClassification;
+  /** ASA "E" emergency modifier */
+  asaEmergency: boolean;
+  /** Timestamp the medical history was last reviewed/re-confirmed */
+  reviewedAt: utcDateTime;
+}
+
+model RecordMedicalHistoryReviewRequest {
+  patientId: UUID;
+  asaClassification?: AsaClassification;
+  asaEmergency?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Models — Amendment
 // ---------------------------------------------------------------------------
 
@@ -619,6 +672,29 @@ namespace DentalClinicalModule {
       @path entryId: UUID,
       @body body: UpdateMedicalHistoryEntryRequest
     ): ApiOkResponse<MedicalHistoryEntry>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // P1-4: ASA classification + periodic re-confirmation
+    @post
+    @route("/medical-history-review")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("recordMedicalHistoryReview")
+    recordReview(
+      @body body: RecordMedicalHistoryReviewRequest
+    ): ApiCreatedResponse<MedicalHistoryReview>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/medical-history-review")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getMedicalHistoryReview")
+    getReview(
+      @query patientId: UUID
+    ): ApiOkResponse<MedicalHistoryReview>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

@@ -16,6 +16,20 @@ import {
   useMedicalHistoryMutations,
   type MedicalHistoryEntry,
 } from '../hooks/use-medical-history';
+import {
+  useMedicalHistoryReview,
+  useMedicalHistoryReviewMutation,
+  type AsaClassification,
+} from '../hooks/use-medical-history-review';
+
+const ASA_OPTIONS: { value: AsaClassification; label: string }[] = [
+  { value: 'I', label: 'ASA I — Healthy' },
+  { value: 'II', label: 'ASA II — Mild systemic disease' },
+  { value: 'III', label: 'ASA III — Severe systemic disease' },
+  { value: 'IV', label: 'ASA IV — Life-threatening disease' },
+  { value: 'V', label: 'ASA V — Moribund' },
+  { value: 'VI', label: 'ASA VI — Brain-dead (donor)' },
+];
 
 // ─── Preset items ─────────────────────────────────────────────────────────────
 
@@ -84,6 +98,26 @@ export interface MedicalHistoryFormProps {
 export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
   const { entries, isLoading, error } = useMedicalHistory(patientId);
   const { addEntry, toggleEntry, updateEntry, saveError } = useMedicalHistoryMutations(patientId);
+
+  // P1-4: ASA classification + periodic re-confirmation
+  const { review, reviewDue } = useMedicalHistoryReview(patientId);
+  const { recordReview, isRecording } = useMedicalHistoryReviewMutation(patientId);
+  const [asaClass, setAsaClass] = useState<AsaClassification | ''>('');
+  const [asaEmergency, setAsaEmergency] = useState(false);
+  useEffect(() => {
+    if (review) {
+      setAsaClass((review.asaClassification as AsaClassification | undefined) ?? '');
+      setAsaEmergency(review.asaEmergency ?? false);
+    }
+  }, [review]);
+
+  async function handleRecordReview() {
+    await recordReview({
+      patientId,
+      asaClassification: asaClass || undefined,
+      asaEmergency,
+    });
+  }
 
   // Local state for surgical history textarea and lifestyle/pregnancy
   // (these are "special" single-value entries stored as procedure/condition)
@@ -331,6 +365,66 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto pb-24">
+
+          {/* ── ASA Status + Re-confirmation (P1-4) ──────────── */}
+          <div className="mt-4 rounded-xl border border-border overflow-hidden">
+            <div className={`${sectionHeaderClass} flex items-center justify-between`}>
+              <span>ASA Status &amp; Review</span>
+              {reviewDue && (
+                <span
+                  data-testid="review-due-badge"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/20 text-warning normal-case tracking-normal"
+                >
+                  ⚠ Review due
+                </span>
+              )}
+            </div>
+            <div className="px-4 py-3 flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="asa-class">
+                  ASA Physical Status
+                </label>
+                <select
+                  id="asa-class"
+                  value={asaClass}
+                  onChange={(e) => setAsaClass(e.target.value as AsaClassification | '')}
+                  aria-label="ASA Physical Status classification"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                >
+                  <option value="">Not classified</option>
+                  {ASA_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={asaEmergency}
+                  onChange={(e) => setAsaEmergency(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                  aria-label="ASA emergency modifier"
+                />
+                <span className="text-sm">Emergency modifier (E)</span>
+              </label>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {review?.reviewedAt
+                    ? `Last reviewed ${new Date(review.reviewedAt).toLocaleDateString()}`
+                    : 'Never reviewed'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRecordReview}
+                  disabled={isRecording}
+                  data-testid="confirm-review-btn"
+                  className="h-9 px-4 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+                >
+                  {isRecording ? 'Saving…' : 'Confirm review'}
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* ── Medical Conditions ─────────────────────────── */}
           <div className="mt-4 rounded-xl border border-border overflow-hidden">
