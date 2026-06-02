@@ -268,6 +268,80 @@ model DentalPaymentReceiptResponse {
 }
 
 // ---------------------------------------------------------------------------
+// P2-14: AR aging + statements
+// ---------------------------------------------------------------------------
+
+/**
+ * Accounts-receivable aging for a single patient. Outstanding balance is
+ * bucketed by the age (days since invoice due date, falling back to issue
+ * date) of each non-voided invoice's remaining balance.
+ */
+model ArAgingPatientRow {
+  patientId: UUID;
+  patientName: string;
+  currentCents: int32;
+  days30Cents: int32;
+  days60Cents: int32;
+  days90PlusCents: int32;
+  totalOutstandingCents: int32;
+  oldestInvoiceDays: int32;
+}
+
+/** Practice-wide aging totals across all outstanding patients. */
+model ArAgingSummary {
+  currentCents: int32;
+  days30Cents: int32;
+  days60Cents: int32;
+  days90PlusCents: int32;
+  totalOutstandingCents: int32;
+  patientCount: int32;
+}
+
+model ArAgingResponse {
+  asOf: utcDateTime;
+  summary: ArAgingSummary;
+  patients: ArAgingPatientRow[];
+}
+
+/**
+ * A generated patient billing statement summarizing charges, payments, and
+ * the resulting balance as of a point in time.
+ */
+model PatientStatement {
+  patientId: UUID;
+  patientName: string;
+  statementNumber: string;
+  asOf: utcDateTime;
+  totalChargedCents: int32;
+  totalPaidCents: int32;
+  totalDiscountCents: int32;
+  balanceCents: int32;
+  invoiceCount: int32;
+  oldestUnpaidInvoiceDays: int32;
+}
+
+model GenerateStatementBatchRequest {
+  branchId?: UUID;
+
+  /** Optional explicit patient subset; when omitted, every patient with an outstanding balance is included. */
+  patientIds?: UUID[];
+
+  /** Statement date; defaults to now(). */
+  asOf?: utcDateTime;
+
+  /** When true, include patients whose balance is zero. Defaults to false. */
+  includeZeroBalance?: boolean;
+}
+
+model GenerateStatementBatchResponse {
+  batchId: UUID;
+  asOf: utcDateTime;
+  statementCount: int32;
+  totalBalanceCents: int32;
+  statements: PatientStatement[];
+}
+
+// ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
 
@@ -458,6 +532,31 @@ namespace DentalBillingModule {
       @path paymentId: UUID
     ): ApiOkResponse<DentalPaymentReceiptResponse>
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // P2-14: AR aging buckets (current / 30 / 60 / 90+) per patient + summary.
+    @get
+    @route("/collections/aging")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getArAging")
+    getArAging(
+      @query branchId?: UUID,
+      @query asOf?: utcDateTime
+    ): ApiOkResponse<ArAgingResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // P2-14: batch patient statements run.
+    @post
+    @route("/statements/batch")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("generateStatementBatch")
+    generateStatementBatch(
+      @body body: GenerateStatementBatchRequest
+    ): ApiOkResponse<GenerateStatementBatchResponse>
+      | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
   }
 }
