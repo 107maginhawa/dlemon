@@ -34,7 +34,7 @@ export function HouseholdCard({ patientId }: { patientId: string }) {
     );
   }
 
-  if (!data) {
+  if (!data || !data.household) {
     return (
       <div
         data-testid="household-empty"
