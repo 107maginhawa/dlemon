@@ -23,6 +23,7 @@ import {
   CreatePerioChartBody,
   UpsertToothReadingBody,
   UpsertToothReadingParams,
+  CompletePerioChartBody,
   CompletePerioChartParams,
   GetVisitPerioChartParams,
   GetPerioChartParams,
@@ -88,7 +89,7 @@ function buildApp(user?: typeof TEST_USER) {
 
   app.post('/dental/perio-charts', zValidator('json', CreatePerioChartBody, ve), createPerioChart as any);
   app.put('/dental/perio-charts/:chartId/readings/:toothNumber', zValidator('param', UpsertToothReadingParams, ve), zValidator('json', UpsertToothReadingBody, ve), upsertToothReading as any);
-  app.post('/dental/perio-charts/:chartId/complete', zValidator('param', CompletePerioChartParams, ve), completePerioChart as any);
+  app.post('/dental/perio-charts/:chartId/complete', zValidator('param', CompletePerioChartParams, ve), zValidator('json', CompletePerioChartBody, ve), completePerioChart as any);
   app.get('/dental/visits/:visitId/perio-chart', zValidator('param', GetVisitPerioChartParams, ve), getVisitPerioChart as any);
   app.get('/dental/perio-charts/:chartId', zValidator('param', GetPerioChartParams, ve), getPerioChart as any);
 
@@ -561,6 +562,56 @@ describe('completePerioChart', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('VISIT_LOCKED');
+  });
+});
+
+// P1-6: 2017 AAP/EFP staging/grading surfaced on the completion response.
+describe('completePerioChart — 2017 staging/grading (P1-6)', () => {
+  const STAGE_VISIT = 'ee000000-0000-1000-8000-000000000055';
+  const STAGE_CHART = 'ee000000-0000-1000-8000-000000000076';
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values({
+      id: STAGE_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+    await db.insert(dentalPerioCharts).values({
+      id: STAGE_CHART, visitId: STAGE_VISIT, patientId: PATIENT_ID,
+      branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+  });
+
+  test('returns computed Stage III + Grade C + generalized extent', async () => {
+    const app = buildApp(TEST_USER);
+    // One advanced interdental site (PD 6 + 2mm recession at BM → CAL 8, furcation II)
+    // plus 15 involved teeth (PD 5 → involved) → ≥30% involvement → generalized.
+    await app.request(`/dental/perio-charts/${STAGE_CHART}/readings/16`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 6, gmBM: 2, furcation: 2 }),
+    });
+    for (const tooth of [12, 13, 14, 15, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 11]) {
+      await app.request(`/dental/perio-charts/${STAGE_CHART}/readings/${tooth}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depthBM: 5, gmBM: 0 }), // CAL 5 → involved
+      });
+    }
+
+    const res = await app.request(`/dental/perio-charts/${STAGE_CHART}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // grading risk: heavy smoker → Grade C. remainingTeeth=28 (full dentition)
+      // so the <20-teeth Stage-IV complexity factor does not apply.
+      body: JSON.stringify({ bonelossPercent: 40, ageYears: 30, cigarettesPerDay: 12, remainingTeeth: 28 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.stage).toBe('III');
+    expect(body.grade).toBe('C');
+    expect(body.extent).toBe('generalized');
   });
 });
 
