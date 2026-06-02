@@ -15,6 +15,7 @@ import { canWriteBilling, type DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
 import { BillingList } from '../../features/billing/components/billing-list'
 import { CollectionsView } from '../../features/billing/components/collections-view'
+import { ClaimsWorklist } from '../../features/billing/components/claims-worklist'
 import { InvoiceDetail } from '../../features/billing/components/invoice-detail'
 import { PaymentPlanView } from '../../features/billing/components/payment-plan-view'
 
@@ -23,7 +24,7 @@ export const Route = createFileRoute('/_dashboard/billing')({
   component: BillingPage,
 })
 
-type BillingTab = 'invoices' | 'collections'
+type BillingTab = 'invoices' | 'collections' | 'insurance'
 
 function BillingPage() {
   const queryClient = useQueryClient()
@@ -63,7 +64,7 @@ function BillingPage() {
           role="tablist"
           aria-label="Billing section"
         >
-          {(['invoices', 'collections'] as const).map((t) => (
+          {(['invoices', 'collections', 'insurance'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -76,7 +77,7 @@ function BillingPage() {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t === 'invoices' ? 'Invoices' : 'Collections'}
+              {t === 'invoices' ? 'Invoices' : t === 'collections' ? 'Collections' : 'Insurance'}
             </button>
           ))}
         </div>
@@ -84,8 +85,10 @@ function BillingPage() {
 
       {tab === 'invoices' ? (
         <BillingList onInvoiceClick={handleInvoiceClick} />
-      ) : (
+      ) : tab === 'collections' ? (
         <CollectionsView branchId={branchId} />
+      ) : (
+        <ClaimsWorklist branchId={branchId} canWrite={canWrite} />
       )}
 
       {selectedInvoiceId && (
