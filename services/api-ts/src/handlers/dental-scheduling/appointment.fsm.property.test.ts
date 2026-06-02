@@ -64,10 +64,18 @@ describe('Appointment FSM property tests', () => {
     );
   });
 
-  test('scheduled can move to checked_in, cancelled, or no_show', () => {
+  test('scheduled can move to confirmed, checked_in, cancelled, or no_show', () => {
+    expect(APPOINTMENT_TRANSITIONS['scheduled']).toContain('confirmed');
     expect(APPOINTMENT_TRANSITIONS['scheduled']).toContain('checked_in');
     expect(APPOINTMENT_TRANSITIONS['scheduled']).toContain('cancelled');
     expect(APPOINTMENT_TRANSITIONS['scheduled']).toContain('no_show');
+  });
+
+  test('confirmed can move to checked_in, cancelled, or no_show (but not back to scheduled)', () => {
+    expect(APPOINTMENT_TRANSITIONS['confirmed']).toContain('checked_in');
+    expect(APPOINTMENT_TRANSITIONS['confirmed']).toContain('cancelled');
+    expect(APPOINTMENT_TRANSITIONS['confirmed']).toContain('no_show');
+    expect(isValidTransition('confirmed', 'scheduled')).toBe(false);
   });
 
   test('no_show is reversible to completed (patient turns up late)', () => {

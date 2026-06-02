@@ -44,6 +44,12 @@ export async function updateAppointment(ctx: HandlerContext) {
     }
   }
 
+  if (body.status === 'confirmed') {
+    const result = await repo.confirm(appointmentId, user.id);
+    if (!result) throw new NotFoundError('Appointment');
+    return ctx.json(toWire(result));
+  }
+
   if (body.status === 'no_show') {
     const result = await repo.markNoShow(appointmentId, user.id);
     if (!result) throw new NotFoundError('Appointment');

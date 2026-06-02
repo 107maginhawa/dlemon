@@ -10,6 +10,7 @@ import { describe, test, expect } from 'bun:test';
 import {
   getStatusBadgeProps,
   canCheckIn,
+  canConfirm,
   type Appointment,
 } from './appointment-card';
 
@@ -36,6 +37,12 @@ describe('getStatusBadgeProps — label mapping', () => {
     const props = getStatusBadgeProps('scheduled');
     expect(props.label).toBe('Scheduled');
     expect(props.className).toContain('blue');
+  });
+
+  test('confirmed → "Confirmed" with teal classes', () => {
+    const props = getStatusBadgeProps('confirmed');
+    expect(props.label).toBe('Confirmed');
+    expect(props.className).toContain('teal');
   });
 
   test('checked_in → "Checked In"', () => {
@@ -77,6 +84,10 @@ describe('canCheckIn — eligibility logic', () => {
     expect(canCheckIn('scheduled')).toBe(true);
   });
 
+  test('status "confirmed" → true (confirmed appointments can still check in)', () => {
+    expect(canCheckIn('confirmed')).toBe(true);
+  });
+
   test('status "checked_in" → false', () => {
     expect(canCheckIn('checked_in')).toBe(false);
   });
@@ -95,6 +106,20 @@ describe('canCheckIn — eligibility logic', () => {
 
   test('unknown status → false (safe default)', () => {
     expect(canCheckIn('unknown_status')).toBe(false);
+  });
+});
+
+describe('canConfirm — eligibility logic', () => {
+  test('only "scheduled" can be confirmed', () => {
+    expect(canConfirm('scheduled')).toBe(true);
+  });
+
+  test('already-confirmed / later states cannot be confirmed again', () => {
+    expect(canConfirm('confirmed')).toBe(false);
+    expect(canConfirm('checked_in')).toBe(false);
+    expect(canConfirm('completed')).toBe(false);
+    expect(canConfirm('cancelled')).toBe(false);
+    expect(canConfirm('no_show')).toBe(false);
   });
 });
 
@@ -139,7 +164,7 @@ describe('Appointment interface', () => {
 // ---------------------------------------------------------------------------
 
 describe('getStatusBadgeProps — className never empty', () => {
-  const statuses = ['scheduled', 'checked_in', 'completed', 'cancelled', 'no_show', 'draft', ''];
+  const statuses = ['scheduled', 'confirmed', 'checked_in', 'completed', 'cancelled', 'no_show', 'draft', ''];
 
   for (const status of statuses) {
     test(`status "${status}" always has a non-empty className`, () => {
