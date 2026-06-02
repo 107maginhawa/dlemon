@@ -168,7 +168,10 @@ describe('useBulkArchive', () => {
 
     await waitFor(() => expect(capturedUrl).toContain('/dental/patients/bulk-archive'));
     const body = JSON.parse(capturedBody);
-    expect(body.patientIds).toEqual(['p1', 'p2']);
+    // Corrected contract: the endpoint expects { ids, reason } (the prior
+    // `patientIds` payload was stale and would have been rejected at runtime).
+    expect(body.ids).toEqual(['p1', 'p2']);
+    expect(typeof body.reason).toBe('string');
     expect(invalidateSpy).toHaveBeenCalled();
   });
 

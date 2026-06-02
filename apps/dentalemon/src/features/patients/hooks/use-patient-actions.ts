@@ -14,7 +14,6 @@ import {
   archiveDentalPatientMutation,
   restoreDentalPatientMutation,
   bulkArchiveDentalPatientsMutation,
-  listDentalPatientsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
 import { exportDentalPatients } from '@monobase/sdk-ts/generated';
 
@@ -27,7 +26,7 @@ export function useArchivePatient() {
     ...archiveDentalPatientMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: listDentalPatientsQueryKey(),
+        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
       });
     },
   });
@@ -52,7 +51,7 @@ export function useRestorePatient() {
     ...restoreDentalPatientMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: listDentalPatientsQueryKey(),
+        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
       });
     },
   });
@@ -77,13 +76,13 @@ export function useBulkArchive() {
     ...bulkArchiveDentalPatientsMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: listDentalPatientsQueryKey(),
+        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
       });
     },
   });
 
-  const bulkArchive = (patientIds: string[]) => {
-    mutation.mutate({ body: { patientIds } });
+  const bulkArchive = (patientIds: string[], reason = 'Bulk archived from patient list') => {
+    mutation.mutate({ body: { ids: patientIds, reason } });
   };
 
   return {
