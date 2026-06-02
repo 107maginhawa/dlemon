@@ -3100,6 +3100,8 @@ export type DentalImagingModuleCephAnalysis = {
 
 export type DentalImagingModuleCephCalibrationMethod = 'dicom_tag' | 'manual_ruler' | 'assumed_default' | 'not_calibrated';
 
+export type DentalImagingModuleCephDetectionStatus = 'pending' | 'succeeded' | 'failed';
+
 export type DentalImagingModuleCephLandmark = {
     id: string;
     imageId: string;
@@ -3126,6 +3128,17 @@ export type DentalImagingModuleCephLandmarkDelta = {
     directionDeg: number;
 };
 
+export type DentalImagingModuleCephLandmarkDetectionResult = {
+    jobId: string;
+    status: DentalImagingModuleCephDetectionStatus;
+    modelVersion: string;
+    provider: string;
+    predictions: Array<DentalImagingModuleCephLandmarkPrediction>;
+    items: Array<DentalImagingModuleCephLandmark>;
+    analysis: DentalImagingModuleCephAnalysis;
+    error?: string;
+};
+
 export type DentalImagingModuleCephLandmarkInput = {
     landmarkCode: DentalImagingModuleCephLandmarkCode;
     x: number;
@@ -3138,6 +3151,13 @@ export type DentalImagingModuleCephLandmarkInput = {
 export type DentalImagingModuleCephLandmarkListResponse = {
     items: Array<DentalImagingModuleCephLandmark>;
     analysis: DentalImagingModuleCephAnalysis;
+};
+
+export type DentalImagingModuleCephLandmarkPrediction = {
+    landmarkCode: DentalImagingModuleCephLandmarkCode;
+    x: number;
+    y: number;
+    confidence: number;
 };
 
 export type DentalImagingModuleCephLandmarkSource = 'manual' | 'ai' | 'ai_corrected';
@@ -65507,6 +65527,43 @@ export type CephMgmtBatchUpsertCephLandmarksResponses = {
 };
 
 export type CephMgmtBatchUpsertCephLandmarksResponse = CephMgmtBatchUpsertCephLandmarksResponses[keyof CephMgmtBatchUpsertCephLandmarksResponses];
+
+export type CephMgmtDetectCephLandmarksData = {
+    body?: never;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect';
+};
+
+export type CephMgmtDetectCephLandmarksResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephLandmarkDetectionResult | ErrorResponse;
+};
+
+export type CephMgmtDetectCephLandmarksResponse = CephMgmtDetectCephLandmarksResponses[keyof CephMgmtDetectCephLandmarksResponses];
+
+export type CephMgmtGetCephLandmarkDetectionJobData = {
+    body?: never;
+    path: {
+        imageId: string;
+        jobId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}';
+};
+
+export type CephMgmtGetCephLandmarkDetectionJobResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleCephLandmarkDetectionResult | ErrorResponse;
+};
+
+export type CephMgmtGetCephLandmarkDetectionJobResponse = CephMgmtGetCephLandmarkDetectionJobResponses[keyof CephMgmtGetCephLandmarkDetectionJobResponses];
 
 export type CephMgmtDeleteCephLandmarkData = {
     body?: never;

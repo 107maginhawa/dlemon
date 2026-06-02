@@ -417,6 +417,44 @@ namespace DentalImagingModule {
   }
 
   // =========================================================================
+  // AUTO / AI LANDMARK DETECTION (P1-10, Phase 0 — detector SEAM + FakeDetector)
+  // =========================================================================
+  //
+  // SAFETY (plan §4): detection produces DRAFTS only. Predictions land via the
+  // existing batch-upsert path as source='ai', status='placed', with per-point
+  // confidence. AI output NEVER auto-confirms and NEVER auto-finalizes — the
+  // report gate (A/B/Go/Po must be human-'confirmed') is the human-review gate.
+  // Gated by imaging addon tier AND the dental_imaging_auto_landmark kill-switch.
+
+  // Async-job status. Phase-0 FakeDetector resolves synchronously → 'succeeded'.
+  enum CephDetectionStatus {
+    pending,
+    succeeded,
+    failed,
+  }
+
+  // A single predicted landmark in image-space pixels (D-C), with confidence.
+  model CephLandmarkPrediction {
+    landmarkCode: CephLandmarkCode;
+    x: float64;
+    y: float64;
+    confidence: float64;
+  }
+
+  // Detection-run result. Predictions are persisted (source='ai', status='placed')
+  // before this is returned, so `items` reflects the post-write landmark set.
+  model CephLandmarkDetectionResult {
+    jobId: string;
+    status: CephDetectionStatus;
+    modelVersion: string;
+    provider: string;
+    predictions: CephLandmarkPrediction[];
+    items: CephLandmark[];
+    analysis: CephAnalysis;
+    error?: string;
+  }
+
+  // =========================================================================
   // CEPHALOMETRIC SUPERIMPOSITION (P1-11, v1: cranial-base S–N only)
   // =========================================================================
   //
@@ -533,6 +571,20 @@ namespace DentalImagingModule {
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
     getCephReport(@path imageId: string, @query version?: int32): CephReport | ErrorResponse;
+
+    // ── Auto / AI landmark detection (P1-10, Phase 0) ──────────────────────
+    // Full /dental/imaging prefix required (route-override gotcha; missing prefix
+    // = P0 auth bypass). Addon-tier + dental_imaging_auto_landmark flag gated.
+    // Predictions are persisted via batch-upsert (source='ai', status='placed').
+    @post
+    @route("/dental/imaging/images/{imageId}/ceph/landmarks/detect")
+    @useAuth(bearerAuth)
+    detectCephLandmarks(@path imageId: string): CephLandmarkDetectionResult | ErrorResponse;
+
+    @get
+    @route("/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}")
+    @useAuth(bearerAuth)
+    getCephLandmarkDetectionJob(@path imageId: string, @path jobId: string): CephLandmarkDetectionResult | ErrorResponse;
 
     // ── Superimposition (P1-11, v1 cranial-base only) ──────────────────────
     // Compute-on-the-fly preview: returns transform + deltas WITHOUT persisting

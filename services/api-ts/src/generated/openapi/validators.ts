@@ -1518,6 +1518,8 @@ export const DentalImagingModuleCephAnalysisSchema = z.object({
 
 export const DentalImagingModuleCephCalibrationMethodSchema = z.enum(["dicom_tag", "manual_ruler", "assumed_default", "not_calibrated"]);
 
+export const DentalImagingModuleCephDetectionStatusSchema = z.enum(["pending", "succeeded", "failed"]);
+
 export const DentalImagingModuleCephLandmarkSchema = z.object({
   id: z.string(),
   imageId: z.string(),
@@ -1540,6 +1542,24 @@ export const DentalImagingModuleCephLandmarkDeltaSchema = z.object({
   dyMm: z.union([z.number(), z.null()]),
   magnitudeMm: z.union([z.number(), z.null()]),
   directionDeg: z.number()
+});
+
+export const DentalImagingModuleCephLandmarkPredictionSchema = z.object({
+  landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
+  x: z.number(),
+  y: z.number(),
+  confidence: z.number()
+});
+
+export const DentalImagingModuleCephLandmarkDetectionResultSchema = z.object({
+  jobId: z.string(),
+  status: DentalImagingModuleCephDetectionStatusSchema,
+  modelVersion: z.string(),
+  provider: z.string(),
+  predictions: z.array(DentalImagingModuleCephLandmarkPredictionSchema),
+  items: z.array(DentalImagingModuleCephLandmarkSchema),
+  analysis: DentalImagingModuleCephAnalysisSchema,
+  error: z.string().optional()
 });
 
 export const DentalImagingModuleCephLandmarkListResponseSchema = z.object({
@@ -20002,6 +20022,21 @@ export const CephMgmt_listCephLandmarksParams = z.object({
 export type CephMgmt_listCephLandmarksParams = z.infer<typeof CephMgmt_listCephLandmarksParams>;
 
 export const CephMgmt_listCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
+
+export const CephMgmt_detectCephLandmarksParams = z.object({
+  imageId: z.string(),
+});
+export type CephMgmt_detectCephLandmarksParams = z.infer<typeof CephMgmt_detectCephLandmarksParams>;
+
+export const CephMgmt_detectCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkDetectionResultSchema, ErrorResponseSchema]);
+
+export const CephMgmt_getCephLandmarkDetectionJobParams = z.object({
+  imageId: z.string(),
+  jobId: z.string(),
+});
+export type CephMgmt_getCephLandmarkDetectionJobParams = z.infer<typeof CephMgmt_getCephLandmarkDetectionJobParams>;
+
+export const CephMgmt_getCephLandmarkDetectionJobResponse = z.union([DentalImagingModuleCephLandmarkDetectionResultSchema, ErrorResponseSchema]);
 
 export const CephMgmt_updateCephLandmarkParams = z.object({
   imageId: z.string(),

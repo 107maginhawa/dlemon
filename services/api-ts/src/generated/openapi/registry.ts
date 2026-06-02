@@ -221,7 +221,9 @@ import { CephMgmt_batchUpsertCephLandmarks } from '../../handlers/dental-imaging
 import { CephMgmt_createCephReport } from '../../handlers/dental-imaging/CephMgmt_createCephReport';
 import { CephMgmt_createCephSuperimposition } from '../../handlers/dental-imaging/CephMgmt_createCephSuperimposition';
 import { CephMgmt_deleteCephLandmark } from '../../handlers/dental-imaging/CephMgmt_deleteCephLandmark';
+import { CephMgmt_detectCephLandmarks } from '../../handlers/dental-imaging/CephMgmt_detectCephLandmarks';
 import { CephMgmt_getCephAnalysis } from '../../handlers/dental-imaging/CephMgmt_getCephAnalysis';
+import { CephMgmt_getCephLandmarkDetectionJob } from '../../handlers/dental-imaging/CephMgmt_getCephLandmarkDetectionJob';
 import { CephMgmt_getCephReport } from '../../handlers/dental-imaging/CephMgmt_getCephReport';
 import { CephMgmt_getCephSuperimposition } from '../../handlers/dental-imaging/CephMgmt_getCephSuperimposition';
 import { CephMgmt_listCephLandmarks } from '../../handlers/dental-imaging/CephMgmt_listCephLandmarks';
@@ -577,7 +579,9 @@ export const registry = {
   CephMgmt_createCephReport,
   CephMgmt_createCephSuperimposition,
   CephMgmt_deleteCephLandmark,
+  CephMgmt_detectCephLandmarks,
   CephMgmt_getCephAnalysis,
+  CephMgmt_getCephLandmarkDetectionJob,
   CephMgmt_getCephReport,
   CephMgmt_getCephSuperimposition,
   CephMgmt_listCephLandmarks,

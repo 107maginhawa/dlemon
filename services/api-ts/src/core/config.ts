@@ -65,6 +65,15 @@ export interface Config {
   webrtc: {
     iceServers: IceServer[];
   };
+
+  // Feature flags
+  features: {
+    // P1-10: kill-switch for AI / auto cephalometric landmark detection.
+    // OFF by default — the detect endpoint hard-returns 403 FEATURE_DISABLED
+    // so the feature can be turned off without a deploy if accuracy /
+    // regulatory issues surface. Enable with DENTAL_IMAGING_AUTO_LANDMARK=true.
+    dentalImagingAutoLandmark: boolean;
+  };
 }
 
 /**
@@ -255,6 +264,12 @@ export function parseConfig(): Config {
       iceServers: process.env['WEBRTC_ICE_SERVERS']
         ? parseIceServerUrls(process.env['WEBRTC_ICE_SERVERS'])
         : DEFAULT_ICE_SERVERS
+    },
+
+    // Feature flags
+    features: {
+      // P1-10 AI landmarking kill-switch — OFF by default.
+      dentalImagingAutoLandmark: parseBool(process.env['DENTAL_IMAGING_AUTO_LANDMARK'], false),
     },
   };
 

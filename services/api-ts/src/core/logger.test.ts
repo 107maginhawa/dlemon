@@ -15,6 +15,7 @@ function makeConfig(): Config {
     notifs: {} as any,
     billing: {} as any,
     webrtc: { iceServers: [] },
+    features: { dentalImagingAutoLandmark: false },
   } as Config;
 }
 

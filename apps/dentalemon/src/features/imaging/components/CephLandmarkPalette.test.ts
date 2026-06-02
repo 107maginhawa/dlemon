@@ -11,6 +11,7 @@ afterEach(cleanup)
 function mk(
   code: CephLandmarkCode,
   status: CephLandmark['status'] = 'placed',
+  overrides: Partial<CephLandmark> = {},
 ): CephLandmark {
   return {
     id: `id-${code}`,
@@ -23,6 +24,7 @@ function mk(
     status,
     createdAt: '',
     updatedAt: '',
+    ...overrides,
   }
 }
 
@@ -122,5 +124,38 @@ describe('CephLandmarkPalette', () => {
     const { container } = renderPalette()
     const btn = container.querySelector('[data-landmark-code="Go"]') as HTMLButtonElement
     expect(btn.getAttribute('title')).toContain('bilateral')
+  })
+})
+
+describe('CephLandmarkPalette — P1-10 AI provenance', () => {
+  test('AI placed landmark shows "AI · unconfirmed" with confidence %', () => {
+    const { container } = renderPalette([mk('S', 'placed', { source: 'ai', confidence: 0.92 })])
+    const badge = container.querySelector('[data-ai-unconfirmed="S"]')
+    expect(badge).not.toBeNull()
+    expect(badge?.textContent).toContain('AI')
+    expect(badge?.textContent).toContain('92%')
+  })
+
+  test('low-confidence AI landmark gets a "low" flag', () => {
+    const { container } = renderPalette([mk('Go', 'placed', { source: 'ai', confidence: 0.45 })])
+    expect(container.querySelector('[data-ai-low-confidence="Go"]')).not.toBeNull()
+  })
+
+  test('high-confidence AI landmark does NOT get the low flag', () => {
+    const { container } = renderPalette([mk('S', 'placed', { source: 'ai', confidence: 0.92 })])
+    expect(container.querySelector('[data-ai-low-confidence="S"]')).toBeNull()
+  })
+
+  test('ai_corrected landmark badge reads "AI · corrected"', () => {
+    const { container } = renderPalette([mk('S', 'placed', { source: 'ai_corrected', confidence: 0.92 })])
+    const btn = container.querySelector('[data-landmark-code="S"]')
+    expect(btn?.textContent).toContain('AI · corrected')
+  })
+
+  test('manual placed landmark shows plain "placed" badge (no AI markup)', () => {
+    const { container } = renderPalette([mk('S', 'placed', { source: 'manual' })])
+    expect(container.querySelector('[data-ai-unconfirmed="S"]')).toBeNull()
+    const btn = container.querySelector('[data-landmark-code="S"]')
+    expect(btn?.textContent).toContain('placed')
   })
 })

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Lock, FileText, Download } from 'lucide-react'
+import { X, Lock, FileText, Download, RefreshCw } from 'lucide-react'
 import {
   Button,
   Select,
@@ -56,6 +56,14 @@ function isAddonError(err: unknown): boolean {
   return /403|forbidden|add-?on|imaging_tier_required/i.test(msg)
 }
 
+// P1-10: the auto-landmark kill-switch returns 403 FEATURE_DISABLED when the
+// dental_imaging_auto_landmark flag is off — distinct from a tier block.
+function isFeatureDisabledError(err: unknown): boolean {
+  if (!err) return false
+  const msg = err instanceof Error ? err.message : String(err)
+  return /feature_disabled/i.test(msg)
+}
+
 export function CephWorkspacePanel({
   imageId,
   isOpen,
@@ -65,7 +73,7 @@ export function CephWorkspacePanel({
   selectedCode: controlledSelectedCode,
   onSelectCode,
 }: CephWorkspacePanelProps) {
-  const { landmarks, commitLandmark } = useCephLandmarks(imageId)
+  const { landmarks, commitLandmark, autoDetect } = useCephLandmarks(imageId)
   // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
   const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
   // P2-6: reference-population selector for norm display (default = classic literature).
@@ -264,6 +272,35 @@ export function CephWorkspacePanel({
             {createReport.isError && (
               <p className="text-xs text-red-400 mt-1">
                 {String(createReport.error)}
+              </p>
+            )}
+          </div>
+
+          {/* P1-10: AI / auto landmark detection (addon + dental_imaging_auto_landmark
+              flag gated). Primary action uses LEMON TOKENS. The AI visual state on the
+              overlay / palette deliberately does NOT use the lemon accent. */}
+          <div className="px-4 py-3 border-b border-zinc-700">
+            <Button
+              type="button"
+              disabled={autoDetect.isPending}
+              onClick={() => autoDetect.mutate()}
+              className="bg-lemon hover:bg-lemon-hover text-lemon-foreground text-xs font-medium w-full"
+            >
+              <RefreshCw size={12} className="mr-1" />
+              {autoDetect.isPending ? 'Detecting…' : 'Auto-detect landmarks'}
+            </Button>
+            {/* Honest disclosure (plan §4) — every AI point is a draft to confirm. */}
+            <p data-ai-disclosure className="mt-2 text-[10px] text-zinc-500 leading-snug">
+              Landmarks suggested by automated detection — confirm each before
+              generating a report.
+            </p>
+            {autoDetect.isError && (
+              <p data-ai-detect-error className="mt-1 text-xs text-amber-400">
+                {isFeatureDisabledError(autoDetect.error)
+                  ? 'Automatic detection is currently disabled.'
+                  : isAddonError(autoDetect.error)
+                    ? 'Automatic detection requires the imaging add-on.'
+                    : 'Detection failed. Place landmarks manually.'}
               </p>
             )}
           </div>

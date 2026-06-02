@@ -1,5 +1,6 @@
 import { LANDMARK_CODES, LANDMARK_LABELS } from '../lib/ceph-geometry'
 import type { CephLandmark, CephLandmarkCode } from '../hooks/use-ceph-landmarks'
+import { CEPH_LOW_CONFIDENCE_THRESHOLD } from '../hooks/use-ceph-landmarks'
 
 export interface CephLandmarkPaletteProps {
   landmarks: CephLandmark[]
@@ -71,6 +72,11 @@ export function CephLandmarkPalette({
         const isDisabled = locked
         const tooltip = D_P_TOOLTIPS[code]
         const showHint = code === activeCode
+        // P1-10 AI provenance display helpers.
+        const confidencePct =
+          lm && lm.confidence != null ? Math.round(lm.confidence * 100) : null
+        const lowConfidence =
+          lm != null && lm.confidence != null && lm.confidence < CEPH_LOW_CONFIDENCE_THRESHOLD
         return (
           <div key={code} className="flex flex-col">
           <button
@@ -95,12 +101,35 @@ export function CephLandmarkPalette({
               <span className="text-white truncate">{LANDMARK_LABELS[code]}</span>
               <span className="text-[10px] text-zinc-500">{code}</span>
             </span>
-            {status !== 'unplaced' && (
-              <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badgeClass(status)}`}
-              >
-                {status}
+            {/* P1-10: AI-suggested-unconfirmed points read distinctly from a
+                human 'placed' point — "AI · unconfirmed" + confidence, with a
+                low-confidence flag. Deliberately NOT the lemon accent (cyan/amber). */}
+            {lm && lm.source === 'ai' && status === 'placed' ? (
+              <span className="flex items-center gap-1">
+                {lowConfidence && (
+                  <span
+                    data-ai-low-confidence={code}
+                    title="Low confidence — review carefully"
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-900 text-amber-300"
+                  >
+                    low
+                  </span>
+                )}
+                <span
+                  data-ai-unconfirmed={code}
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-sky-900 text-sky-300"
+                >
+                  AI · unconfirmed{confidencePct != null ? ` ${confidencePct}%` : ''}
+                </span>
               </span>
+            ) : (
+              status !== 'unplaced' && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badgeClass(status)}`}
+                >
+                  {lm && lm.source === 'ai_corrected' ? 'AI · corrected' : status}
+                </span>
+              )
             )}
           </button>
           {showHint && (

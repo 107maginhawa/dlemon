@@ -168,6 +168,69 @@ jsonpath "$.analysis.calibrationValue" == 0.2
 
 
 # ============================================================
+# AI / AUTO LANDMARKING (P1-10 Phase 0) — kill-switch + safety
+# ============================================================
+
+# 3a. Auto-detect is kill-switched OFF by default (dental_imaging_auto_landmark).
+#     The detect endpoint must HARD-disable → 403 FEATURE_DISABLED (no deploy needed
+#     to turn the feature off). Route prefix /dental/imaging asserted here too.
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/detect
+Cookie: better-auth.session_token={{session_token}}
+HTTP 403
+[Asserts]
+jsonpath "$.code" == "FEATURE_DISABLED"
+
+
+# 3b. Detect requires authentication → 401
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/detect
+HTTP 401
+
+
+# 3c. SAFETY: an AI-sourced write may NOT auto-confirm. source='ai' + status='confirmed'
+#     is rejected (422) — AI predictions must enter at 'placed' and be human-confirmed.
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "landmarks": [
+    { "landmarkCode": "Me", "x": 260, "y": 420, "source": "ai", "status": "confirmed" }
+  ]
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "AI_LANDMARK_CANNOT_AUTOCONFIRM"
+
+
+# 3d. SAFETY: an AI write at status='placed' WITH confidence is allowed (the real
+#     ingest path for predictions). Provenance source='ai' is persisted.
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "landmarks": [
+    { "landmarkCode": "Or", "x": 330, "y": 180, "source": "ai", "confidence": 0.83, "status": "placed" }
+  ]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.items[?(@.landmarkCode=='Or')].source" nth 0 == "ai"
+jsonpath "$.items[?(@.landmarkCode=='Or')].confidence" nth 0 == 0.83
+
+
+# 3e. PROVENANCE: editing the AI point's coordinates flips source 'ai' → 'ai_corrected'.
+PATCH {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/Or
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "x": 335,
+  "y": 185
+}
+HTTP 200
+[Asserts]
+jsonpath "$.items[?(@.landmarkCode=='Or')].source" nth 0 == "ai_corrected"
+
+
+# ============================================================
 # CEPH ANALYSIS — GET (EMPTY-STATE CONTRACT)
 # ============================================================
 

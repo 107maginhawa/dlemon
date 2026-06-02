@@ -86,6 +86,18 @@ export async function updateCephLandmark(ctx: BaseContext): Promise<Response> {
   if (body['y'] !== undefined) updatePayload['y'] = body['y'];
   if (body['status'] !== undefined) updatePayload['status'] = body['status'] as ImagingCephLandmark['status'];
 
+  // P1-10 PROVENANCE (plan §3): editing the COORDINATES of an AI-suggested point
+  // flips source 'ai' → 'ai_corrected' (a human has overridden the model). Confirming
+  // (status-only change) PRESERVES source so the report snapshot records which
+  // landmarks were AI-originated vs human-corrected vs hand-placed. Only the first
+  // coordinate edit transitions; 'ai_corrected' and 'manual' are unaffected.
+  const coordsChanged =
+    (body.x !== undefined && body.x !== landmark.x) ||
+    (body.y !== undefined && body.y !== landmark.y);
+  if (coordsChanged && landmark.source === 'ai') {
+    updatePayload['source'] = 'ai_corrected';
+  }
+
   await cephRepo.update(landmark.id, updatePayload);
 
   const allLandmarks = await cephRepo.listByImage(imageId);

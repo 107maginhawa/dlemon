@@ -53,6 +53,30 @@ interface CommitLandmarkVars {
   status?: CephLandmarkStatus
 }
 
+export interface CephLandmarkPrediction {
+  landmarkCode: CephLandmarkCode
+  x: number
+  y: number
+  confidence: number
+}
+
+export interface CephDetectionResult {
+  jobId: string
+  status: 'pending' | 'succeeded' | 'failed'
+  modelVersion: string
+  provider: string
+  predictions: CephLandmarkPrediction[]
+  items: CephLandmark[]
+  analysis: CephAnalysis | null
+  error?: string
+}
+
+/**
+ * P1-10: per-point low-confidence threshold (single source of truth shared with
+ * the overlay + palette). Mirrors the backend CEPH_LOW_CONFIDENCE_THRESHOLD.
+ */
+export const CEPH_LOW_CONFIDENCE_THRESHOLD = 0.6
+
 export function useCephLandmarks(imageId: string) {
   const queryClient = useQueryClient()
   const seqRef = useRef(0)
@@ -193,6 +217,34 @@ export function useCephLandmarks(imageId: string) {
     },
   })
 
+  // P1-10: AI / auto landmark detection. POSTs to the detect endpoint; the server
+  // persists predictions (source='ai', status='placed') and returns the post-write
+  // landmark set, which seeds the caches so AI points render immediately. Tier/flag
+  // gating surfaces as a thrown error (reuses isAddonError / FEATURE_DISABLED).
+  const autoDetect = useMutation<CephDetectionResult, Error, void>({
+    mutationFn: async (): Promise<CephDetectionResult> => {
+      const res = await fetch(
+        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/detect`,
+        { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } },
+      )
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<CephDetectionResult>
+    },
+    onSuccess: (data) => {
+      if (data.analysis) {
+        queryClient.setQueryData<CephLandmarksResponse>(landmarksQueryKey, {
+          items: data.items,
+          analysis: data.analysis,
+        })
+        queryClient.setQueryData<CephAnalysis>(analysisQueryKey, data.analysis)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: landmarksQueryKey })
+      void queryClient.invalidateQueries({ queryKey: analysisQueryKey })
+    },
+  })
+
   return {
     landmarks: query.data?.items ?? [],
     analysis: query.data?.analysis ?? null,
@@ -209,5 +261,6 @@ export function useCephLandmarks(imageId: string) {
     commitLandmark,
     batchUpsert,
     deleteLandmark,
+    autoDetect,
   }
 }

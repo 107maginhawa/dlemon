@@ -21,7 +21,9 @@ import {
   type ImagingCephSuperimposition,
 } from './imaging_ceph.schema';
 
-export type UpdateLandmarkPayload = Partial<Pick<ImagingCephLandmark, 'x' | 'y' | 'status'>>;
+export type UpdateLandmarkPayload = Partial<
+  Pick<ImagingCephLandmark, 'x' | 'y' | 'status' | 'source'>
+>;
 
 export type UpsertLandmarkInput = {
   imageId: string;

@@ -901,6 +901,20 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.CephMgmt_listCephLandmarks as unknown as Handler
   );
 
+  // CephMgmt_detectCephLandmarks
+  app.post('/dental/imaging/images/:imageId/ceph/landmarks/detect',
+    authMiddleware(),
+    zValidator('param', validators.CephMgmt_detectCephLandmarksParams, validationErrorHandler),
+    registry.CephMgmt_detectCephLandmarks as unknown as Handler
+  );
+
+  // CephMgmt_getCephLandmarkDetectionJob
+  app.get('/dental/imaging/images/:imageId/ceph/landmarks/detect/:jobId',
+    authMiddleware(),
+    zValidator('param', validators.CephMgmt_getCephLandmarkDetectionJobParams, validationErrorHandler),
+    registry.CephMgmt_getCephLandmarkDetectionJob as unknown as Handler
+  );
+
   // CephMgmt_updateCephLandmark
   app.patch('/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode',
     authMiddleware(),

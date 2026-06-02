@@ -2,7 +2,23 @@ import { useRef } from 'react'
 import { imageToScreen, screenToImage } from '@monobase/ceph-math'
 import type { CephTransformState } from '@monobase/ceph-math'
 import type { CephLandmark, CephLandmarkCode } from '../hooks/use-ceph-landmarks'
+import { CEPH_LOW_CONFIDENCE_THRESHOLD } from '../hooks/use-ceph-landmarks'
 import { BRAND_GOLD } from '@/constants/brand'
+
+// AI overlay palette — deliberately NOT the lemon accent (lemon = primary action /
+// next-unplaced). AI-unconfirmed points read as provisional: a cyan hollow/dashed
+// ring; low-confidence AI points pick up an amber attention tint.
+const AI_RING = '#38bdf8' // cyan-400 — AI suggested, unconfirmed
+const AI_LOW_CONFIDENCE_RING = '#fbbf24' // amber-400 — AI + low confidence (flagged)
+
+/** An AI-originated point that the clinician has not yet corrected or confirmed. */
+function isAiUnconfirmed(l: CephLandmark): boolean {
+  return l.source === 'ai' && l.status === 'placed'
+}
+
+function isLowConfidence(l: CephLandmark): boolean {
+  return l.confidence != null && l.confidence < CEPH_LOW_CONFIDENCE_THRESHOLD
+}
 
 export interface CephLandmarkLayerProps {
   landmarks: CephLandmark[]
@@ -83,6 +99,47 @@ export function CephLandmarkLayer({
       {landmarks.map((l) => {
         const { x, y } = imageToScreen(l.x, l.y, transform)
         const locked = l.status === 'locked'
+        const aiUnconfirmed = isAiUnconfirmed(l)
+        const lowConfidence = aiUnconfirmed && isLowConfidence(l)
+        const ringColor = lowConfidence ? AI_LOW_CONFIDENCE_RING : AI_RING
+
+        const commonProps = {
+          'data-landmark-code': l.landmarkCode,
+          'data-source': l.source,
+          'data-confidence': l.confidence != null ? String(l.confidence) : undefined,
+          'aria-label': aiUnconfirmed
+            ? `${l.landmarkCode} landmark (AI suggested, unconfirmed${lowConfidence ? ', low confidence' : ''})`
+            : `${l.landmarkCode} landmark`,
+          style: locked ? { pointerEvents: 'none' as const } : undefined,
+          onPointerDown: (e: React.PointerEvent) => {
+            if (locked) return
+            e.stopPropagation()
+            dragRef.current = l.landmarkCode
+          },
+        }
+
+        // AI-unconfirmed → DISTINCT state: hollow (no fill) dashed ring, NOT lemon.
+        if (aiUnconfirmed) {
+          return (
+            <g key={l.landmarkCode}>
+              <circle
+                cx={x}
+                cy={y}
+                r={6}
+                fill="none"
+                stroke={ringColor}
+                strokeWidth={2}
+                strokeDasharray="3 2"
+                data-ai-unconfirmed="true"
+                data-low-confidence={lowConfidence ? 'true' : undefined}
+                {...commonProps}
+              />
+              {/* small filled center dot keeps the exact point legible inside the hollow ring */}
+              <circle cx={x} cy={y} r={1.5} fill={ringColor} style={{ pointerEvents: 'none' }} />
+            </g>
+          )
+        }
+
         return (
           <circle
             key={l.landmarkCode}
@@ -90,14 +147,7 @@ export function CephLandmarkLayer({
             cy={y}
             r={5}
             fill={fillForStatus(l.status)}
-            data-landmark-code={l.landmarkCode}
-            aria-label={`${l.landmarkCode} landmark`}
-            style={locked ? { pointerEvents: 'none' } : undefined}
-            onPointerDown={(e) => {
-              if (locked) return
-              e.stopPropagation()
-              dragRef.current = l.landmarkCode
-            }}
+            {...commonProps}
           />
         )
       })}

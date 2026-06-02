@@ -260,3 +260,111 @@ describe('CephWorkspacePanel', () => {
     expect(container.textContent).not.toContain('Class')
   })
 })
+
+// ---------------------------------------------------------------------------
+// P1-10 — Auto-detect landmarks
+// ---------------------------------------------------------------------------
+
+describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
+  test('renders the Auto-detect landmarks button', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    renderPanel()
+    expect(
+      await screen.findByRole('button', { name: /Auto-detect landmarks/i }),
+    ).not.toBeNull()
+  })
+
+  test('shows the honest AI disclosure note', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    const { container } = renderPanel()
+    await screen.findByText('Cephalometric')
+    const note = container.querySelector('[data-ai-disclosure]')
+    expect(note?.textContent).toContain('confirm each before')
+  })
+
+  test('Auto-detect button uses the lemon token (no raw hex)', async () => {
+    setFetch(
+      () => jsonResponse(okLandmarks([])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    renderPanel()
+    const btn = (await screen.findByRole('button', {
+      name: /Auto-detect landmarks/i,
+    })) as HTMLButtonElement
+    expect(btn.className).toContain('bg-lemon')
+    expect(btn.className).not.toContain('#FFE97D')
+  })
+
+  test('clicking Auto-detect POSTs to the detect endpoint and renders AI points', async () => {
+    let detectCalled = false
+    const aiItem: CephLandmark = {
+      id: 'ai-s',
+      imageId: 'img1',
+      landmarkCode: 'S',
+      x: 320,
+      y: 130,
+      source: 'ai',
+      confidence: 0.94,
+      status: 'placed',
+      createdAt: '',
+      updatedAt: '',
+    }
+    global.fetch = mock((url: string, init?: RequestInit) => {
+      if (url.includes('/ceph/landmarks/detect')) {
+        detectCalled = true
+        return jsonResponse({
+          jobId: 'job-1',
+          status: 'succeeded',
+          modelVersion: 'fake-detector-v0',
+          provider: 'fake',
+          predictions: [{ landmarkCode: 'S', x: 320, y: 130, confidence: 0.94 }],
+          items: [aiItem],
+          analysis: mkAnalysis(),
+        })
+      }
+      if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
+      // List query reflects persisted state post-detect (AI point present), so the
+      // onSettled invalidation/refetch keeps the AI overlay rendered.
+      return jsonResponse(okLandmarks(detectCalled ? [aiItem] : []))
+    }) as unknown as typeof fetch
+
+    const { container } = renderPanel()
+    const btn = (await screen.findByRole('button', {
+      name: /Auto-detect landmarks/i,
+    })) as HTMLButtonElement
+    const user = userEvent.setup()
+    await user.click(btn)
+    await waitFor(() => expect(detectCalled).toBe(true))
+    // The AI point lands in the palette as "AI · unconfirmed".
+    await waitFor(() =>
+      expect(container.querySelector('[data-ai-unconfirmed="S"]')).not.toBeNull(),
+    )
+  })
+
+  test('surfaces FEATURE_DISABLED kill-switch error distinctly', async () => {
+    global.fetch = mock((url: string) => {
+      if (url.includes('/ceph/landmarks/detect'))
+        return jsonResponse({ error: 'disabled', code: 'FEATURE_DISABLED' }, 403)
+      if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
+      return jsonResponse(okLandmarks([]))
+    }) as unknown as typeof fetch
+
+    const { container } = renderPanel()
+    const btn = (await screen.findByRole('button', {
+      name: /Auto-detect landmarks/i,
+    })) as HTMLButtonElement
+    const user = userEvent.setup()
+    await user.click(btn)
+    await waitFor(() =>
+      expect(container.querySelector('[data-ai-detect-error]')?.textContent).toContain(
+        'disabled',
+      ),
+    )
+  })
+})

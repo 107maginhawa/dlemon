@@ -1,58 +1,46 @@
 /**
- * batchUpsertCephLandmarks handler
+ * getCephLandmarkDetectionJob handler  (P1-10 Phase 0)
  *
- * POST /dental/imaging/images/{imageId}/ceph/landmarks
+ * GET /dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}
  *
- * Upserts landmarks for a ceph image. Skips locked landmarks silently.
- * Recomputes analysis after write. Returns {items, analysis}.
- * Ceph is Addon-tier only (resolveImagingTier free → 403).
+ * Job-status poll for the detect op. Phase 0 detection resolves synchronously, so
+ * this reports the current persisted state: 'succeeded' once AI-sourced landmarks
+ * exist for the image, else 'pending'. The async-job shape is preserved so a Phase-1
+ * self-hosted/vendor detector (slow inference) can populate real job rows behind the
+ * same contract with no handler/route change.
+ *
+ * Inherits the same gates as detect: kill-switch flag, addon tier, branch membership.
  */
 
 import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import type { Config } from '@/core/config';
+import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
+import { FAKE_DETECTOR_MODEL_VERSION, FAKE_DETECTOR_PROVIDER } from './repos/ceph-landmark-detector';
 
-type LandmarkInput = {
-  landmarkCode: string;
-  x: number;
-  y: number;
-  source?: string;
-  confidence?: number;
-  status?: string;
-};
-
-export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Response> {
+export async function getCephLandmarkDetectionJob(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const { imageId } = ctx.req.param() as { imageId: string };
-  const body = (await ctx.req.json()) as { landmarks: LandmarkInput[] };
-
-  // P1-10 SAFETY (plan §4): an AI write must NOT be able to confirm/lock in the
-  // same write. AI output is a DRAFT — only a human may drive placed → confirmed
-  // → locked via updateCephLandmark. No code path auto-confirms an AI landmark.
-  const illegalAiWrite = (body.landmarks ?? []).find(
-    (lm) =>
-      (lm.source === 'ai' || lm.source === 'ai_corrected') &&
-      (lm.status === 'confirmed' || lm.status === 'locked'),
-  );
-  if (illegalAiWrite) {
-    throw new BusinessLogicError(
-      `AI-sourced landmark '${illegalAiWrite.landmarkCode}' cannot be written as ` +
-        `'${illegalAiWrite.status}'. AI predictions must enter at 'placed' and be ` +
-        `confirmed by a human.`,
-      'AI_LANDMARK_CANNOT_AUTOCONFIRM',
-    );
-  }
+  const { imageId, jobId } = ctx.req.param() as { imageId: string; jobId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+  const config = ctx.get('config') as Config | undefined;
+
+  if (!config?.features?.dentalImagingAutoLandmark) {
+    throw new ForbiddenError(
+      'Automatic landmark detection is currently disabled.',
+      'FEATURE_DISABLED',
+    );
+  }
+
   const imagingRepo = new ImagingRepository(db);
   const cephRepo = new ImagingCephRepository(db);
 
@@ -70,29 +58,16 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
 
   const imagingTier = await getImagingTierForBranch(db, study.branchId);
   if (imagingTier !== 'addon') {
-    logger?.warn(
-      { event: 'dental-imaging.tier-blocked', userId: user.id, feature: 'ceph_landmarks_upsert', currentTier: imagingTier },
-      'Tier gate blocked access',
-    );
     throw new ForbiddenError(
       'Cephalometric analysis requires an imaging add-on. Upgrade your plan.',
       'IMAGING_TIER_REQUIRED',
     );
   }
 
-  await cephRepo.batchUpsert(
-    body.landmarks.map((lm) => ({
-      imageId,
-      landmarkCode: lm.landmarkCode,
-      x: lm.x,
-      y: lm.y,
-      source: lm.source as 'manual' | 'ai' | 'ai_corrected' | undefined,
-      confidence: lm.confidence,
-      status: lm.status as 'placed' | 'confirmed' | 'locked' | undefined,
-    })),
-  );
-
   const allLandmarks = await cephRepo.listByImage(imageId);
+  const aiLandmarks = allLandmarks.filter(
+    (l) => l.source === 'ai' || l.source === 'ai_corrected',
+  );
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));
   const result = computeCephAnalysis(landmarkMap, image.pixelSpacingMm ?? null);
   const analysisRow = await cephRepo.upsertAnalysis(imageId, {
@@ -101,13 +76,20 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
     calibrationMethod: image.pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
   });
 
-  logger?.info(
-    { imageId, count: body.landmarks.length, action: 'ceph_landmarks_batch_upsert', by: user.id },
-    'Ceph landmarks batch upserted',
-  );
+  const status = aiLandmarks.length > 0 ? 'succeeded' : 'pending';
 
   return ctx.json(
     {
+      jobId,
+      status,
+      modelVersion: FAKE_DETECTOR_MODEL_VERSION,
+      provider: FAKE_DETECTOR_PROVIDER,
+      predictions: aiLandmarks.map((l) => ({
+        landmarkCode: l.landmarkCode,
+        x: l.x,
+        y: l.y,
+        confidence: l.confidence ?? 0,
+      })),
       items: allLandmarks,
       analysis: {
         imageId,
