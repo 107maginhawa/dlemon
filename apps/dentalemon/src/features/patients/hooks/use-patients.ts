@@ -84,10 +84,13 @@ export interface UsePatientsOptions {
 export function usePatients(options: UsePatientsOptions) {
   const { branchId, searchQuery, status, needsFollowUp } = options;
 
+  // branchId is required by the API contract (GET /dental/patients); pass through
+  // (empty when unset) to satisfy the generated type — the runtime 400-guard and
+  // the caller's branch context handle the unset case.
   const query = useQuery({
     ...listDentalPatientsOptions({
       query: {
-        branchId: branchId ?? undefined,
+        branchId: branchId ?? '',
         q: searchQuery,
         status: status === 'all' ? undefined : status,
         needsFollowUp,

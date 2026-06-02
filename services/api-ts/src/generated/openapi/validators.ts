@@ -19446,7 +19446,7 @@ export const ListDentalPatientsQuery = z.object({
   q: z.string().optional(),
   needsFollowUp: z.coerce.boolean().optional(),
   status: z.string().optional(),
-  branchId: UUIDSchema.optional(),
+  branchId: UUIDSchema,
   limit: z.coerce.number().int().optional(),
   offset: z.coerce.number().int().optional(),
 });

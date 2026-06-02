@@ -377,7 +377,7 @@ namespace DentalPatientModule {
       @query q?: string,
       @query needsFollowUp?: boolean,
       @query status?: string,
-      @query branchId?: UUID,
+      @query branchId: UUID,
       @query limit?: int32,
       @query offset?: int32,
     ): ApiOkResponse<PaginatedResponse<DentalPatient>>

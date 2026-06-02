@@ -60843,11 +60843,11 @@ export type DentalMembershipManagementVerifyPinResponse = DentalMembershipManage
 export type ListDentalPatientsData = {
     body?: never;
     path?: never;
-    query?: {
+    query: {
         q?: string;
         needsFollowUp?: boolean;
         status?: string;
-        branchId?: Uuid;
+        branchId: Uuid;
         limit?: number;
         offset?: number;
     };

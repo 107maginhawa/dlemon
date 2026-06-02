@@ -77,10 +77,13 @@ export interface UsePatientReportOptions {
 export function usePatientReport(options: UsePatientReportOptions) {
   const { branchId, startDate = '', endDate = '' } = options;
 
+  // branchId is required by the API contract (GET /dental/patients); pass through
+  // (empty when unset) to satisfy the generated type — the runtime 400-guard and
+  // the caller's branch context handle the unset case.
   const query = useQuery({
     ...listDentalPatientsOptions({
       query: {
-        branchId: branchId || undefined,
+        branchId: branchId || '',
         limit: 1000, // Fetch all for reporting
       },
     }),
