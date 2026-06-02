@@ -96,6 +96,21 @@ describe('PatientImageList', () => {
     expect(screen.queryByTestId('select-image-img-1')).toBeNull();
   });
 
+  test('P2-7 renders a CBCT volume as a volume card (no flat row, no <img>)', async () => {
+    global.fetch = mock(() => jsonResponse({
+      items: [
+        { ...makeItem('cbct-1', 'cbct'), isVolume: true, frameCount: 128, viewerKind: 'volume', studyId: 'study-1' },
+      ],
+      total: 1,
+    }));
+    const { container } = render(React.createElement(PatientImageList, DEFAULT_PROPS), { wrapper: makeWrapper() });
+    await waitFor(() => expect(screen.getByTestId('cbct-study-card')).not.toBeNull());
+    // Volume cards are NOT 2-D selectable and never an <img>.
+    expect(screen.queryByTestId('select-image-cbct-1')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText(/128 slices/i)).not.toBeNull();
+  });
+
   test('multi-select: 2 items shows Compare, 3rd is capped', async () => {
     global.fetch = mock(() => jsonResponse({
       items: [makeItem('a'), makeItem('b'), makeItem('c')],

@@ -9,7 +9,14 @@ import {
 import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 import { ImageUpload } from './image-upload'
 import { FmxMount } from './FmxMount'
+import { CbctStudyCard } from './CbctStudyCard'
 import { BRAND_GOLD_SOFT, BRAND_GOLD_TEXT } from '@/constants/brand'
+
+// P2-7: a CBCT / multi-frame object is a 3-D VOLUME — never render it as a flat
+// list row with an <img> thumbnail. The discriminator is server-provided.
+function isVolumeItem(item: PatientImageItem): boolean {
+  return item.viewerKind === 'volume' || item.isVolume === true || item.modality === 'cbct'
+}
 
 interface PatientImageListProps {
   patientId: string
@@ -109,34 +116,42 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
           </div>
         ) : (
           <ul className="divide-y divide-zinc-100 flex-1 overflow-y-auto">
-            {data.items.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center gap-3 p-3 hover:bg-zinc-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(item.id)}
-                  onChange={(e) => toggleSelect(item, e)}
-                  className="shrink-0 accent-[#FFE97D]"
-                  data-testid={`select-image-${item.id}`}
-                />
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
-                  <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
-                  <p className="text-xs text-zinc-400 capitalize">
-                    {item.modality.replace('_', ' ')}
-                  </p>
-                </div>
-                {item.source === 'legacy' && (
-                  <span
-                    className="text-xs px-1.5 py-0.5 rounded"
-                    style={{ background: BRAND_GOLD_SOFT, color: BRAND_GOLD_TEXT }}
-                  >
-                    Legacy
-                  </span>
-                )}
-              </li>
-            ))}
+            {data.items.map((item) =>
+              isVolumeItem(item) ? (
+                // P2-7: CBCT / 3-D volume — volume-aware card + viewer handoff,
+                // never a flat <img> row. Not eligible for 2-D pairwise compare.
+                <li key={item.id} className="p-3">
+                  <CbctStudyCard item={item} />
+                </li>
+              ) : (
+                <li
+                  key={item.id}
+                  className="flex items-center gap-3 p-3 hover:bg-zinc-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={(e) => toggleSelect(item, e)}
+                    className="shrink-0 accent-[#FFE97D]"
+                    data-testid={`select-image-${item.id}`}
+                  />
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
+                    <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
+                    <p className="text-xs text-zinc-400 capitalize">
+                      {item.modality.replace('_', ' ')}
+                    </p>
+                  </div>
+                  {item.source === 'legacy' && (
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded"
+                      style={{ background: BRAND_GOLD_SOFT, color: BRAND_GOLD_TEXT }}
+                    >
+                      Legacy
+                    </span>
+                  )}
+                </li>
+              ),
+            )}
           </ul>
         )
       ) : null}
