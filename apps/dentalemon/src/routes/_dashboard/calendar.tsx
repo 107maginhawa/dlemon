@@ -15,6 +15,7 @@ import { CalendarMonth } from '../../features/scheduling/components/calendar-mon
 import { AppointmentModal } from '../../features/scheduling/components/appointment-modal';
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
+import { ListErrorState } from '@/components/list-error-state';
 import { checkInAppointment } from '@monobase/sdk-ts/generated';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
@@ -251,18 +252,15 @@ function CalendarPage() {
         </div>
       </div>
 
-      {/* Error banner */}
-      {error && (
-        <div className="mx-4 mt-3 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive flex items-center justify-between">
-          <span>{error.message}</span>
-          <button type="button" onClick={() => refetch()} className="text-xs underline ml-2">
-            Retry
-          </button>
-        </div>
-      )}
-
       {/* Calendar content */}
-      {isLoading && appointments.length === 0 ? (
+      {error ? (
+        <div className="flex-1 flex items-center justify-center" data-testid="calendar-error">
+          <ListErrorState
+            message={error.message || 'Failed to load appointments.'}
+            onRetry={() => refetch()}
+          />
+        </div>
+      ) : isLoading && appointments.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm" aria-label="Loading appointments">
           Loading appointments…
         </div>

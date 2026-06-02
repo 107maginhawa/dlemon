@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useInvoices } from '../hooks/use-invoices';
+import { ListErrorState } from '@/components/list-error-state';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,15 +201,13 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
         ))}
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive flex items-center justify-between">
-          <span>{error.message}</span>
-          <button type="button" onClick={() => refetch()} className="text-xs underline ml-2">Retry</button>
+      {/* Error state — distinct from the empty "no invoices" state */}
+      {error ? (
+        <div className="bg-background rounded-2xl shadow-sm overflow-hidden" data-testid="billing-list-error">
+          <ListErrorState message={error.message || 'Failed to load invoices.'} onRetry={() => refetch()} />
         </div>
-      )}
-
-      {/* Invoice Table */}
+      ) : (
+      /* Invoice Table */
       <div className="bg-background rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse">
@@ -305,6 +304,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

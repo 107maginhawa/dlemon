@@ -13,6 +13,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { PatientFolderCard, type PatientCardData } from './patient-folder-card';
+import { ListErrorState } from '@/components/list-error-state';
 
 interface PatientListProps {
   patients: PatientCardData[];
@@ -35,6 +36,12 @@ interface PatientListProps {
   isActionPending?: boolean;
   /** Whether export is in progress */
   isExporting?: boolean;
+  /** Query errored — show the error state instead of the empty state */
+  isError?: boolean;
+  /** Error message to display in the error state */
+  errorMessage?: string;
+  /** Retry handler wired to the query's refetch */
+  onRetry?: () => void;
 }
 
 export function PatientList({
@@ -51,6 +58,9 @@ export function PatientList({
   onExport,
   isActionPending = false,
   isExporting = false,
+  isError = false,
+  errorMessage,
+  onRetry,
 }: PatientListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -182,8 +192,16 @@ export function PatientList({
         </label>
       )}
 
+      {/* Error state — distinct from the empty "no patients" state */}
+      {isError && (
+        <ListErrorState
+          message={errorMessage || 'Failed to load patients.'}
+          onRetry={() => onRetry?.()}
+        />
+      )}
+
       {/* Loading skeleton */}
-      {isLoading && (
+      {!isError && isLoading && (
         <div data-testid="patient-list-loading" className="flex flex-wrap gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
@@ -196,7 +214,7 @@ export function PatientList({
       )}
 
       {/* Grid or empty state */}
-      {!isLoading && filtered.length === 0 && (
+      {!isError && !isLoading && filtered.length === 0 && (
         <div
           data-testid="patient-list-empty"
           className="text-center text-sm text-muted-foreground py-12"
@@ -205,7 +223,7 @@ export function PatientList({
         </div>
       )}
 
-      {!isLoading && filtered.length > 0 && (
+      {!isError && !isLoading && filtered.length > 0 && (
         <div className="flex flex-wrap gap-4">
           {filtered.map((p) => (
             <div key={p.id} className="relative flex flex-col">

@@ -69,6 +69,37 @@ describe('PatientList', () => {
     render(React.createElement(PatientList, { patients, onSelect: () => {}, searchQuery: '' }));
     expect(screen.getByPlaceholderText(/search/i)).not.toBeNull();
   });
+
+  test('shows error state (not empty state) when isError is true', () => {
+    render(
+      React.createElement(PatientList, {
+        patients: [],
+        isError: true,
+        onRetry: () => {},
+        onSelect: () => {},
+        searchQuery: '',
+      }),
+    );
+    expect(screen.getByTestId('list-error-state')).not.toBeNull();
+    // Must NOT collapse to the empty "no patients" state
+    expect(screen.queryByTestId('patient-list-empty')).toBeNull();
+  });
+
+  test('error state Retry button calls onRetry', async () => {
+    const user = userEvent.setup();
+    const onRetry = mock(() => {});
+    render(
+      React.createElement(PatientList, {
+        patients: [],
+        isError: true,
+        onRetry,
+        onSelect: () => {},
+        searchQuery: '',
+      }),
+    );
+    await user.click(screen.getByTestId('list-error-retry'));
+    expect(onRetry).toHaveBeenCalled();
+  });
 });
 
 // ─── Archive/Restore action tests ───────────────────────────────────────

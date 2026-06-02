@@ -46,7 +46,7 @@ function PatientsPage() {
   const { bulkArchive, isPending: isBulkPending } = useBulkArchive();
   const { exportPatients, isExporting } = useExportPatients();
 
-  const { patients, isLoading, error } = usePatients({
+  const { patients, isLoading, error, refetch } = usePatients({
     branchId,
     searchQuery: searchQuery || undefined,
     status: activeFilter === 'all' ? undefined : activeFilter === 'archived' ? 'archived' : 'active',
@@ -104,17 +104,13 @@ function PatientsPage() {
         onFilterChange={setActiveFilter}
       />
 
-      {/* Error state */}
-      {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load patients. Please refresh.
-        </div>
-      )}
-
       {/* Patient list */}
       <PatientList
         patients={patients}
         isLoading={isLoading}
+        isError={!!error}
+        errorMessage={error ? 'Failed to load patients.' : undefined}
+        onRetry={() => refetch()}
         onSelect={(patient: PatientCardData) =>
           navigate({ to: '/$patientId', params: { patientId: patient.id } })
         }
