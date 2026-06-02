@@ -18,19 +18,19 @@ import { getTreatmentPlan } from '@/handlers/dental-visit/treatment-plans/getTre
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
-const TEST_USER = { id: 'a0000000-0000-1000-8000-0000000000ph', email: 'staff@clinic.com' };
-const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000ph';
-const ORG_ID = 'c0000000-0000-1000-8000-0000000000ph';
-const PATIENT_ID = 'd0000000-0000-1000-8000-0000000000ph';
-const PERSON_ID = 'e0000000-0000-1000-8000-0000000000ph';
-const MEMBER_ID = 'a1000000-0000-1000-8000-0000000000ph';
-const VISIT_ID = 'f0000000-0000-1000-8000-0000000000ph';
+const TEST_USER = { id: 'a0000000-0000-1000-8000-0000000000bb', email: 'staff@clinic.com' };
+const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000bb';
+const ORG_ID = 'c0000000-0000-1000-8000-0000000000bb';
+const PATIENT_ID = 'd0000000-0000-1000-8000-0000000000bb';
+const PERSON_ID = 'e0000000-0000-1000-8000-0000000000bb';
+const MEMBER_ID = 'a1000000-0000-1000-8000-0000000000bb';
+const VISIT_ID = 'f0000000-0000-1000-8000-0000000000bb';
 
-const URGENT_ID = 'f4000000-0000-1000-8000-0000000000p1';
-const CONTROL_HI_ID = 'f4000000-0000-1000-8000-0000000000p2';
-const CONTROL_LO_ID = 'f4000000-0000-1000-8000-0000000000p3';
-const DEFINITIVE_ID = 'f4000000-0000-1000-8000-0000000000p4';
-const UNPHASED_ID = 'f4000000-0000-1000-8000-0000000000p5';
+const URGENT_ID = 'f4000000-0000-1000-8000-0000000000b1';
+const CONTROL_HI_ID = 'f4000000-0000-1000-8000-0000000000b2';
+const CONTROL_LO_ID = 'f4000000-0000-1000-8000-0000000000b3';
+const DEFINITIVE_ID = 'f4000000-0000-1000-8000-0000000000b4';
+const UNPHASED_ID = 'f4000000-0000-1000-8000-0000000000b5';
 
 const ve = (result: any, c: any) => {
   if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);

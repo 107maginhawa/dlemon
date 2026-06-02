@@ -1426,7 +1426,9 @@ describe('#15 getCephAnalysis analysisType switcher', () => {
     const app = buildCephApp(CephMgmt_getCephAnalysis as any, {
       user: DENTIST_USER, db, method: 'GET', path: '/:imageId/analysis',
     });
-    const res = await app.request(`/${IMAGE_ID}/analysis?analysisType=mcnamara`);
+    // Use a value that is genuinely not a supported analysis (mcnamara et al.
+    // are now implemented); a bogus type must still 422 rather than fabricate.
+    const res = await app.request(`/${IMAGE_ID}/analysis?analysisType=not_a_real_analysis`);
     expect(res.status).toBe(422);
   });
 });
