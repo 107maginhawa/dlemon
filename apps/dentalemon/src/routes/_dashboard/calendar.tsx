@@ -16,8 +16,11 @@ import { AppointmentModal } from '../../features/scheduling/components/appointme
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
-import { checkInAppointment, updateAppointment } from '@monobase/sdk-ts/generated';
+import { checkInAppointment, updateAppointment, confirmAppointment } from '@monobase/sdk-ts/generated';
 import { APP_LOCALE } from '@/constants/brand';
+import { RecallDueList } from '../../features/scheduling/components/recall-due-list';
+import type { RecallDueItem } from '../../features/scheduling/hooks/use-recall-due-list';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
   component: CalendarPage,
@@ -77,6 +80,8 @@ function CalendarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
   const [editAppointmentId, setEditAppointmentId] = useState<string | undefined>();
+  const [showRecare, setShowRecare] = useState(false);
+  const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
 
   const weekStart = getMondayOfWeek(selectedDate);
 
@@ -143,10 +148,9 @@ function CalendarPage() {
 
   async function handleConfirm(appointmentId: string) {
     try {
-      await updateAppointment({
-        path: { appointmentId },
-        body: { status: 'confirmed' } as unknown as Parameters<typeof updateAppointment>[0]['body'],
-      });
+      // P1-24: dedicated staff-confirm endpoint (scheduled→confirmed, confirmedVia='staff',
+      // synchronously expires queued reminders). Falls back to no-op on error.
+      await confirmAppointment({ path: { appointmentId } });
       invalidateAppointments();
     } catch {
       // Network error — ignore silently
@@ -177,6 +181,14 @@ function CalendarPage() {
     setModalOpen(false);
     setEditAppointmentId(undefined);
     invalidateAppointments();
+  }
+
+  // P1-24: "Schedule" from the recare due-list → open the appointment modal.
+  function handleScheduleFromRecall(_recall: RecallDueItem) {
+    setShowRecare(false);
+    setEditAppointmentId(undefined);
+    setModalInitialDate(selectedDate);
+    setModalOpen(true);
   }
 
   const dateTitle = view === 'day'
@@ -263,6 +275,17 @@ function CalendarPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setShowRecare((v) => !v)}
+            aria-pressed={showRecare}
+            className={`h-11 px-4 rounded-[10px] border border-border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${
+              showRecare ? 'bg-secondary' : 'bg-background hover:bg-secondary'
+            }`}
+            aria-label="Toggle recare due-list"
+          >
+            Recare due
+          </button>
+          <button
+            type="button"
             onClick={() => handleNewAppointment(true)}
             className="h-11 px-4 rounded-[10px] border border-border bg-background text-[13px] font-medium flex items-center gap-1.5 hover:bg-secondary transition-colors"
             aria-label="Add walk-in appointment"
@@ -315,6 +338,16 @@ function CalendarPage() {
           appointments={appointments}
           onDayClick={handleDayClick}
         />
+      )}
+
+      {/* P1-24: recare due-list slide-over panel */}
+      {showRecare && (
+        <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label="Recare due-list">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowRecare(false)} />
+          <div className="relative w-full max-w-[420px] h-full bg-background shadow-2xl overflow-y-auto p-4">
+            <RecallDueList branchId={branchId} onSchedule={handleScheduleFromRecall} />
+          </div>
+        </div>
       )}
 
       {/* Appointment modal — create or edit */}
