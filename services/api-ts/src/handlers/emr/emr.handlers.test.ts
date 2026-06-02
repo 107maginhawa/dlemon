@@ -142,7 +142,7 @@ describe('EMR handler exports', () => {
         json: (_body: unknown, _status?: number) => ({}),
       } as any;
 
-      const result = (handler as Function)(stub);
+      const result = (handler as (c: unknown) => unknown)(stub);
       // A function is async when its return value is a Promise
       expect(result).toBeInstanceOf(Promise);
       // Handler rejects with incomplete stub — verify it rejects rather than swallowing

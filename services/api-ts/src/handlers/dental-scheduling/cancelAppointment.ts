@@ -68,11 +68,13 @@ export async function cancelAppointment(
 
   // DE-011: emit AppointmentCancelled domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;
-  scheduler && emitAppointmentCancelled(scheduler, {
-    appointmentId: result.id,
-    patientId: result.patientId,
-    branchId: result.branchId,
-  }).catch(() => {/* non-blocking */});
+  if (scheduler) {
+    void emitAppointmentCancelled(scheduler, {
+      appointmentId: result.id,
+      patientId: result.patientId,
+      branchId: result.branchId,
+    }).catch(() => {/* non-blocking */});
+  }
 
   return ctx.body(null, 204);
 }

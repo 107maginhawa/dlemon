@@ -7,6 +7,7 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterEach } from 'bun:test';
 import { TreatmentRepository } from './treatment.repo';
+import { TREATMENT_TRANSITIONS } from './treatment.schema';
 import { openTestTx } from '@/core/test-tx';
 import { createDatabase } from '@/core/database';
 import { seedAuditWorkspace, AUDIT_IDS } from '@/tests/fixtures/audit-workspace-fixtures';
@@ -51,17 +52,14 @@ describe('TreatmentRepository — informed refusal (P1.4)', () => {
   });
 
   test('TREATMENT_TRANSITIONS allows diagnosed → declined', () => {
-    const { TREATMENT_TRANSITIONS } = require('./treatment.schema');
     expect(TREATMENT_TRANSITIONS['diagnosed']).toContain('declined');
   });
 
   test('TREATMENT_TRANSITIONS allows planned → declined', () => {
-    const { TREATMENT_TRANSITIONS } = require('./treatment.schema');
     expect(TREATMENT_TRANSITIONS['planned']).toContain('declined');
   });
 
   test('TREATMENT_TRANSITIONS: declined is terminal (no further transitions)', () => {
-    const { TREATMENT_TRANSITIONS } = require('./treatment.schema');
     expect(TREATMENT_TRANSITIONS['declined']).toEqual([]);
   });
 });

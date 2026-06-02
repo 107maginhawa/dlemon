@@ -20,9 +20,11 @@
     "test:contract": "bun scripts/run-contract-tests.ts",
     "test:contract:fuzz": "bun scripts/run-schemathesis.ts",
     "typecheck": "bun run --filter dentalemon typecheck",
-    "lint": "bun run --filter dentalemon lint",
+    "lint": "bun run --filter dentalemon --filter '@monobase/api-ts' lint && bun run check:fsm-tokens",
+    "check:fsm-tokens": "bun scripts/check-fsm-tokens.ts",
     "test": "bun run --filter dentalemon test",
     "test:e2e": "bun run --filter dentalemon test:e2e",
+    "audit:rust": "bash scripts/cargo-audit.sh",
     "audit:trace": "bun scripts/audit-traceability.ts",
     "audit:trace:ci": "bun scripts/audit-traceability.ts --ci"
   },

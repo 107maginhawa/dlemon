@@ -158,7 +158,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 |----|-----|-------|-----------|
 | Create | Dentist, Staff Full | WF-013 | BR-009 (≥1 line item) |
 | Read (invoice detail) | Dentist, Staff Full | WF-051 [INFERRED] | — |
-| Send | Dentist, Staff Full | WF-052 [INFERRED] | BR-012 (draft→sent) |
+| Issue | Dentist, Staff Full | WF-052 [INFERRED] | BR-012 (draft→issued) |
 | Record payment | Staff Full | WF-014 | BR-012 |
 | Mark partial | System | WF-053 [INFERRED] | BR-012, BR-015 |
 | Mark overdue | System (scheduled job) | WF-054 [INFERRED] | BR-012 |
@@ -383,11 +383,11 @@ diagnosed ──► planned ──► performed ──► verified
 ### Invoice State Machine
 
 ```
-draft ──► sent ──► paid
-              ├──► partial ──► paid (via payment plan)
-              └──► overdue
-draft/sent ──► void (BR-011: no active payment plan)
-              └──► uncollectible (BR-013: deferred — 501 stub, feature-flag off)
+draft ──► issued ──► paid
+                ├──► partial ──► paid (via payment plan)
+                └──► overdue
+draft/issued ──► voided (BR-011: no active payment plan)
+                └──► uncollectible (BR-013: deferred — 501 stub, feature-flag off)
 ```
 
 ### Consent Form State Machine

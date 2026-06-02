@@ -124,12 +124,14 @@ export async function createDentalInvoice(
 
   // DE-020: emit InvoiceCreated domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;
-  scheduler && emitInvoiceCreated(scheduler, {
-    invoiceId: invoice.id,
-    patientId: invoice.patientId,
-    branchId: invoice.branchId,
-    totalCents: invoice.totalCents,
-  }).catch(() => {/* non-blocking */});
+  if (scheduler) {
+    void emitInvoiceCreated(scheduler, {
+      invoiceId: invoice.id,
+      patientId: invoice.patientId,
+      branchId: invoice.branchId,
+      totalCents: invoice.totalCents,
+    }).catch(() => {/* non-blocking */});
+  }
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

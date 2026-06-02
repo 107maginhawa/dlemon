@@ -182,21 +182,21 @@ diagnosed ──► planned ──► performed ──► verified
 ### SM-INVOICE: Invoice Lifecycle
 
 ```
-draft ──► sent ──► paid
-                ├──► partial (requires PaymentPlan)
-                └──► overdue (scheduled job)
-draft/sent ──► void  [BR-011: no active PaymentPlan]
-sent ──► uncollectible  [BR-013: INCOMPLETE]
+draft ──► issued ──► paid
+                  ├──► partial (requires PaymentPlan)
+                  └──► overdue (scheduled job)
+draft/issued ──► voided  [BR-011: no active PaymentPlan]
+issued ──► uncollectible  [BR-013: INCOMPLETE]
 ```
 
 | From | To | Actor | Condition | Event Published |
 |------|----|-------|-----------|----------------|
-| draft | sent | Staff/Dentist | — | DE-007 |
-| sent | paid | Staff Full | Full payment recorded | DE-008 |
-| sent | partial | System | Partial payment + PaymentPlan | — |
+| draft | issued | Staff/Dentist | — | DE-007 |
+| issued | paid | Staff Full | Full payment recorded | DE-008 |
+| issued | partial | System | Partial payment + PaymentPlan | — |
 | partial | paid | System | Plan completed | DE-008 |
-| sent | overdue | pg-boss job | Past due date | — |
-| draft/sent | void | Dentist-Owner | BR-011: no active plan | DE-009 |
+| issued | overdue | pg-boss job | Past due date | — |
+| draft/issued | voided | Dentist-Owner | BR-011: no active plan | DE-009 |
 
 ### SM-CONSENT: Consent Form
 
