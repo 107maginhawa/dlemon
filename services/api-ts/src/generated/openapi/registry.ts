@@ -114,9 +114,11 @@ import { createOcclusionScreening } from '../../handlers/dental-clinical/occlusi
 import { createPostopTemplate } from '../../handlers/dental-clinical/postop/createPostopTemplate';
 import { createPrescription } from '../../handlers/dental-clinical/prescriptions/createPrescription';
 import { deleteAttachment } from '../../handlers/dental-clinical/attachments/deleteAttachment';
+import { getMedicalHistoryReview } from '../../handlers/dental-clinical/medical-history/getMedicalHistoryReview';
 import { listAmendments } from '../../handlers/dental-clinical/amendments/listAmendments';
 import { listAttachments } from '../../handlers/dental-clinical/attachments/listAttachments';
 import { listConsentForms } from '../../handlers/dental-clinical/consent/listConsentForms';
+import { listConsentRefusals } from '../../handlers/dental-clinical/consent/listConsentRefusals';
 import { listInventoryAdjustments } from '../../handlers/dental-clinical/inventory/listInventoryAdjustments';
 import { listInventoryItems } from '../../handlers/dental-clinical/inventory/listInventoryItems';
 import { listLabOrders } from '../../handlers/dental-clinical/lab-orders/listLabOrders';
@@ -124,6 +126,8 @@ import { listMedicalHistory } from '../../handlers/dental-clinical/medical-histo
 import { listOcclusionScreenings } from '../../handlers/dental-clinical/occlusion/listOcclusionScreenings';
 import { listPostopTemplates } from '../../handlers/dental-clinical/postop/listPostopTemplates';
 import { listPrescriptions } from '../../handlers/dental-clinical/prescriptions/listPrescriptions';
+import { recordConsentRefusal } from '../../handlers/dental-clinical/consent/recordConsentRefusal';
+import { recordMedicalHistoryReview } from '../../handlers/dental-clinical/medical-history/recordMedicalHistoryReview';
 import { revokeConsentForm } from '../../handlers/dental-clinical/consent/revokeConsentForm';
 import { signConsentForm } from '../../handlers/dental-clinical/consent/signConsentForm';
 import { updateInventoryItem } from '../../handlers/dental-clinical/inventory/updateInventoryItem';
@@ -160,10 +164,12 @@ import { PatientImageMgmt_listPatientImages } from '../../handlers/dental-imagin
 import { listLegalHolds } from '../../handlers/dental-legalhold/listLegalHolds';
 import { placeLegalHold } from '../../handlers/dental-legalhold/placeLegalHold';
 import { releaseLegalHold } from '../../handlers/dental-legalhold/releaseLegalHold';
+import { acceptTreatmentOption } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentOption';
 import { acceptTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/acceptTreatmentPlan';
 import { addFollowUpNote } from '../../handlers/dental-patient/engagement/addFollowUpNote';
 import { approveTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/approveTreatmentPlan';
 import { archiveDentalPatient } from '../../handlers/dental-patient/identity/archiveDentalPatient';
+import { attachTreatmentAppointment } from '../../handlers/dental-patient/treatment-plans/attachTreatmentAppointment';
 import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/identity/bulkArchiveDentalPatients';
 import { createClaimDraft } from '../../handlers/dental-patient/insurance/createClaimDraft';
 import { createDentalAlert } from '../../handlers/dental-patient/alerts/createDentalAlert';
@@ -175,11 +181,13 @@ import { createSyncLog } from '../../handlers/dental-patient/sync/createSyncLog'
 import { createTask } from '../../handlers/dental-patient/engagement/createTask';
 import { createTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/createTreatmentPlan';
 import { deletePatientContact } from '../../handlers/dental-patient/contacts/deletePatientContact';
+import { detachTreatmentAppointment } from '../../handlers/dental-patient/treatment-plans/detachTreatmentAppointment';
 import { exportDentalPatients } from '../../handlers/dental-patient/identity/exportDentalPatients';
 import { getClaimReadiness } from '../../handlers/dental-patient/insurance/getClaimReadiness';
 import { getDentalPatient } from '../../handlers/dental-patient/identity/getDentalPatient';
 import { getDentalPatientSafetyFloor } from '../../handlers/dental-patient/identity/getDentalPatientSafetyFloor';
 import { getDentalPatientStatement } from '../../handlers/dental-patient/identity/getDentalPatientStatement';
+import { getPatientCommunicationConsent } from '../../handlers/dental-patient/consent/getPatientCommunicationConsent';
 import { getTreatmentPlan } from '../../handlers/dental-patient/treatment-plans/getTreatmentPlan';
 import { getTreatmentPlanVersion } from '../../handlers/dental-patient/treatment-plans/getTreatmentPlanVersion';
 import { importPatients } from '../../handlers/dental-patient/identity/importPatients';
@@ -196,11 +204,14 @@ import { listPatientTasks } from '../../handlers/dental-patient/engagement/listP
 import { listPatientTreatmentPlans } from '../../handlers/dental-patient/treatment-plans/listPatientTreatmentPlans';
 import { listPatientVisits } from '../../handlers/dental-patient/identity/listPatientVisits';
 import { listSyncLogs } from '../../handlers/dental-patient/sync/listSyncLogs';
+import { listTreatmentOptionGroup } from '../../handlers/dental-patient/treatment-plans/listTreatmentOptionGroup';
+import { listTreatmentPlanStatusHistory } from '../../handlers/dental-patient/treatment-plans/listTreatmentPlanStatusHistory';
 import { restoreDentalPatient } from '../../handlers/dental-patient/identity/restoreDentalPatient';
 import { updateClaimStatus } from '../../handlers/dental-patient/insurance/updateClaimStatus';
 import { updateDentalAlert } from '../../handlers/dental-patient/alerts/updateDentalAlert';
 import { updateDentalPatient } from '../../handlers/dental-patient/identity/updateDentalPatient';
 import { updateInsuranceProfile } from '../../handlers/dental-patient/insurance/updateInsuranceProfile';
+import { updatePatientCommunicationConsent } from '../../handlers/dental-patient/consent/updatePatientCommunicationConsent';
 import { updatePatientContact } from '../../handlers/dental-patient/contacts/updatePatientContact';
 import { updateRecall } from '../../handlers/dental-patient/recalls/updateRecall';
 import { updateSyncLog } from '../../handlers/dental-patient/sync/updateSyncLog';
@@ -424,9 +435,11 @@ export const registry = {
   createPostopTemplate,
   createPrescription,
   deleteAttachment,
+  getMedicalHistoryReview,
   listAmendments,
   listAttachments,
   listConsentForms,
+  listConsentRefusals,
   listInventoryAdjustments,
   listInventoryItems,
   listLabOrders,
@@ -434,6 +447,8 @@ export const registry = {
   listOcclusionScreenings,
   listPostopTemplates,
   listPrescriptions,
+  recordConsentRefusal,
+  recordMedicalHistoryReview,
   revokeConsentForm,
   signConsentForm,
   updateInventoryItem,
@@ -478,10 +493,12 @@ export const registry = {
   releaseLegalHold,
 
   // Dental-patient handlers
+  acceptTreatmentOption,
   acceptTreatmentPlan,
   addFollowUpNote,
   approveTreatmentPlan,
   archiveDentalPatient,
+  attachTreatmentAppointment,
   bulkArchiveDentalPatients,
   createClaimDraft,
   createDentalAlert,
@@ -493,11 +510,13 @@ export const registry = {
   createTask,
   createTreatmentPlan,
   deletePatientContact,
+  detachTreatmentAppointment,
   exportDentalPatients,
   getClaimReadiness,
   getDentalPatient,
   getDentalPatientSafetyFloor,
   getDentalPatientStatement,
+  getPatientCommunicationConsent,
   getTreatmentPlan,
   getTreatmentPlanVersion,
   importPatients,
@@ -514,11 +533,14 @@ export const registry = {
   listPatientTreatmentPlans,
   listPatientVisits,
   listSyncLogs,
+  listTreatmentOptionGroup,
+  listTreatmentPlanStatusHistory,
   restoreDentalPatient,
   updateClaimStatus,
   updateDentalAlert,
   updateDentalPatient,
   updateInsuranceProfile,
+  updatePatientCommunicationConsent,
   updatePatientContact,
   updateRecall,
   updateSyncLog,

@@ -679,6 +679,20 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listMedicalHistory as unknown as Handler
   );
 
+  // recordMedicalHistoryReview
+  app.post('/dental/clinical/medical-history-review',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.RecordMedicalHistoryReviewBody, validationErrorHandler),
+    registry.recordMedicalHistoryReview as unknown as Handler
+  );
+
+  // getMedicalHistoryReview
+  app.get('/dental/clinical/medical-history-review',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetMedicalHistoryReviewQuery, validationErrorHandler),
+    registry.getMedicalHistoryReview as unknown as Handler
+  );
+
   // updateMedicalHistoryEntry
   app.patch('/dental/clinical/medical-history/:entryId',
     authMiddleware({ roles: ["user"] }),
@@ -1166,6 +1180,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.updateClaimStatus as unknown as Handler
   );
 
+  // getPatientCommunicationConsent
+  app.get('/dental/patients/:patientId/communication-consent',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetPatientCommunicationConsentParams, validationErrorHandler),
+    registry.getPatientCommunicationConsent as unknown as Handler
+  );
+
+  // updatePatientCommunicationConsent
+  app.patch('/dental/patients/:patientId/communication-consent',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdatePatientCommunicationConsentParams, validationErrorHandler),
+    zValidator('json', validators.UpdatePatientCommunicationConsentBody, validationErrorHandler),
+    registry.updatePatientCommunicationConsent as unknown as Handler
+  );
+
   // createPatientContact
   app.post('/dental/patients/:patientId/contacts',
     authMiddleware({ roles: ["user"] }),
@@ -1319,6 +1348,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.updateTask as unknown as Handler
   );
 
+  // listTreatmentOptionGroup
+  app.get('/dental/patients/:patientId/treatment-options/:optionGroupId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListTreatmentOptionGroupParams, validationErrorHandler),
+    registry.listTreatmentOptionGroup as unknown as Handler
+  );
+
+  // acceptTreatmentOption
+  app.post('/dental/patients/:patientId/treatment-options/:optionGroupId/accept',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AcceptTreatmentOptionParams, validationErrorHandler),
+    zValidator('json', validators.AcceptTreatmentOptionBody, validationErrorHandler),
+    registry.acceptTreatmentOption as unknown as Handler
+  );
+
   // getTreatmentPlan
   app.get('/dental/patients/:patientId/treatment-plan',
     authMiddleware({ roles: ["user"] }),
@@ -1372,12 +1416,34 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.approveTreatmentPlan as unknown as Handler
   );
 
+  // listTreatmentPlanStatusHistory
+  app.get('/dental/patients/:patientId/treatment-plans/:planId/status-history',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListTreatmentPlanStatusHistoryParams, validationErrorHandler),
+    registry.listTreatmentPlanStatusHistory as unknown as Handler
+  );
+
   // listPatientConditions
   app.get('/dental/patients/:patientId/treatments',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.ListPatientConditionsParams, validationErrorHandler),
     zValidator('query', validators.ListPatientConditionsQuery, validationErrorHandler),
     registry.listPatientConditions as unknown as Handler
+  );
+
+  // attachTreatmentAppointment
+  app.post('/dental/patients/:patientId/treatments/:treatmentId/appointment',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AttachTreatmentAppointmentParams, validationErrorHandler),
+    zValidator('json', validators.AttachTreatmentAppointmentBody, validationErrorHandler),
+    registry.attachTreatmentAppointment as unknown as Handler
+  );
+
+  // detachTreatmentAppointment
+  app.delete('/dental/patients/:patientId/treatments/:treatmentId/appointment',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.DetachTreatmentAppointmentParams, validationErrorHandler),
+    registry.detachTreatmentAppointment as unknown as Handler
   );
 
   // listPatientVisits
@@ -1406,6 +1472,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/perio-charts/:chartId/complete',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.CompletePerioChartParams, validationErrorHandler),
+    zValidator('json', validators.CompletePerioChartBody, validationErrorHandler),
     registry.completePerioChart as unknown as Handler
   );
 
@@ -1618,6 +1685,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.UpdateToothParams, validationErrorHandler),
     zValidator('json', validators.UpdateToothBody, validationErrorHandler),
     registry.updateTooth as unknown as Handler
+  );
+
+  // recordConsentRefusal
+  app.post('/dental/visits/:visitId/consent-refusals',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RecordConsentRefusalParams, validationErrorHandler),
+    zValidator('json', validators.RecordConsentRefusalBody, validationErrorHandler),
+    registry.recordConsentRefusal as unknown as Handler
+  );
+
+  // listConsentRefusals
+  app.get('/dental/visits/:visitId/consent-refusals',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListConsentRefusalsParams, validationErrorHandler),
+    registry.listConsentRefusals as unknown as Handler
   );
 
   // createConsentForm

@@ -129,6 +129,12 @@ export type ApplyTemplateResponse = {
 export type AppointmentStatus = 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show';
 
 /**
+ * ASA Physical Status classification (American Society of Anesthesiologists).
+ * I–VI plus the "E" emergency modifier is captured separately (asaEmergency).
+ */
+export type AsaClassification = 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI';
+
+/**
  * Action performed in audited event
  */
 export type AuditAction = 'create' | 'read' | 'update' | 'delete' | 'login' | 'logout';
@@ -1127,6 +1133,73 @@ export type CollectionsSummaryResponse = {
 };
 
 /**
+ * P1-6: optional 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted.
+ */
+export type CompletePerioChartRequest = {
+    /**
+     * Teeth lost due to periodontitis (staging complexity).
+     */
+    toothLossCount?: number;
+    /**
+     * Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.
+     */
+    remainingTeeth?: number;
+    /**
+     * Masticatory dysfunction / bite collapse (Stage-IV factor).
+     */
+    biteCollapse?: boolean;
+    /**
+     * Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.
+     */
+    bonelossPercent?: number;
+    /**
+     * Patient age in years (denominator of the %bone-loss÷age grading ratio).
+     */
+    ageYears?: number;
+    /**
+     * Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.
+     */
+    fiveYearProgressionMm?: number;
+    /**
+     * Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.
+     */
+    cigarettesPerDay?: number;
+    /**
+     * Whether the patient has diabetes (grading modifier).
+     */
+    hasDiabetes?: boolean;
+    /**
+     * Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.
+     */
+    hba1cPercent?: number;
+    /**
+     * Whether involvement follows a molar/incisor pattern (extent descriptor).
+     */
+    molarIncisorPattern?: boolean;
+};
+
+export type CompletePerioChartResponse = {
+    id: Uuid;
+    status: PerioChartStatus;
+    completedAt: Date;
+    summaryBopPercent: number;
+    summaryMeanDepth: number;
+    summaryDeepPocketCount: number;
+    /**
+     * P1-6: computed 2017 AAP/EFP stage. null when there is no CAL evidence to stage.
+     */
+    stage?: 'I' | 'II' | 'III' | 'IV';
+    /**
+     * P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence).
+     */
+    grade?: 'A' | 'B' | 'C';
+    /**
+     * P1-6: computed extent descriptor. null when no teeth were examined.
+     */
+    extent?: 'localized' | 'generalized' | 'molar_incisor';
+};
+
+/**
  * Resource conflict error
  */
 export type ConflictError = {
@@ -1197,6 +1270,26 @@ export type ConsentForm = {
     patientId: Uuid;
     templateId: string;
     templateName: string;
+    /**
+     * ADA: nature of the proposed procedure (P1-3 structured consent)
+     */
+    procedureNature?: string;
+    /**
+     * ADA: expected benefits of the procedure
+     */
+    benefits?: string;
+    /**
+     * ADA: material risks of the procedure
+     */
+    risks?: string;
+    /**
+     * ADA: reasonable alternatives to the procedure
+     */
+    alternatives?: string;
+    /**
+     * ADA: risks of not receiving treatment
+     */
+    risksOfNonTreatment?: string;
     signedAt?: Date;
     signatureData?: string;
     signed: boolean;
@@ -1370,7 +1463,7 @@ export type ConsultationNote = {
 };
 
 /**
- * Status of consultation note
+ * Status of consultation note. State machine is draft → finalized (terminal). The 'amended' value is RESERVED but unreachable: there is no amend endpoint and finalize rejects non-draft notes (V-EMR-001). Retained only as a reserved enum value for forward compatibility.
  */
 export type ConsultationStatus = string | 'draft' | 'finalized' | 'amended';
 
@@ -1404,11 +1497,11 @@ export type CreateAmendmentRequest = {
 
 export type CreateAppointmentRequest = {
     patientId: Uuid;
-    dentistMemberId: Uuid;
+    providerId: Uuid;
     branchId: Uuid;
-    scheduledAt: Date;
-    durationMinutes: number;
-    serviceType: string;
+    startAt: Date;
+    endAt: Date;
+    visitType: VisitType;
     operatoryId?: Uuid;
     walkIn?: boolean;
     notes?: string;
@@ -1441,6 +1534,26 @@ export type CreateConsentFormRequest = {
     patientId: Uuid;
     templateId: string;
     templateName: string;
+    /**
+     * ADA: nature of the proposed procedure
+     */
+    procedureNature?: string;
+    /**
+     * ADA: expected benefits of the procedure
+     */
+    benefits?: string;
+    /**
+     * ADA: material risks of the procedure
+     */
+    risks?: string;
+    /**
+     * ADA: reasonable alternatives
+     */
+    alternatives?: string;
+    /**
+     * ADA: risks of not receiving treatment
+     */
+    risksOfNonTreatment?: string;
 };
 
 /**
@@ -1566,6 +1679,12 @@ export type CreateConsultationRequest = {
          */
         specialistReferral?: string;
     };
+    /**
+     * External documentation (V-EMR-008 — settable at create, parity with update)
+     */
+    externalDocumentation?: {
+        [key: string]: unknown;
+    };
 };
 
 export type CreateDentalAttachmentRequest = {
@@ -1584,6 +1703,10 @@ export type CreateDentalChartRequest = {
     visitId: Uuid;
     patientId: Uuid;
     teeth: Array<ToothChartState>;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
 };
 
 export type CreateDentalInvoiceRequest = {
@@ -1593,6 +1716,10 @@ export type CreateDentalInvoiceRequest = {
     dentistMemberId: Uuid;
     taxRate?: number;
     dueDate?: Date;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
 };
 
 export type CreateDentalPaymentPlanRequest = {
@@ -1612,6 +1739,10 @@ export type CreateDentalTreatmentRequest = {
     conditionCode?: string;
     priceCents: number;
     clinicalNotes?: string;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
 };
 
 export type CreateDentalVisitRequest = {
@@ -1619,6 +1750,10 @@ export type CreateDentalVisitRequest = {
     branchId: Uuid;
     dentistMemberId: Uuid;
     chiefComplaint?: string;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
 };
 
 /**
@@ -1668,8 +1803,24 @@ export type CreateInvoiceRequest = {
 export type CreateLabOrderRequest = {
     visitId: Uuid;
     patientId: Uuid;
+    /**
+     * FDI tooth notation the lab order is for (spec §7 / WF-017).
+     */
+    toothFdi?: string;
     labName: string;
     description: string;
+    /**
+     * P2-12: restoration shade (e.g. VITA "A2")
+     */
+    shade?: string;
+    /**
+     * P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max")
+     */
+    material?: string;
+    /**
+     * P2-12: date the case is needed chairside.
+     */
+    dueDate?: Date;
     expectedDeliveryDate?: Date;
 };
 
@@ -1851,6 +2002,12 @@ export type CreatePatientRequest = {
      * Free-text summary of the patient's dental history
      */
     dentalHistorySummary?: string;
+};
+
+export type CreatePerioChartRequest = {
+    visitId: Uuid;
+    patientId: Uuid;
+    notes?: string;
 };
 
 /**
@@ -2161,11 +2318,11 @@ export type DentalAppointment = {
     updatedAt: Date;
     version: number;
     patientId: Uuid;
-    dentistMemberId: Uuid;
+    providerId: Uuid;
     branchId: Uuid;
-    scheduledAt: Date;
-    durationMinutes: number;
-    serviceType: string;
+    startAt: Date;
+    endAt: Date;
+    visitType: VisitType;
     operatoryId?: Uuid;
     walkIn: boolean;
     status: AppointmentStatus;
@@ -2175,6 +2332,7 @@ export type DentalAppointment = {
     cancelledAt?: Date;
     cancellationReason?: string;
     no_showAt?: Date;
+    warnings?: Array<string>;
 };
 
 export type DentalAttachment = {
@@ -2195,6 +2353,140 @@ export type DentalAttachment = {
 
 export type DentalAttachmentImageType = 'xray' | 'photo' | 'scan' | 'document' | 'other';
 
+/**
+ * A single append-only dental audit event (viewer DTO — no PHI snapshots)
+ */
+export type DentalAuditModuleDentalAuditEvent = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Branch the event occurred in (audit viewer is always branch-scoped)
+     */
+    branchId: string | null;
+    /**
+     * Tenant (organization) the event belongs to
+     */
+    tenantId: string;
+    /**
+     * Actor who performed the action (UUID only — never a name)
+     */
+    actorId: string;
+    /**
+     * Membership role the actor held at time of the event
+     */
+    actorRole: string | null;
+    /**
+     * Event classification against the domain event catalog
+     */
+    eventType: 'authentication' | 'data-access' | 'data-modification' | 'security' | 'compliance' | 'system-config';
+    /**
+     * Action performed (e.g. 'invoice.voided', 'visit.complete')
+     */
+    action: string;
+    /**
+     * Type of the affected resource (e.g. 'dental_invoice')
+     */
+    resourceType: string;
+    /**
+     * UUID of the affected resource — null for non-entity events
+     */
+    resourceId: string | null;
+    /**
+     * Optional reason supplied with the action
+     */
+    reason: string | null;
+    /**
+     * Request IP address (web requests only; null offline-first)
+     */
+    ipAddress: string | null;
+    /**
+     * Request user agent (web requests only)
+     */
+    userAgent: string | null;
+    /**
+     * Safe, non-PHI context (IDs, counts, status/CDT codes, flags)
+     */
+    metadata: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * When the event occurred (ISO 8601 UTC)
+     */
+    timestamp: Date;
+};
+
+/**
+ * Classification of an audited event against the domain event catalog
+ */
+export type DentalAuditModuleDentalAuditEventType = 'authentication' | 'data-access' | 'data-modification' | 'security' | 'compliance' | 'system-config';
+
+/**
+ * Pagination metadata for the audit viewer response
+ */
+export type DentalAuditModuleDentalAuditEventsMeta = {
+    /**
+     * Total number of events matching the filter
+     */
+    total: number;
+    /**
+     * Items per page
+     */
+    limit: number;
+    /**
+     * Current offset
+     */
+    offset: number;
+};
+
+/**
+ * Paginated audit events response
+ */
+export type DentalAuditModuleDentalAuditEventsResponse = {
+    /**
+     * Audit events for the current page
+     */
+    data: Array<DentalAuditModuleDentalAuditEvent>;
+    /**
+     * Pagination metadata
+     */
+    meta: {
+        /**
+         * Total number of events matching the filter
+         */
+        total: number;
+        /**
+         * Items per page
+         */
+        limit: number;
+        /**
+         * Current offset
+         */
+        offset: number;
+    };
+};
+
 export type DentalChart = {
     id: Uuid;
     createdAt: Date;
@@ -2202,6 +2494,504 @@ export type DentalChart = {
     visitId: Uuid;
     patientId: Uuid;
     teeth: Array<ToothChartState>;
+};
+
+/**
+ * Type of a stock adjustment ledger entry
+ */
+export type DentalClinicalOpsModuleAdjustmentType = 'restock' | 'usage' | 'disposal' | 'correction';
+
+/**
+ * Body to create a stock adjustment
+ */
+export type DentalClinicalOpsModuleCreateInventoryAdjustmentRequest = {
+    adjustmentType: DentalClinicalOpsModuleAdjustmentType;
+    /**
+     * Signed quantity delta; must be non-zero
+     */
+    quantity: number;
+    reason?: string;
+};
+
+/**
+ * Body to create an inventory item
+ */
+export type DentalClinicalOpsModuleCreateInventoryItemRequest = {
+    name: string;
+    category: DentalClinicalOpsModuleInventoryCategory;
+    unit: string;
+    quantityOnHand?: number;
+    reorderLevel?: number;
+    notes?: string;
+};
+
+/**
+ * Body to create an occlusion screening
+ */
+export type DentalClinicalOpsModuleCreateOcclusionScreeningRequest = {
+    angleClass?: DentalClinicalOpsModuleOcclusionClass;
+    overbiteMm?: number;
+    overjetMm?: number;
+    crossbite?: boolean;
+    crowding?: boolean;
+    spacing?: boolean;
+    midlineDeviation?: string;
+    visitId?: Uuid;
+    notes?: string;
+};
+
+/**
+ * Body to create a post-op template
+ */
+export type DentalClinicalOpsModuleCreatePostopTemplateRequest = {
+    category: DentalClinicalOpsModulePostopCategory;
+    title: string;
+    content: string;
+};
+
+/**
+ * A stock adjustment ledger entry
+ */
+export type DentalClinicalOpsModuleInventoryAdjustment = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Inventory item this adjustment applies to
+     */
+    itemId: string;
+    /**
+     * Adjustment type
+     */
+    adjustmentType: 'restock' | 'usage' | 'disposal' | 'correction';
+    /**
+     * Signed quantity delta (non-zero)
+     */
+    quantity: number;
+    /**
+     * Reason for the adjustment
+     */
+    reason: string | null;
+};
+
+/**
+ * Category of an inventory item
+ */
+export type DentalClinicalOpsModuleInventoryCategory = 'consumable' | 'instrument' | 'medication' | 'equipment' | 'other';
+
+/**
+ * A branch-scoped inventory item
+ */
+export type DentalClinicalOpsModuleInventoryItem = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Branch this item belongs to
+     */
+    branchId: string;
+    /**
+     * Item name
+     */
+    name: string;
+    /**
+     * Item category
+     */
+    category: 'consumable' | 'instrument' | 'medication' | 'equipment' | 'other';
+    /**
+     * Unit of measure
+     */
+    unit: string;
+    /**
+     * Lifecycle status
+     */
+    status: 'active' | 'depleted' | 'discontinued';
+    /**
+     * Materialized running quantity on hand
+     */
+    quantityOnHand: number;
+    /**
+     * Reorder threshold
+     */
+    reorderLevel: number;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+};
+
+/**
+ * Lifecycle status of an inventory item
+ */
+export type DentalClinicalOpsModuleInventoryStatus = 'active' | 'depleted' | 'discontinued';
+
+/**
+ * Angle classification of occlusion
+ */
+export type DentalClinicalOpsModuleOcclusionClass = 'class_i' | 'class_ii_div1' | 'class_ii_div2' | 'class_iii' | 'edge_to_edge';
+
+/**
+ * An occlusion screening record
+ */
+export type DentalClinicalOpsModuleOcclusionScreening = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this screening belongs to
+     */
+    patientId: string;
+    /**
+     * Visit context, if any
+     */
+    visitId: string | null;
+    /**
+     * Angle classification
+     */
+    angleClass: 'class_i' | 'class_ii_div1' | 'class_ii_div2' | 'class_iii' | 'edge_to_edge';
+    /**
+     * Overbite in millimetres
+     */
+    overbiteMm: number | null;
+    /**
+     * Overjet in millimetres
+     */
+    overjetMm: number | null;
+    /**
+     * Crossbite present
+     */
+    crossbite: boolean | null;
+    /**
+     * Crowding present
+     */
+    crowding: boolean | null;
+    /**
+     * Spacing present
+     */
+    spacing: boolean | null;
+    /**
+     * Midline deviation description
+     */
+    midlineDeviation: string | null;
+    /**
+     * Free-text clinical notes
+     */
+    notes: string | null;
+};
+
+/**
+ * Category of a post-op care template
+ */
+export type DentalClinicalOpsModulePostopCategory = 'extraction' | 'implant' | 'root_canal' | 'filling' | 'crown' | 'cleaning' | 'surgery' | 'orthodontic' | 'other';
+
+/**
+ * A branch-scoped post-op care template
+ */
+export type DentalClinicalOpsModulePostopTemplate = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Branch this template belongs to
+     */
+    branchId: string;
+    /**
+     * Template category
+     */
+    category: 'extraction' | 'implant' | 'root_canal' | 'filling' | 'crown' | 'cleaning' | 'surgery' | 'orthodontic' | 'other';
+    /**
+     * Template title
+     */
+    title: string;
+    /**
+     * Template body content
+     */
+    content: string;
+    /**
+     * Whether the template is active
+     */
+    active: boolean;
+};
+
+/**
+ * Body to update an inventory item (at least one field required)
+ */
+export type DentalClinicalOpsModuleUpdateInventoryItemRequest = {
+    name?: string;
+    category?: DentalClinicalOpsModuleInventoryCategory;
+    unit?: string;
+    status?: DentalClinicalOpsModuleInventoryStatus;
+    quantityOnHand?: number;
+    reorderLevel?: number;
+    notes?: string;
+};
+
+/**
+ * Body to update a post-op template (at least one field required)
+ */
+export type DentalClinicalOpsModuleUpdatePostopTemplateRequest = {
+    category?: DentalClinicalOpsModulePostopCategory;
+    title?: string;
+    content?: string;
+    active?: boolean;
+};
+
+/**
+ * Body to approve an erasure request
+ */
+export type DentalErasureModuleApproveErasureRequest = {
+    /**
+     * Reviewer assertion that the subject is under an active legal hold (blocks erasure)
+     */
+    legalHold?: boolean;
+};
+
+/**
+ * An erasure request record
+ */
+export type DentalErasureModuleErasureRequest = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Person (central PII record) targeted for erasure
+     */
+    subjectPersonId: string;
+    /**
+     * Optional patient profile link
+     */
+    subjectPatientId: string | null;
+    /**
+     * Tenant (organization) context
+     */
+    tenantId: string;
+    /**
+     * Branch context, if any
+     */
+    branchId: string | null;
+    /**
+     * Current lifecycle status
+     */
+    status: 'requested' | 'approved' | 'anonymized' | 'rejected';
+    /**
+     * Why erasure was requested
+     */
+    reason: string;
+    /**
+     * Actor who requested erasure
+     */
+    requestedBy: string;
+    /**
+     * Reviewer who approved/rejected
+     */
+    reviewedBy: string | null;
+    /**
+     * When reviewed (ISO 8601 UTC)
+     */
+    reviewedAt: Date | null;
+    /**
+     * When anonymization completed (ISO 8601 UTC)
+     */
+    processedAt: Date | null;
+    /**
+     * Reason supplied on rejection
+     */
+    rejectionReason: string | null;
+    /**
+     * True if the request was refused because the subject was under a legal hold
+     */
+    legalHoldBlocked: boolean;
+};
+
+/**
+ * List of erasure requests
+ */
+export type DentalErasureModuleErasureRequestList = {
+    data: Array<DentalErasureModuleErasureRequest>;
+};
+
+/**
+ * Lifecycle of an erasure request
+ */
+export type DentalErasureModuleErasureRequestStatus = 'requested' | 'approved' | 'anonymized' | 'rejected';
+
+/**
+ * Body to reject an erasure request
+ */
+export type DentalErasureModuleRejectErasureRequest = {
+    /**
+     * Reason for the rejection
+     */
+    rejectionReason: string;
+};
+
+/**
+ * Body to request erasure of a subject
+ */
+export type DentalErasureModuleRequestErasureRequest = {
+    subjectPersonId: Uuid;
+    subjectPatientId?: Uuid;
+    tenantId: Uuid;
+    branchId?: Uuid;
+    /**
+     * Reason for the erasure request
+     */
+    reason: string;
+};
+
+/**
+ * A single fee-schedule entry: CDT code with its effective per-branch price
+ */
+export type DentalFeeScheduleModuleFeeScheduleEntry = {
+    /**
+     * CDT procedure code (e.g. 'D1110')
+     */
+    cdtCode: string;
+    /**
+     * Human-readable procedure description
+     */
+    description: string;
+    /**
+     * Effective price in minor units (per-branch override or catalog default)
+     */
+    priceCents: number;
+    /**
+     * ISO 4217 currency code (defaults to 'PHP')
+     */
+    currency: string;
+};
+
+/**
+ * Single fee-schedule entry wrapper
+ */
+export type DentalFeeScheduleModuleFeeScheduleEntryResponse = {
+    data: DentalFeeScheduleModuleFeeScheduleEntry;
+};
+
+/**
+ * Fee schedule listing wrapper
+ */
+export type DentalFeeScheduleModuleFeeScheduleList = {
+    data: Array<DentalFeeScheduleModuleFeeScheduleEntry>;
+};
+
+/**
+ * Body to set a per-branch CDT price override (dentist_owner only)
+ */
+export type DentalFeeScheduleModuleUpdateFeeScheduleEntryRequest = {
+    /**
+     * Branch whose fee schedule is being modified
+     */
+    branchId: string;
+    /**
+     * New price in minor units (0..999999)
+     */
+    priceCents: number;
 };
 
 export type DentalImagingModuleBatchUpsertLandmarksBody = {
@@ -2346,7 +3136,7 @@ export type DentalImagingModuleImagingFindingListResponse = {
     items: Array<DentalImagingModuleImagingFinding>;
 };
 
-export type DentalImagingModuleImagingFindingStatus = 'suspected' | 'confirmed' | 'monitoring' | 'resolved';
+export type DentalImagingModuleImagingFindingStatus = 'draft' | 'confirmed' | 'resolved';
 
 export type DentalImagingModuleImagingFindingType = 'caries' | 'secondary_caries' | 'bone_loss' | 'furcation_involvement' | 'periapical_lesion' | 'root_resorption' | 'calculus' | 'crown_fracture' | 'root_fracture' | 'impacted_tooth' | 'over_eruption' | 'open_contact' | 'overhang' | 'crown_needed' | 'implant_needed';
 
@@ -2398,7 +3188,7 @@ export type DentalImagingModuleMeasurementListResponse = {
     items: Array<DentalImagingModuleImagingAnnotation>;
 };
 
-export type DentalImagingModuleModalityEnum = 'periapical' | 'bitewing' | 'panoramic' | 'cephalometric' | 'intraoral_photo' | 'extraoral_photo' | 'other';
+export type DentalImagingModuleModalityEnum = 'periapical' | 'bitewing' | 'panoramic' | 'cephalometric' | 'cbct' | 'intraoral_photo' | 'extraoral_photo' | 'other';
 
 export type DentalImagingModulePatientImageItem = {
     id: string;
@@ -2411,6 +3201,7 @@ export type DentalImagingModulePatientImageItem = {
     visitId: string | null;
     toothNumbers: Array<number>;
     createdAt: Date;
+    downloadUrl: string | null;
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
@@ -2460,6 +3251,102 @@ export type DentalInvoice = {
 };
 
 export type DentalInvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'voided';
+
+/**
+ * A legal-hold record
+ */
+export type DentalLegalHoldModuleLegalHold = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Tenant (organization) context
+     */
+    tenantId: string;
+    /**
+     * Branch context, if any
+     */
+    branchId: string | null;
+    /**
+     * Person (central PII record) whose data is held
+     */
+    subjectPersonId: string;
+    /**
+     * Human-readable hold name / matter label
+     */
+    name: string;
+    /**
+     * Why the hold was placed
+     */
+    reason: string;
+    /**
+     * Current lifecycle status
+     */
+    status: 'active' | 'released';
+    /**
+     * Actor who placed the hold
+     */
+    initiatedBy: string;
+    /**
+     * Actor who released the hold
+     */
+    releasedBy: string | null;
+    /**
+     * When released (ISO 8601 UTC)
+     */
+    releasedAt: Date | null;
+    /**
+     * Optional free-text note
+     */
+    note: string | null;
+};
+
+/**
+ * Lifecycle of a legal hold
+ */
+export type DentalLegalHoldModuleLegalHoldStatus = 'active' | 'released';
+
+/**
+ * Body to place a legal hold on a subject
+ */
+export type DentalLegalHoldModulePlaceLegalHoldRequest = {
+    tenantId: Uuid;
+    subjectPersonId: Uuid;
+    branchId?: Uuid;
+    /**
+     * Human-readable hold name / matter label
+     */
+    name: string;
+    /**
+     * Why the hold is being placed
+     */
+    reason: string;
+    /**
+     * Optional free-text note
+     */
+    note?: string;
+};
 
 /**
  * List of branches
@@ -2942,7 +3829,7 @@ export type DentalOrgModuleRecoverPinResponse = {
  */
 export type DentalOrgModuleResetMemberPinRequest = {
     /**
-     * New 4-8 digit PIN
+     * New PIN — exactly 6 digits
      */
     newPin: string;
 };
@@ -2952,7 +3839,7 @@ export type DentalOrgModuleResetMemberPinRequest = {
  */
 export type DentalOrgModuleSetPinRequest = {
     /**
-     * New 4-8 digit PIN
+     * New digit-only PIN (4-8 digits)
      */
     pin: string;
 };
@@ -3038,7 +3925,7 @@ export type DentalOrgModuleUpdateOrganizationRequest = {
  */
 export type DentalOrgModuleVerifyPinRequest = {
     /**
-     * 6-digit PIN entered by the staff member
+     * Digit-only PIN entered by the staff member (4-8 digits)
      */
     pin: string;
 };
@@ -3062,6 +3949,1337 @@ export type DentalOrgModuleVerifyPinResponse = {
 };
 
 /**
+ * Body to create a dental alert
+ */
+export type DentalPatientEngagementModuleCreateDentalAlertRequest = {
+    /**
+     * Alert type
+     */
+    alertType: 'gag_reflex' | 'latex_allergy' | 'needle_phobia' | 'dental_anxiety' | 'tmj_disorder' | 'excessive_salivation' | 'dry_socket_history' | 'bisphosphonate_use' | 'bleeding_disorder' | 'other';
+    /**
+     * Alert severity (defaults to medium)
+     */
+    severity?: 'low' | 'medium' | 'high';
+    /**
+     * Free-text description
+     */
+    description?: string;
+};
+
+/**
+ * Body to create a patient contact
+ */
+export type DentalPatientEngagementModuleCreatePatientContactRequest = {
+    /**
+     * Contact full name (required, non-blank)
+     */
+    name: string;
+    /**
+     * Relationship to the patient
+     */
+    relationship?: string;
+    /**
+     * Contact phone number
+     */
+    phone?: string;
+    /**
+     * Contact email address
+     */
+    email?: string;
+    /**
+     * True if this contact is a legal guardian (defaults to false)
+     */
+    isGuardian?: boolean;
+    /**
+     * True if this contact is an emergency contact (defaults to false)
+     */
+    isEmergencyContact?: boolean;
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to create a recall
+ */
+export type DentalPatientEngagementModuleCreateRecallRequest = {
+    /**
+     * Recall type
+     */
+    type: 'cleaning' | 'checkup' | 'treatment' | 'other';
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate: string;
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to create a patient task
+ */
+export type DentalPatientEngagementModuleCreateTaskRequest = {
+    /**
+     * Task title (required, non-blank)
+     */
+    title: string;
+    /**
+     * Task type
+     */
+    taskType: 'follow_up' | 'lab_order' | 'referral' | 'prescription' | 'other';
+    /**
+     * Free-text description
+     */
+    description?: string;
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate?: string;
+    /**
+     * Person assigned to the task
+     */
+    assignedTo?: string;
+};
+
+/**
+ * A chairside dental alert
+ */
+export type DentalPatientEngagementModuleDentalAlert = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this alert belongs to
+     */
+    patientId: string;
+    /**
+     * Alert type
+     */
+    alertType: 'gag_reflex' | 'latex_allergy' | 'needle_phobia' | 'dental_anxiety' | 'tmj_disorder' | 'excessive_salivation' | 'dry_socket_history' | 'bisphosphonate_use' | 'bleeding_disorder' | 'other';
+    /**
+     * Alert severity (defaults to medium)
+     */
+    severity: 'low' | 'medium' | 'high';
+    /**
+     * Free-text description
+     */
+    description: string | null;
+    /**
+     * Whether the alert is active
+     */
+    active: boolean;
+};
+
+/**
+ * Severity of a dental alert
+ */
+export type DentalPatientEngagementModuleDentalAlertSeverity = 'low' | 'medium' | 'high';
+
+/**
+ * Type of chairside dental alert
+ */
+export type DentalPatientEngagementModuleDentalAlertType = 'gag_reflex' | 'latex_allergy' | 'needle_phobia' | 'dental_anxiety' | 'tmj_disorder' | 'excessive_salivation' | 'dry_socket_history' | 'bisphosphonate_use' | 'bleeding_disorder' | 'other';
+
+/**
+ * A patient contact — guardian and/or emergency contact
+ */
+export type DentalPatientEngagementModulePatientContact = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this contact belongs to
+     */
+    patientId: string;
+    /**
+     * Contact full name
+     */
+    name: string;
+    /**
+     * Relationship to the patient
+     */
+    relationship: string | null;
+    /**
+     * Contact phone number
+     */
+    phone: string | null;
+    /**
+     * Contact email address
+     */
+    email: string | null;
+    /**
+     * True if this contact is a legal guardian
+     */
+    isGuardian: boolean;
+    /**
+     * True if this contact is an emergency contact
+     */
+    isEmergencyContact: boolean;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+    /**
+     * Soft-delete timestamp (ISO 8601 UTC); null if active
+     */
+    deletedAt: Date | null;
+};
+
+/**
+ * A patient task record
+ */
+export type DentalPatientEngagementModulePatientTask = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this task belongs to
+     */
+    patientId: string;
+    /**
+     * Task title
+     */
+    title: string;
+    /**
+     * Free-text description
+     */
+    description: string | null;
+    /**
+     * Task type
+     */
+    taskType: 'follow_up' | 'lab_order' | 'referral' | 'prescription' | 'other';
+    /**
+     * Current lifecycle status
+     */
+    status: 'open' | 'in_progress' | 'done' | 'cancelled';
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate: string | null;
+    /**
+     * Person assigned to the task
+     */
+    assignedTo: string | null;
+    /**
+     * When the task was completed (ISO 8601 UTC)
+     */
+    completedAt: Date | null;
+};
+
+/**
+ * A patient recall record
+ */
+export type DentalPatientEngagementModuleRecall = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this recall belongs to
+     */
+    patientId: string;
+    /**
+     * Recall type
+     */
+    type: 'cleaning' | 'checkup' | 'treatment' | 'other';
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate: string;
+    /**
+     * Current lifecycle status
+     */
+    status: 'pending' | 'sent' | 'completed' | 'cancelled';
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+    /**
+     * When the recall was sent (ISO 8601 UTC)
+     */
+    sentAt: Date | null;
+    /**
+     * When the recall was completed (ISO 8601 UTC)
+     */
+    completedAt: Date | null;
+};
+
+/**
+ * Lifecycle status of a recall
+ */
+export type DentalPatientEngagementModuleRecallStatus = 'pending' | 'sent' | 'completed' | 'cancelled';
+
+/**
+ * Type of recall
+ */
+export type DentalPatientEngagementModuleRecallType = 'cleaning' | 'checkup' | 'treatment' | 'other';
+
+/**
+ * Lifecycle status of a patient task
+ */
+export type DentalPatientEngagementModuleTaskStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+
+/**
+ * Type of patient task
+ */
+export type DentalPatientEngagementModuleTaskType = 'follow_up' | 'lab_order' | 'referral' | 'prescription' | 'other';
+
+/**
+ * Body to update a dental alert (at least one field required)
+ */
+export type DentalPatientEngagementModuleUpdateDentalAlertRequest = {
+    /**
+     * Alert type
+     */
+    alertType?: 'gag_reflex' | 'latex_allergy' | 'needle_phobia' | 'dental_anxiety' | 'tmj_disorder' | 'excessive_salivation' | 'dry_socket_history' | 'bisphosphonate_use' | 'bleeding_disorder' | 'other';
+    /**
+     * Alert severity
+     */
+    severity?: 'low' | 'medium' | 'high';
+    /**
+     * Free-text description
+     */
+    description?: string;
+    /**
+     * Whether the alert is active
+     */
+    active?: boolean;
+};
+
+/**
+ * Body to update a patient contact (at least one field required)
+ */
+export type DentalPatientEngagementModuleUpdatePatientContactRequest = {
+    /**
+     * Contact full name (non-blank)
+     */
+    name?: string;
+    /**
+     * Relationship to the patient
+     */
+    relationship?: string | null;
+    /**
+     * Contact phone number
+     */
+    phone?: string | null;
+    /**
+     * Contact email address
+     */
+    email?: string | null;
+    /**
+     * True if this contact is a legal guardian
+     */
+    isGuardian?: boolean;
+    /**
+     * True if this contact is an emergency contact
+     */
+    isEmergencyContact?: boolean;
+    /**
+     * Free-text notes
+     */
+    notes?: string | null;
+};
+
+/**
+ * Body to update a recall (at least one field required)
+ */
+export type DentalPatientEngagementModuleUpdateRecallRequest = {
+    /**
+     * Recall type
+     */
+    type?: 'cleaning' | 'checkup' | 'treatment' | 'other';
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate?: string;
+    /**
+     * Current lifecycle status
+     */
+    status?: 'pending' | 'sent' | 'completed' | 'cancelled';
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to update a patient task (at least one field required)
+ */
+export type DentalPatientEngagementModuleUpdateTaskRequest = {
+    /**
+     * Task title (non-blank)
+     */
+    title?: string;
+    /**
+     * Task type
+     */
+    taskType?: 'follow_up' | 'lab_order' | 'referral' | 'prescription' | 'other';
+    /**
+     * Free-text description
+     */
+    description?: string;
+    /**
+     * Due date (YYYY-MM-DD)
+     */
+    dueDate?: string;
+    /**
+     * Person assigned to the task
+     */
+    assignedTo?: string;
+    /**
+     * Current lifecycle status
+     */
+    status?: 'open' | 'in_progress' | 'done' | 'cancelled';
+};
+
+/**
+ * Body to accept one option in an alternate-case group
+ */
+export type DentalPatientFinanceModuleAcceptTreatmentOptionRequest = {
+    /**
+     * The chosen treatment; its siblings in the group are declined
+     */
+    chosenTreatmentId: string;
+};
+
+/**
+ * Result of accepting an alternate-case option
+ */
+export type DentalPatientFinanceModuleAcceptTreatmentOptionResult = {
+    /**
+     * Option-group identifier
+     */
+    optionGroupId: string;
+    /**
+     * The accepted treatment
+     */
+    chosenTreatmentId: string;
+    /**
+     * The option group's post-acceptance state
+     */
+    options: Array<DentalPatientFinanceModuleTreatmentOption>;
+};
+
+/**
+ * Body to record a patient approval of a treatment plan (CR-05)
+ */
+export type DentalPatientFinanceModuleApproveTreatmentPlanRequest = {
+    /**
+     * Person (patient/guardian) who approved
+     */
+    approvedByPersonId: string;
+    /**
+     * Approval method
+     */
+    method: 'signature' | 'verbal' | 'portal';
+    /**
+     * Consent form linkage, if consented
+     */
+    consentFormId?: string;
+    /**
+     * Accepted plan-version snapshot linkage, if any
+     */
+    planVersionId?: string;
+    /**
+     * Captured signature payload, if method = signature
+     */
+    signatureData?: string;
+};
+
+/**
+ * Body to attach a planned treatment item to a scheduled appointment
+ */
+export type DentalPatientFinanceModuleAttachTreatmentAppointmentRequest = {
+    /**
+     * Appointment to link the treatment to (must belong to the same patient)
+     */
+    appointmentId: string;
+};
+
+/**
+ * An insurance claim draft
+ */
+export type DentalPatientFinanceModuleClaimDraft = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this claim belongs to
+     */
+    patientId: string;
+    /**
+     * Insurance profile backing the claim
+     */
+    insuranceProfileId: string;
+    /**
+     * Visit the claim is anchored to, if any
+     */
+    visitId: string | null;
+    /**
+     * CDT procedure code
+     */
+    cdtCode: string;
+    /**
+     * ICD-10 diagnosis code, if any
+     */
+    icd10Code: string | null;
+    /**
+     * Free-text diagnosis description, if any
+     */
+    diagnosisDescription: string | null;
+    /**
+     * Fee amount in cents
+     */
+    feeAmountCents: number;
+    /**
+     * Current lifecycle status
+     */
+    status: 'draft' | 'ready' | 'submitted' | 'accepted' | 'rejected';
+    /**
+     * When the claim was submitted (ISO 8601 UTC)
+     */
+    submittedAt: Date | null;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+};
+
+/**
+ * Lifecycle of a claim draft
+ */
+export type DentalPatientFinanceModuleClaimDraftStatus = 'draft' | 'ready' | 'submitted' | 'accepted' | 'rejected';
+
+/**
+ * Claim-readiness checklist result
+ */
+export type DentalPatientFinanceModuleClaimReadiness = {
+    /**
+     * Claim being evaluated
+     */
+    claimId: string;
+    /**
+     * Whether a CDT code is present
+     */
+    hasCdtCode: boolean;
+    /**
+     * Whether an ICD-10 code is present
+     */
+    hasIcd10Code: boolean;
+    /**
+     * Whether an active insurance profile backs the claim
+     */
+    hasInsuranceProfile: boolean;
+    /**
+     * Whether a positive fee is present
+     */
+    hasFee: boolean;
+    /**
+     * Overall readiness (all checks pass)
+     */
+    ready: boolean;
+};
+
+/**
+ * Body to create a claim draft (created in 'draft')
+ */
+export type DentalPatientFinanceModuleCreateClaimDraftRequest = {
+    /**
+     * Insurance profile backing the claim
+     */
+    insuranceProfileId: string;
+    /**
+     * Visit the claim is anchored to, if any
+     */
+    visitId?: string;
+    /**
+     * CDT procedure code
+     */
+    cdtCode: string;
+    /**
+     * ICD-10 diagnosis code, if any
+     */
+    icd10Code?: string;
+    /**
+     * Free-text diagnosis description, if any
+     */
+    diagnosisDescription?: string;
+    /**
+     * Fee amount in cents
+     */
+    feeAmountCents: number;
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to create an insurance profile
+ */
+export type DentalPatientFinanceModuleCreateInsuranceProfileRequest = {
+    /**
+     * Insurer / carrier name
+     */
+    insurerName: string;
+    /**
+     * Policy number
+     */
+    policyNumber: string;
+    /**
+     * Group number, if any
+     */
+    groupNumber?: string;
+    /**
+     * Subscriber full name
+     */
+    subscriberName: string;
+    /**
+     * Subscriber date of birth (YYYY-MM-DD)
+     */
+    subscriberDob?: string;
+    /**
+     * Subscriber relationship to the patient (default 'self')
+     */
+    relationship?: 'self' | 'spouse' | 'child' | 'other';
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to register a local-first sync entry
+ */
+export type DentalPatientFinanceModuleCreateSyncLogRequest = {
+    /**
+     * Client-assigned local identifier
+     */
+    localId: string;
+    /**
+     * Entity type being synced
+     */
+    entityType: string;
+    /**
+     * Entity identifier being synced
+     */
+    entityId: string;
+    /**
+     * Server-assigned identifier, if already known
+     */
+    serverId?: string;
+    /**
+     * Branch context, if any
+     */
+    branchId?: string;
+};
+
+/**
+ * Body to create a treatment-plan header (created in 'draft')
+ */
+export type DentalPatientFinanceModuleCreateTreatmentPlanRequest = {
+    /**
+     * Provider who authors the plan
+     */
+    providerId: string;
+    /**
+     * Total estimate in cents (default 0)
+     */
+    totalEstimateCents?: number;
+    /**
+     * Optional free-text notes
+     */
+    notes?: string;
+    /**
+     * ADA CDT code-set year stamp (P2-10; defaults to the current default year)
+     */
+    cdtCodeSetYear?: number;
+};
+
+/**
+ * A patient insurance-coverage profile
+ */
+export type DentalPatientFinanceModuleInsuranceProfile = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this profile belongs to
+     */
+    patientId: string;
+    /**
+     * Insurer / carrier name
+     */
+    insurerName: string;
+    /**
+     * Policy number
+     */
+    policyNumber: string;
+    /**
+     * Group number, if any
+     */
+    groupNumber: string | null;
+    /**
+     * Subscriber full name
+     */
+    subscriberName: string;
+    /**
+     * Subscriber date of birth (YYYY-MM-DD)
+     */
+    subscriberDob: Date | null;
+    /**
+     * Subscriber relationship to the patient
+     */
+    relationship: string;
+    /**
+     * Whether the profile is active
+     */
+    active: boolean;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+};
+
+/**
+ * Subscriber relationship to the patient
+ */
+export type DentalPatientFinanceModuleInsuranceRelationship = 'self' | 'spouse' | 'child' | 'other';
+
+/**
+ * A local-first sync ledger entry
+ */
+export type DentalPatientFinanceModuleSyncLog = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Client-assigned local identifier
+     */
+    localId: string;
+    /**
+     * Server-assigned identifier once reconciled
+     */
+    serverId: string | null;
+    /**
+     * Entity type being synced
+     */
+    entityType: string;
+    /**
+     * Entity identifier being synced
+     */
+    entityId: string;
+    /**
+     * Branch context, if any
+     */
+    branchId: string | null;
+    /**
+     * Current sync status
+     */
+    syncStatus: 'pending' | 'syncing' | 'synced' | 'failed';
+    /**
+     * When the entry last reached 'synced' (ISO 8601 UTC)
+     */
+    lastSyncAt: Date | null;
+    /**
+     * Last error message, if the sync failed
+     */
+    error: string | null;
+};
+
+/**
+ * Lifecycle of a local-first sync entry
+ */
+export type DentalPatientFinanceModuleSyncStatus = 'pending' | 'syncing' | 'synced' | 'failed';
+
+/**
+ * Result of attaching/detaching a treatment's appointment link
+ */
+export type DentalPatientFinanceModuleTreatmentAppointmentLink = {
+    /**
+     * Treatment item that was (un)linked
+     */
+    id: string;
+    /**
+     * The linked appointment, or null if detached
+     */
+    appointmentId: string | null;
+};
+
+/**
+ * One alternate-case treatment option within an option group
+ */
+export type DentalPatientFinanceModuleTreatmentOption = {
+    /**
+     * Treatment item id
+     */
+    id: string;
+    /**
+     * Item status (diagnosed/planned/declined/…)
+     */
+    status: string;
+    /**
+     * Whether this is the clinician-recommended option
+     */
+    recommended: boolean;
+};
+
+/**
+ * An alternate-case option group (e.g. implant vs bridge)
+ */
+export type DentalPatientFinanceModuleTreatmentOptionGroup = {
+    /**
+     * Option-group identifier shared by mutually-exclusive options
+     */
+    optionGroupId: string;
+    /**
+     * The options in the group
+     */
+    options: Array<DentalPatientFinanceModuleTreatmentOption>;
+};
+
+/**
+ * A treatment-plan header record
+ */
+export type DentalPatientFinanceModuleTreatmentPlan = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient this plan belongs to
+     */
+    patientId: string;
+    /**
+     * Provider who authored the plan
+     */
+    providerId: string;
+    /**
+     * Current lifecycle status
+     */
+    status: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+    /**
+     * Total estimate in cents
+     */
+    totalEstimateCents: number;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+    /**
+     * ADA CDT code-set year the plan's procedure codes were authored against (P2-10)
+     */
+    cdtCodeSetYear: number;
+    /**
+     * When the plan was presented to the patient (ISO 8601 UTC)
+     */
+    presentedAt: Date | null;
+    /**
+     * When the plan was approved (ISO 8601 UTC)
+     */
+    approvedAt: Date | null;
+};
+
+/**
+ * An append-only treatment-plan approval record (CR-05 / TR-P1-08)
+ */
+export type DentalPatientFinanceModuleTreatmentPlanApproval = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Treatment plan that was approved
+     */
+    treatmentPlanId: string;
+    /**
+     * Loose ref to the accepted plan-version snapshot, if any
+     */
+    planVersionId: string | null;
+    /**
+     * Person (patient/guardian) who approved
+     */
+    approvedByPersonId: string;
+    /**
+     * Approval method
+     */
+    method: 'signature' | 'verbal' | 'portal';
+    /**
+     * Loose ref to the consent form, if the approval was consented
+     */
+    consentFormId: string | null;
+    /**
+     * Captured signature payload, if method = signature
+     */
+    signatureData: string | null;
+    /**
+     * When the approval was recorded (ISO 8601 UTC)
+     */
+    approvedAt: Date;
+};
+
+/**
+ * How a treatment plan was approved
+ */
+export type DentalPatientFinanceModuleTreatmentPlanApprovalMethod = 'signature' | 'verbal' | 'portal';
+
+/**
+ * Result of approving a treatment plan: the approval record plus the recomputed plan
+ */
+export type DentalPatientFinanceModuleTreatmentPlanApprovalResult = {
+    /**
+     * The newly-written approval record
+     */
+    approval: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Treatment plan that was approved
+         */
+        treatmentPlanId: string;
+        /**
+         * Loose ref to the accepted plan-version snapshot, if any
+         */
+        planVersionId: string | null;
+        /**
+         * Person (patient/guardian) who approved
+         */
+        approvedByPersonId: string;
+        /**
+         * Approval method
+         */
+        method: 'signature' | 'verbal' | 'portal';
+        /**
+         * Loose ref to the consent form, if the approval was consented
+         */
+        consentFormId: string | null;
+        /**
+         * Captured signature payload, if method = signature
+         */
+        signatureData: string | null;
+        /**
+         * When the approval was recorded (ISO 8601 UTC)
+         */
+        approvedAt: Date;
+    };
+    /**
+     * The plan header after binding items + status derivation
+     */
+    plan: {
+        /**
+         * Unique identifier
+         */
+        id: string;
+        /**
+         * Entity version for optimistic locking
+         */
+        version: number;
+        /**
+         * Creation timestamp
+         */
+        createdAt: Date;
+        /**
+         * User who created the entity
+         */
+        createdBy?: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: Date;
+        /**
+         * User who last updated the entity
+         */
+        updatedBy?: string;
+        /**
+         * Patient this plan belongs to
+         */
+        patientId: string;
+        /**
+         * Provider who authored the plan
+         */
+        providerId: string;
+        /**
+         * Current lifecycle status
+         */
+        status: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+        /**
+         * Total estimate in cents
+         */
+        totalEstimateCents: number;
+        /**
+         * Free-text notes
+         */
+        notes: string | null;
+        /**
+         * ADA CDT code-set year the plan's procedure codes were authored against (P2-10)
+         */
+        cdtCodeSetYear: number;
+        /**
+         * When the plan was presented to the patient (ISO 8601 UTC)
+         */
+        presentedAt: Date | null;
+        /**
+         * When the plan was approved (ISO 8601 UTC)
+         */
+        approvedAt: Date | null;
+    };
+};
+
+/**
+ * Lifecycle of a treatment-plan header
+ */
+export type DentalPatientFinanceModuleTreatmentPlanStatus = 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+
+/**
+ * An append-only treatment-plan status-transition record (P2-8)
+ */
+export type DentalPatientFinanceModuleTreatmentPlanStatusHistoryEntry = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Treatment plan this transition belongs to
+     */
+    treatmentPlanId: string;
+    /**
+     * Status before the transition (null on the initial 'draft' creation event)
+     */
+    fromStatus: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+    /**
+     * Status after the transition
+     */
+    toStatus: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+    /**
+     * Person who performed the transition
+     */
+    changedByPersonId: string;
+    /**
+     * When the transition occurred (ISO 8601 UTC)
+     */
+    changedAt: Date;
+};
+
+/**
+ * Body to transition a claim draft's status (FSM-validated)
+ */
+export type DentalPatientFinanceModuleUpdateClaimStatusRequest = {
+    /**
+     * New lifecycle status
+     */
+    status: 'draft' | 'ready' | 'submitted' | 'accepted' | 'rejected';
+};
+
+/**
+ * Body to update an insurance profile (at least one field required)
+ */
+export type DentalPatientFinanceModuleUpdateInsuranceProfileRequest = {
+    /**
+     * Insurer / carrier name
+     */
+    insurerName?: string;
+    /**
+     * Policy number
+     */
+    policyNumber?: string;
+    /**
+     * Group number
+     */
+    groupNumber?: string;
+    /**
+     * Subscriber full name
+     */
+    subscriberName?: string;
+    /**
+     * Subscriber date of birth (YYYY-MM-DD)
+     */
+    subscriberDob?: string;
+    /**
+     * Subscriber relationship to the patient
+     */
+    relationship?: 'self' | 'spouse' | 'child' | 'other';
+    /**
+     * Whether the profile is active
+     */
+    active?: boolean;
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to transition a sync entry (at least one non-version field required)
+ */
+export type DentalPatientFinanceModuleUpdateSyncLogRequest = {
+    /**
+     * New sync status (FSM-validated; 'synced' is terminal)
+     */
+    syncStatus?: 'pending' | 'syncing' | 'synced' | 'failed';
+    /**
+     * Server-assigned identifier
+     */
+    serverId?: string;
+    /**
+     * Error message
+     */
+    error?: string;
+    /**
+     * Expected current version for optimistic-lock conflict detection (LF-BR-004)
+     */
+    version?: number;
+};
+
+/**
+ * Body to update a treatment plan (at least one field required)
+ */
+export type DentalPatientFinanceModuleUpdateTreatmentPlanRequest = {
+    /**
+     * New lifecycle status (FSM-validated)
+     */
+    status?: 'draft' | 'presented' | 'approved' | 'rejected' | 'scheduled' | 'partially_completed' | 'completed' | 'cancelled';
+    /**
+     * Updated total estimate in cents
+     */
+    totalEstimateCents?: number;
+    /**
+     * Updated free-text notes
+     */
+    notes?: string;
+};
+
+/**
  * Add follow-up note request
  */
 export type DentalPatientModuleAddFollowUpNoteRequest = {
@@ -3080,7 +5298,14 @@ export type DentalPatientModuleAddFollowUpNoteResponse = {
  * Bulk archive request
  */
 export type DentalPatientModuleBulkArchiveDentalPatientsRequest = {
-    patientIds: Array<Uuid>;
+    /**
+     * Patient IDs to archive (1–50)
+     */
+    ids: Array<Uuid>;
+    /**
+     * Reason for the bulk archive (required, 5–500 chars)
+     */
+    reason: string;
 };
 
 /**
@@ -3102,6 +5327,63 @@ export type DentalPatientModuleBulkArchiveResult = {
 };
 
 /**
+ * Per-channel communication consent (P1-28)
+ */
+export type DentalPatientModuleCommunicationChannelConsent = {
+    /**
+     * Consent to SMS communication
+     */
+    sms?: boolean;
+    /**
+     * Consent to email communication
+     */
+    email?: boolean;
+    /**
+     * Consent to phone communication
+     */
+    phone?: boolean;
+    /**
+     * Consent to marketing communication
+     */
+    marketing?: boolean;
+};
+
+/**
+ * A patient's communication-consent state (P1-28)
+ */
+export type DentalPatientModuleCommunicationConsentResponse = {
+    /**
+     * Registration consent gate
+     */
+    registrationConsent: boolean;
+    /**
+     * Per-channel communication consent
+     */
+    channels: {
+        /**
+         * Consent to SMS communication
+         */
+        sms?: boolean;
+        /**
+         * Consent to email communication
+         */
+        email?: boolean;
+        /**
+         * Consent to phone communication
+         */
+        phone?: boolean;
+        /**
+         * Consent to marketing communication
+         */
+        marketing?: boolean;
+    };
+    /**
+     * When per-channel consent was last updated (ISO 8601), if ever
+     */
+    channelsUpdatedAt: string | null;
+};
+
+/**
  * Create dental patient request
  */
 export type DentalPatientModuleCreateDentalPatientRequest = {
@@ -3109,10 +5391,13 @@ export type DentalPatientModuleCreateDentalPatientRequest = {
     dateOfBirth?: string;
     gender?: string;
     /**
-     * Patient consent must be true
+     * Patient registration consent — must be true (V-PAT-004: required)
      */
-    consentGiven?: boolean;
-    branchId?: Uuid;
+    consentGiven: boolean;
+    /**
+     * Branch the patient is registered to (V-PAT-004: required)
+     */
+    branchId: string;
 };
 
 /**
@@ -3137,6 +5422,51 @@ export type DentalPatientModuleCreateDentalPatientResponse = {
     };
     person?: DentalPatientModuleDentalPatientPerson;
     displayName?: string;
+    /**
+     * Safety-floor summary counts (V-PAT-007 / AC-PAT-003) — present on the profile endpoint
+     */
+    safetyFloor?: {
+        hasAlerts: boolean;
+        allergyCount: number;
+        medicationCount: number;
+        conditionCount: number;
+    };
+    /**
+     * Follow-up notes (V-PAT-007) — present on the profile endpoint
+     */
+    followUpNotes?: Array<DentalPatientModuleFollowUpNote>;
+    /**
+     * Persisted registration consent (V-PAT-005/007)
+     */
+    consent?: {
+        registrationConsent: boolean;
+        capturedAt: string;
+        /**
+         * Per-channel communication consent (P1-28)
+         */
+        channels?: {
+            /**
+             * Consent to SMS communication
+             */
+            sms?: boolean;
+            /**
+             * Consent to email communication
+             */
+            email?: boolean;
+            /**
+             * Consent to phone communication
+             */
+            phone?: boolean;
+            /**
+             * Consent to marketing communication
+             */
+            marketing?: boolean;
+        };
+        /**
+         * When per-channel consent was last updated (ISO 8601)
+         */
+        channelsUpdatedAt?: string;
+    };
     warning?: DentalPatientModuleDuplicateWarning;
 };
 
@@ -3162,6 +5492,51 @@ export type DentalPatientModuleDentalPatient = {
     };
     person?: DentalPatientModuleDentalPatientPerson;
     displayName?: string;
+    /**
+     * Safety-floor summary counts (V-PAT-007 / AC-PAT-003) — present on the profile endpoint
+     */
+    safetyFloor?: {
+        hasAlerts: boolean;
+        allergyCount: number;
+        medicationCount: number;
+        conditionCount: number;
+    };
+    /**
+     * Follow-up notes (V-PAT-007) — present on the profile endpoint
+     */
+    followUpNotes?: Array<DentalPatientModuleFollowUpNote>;
+    /**
+     * Persisted registration consent (V-PAT-005/007)
+     */
+    consent?: {
+        registrationConsent: boolean;
+        capturedAt: string;
+        /**
+         * Per-channel communication consent (P1-28)
+         */
+        channels?: {
+            /**
+             * Consent to SMS communication
+             */
+            sms?: boolean;
+            /**
+             * Consent to email communication
+             */
+            email?: boolean;
+            /**
+             * Consent to phone communication
+             */
+            phone?: boolean;
+            /**
+             * Consent to marketing communication
+             */
+            marketing?: boolean;
+        };
+        /**
+         * When per-channel consent was last updated (ISO 8601)
+         */
+        channelsUpdatedAt?: string;
+    };
 };
 
 /**
@@ -3185,6 +5560,16 @@ export type DentalPatientModuleDentalPatientSafetyFloor = {
     medications: Array<DentalPatientModuleSafetyEntry>;
     conditions: Array<DentalPatientModuleSafetyEntry>;
     retrievedAt: string;
+};
+
+/**
+ * Safety-floor summary counts for the patient profile
+ */
+export type DentalPatientModuleDentalPatientSafetyFloorSummary = {
+    hasAlerts: boolean;
+    allergyCount: number;
+    medicationCount: number;
+    conditionCount: number;
 };
 
 /**
@@ -3317,6 +5702,39 @@ export type DentalPatientModuleListFollowUpNotesResponse = {
 };
 
 /**
+ * Persisted consent: registration gate + per-channel communication consent
+ */
+export type DentalPatientModulePersonConsentInfo = {
+    registrationConsent: boolean;
+    capturedAt: string;
+    /**
+     * Per-channel communication consent (P1-28)
+     */
+    channels?: {
+        /**
+         * Consent to SMS communication
+         */
+        sms?: boolean;
+        /**
+         * Consent to email communication
+         */
+        email?: boolean;
+        /**
+         * Consent to phone communication
+         */
+        phone?: boolean;
+        /**
+         * Consent to marketing communication
+         */
+        marketing?: boolean;
+    };
+    /**
+     * When per-channel consent was last updated (ISO 8601)
+     */
+    channelsUpdatedAt?: string;
+};
+
+/**
  * Safety-critical medical entry (allergy, medication, or condition)
  */
 export type DentalPatientModuleSafetyEntry = {
@@ -3380,6 +5798,28 @@ export type DentalPatientModuleStatementVisit = {
 };
 
 /**
+ * Body to update per-channel communication consent (partial; omitted channels unchanged)
+ */
+export type DentalPatientModuleUpdateCommunicationConsentRequest = {
+    /**
+     * Consent to SMS communication
+     */
+    sms?: boolean;
+    /**
+     * Consent to email communication
+     */
+    email?: boolean;
+    /**
+     * Consent to phone communication
+     */
+    phone?: boolean;
+    /**
+     * Consent to marketing communication
+     */
+    marketing?: boolean;
+};
+
+/**
  * Update dental patient request — all fields optional
  */
 export type DentalPatientModuleUpdateDentalPatientRequest = {
@@ -3434,6 +5874,97 @@ export type DentalPaymentReceiptResponse = {
     paidAt: Date;
     invoiceId: Uuid;
     patientId: Uuid;
+};
+
+/**
+ * Body to add an appointment to the queue board
+ */
+export type DentalQueueModuleCreateQueueItemRequest = {
+    /**
+     * Optional free-text note
+     */
+    notes?: string;
+};
+
+/**
+ * A queue-board item linking an appointment to the branch patient-flow board
+ */
+export type DentalQueueModuleQueueItem = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Appointment this queue item belongs to
+     */
+    appointmentId: string;
+    /**
+     * Patient on the queue
+     */
+    patientId: string;
+    /**
+     * Branch whose board this item is on
+     */
+    branchId: string;
+    /**
+     * Current lifecycle status
+     */
+    status: 'waiting' | 'called' | 'in_progress' | 'completed' | 'cancelled';
+    /**
+     * When the patient was called (ISO 8601 UTC)
+     */
+    calledAt: Date | null;
+    /**
+     * When treatment started (ISO 8601 UTC)
+     */
+    startedAt: Date | null;
+    /**
+     * When the visit completed (ISO 8601 UTC)
+     */
+    completedAt: Date | null;
+    /**
+     * Optional free-text note
+     */
+    notes: string | null;
+};
+
+/**
+ * Lifecycle status of a queue item
+ */
+export type DentalQueueModuleQueueItemStatus = 'waiting' | 'called' | 'in_progress' | 'completed' | 'cancelled';
+
+/**
+ * Body to transition a queue item's status
+ */
+export type DentalQueueModuleUpdateQueueItemStatusRequest = {
+    /**
+     * Target status (validated against the FSM in-handler)
+     */
+    status: 'waiting' | 'called' | 'in_progress' | 'completed' | 'cancelled';
+    /**
+     * Optional free-text note
+     */
+    notes?: string;
 };
 
 export type DentalTreatment = {
@@ -52388,7 +54919,18 @@ export type ImportPmdRequest = {
     patientId: Uuid;
     sourceFacility: string;
     sourceReference?: string;
+    /**
+     * EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
+     * Required for audit trail data provenance per MODULE_SPEC §7.2 item 5.
+     * V-PMD-010: capped at 200 chars (API_CONTRACTS §import).
+     */
+    sourceDescription: string;
     content: string;
+    /**
+     * Optional SHA-256 checksum (format: sha256-<hex>). When provided the server
+     * verifies the digest of `content` matches before persisting. Mismatch → 422.
+     */
+    checksum?: string;
 };
 
 export type ImportedPmd = {
@@ -52400,6 +54942,12 @@ export type ImportedPmd = {
     sourceFacility: string;
     sourceReference?: string;
     /**
+     * EF-PMD-005: Originating software system (e.g. "Open Dental v21.1", "Dentrix G7").
+     * Required for audit trail data provenance per MODULE_SPEC §7.2 item 5.
+     * V-PMD-010: capped at 200 chars (API_CONTRACTS §import).
+     */
+    sourceDescription: string;
+    /**
      * Raw JSON content of the imported PMD
      */
     content: string;
@@ -52408,6 +54956,31 @@ export type ImportedPmd = {
      * Whether the Safety Floor merge has been applied
      */
     safetyFloorMerged: boolean;
+};
+
+/**
+ * InformedRefusal — records a patient's explicit refusal of recommended treatment.
+ * Distinct from consent (which is granted); immutable once recorded.
+ * Required by ADA guidelines and medico-legal best practice.
+ */
+export type InformedRefusal = {
+    id: Uuid;
+    createdAt: Date;
+    updatedAt: Date;
+    version: number;
+    visitId: Uuid;
+    patientId: Uuid;
+    /**
+     * Member (dentist) who presented the treatment and recorded the refusal
+     */
+    refusingMemberId: string;
+    procedureDescription: string;
+    refusalReason: string;
+    /**
+     * Verbatim patient acknowledgement that they understand risks of non-treatment
+     */
+    patientAcknowledgement: string;
+    refusedAt: Date;
 };
 
 /**
@@ -52644,8 +55217,24 @@ export type LabOrder = {
     version: number;
     visitId: Uuid;
     patientId: Uuid;
+    /**
+     * FDI tooth notation the lab order is for (spec §7 / WF-017).
+     */
+    toothFdi?: string;
     labName: string;
     description: string;
+    /**
+     * P2-12: restoration shade (e.g. VITA "A2")
+     */
+    shade?: string;
+    /**
+     * P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max")
+     */
+    material?: string;
+    /**
+     * P2-12: date the case is needed chairside (distinct from expectedDeliveryDate).
+     */
+    dueDate?: Date;
     status: LabOrderStatus;
     orderedAt: Date;
     expectedDeliveryDate?: Date;
@@ -52955,6 +55544,32 @@ export type MedicalHistoryEntry = {
 };
 
 export type MedicalHistoryEntryType = 'condition' | 'medication' | 'allergy' | 'procedure' | 'vaccination' | 'family_history';
+
+/**
+ * MedicalHistoryReview — patient-level review attestation (P1-4).
+ * Captures the ASA Physical Status and the date the history was last reviewed,
+ * supporting the periodic (3–6 month) re-confirmation requirement. Latest review
+ * per patient is the current one; prior reviews are retained as history.
+ */
+export type MedicalHistoryReview = {
+    id: Uuid;
+    createdAt: Date;
+    updatedAt: Date;
+    version: number;
+    patientId: Uuid;
+    /**
+     * ASA Physical Status I–VI; null when not yet classified
+     */
+    asaClassification?: 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI';
+    /**
+     * ASA "E" emergency modifier
+     */
+    asaEmergency: boolean;
+    /**
+     * Timestamp the medical history was last reviewed/re-confirmed
+     */
+    reviewedAt: Date;
+};
 
 /**
  * Merchant account for payment processing
@@ -53796,6 +56411,22 @@ export type PatientCommunication = {
 };
 
 /**
+ * Patient-level condition / chart-entry record (status = entryClassification or treatment status)
+ */
+export type PatientConditionEntry = {
+    id: string;
+    visitId: Uuid;
+    toothNumber?: number;
+    status: string;
+    surfaces?: Array<string>;
+    conditionCode?: string;
+    state?: string;
+    cdtCode?: string;
+    description?: string;
+    priceCents?: number;
+};
+
+/**
  * Link to another patient resource that concerns the same actual patient
  */
 export type PatientLink = {
@@ -54074,6 +56705,18 @@ export type PatientMergeResult = {
 };
 
 /**
+ * Per-tooth entry with entryClassification surfaced as `status`
+ */
+export type PatientToothEntry = {
+    toothNumber: number;
+    state?: string;
+    status?: string;
+    entryClassification?: ChartEntryClassification;
+    surfaces?: Array<string>;
+    conditionCode?: string;
+};
+
+/**
  * Request to reverse a previous patient merge
  */
 export type PatientUnmergeRequest = {
@@ -54089,6 +56732,20 @@ export type PatientUnmergeRequest = {
      * Reason for the unmerge
      */
     reason: string;
+};
+
+/**
+ * Patient visit summary with embedded chart teeth (entryClassification → status)
+ */
+export type PatientVisitRecord = {
+    id: Uuid;
+    createdAt: Date;
+    updatedAt: Date;
+    patientId: Uuid;
+    branchId: Uuid;
+    status: DentalVisitStatus;
+    chiefComplaint?: string;
+    teeth?: Array<PatientToothEntry>;
 };
 
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer';
@@ -54131,6 +56788,96 @@ export type PaymentResponse = {
  * Payment processing status
  */
 export type PaymentStatus = 'pending' | 'requires_capture' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+
+export type PerioChart = {
+    id: Uuid;
+    visitId: Uuid;
+    patientId: Uuid;
+    branchId: Uuid;
+    examinerMemberId: Uuid;
+    status: PerioChartStatus;
+    notes?: string;
+    completedAt?: Date;
+    summaryBopPercent?: number;
+    summaryMeanDepth?: number;
+    summaryDeepPocketCount?: number;
+    readings: Array<PerioToothReading>;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+export type PerioChartStatus = 'draft' | 'completed' | 'locked';
+
+/**
+ * 2017 AAP/EFP extent descriptor.
+ */
+export type PerioExtent = 'localized' | 'generalized' | 'molar_incisor';
+
+/**
+ * 2017 AAP/EFP grade (progression rate).
+ */
+export type PerioGrade = 'A' | 'B' | 'C';
+
+/**
+ * 2017 AAP/EFP stage (severity/complexity).
+ */
+export type PerioStage = 'I' | 'II' | 'III' | 'IV';
+
+export type PerioToothReading = {
+    id: Uuid;
+    chartId: Uuid;
+    toothNumber: number;
+    /**
+     * Buccal probing depth (mm), 0-20. BR-P03.
+     */
+    depthBM?: number;
+    depthBC?: number;
+    depthBD?: number;
+    depthLM?: number;
+    depthLC?: number;
+    depthLD?: number;
+    bopBM?: boolean;
+    bopBC?: boolean;
+    bopBD?: boolean;
+    bopLM?: boolean;
+    bopLC?: boolean;
+    bopLD?: boolean;
+    /**
+     * Gingival recession (mm). -5..20; negative = coronal overgrowth above CEJ. V-PER-009.
+     */
+    recession?: number;
+    /**
+     * P1-5: per-site gingival-margin position vs CEJ (mm). Buccal-mesial. positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20.
+     */
+    gmBM?: number;
+    gmBC?: number;
+    gmBD?: number;
+    gmLM?: number;
+    gmLC?: number;
+    gmLD?: number;
+    /**
+     * P1-5: read-only Clinical Attachment Level (mm) per site, derived as CAL = probing depth + gingival margin. null when either input is missing. Never persisted.
+     */
+    calBM?: number | null;
+    calBC?: number | null;
+    calBD?: number | null;
+    calLM?: number | null;
+    calLC?: number | null;
+    calLD?: number | null;
+    /**
+     * Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).
+     */
+    mobility: number;
+    /**
+     * Furcation involvement class F0-F3 (0-3). V-PER-004 (enforced in handler → 422 INVALID_GRADE).
+     */
+    furcation: number;
+    plaque: boolean;
+    suppuration: boolean;
+    notes?: string;
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 /**
  * Person demographic and contact information
@@ -55019,12 +57766,28 @@ export type RateLimitError = {
     windowSize: number;
 };
 
+export type RecordConsentRefusalRequest = {
+    visitId: Uuid;
+    patientId: Uuid;
+    refusingMemberId: Uuid;
+    procedureDescription: string;
+    refusalReason: string;
+    patientAcknowledgement: string;
+};
+
 export type RecordDentalPaymentRequest = {
     amountCents: number;
     method: PaymentMethod;
-    receiptNumber: string;
+    receiptNumber?: string;
     recordedByMemberId: Uuid;
+    paymentDate?: Date;
     notes?: string;
+};
+
+export type RecordMedicalHistoryReviewRequest = {
+    patientId: Uuid;
+    asaClassification?: AsaClassification;
+    asaEmergency?: boolean;
 };
 
 /**
@@ -55828,9 +58591,10 @@ export type TreatmentTemplate = {
 export type Uuid = string;
 
 export type UpdateAppointmentRequest = {
-    scheduledAt?: Date;
-    durationMinutes?: number;
-    serviceType?: string;
+    startAt?: Date;
+    endAt?: Date;
+    providerId?: Uuid;
+    visitType?: VisitType;
     operatoryId?: Uuid;
     notes?: string;
     status?: AppointmentStatus;
@@ -56004,6 +58768,9 @@ export type UpdateInvoiceRequest = {
 
 export type UpdateLabOrderRequest = {
     status?: LabOrderStatus;
+    shade?: string;
+    material?: string;
+    dueDate?: Date;
     expectedDeliveryDate?: Date;
     cancelReason?: string;
     isDefective?: boolean;
@@ -56338,6 +59105,45 @@ export type UpdateTreatmentTemplateRequest = {
     treatments?: string;
 };
 
+export type UpsertToothReadingRequest = {
+    depthBM?: number;
+    depthBC?: number;
+    depthBD?: number;
+    depthLM?: number;
+    depthLC?: number;
+    depthLD?: number;
+    bopBM?: boolean;
+    bopBC?: boolean;
+    bopBD?: boolean;
+    bopLM?: boolean;
+    bopLC?: boolean;
+    bopLD?: boolean;
+    /**
+     * Gingival recession (mm). -5..20. V-PER-009.
+     */
+    recession?: number;
+    /**
+     * P1-5: per-site gingival-margin position vs CEJ (mm). positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20. Feeds read-only CAL.
+     */
+    gmBM?: number;
+    gmBC?: number;
+    gmBD?: number;
+    gmLM?: number;
+    gmLC?: number;
+    gmLD?: number;
+    /**
+     * Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).
+     */
+    mobility?: number;
+    /**
+     * Furcation involvement class 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).
+     */
+    furcation?: number;
+    plaque?: boolean;
+    suppuration?: boolean;
+    notes?: string;
+};
+
 export type UpsertVisitNotesRequest = {
     visitId: Uuid;
     subjective?: string;
@@ -56520,6 +59326,8 @@ export type VisitNotes = {
     lockedAt?: Date;
 };
 
+export type VisitType = 'checkup' | 'treatment' | 'emergency' | 'recall';
+
 /**
  * Vital signs measurements with standardized units
  */
@@ -56560,6 +59368,10 @@ export type VitalsData = {
      * Additional notes about vital signs
      */
     notes?: string;
+};
+
+export type VoidDentalInvoiceRequest = {
+    reason: string;
 };
 
 export type VoidDentalPaymentRequest = {
@@ -58730,16 +61542,24 @@ export type GetIceServersResponse = GetIceServersResponses[keyof GetIceServersRe
 export type ListAppointmentsData = {
     body?: never;
     path?: never;
-    query?: {
-        branchId?: Uuid;
-        dentistMemberId?: Uuid;
-        date?: string;
+    query: {
+        branchId: Uuid;
+        date_from: string;
+        date_to: string;
+        providerId?: Uuid;
+        patientId?: Uuid;
         status?: AppointmentStatus;
+        page?: number;
+        per_page?: number;
     };
     url: '/dental/appointments';
 };
 
 export type ListAppointmentsErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
     /**
      * Unauthorized access response
      */
@@ -58791,7 +61611,9 @@ export type CancelAppointmentData = {
     path: {
         appointmentId: Uuid;
     };
-    query?: never;
+    query?: {
+        reason?: string;
+    };
     url: '/dental/appointments/{appointmentId}';
 };
 
@@ -58917,6 +61739,123 @@ export type CheckInAppointmentResponses = {
 };
 
 export type CheckInAppointmentResponse = CheckInAppointmentResponses[keyof CheckInAppointmentResponses];
+
+export type CreateQueueItemData = {
+    body: DentalQueueModuleCreateQueueItemRequest;
+    path: {
+        appointmentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/appointments/{appointmentId}/queue-item';
+};
+
+export type CreateQueueItemErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateQueueItemError = CreateQueueItemErrors[keyof CreateQueueItemErrors];
+
+export type CreateQueueItemResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalQueueModuleQueueItem;
+};
+
+export type CreateQueueItemResponse = CreateQueueItemResponses[keyof CreateQueueItemResponses];
+
+export type GetAuditEventsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Branch to query — REQUIRED; the viewer is always branch-scoped
+         */
+        branchId: Uuid;
+        /**
+         * Filter by acting user UUID
+         */
+        actorId?: Uuid;
+        /**
+         * Filter by event classification
+         */
+        eventType?: DentalAuditModuleDentalAuditEventType;
+        /**
+         * Filter by action (e.g. 'invoice.voided')
+         */
+        action?: SafeQueryString;
+        /**
+         * Filter by affected resource type
+         */
+        targetType?: SafeQueryString;
+        /**
+         * Filter by affected resource UUID
+         */
+        targetId?: Uuid;
+        /**
+         * Start of the date range, inclusive (ISO 8601 UTC)
+         */
+        from?: StrictUtcDateTime;
+        /**
+         * End of the date range, inclusive (ISO 8601 UTC). Must be >= from
+         */
+        to?: StrictUtcDateTime;
+        /**
+         * Max items per page (capped at 200)
+         */
+        limit?: number;
+        /**
+         * Offset for pagination
+         */
+        offset?: number;
+    };
+    url: '/dental/audit-events';
+};
+
+export type GetAuditEventsErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetAuditEventsError = GetAuditEventsErrors[keyof GetAuditEventsErrors];
+
+export type GetAuditEventsResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalAuditModuleDentalAuditEventsResponse | ErrorResponse;
+};
+
+export type GetAuditEventsResponse = GetAuditEventsResponses[keyof GetAuditEventsResponses];
 
 export type GetCollectionsSummaryData = {
     body?: never;
@@ -59389,8 +62328,43 @@ export type CreateDentalPaymentPlanResponses = {
 
 export type CreateDentalPaymentPlanResponse = CreateDentalPaymentPlanResponses[keyof CreateDentalPaymentPlanResponses];
 
-export type VoidDentalInvoiceData = {
+export type MarkUncollectibleData = {
     body?: never;
+    path: {
+        invoiceId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/invoices/{invoiceId}/uncollectible';
+};
+
+export type MarkUncollectibleErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type MarkUncollectibleError = MarkUncollectibleErrors[keyof MarkUncollectibleErrors];
+
+export type MarkUncollectibleResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalInvoice;
+};
+
+export type MarkUncollectibleResponse = MarkUncollectibleResponses[keyof MarkUncollectibleResponses];
+
+export type VoidDentalInvoiceData = {
+    body: VoidDentalInvoiceRequest;
     path: {
         invoiceId: Uuid;
     };
@@ -59454,6 +62428,31 @@ export type GetPatientBalanceResponses = {
 };
 
 export type GetPatientBalanceResponse = GetPatientBalanceResponses[keyof GetPatientBalanceResponses];
+
+export type GetBranchesByUserData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/dental/branches';
+};
+
+export type GetBranchesByUserErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type GetBranchesByUserError = GetBranchesByUserErrors[keyof GetBranchesByUserErrors];
+
+export type GetBranchesByUserResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalOrgModuleBranchList | ErrorResponse;
+};
+
+export type GetBranchesByUserResponse = GetBranchesByUserResponses[keyof GetBranchesByUserResponses];
 
 export type ListConsentTemplatesData = {
     body?: never;
@@ -59582,6 +62581,359 @@ export type UpdateConsentTemplateResponses = {
 };
 
 export type UpdateConsentTemplateResponse = UpdateConsentTemplateResponses[keyof UpdateConsentTemplateResponses];
+
+export type ListInventoryItemsData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/inventory';
+};
+
+export type ListInventoryItemsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListInventoryItemsError = ListInventoryItemsErrors[keyof ListInventoryItemsErrors];
+
+export type ListInventoryItemsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalClinicalOpsModuleInventoryItem> | ErrorResponse;
+};
+
+export type ListInventoryItemsResponse = ListInventoryItemsResponses[keyof ListInventoryItemsResponses];
+
+export type CreateInventoryItemData = {
+    body: DentalClinicalOpsModuleCreateInventoryItemRequest;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/inventory';
+};
+
+export type CreateInventoryItemErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateInventoryItemError = CreateInventoryItemErrors[keyof CreateInventoryItemErrors];
+
+export type CreateInventoryItemResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalClinicalOpsModuleInventoryItem;
+};
+
+export type CreateInventoryItemResponse = CreateInventoryItemResponses[keyof CreateInventoryItemResponses];
+
+export type UpdateInventoryItemData = {
+    body: DentalClinicalOpsModuleUpdateInventoryItemRequest;
+    path: {
+        branchId: Uuid;
+        itemId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/inventory/{itemId}';
+};
+
+export type UpdateInventoryItemErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateInventoryItemError = UpdateInventoryItemErrors[keyof UpdateInventoryItemErrors];
+
+export type UpdateInventoryItemResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalClinicalOpsModuleInventoryItem | ErrorResponse;
+};
+
+export type UpdateInventoryItemResponse = UpdateInventoryItemResponses[keyof UpdateInventoryItemResponses];
+
+export type ListInventoryAdjustmentsData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+        itemId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/inventory/{itemId}/adjustments';
+};
+
+export type ListInventoryAdjustmentsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListInventoryAdjustmentsError = ListInventoryAdjustmentsErrors[keyof ListInventoryAdjustmentsErrors];
+
+export type ListInventoryAdjustmentsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalClinicalOpsModuleInventoryAdjustment> | ErrorResponse;
+};
+
+export type ListInventoryAdjustmentsResponse = ListInventoryAdjustmentsResponses[keyof ListInventoryAdjustmentsResponses];
+
+export type CreateInventoryAdjustmentData = {
+    body: DentalClinicalOpsModuleCreateInventoryAdjustmentRequest;
+    path: {
+        branchId: Uuid;
+        itemId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/inventory/{itemId}/adjustments';
+};
+
+export type CreateInventoryAdjustmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateInventoryAdjustmentError = CreateInventoryAdjustmentErrors[keyof CreateInventoryAdjustmentErrors];
+
+export type CreateInventoryAdjustmentResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalClinicalOpsModuleInventoryAdjustment;
+};
+
+export type CreateInventoryAdjustmentResponse = CreateInventoryAdjustmentResponses[keyof CreateInventoryAdjustmentResponses];
+
+export type ListPostopTemplatesData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+    };
+    query?: {
+        category?: DentalClinicalOpsModulePostopCategory;
+    };
+    url: '/dental/branches/{branchId}/postop-templates';
+};
+
+export type ListPostopTemplatesErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPostopTemplatesError = ListPostopTemplatesErrors[keyof ListPostopTemplatesErrors];
+
+export type ListPostopTemplatesResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalClinicalOpsModulePostopTemplate> | ErrorResponse;
+};
+
+export type ListPostopTemplatesResponse = ListPostopTemplatesResponses[keyof ListPostopTemplatesResponses];
+
+export type CreatePostopTemplateData = {
+    body: DentalClinicalOpsModuleCreatePostopTemplateRequest;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/postop-templates';
+};
+
+export type CreatePostopTemplateErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreatePostopTemplateError = CreatePostopTemplateErrors[keyof CreatePostopTemplateErrors];
+
+export type CreatePostopTemplateResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalClinicalOpsModulePostopTemplate;
+};
+
+export type CreatePostopTemplateResponse = CreatePostopTemplateResponses[keyof CreatePostopTemplateResponses];
+
+export type UpdatePostopTemplateData = {
+    body: DentalClinicalOpsModuleUpdatePostopTemplateRequest;
+    path: {
+        branchId: Uuid;
+        templateId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/postop-templates/{templateId}';
+};
+
+export type UpdatePostopTemplateErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdatePostopTemplateError = UpdatePostopTemplateErrors[keyof UpdatePostopTemplateErrors];
+
+export type UpdatePostopTemplateResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalClinicalOpsModulePostopTemplate | ErrorResponse;
+};
+
+export type UpdatePostopTemplateResponse = UpdatePostopTemplateResponses[keyof UpdatePostopTemplateResponses];
+
+export type ListQueueBoardData = {
+    body?: never;
+    path: {
+        branchId: Uuid;
+    };
+    query?: never;
+    url: '/dental/branches/{branchId}/queue-board';
+};
+
+export type ListQueueBoardErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListQueueBoardError = ListQueueBoardErrors[keyof ListQueueBoardErrors];
+
+export type ListQueueBoardResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalQueueModuleQueueItem> | ErrorResponse;
+};
+
+export type ListQueueBoardResponse = ListQueueBoardResponses[keyof ListQueueBoardResponses];
 
 export type GetBranchSettingsData = {
     body?: never;
@@ -59813,6 +63165,66 @@ export type CreateMedicalHistoryEntryResponses = {
 
 export type CreateMedicalHistoryEntryResponse = CreateMedicalHistoryEntryResponses[keyof CreateMedicalHistoryEntryResponses];
 
+export type GetMedicalHistoryReviewData = {
+    body?: never;
+    path?: never;
+    query: {
+        patientId: Uuid;
+    };
+    url: '/dental/clinical/medical-history-review';
+};
+
+export type GetMedicalHistoryReviewErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetMedicalHistoryReviewError = GetMedicalHistoryReviewErrors[keyof GetMedicalHistoryReviewErrors];
+
+export type GetMedicalHistoryReviewResponses = {
+    /**
+     * Success response with data
+     */
+    200: MedicalHistoryReview;
+};
+
+export type GetMedicalHistoryReviewResponse = GetMedicalHistoryReviewResponses[keyof GetMedicalHistoryReviewResponses];
+
+export type RecordMedicalHistoryReviewData = {
+    body: RecordMedicalHistoryReviewRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/clinical/medical-history-review';
+};
+
+export type RecordMedicalHistoryReviewErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type RecordMedicalHistoryReviewError = RecordMedicalHistoryReviewErrors[keyof RecordMedicalHistoryReviewErrors];
+
+export type RecordMedicalHistoryReviewResponses = {
+    /**
+     * Resource created response
+     */
+    201: MedicalHistoryReview;
+};
+
+export type RecordMedicalHistoryReviewResponse = RecordMedicalHistoryReviewResponses[keyof RecordMedicalHistoryReviewResponses];
+
 export type UpdateMedicalHistoryEntryData = {
     body: UpdateMedicalHistoryEntryRequest;
     path: {
@@ -59870,6 +63282,273 @@ export type GetDashboardSummaryResponses = {
 };
 
 export type GetDashboardSummaryResponse = GetDashboardSummaryResponses[keyof GetDashboardSummaryResponses];
+
+export type ListErasureRequestsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: DentalErasureModuleErasureRequestStatus;
+        subjectPersonId?: Uuid;
+        tenantId?: Uuid;
+    };
+    url: '/dental/erasure-requests';
+};
+
+export type ListErasureRequestsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListErasureRequestsError = ListErasureRequestsErrors[keyof ListErasureRequestsErrors];
+
+export type ListErasureRequestsResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalErasureModuleErasureRequestList | ErrorResponse;
+};
+
+export type ListErasureRequestsResponse = ListErasureRequestsResponses[keyof ListErasureRequestsResponses];
+
+export type RequestErasureData = {
+    body: DentalErasureModuleRequestErasureRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/erasure-requests';
+};
+
+export type RequestErasureErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type RequestErasureError = RequestErasureErrors[keyof RequestErasureErrors];
+
+export type RequestErasureResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalErasureModuleErasureRequest;
+};
+
+export type RequestErasureResponse = RequestErasureResponses[keyof RequestErasureResponses];
+
+export type GetErasureRequestData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/erasure-requests/{id}';
+};
+
+export type GetErasureRequestErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetErasureRequestError = GetErasureRequestErrors[keyof GetErasureRequestErrors];
+
+export type GetErasureRequestResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalErasureModuleErasureRequest | ErrorResponse;
+};
+
+export type GetErasureRequestResponse = GetErasureRequestResponses[keyof GetErasureRequestResponses];
+
+export type ApproveErasureData = {
+    body: DentalErasureModuleApproveErasureRequest;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/erasure-requests/{id}/approve';
+};
+
+export type ApproveErasureErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ApproveErasureError = ApproveErasureErrors[keyof ApproveErasureErrors];
+
+export type ApproveErasureResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalErasureModuleErasureRequest | ErrorResponse;
+};
+
+export type ApproveErasureResponse = ApproveErasureResponses[keyof ApproveErasureResponses];
+
+export type RejectErasureData = {
+    body: DentalErasureModuleRejectErasureRequest;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/erasure-requests/{id}/reject';
+};
+
+export type RejectErasureErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type RejectErasureError = RejectErasureErrors[keyof RejectErasureErrors];
+
+export type RejectErasureResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalErasureModuleErasureRequest | ErrorResponse;
+};
+
+export type RejectErasureResponse = RejectErasureResponses[keyof RejectErasureResponses];
+
+export type GetFeeScheduleData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Branch to read the fee schedule for (required by the handler)
+         */
+        branchId?: Uuid;
+    };
+    url: '/dental/fee-schedule';
+};
+
+export type GetFeeScheduleErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetFeeScheduleError = GetFeeScheduleErrors[keyof GetFeeScheduleErrors];
+
+export type GetFeeScheduleResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalFeeScheduleModuleFeeScheduleList | ErrorResponse;
+};
+
+export type GetFeeScheduleResponse = GetFeeScheduleResponses[keyof GetFeeScheduleResponses];
+
+export type UpdateFeeScheduleEntryData = {
+    body: DentalFeeScheduleModuleUpdateFeeScheduleEntryRequest;
+    path: {
+        /**
+         * CDT procedure code (string, e.g. 'D1110') — not a UUID
+         */
+        cdt: string;
+    };
+    query?: never;
+    url: '/dental/fee-schedule/{cdt}';
+};
+
+export type UpdateFeeScheduleEntryErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateFeeScheduleEntryError = UpdateFeeScheduleEntryErrors[keyof UpdateFeeScheduleEntryErrors];
+
+export type UpdateFeeScheduleEntryResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalFeeScheduleModuleFeeScheduleEntryResponse | ErrorResponse;
+};
+
+export type UpdateFeeScheduleEntryResponse = UpdateFeeScheduleEntryResponses[keyof UpdateFeeScheduleEntryResponses];
 
 export type ImagingFindingsMgmtDeleteFindingData = {
     body?: never;
@@ -59956,7 +63635,9 @@ export type CephMgmtGetCephAnalysisData = {
     path: {
         imageId: string;
     };
-    query?: never;
+    query?: {
+        analysisType?: string;
+    };
     url: '/dental/imaging/images/{imageId}/ceph/analysis';
 };
 
@@ -59974,7 +63655,9 @@ export type CephMgmtRecomputeCephAnalysisData = {
     path: {
         imageId: string;
     };
-    query?: never;
+    query?: {
+        analysisType?: string;
+    };
     url: '/dental/imaging/images/{imageId}/ceph/analysis/recompute';
 };
 
@@ -60248,6 +63931,115 @@ export type ImagingMgmtGetImagingStudyResponses = {
 };
 
 export type ImagingMgmtGetImagingStudyResponse = ImagingMgmtGetImagingStudyResponses[keyof ImagingMgmtGetImagingStudyResponses];
+
+export type ListLegalHoldsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: DentalLegalHoldModuleLegalHoldStatus;
+        subjectPersonId?: Uuid;
+        tenantId?: Uuid;
+    };
+    url: '/dental/legal-holds';
+};
+
+export type ListLegalHoldsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListLegalHoldsError = ListLegalHoldsErrors[keyof ListLegalHoldsErrors];
+
+export type ListLegalHoldsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalLegalHoldModuleLegalHold> | ErrorResponse;
+};
+
+export type ListLegalHoldsResponse = ListLegalHoldsResponses[keyof ListLegalHoldsResponses];
+
+export type PlaceLegalHoldData = {
+    body: DentalLegalHoldModulePlaceLegalHoldRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/legal-holds';
+};
+
+export type PlaceLegalHoldErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type PlaceLegalHoldError = PlaceLegalHoldErrors[keyof PlaceLegalHoldErrors];
+
+export type PlaceLegalHoldResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalLegalHoldModuleLegalHold;
+};
+
+export type PlaceLegalHoldResponse = PlaceLegalHoldResponses[keyof PlaceLegalHoldResponses];
+
+export type ReleaseLegalHoldData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/legal-holds/{id}/release';
+};
+
+export type ReleaseLegalHoldErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ReleaseLegalHoldError = ReleaseLegalHoldErrors[keyof ReleaseLegalHoldErrors];
+
+export type ReleaseLegalHoldResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalLegalHoldModuleLegalHold | ErrorResponse;
+};
+
+export type ReleaseLegalHoldResponse = ReleaseLegalHoldResponses[keyof ReleaseLegalHoldResponses];
 
 export type GetOrgContextData = {
     body?: never;
@@ -61266,6 +65058,502 @@ export type GetDentalPatientStatementResponses = {
 
 export type GetDentalPatientStatementResponse = GetDentalPatientStatementResponses[keyof GetDentalPatientStatementResponses];
 
+export type ListPatientClaimsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/claims';
+};
+
+export type ListPatientClaimsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientClaimsError = ListPatientClaimsErrors[keyof ListPatientClaimsErrors];
+
+export type ListPatientClaimsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleClaimDraft> | ErrorResponse;
+};
+
+export type ListPatientClaimsResponse = ListPatientClaimsResponses[keyof ListPatientClaimsResponses];
+
+export type CreateClaimDraftData = {
+    body: DentalPatientFinanceModuleCreateClaimDraftRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/claims';
+};
+
+export type CreateClaimDraftErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateClaimDraftError = CreateClaimDraftErrors[keyof CreateClaimDraftErrors];
+
+export type CreateClaimDraftResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleClaimDraft;
+};
+
+export type CreateClaimDraftResponse = CreateClaimDraftResponses[keyof CreateClaimDraftResponses];
+
+export type GetClaimReadinessData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/claims/{claimId}/readiness';
+};
+
+export type GetClaimReadinessErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetClaimReadinessError = GetClaimReadinessErrors[keyof GetClaimReadinessErrors];
+
+export type GetClaimReadinessResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleClaimReadiness | ErrorResponse;
+};
+
+export type GetClaimReadinessResponse = GetClaimReadinessResponses[keyof GetClaimReadinessResponses];
+
+export type UpdateClaimStatusData = {
+    body: DentalPatientFinanceModuleUpdateClaimStatusRequest;
+    path: {
+        patientId: Uuid;
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/claims/{claimId}/status';
+};
+
+export type UpdateClaimStatusErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateClaimStatusError = UpdateClaimStatusErrors[keyof UpdateClaimStatusErrors];
+
+export type UpdateClaimStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleClaimDraft | ErrorResponse;
+};
+
+export type UpdateClaimStatusResponse = UpdateClaimStatusResponses[keyof UpdateClaimStatusResponses];
+
+export type GetPatientCommunicationConsentData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/communication-consent';
+};
+
+export type GetPatientCommunicationConsentErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetPatientCommunicationConsentError = GetPatientCommunicationConsentErrors[keyof GetPatientCommunicationConsentErrors];
+
+export type GetPatientCommunicationConsentResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalPatientModuleCommunicationConsentResponse;
+};
+
+export type GetPatientCommunicationConsentResponse = GetPatientCommunicationConsentResponses[keyof GetPatientCommunicationConsentResponses];
+
+export type UpdatePatientCommunicationConsentData = {
+    body: DentalPatientModuleUpdateCommunicationConsentRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/communication-consent';
+};
+
+export type UpdatePatientCommunicationConsentErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdatePatientCommunicationConsentError = UpdatePatientCommunicationConsentErrors[keyof UpdatePatientCommunicationConsentErrors];
+
+export type UpdatePatientCommunicationConsentResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalPatientModuleCommunicationConsentResponse;
+};
+
+export type UpdatePatientCommunicationConsentResponse = UpdatePatientCommunicationConsentResponses[keyof UpdatePatientCommunicationConsentResponses];
+
+export type ListPatientContactsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/contacts';
+};
+
+export type ListPatientContactsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientContactsError = ListPatientContactsErrors[keyof ListPatientContactsErrors];
+
+export type ListPatientContactsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientEngagementModulePatientContact> | ErrorResponse;
+};
+
+export type ListPatientContactsResponse = ListPatientContactsResponses[keyof ListPatientContactsResponses];
+
+export type CreatePatientContactData = {
+    body: DentalPatientEngagementModuleCreatePatientContactRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/contacts';
+};
+
+export type CreatePatientContactErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreatePatientContactError = CreatePatientContactErrors[keyof CreatePatientContactErrors];
+
+export type CreatePatientContactResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientEngagementModulePatientContact;
+};
+
+export type CreatePatientContactResponse = CreatePatientContactResponses[keyof CreatePatientContactResponses];
+
+export type DeletePatientContactData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        contactId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/contacts/{contactId}';
+};
+
+export type DeletePatientContactErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type DeletePatientContactError = DeletePatientContactErrors[keyof DeletePatientContactErrors];
+
+export type DeletePatientContactResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Success response with no content
+     */
+    204: void;
+};
+
+export type DeletePatientContactResponse = DeletePatientContactResponses[keyof DeletePatientContactResponses];
+
+export type UpdatePatientContactData = {
+    body: DentalPatientEngagementModuleUpdatePatientContactRequest;
+    path: {
+        patientId: Uuid;
+        contactId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/contacts/{contactId}';
+};
+
+export type UpdatePatientContactErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdatePatientContactError = UpdatePatientContactErrors[keyof UpdatePatientContactErrors];
+
+export type UpdatePatientContactResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientEngagementModulePatientContact | ErrorResponse;
+};
+
+export type UpdatePatientContactResponse = UpdatePatientContactResponses[keyof UpdatePatientContactResponses];
+
+export type ListDentalAlertsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/dental-alerts';
+};
+
+export type ListDentalAlertsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListDentalAlertsError = ListDentalAlertsErrors[keyof ListDentalAlertsErrors];
+
+export type ListDentalAlertsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientEngagementModuleDentalAlert> | ErrorResponse;
+};
+
+export type ListDentalAlertsResponse = ListDentalAlertsResponses[keyof ListDentalAlertsResponses];
+
+export type CreateDentalAlertData = {
+    body: DentalPatientEngagementModuleCreateDentalAlertRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/dental-alerts';
+};
+
+export type CreateDentalAlertErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateDentalAlertError = CreateDentalAlertErrors[keyof CreateDentalAlertErrors];
+
+export type CreateDentalAlertResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientEngagementModuleDentalAlert;
+};
+
+export type CreateDentalAlertResponse = CreateDentalAlertResponses[keyof CreateDentalAlertResponses];
+
+export type UpdateDentalAlertData = {
+    body: DentalPatientEngagementModuleUpdateDentalAlertRequest;
+    path: {
+        patientId: Uuid;
+        alertId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/dental-alerts/{alertId}';
+};
+
+export type UpdateDentalAlertErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateDentalAlertError = UpdateDentalAlertErrors[keyof UpdateDentalAlertErrors];
+
+export type UpdateDentalAlertResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientEngagementModuleDentalAlert | ErrorResponse;
+};
+
+export type UpdateDentalAlertResponse = UpdateDentalAlertResponses[keyof UpdateDentalAlertResponses];
+
 export type InitializeDentitionData = {
     body: DentalPatientModuleInitializeDentitionRequest;
     path: {
@@ -61316,6 +65604,514 @@ export type PatientImageMgmtListPatientImagesResponses = {
 };
 
 export type PatientImageMgmtListPatientImagesResponse = PatientImageMgmtListPatientImagesResponses[keyof PatientImageMgmtListPatientImagesResponses];
+
+export type ListPatientInsuranceProfilesData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/insurance-profiles';
+};
+
+export type ListPatientInsuranceProfilesErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientInsuranceProfilesError = ListPatientInsuranceProfilesErrors[keyof ListPatientInsuranceProfilesErrors];
+
+export type ListPatientInsuranceProfilesResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleInsuranceProfile> | ErrorResponse;
+};
+
+export type ListPatientInsuranceProfilesResponse = ListPatientInsuranceProfilesResponses[keyof ListPatientInsuranceProfilesResponses];
+
+export type CreateInsuranceProfileData = {
+    body: DentalPatientFinanceModuleCreateInsuranceProfileRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/insurance-profiles';
+};
+
+export type CreateInsuranceProfileErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateInsuranceProfileError = CreateInsuranceProfileErrors[keyof CreateInsuranceProfileErrors];
+
+export type CreateInsuranceProfileResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleInsuranceProfile;
+};
+
+export type CreateInsuranceProfileResponse = CreateInsuranceProfileResponses[keyof CreateInsuranceProfileResponses];
+
+export type UpdateInsuranceProfileData = {
+    body: DentalPatientFinanceModuleUpdateInsuranceProfileRequest;
+    path: {
+        patientId: Uuid;
+        profileId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/insurance-profiles/{profileId}';
+};
+
+export type UpdateInsuranceProfileErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateInsuranceProfileError = UpdateInsuranceProfileErrors[keyof UpdateInsuranceProfileErrors];
+
+export type UpdateInsuranceProfileResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleInsuranceProfile | ErrorResponse;
+};
+
+export type UpdateInsuranceProfileResponse = UpdateInsuranceProfileResponses[keyof UpdateInsuranceProfileResponses];
+
+export type ListOcclusionScreeningsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/occlusion-screenings';
+};
+
+export type ListOcclusionScreeningsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListOcclusionScreeningsError = ListOcclusionScreeningsErrors[keyof ListOcclusionScreeningsErrors];
+
+export type ListOcclusionScreeningsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalClinicalOpsModuleOcclusionScreening> | ErrorResponse;
+};
+
+export type ListOcclusionScreeningsResponse = ListOcclusionScreeningsResponses[keyof ListOcclusionScreeningsResponses];
+
+export type CreateOcclusionScreeningData = {
+    body: DentalClinicalOpsModuleCreateOcclusionScreeningRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/occlusion-screenings';
+};
+
+export type CreateOcclusionScreeningErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateOcclusionScreeningError = CreateOcclusionScreeningErrors[keyof CreateOcclusionScreeningErrors];
+
+export type CreateOcclusionScreeningResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalClinicalOpsModuleOcclusionScreening;
+};
+
+export type CreateOcclusionScreeningResponse = CreateOcclusionScreeningResponses[keyof CreateOcclusionScreeningResponses];
+
+export type ListPatientRecallsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/recalls';
+};
+
+export type ListPatientRecallsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientRecallsError = ListPatientRecallsErrors[keyof ListPatientRecallsErrors];
+
+export type ListPatientRecallsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientEngagementModuleRecall> | ErrorResponse;
+};
+
+export type ListPatientRecallsResponse = ListPatientRecallsResponses[keyof ListPatientRecallsResponses];
+
+export type CreateRecallData = {
+    body: DentalPatientEngagementModuleCreateRecallRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/recalls';
+};
+
+export type CreateRecallErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateRecallError = CreateRecallErrors[keyof CreateRecallErrors];
+
+export type CreateRecallResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientEngagementModuleRecall;
+};
+
+export type CreateRecallResponse = CreateRecallResponses[keyof CreateRecallResponses];
+
+export type UpdateRecallData = {
+    body: DentalPatientEngagementModuleUpdateRecallRequest;
+    path: {
+        patientId: Uuid;
+        recallId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/recalls/{recallId}';
+};
+
+export type UpdateRecallErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateRecallError = UpdateRecallErrors[keyof UpdateRecallErrors];
+
+export type UpdateRecallResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientEngagementModuleRecall | ErrorResponse;
+};
+
+export type UpdateRecallResponse = UpdateRecallResponses[keyof UpdateRecallResponses];
+
+export type ListPatientTasksData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/tasks';
+};
+
+export type ListPatientTasksErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientTasksError = ListPatientTasksErrors[keyof ListPatientTasksErrors];
+
+export type ListPatientTasksResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientEngagementModulePatientTask> | ErrorResponse;
+};
+
+export type ListPatientTasksResponse = ListPatientTasksResponses[keyof ListPatientTasksResponses];
+
+export type CreateTaskData = {
+    body: DentalPatientEngagementModuleCreateTaskRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/tasks';
+};
+
+export type CreateTaskErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateTaskError = CreateTaskErrors[keyof CreateTaskErrors];
+
+export type CreateTaskResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientEngagementModulePatientTask;
+};
+
+export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses];
+
+export type UpdateTaskData = {
+    body: DentalPatientEngagementModuleUpdateTaskRequest;
+    path: {
+        patientId: Uuid;
+        taskId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/tasks/{taskId}';
+};
+
+export type UpdateTaskErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateTaskError = UpdateTaskErrors[keyof UpdateTaskErrors];
+
+export type UpdateTaskResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientEngagementModulePatientTask | ErrorResponse;
+};
+
+export type UpdateTaskResponse = UpdateTaskResponses[keyof UpdateTaskResponses];
+
+export type ListTreatmentOptionGroupData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        optionGroupId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-options/{optionGroupId}';
+};
+
+export type ListTreatmentOptionGroupErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListTreatmentOptionGroupError = ListTreatmentOptionGroupErrors[keyof ListTreatmentOptionGroupErrors];
+
+export type ListTreatmentOptionGroupResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleTreatmentOptionGroup | ErrorResponse;
+};
+
+export type ListTreatmentOptionGroupResponse = ListTreatmentOptionGroupResponses[keyof ListTreatmentOptionGroupResponses];
+
+export type AcceptTreatmentOptionData = {
+    body: DentalPatientFinanceModuleAcceptTreatmentOptionRequest;
+    path: {
+        patientId: Uuid;
+        optionGroupId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-options/{optionGroupId}/accept';
+};
+
+export type AcceptTreatmentOptionErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AcceptTreatmentOptionError = AcceptTreatmentOptionErrors[keyof AcceptTreatmentOptionErrors];
+
+export type AcceptTreatmentOptionResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleAcceptTreatmentOptionResult | ErrorResponse;
+};
+
+export type AcceptTreatmentOptionResponse = AcceptTreatmentOptionResponses[keyof AcceptTreatmentOptionResponses];
 
 export type GetTreatmentPlanData = {
     body?: never;
@@ -61414,6 +66210,559 @@ export type GetTreatmentPlanVersionResponses = {
 };
 
 export type GetTreatmentPlanVersionResponse = GetTreatmentPlanVersionResponses[keyof GetTreatmentPlanVersionResponses];
+
+export type ListPatientTreatmentPlansData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-plans';
+};
+
+export type ListPatientTreatmentPlansErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListPatientTreatmentPlansError = ListPatientTreatmentPlansErrors[keyof ListPatientTreatmentPlansErrors];
+
+export type ListPatientTreatmentPlansResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleTreatmentPlan> | ErrorResponse;
+};
+
+export type ListPatientTreatmentPlansResponse = ListPatientTreatmentPlansResponses[keyof ListPatientTreatmentPlansResponses];
+
+export type CreateTreatmentPlanData = {
+    body: DentalPatientFinanceModuleCreateTreatmentPlanRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-plans';
+};
+
+export type CreateTreatmentPlanErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateTreatmentPlanError = CreateTreatmentPlanErrors[keyof CreateTreatmentPlanErrors];
+
+export type CreateTreatmentPlanResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleTreatmentPlan;
+};
+
+export type CreateTreatmentPlanResponse = CreateTreatmentPlanResponses[keyof CreateTreatmentPlanResponses];
+
+export type UpdateTreatmentPlanData = {
+    body: DentalPatientFinanceModuleUpdateTreatmentPlanRequest;
+    path: {
+        patientId: Uuid;
+        planId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-plans/{planId}';
+};
+
+export type UpdateTreatmentPlanErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateTreatmentPlanError = UpdateTreatmentPlanErrors[keyof UpdateTreatmentPlanErrors];
+
+export type UpdateTreatmentPlanResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleTreatmentPlan | ErrorResponse;
+};
+
+export type UpdateTreatmentPlanResponse = UpdateTreatmentPlanResponses[keyof UpdateTreatmentPlanResponses];
+
+export type ApproveTreatmentPlanData = {
+    body: DentalPatientFinanceModuleApproveTreatmentPlanRequest;
+    path: {
+        patientId: Uuid;
+        planId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-plans/{planId}/approval';
+};
+
+export type ApproveTreatmentPlanErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ApproveTreatmentPlanError = ApproveTreatmentPlanErrors[keyof ApproveTreatmentPlanErrors];
+
+export type ApproveTreatmentPlanResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleTreatmentPlanApprovalResult;
+};
+
+export type ApproveTreatmentPlanResponse = ApproveTreatmentPlanResponses[keyof ApproveTreatmentPlanResponses];
+
+export type ListTreatmentPlanStatusHistoryData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        planId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatment-plans/{planId}/status-history';
+};
+
+export type ListTreatmentPlanStatusHistoryErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListTreatmentPlanStatusHistoryError = ListTreatmentPlanStatusHistoryErrors[keyof ListTreatmentPlanStatusHistoryErrors];
+
+export type ListTreatmentPlanStatusHistoryResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleTreatmentPlanStatusHistoryEntry> | ErrorResponse;
+};
+
+export type ListTreatmentPlanStatusHistoryResponse = ListTreatmentPlanStatusHistoryResponses[keyof ListTreatmentPlanStatusHistoryResponses];
+
+export type ListPatientConditionsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: {
+        branchId?: Uuid;
+    };
+    url: '/dental/patients/{patientId}/treatments';
+};
+
+export type ListPatientConditionsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ListPatientConditionsError = ListPatientConditionsErrors[keyof ListPatientConditionsErrors];
+
+export type ListPatientConditionsResponses = {
+    /**
+     * Offset-based paginated response with page navigation
+     */
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<PatientConditionEntry>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    };
+};
+
+export type ListPatientConditionsResponse = ListPatientConditionsResponses[keyof ListPatientConditionsResponses];
+
+export type DetachTreatmentAppointmentData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+        treatmentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatments/{treatmentId}/appointment';
+};
+
+export type DetachTreatmentAppointmentErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type DetachTreatmentAppointmentError = DetachTreatmentAppointmentErrors[keyof DetachTreatmentAppointmentErrors];
+
+export type DetachTreatmentAppointmentResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleTreatmentAppointmentLink | ErrorResponse;
+};
+
+export type DetachTreatmentAppointmentResponse = DetachTreatmentAppointmentResponses[keyof DetachTreatmentAppointmentResponses];
+
+export type AttachTreatmentAppointmentData = {
+    body: DentalPatientFinanceModuleAttachTreatmentAppointmentRequest;
+    path: {
+        patientId: Uuid;
+        treatmentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/treatments/{treatmentId}/appointment';
+};
+
+export type AttachTreatmentAppointmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AttachTreatmentAppointmentError = AttachTreatmentAppointmentErrors[keyof AttachTreatmentAppointmentErrors];
+
+export type AttachTreatmentAppointmentResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleTreatmentAppointmentLink | ErrorResponse;
+};
+
+export type AttachTreatmentAppointmentResponse = AttachTreatmentAppointmentResponses[keyof AttachTreatmentAppointmentResponses];
+
+export type ListPatientVisitsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: {
+        branchId?: Uuid;
+    };
+    url: '/dental/patients/{patientId}/visits';
+};
+
+export type ListPatientVisitsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ListPatientVisitsError = ListPatientVisitsErrors[keyof ListPatientVisitsErrors];
+
+export type ListPatientVisitsResponses = {
+    /**
+     * Offset-based paginated response with page navigation
+     */
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<PatientVisitRecord>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    };
+};
+
+export type ListPatientVisitsResponse = ListPatientVisitsResponses[keyof ListPatientVisitsResponses];
+
+export type CreatePerioChartData = {
+    body: CreatePerioChartRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/perio-charts';
+};
+
+export type CreatePerioChartErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CreatePerioChartError = CreatePerioChartErrors[keyof CreatePerioChartErrors];
+
+export type CreatePerioChartResponses = {
+    /**
+     * Resource created response
+     */
+    201: PerioChart;
+};
+
+export type CreatePerioChartResponse = CreatePerioChartResponses[keyof CreatePerioChartResponses];
+
+export type GetPerioChartData = {
+    body?: never;
+    path: {
+        chartId: Uuid;
+    };
+    query?: never;
+    url: '/dental/perio-charts/{chartId}';
+};
+
+export type GetPerioChartErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetPerioChartError = GetPerioChartErrors[keyof GetPerioChartErrors];
+
+export type GetPerioChartResponses = {
+    /**
+     * Success response with data
+     */
+    200: PerioChart;
+};
+
+export type GetPerioChartResponse = GetPerioChartResponses[keyof GetPerioChartResponses];
+
+export type CompletePerioChartData = {
+    /**
+     * Optional 2017 staging/grading risk factors (P1-6). Omit for measurement-only classification.
+     */
+    body?: CompletePerioChartRequest;
+    path: {
+        chartId: Uuid;
+    };
+    query?: never;
+    url: '/dental/perio-charts/{chartId}/complete';
+};
+
+export type CompletePerioChartErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CompletePerioChartError = CompletePerioChartErrors[keyof CompletePerioChartErrors];
+
+export type CompletePerioChartResponses = {
+    /**
+     * Success response with data
+     */
+    200: CompletePerioChartResponse;
+};
+
+export type CompletePerioChartResponse2 = CompletePerioChartResponses[keyof CompletePerioChartResponses];
+
+export type UpsertToothReadingData = {
+    body: UpsertToothReadingRequest;
+    path: {
+        chartId: Uuid;
+        /**
+         * FDI tooth number. Outer bound 11-85 enforced here; the handler applies the precise FDI quadrant check (adult 11-18,21-28,31-38,41-48; primary 51-55,61-65,71-75,81-85) — disjoint ranges are not expressible in a single validator. V-PER-010 / BR-P04.
+         */
+        toothNumber: number;
+    };
+    query?: never;
+    url: '/dental/perio-charts/{chartId}/readings/{toothNumber}';
+};
+
+export type UpsertToothReadingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpsertToothReadingError = UpsertToothReadingErrors[keyof UpsertToothReadingErrors];
+
+export type UpsertToothReadingResponses = {
+    /**
+     * Success response with data
+     */
+    200: PerioToothReading;
+};
+
+export type UpsertToothReadingResponse = UpsertToothReadingResponses[keyof UpsertToothReadingResponses];
 
 export type ImportPmdData = {
     body: ImportPmdRequest;
@@ -61543,6 +66892,154 @@ export type GetImportedPmdResponses = {
 };
 
 export type GetImportedPmdResponse = GetImportedPmdResponses[keyof GetImportedPmdResponses];
+
+export type UpdateQueueItemStatusData = {
+    body: DentalQueueModuleUpdateQueueItemStatusRequest;
+    path: {
+        itemId: Uuid;
+    };
+    query?: never;
+    url: '/dental/queue-items/{itemId}/status';
+};
+
+export type UpdateQueueItemStatusErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateQueueItemStatusError = UpdateQueueItemStatusErrors[keyof UpdateQueueItemStatusErrors];
+
+export type UpdateQueueItemStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalQueueModuleQueueItem | ErrorResponse;
+};
+
+export type UpdateQueueItemStatusResponse = UpdateQueueItemStatusResponses[keyof UpdateQueueItemStatusResponses];
+
+export type ListSyncLogsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/dental/sync-logs';
+};
+
+export type ListSyncLogsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListSyncLogsError = ListSyncLogsErrors[keyof ListSyncLogsErrors];
+
+export type ListSyncLogsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleSyncLog> | ErrorResponse;
+};
+
+export type ListSyncLogsResponse = ListSyncLogsResponses[keyof ListSyncLogsResponses];
+
+export type CreateSyncLogData = {
+    body: DentalPatientFinanceModuleCreateSyncLogRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/sync-logs';
+};
+
+export type CreateSyncLogErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type CreateSyncLogError = CreateSyncLogErrors[keyof CreateSyncLogErrors];
+
+export type CreateSyncLogResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleSyncLog;
+};
+
+export type CreateSyncLogResponse = CreateSyncLogResponses[keyof CreateSyncLogResponses];
+
+export type UpdateSyncLogData = {
+    body: DentalPatientFinanceModuleUpdateSyncLogRequest;
+    path: {
+        logId: Uuid;
+    };
+    query?: never;
+    url: '/dental/sync-logs/{logId}';
+};
+
+export type UpdateSyncLogErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type UpdateSyncLogError = UpdateSyncLogErrors[keyof UpdateSyncLogErrors];
+
+export type UpdateSyncLogResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleSyncLog | ErrorResponse;
+};
+
+export type UpdateSyncLogResponse = UpdateSyncLogResponses[keyof UpdateSyncLogResponses];
 
 export type ListTreatmentTemplatesData = {
     body?: never;
@@ -62099,6 +67596,42 @@ export type CreateAmendmentResponses = {
 
 export type CreateAmendmentResponse = CreateAmendmentResponses[keyof CreateAmendmentResponses];
 
+export type ApproveAmendmentData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+        amendmentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/amendments/{amendmentId}/approve';
+};
+
+export type ApproveAmendmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ApproveAmendmentError = ApproveAmendmentErrors[keyof ApproveAmendmentErrors];
+
+export type ApproveAmendmentResponses = {
+    /**
+     * Success response with data
+     */
+    200: Amendment;
+};
+
+export type ApproveAmendmentResponse = ApproveAmendmentResponses[keyof ApproveAmendmentResponses];
+
 export type ApplyTemplateData = {
     body?: never;
     path: {
@@ -62400,6 +67933,106 @@ export type UpdateToothResponses = {
 
 export type UpdateToothResponse = UpdateToothResponses[keyof UpdateToothResponses];
 
+export type ListConsentRefusalsData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/consent-refusals';
+};
+
+export type ListConsentRefusalsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ListConsentRefusalsError = ListConsentRefusalsErrors[keyof ListConsentRefusalsErrors];
+
+export type ListConsentRefusalsResponses = {
+    /**
+     * Offset-based paginated response with page navigation
+     */
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<InformedRefusal>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    };
+};
+
+export type ListConsentRefusalsResponse = ListConsentRefusalsResponses[keyof ListConsentRefusalsResponses];
+
+export type RecordConsentRefusalData = {
+    body: RecordConsentRefusalRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/consent-refusals';
+};
+
+export type RecordConsentRefusalErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type RecordConsentRefusalError = RecordConsentRefusalErrors[keyof RecordConsentRefusalErrors];
+
+export type RecordConsentRefusalResponses = {
+    /**
+     * Resource created response
+     */
+    201: InformedRefusal;
+};
+
+export type RecordConsentRefusalResponse = RecordConsentRefusalResponses[keyof RecordConsentRefusalResponses];
+
 export type ListConsentFormsData = {
     body?: never;
     path: {
@@ -62499,6 +68132,42 @@ export type CreateConsentFormResponses = {
 };
 
 export type CreateConsentFormResponse = CreateConsentFormResponses[keyof CreateConsentFormResponses];
+
+export type RevokeConsentFormData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+        cid: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/consents/{cid}/revoke';
+};
+
+export type RevokeConsentFormErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type RevokeConsentFormError = RevokeConsentFormErrors[keyof RevokeConsentFormErrors];
+
+export type RevokeConsentFormResponses = {
+    /**
+     * Success response with data
+     */
+    200: ConsentForm;
+};
+
+export type RevokeConsentFormResponse = RevokeConsentFormResponses[keyof RevokeConsentFormResponses];
 
 export type SignConsentFormData = {
     body: SignConsentFormRequest;
@@ -62834,6 +68503,41 @@ export type SignVisitNotesResponses = {
 };
 
 export type SignVisitNotesResponse = SignVisitNotesResponses[keyof SignVisitNotesResponses];
+
+export type GetVisitPerioChartData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/perio-chart';
+};
+
+export type GetVisitPerioChartErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetVisitPerioChartError = GetVisitPerioChartErrors[keyof GetVisitPerioChartErrors];
+
+export type GetVisitPerioChartResponses = {
+    /**
+     * Success response with data
+     */
+    200: PerioChart;
+    /**
+     * Success response with no content
+     */
+    204: void;
+};
+
+export type GetVisitPerioChartResponse = GetVisitPerioChartResponses[keyof GetVisitPerioChartResponses];
 
 export type GetPmdForVisitData = {
     body?: never;

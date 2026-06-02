@@ -118,6 +118,8 @@ export const ApplyTemplateResponseSchema = z.object({
 
 export const AppointmentStatusSchema = z.enum(["scheduled", "checked_in", "completed", "cancelled", "no_show"]);
 
+export const AsaClassificationSchema = z.enum(["I", "II", "III", "IV", "V", "VI"]);
+
 export const AuditActionSchema = z.enum(["create", "read", "update", "delete", "login", "logout"]);
 
 export const AuditCategorySchema = z.enum(["regulatory", "security", "privacy", "administrative", "domain", "financial"]);
@@ -546,6 +548,19 @@ export const CollectionsSummaryResponseSchema = z.object({
   invoiceCount: z.number().int()
 });
 
+export const CompletePerioChartRequestSchema = z.object({
+  toothLossCount: z.number().int().optional(),
+  remainingTeeth: z.number().int().optional(),
+  biteCollapse: z.boolean().optional(),
+  bonelossPercent: z.number().optional(),
+  ageYears: z.number().int().optional(),
+  fiveYearProgressionMm: z.number().optional(),
+  cigarettesPerDay: z.number().int().optional(),
+  hasDiabetes: z.boolean().optional(),
+  hba1cPercent: z.number().optional(),
+  molarIncisorPattern: z.boolean().optional()
+});
+
 export const PerioChartStatusSchema = z.enum(["draft", "completed", "locked"]);
 
 export const CompletePerioChartResponseSchema = z.object({
@@ -554,7 +569,10 @@ export const CompletePerioChartResponseSchema = z.object({
   completedAt: z.string().datetime().transform((str) => new Date(str)),
   summaryBopPercent: z.number(),
   summaryMeanDepth: z.number(),
-  summaryDeepPocketCount: z.number().int()
+  summaryDeepPocketCount: z.number().int(),
+  stage: z.union([z.enum(["I", "II", "III", "IV"]), z.null()]).optional(),
+  grade: z.enum(["A", "B", "C"]).optional(),
+  extent: z.union([z.enum(["localized", "generalized", "molar_incisor"]), z.null()]).optional()
 });
 
 export const ConflictErrorSchema = z.object({
@@ -582,6 +600,11 @@ export const ConsentFormSchema = z.object({
   patientId: UUIDSchema,
   templateId: z.string(),
   templateName: z.string(),
+  procedureNature: z.string().optional(),
+  benefits: z.string().optional(),
+  risks: z.string().optional(),
+  alternatives: z.string().optional(),
+  risksOfNonTreatment: z.string().optional(),
   signedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   signatureData: z.string().optional(),
   signed: z.boolean()
@@ -684,7 +707,12 @@ export const CreateConsentFormRequestSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
   templateId: z.string(),
-  templateName: z.string()
+  templateName: z.string(),
+  procedureNature: z.string().optional(),
+  benefits: z.string().optional(),
+  risks: z.string().optional(),
+  alternatives: z.string().optional(),
+  risksOfNonTreatment: z.string().optional()
 });
 
 export const CreateConsultationRequestSchema = z.object({
@@ -823,6 +851,9 @@ export const CreateLabOrderRequestSchema = z.object({
   toothFdi: z.string().optional(),
   labName: z.string(),
   description: z.string(),
+  shade: z.string().optional(),
+  material: z.string().optional(),
+  dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   expectedDeliveryDate: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
@@ -2013,12 +2044,32 @@ export const DentalPatientEngagementModuleUpdateTaskRequestSchema = z.object({
   status: z.enum(["open", "in_progress", "done", "cancelled"]).optional()
 });
 
+export const DentalPatientFinanceModuleAcceptTreatmentOptionRequestSchema = z.object({
+  chosenTreatmentId: z.string().uuid()
+});
+
+export const DentalPatientFinanceModuleTreatmentOptionSchema = z.object({
+  id: z.string().uuid(),
+  status: z.string(),
+  recommended: z.boolean()
+});
+
+export const DentalPatientFinanceModuleAcceptTreatmentOptionResultSchema = z.object({
+  optionGroupId: z.string().uuid(),
+  chosenTreatmentId: z.string().uuid(),
+  options: z.array(DentalPatientFinanceModuleTreatmentOptionSchema)
+});
+
 export const DentalPatientFinanceModuleApproveTreatmentPlanRequestSchema = z.object({
   approvedByPersonId: z.string().uuid(),
   method: z.enum(["signature", "verbal", "portal"]),
   consentFormId: z.string().uuid().optional(),
   planVersionId: z.string().uuid().optional(),
   signatureData: z.string().optional()
+});
+
+export const DentalPatientFinanceModuleAttachTreatmentAppointmentRequestSchema = z.object({
+  appointmentId: z.string().uuid()
 });
 
 export const DentalPatientFinanceModuleClaimDraftSchema = z.object({
@@ -2082,7 +2133,8 @@ export const DentalPatientFinanceModuleCreateSyncLogRequestSchema = z.object({
 export const DentalPatientFinanceModuleCreateTreatmentPlanRequestSchema = z.object({
   providerId: z.string().uuid(),
   totalEstimateCents: z.number().int().gte(0).optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  cdtCodeSetYear: z.number().int().gte(2000).lte(2100).optional()
 });
 
 export const DentalPatientFinanceModuleInsuranceProfileSchema = z.object({
@@ -2124,6 +2176,16 @@ export const DentalPatientFinanceModuleSyncLogSchema = z.object({
 
 export const DentalPatientFinanceModuleSyncStatusSchema = z.enum(["pending", "syncing", "synced", "failed"]);
 
+export const DentalPatientFinanceModuleTreatmentAppointmentLinkSchema = z.object({
+  id: z.string().uuid(),
+  appointmentId: z.union([z.string().uuid(), z.null()])
+});
+
+export const DentalPatientFinanceModuleTreatmentOptionGroupSchema = z.object({
+  optionGroupId: z.string().uuid(),
+  options: z.array(DentalPatientFinanceModuleTreatmentOptionSchema)
+});
+
 export const DentalPatientFinanceModuleTreatmentPlanSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -2133,9 +2195,10 @@ export const DentalPatientFinanceModuleTreatmentPlanSchema = z.object({
   updatedBy: z.string().uuid().optional(),
   patientId: z.string().uuid(),
   providerId: z.string().uuid(),
-  status: z.enum(["draft", "presented", "approved", "partially_completed", "completed", "cancelled"]),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
   totalEstimateCents: z.number().int(),
   notes: z.union([z.string(), z.null()]),
+  cdtCodeSetYear: z.number().int(),
   presentedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
   approvedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
 });
@@ -2183,15 +2246,30 @@ export const DentalPatientFinanceModuleTreatmentPlanApprovalResultSchema = z.obj
   updatedBy: z.string().uuid().optional(),
   patientId: z.string().uuid(),
   providerId: z.string().uuid(),
-  status: z.enum(["draft", "presented", "approved", "partially_completed", "completed", "cancelled"]),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
   totalEstimateCents: z.number().int(),
   notes: z.union([z.string(), z.null()]),
+  cdtCodeSetYear: z.number().int(),
   presentedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
   approvedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
 })
 });
 
-export const DentalPatientFinanceModuleTreatmentPlanStatusSchema = z.enum(["draft", "presented", "approved", "partially_completed", "completed", "cancelled"]);
+export const DentalPatientFinanceModuleTreatmentPlanStatusSchema = z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]);
+
+export const DentalPatientFinanceModuleTreatmentPlanStatusHistoryEntrySchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  treatmentPlanId: z.string().uuid(),
+  fromStatus: z.union([z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]), z.null()]),
+  toStatus: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]),
+  changedByPersonId: z.string().uuid(),
+  changedAt: z.string().datetime().transform((str) => new Date(str))
+});
 
 export const DentalPatientFinanceModuleUpdateClaimStatusRequestSchema = z.object({
   status: z.enum(["draft", "ready", "submitted", "accepted", "rejected"])
@@ -2216,7 +2294,7 @@ export const DentalPatientFinanceModuleUpdateSyncLogRequestSchema = z.object({
 });
 
 export const DentalPatientFinanceModuleUpdateTreatmentPlanRequestSchema = z.object({
-  status: z.enum(["draft", "presented", "approved", "partially_completed", "completed", "cancelled"]).optional(),
+  status: z.enum(["draft", "presented", "approved", "rejected", "scheduled", "partially_completed", "completed", "cancelled"]).optional(),
   totalEstimateCents: z.number().int().gte(0).optional(),
   notes: z.string().optional()
 });
@@ -2252,6 +2330,24 @@ export const DentalPatientModuleBulkArchiveDentalPatientsResponseSchema = z.obje
   results: z.array(DentalPatientModuleBulkArchiveResultSchema),
   successCount: z.number().int(),
   failCount: z.number().int()
+});
+
+export const DentalPatientModuleCommunicationChannelConsentSchema = z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
+});
+
+export const DentalPatientModuleCommunicationConsentResponseSchema = z.object({
+  registrationConsent: z.boolean(),
+  channels: z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
+}),
+  channelsUpdatedAt: z.union([z.string(), z.null()])
 });
 
 export const DentalPatientModuleCreateDentalPatientRequestSchema = z.object({
@@ -2302,7 +2398,14 @@ export const DentalPatientModuleCreateDentalPatientResponseSchema = z.object({
   followUpNotes: z.array(DentalPatientModuleFollowUpNoteSchema).optional(),
   consent: z.object({
   registrationConsent: z.boolean(),
-  capturedAt: z.string()
+  capturedAt: z.string(),
+  channels: z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
+}).optional(),
+  channelsUpdatedAt: z.string().optional()
 }).optional(),
   warning: DentalPatientModuleDuplicateWarningSchema.optional()
 });
@@ -2331,7 +2434,14 @@ export const DentalPatientModuleDentalPatientSchema = z.object({
   followUpNotes: z.array(DentalPatientModuleFollowUpNoteSchema).optional(),
   consent: z.object({
   registrationConsent: z.boolean(),
-  capturedAt: z.string()
+  capturedAt: z.string(),
+  channels: z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
+}).optional(),
+  channelsUpdatedAt: z.string().optional()
 }).optional()
 });
 
@@ -2468,7 +2578,21 @@ export const DentalPatientModuleListFollowUpNotesResponseSchema = z.object({
 
 export const DentalPatientModulePersonConsentInfoSchema = z.object({
   registrationConsent: z.boolean(),
-  capturedAt: z.string()
+  capturedAt: z.string(),
+  channels: z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
+}).optional(),
+  channelsUpdatedAt: z.string().optional()
+});
+
+export const DentalPatientModuleUpdateCommunicationConsentRequestSchema = z.object({
+  sms: z.boolean().optional(),
+  email: z.boolean().optional(),
+  phone: z.boolean().optional(),
+  marketing: z.boolean().optional()
 });
 
 export const DentalPatientModuleUpdateDentalPatientRequestSchema = z.object({
@@ -16732,6 +16856,20 @@ export const ImportedPMDSchema = z.object({
   safetyFloorMerged: z.boolean()
 });
 
+export const InformedRefusalSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  version: z.number().int(),
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  refusingMemberId: z.string().uuid(),
+  procedureDescription: z.string(),
+  refusalReason: z.string(),
+  patientAcknowledgement: z.string(),
+  refusedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const InternalServerErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -16818,6 +16956,9 @@ export const LabOrderSchema = z.object({
   toothFdi: z.string().optional(),
   labName: z.string(),
   description: z.string(),
+  shade: z.string().optional(),
+  material: z.string().optional(),
+  dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   status: LabOrderStatusSchema,
   orderedAt: z.string().datetime().transform((str) => new Date(str)),
   expectedDeliveryDate: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -16923,6 +17064,17 @@ export const MedicalHistoryEntrySchema = z.object({
   onsetDate: z.string().optional(),
   resolvedDate: z.string().optional(),
   active: z.boolean()
+});
+
+export const MedicalHistoryReviewSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  version: z.number().int(),
+  patientId: UUIDSchema,
+  asaClassification: z.enum(["I", "II", "III", "IV", "V", "VI"]).optional(),
+  asaEmergency: z.boolean(),
+  reviewedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
 export const MessageTypeSchema = z.enum(["text", "system", "video_call"]);
@@ -17306,6 +17458,18 @@ export const PerioToothReadingSchema = z.object({
   bopLC: z.boolean().optional(),
   bopLD: z.boolean().optional(),
   recession: z.number().int().gte(-5).lte(20).optional(),
+  gmBM: z.number().int().gte(-5).lte(20).optional(),
+  gmBC: z.number().int().gte(-5).lte(20).optional(),
+  gmBD: z.number().int().gte(-5).lte(20).optional(),
+  gmLM: z.number().int().gte(-5).lte(20).optional(),
+  gmLC: z.number().int().gte(-5).lte(20).optional(),
+  gmLD: z.number().int().gte(-5).lte(20).optional(),
+  calBM: z.union([z.number().int(), z.null()]).optional(),
+  calBC: z.union([z.number().int(), z.null()]).optional(),
+  calBD: z.union([z.number().int(), z.null()]).optional(),
+  calLM: z.union([z.number().int(), z.null()]).optional(),
+  calLC: z.union([z.number().int(), z.null()]).optional(),
+  calLD: z.union([z.number().int(), z.null()]).optional(),
   mobility: z.number().int(),
   furcation: z.number().int(),
   plaque: z.boolean(),
@@ -17331,6 +17495,12 @@ export const PerioChartSchema = z.object({
   createdAt: z.string().datetime().transform((str) => new Date(str)),
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
+
+export const PerioExtentSchema = z.enum(["localized", "generalized", "molar_incisor"]);
+
+export const PerioGradeSchema = z.enum(["A", "B", "C"]);
+
+export const PerioStageSchema = z.enum(["I", "II", "III", "IV"]);
 
 export const PersonCreateRequestSchema = z.object({
   firstName: z.string().min(1).max(50),
@@ -17519,6 +17689,15 @@ export const RateLimitErrorSchema = z.object({
   windowSize: z.number().int()
 });
 
+export const RecordConsentRefusalRequestSchema = z.object({
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  refusingMemberId: UUIDSchema,
+  procedureDescription: z.string(),
+  refusalReason: z.string(),
+  patientAcknowledgement: z.string()
+});
+
 export const RecordDentalPaymentRequestSchema = z.object({
   amountCents: z.number().int().gte(1),
   method: PaymentMethodSchema,
@@ -17526,6 +17705,12 @@ export const RecordDentalPaymentRequestSchema = z.object({
   recordedByMemberId: UUIDSchema,
   paymentDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   notes: z.string().optional()
+});
+
+export const RecordMedicalHistoryReviewRequestSchema = z.object({
+  patientId: UUIDSchema,
+  asaClassification: AsaClassificationSchema.optional(),
+  asaEmergency: z.boolean().optional()
 });
 
 export const RecurrencePatternSchema = z.object({
@@ -17812,6 +17997,9 @@ export const UpdateInvoiceRequestSchema = z.object({
 
 export const UpdateLabOrderRequestSchema = z.object({
   status: LabOrderStatusSchema.optional(),
+  shade: z.string().optional(),
+  material: z.string().optional(),
+  dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   expectedDeliveryDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   cancelReason: z.string().optional(),
   isDefective: z.boolean().optional()
@@ -17948,6 +18136,12 @@ export const UpsertToothReadingRequestSchema = z.object({
   bopLC: z.boolean().optional(),
   bopLD: z.boolean().optional(),
   recession: z.number().int().gte(-5).lte(20).optional(),
+  gmBM: z.number().int().gte(-5).lte(20).optional(),
+  gmBC: z.number().int().gte(-5).lte(20).optional(),
+  gmBD: z.number().int().gte(-5).lte(20).optional(),
+  gmLM: z.number().int().gte(-5).lte(20).optional(),
+  gmLC: z.number().int().gte(-5).lte(20).optional(),
+  gmLD: z.number().int().gte(-5).lte(20).optional(),
   mobility: z.number().int().optional(),
   furcation: z.number().int().optional(),
   plaque: z.boolean().optional(),
@@ -18995,6 +19189,18 @@ export const ListMedicalHistoryResponse = z.object({
 })
 });
 
+export const RecordMedicalHistoryReviewBody = RecordMedicalHistoryReviewRequestSchema;
+export type RecordMedicalHistoryReviewBody = z.infer<typeof RecordMedicalHistoryReviewBody>;
+
+export const RecordMedicalHistoryReviewResponse = MedicalHistoryReviewSchema;
+
+export const GetMedicalHistoryReviewQuery = z.object({
+  patientId: UUIDSchema,
+});
+export type GetMedicalHistoryReviewQuery = z.infer<typeof GetMedicalHistoryReviewQuery>;
+
+export const GetMedicalHistoryReviewResponse = MedicalHistoryReviewSchema;
+
 export const UpdateMedicalHistoryEntryParams = z.object({
   entryId: UUIDSchema,
 });
@@ -19583,6 +19789,23 @@ export type UpdateClaimStatusBody = z.infer<typeof UpdateClaimStatusBody>;
 
 export const UpdateClaimStatusResponse = z.union([DentalPatientFinanceModuleClaimDraftSchema, ErrorResponseSchema]);
 
+export const GetPatientCommunicationConsentParams = z.object({
+  patientId: UUIDSchema,
+});
+export type GetPatientCommunicationConsentParams = z.infer<typeof GetPatientCommunicationConsentParams>;
+
+export const GetPatientCommunicationConsentResponse = DentalPatientModuleCommunicationConsentResponseSchema;
+
+export const UpdatePatientCommunicationConsentParams = z.object({
+  patientId: UUIDSchema,
+});
+export type UpdatePatientCommunicationConsentParams = z.infer<typeof UpdatePatientCommunicationConsentParams>;
+
+export const UpdatePatientCommunicationConsentBody = DentalPatientModuleUpdateCommunicationConsentRequestSchema;
+export type UpdatePatientCommunicationConsentBody = z.infer<typeof UpdatePatientCommunicationConsentBody>;
+
+export const UpdatePatientCommunicationConsentResponse = DentalPatientModuleCommunicationConsentResponseSchema;
+
 export const CreatePatientContactParams = z.object({
   patientId: UUIDSchema,
 });
@@ -19770,6 +19993,25 @@ export type UpdateTaskBody = z.infer<typeof UpdateTaskBody>;
 
 export const UpdateTaskResponse = z.union([DentalPatientEngagementModulePatientTaskSchema, ErrorResponseSchema]);
 
+export const ListTreatmentOptionGroupParams = z.object({
+  patientId: UUIDSchema,
+  optionGroupId: UUIDSchema,
+});
+export type ListTreatmentOptionGroupParams = z.infer<typeof ListTreatmentOptionGroupParams>;
+
+export const ListTreatmentOptionGroupResponse = z.union([DentalPatientFinanceModuleTreatmentOptionGroupSchema, ErrorResponseSchema]);
+
+export const AcceptTreatmentOptionParams = z.object({
+  patientId: UUIDSchema,
+  optionGroupId: UUIDSchema,
+});
+export type AcceptTreatmentOptionParams = z.infer<typeof AcceptTreatmentOptionParams>;
+
+export const AcceptTreatmentOptionBody = DentalPatientFinanceModuleAcceptTreatmentOptionRequestSchema;
+export type AcceptTreatmentOptionBody = z.infer<typeof AcceptTreatmentOptionBody>;
+
+export const AcceptTreatmentOptionResponse = z.union([DentalPatientFinanceModuleAcceptTreatmentOptionResultSchema, ErrorResponseSchema]);
+
 export const GetTreatmentPlanParams = z.object({
   patientId: UUIDSchema,
 });
@@ -19834,6 +20076,14 @@ export type ApproveTreatmentPlanBody = z.infer<typeof ApproveTreatmentPlanBody>;
 
 export const ApproveTreatmentPlanResponse = ErrorResponseSchema;
 
+export const ListTreatmentPlanStatusHistoryParams = z.object({
+  patientId: UUIDSchema,
+  planId: UUIDSchema,
+});
+export type ListTreatmentPlanStatusHistoryParams = z.infer<typeof ListTreatmentPlanStatusHistoryParams>;
+
+export const ListTreatmentPlanStatusHistoryResponse = z.union([z.array(DentalPatientFinanceModuleTreatmentPlanStatusHistoryEntrySchema), ErrorResponseSchema]);
+
 export const ListPatientConditionsParams = z.object({
   patientId: UUIDSchema,
 });
@@ -19857,6 +20107,25 @@ export const ListPatientConditionsResponse = z.object({
   hasPreviousPage: z.boolean()
 })
 });
+
+export const AttachTreatmentAppointmentParams = z.object({
+  patientId: UUIDSchema,
+  treatmentId: UUIDSchema,
+});
+export type AttachTreatmentAppointmentParams = z.infer<typeof AttachTreatmentAppointmentParams>;
+
+export const AttachTreatmentAppointmentBody = DentalPatientFinanceModuleAttachTreatmentAppointmentRequestSchema;
+export type AttachTreatmentAppointmentBody = z.infer<typeof AttachTreatmentAppointmentBody>;
+
+export const AttachTreatmentAppointmentResponse = z.union([DentalPatientFinanceModuleTreatmentAppointmentLinkSchema, ErrorResponseSchema]);
+
+export const DetachTreatmentAppointmentParams = z.object({
+  patientId: UUIDSchema,
+  treatmentId: UUIDSchema,
+});
+export type DetachTreatmentAppointmentParams = z.infer<typeof DetachTreatmentAppointmentParams>;
+
+export const DetachTreatmentAppointmentResponse = z.union([DentalPatientFinanceModuleTreatmentAppointmentLinkSchema, ErrorResponseSchema]);
 
 export const ListPatientVisitsParams = z.object({
   patientId: UUIDSchema,
@@ -19898,6 +20167,9 @@ export const CompletePerioChartParams = z.object({
   chartId: UUIDSchema,
 });
 export type CompletePerioChartParams = z.infer<typeof CompletePerioChartParams>;
+
+export const CompletePerioChartBody = CompletePerioChartRequestSchema;
+export type CompletePerioChartBody = z.infer<typeof CompletePerioChartBody>;
 
 export const CompletePerioChartResponse = CompletePerioChartResponseSchema;
 
@@ -20201,6 +20473,35 @@ export const UpdateToothBody = UpdateToothRequestSchema;
 export type UpdateToothBody = z.infer<typeof UpdateToothBody>;
 
 export const UpdateToothResponse = DentalChartSchema;
+
+export const RecordConsentRefusalParams = z.object({
+  visitId: UUIDSchema,
+});
+export type RecordConsentRefusalParams = z.infer<typeof RecordConsentRefusalParams>;
+
+export const RecordConsentRefusalBody = RecordConsentRefusalRequestSchema;
+export type RecordConsentRefusalBody = z.infer<typeof RecordConsentRefusalBody>;
+
+export const RecordConsentRefusalResponse = InformedRefusalSchema;
+
+export const ListConsentRefusalsParams = z.object({
+  visitId: UUIDSchema,
+});
+export type ListConsentRefusalsParams = z.infer<typeof ListConsentRefusalsParams>;
+
+export const ListConsentRefusalsResponse = z.object({
+  data: z.array(InformedRefusalSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
 
 export const CreateConsentFormParams = z.object({
   visitId: UUIDSchema,
