@@ -58,6 +58,18 @@ export async function updateTreatmentPlan(ctx: any): Promise<Response> {
   const plan = await repo.update(planId, patientId, updates as any);
   if (!plan) throw new NotFoundError('Treatment plan not found');
 
+  // P2-8: append a status-history row whenever the status actually changes.
+  if (body['status'] !== undefined && body['status'] !== existing.status) {
+    await repo.recordStatusHistory({
+      treatmentPlanId: planId,
+      fromStatus: existing.status,
+      toStatus: body['status'] as TreatmentPlanStatus,
+      changedByPersonId: user.id,
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
+  }
+
   logger?.info({ action: 'updateTreatmentPlan', patientId, planId, updates }, 'Treatment plan updated');
 
   return ctx.json(plan, 200);

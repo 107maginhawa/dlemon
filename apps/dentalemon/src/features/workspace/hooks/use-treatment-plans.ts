@@ -15,6 +15,9 @@ export type TreatmentPlanStatus =
   | 'draft'
   | 'presented'
   | 'approved'
+  // P2-8: explicit case-acceptance + scheduling states.
+  | 'rejected'
+  | 'scheduled'
   | 'partially_completed'
   | 'completed'
   | 'cancelled';
@@ -26,6 +29,8 @@ export interface TreatmentPlanDoc {
   status: TreatmentPlanStatus;
   totalEstimateCents?: number;
   notes?: string;
+  /** P2-10: ADA CDT code-set year the plan's codes were authored against. */
+  cdtCodeSetYear?: number;
   createdAt: string;
   updatedAt: string;
 }
