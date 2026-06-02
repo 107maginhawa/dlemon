@@ -27,6 +27,8 @@ export interface Treatment {
   note?: string;
   clinicalNotes?: string | null;
   createdAt: string;
+  /** P1-21: the scheduled appointment this planned item is booked into, if any. */
+  appointmentId?: string | null;
 }
 
 interface UseTreatmentsOptions {

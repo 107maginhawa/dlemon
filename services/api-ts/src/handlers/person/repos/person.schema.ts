@@ -67,12 +67,28 @@ export interface ContactInfo {
   phone?: string;
 }
 
-// V-PAT-005: persisted registration consent. Single-consent model (NOT the
-// fictional 4-consent split) — captures whether the patient gave registration
-// consent and when. Additive; defaults to undefined for non-dental persons.
+// V-PAT-005: persisted registration consent. Additive; defaults to undefined for
+// non-dental persons.
+//
+// P1-28: per-channel communication consent. The registration consent remains the
+// medico-legal "may we treat / hold a record" gate; `channels` captures the
+// separate, individually-revocable opt-ins for outbound communication
+// (sms/email/phone/marketing) required once automated reminders/marketing ship.
+// Each channel is optional so existing records (channels === undefined) are read
+// as "not yet captured" rather than "opted out".
+export interface CommunicationChannelConsent {
+  sms?: boolean;
+  email?: boolean;
+  phone?: boolean;
+  marketing?: boolean;
+}
+
 export interface PersonConsent {
   registrationConsent: boolean;
   capturedAt: string; // ISO 8601 timestamp
+  // P1-28: per-channel communication consent + when it was last updated.
+  channels?: CommunicationChannelConsent;
+  channelsUpdatedAt?: string; // ISO 8601 timestamp
 }
 
 // MaybeStoredFile type - matches TypeSpec MaybeStoredFile model

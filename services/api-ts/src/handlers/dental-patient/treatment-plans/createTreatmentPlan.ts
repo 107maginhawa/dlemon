@@ -8,6 +8,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
+import { DEFAULT_CDT_CODE_SET_YEAR } from '../repos/treatment-plan.schema';
 import type { DatabaseInstance } from '@/core/database';
 
 export async function createTreatmentPlan(ctx: any): Promise<Response> {
@@ -39,6 +40,18 @@ export async function createTreatmentPlan(ctx: any): Promise<Response> {
     status: 'draft',
     totalEstimateCents: body.totalEstimateCents ?? 0,
     notes: body.notes ?? null,
+    // P2-10: stamp the CDT code-set year (caller override, else current default).
+    cdtCodeSetYear: body.cdtCodeSetYear ?? DEFAULT_CDT_CODE_SET_YEAR,
+    createdBy: user.id,
+    updatedBy: user.id,
+  });
+
+  // P2-8: seed the status-history timeline with the initial draft creation event.
+  await repo.recordStatusHistory({
+    treatmentPlanId: plan.id,
+    fromStatus: null,
+    toStatus: 'draft',
+    changedByPersonId: user.id,
     createdBy: user.id,
     updatedBy: user.id,
   });

@@ -101,10 +101,58 @@ namespace DentalPatientModule {
     conditionCount: int32;
   }
 
-  @doc("Persisted registration consent (single-consent model)")
+  @doc("Per-channel communication consent (P1-28)")
+  model CommunicationChannelConsent {
+    @doc("Consent to SMS communication")
+    sms?: boolean;
+
+    @doc("Consent to email communication")
+    email?: boolean;
+
+    @doc("Consent to phone communication")
+    phone?: boolean;
+
+    @doc("Consent to marketing communication")
+    marketing?: boolean;
+  }
+
+  @doc("Persisted consent: registration gate + per-channel communication consent")
   model PersonConsentInfo {
     registrationConsent: boolean;
     capturedAt: string;
+
+    @doc("Per-channel communication consent (P1-28)")
+    channels?: CommunicationChannelConsent;
+
+    @doc("When per-channel consent was last updated (ISO 8601)")
+    channelsUpdatedAt?: string;
+  }
+
+  @doc("A patient's communication-consent state (P1-28)")
+  model CommunicationConsentResponse {
+    @doc("Registration consent gate")
+    registrationConsent: boolean;
+
+    @doc("Per-channel communication consent")
+    channels: CommunicationChannelConsent;
+
+    @doc("When per-channel consent was last updated (ISO 8601), if ever")
+    channelsUpdatedAt: string | null;
+  }
+
+  @doc("Body to update per-channel communication consent (partial; omitted channels unchanged)")
+  model UpdateCommunicationConsentRequest {
+    @doc("Consent to SMS communication")
+    sms?: boolean;
+
+    @doc("Consent to email communication")
+    email?: boolean;
+
+    @doc("Consent to phone communication")
+    phone?: boolean;
+
+    @doc("Consent to marketing communication")
+    marketing?: boolean;
   }
 
   @doc("Duplicate warning on patient creation")
@@ -518,5 +566,30 @@ namespace DentalPatientModule {
       @statusCode statusCode: 201;
       @body response: InitializeDentitionResponse;
     } | ApiUnauthorizedResponse | ApiNotFoundResponse;
+
+    @doc("Get a patient's per-channel communication consent (P1-28)")
+    @get
+    @route("/{patientId}/communication-consent")
+    @operationId("getPatientCommunicationConsent")
+    @extension("x-security-required-roles", #["user"])
+    @useAuth(BearerAuth)
+    getPatientCommunicationConsent(@path patientId: UUID): {
+      @statusCode statusCode: 200;
+      @body response: CommunicationConsentResponse;
+    } | ApiUnauthorizedResponse | ApiNotFoundResponse;
+
+    @doc("Update a patient's per-channel communication consent (P1-28)")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/communication-consent")
+    @operationId("updatePatientCommunicationConsent")
+    @extension("x-security-required-roles", #["user"])
+    @useAuth(BearerAuth)
+    updatePatientCommunicationConsent(
+      @path patientId: UUID,
+      @body body: UpdateCommunicationConsentRequest,
+    ): {
+      @statusCode statusCode: 200;
+      @body response: CommunicationConsentResponse;
+    } | ApiUnauthorizedResponse | ApiNotFoundResponse | ApiForbiddenResponse;
   }
 }

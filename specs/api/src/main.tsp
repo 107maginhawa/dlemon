@@ -504,6 +504,14 @@ namespace MonobaseAPI {
   interface DentalTreatmentPlanHeaderMgmt extends DentalPatientFinanceModule.TreatmentPlanHeaderManagement {}
 
   @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalTreatmentApptLinkMgmt extends DentalPatientFinanceModule.TreatmentAppointmentLinkManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalTreatmentOptionMgmt extends DentalPatientFinanceModule.TreatmentOptionManagement {}
+
+  @tag("Dental:Patient")
   @route("/dental/sync-logs")
   interface DentalSyncLogMgmt extends DentalPatientFinanceModule.SyncLogManagement {}
 

@@ -64,6 +64,15 @@ export async function approveTreatmentPlan(ctx: any): Promise<Response> {
   await repo.linkPendingTreatments(planId, patientId);
   if (plan.status === 'presented') {
     await repo.update(planId, patientId, { status: 'approved', approvedAt: new Date() });
+    // P2-8: capture the presented → approved transition on the status timeline.
+    await repo.recordStatusHistory({
+      treatmentPlanId: planId,
+      fromStatus: 'presented',
+      toStatus: 'approved',
+      changedByPersonId: user.id,
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
   }
 
   // Derive completion (covers the rare case where linked items are already done).

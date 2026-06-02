@@ -12,6 +12,7 @@ import {
   type TreatmentPlanStatus,
   type TreatmentPlanDoc,
 } from '../hooks/use-treatment-plans';
+import { useTreatmentOptions } from '../hooks/use-treatment-options';
 import { formatCents } from '@/lib/format-currency';
 
 // ---------------------------------------------------------------------------
@@ -22,16 +23,25 @@ interface TreatmentPlansSheetProps {
   patientId: string;
   open: boolean;
   onClose: () => void;
+  /**
+   * P1-19: alternate-case option groups (e.g. implant vs bridge) to present for
+   * acceptance. Optional — when omitted the alternate-cases section is hidden.
+   */
+  optionGroupIds?: string[];
 }
 
 // ---------------------------------------------------------------------------
 // FSM config
 // ---------------------------------------------------------------------------
 
+// P2-8: lifecycle mirrors TREATMENT_PLAN_FSM in treatment-plan.schema.ts —
+// presented can be approved or rejected; approved can be scheduled to the calendar.
 const FSM: Record<TreatmentPlanStatus, TreatmentPlanStatus[]> = {
   draft: ['presented', 'cancelled'],
-  presented: ['approved', 'cancelled'],
-  approved: ['partially_completed', 'cancelled'],
+  presented: ['approved', 'rejected', 'cancelled'],
+  approved: ['scheduled', 'partially_completed', 'cancelled'],
+  scheduled: ['partially_completed', 'cancelled'],
+  rejected: [],
   partially_completed: ['completed', 'cancelled'],
   completed: [],
   cancelled: [],
@@ -41,6 +51,8 @@ const TRANSITION_LABELS: Record<TreatmentPlanStatus, string> = {
   draft: 'Draft',
   presented: 'Present',
   approved: 'Approve',
+  rejected: 'Reject',
+  scheduled: 'Schedule',
   partially_completed: 'Start',
   completed: 'Complete',
   cancelled: 'Cancel',
@@ -50,6 +62,8 @@ const STATUS_DISPLAY: Record<TreatmentPlanStatus, string> = {
   draft: 'Draft',
   presented: 'Presented',
   approved: 'Approved',
+  rejected: 'Rejected',
+  scheduled: 'Scheduled',
   partially_completed: 'In Progress',
   completed: 'Completed',
   cancelled: 'Cancelled',
@@ -59,6 +73,8 @@ const STATUS_BADGE_CLASS: Record<TreatmentPlanStatus, string> = {
   draft: 'bg-gray-100 text-gray-600',
   presented: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-700',
+  scheduled: 'bg-blue-50 text-blue-700',
   partially_completed: 'bg-blue-100 text-blue-800',
   completed: 'bg-green-50 text-green-500',
   cancelled: 'bg-red-50 text-red-400',
@@ -95,6 +111,10 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
             Estimate: {formatCents(plan.totalEstimateCents)}
           </p>
         )}
+        {/* P2-10: CDT code-set year stamp */}
+        {plan.cdtCodeSetYear !== undefined && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground">CDT {plan.cdtCodeSetYear}</p>
+        )}
         {plan.notes && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{plan.notes}</p>
         )}
@@ -109,7 +129,7 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
               disabled={isUpdating}
               onClick={() => onUpdate(plan.id, { status: next })}
               className={`rounded px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                next === 'cancelled'
+                next === 'cancelled' || next === 'rejected'
                   ? 'bg-red-50 text-red-600 hover:bg-red-100'
                   : 'bg-muted hover:bg-muted/80 text-foreground'
               }`}
@@ -124,10 +144,69 @@ function PlanRow({ plan, onUpdate, isUpdating }: PlanRowProps) {
 }
 
 // ---------------------------------------------------------------------------
+// P1-19 — Alternate cases (implant vs bridge, …)
+// ---------------------------------------------------------------------------
+
+function OptionGroupCard({ patientId, optionGroupId }: { patientId: string; optionGroupId: string }) {
+  const { optionGroup, isLoading, acceptOption, isAccepting } = useTreatmentOptions(
+    patientId,
+    optionGroupId,
+  );
+
+  if (isLoading || !optionGroup || optionGroup.options.length === 0) return null;
+
+  const accepted = optionGroup.options.find((o) => o.status === 'planned');
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <p className="mb-2 text-xs font-semibold text-muted-foreground">Alternate options</p>
+      <div className="flex flex-col gap-2">
+        {optionGroup.options.map((opt) => {
+          const isAccepted = opt.status === 'planned';
+          const isDeclined = opt.status === 'declined';
+          return (
+            <div key={opt.id} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate text-sm">Option {opt.id.slice(0, 8)}</span>
+                {opt.recommended && (
+                  <span className="inline-flex items-center rounded-full bg-lemon px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                    Recommended
+                  </span>
+                )}
+                {isAccepted && (
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                    Accepted
+                  </span>
+                )}
+                {isDeclined && (
+                  <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+                    Declined
+                  </span>
+                )}
+              </div>
+              {!accepted && !isDeclined && (
+                <button
+                  type="button"
+                  disabled={isAccepting}
+                  onClick={() => acceptOption(opt.id)}
+                  className="shrink-0 rounded bg-muted px-2 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
+                >
+                  Accept
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
-export function TreatmentPlansSheet({ patientId, open, onClose }: TreatmentPlansSheetProps) {
+export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }: TreatmentPlansSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -201,6 +280,15 @@ export function TreatmentPlansSheet({ patientId, open, onClose }: TreatmentPlans
                   onUpdate={(id, body) => updatePlan(id, body)}
                   isUpdating={isUpdating}
                 />
+              ))}
+            </div>
+          )}
+
+          {/* P1-19: alternate-case option groups */}
+          {optionGroupIds && optionGroupIds.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2">
+              {optionGroupIds.map((gid) => (
+                <OptionGroupCard key={gid} patientId={patientId} optionGroupId={gid} />
               ))}
             </div>
           )}

@@ -46,6 +46,9 @@ namespace DentalPatientFinanceModule {
     draft: "draft",
     presented: "presented",
     approved: "approved",
+    // P2-8: explicit case-acceptance + scheduling states.
+    rejected: "rejected",
+    scheduled: "scheduled",
     partially_completed: "partially_completed",
     completed: "completed",
     cancelled: "cancelled",
@@ -74,6 +77,9 @@ namespace DentalPatientFinanceModule {
 
     @doc("Free-text notes")
     notes: string | null;
+
+    @doc("ADA CDT code-set year the plan's procedure codes were authored against (P2-10)")
+    cdtCodeSetYear: int32;
 
     @doc("When the plan was presented to the patient (ISO 8601 UTC)")
     presentedAt: utcDateTime | null;
@@ -106,6 +112,24 @@ namespace DentalPatientFinanceModule {
     approvedAt: utcDateTime;
   }
 
+  @doc("An append-only treatment-plan status-transition record (P2-8)")
+  model TreatmentPlanStatusHistoryEntry extends BaseEntity {
+    @doc("Treatment plan this transition belongs to")
+    treatmentPlanId: UUID;
+
+    @doc("Status before the transition (null on the initial 'draft' creation event)")
+    fromStatus: TreatmentPlanStatus | null;
+
+    @doc("Status after the transition")
+    toStatus: TreatmentPlanStatus;
+
+    @doc("Person who performed the transition")
+    changedByPersonId: UUID;
+
+    @doc("When the transition occurred (ISO 8601 UTC)")
+    changedAt: utcDateTime;
+  }
+
   @doc("Result of approving a treatment plan: the approval record plus the recomputed plan")
   model TreatmentPlanApprovalResult {
     @doc("The newly-written approval record")
@@ -126,6 +150,11 @@ namespace DentalPatientFinanceModule {
 
     @doc("Optional free-text notes")
     notes?: string;
+
+    @doc("ADA CDT code-set year stamp (P2-10; defaults to the current default year)")
+    @minValue(2000)
+    @maxValue(2100)
+    cdtCodeSetYear?: int32;
   }
 
   @doc("Body to update a treatment plan (at least one field required)")
@@ -221,6 +250,149 @@ namespace DentalPatientFinanceModule {
       @body body: ApproveTreatmentPlanRequest,
     ):
       | ApiCreatedResponse<TreatmentPlanApprovalResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a treatment plan's status-transition history (P2-8)")
+    @operationId("listTreatmentPlanStatusHistory")
+    @get
+    @route("/{patientId}/treatment-plans/{planId}/status-history")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listTreatmentPlanStatusHistory(@path patientId: UUID, @path planId: UUID):
+      | ApiOkResponse<TreatmentPlanStatusHistoryEntry[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 1b — PLAN → APPOINTMENT LINKAGE (P1-21)
+  // ==========================================================================
+
+  @doc("Body to attach a planned treatment item to a scheduled appointment")
+  model AttachTreatmentAppointmentRequest {
+    @doc("Appointment to link the treatment to (must belong to the same patient)")
+    appointmentId: UUID;
+  }
+
+  @doc("Result of attaching/detaching a treatment's appointment link")
+  model TreatmentAppointmentLink {
+    @doc("Treatment item that was (un)linked")
+    id: UUID;
+
+    @doc("The linked appointment, or null if detached")
+    appointmentId: UUID | null;
+  }
+
+  @doc("Plan item ↔ appointment scheduling linkage (P1-21)")
+  interface TreatmentAppointmentLinkManagement {
+    @doc("Link a planned treatment item to a scheduled appointment")
+    @operationId("attachTreatmentAppointment")
+    @post
+    @route("/{patientId}/treatments/{treatmentId}/appointment")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    attachTreatmentAppointment(
+      @path patientId: UUID,
+      @path treatmentId: UUID,
+      @body body: AttachTreatmentAppointmentRequest,
+    ):
+      | ApiOkResponse<TreatmentAppointmentLink>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Unlink a planned treatment item from its appointment")
+    @operationId("detachTreatmentAppointment")
+    @delete
+    @route("/{patientId}/treatments/{treatmentId}/appointment")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    detachTreatmentAppointment(@path patientId: UUID, @path treatmentId: UUID):
+      | ApiOkResponse<TreatmentAppointmentLink>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 1c — ALTERNATE CASES / OPTION GROUPS (P1-19)
+  // ==========================================================================
+
+  @doc("One alternate-case treatment option within an option group")
+  model TreatmentOption {
+    @doc("Treatment item id")
+    id: UUID;
+
+    @doc("Item status (diagnosed/planned/declined/…)")
+    status: string;
+
+    @doc("Whether this is the clinician-recommended option")
+    recommended: boolean;
+  }
+
+  @doc("An alternate-case option group (e.g. implant vs bridge)")
+  model TreatmentOptionGroup {
+    @doc("Option-group identifier shared by mutually-exclusive options")
+    optionGroupId: UUID;
+
+    @doc("The options in the group")
+    options: TreatmentOption[];
+  }
+
+  @doc("Body to accept one option in an alternate-case group")
+  model AcceptTreatmentOptionRequest {
+    @doc("The chosen treatment; its siblings in the group are declined")
+    chosenTreatmentId: UUID;
+  }
+
+  @doc("Result of accepting an alternate-case option")
+  model AcceptTreatmentOptionResult {
+    @doc("Option-group identifier")
+    optionGroupId: UUID;
+
+    @doc("The accepted treatment")
+    chosenTreatmentId: UUID;
+
+    @doc("The option group's post-acceptance state")
+    options: TreatmentOption[];
+  }
+
+  @doc("Alternate-case / option-group management (P1-19)")
+  interface TreatmentOptionManagement {
+    @doc("List the alternate-case options in a group")
+    @operationId("listTreatmentOptionGroup")
+    @get
+    @route("/{patientId}/treatment-options/{optionGroupId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listTreatmentOptionGroup(@path patientId: UUID, @path optionGroupId: UUID):
+      | ApiOkResponse<TreatmentOptionGroup>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Accept one option; decline its non-terminal siblings")
+    @operationId("acceptTreatmentOption")
+    @post
+    @route("/{patientId}/treatment-options/{optionGroupId}/accept")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    acceptTreatmentOption(
+      @path patientId: UUID,
+      @path optionGroupId: UUID,
+      @body body: AcceptTreatmentOptionRequest,
+    ):
+      | ApiOkResponse<AcceptTreatmentOptionResult>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
