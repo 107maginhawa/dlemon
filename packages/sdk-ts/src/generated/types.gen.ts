@@ -1172,6 +1172,11 @@ export type CheckInResponse = {
     visitId: Uuid;
 };
 
+/**
+ * Per-procedure claim-line coverage status
+ */
+export type ClaimLineStatus = 'pending' | 'covered' | 'partial' | 'disallowed';
+
 export type CollectionsSummaryResponse = {
     totalCollectedCents: number;
     period: string;
@@ -1540,6 +1545,49 @@ export type ControlledSubstanceSchedule = 'none' | 'II' | 'III' | 'IV' | 'V';
  */
 export type CountryCode = string;
 
+/**
+ * A planned line for a coverage estimate
+ */
+export type CoverageEstimateLine = {
+    cdtCode: string;
+    billedAmountCents: number;
+    description?: string;
+};
+
+/**
+ * Per-line coverage estimate result
+ */
+export type CoverageEstimateLineResult = {
+    cdtCode: string;
+    description?: string;
+    billedAmountCents: number;
+    coveredCents: number;
+    patientPortionCents: number;
+    uncovered: boolean;
+};
+
+/**
+ * Body for a read-only coverage estimate (no persistence)
+ */
+export type CoverageEstimateRequest = {
+    patientId?: Uuid;
+    insuranceProfileId?: Uuid;
+    authorizationId?: Uuid;
+    lines: Array<CoverageEstimateLine>;
+};
+
+/**
+ * Coverage estimate result (covered vs patient portion)
+ */
+export type CoverageEstimateResult = {
+    estimatedCoveredCents: number;
+    estimatedPatientPortionCents: number;
+    estimatedBilledCents: number;
+    perLine: Array<CoverageEstimateLineResult>;
+    cappedByAnnualLimit: boolean;
+    uncoveredProcedures: Array<string>;
+};
+
 export type CreateAmendmentRequest = {
     visitId: Uuid;
     patientId: Uuid;
@@ -1822,6 +1870,39 @@ export type CreateHoldRequest = {
     providerId: Uuid;
     startAt: Date;
     visitType: VisitType;
+};
+
+/**
+ * A claim line on a create/add request
+ */
+export type CreateInsuranceClaimLineRequest = {
+    treatmentId?: Uuid;
+    invoiceLineItemId?: Uuid;
+    cdtCode: string;
+    description: string;
+    billedAmountCents: number;
+};
+
+/**
+ * Body to create an invoice-anchored claim
+ */
+export type CreateInsuranceClaimRequest = {
+    patientId: Uuid;
+    insuranceProfileId: Uuid;
+    /**
+     * Invoice to anchor the claim to; lines are derived from it when none supplied
+     */
+    invoiceId?: string;
+    visitId?: Uuid;
+    /**
+     * Optional coverage authorization (LOA) backing the claim
+     */
+    authorizationId?: string;
+    submissionChannel?: SubmissionChannel;
+    /**
+     * Inline claim lines (omit to derive from the invoice's line items)
+     */
+    lines?: Array<CreateInsuranceClaimLineRequest>;
 };
 
 /**
@@ -5469,6 +5550,111 @@ export type DentalPatientFinanceModuleClaimReadiness = {
 };
 
 /**
+ * Lifecycle of a coverage authorization (PH LOA)
+ */
+export type DentalPatientFinanceModuleCoverageAuthStatus = 'requested' | 'approved' | 'partial' | 'denied' | 'expired';
+
+/**
+ * A coverage authorization (HMO Letter of Authorization / approval record)
+ */
+export type DentalPatientFinanceModuleCoverageAuthorization = {
+    /**
+     * Unique identifier
+     */
+    id: string;
+    /**
+     * Entity version for optimistic locking
+     */
+    version: number;
+    /**
+     * Creation timestamp
+     */
+    createdAt: Date;
+    /**
+     * User who created the entity
+     */
+    createdBy?: string;
+    /**
+     * Last update timestamp
+     */
+    updatedAt: Date;
+    /**
+     * User who last updated the entity
+     */
+    updatedBy?: string;
+    /**
+     * Patient the authorization covers
+     */
+    patientId: string;
+    /**
+     * Insurance profile backing the authorization
+     */
+    insuranceProfileId: string;
+    /**
+     * Branch the authorization is scoped to
+     */
+    branchId: string;
+    /**
+     * Visit the authorization is anchored to, if any
+     */
+    visitId: string | null;
+    /**
+     * Treatment plan the authorization is anchored to, if any
+     */
+    treatmentPlanId: string | null;
+    /**
+     * Approval code / LOA number
+     */
+    loaNumber: string | null;
+    /**
+     * Authorization status
+     */
+    status: 'requested' | 'approved' | 'partial' | 'denied' | 'expired';
+    /**
+     * Date the authorization was approved (YYYY-MM-DD)
+     */
+    approvedAt: Date | null;
+    /**
+     * Date the authorization expires (YYYY-MM-DD)
+     */
+    validUntil: Date | null;
+    /**
+     * Approved coverage cap for this authorization, in centavos
+     */
+    approvedAmountCents: number | null;
+    /**
+     * Itemized covered procedures, if any
+     */
+    coveredProcedures: Array<DentalPatientFinanceModuleCoveredProcedure> | null;
+    /**
+     * Storage file id of the scanned LOA, if any
+     */
+    attachmentFileId: string | null;
+    /**
+     * Free-text notes
+     */
+    notes: string | null;
+};
+
+/**
+ * One covered-procedure entry on an itemized authorization
+ */
+export type DentalPatientFinanceModuleCoveredProcedure = {
+    /**
+     * CDT procedure code
+     */
+    cdtCode: string;
+    /**
+     * Approved amount for this procedure, in centavos
+     */
+    approvedAmountCents?: number;
+    /**
+     * Free-text note
+     */
+    note?: string;
+};
+
+/**
  * Body to create a case presentation from a presented plan
  */
 export type DentalPatientFinanceModuleCreateCasePresentationRequest = {
@@ -5510,6 +5696,56 @@ export type DentalPatientFinanceModuleCreateClaimDraftRequest = {
      * Fee amount in cents
      */
     feeAmountCents: number;
+    /**
+     * Free-text notes
+     */
+    notes?: string;
+};
+
+/**
+ * Body to capture a coverage authorization (LOA)
+ */
+export type DentalPatientFinanceModuleCreateCoverageAuthorizationRequest = {
+    /**
+     * Insurance profile backing the authorization
+     */
+    insuranceProfileId: string;
+    /**
+     * Visit the authorization is anchored to, if any
+     */
+    visitId?: string;
+    /**
+     * Treatment plan the authorization is anchored to, if any
+     */
+    treatmentPlanId?: string;
+    /**
+     * Approval code / LOA number
+     */
+    loaNumber?: string;
+    /**
+     * Initial status (default 'requested')
+     */
+    status?: 'requested' | 'approved' | 'partial' | 'denied' | 'expired';
+    /**
+     * Date the authorization was approved (YYYY-MM-DD)
+     */
+    approvedAt?: string;
+    /**
+     * Date the authorization expires (YYYY-MM-DD)
+     */
+    validUntil?: string;
+    /**
+     * Approved coverage cap, in centavos
+     */
+    approvedAmountCents?: number;
+    /**
+     * Itemized covered procedures, if any
+     */
+    coveredProcedures?: Array<DentalPatientFinanceModuleCoveredProcedure>;
+    /**
+     * Storage file id of the scanned LOA, if any
+     */
+    attachmentFileId?: string;
     /**
      * Free-text notes
      */
@@ -5570,6 +5806,22 @@ export type DentalPatientFinanceModuleCreateInsuranceProfileRequest = {
      * Free-text notes
      */
     notes?: string;
+    /**
+     * PH payer type (default hmo)
+     */
+    payerType?: 'hmo' | 'philhealth' | 'corporate' | 'self_pay_assist' | 'other';
+    /**
+     * Whether the clinic/branch is an accredited provider for this payer
+     */
+    accredited?: boolean;
+    /**
+     * Annual benefit cap in centavos
+     */
+    annualLimitCents?: number;
+    /**
+     * Annual benefit already consumed, in centavos
+     */
+    annualLimitUsedCents?: number;
 };
 
 /**
@@ -5831,12 +6083,33 @@ export type DentalPatientFinanceModuleInsuranceProfile = {
      * Free-text notes
      */
     notes: string | null;
+    /**
+     * PH payer type (P1-26; default hmo)
+     */
+    payerType: 'hmo' | 'philhealth' | 'corporate' | 'self_pay_assist' | 'other';
+    /**
+     * Whether the clinic/branch is an accredited provider for this payer
+     */
+    accredited: boolean | null;
+    /**
+     * Annual benefit cap in centavos, if any
+     */
+    annualLimitCents: number | null;
+    /**
+     * Annual benefit already consumed, in centavos
+     */
+    annualLimitUsedCents: number | null;
 };
 
 /**
  * Subscriber relationship to the patient
  */
 export type DentalPatientFinanceModuleInsuranceRelationship = 'self' | 'spouse' | 'child' | 'other';
+
+/**
+ * PH payer type (P1-26). hmo is the dominant model; philhealth is minimal.
+ */
+export type DentalPatientFinanceModulePayerType = 'hmo' | 'philhealth' | 'corporate' | 'self_pay_assist' | 'other';
 
 /**
  * Body to reject a presented case
@@ -6416,6 +6689,24 @@ export type DentalPatientFinanceModuleUpdateClaimStatusRequest = {
 };
 
 /**
+ * Body to transition a coverage authorization's status (FSM-validated)
+ */
+export type DentalPatientFinanceModuleUpdateCoverageAuthorizationStatusRequest = {
+    /**
+     * New status
+     */
+    status: 'requested' | 'approved' | 'partial' | 'denied' | 'expired';
+    /**
+     * Approved cap to set on approval/partial, in centavos
+     */
+    approvedAmountCents?: number;
+    /**
+     * Itemized covered procedures to set on approval/partial
+     */
+    coveredProcedures?: Array<DentalPatientFinanceModuleCoveredProcedure>;
+};
+
+/**
  * Body to update an insurance profile (at least one field required)
  */
 export type DentalPatientFinanceModuleUpdateInsuranceProfileRequest = {
@@ -6451,6 +6742,22 @@ export type DentalPatientFinanceModuleUpdateInsuranceProfileRequest = {
      * Free-text notes
      */
     notes?: string;
+    /**
+     * PH payer type
+     */
+    payerType?: 'hmo' | 'philhealth' | 'corporate' | 'self_pay_assist' | 'other';
+    /**
+     * Whether the clinic/branch is an accredited provider for this payer
+     */
+    accredited?: boolean;
+    /**
+     * Annual benefit cap in centavos
+     */
+    annualLimitCents?: number;
+    /**
+     * Annual benefit already consumed, in centavos
+     */
+    annualLimitUsedCents?: number;
 };
 
 /**
@@ -56407,6 +56714,92 @@ export type InformedRefusal = {
 };
 
 /**
+ * An invoice-anchored, multi-line HMO claim (the submittable unit)
+ */
+export type InsuranceClaim = {
+    id: Uuid;
+    patientId: Uuid;
+    insuranceProfileId: Uuid;
+    branchId: Uuid;
+    invoiceId?: Uuid;
+    visitId?: Uuid;
+    authorizationId?: Uuid;
+    claimNumber: string;
+    payerReference?: string;
+    status: InsuranceClaimStatus;
+    submissionChannel?: SubmissionChannel;
+    billedAmountCents: number;
+    approvedAmountCents?: number;
+    paidByPayerCents: number;
+    disallowedCents?: number;
+    patientPortionCents: number;
+    denialReason?: string;
+    submittedAt?: Date;
+    decisionAt?: Date;
+    paidAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+/**
+ * One per-procedure line on an insurance claim
+ */
+export type InsuranceClaimLine = {
+    id: Uuid;
+    claimId: Uuid;
+    treatmentId?: Uuid;
+    invoiceLineItemId?: Uuid;
+    cdtCode: string;
+    description: string;
+    billedAmountCents: number;
+    approvedAmountCents?: number;
+    paidAmountCents: number;
+    status: ClaimLineStatus;
+};
+
+/**
+ * Claim worklist page
+ */
+export type InsuranceClaimList = {
+    items: Array<InsuranceClaim>;
+    total: number;
+};
+
+/**
+ * Lifecycle of an invoice-anchored HMO claim (PH workflow)
+ */
+export type InsuranceClaimStatus = 'draft' | 'ready' | 'submitted' | 'under_review' | 'approved' | 'partially_paid' | 'paid' | 'denied' | 'appealed' | 'written_off';
+
+/**
+ * A claim with its line items (and any transition warnings)
+ */
+export type InsuranceClaimWithLines = {
+    id: Uuid;
+    patientId: Uuid;
+    insuranceProfileId: Uuid;
+    branchId: Uuid;
+    invoiceId?: Uuid;
+    visitId?: Uuid;
+    authorizationId?: Uuid;
+    claimNumber: string;
+    payerReference?: string;
+    status: InsuranceClaimStatus;
+    submissionChannel?: SubmissionChannel;
+    billedAmountCents: number;
+    approvedAmountCents?: number;
+    paidByPayerCents: number;
+    disallowedCents?: number;
+    patientPortionCents: number;
+    denialReason?: string;
+    submittedAt?: Date;
+    decisionAt?: Date;
+    paidAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    lines: Array<InsuranceClaimLine>;
+};
+
+/**
  * Internal server error
  */
 export type InternalServerError = {
@@ -58227,6 +58620,65 @@ export type PatientVisitRecord = {
     teeth?: Array<PatientToothEntry>;
 };
 
+/**
+ * AR-by-payer aging response
+ */
+export type PayerArAgingResponse = {
+    asOf: Date;
+    summary: PayerArSummary;
+    payers: Array<PayerArRow>;
+};
+
+/**
+ * AR aging row for one payer
+ */
+export type PayerArRow = {
+    insuranceProfileId: Uuid;
+    payerName: string;
+    currentCents: number;
+    days30Cents: number;
+    days60Cents: number;
+    days90PlusCents: number;
+    totalOutstandingCents: number;
+    claimCount: number;
+    oldestClaimDays: number;
+};
+
+/**
+ * Practice-wide AR-by-payer totals
+ */
+export type PayerArSummary = {
+    currentCents: number;
+    days30Cents: number;
+    days60Cents: number;
+    days90PlusCents: number;
+    totalOutstandingCents: number;
+    payerCount: number;
+    claimCount: number;
+};
+
+/**
+ * An HMO remittance posting (the PH EOB-posting analogue)
+ */
+export type PayerPayment = {
+    id: Uuid;
+    claimId: Uuid;
+    insuranceProfileId: Uuid;
+    branchId: Uuid;
+    invoiceId?: Uuid;
+    amountCents: number;
+    remittanceReference?: string;
+    method: PayerPaymentMethod;
+    disallowanceCents?: number;
+    disallowanceReason?: string;
+    createdAt: Date;
+};
+
+/**
+ * How an HMO remittance was received
+ */
+export type PayerPaymentMethod = 'bank_transfer' | 'check' | 'portal';
+
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer';
 
 export type PaymentPlanStatus = 'on_track' | 'behind' | 'completed' | 'defaulted';
@@ -59323,6 +59775,38 @@ export type RecordMedicalHistoryReviewRequest = {
 };
 
 /**
+ * Body to post an HMO remittance against a claim
+ */
+export type RecordRemittanceRequest = {
+    /**
+     * Amount the payer remitted, in centavos
+     */
+    amountCents: number;
+    /**
+     * Payer remittance reference (idempotency key per claim)
+     */
+    remittanceReference?: string;
+    /**
+     * Remittance date (YYYY-MM-DD)
+     */
+    remittedAt?: string;
+    method?: PayerPaymentMethod;
+    /**
+     * Disallowed/contractual-gap amount to write off, in centavos
+     */
+    disallowanceCents?: number;
+    disallowanceReason?: string;
+};
+
+/**
+ * Result of posting a remittance
+ */
+export type RecordRemittanceResult = {
+    payerPayment: PayerPayment;
+    claim: InsuranceClaim;
+};
+
+/**
  * Recurrence pattern for schedule exceptions
  */
 export type RecurrencePattern = {
@@ -59732,6 +60216,11 @@ export type StoredFile = {
  * ISO 8601 UTC timestamp with millisecond precision and Z suffix (e.g. 2026-04-30T14:25:31.000Z)
  */
 export type StrictUtcDateTime = Date;
+
+/**
+ * How a claim was submitted to the payer (no EDI/clearinghouse)
+ */
+export type SubmissionChannel = 'portal' | 'email' | 'fax' | 'in_person' | 'other';
 
 /**
  * Severity classification for symptoms
@@ -60276,6 +60765,33 @@ export type UpdateDentalTreatmentRequest = {
 export type UpdateDentalVisitRequest = {
     status?: DentalVisitStatus;
     chiefComplaint?: string;
+};
+
+/**
+ * Body to update a claim line after a payer decision
+ */
+export type UpdateInsuranceClaimLineRequest = {
+    approvedAmountCents?: number;
+    paidAmountCents?: number;
+    status?: ClaimLineStatus;
+    description?: string;
+    billedAmountCents?: number;
+};
+
+/**
+ * Body to transition a claim's status (FSM-validated)
+ */
+export type UpdateInsuranceClaimStatusRequest = {
+    status: InsuranceClaimStatus;
+    /**
+     * Payer tracking reference, captured on submit
+     */
+    payerReference?: string;
+    submissionChannel?: SubmissionChannel;
+    /**
+     * Reason captured on a denial
+     */
+    denialReason?: string;
 };
 
 /**
@@ -63435,6 +63951,321 @@ export type GetAuditEventsResponses = {
 
 export type GetAuditEventsResponse = GetAuditEventsResponses[keyof GetAuditEventsResponses];
 
+export type ListInsuranceClaimsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        status?: InsuranceClaimStatus;
+        insuranceProfileId?: Uuid;
+        patientId?: Uuid;
+    };
+    url: '/dental/billing/claims';
+};
+
+export type ListInsuranceClaimsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListInsuranceClaimsError = ListInsuranceClaimsErrors[keyof ListInsuranceClaimsErrors];
+
+export type ListInsuranceClaimsResponses = {
+    /**
+     * Success response with data
+     */
+    200: InsuranceClaimList | ErrorResponse;
+};
+
+export type ListInsuranceClaimsResponse = ListInsuranceClaimsResponses[keyof ListInsuranceClaimsResponses];
+
+export type CreateInsuranceClaimData = {
+    body: CreateInsuranceClaimRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/billing/claims';
+};
+
+export type CreateInsuranceClaimErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateInsuranceClaimError = CreateInsuranceClaimErrors[keyof CreateInsuranceClaimErrors];
+
+export type CreateInsuranceClaimResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: InsuranceClaimWithLines;
+};
+
+export type CreateInsuranceClaimResponse = CreateInsuranceClaimResponses[keyof CreateInsuranceClaimResponses];
+
+export type GetPayerArAgingData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        asOf?: Date;
+    };
+    url: '/dental/billing/claims/aging';
+};
+
+export type GetPayerArAgingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetPayerArAgingError = GetPayerArAgingErrors[keyof GetPayerArAgingErrors];
+
+export type GetPayerArAgingResponses = {
+    /**
+     * Success response with data
+     */
+    200: PayerArAgingResponse | ErrorResponse;
+};
+
+export type GetPayerArAgingResponse = GetPayerArAgingResponses[keyof GetPayerArAgingResponses];
+
+export type GetInsuranceClaimData = {
+    body?: never;
+    path: {
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/claims/{claimId}';
+};
+
+export type GetInsuranceClaimErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetInsuranceClaimError = GetInsuranceClaimErrors[keyof GetInsuranceClaimErrors];
+
+export type GetInsuranceClaimResponses = {
+    /**
+     * Success response with data
+     */
+    200: InsuranceClaimWithLines | ErrorResponse;
+};
+
+export type GetInsuranceClaimResponse = GetInsuranceClaimResponses[keyof GetInsuranceClaimResponses];
+
+export type AddInsuranceClaimLineData = {
+    body: CreateInsuranceClaimLineRequest;
+    path: {
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/claims/{claimId}/lines';
+};
+
+export type AddInsuranceClaimLineErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AddInsuranceClaimLineError = AddInsuranceClaimLineErrors[keyof AddInsuranceClaimLineErrors];
+
+export type AddInsuranceClaimLineResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: InsuranceClaimLine;
+};
+
+export type AddInsuranceClaimLineResponse = AddInsuranceClaimLineResponses[keyof AddInsuranceClaimLineResponses];
+
+export type UpdateInsuranceClaimLineData = {
+    body: UpdateInsuranceClaimLineRequest;
+    path: {
+        claimId: Uuid;
+        lineId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/claims/{claimId}/lines/{lineId}';
+};
+
+export type UpdateInsuranceClaimLineErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateInsuranceClaimLineError = UpdateInsuranceClaimLineErrors[keyof UpdateInsuranceClaimLineErrors];
+
+export type UpdateInsuranceClaimLineResponses = {
+    /**
+     * Success response with data
+     */
+    200: InsuranceClaimLine | ErrorResponse;
+};
+
+export type UpdateInsuranceClaimLineResponse = UpdateInsuranceClaimLineResponses[keyof UpdateInsuranceClaimLineResponses];
+
+export type RecordClaimRemittanceData = {
+    body: RecordRemittanceRequest;
+    path: {
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/claims/{claimId}/remittance';
+};
+
+export type RecordClaimRemittanceErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type RecordClaimRemittanceError = RecordClaimRemittanceErrors[keyof RecordClaimRemittanceErrors];
+
+export type RecordClaimRemittanceResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: RecordRemittanceResult;
+};
+
+export type RecordClaimRemittanceResponse = RecordClaimRemittanceResponses[keyof RecordClaimRemittanceResponses];
+
+export type UpdateInsuranceClaimStatusData = {
+    body: UpdateInsuranceClaimStatusRequest;
+    path: {
+        claimId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/claims/{claimId}/status';
+};
+
+export type UpdateInsuranceClaimStatusErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateInsuranceClaimStatusError = UpdateInsuranceClaimStatusErrors[keyof UpdateInsuranceClaimStatusErrors];
+
+export type UpdateInsuranceClaimStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: InsuranceClaim | ErrorResponse;
+};
+
+export type UpdateInsuranceClaimStatusResponse = UpdateInsuranceClaimStatusResponses[keyof UpdateInsuranceClaimStatusResponses];
+
 export type GetArAgingData = {
     body?: never;
     path?: never;
@@ -63494,6 +64325,35 @@ export type GetCollectionsSummaryResponses = {
 };
 
 export type GetCollectionsSummaryResponse = GetCollectionsSummaryResponses[keyof GetCollectionsSummaryResponses];
+
+export type EstimateClaimCoverageData = {
+    body: CoverageEstimateRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/billing/estimate';
+};
+
+export type EstimateClaimCoverageErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type EstimateClaimCoverageError = EstimateClaimCoverageErrors[keyof EstimateClaimCoverageErrors];
+
+export type EstimateClaimCoverageResponses = {
+    /**
+     * Success response with data
+     */
+    200: CoverageEstimateResult | ErrorResponse;
+};
+
+export type EstimateClaimCoverageResponse = EstimateClaimCoverageResponses[keyof EstimateClaimCoverageResponses];
 
 export type ListDentalInvoicesData = {
     body?: never;
@@ -67172,6 +68032,124 @@ export type GetDentalPatientStatementResponses = {
 };
 
 export type GetDentalPatientStatementResponse = GetDentalPatientStatementResponses[keyof GetDentalPatientStatementResponses];
+
+export type ListCoverageAuthorizationsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/authorizations';
+};
+
+export type ListCoverageAuthorizationsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListCoverageAuthorizationsError = ListCoverageAuthorizationsErrors[keyof ListCoverageAuthorizationsErrors];
+
+export type ListCoverageAuthorizationsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPatientFinanceModuleCoverageAuthorization> | ErrorResponse;
+};
+
+export type ListCoverageAuthorizationsResponse = ListCoverageAuthorizationsResponses[keyof ListCoverageAuthorizationsResponses];
+
+export type CreateCoverageAuthorizationData = {
+    body: DentalPatientFinanceModuleCreateCoverageAuthorizationRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/authorizations';
+};
+
+export type CreateCoverageAuthorizationErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateCoverageAuthorizationError = CreateCoverageAuthorizationErrors[keyof CreateCoverageAuthorizationErrors];
+
+export type CreateCoverageAuthorizationResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalPatientFinanceModuleCoverageAuthorization;
+};
+
+export type CreateCoverageAuthorizationResponse = CreateCoverageAuthorizationResponses[keyof CreateCoverageAuthorizationResponses];
+
+export type UpdateCoverageAuthorizationStatusData = {
+    body: DentalPatientFinanceModuleUpdateCoverageAuthorizationStatusRequest;
+    path: {
+        patientId: Uuid;
+        authorizationId: Uuid;
+    };
+    query?: never;
+    url: '/dental/patients/{patientId}/authorizations/{authorizationId}/status';
+};
+
+export type UpdateCoverageAuthorizationStatusErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateCoverageAuthorizationStatusError = UpdateCoverageAuthorizationStatusErrors[keyof UpdateCoverageAuthorizationStatusErrors];
+
+export type UpdateCoverageAuthorizationStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPatientFinanceModuleCoverageAuthorization | ErrorResponse;
+};
+
+export type UpdateCoverageAuthorizationStatusResponse = UpdateCoverageAuthorizationStatusResponses[keyof UpdateCoverageAuthorizationStatusResponses];
 
 export type ListCasePresentationsData = {
     body?: never;

@@ -41,6 +41,11 @@ export async function createInsuranceProfile(ctx: any): Promise<Response> {
     relationship: body.relationship ?? 'self',
     active: true,
     notes: body.notes ?? null,
+    // P1-26 PH payer fields (additive)
+    payerType: body.payerType ?? 'hmo',
+    accredited: body.accredited ?? null,
+    annualLimitCents: body.annualLimitCents ?? null,
+    annualLimitUsedCents: body.annualLimitUsedCents ?? null,
     createdBy: user.id,
     updatedBy: user.id,
   });

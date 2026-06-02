@@ -427,6 +427,66 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getAuditEvents as unknown as Handler
   );
 
+  // createInsuranceClaim
+  app.post('/dental/billing/claims',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateInsuranceClaimBody, validationErrorHandler),
+    registry.createInsuranceClaim as unknown as Handler
+  );
+
+  // listInsuranceClaims
+  app.get('/dental/billing/claims',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListInsuranceClaimsQuery, validationErrorHandler),
+    registry.listInsuranceClaims as unknown as Handler
+  );
+
+  // getPayerArAging
+  app.get('/dental/billing/claims/aging',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetPayerArAgingQuery, validationErrorHandler),
+    registry.getPayerArAging as unknown as Handler
+  );
+
+  // getInsuranceClaim
+  app.get('/dental/billing/claims/:claimId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetInsuranceClaimParams, validationErrorHandler),
+    registry.getInsuranceClaim as unknown as Handler
+  );
+
+  // addInsuranceClaimLine
+  app.post('/dental/billing/claims/:claimId/lines',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AddInsuranceClaimLineParams, validationErrorHandler),
+    zValidator('json', validators.AddInsuranceClaimLineBody, validationErrorHandler),
+    registry.addInsuranceClaimLine as unknown as Handler
+  );
+
+  // updateInsuranceClaimLine
+  app.patch('/dental/billing/claims/:claimId/lines/:lineId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdateInsuranceClaimLineParams, validationErrorHandler),
+    zValidator('json', validators.UpdateInsuranceClaimLineBody, validationErrorHandler),
+    registry.updateInsuranceClaimLine as unknown as Handler
+  );
+
+  // recordClaimRemittance
+  app.post('/dental/billing/claims/:claimId/remittance',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RecordClaimRemittanceParams, validationErrorHandler),
+    zValidator('json', validators.RecordClaimRemittanceBody, validationErrorHandler),
+    registry.recordClaimRemittance as unknown as Handler
+  );
+
+  // updateInsuranceClaimStatus
+  app.patch('/dental/billing/claims/:claimId/status',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdateInsuranceClaimStatusParams, validationErrorHandler),
+    zValidator('json', validators.UpdateInsuranceClaimStatusBody, validationErrorHandler),
+    registry.updateInsuranceClaimStatus as unknown as Handler
+  );
+
   // getArAging
   app.get('/dental/billing/collections/aging',
     authMiddleware({ roles: ["user"] }),
@@ -439,6 +499,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('query', validators.GetCollectionsSummaryQuery, validationErrorHandler),
     registry.getCollectionsSummary as unknown as Handler
+  );
+
+  // estimateClaimCoverage
+  app.post('/dental/billing/estimate',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.EstimateClaimCoverageBody, validationErrorHandler),
+    registry.estimateClaimCoverage as unknown as Handler
   );
 
   // createDentalInvoice
@@ -1286,6 +1353,29 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetDentalPatientStatementParams, validationErrorHandler),
     registry.getDentalPatientStatement as unknown as Handler
+  );
+
+  // createCoverageAuthorization
+  app.post('/dental/patients/:patientId/authorizations',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.CreateCoverageAuthorizationParams, validationErrorHandler),
+    zValidator('json', validators.CreateCoverageAuthorizationBody, validationErrorHandler),
+    registry.createCoverageAuthorization as unknown as Handler
+  );
+
+  // listCoverageAuthorizations
+  app.get('/dental/patients/:patientId/authorizations',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListCoverageAuthorizationsParams, validationErrorHandler),
+    registry.listCoverageAuthorizations as unknown as Handler
+  );
+
+  // updateCoverageAuthorizationStatus
+  app.patch('/dental/patients/:patientId/authorizations/:authorizationId/status',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdateCoverageAuthorizationStatusParams, validationErrorHandler),
+    zValidator('json', validators.UpdateCoverageAuthorizationStatusBody, validationErrorHandler),
+    registry.updateCoverageAuthorizationStatus as unknown as Handler
   );
 
   // createCasePresentation

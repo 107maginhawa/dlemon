@@ -476,6 +476,11 @@ namespace MonobaseAPI {
   @route("/dental/billing")
   interface BillingExtrasMgmt extends DentalBillingModule.BillingExtras {}
 
+  // P1-26: insurance / revenue-cycle (PH HMO) — claims, remittance, estimate, aging
+  @tag("Dental:Billing")
+  @route("/dental/billing")
+  interface DentalRevenueCycleMgmt extends DentalBillingModule.RevenueCycle {}
+
   // Dental Erasure (right-to-erasure / V-DG-002 / WFG-006)
   @tag("Dental:Erasure")
   @route("/dental/erasure-requests")
@@ -551,6 +556,11 @@ namespace MonobaseAPI {
   @tag("Dental:Patient")
   @route("/dental/patients")
   interface DentalClaimDraftMgmt extends DentalPatientFinanceModule.ClaimDraftManagement {}
+
+  // P1-26: coverage authorization (LOA) capture
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalCoverageAuthMgmt extends DentalPatientFinanceModule.CoverageAuthorizationManagement {}
 
   // ── TR-DG-002 manual-route migration: clinical ops ───────────────────────
   @tag("Dental:Clinical")

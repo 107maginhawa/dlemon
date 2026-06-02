@@ -582,6 +582,8 @@ export const CheckInResponseSchema = z.object({
   visitId: UUIDSchema
 });
 
+export const ClaimLineStatusSchema = z.enum(["pending", "covered", "partial", "disallowed"]);
+
 export const CollectionsSummaryResponseSchema = z.object({
   totalCollectedCents: z.number().int(),
   period: z.string(),
@@ -716,6 +718,37 @@ export const ContactInfoSchema = z.object({
 export const ControlledSubstanceScheduleSchema = z.enum(["none", "II", "III", "IV", "V"]);
 
 export const CountryCodeSchema = z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" });
+
+export const CoverageEstimateLineSchema = z.object({
+  cdtCode: z.string().min(1),
+  billedAmountCents: z.number().int().gte(0),
+  description: z.string().optional()
+});
+
+export const CoverageEstimateLineResultSchema = z.object({
+  cdtCode: z.string(),
+  description: z.string().optional(),
+  billedAmountCents: z.number().int(),
+  coveredCents: z.number().int(),
+  patientPortionCents: z.number().int(),
+  uncovered: z.boolean()
+});
+
+export const CoverageEstimateRequestSchema = z.object({
+  patientId: UUIDSchema.optional(),
+  insuranceProfileId: UUIDSchema.optional(),
+  authorizationId: UUIDSchema.optional(),
+  lines: z.array(CoverageEstimateLineSchema)
+});
+
+export const CoverageEstimateResultSchema = z.object({
+  estimatedCoveredCents: z.number().int(),
+  estimatedPatientPortionCents: z.number().int(),
+  estimatedBilledCents: z.number().int(),
+  perLine: z.array(CoverageEstimateLineResultSchema),
+  cappedByAnnualLimit: z.boolean(),
+  uncoveredProcedures: z.array(z.string())
+});
 
 export const CreateAmendmentRequestSchema = z.object({
   visitId: UUIDSchema,
@@ -874,6 +907,26 @@ export const CreateHoldRequestSchema = z.object({
   providerId: UUIDSchema,
   startAt: z.string().datetime().transform((str) => new Date(str)),
   visitType: VisitTypeSchema
+});
+
+export const CreateInsuranceClaimLineRequestSchema = z.object({
+  treatmentId: UUIDSchema.optional(),
+  invoiceLineItemId: UUIDSchema.optional(),
+  cdtCode: z.string().min(1),
+  description: z.string().min(1),
+  billedAmountCents: z.number().int().gte(0)
+});
+
+export const SubmissionChannelSchema = z.enum(["portal", "email", "fax", "in_person", "other"]);
+
+export const CreateInsuranceClaimRequestSchema = z.object({
+  patientId: UUIDSchema,
+  insuranceProfileId: UUIDSchema,
+  invoiceId: z.string().uuid().optional(),
+  visitId: UUIDSchema.optional(),
+  authorizationId: z.string().uuid().optional(),
+  submissionChannel: SubmissionChannelSchema.optional(),
+  lines: z.array(CreateInsuranceClaimLineRequestSchema).optional()
 });
 
 export const CreateLineItemRequestSchema = z.object({
@@ -2454,6 +2507,36 @@ export const DentalPatientFinanceModuleClaimReadinessSchema = z.object({
   ready: z.boolean()
 });
 
+export const DentalPatientFinanceModuleCoverageAuthStatusSchema = z.enum(["requested", "approved", "partial", "denied", "expired"]);
+
+export const DentalPatientFinanceModuleCoveredProcedureSchema = z.object({
+  cdtCode: z.string(),
+  approvedAmountCents: z.number().int().optional(),
+  note: z.string().optional()
+});
+
+export const DentalPatientFinanceModuleCoverageAuthorizationSchema = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  createdBy: z.string().uuid().optional(),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedBy: z.string().uuid().optional(),
+  patientId: z.string().uuid(),
+  insuranceProfileId: z.string().uuid(),
+  branchId: z.string().uuid(),
+  visitId: z.union([z.string().uuid(), z.null()]),
+  treatmentPlanId: z.union([z.string().uuid(), z.null()]),
+  loaNumber: z.union([z.string(), z.null()]),
+  status: z.enum(["requested", "approved", "partial", "denied", "expired"]),
+  approvedAt: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }), z.null()]),
+  validUntil: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }), z.null()]),
+  approvedAmountCents: z.union([z.number().int(), z.null()]),
+  coveredProcedures: z.union([z.array(DentalPatientFinanceModuleCoveredProcedureSchema), z.null()]),
+  attachmentFileId: z.union([z.string().uuid(), z.null()]),
+  notes: z.union([z.string(), z.null()])
+});
+
 export const DentalPatientFinanceModuleCreateCasePresentationRequestSchema = z.object({
   treatmentPlanId: z.string().uuid(),
   planVersionId: z.string().uuid().optional()
@@ -2466,6 +2549,20 @@ export const DentalPatientFinanceModuleCreateClaimDraftRequestSchema = z.object(
   icd10Code: z.string().optional(),
   diagnosisDescription: z.string().optional(),
   feeAmountCents: z.number().int().gte(0),
+  notes: z.string().optional()
+});
+
+export const DentalPatientFinanceModuleCreateCoverageAuthorizationRequestSchema = z.object({
+  insuranceProfileId: z.string().uuid(),
+  visitId: z.string().uuid().optional(),
+  treatmentPlanId: z.string().uuid().optional(),
+  loaNumber: z.string().optional(),
+  status: z.enum(["requested", "approved", "partial", "denied", "expired"]).optional(),
+  approvedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  approvedAmountCents: z.number().int().gte(0).optional(),
+  coveredProcedures: z.array(DentalPatientFinanceModuleCoveredProcedureSchema).optional(),
+  attachmentFileId: z.string().uuid().optional(),
   notes: z.string().optional()
 });
 
@@ -2483,7 +2580,11 @@ export const DentalPatientFinanceModuleCreateInsuranceProfileRequestSchema = z.o
   subscriberName: z.string().min(1),
   subscriberDob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   relationship: z.enum(["self", "spouse", "child", "other"]).optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  payerType: z.enum(["hmo", "philhealth", "corporate", "self_pay_assist", "other"]).optional(),
+  accredited: z.boolean().optional(),
+  annualLimitCents: z.number().int().gte(0).optional(),
+  annualLimitUsedCents: z.number().int().gte(0).optional()
 });
 
 export const DentalPatientFinanceModuleCreateSyncLogRequestSchema = z.object({
@@ -2558,10 +2659,16 @@ export const DentalPatientFinanceModuleInsuranceProfileSchema = z.object({
   subscriberDob: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }), z.null()]),
   relationship: z.string(),
   active: z.boolean(),
-  notes: z.union([z.string(), z.null()])
+  notes: z.union([z.string(), z.null()]),
+  payerType: z.enum(["hmo", "philhealth", "corporate", "self_pay_assist", "other"]),
+  accredited: z.union([z.boolean(), z.null()]),
+  annualLimitCents: z.union([z.number().int(), z.null()]),
+  annualLimitUsedCents: z.union([z.number().int(), z.null()])
 });
 
 export const DentalPatientFinanceModuleInsuranceRelationshipSchema = z.enum(["self", "spouse", "child", "other"]);
+
+export const DentalPatientFinanceModulePayerTypeSchema = z.enum(["hmo", "philhealth", "corporate", "self_pay_assist", "other"]);
 
 export const DentalPatientFinanceModuleRejectCasePresentationRequestSchema = z.object({
   rejectionReason: z.string().optional()
@@ -2723,6 +2830,12 @@ export const DentalPatientFinanceModuleUpdateClaimStatusRequestSchema = z.object
   status: z.enum(["draft", "ready", "submitted", "accepted", "rejected"])
 });
 
+export const DentalPatientFinanceModuleUpdateCoverageAuthorizationStatusRequestSchema = z.object({
+  status: z.enum(["requested", "approved", "partial", "denied", "expired"]),
+  approvedAmountCents: z.number().int().gte(0).optional(),
+  coveredProcedures: z.array(DentalPatientFinanceModuleCoveredProcedureSchema).optional()
+});
+
 export const DentalPatientFinanceModuleUpdateInsuranceProfileRequestSchema = z.object({
   insurerName: z.string().min(1).optional(),
   policyNumber: z.string().min(1).optional(),
@@ -2731,7 +2844,11 @@ export const DentalPatientFinanceModuleUpdateInsuranceProfileRequestSchema = z.o
   subscriberDob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   relationship: z.enum(["self", "spouse", "child", "other"]).optional(),
   active: z.boolean().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  payerType: z.enum(["hmo", "philhealth", "corporate", "self_pay_assist", "other"]).optional(),
+  accredited: z.boolean().optional(),
+  annualLimitCents: z.number().int().gte(0).optional(),
+  annualLimitUsedCents: z.number().int().gte(0).optional()
 });
 
 export const DentalPatientFinanceModuleUpdateSyncLogRequestSchema = z.object({
@@ -17423,6 +17540,77 @@ export const InformedRefusalSchema = z.object({
   refusedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const InsuranceClaimStatusSchema = z.enum(["draft", "ready", "submitted", "under_review", "approved", "partially_paid", "paid", "denied", "appealed", "written_off"]);
+
+export const InsuranceClaimSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  insuranceProfileId: UUIDSchema,
+  branchId: UUIDSchema,
+  invoiceId: UUIDSchema.optional(),
+  visitId: UUIDSchema.optional(),
+  authorizationId: UUIDSchema.optional(),
+  claimNumber: z.string(),
+  payerReference: z.string().optional(),
+  status: InsuranceClaimStatusSchema,
+  submissionChannel: SubmissionChannelSchema.optional(),
+  billedAmountCents: z.number().int(),
+  approvedAmountCents: z.number().int().optional(),
+  paidByPayerCents: z.number().int(),
+  disallowedCents: z.number().int().optional(),
+  patientPortionCents: z.number().int(),
+  denialReason: z.string().optional(),
+  submittedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  decisionAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  paidAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const InsuranceClaimLineSchema = z.object({
+  id: UUIDSchema,
+  claimId: UUIDSchema,
+  treatmentId: UUIDSchema.optional(),
+  invoiceLineItemId: UUIDSchema.optional(),
+  cdtCode: z.string(),
+  description: z.string(),
+  billedAmountCents: z.number().int(),
+  approvedAmountCents: z.number().int().optional(),
+  paidAmountCents: z.number().int(),
+  status: ClaimLineStatusSchema
+});
+
+export const InsuranceClaimListSchema = z.object({
+  items: z.array(InsuranceClaimSchema),
+  total: z.number().int()
+});
+
+export const InsuranceClaimWithLinesSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  insuranceProfileId: UUIDSchema,
+  branchId: UUIDSchema,
+  invoiceId: UUIDSchema.optional(),
+  visitId: UUIDSchema.optional(),
+  authorizationId: UUIDSchema.optional(),
+  claimNumber: z.string(),
+  payerReference: z.string().optional(),
+  status: InsuranceClaimStatusSchema,
+  submissionChannel: SubmissionChannelSchema.optional(),
+  billedAmountCents: z.number().int(),
+  approvedAmountCents: z.number().int().optional(),
+  paidByPayerCents: z.number().int(),
+  disallowedCents: z.number().int().optional(),
+  patientPortionCents: z.number().int(),
+  denialReason: z.string().optional(),
+  submittedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  decisionAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  paidAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  lines: z.array(InsuranceClaimLineSchema)
+});
+
 export const InternalServerErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -17998,6 +18186,50 @@ export const PatientVisitRecordSchema = z.object({
   teeth: z.array(PatientToothEntrySchema).optional()
 });
 
+export const PayerArSummarySchema = z.object({
+  currentCents: z.number().int(),
+  days30Cents: z.number().int(),
+  days60Cents: z.number().int(),
+  days90PlusCents: z.number().int(),
+  totalOutstandingCents: z.number().int(),
+  payerCount: z.number().int(),
+  claimCount: z.number().int()
+});
+
+export const PayerArRowSchema = z.object({
+  insuranceProfileId: UUIDSchema,
+  payerName: z.string(),
+  currentCents: z.number().int(),
+  days30Cents: z.number().int(),
+  days60Cents: z.number().int(),
+  days90PlusCents: z.number().int(),
+  totalOutstandingCents: z.number().int(),
+  claimCount: z.number().int(),
+  oldestClaimDays: z.number().int()
+});
+
+export const PayerArAgingResponseSchema = z.object({
+  asOf: z.string().datetime().transform((str) => new Date(str)),
+  summary: PayerArSummarySchema,
+  payers: z.array(PayerArRowSchema)
+});
+
+export const PayerPaymentMethodSchema = z.enum(["bank_transfer", "check", "portal"]);
+
+export const PayerPaymentSchema = z.object({
+  id: UUIDSchema,
+  claimId: UUIDSchema,
+  insuranceProfileId: UUIDSchema,
+  branchId: UUIDSchema,
+  invoiceId: UUIDSchema.optional(),
+  amountCents: z.number().int(),
+  remittanceReference: z.string().optional(),
+  method: PayerPaymentMethodSchema,
+  disallowanceCents: z.number().int().optional(),
+  disallowanceReason: z.string().optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const PaymentRequestSchema = z.object({
   paymentMethod: z.string().max(255).optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
@@ -18324,6 +18556,20 @@ export const RecordMedicalHistoryReviewRequestSchema = z.object({
   asaEmergency: z.boolean().optional()
 });
 
+export const RecordRemittanceRequestSchema = z.object({
+  amountCents: z.number().int().gte(0),
+  remittanceReference: z.string().optional(),
+  remittedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  method: PayerPaymentMethodSchema.optional(),
+  disallowanceCents: z.number().int().gte(0).optional(),
+  disallowanceReason: z.string().optional()
+});
+
+export const RecordRemittanceResultSchema = z.object({
+  payerPayment: PayerPaymentSchema,
+  claim: InsuranceClaimSchema
+});
+
 export const RecurrencePatternSchema = z.object({
   type: z.enum(["daily", "weekly", "monthly", "yearly"]),
   interval: z.number().int().gte(1).optional(),
@@ -18598,6 +18844,21 @@ export const UpdateDentalTreatmentRequestSchema = z.object({
 export const UpdateDentalVisitRequestSchema = z.object({
   status: DentalVisitStatusSchema.optional(),
   chiefComplaint: z.string().optional()
+});
+
+export const UpdateInsuranceClaimLineRequestSchema = z.object({
+  approvedAmountCents: z.number().int().gte(0).optional(),
+  paidAmountCents: z.number().int().gte(0).optional(),
+  status: ClaimLineStatusSchema.optional(),
+  description: z.string().optional(),
+  billedAmountCents: z.number().int().gte(0).optional()
+});
+
+export const UpdateInsuranceClaimStatusRequestSchema = z.object({
+  status: InsuranceClaimStatusSchema,
+  payerReference: z.string().optional(),
+  submissionChannel: SubmissionChannelSchema.optional(),
+  denialReason: z.string().optional()
 });
 
 export const UpdateInvoiceRequestSchema = z.object({
@@ -19482,6 +19743,77 @@ export type GetAuditEventsQuery = z.infer<typeof GetAuditEventsQuery>;
 
 export const GetAuditEventsResponse = z.union([DentalAuditModuleDentalAuditEventsResponseSchema, ErrorResponseSchema]);
 
+export const CreateInsuranceClaimBody = CreateInsuranceClaimRequestSchema;
+export type CreateInsuranceClaimBody = z.infer<typeof CreateInsuranceClaimBody>;
+
+export const CreateInsuranceClaimResponse = ErrorResponseSchema;
+
+export const ListInsuranceClaimsQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  status: InsuranceClaimStatusSchema.optional(),
+  insuranceProfileId: UUIDSchema.optional(),
+  patientId: UUIDSchema.optional(),
+});
+export type ListInsuranceClaimsQuery = z.infer<typeof ListInsuranceClaimsQuery>;
+
+export const ListInsuranceClaimsResponse = z.union([InsuranceClaimListSchema, ErrorResponseSchema]);
+
+export const GetPayerArAgingQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
+});
+export type GetPayerArAgingQuery = z.infer<typeof GetPayerArAgingQuery>;
+
+export const GetPayerArAgingResponse = z.union([PayerArAgingResponseSchema, ErrorResponseSchema]);
+
+export const GetInsuranceClaimParams = z.object({
+  claimId: UUIDSchema,
+});
+export type GetInsuranceClaimParams = z.infer<typeof GetInsuranceClaimParams>;
+
+export const GetInsuranceClaimResponse = z.union([InsuranceClaimWithLinesSchema, ErrorResponseSchema]);
+
+export const AddInsuranceClaimLineParams = z.object({
+  claimId: UUIDSchema,
+});
+export type AddInsuranceClaimLineParams = z.infer<typeof AddInsuranceClaimLineParams>;
+
+export const AddInsuranceClaimLineBody = CreateInsuranceClaimLineRequestSchema;
+export type AddInsuranceClaimLineBody = z.infer<typeof AddInsuranceClaimLineBody>;
+
+export const AddInsuranceClaimLineResponse = ErrorResponseSchema;
+
+export const UpdateInsuranceClaimLineParams = z.object({
+  claimId: UUIDSchema,
+  lineId: UUIDSchema,
+});
+export type UpdateInsuranceClaimLineParams = z.infer<typeof UpdateInsuranceClaimLineParams>;
+
+export const UpdateInsuranceClaimLineBody = UpdateInsuranceClaimLineRequestSchema;
+export type UpdateInsuranceClaimLineBody = z.infer<typeof UpdateInsuranceClaimLineBody>;
+
+export const UpdateInsuranceClaimLineResponse = z.union([InsuranceClaimLineSchema, ErrorResponseSchema]);
+
+export const RecordClaimRemittanceParams = z.object({
+  claimId: UUIDSchema,
+});
+export type RecordClaimRemittanceParams = z.infer<typeof RecordClaimRemittanceParams>;
+
+export const RecordClaimRemittanceBody = RecordRemittanceRequestSchema;
+export type RecordClaimRemittanceBody = z.infer<typeof RecordClaimRemittanceBody>;
+
+export const RecordClaimRemittanceResponse = ErrorResponseSchema;
+
+export const UpdateInsuranceClaimStatusParams = z.object({
+  claimId: UUIDSchema,
+});
+export type UpdateInsuranceClaimStatusParams = z.infer<typeof UpdateInsuranceClaimStatusParams>;
+
+export const UpdateInsuranceClaimStatusBody = UpdateInsuranceClaimStatusRequestSchema;
+export type UpdateInsuranceClaimStatusBody = z.infer<typeof UpdateInsuranceClaimStatusBody>;
+
+export const UpdateInsuranceClaimStatusResponse = z.union([InsuranceClaimSchema, ErrorResponseSchema]);
+
 export const GetArAgingQuery = z.object({
   branchId: UUIDSchema.optional(),
   asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -19497,6 +19829,11 @@ export const GetCollectionsSummaryQuery = z.object({
 export type GetCollectionsSummaryQuery = z.infer<typeof GetCollectionsSummaryQuery>;
 
 export const GetCollectionsSummaryResponse = CollectionsSummaryResponseSchema;
+
+export const EstimateClaimCoverageBody = CoverageEstimateRequestSchema;
+export type EstimateClaimCoverageBody = z.infer<typeof EstimateClaimCoverageBody>;
+
+export const EstimateClaimCoverageResponse = z.union([CoverageEstimateResultSchema, ErrorResponseSchema]);
 
 export const CreateDentalInvoiceBody = CreateDentalInvoiceRequestSchema;
 export type CreateDentalInvoiceBody = z.infer<typeof CreateDentalInvoiceBody>;
@@ -20513,6 +20850,34 @@ export const GetDentalPatientStatementParams = z.object({
 export type GetDentalPatientStatementParams = z.infer<typeof GetDentalPatientStatementParams>;
 
 export const GetDentalPatientStatementResponse = DentalPatientModuleDentalPatientStatementSchema;
+
+export const CreateCoverageAuthorizationParams = z.object({
+  patientId: UUIDSchema,
+});
+export type CreateCoverageAuthorizationParams = z.infer<typeof CreateCoverageAuthorizationParams>;
+
+export const CreateCoverageAuthorizationBody = DentalPatientFinanceModuleCreateCoverageAuthorizationRequestSchema;
+export type CreateCoverageAuthorizationBody = z.infer<typeof CreateCoverageAuthorizationBody>;
+
+export const CreateCoverageAuthorizationResponse = ErrorResponseSchema;
+
+export const ListCoverageAuthorizationsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type ListCoverageAuthorizationsParams = z.infer<typeof ListCoverageAuthorizationsParams>;
+
+export const ListCoverageAuthorizationsResponse = z.union([z.array(DentalPatientFinanceModuleCoverageAuthorizationSchema), ErrorResponseSchema]);
+
+export const UpdateCoverageAuthorizationStatusParams = z.object({
+  patientId: UUIDSchema,
+  authorizationId: UUIDSchema,
+});
+export type UpdateCoverageAuthorizationStatusParams = z.infer<typeof UpdateCoverageAuthorizationStatusParams>;
+
+export const UpdateCoverageAuthorizationStatusBody = DentalPatientFinanceModuleUpdateCoverageAuthorizationStatusRequestSchema;
+export type UpdateCoverageAuthorizationStatusBody = z.infer<typeof UpdateCoverageAuthorizationStatusBody>;
+
+export const UpdateCoverageAuthorizationStatusResponse = z.union([DentalPatientFinanceModuleCoverageAuthorizationSchema, ErrorResponseSchema]);
 
 export const CreateCasePresentationParams = z.object({
   patientId: UUIDSchema,

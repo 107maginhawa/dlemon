@@ -68,21 +68,30 @@ import { promoteWaitlistEntry } from '../../handlers/dental-scheduling/promoteWa
 import { updateAppointment } from '../../handlers/dental-scheduling/updateAppointment';
 import { updateQueueItemStatus } from '../../handlers/dental-scheduling/updateQueueItemStatus';
 import { getAuditEvents } from '../../handlers/dental-audit/getAuditEvents';
+import { addInsuranceClaimLine } from '../../handlers/dental-billing/addInsuranceClaimLine';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
 import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
+import { createInsuranceClaim } from '../../handlers/dental-billing/createInsuranceClaim';
+import { estimateClaimCoverage } from '../../handlers/dental-billing/estimateClaimCoverage';
 import { generateStatementBatch } from '../../handlers/dental-billing/generateStatementBatch';
 import { getArAging } from '../../handlers/dental-billing/getArAging';
 import { getCollectionsSummary } from '../../handlers/dental-billing/getCollectionsSummary';
 import { getDentalInvoice } from '../../handlers/dental-billing/getDentalInvoice';
 import { getDentalPaymentPlan } from '../../handlers/dental-billing/getDentalPaymentPlan';
 import { getDentalPaymentReceipt } from '../../handlers/dental-billing/getDentalPaymentReceipt';
+import { getInsuranceClaim } from '../../handlers/dental-billing/getInsuranceClaim';
 import { getPatientBalance } from '../../handlers/dental-billing/getPatientBalance';
+import { getPayerArAging } from '../../handlers/dental-billing/getPayerArAging';
 import { issueDentalInvoice } from '../../handlers/dental-billing/issueDentalInvoice';
 import { listDentalInvoices } from '../../handlers/dental-billing/listDentalInvoices';
 import { listDentalPayments } from '../../handlers/dental-billing/listDentalPayments';
+import { listInsuranceClaims } from '../../handlers/dental-billing/listInsuranceClaims';
 import { markUncollectible } from '../../handlers/dental-billing/markUncollectible';
+import { recordClaimRemittance } from '../../handlers/dental-billing/recordClaimRemittance';
 import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
+import { updateInsuranceClaimLine } from '../../handlers/dental-billing/updateInsuranceClaimLine';
+import { updateInsuranceClaimStatus } from '../../handlers/dental-billing/updateInsuranceClaimStatus';
 import { voidDentalInvoice } from '../../handlers/dental-billing/voidDentalInvoice';
 import { voidDentalPayment } from '../../handlers/dental-billing/voidDentalPayment';
 import { DentalBranchManagement_create } from '../../handlers/dental-org/DentalBranchManagement_create';
@@ -166,6 +175,7 @@ import { attachTreatmentAppointment } from '../../handlers/dental-patient/treatm
 import { bulkArchiveDentalPatients } from '../../handlers/dental-patient/identity/bulkArchiveDentalPatients';
 import { createCasePresentation } from '../../handlers/dental-patient/case-presentation/createCasePresentation';
 import { createClaimDraft } from '../../handlers/dental-patient/insurance/createClaimDraft';
+import { createCoverageAuthorization } from '../../handlers/dental-patient/insurance/createCoverageAuthorization';
 import { createDentalAlert } from '../../handlers/dental-patient/alerts/createDentalAlert';
 import { createDentalPatient } from '../../handlers/dental-patient/identity/createDentalPatient';
 import { createHousehold } from '../../handlers/dental-patient/household/createHousehold';
@@ -192,6 +202,7 @@ import { getTreatmentPlanVersion } from '../../handlers/dental-patient/treatment
 import { importPatients } from '../../handlers/dental-patient/identity/importPatients';
 import { initializeDentition } from '../../handlers/dental-patient/identity/initializeDentition';
 import { listCasePresentations } from '../../handlers/dental-patient/case-presentation/listCasePresentations';
+import { listCoverageAuthorizations } from '../../handlers/dental-patient/insurance/listCoverageAuthorizations';
 import { listDentalAlerts } from '../../handlers/dental-patient/alerts/listDentalAlerts';
 import { listDentalPatients } from '../../handlers/dental-patient/identity/listDentalPatients';
 import { listDueRecalls } from '../../handlers/dental-patient/recalls/listDueRecalls';
@@ -211,6 +222,7 @@ import { rejectCasePresentation } from '../../handlers/dental-patient/case-prese
 import { removeHouseholdMember } from '../../handlers/dental-patient/household/removeHouseholdMember';
 import { restoreDentalPatient } from '../../handlers/dental-patient/identity/restoreDentalPatient';
 import { updateClaimStatus } from '../../handlers/dental-patient/insurance/updateClaimStatus';
+import { updateCoverageAuthorizationStatus } from '../../handlers/dental-patient/insurance/updateCoverageAuthorizationStatus';
 import { updateDentalAlert } from '../../handlers/dental-patient/alerts/updateDentalAlert';
 import { updateDentalPatient } from '../../handlers/dental-patient/identity/updateDentalPatient';
 import { updateInsuranceProfile } from '../../handlers/dental-patient/insurance/updateInsuranceProfile';
@@ -419,21 +431,30 @@ export const registry = {
   getAuditEvents,
 
   // Dental-billing handlers
+  addInsuranceClaimLine,
   applyDentalDiscount,
   createDentalInvoice,
   createDentalPaymentPlan,
+  createInsuranceClaim,
+  estimateClaimCoverage,
   generateStatementBatch,
   getArAging,
   getCollectionsSummary,
   getDentalInvoice,
   getDentalPaymentPlan,
   getDentalPaymentReceipt,
+  getInsuranceClaim,
   getPatientBalance,
+  getPayerArAging,
   issueDentalInvoice,
   listDentalInvoices,
   listDentalPayments,
+  listInsuranceClaims,
   markUncollectible,
+  recordClaimRemittance,
   recordDentalPayment,
+  updateInsuranceClaimLine,
+  updateInsuranceClaimStatus,
   voidDentalInvoice,
   voidDentalPayment,
 
@@ -525,6 +546,7 @@ export const registry = {
   bulkArchiveDentalPatients,
   createCasePresentation,
   createClaimDraft,
+  createCoverageAuthorization,
   createDentalAlert,
   createDentalPatient,
   createHousehold,
@@ -551,6 +573,7 @@ export const registry = {
   importPatients,
   initializeDentition,
   listCasePresentations,
+  listCoverageAuthorizations,
   listDentalAlerts,
   listDentalPatients,
   listDueRecalls,
@@ -570,6 +593,7 @@ export const registry = {
   removeHouseholdMember,
   restoreDentalPatient,
   updateClaimStatus,
+  updateCoverageAuthorizationStatus,
   updateDentalAlert,
   updateDentalPatient,
   updateInsuranceProfile,

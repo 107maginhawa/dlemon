@@ -342,10 +342,390 @@ model GenerateStatementBatchResponse {
 }
 
 // ---------------------------------------------------------------------------
+// P1-26: Insurance / Revenue-Cycle (PH HMO) — invoice-anchored multi-line claim,
+// remittance posting, coverage estimate, AR-by-payer aging.
+// PH-shaped: submission = "mark submitted + attach reference"; NO EDI 837/835,
+// NO real-time eligibility, NO PPO fee schedule, NO clearinghouse.
+// ---------------------------------------------------------------------------
+
+@doc("Lifecycle of an invoice-anchored HMO claim (PH workflow)")
+enum InsuranceClaimStatus {
+  draft,
+  ready,
+  submitted,
+  under_review,
+  approved,
+  partially_paid,
+  paid,
+  denied,
+  appealed,
+  written_off,
+}
+
+@doc("How a claim was submitted to the payer (no EDI/clearinghouse)")
+enum SubmissionChannel {
+  portal,
+  email,
+  fax,
+  in_person,
+  other,
+}
+
+@doc("Per-procedure claim-line coverage status")
+enum ClaimLineStatus {
+  pending,
+  covered,
+  partial,
+  disallowed,
+}
+
+@doc("How an HMO remittance was received")
+enum PayerPaymentMethod {
+  bank_transfer,
+  check,
+  portal,
+}
+
+@doc("One per-procedure line on an insurance claim")
+model InsuranceClaimLine {
+  id: UUID;
+  claimId: UUID;
+  treatmentId?: UUID;
+  invoiceLineItemId?: UUID;
+  cdtCode: string;
+  description: string;
+  billedAmountCents: int32;
+  approvedAmountCents?: int32;
+  paidAmountCents: int32;
+  status: ClaimLineStatus;
+}
+
+@doc("An invoice-anchored, multi-line HMO claim (the submittable unit)")
+model InsuranceClaim {
+  id: UUID;
+  patientId: UUID;
+  insuranceProfileId: UUID;
+  branchId: UUID;
+  invoiceId?: UUID;
+  visitId?: UUID;
+  authorizationId?: UUID;
+  claimNumber: string;
+  payerReference?: string;
+  status: InsuranceClaimStatus;
+  submissionChannel?: SubmissionChannel;
+  billedAmountCents: int32;
+  approvedAmountCents?: int32;
+  paidByPayerCents: int32;
+  disallowedCents?: int32;
+  patientPortionCents: int32;
+  denialReason?: string;
+  submittedAt?: utcDateTime;
+  decisionAt?: utcDateTime;
+  paidAt?: utcDateTime;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+}
+
+@doc("A claim with its line items (and any transition warnings)")
+model InsuranceClaimWithLines {
+  ...InsuranceClaim;
+  lines: InsuranceClaimLine[];
+}
+
+@doc("Body to create an invoice-anchored claim")
+model CreateInsuranceClaimRequest {
+  patientId: UUID;
+  insuranceProfileId: UUID;
+
+  @doc("Invoice to anchor the claim to; lines are derived from it when none supplied")
+  invoiceId?: UUID;
+
+  visitId?: UUID;
+
+  @doc("Optional coverage authorization (LOA) backing the claim")
+  authorizationId?: UUID;
+
+  submissionChannel?: SubmissionChannel;
+
+  @doc("Inline claim lines (omit to derive from the invoice's line items)")
+  lines?: CreateInsuranceClaimLineRequest[];
+}
+
+@doc("A claim line on a create/add request")
+model CreateInsuranceClaimLineRequest {
+  treatmentId?: UUID;
+  invoiceLineItemId?: UUID;
+  @minLength(1) cdtCode: string;
+  @minLength(1) description: string;
+  @minValue(0) billedAmountCents: int32;
+}
+
+@doc("Body to transition a claim's status (FSM-validated)")
+model UpdateInsuranceClaimStatusRequest {
+  status: InsuranceClaimStatus;
+  @doc("Payer tracking reference, captured on submit")
+  payerReference?: string;
+  submissionChannel?: SubmissionChannel;
+  @doc("Reason captured on a denial")
+  denialReason?: string;
+}
+
+@doc("Body to update a claim line after a payer decision")
+model UpdateInsuranceClaimLineRequest {
+  @minValue(0) approvedAmountCents?: int32;
+  @minValue(0) paidAmountCents?: int32;
+  status?: ClaimLineStatus;
+  description?: string;
+  @minValue(0) billedAmountCents?: int32;
+}
+
+@doc("An HMO remittance posting (the PH EOB-posting analogue)")
+model PayerPayment {
+  id: UUID;
+  claimId: UUID;
+  insuranceProfileId: UUID;
+  branchId: UUID;
+  invoiceId?: UUID;
+  amountCents: int32;
+  remittanceReference?: string;
+  method: PayerPaymentMethod;
+  disallowanceCents?: int32;
+  disallowanceReason?: string;
+  createdAt: utcDateTime;
+}
+
+@doc("Body to post an HMO remittance against a claim")
+model RecordRemittanceRequest {
+  @doc("Amount the payer remitted, in centavos")
+  @minValue(0) amountCents: int32;
+
+  @doc("Payer remittance reference (idempotency key per claim)")
+  remittanceReference?: string;
+
+  @doc("Remittance date (YYYY-MM-DD)")
+  @pattern("^\\d{4}-\\d{2}-\\d{2}$")
+  remittedAt?: string;
+
+  method?: PayerPaymentMethod;
+
+  @doc("Disallowed/contractual-gap amount to write off, in centavos")
+  @minValue(0) disallowanceCents?: int32;
+
+  disallowanceReason?: string;
+}
+
+@doc("Result of posting a remittance")
+model RecordRemittanceResult {
+  payerPayment: PayerPayment;
+  claim: InsuranceClaim;
+}
+
+@doc("A planned line for a coverage estimate")
+model CoverageEstimateLine {
+  @minLength(1) cdtCode: string;
+  @minValue(0) billedAmountCents: int32;
+  description?: string;
+}
+
+@doc("Body for a read-only coverage estimate (no persistence)")
+model CoverageEstimateRequest {
+  patientId?: UUID;
+  insuranceProfileId?: UUID;
+  authorizationId?: UUID;
+  lines: CoverageEstimateLine[];
+}
+
+@doc("Per-line coverage estimate result")
+model CoverageEstimateLineResult {
+  cdtCode: string;
+  description?: string;
+  billedAmountCents: int32;
+  coveredCents: int32;
+  patientPortionCents: int32;
+  uncovered: boolean;
+}
+
+@doc("Coverage estimate result (covered vs patient portion)")
+model CoverageEstimateResult {
+  estimatedCoveredCents: int32;
+  estimatedPatientPortionCents: int32;
+  estimatedBilledCents: int32;
+  perLine: CoverageEstimateLineResult[];
+  cappedByAnnualLimit: boolean;
+  uncoveredProcedures: string[];
+}
+
+@doc("Claim worklist page")
+model InsuranceClaimList {
+  items: InsuranceClaim[];
+  total: int32;
+}
+
+@doc("AR aging row for one payer")
+model PayerArRow {
+  insuranceProfileId: UUID;
+  payerName: string;
+  currentCents: int32;
+  days30Cents: int32;
+  days60Cents: int32;
+  days90PlusCents: int32;
+  totalOutstandingCents: int32;
+  claimCount: int32;
+  oldestClaimDays: int32;
+}
+
+@doc("Practice-wide AR-by-payer totals")
+model PayerArSummary {
+  currentCents: int32;
+  days30Cents: int32;
+  days60Cents: int32;
+  days90PlusCents: int32;
+  totalOutstandingCents: int32;
+  payerCount: int32;
+  claimCount: int32;
+}
+
+@doc("AR-by-payer aging response")
+model PayerArAgingResponse {
+  asOf: utcDateTime;
+  summary: PayerArSummary;
+  payers: PayerArRow[];
+}
+
+// ---------------------------------------------------------------------------
 // API Interfaces
 // ---------------------------------------------------------------------------
 
 namespace DentalBillingModule {
+  @doc("P1-26 insurance / revenue-cycle (PH HMO)")
+  interface RevenueCycle {
+    @doc("Create an invoice-anchored, multi-line HMO claim")
+    @operationId("createInsuranceClaim")
+    @post
+    @route("/claims")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createInsuranceClaim(@body body: CreateInsuranceClaimRequest):
+      | ApiCreatedResponse<InsuranceClaimWithLines>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Claim worklist — filter by branch, status, payer, patient")
+    @operationId("listInsuranceClaims")
+    @get
+    @route("/claims")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listInsuranceClaims(
+      @query branchId?: UUID,
+      @query status?: InsuranceClaimStatus,
+      @query insuranceProfileId?: UUID,
+      @query patientId?: UUID,
+    ):
+      | ApiOkResponse<InsuranceClaimList>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ErrorResponse;
+
+    @doc("AR-by-payer aging worklist (outstanding claims bucketed by age)")
+    @operationId("getPayerArAging")
+    @get
+    @route("/claims/aging")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getPayerArAging(@query branchId?: UUID, @query asOf?: utcDateTime):
+      | ApiOkResponse<PayerArAgingResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ErrorResponse;
+
+    @doc("Read-only coverage estimate (covered vs patient portion); no persistence")
+    @operationId("estimateClaimCoverage")
+    @post
+    @route("/estimate")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    estimateClaimCoverage(@body body: CoverageEstimateRequest):
+      | ApiOkResponse<CoverageEstimateResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
+
+    @doc("Get a claim with its line items")
+    @operationId("getInsuranceClaim")
+    @get
+    @route("/claims/{claimId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    getInsuranceClaim(@path claimId: UUID):
+      | ApiOkResponse<InsuranceClaimWithLines>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Transition a claim's status (FSM-validated)")
+    @operationId("updateInsuranceClaimStatus")
+    @patch(#{ implicitOptionality: false })
+    @route("/claims/{claimId}/status")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateInsuranceClaimStatus(@path claimId: UUID, @body body: UpdateInsuranceClaimStatusRequest):
+      | ApiOkResponse<InsuranceClaim>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Add a line to a draft claim")
+    @operationId("addInsuranceClaimLine")
+    @post
+    @route("/claims/{claimId}/lines")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    addInsuranceClaimLine(@path claimId: UUID, @body body: CreateInsuranceClaimLineRequest):
+      | ApiCreatedResponse<InsuranceClaimLine>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Update a claim line after a payer decision")
+    @operationId("updateInsuranceClaimLine")
+    @patch(#{ implicitOptionality: false })
+    @route("/claims/{claimId}/lines/{lineId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateInsuranceClaimLine(@path claimId: UUID, @path lineId: UUID, @body body: UpdateInsuranceClaimLineRequest):
+      | ApiOkResponse<InsuranceClaimLine>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Post an HMO remittance against a claim (payment + disallowance write-off)")
+    @operationId("recordClaimRemittance")
+    @post
+    @route("/claims/{claimId}/remittance")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    recordClaimRemittance(@path claimId: UUID, @body body: RecordRemittanceRequest):
+      | ApiCreatedResponse<RecordRemittanceResult>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ApiConflictResponse
+      | ErrorResponse;
+  }
+
   interface InvoiceManagement {
     @post
     @route("/invoices")

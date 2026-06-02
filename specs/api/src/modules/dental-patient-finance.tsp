@@ -950,6 +950,15 @@ namespace DentalPatientFinanceModule {
     other: "other",
   }
 
+  @doc("PH payer type (P1-26). hmo is the dominant model; philhealth is minimal.")
+  enum PayerType {
+    hmo: "hmo",
+    philhealth: "philhealth",
+    corporate: "corporate",
+    self_pay_assist: "self_pay_assist",
+    other: "other",
+  }
+
   @doc("A patient insurance-coverage profile")
   model InsuranceProfile extends BaseEntity {
     @doc("Patient this profile belongs to")
@@ -978,6 +987,18 @@ namespace DentalPatientFinanceModule {
 
     @doc("Free-text notes")
     notes: string | null;
+
+    @doc("PH payer type (P1-26; default hmo)")
+    payerType: PayerType;
+
+    @doc("Whether the clinic/branch is an accredited provider for this payer")
+    accredited: boolean | null;
+
+    @doc("Annual benefit cap in centavos, if any")
+    annualLimitCents: int32 | null;
+
+    @doc("Annual benefit already consumed, in centavos")
+    annualLimitUsedCents: int32 | null;
   }
 
   @doc("Body to create an insurance profile")
@@ -1006,6 +1027,18 @@ namespace DentalPatientFinanceModule {
 
     @doc("Free-text notes")
     notes?: string;
+
+    @doc("PH payer type (default hmo)")
+    payerType?: PayerType;
+
+    @doc("Whether the clinic/branch is an accredited provider for this payer")
+    accredited?: boolean;
+
+    @doc("Annual benefit cap in centavos")
+    @minValue(0) annualLimitCents?: int32;
+
+    @doc("Annual benefit already consumed, in centavos")
+    @minValue(0) annualLimitUsedCents?: int32;
   }
 
   @doc("Body to update an insurance profile (at least one field required)")
@@ -1037,6 +1070,18 @@ namespace DentalPatientFinanceModule {
 
     @doc("Free-text notes")
     notes?: string;
+
+    @doc("PH payer type")
+    payerType?: PayerType;
+
+    @doc("Whether the clinic/branch is an accredited provider for this payer")
+    accredited?: boolean;
+
+    @doc("Annual benefit cap in centavos")
+    @minValue(0) annualLimitCents?: int32;
+
+    @doc("Annual benefit already consumed, in centavos")
+    @minValue(0) annualLimitUsedCents?: int32;
   }
 
   @doc("Patient insurance-profile management")
@@ -1246,6 +1291,176 @@ namespace DentalPatientFinanceModule {
       @body body: UpdateClaimStatusRequest,
     ):
       | ApiOkResponse<ClaimDraft>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+  }
+
+  // ==========================================================================
+  // 5 — COVERAGE AUTHORIZATION (LOA) — P1-26
+  // ==========================================================================
+
+  @doc("Lifecycle of a coverage authorization (PH LOA)")
+  enum CoverageAuthStatus {
+    requested: "requested",
+    approved: "approved",
+    partial: "partial",
+    denied: "denied",
+    expired: "expired",
+  }
+
+  @doc("One covered-procedure entry on an itemized authorization")
+  model CoveredProcedure {
+    @doc("CDT procedure code")
+    cdtCode: string;
+
+    @doc("Approved amount for this procedure, in centavos")
+    approvedAmountCents?: int32;
+
+    @doc("Free-text note")
+    note?: string;
+  }
+
+  @doc("A coverage authorization (HMO Letter of Authorization / approval record)")
+  model CoverageAuthorization extends BaseEntity {
+    @doc("Patient the authorization covers")
+    patientId: UUID;
+
+    @doc("Insurance profile backing the authorization")
+    insuranceProfileId: UUID;
+
+    @doc("Branch the authorization is scoped to")
+    branchId: UUID;
+
+    @doc("Visit the authorization is anchored to, if any")
+    visitId: UUID | null;
+
+    @doc("Treatment plan the authorization is anchored to, if any")
+    treatmentPlanId: UUID | null;
+
+    @doc("Approval code / LOA number")
+    loaNumber: string | null;
+
+    @doc("Authorization status")
+    status: CoverageAuthStatus;
+
+    @doc("Date the authorization was approved (YYYY-MM-DD)")
+    approvedAt: plainDate | null;
+
+    @doc("Date the authorization expires (YYYY-MM-DD)")
+    validUntil: plainDate | null;
+
+    @doc("Approved coverage cap for this authorization, in centavos")
+    approvedAmountCents: int32 | null;
+
+    @doc("Itemized covered procedures, if any")
+    coveredProcedures: CoveredProcedure[] | null;
+
+    @doc("Storage file id of the scanned LOA, if any")
+    attachmentFileId: UUID | null;
+
+    @doc("Free-text notes")
+    notes: string | null;
+  }
+
+  @doc("Body to capture a coverage authorization (LOA)")
+  model CreateCoverageAuthorizationRequest {
+    @doc("Insurance profile backing the authorization")
+    insuranceProfileId: UUID;
+
+    @doc("Visit the authorization is anchored to, if any")
+    visitId?: UUID;
+
+    @doc("Treatment plan the authorization is anchored to, if any")
+    treatmentPlanId?: UUID;
+
+    @doc("Approval code / LOA number")
+    loaNumber?: string;
+
+    @doc("Initial status (default 'requested')")
+    status?: CoverageAuthStatus;
+
+    @doc("Date the authorization was approved (YYYY-MM-DD)")
+    @pattern("^\\d{4}-\\d{2}-\\d{2}$")
+    approvedAt?: string;
+
+    @doc("Date the authorization expires (YYYY-MM-DD)")
+    @pattern("^\\d{4}-\\d{2}-\\d{2}$")
+    validUntil?: string;
+
+    @doc("Approved coverage cap, in centavos")
+    @minValue(0)
+    approvedAmountCents?: int32;
+
+    @doc("Itemized covered procedures, if any")
+    coveredProcedures?: CoveredProcedure[];
+
+    @doc("Storage file id of the scanned LOA, if any")
+    attachmentFileId?: UUID;
+
+    @doc("Free-text notes")
+    notes?: string;
+  }
+
+  @doc("Body to transition a coverage authorization's status (FSM-validated)")
+  model UpdateCoverageAuthorizationStatusRequest {
+    @doc("New status")
+    status: CoverageAuthStatus;
+
+    @doc("Approved cap to set on approval/partial, in centavos")
+    @minValue(0)
+    approvedAmountCents?: int32;
+
+    @doc("Itemized covered procedures to set on approval/partial")
+    coveredProcedures?: CoveredProcedure[];
+  }
+
+  @doc("Coverage-authorization (LOA) management")
+  interface CoverageAuthorizationManagement {
+    @doc("Capture a coverage authorization for a patient")
+    @operationId("createCoverageAuthorization")
+    @post
+    @route("/{patientId}/authorizations")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createCoverageAuthorization(
+      @path patientId: UUID,
+      @body body: CreateCoverageAuthorizationRequest,
+    ):
+      | ApiCreatedResponse<CoverageAuthorization>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("List a patient's coverage authorizations")
+    @operationId("listCoverageAuthorizations")
+    @get
+    @route("/{patientId}/authorizations")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    listCoverageAuthorizations(@path patientId: UUID):
+      | ApiOkResponse<CoverageAuthorization[]>
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ErrorResponse;
+
+    @doc("Transition a coverage authorization's status (FSM-validated)")
+    @operationId("updateCoverageAuthorizationStatus")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/authorizations/{authorizationId}/status")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    updateCoverageAuthorizationStatus(
+      @path patientId: UUID,
+      @path authorizationId: UUID,
+      @body body: UpdateCoverageAuthorizationStatusRequest,
+    ):
+      | ApiOkResponse<CoverageAuthorization>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
