@@ -16,6 +16,7 @@ import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ImagingCephReportImageIdRouteImport } from './routes/imaging-ceph-report.$imageId'
+import { Route as BookBranchIdRouteImport } from './routes/book.$branchId'
 import { Route as AuthPinSelectRouteImport } from './routes/auth/pin-select'
 import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
 import { Route as WorkspaceQueueBoardRouteImport } from './routes/_workspace/queue-board'
@@ -64,6 +65,11 @@ const ImagingCephReportImageIdRoute =
     path: '/imaging-ceph-report/$imageId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const BookBranchIdRoute = BookBranchIdRouteImport.update({
+  id: '/book/$branchId',
+  path: '/book/$branchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthPinSelectRoute = AuthPinSelectRouteImport.update({
   id: '/auth/pin-select',
   path: '/auth/pin-select',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_workspace/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_workspace/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/_dashboard/patients_/$patientId'
     | '/auth/pin-entry/$memberId'
@@ -268,6 +280,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   AuthAuthViewRoute: typeof AuthAuthViewRoute
   AuthPinSelectRoute: typeof AuthPinSelectRoute
+  BookBranchIdRoute: typeof BookBranchIdRoute
   ImagingCephReportImageIdRoute: typeof ImagingCephReportImageIdRoute
   AuthPinEntryMemberIdRoute: typeof AuthPinEntryMemberIdRoute
 }
@@ -321,6 +334,13 @@ declare module '@tanstack/react-router' {
       path: '/imaging-ceph-report/$imageId'
       fullPath: '/imaging-ceph-report/$imageId'
       preLoaderRoute: typeof ImagingCephReportImageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$branchId': {
+      id: '/book/$branchId'
+      path: '/book/$branchId'
+      fullPath: '/book/$branchId'
+      preLoaderRoute: typeof BookBranchIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/pin-select': {
@@ -466,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   AuthAuthViewRoute: AuthAuthViewRoute,
   AuthPinSelectRoute: AuthPinSelectRoute,
+  BookBranchIdRoute: BookBranchIdRoute,
   ImagingCephReportImageIdRoute: ImagingCephReportImageIdRoute,
   AuthPinEntryMemberIdRoute: AuthPinEntryMemberIdRoute,
 }
