@@ -5,6 +5,7 @@ import { FeeSchedule } from '../../features/settings/components/fee-schedule'
 import { LocaleSettings } from '../../features/settings/components/locale-settings'
 import { WorkingHours } from '../../features/settings/components/working-hours'
 import { NotificationSettings } from '../../features/settings/components/notification-settings'
+import { PermissionGrid } from '../../features/settings/components/permission-grid'
 import { canAccess } from '@/lib/rbac'
 import type { DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/_dashboard/settings')({
   component: SettingsPage,
 })
 
-type Tab = 'clinic' | 'fees' | 'locale' | 'hours' | 'notifications';
+type Tab = 'clinic' | 'fees' | 'locale' | 'hours' | 'notifications' | 'permissions';
 
 function SettingsPage() {
   const [tab, setTab] = useState<Tab>('clinic');
@@ -36,6 +37,7 @@ function SettingsPage() {
     { key: 'fees', label: 'Fee Schedule' },
     { key: 'locale', label: 'Locale' },
     { key: 'notifications', label: 'Notifications' },
+    { key: 'permissions', label: 'Permissions' },
   ];
 
   return (
@@ -56,6 +58,7 @@ function SettingsPage() {
       {tab === 'fees' && <FeeSchedule />}
       {tab === 'locale' && <LocaleSettings />}
       {tab === 'notifications' && <NotificationSettings />}
+      {tab === 'permissions' && <PermissionGrid />}
     </div>
   );
 }

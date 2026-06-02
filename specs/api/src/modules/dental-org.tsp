@@ -556,6 +556,70 @@ namespace DentalOrgModule {
   }
 
   // ==========================================================================
+  // Granular feature permissions (P2-17)
+  // ==========================================================================
+
+  @doc("A single feature in the permission catalog")
+  model PermissionCatalogEntry {
+    @doc("Stable feature key, e.g. 'billing.invoice.void'")
+    feature: string;
+
+    @doc("Human-readable label for the settings grid")
+    label: string;
+
+    @doc("Grouping category for the settings grid")
+    category: string;
+
+    @doc("Roles allowed by default (absent override falls back to these)")
+    defaultAllowedRoles: MemberRole[];
+  }
+
+  @doc("Effective decision for one (role, feature) cell")
+  model PermissionGridCell {
+    @doc("Role this cell applies to")
+    role: MemberRole;
+
+    @doc("Feature key this cell applies to")
+    feature: string;
+
+    @doc("Whether this role is currently allowed the feature")
+    allowed: boolean;
+
+    @doc("'override' if set explicitly by the org, 'default' if from the catalog")
+    source: string;
+  }
+
+  @doc("Full permission grid for an organization: catalog + effective cells")
+  model PermissionGridResponse {
+    @doc("Organization the grid belongs to")
+    organizationId: UUID;
+
+    @doc("Feature catalog (labels, categories, defaults)")
+    catalog: PermissionCatalogEntry[];
+
+    @doc("Effective decision for every (role, feature) pair")
+    cells: PermissionGridCell[];
+  }
+
+  @doc("A single permission override to apply")
+  model PermissionOverrideInput {
+    @doc("Role to override")
+    role: MemberRole;
+
+    @doc("Feature key to override")
+    feature: string;
+
+    @doc("Allow (true) or deny (false) this role the feature")
+    allowed: boolean;
+  }
+
+  @doc("Update one or more permission overrides for an organization")
+  model UpdatePermissionsRequest {
+    @doc("Override decisions to upsert")
+    overrides: PermissionOverrideInput[];
+  }
+
+  // ==========================================================================
   // Interfaces
   // ==========================================================================
 
@@ -753,6 +817,33 @@ namespace DentalOrgModule {
     ): ApiOkResponse<RecoverPinResponse>
       | ApiBadRequestResponse
       | ApiNotFoundResponse;
+  }
+
+  @doc("Granular feature-permission grid management (P2-17)")
+  interface PermissionManagement {
+    @doc("Get the effective permission grid for an organization")
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getPermissionGrid")
+    getPermissionGrid(
+      @query organizationId?: UUID
+    ): ApiOkResponse<PermissionGridResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Upsert permission overrides for an organization (owner only)")
+    @put
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updatePermissions")
+    updatePermissions(
+      @query organizationId?: UUID,
+      @body body: UpdatePermissionsRequest
+    ): ApiOkResponse<PermissionGridResponse>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   interface BranchConfigManagement {
