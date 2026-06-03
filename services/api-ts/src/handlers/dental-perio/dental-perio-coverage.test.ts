@@ -286,6 +286,30 @@ describe('upsertToothReading', () => {
     expect(body.depthBM).toBe(6);
   });
 
+  // Data-loss regression (perio-charting.spec.ts:242 red-line): the chairside flow
+  // PUTs ONE site per keystroke. A single-site patch must MERGE — it must not null
+  // out the other sites already saved on the tooth. Before the fix, the 2nd patch
+  // (depthBC) wiped depthBM back to null, so the red-line never rendered.
+  test('preserves previously-entered sites across single-site patches (no data loss)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const first = await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 6 }),
+    });
+    expect(first.status).toBe(200);
+    const second = await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBC: 5 }),
+    });
+    expect(second.status).toBe(200);
+    const body = await second.json() as any;
+    expect(body.depthBM).toBe(6); // must survive the second single-site patch
+    expect(body.depthBC).toBe(5);
+  });
+
   test('returns 403 for staff_scheduling role', async () => {
     const chartId = await getChartId();
     const app = buildApp(NON_DENTIST);
