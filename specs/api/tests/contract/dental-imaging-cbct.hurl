@@ -31,17 +31,27 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-POST {{api}}/dental/organizations
+# Self-service onboarding — org + default branch + owner membership in one call
+# (replaces the old org→branch→member setup; caller becomes owner + dentist_owner).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "CBCT Test Clinic {{suffix}}",
+  "organizationName": "CBCT Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
+  "countryCode": "PH",
+  "branchName": "CBCT Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "1 Cone Beam Ave",
+  "city": "Manila",
+  "phone": "+639001234570",
+  "ownerDisplayName": "Dr. CBCT Tester"
 }
 HTTP 201
 [Captures]
-org_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # Upgrade org to imaging addon tier (CBCT is addon-gated, same as cephalometric).
@@ -54,32 +64,6 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.imagingTier" == "addon"
-
-
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "CBCT Main Branch",
-  "timezone": "Asia/Manila",
-  "address": "1 Cone Beam Ave",
-  "city": "Manila",
-  "phone": "+639001234570"
-}
-HTTP 201
-[Captures]
-branch_id: jsonpath "$.id"
-
-
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. CBCT Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
 
 
 POST {{api}}/dental/patients
@@ -174,8 +158,12 @@ jsonpath "$.isVolume" == true
 jsonpath "$.frameCount" == 128
 
 
-# Viewer link auth check (no cookie) → 401
+# Viewer link auth check → 401. Hurl's cookie jar auto-replays the signed-in
+# session cookie on every request, so a bare GET is still authenticated; a Bearer
+# token the auth layer can't resolve overrides the cookie and yields a true 401
+# (mirrors the pattern in the sibling dental contract files).
 GET {{api}}/dental/imaging/studies/{{study_id}}/cbct/viewer-link
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -196,37 +184,48 @@ jsonpath "$.code" == "INVALID_DICOM"
 # TIER GATE — free-tier branch blocked from CBCT create
 # ============================================================
 
-# A second org left on the default (free) imaging tier.
-POST {{api}}/dental/organizations
-Cookie: better-auth.session_token={{session_token}}
+# A second org left on the default (free) imaging tier. The one-active-org
+# invariant forbids the primary user owning two active solo/clinic orgs, so a
+# SEPARATE owner provisions the free org via onboarding and then grants the
+# primary user branch access — preserving the tier-gate intent (the primary user
+# has branch ACCESS, but the org's imaging tier is free).
+POST {{api}}/auth/sign-up/email
 Content-Type: application/json
+Origin: {{api}}
 {
-  "name": "CBCT Free Clinic {{suffix}}",
-  "tier": "solo",
-  "countryCode": "PH"
+  "email": "dental-cbct-free-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Dr. CBCT Free Owner"
 }
-HTTP 201
+HTTP 200
 [Captures]
-free_org_id: jsonpath "$.id"
+free_owner_token: cookie "better-auth.session_token"
 
 
-POST {{api}}/dental/organizations/{{free_org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
+POST {{api}}/dental/onboarding
+Cookie: better-auth.session_token={{free_owner_token}}
 Content-Type: application/json
 {
-  "name": "CBCT Free Branch",
+  "organizationName": "CBCT Free Clinic {{suffix}}",
+  "tier": "solo",
+  "countryCode": "PH",
+  "branchName": "CBCT Free Branch",
   "timezone": "Asia/Manila",
   "address": "2 Free Ave",
   "city": "Manila",
-  "phone": "+639001234571"
+  "phone": "+639001234571",
+  "ownerDisplayName": "Dr. CBCT Free Owner"
 }
 HTTP 201
 [Captures]
-free_branch_id: jsonpath "$.id"
+free_org_id: jsonpath "$.organizationId"
+free_branch_id: jsonpath "$.branchId"
 
 
+# Free-org owner grants the primary user branch access (so the CBCT attempt below
+# fails on the IMAGING TIER gate, not the branch-access gate).
 POST {{api}}/dental/organizations/{{free_org_id}}/branches/{{free_branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
+Cookie: better-auth.session_token={{free_owner_token}}
 Content-Type: application/json
 {
   "displayName": "Dr. CBCT Tester",

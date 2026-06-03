@@ -31,18 +31,28 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; caller becomes owner +
+# dentist_owner). imagingTier is still upgraded via the PATCH below.
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Imaging Test Clinic {{suffix}}",
+  "organizationName": "Imaging Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
+  "countryCode": "PH",
+  "branchName": "Main Branch",
+  "timezone": "Asia/Manila",
+  "address": "123 Imaging Street",
+  "city": "Manila",
+  "phone": "+639001234569",
+  "ownerDisplayName": "Dr. Imaging Tester"
 }
 HTTP 201
 [Captures]
-org_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # 0b. Upgrade org to imaging addon tier (required for ceph endpoints)
@@ -57,37 +67,7 @@ HTTP 200
 jsonpath "$.imagingTier" == "addon"
 
 
-# 0c. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
-  "timezone": "Asia/Manila",
-  "address": "123 Imaging Street",
-  "city": "Manila",
-  "phone": "+639001234569"
-}
-HTTP 201
-[Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0d. Create branch membership (grants branch + upload access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Imaging Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
-
-
-# 0e. Create a dental patient
+# 0c. Create a dental patient
 POST {{api}}/dental/patients
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -181,8 +161,12 @@ HTTP 403
 jsonpath "$.code" == "FEATURE_DISABLED"
 
 
-# 3b. Detect requires authentication → 401
+# 3b. Detect requires authentication → 401 (auth gate runs before the kill-switch).
+#     Hurl keeps the signed-in session in its cookie store across the whole file, so to
+#     prove the unauthenticated path we send an invalid bearer; Better-Auth's bearer
+#     plugin takes precedence over the stored cookie → no session → 401.
 POST {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/detect
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -213,8 +197,8 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.items[?(@.landmarkCode=='Or')].source" nth 0 == "ai"
-jsonpath "$.items[?(@.landmarkCode=='Or')].confidence" nth 0 == 0.83
+jsonpath "$.items[?(@.landmarkCode=='Or')].source" == "ai"
+jsonpath "$.items[?(@.landmarkCode=='Or')].confidence" == 0.83
 
 
 # 3e. PROVENANCE: editing the AI point's coordinates flips source 'ai' → 'ai_corrected'.
@@ -227,7 +211,7 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.items[?(@.landmarkCode=='Or')].source" nth 0 == "ai_corrected"
+jsonpath "$.items[?(@.landmarkCode=='Or')].source" == "ai_corrected"
 
 
 # ============================================================
@@ -480,8 +464,9 @@ HTTP 200
 jsonpath "$.items" count >= 1
 
 
-# 17f. Superimposition auth check (no cookie) → 401
+# 17f. Superimposition auth check → 401 (invalid bearer overrides hurl's stored cookie)
 GET {{api}}/dental/imaging/patients/{{patient_id}}/ceph/superimpositions
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -498,8 +483,9 @@ jsonpath "$.id" == "{{study_id}}"
 jsonpath "$.images" isCollection
 
 
-# 19. Get study auth check
+# 19. Get study auth check → 401 (invalid bearer overrides hurl's stored cookie)
 GET {{api}}/dental/imaging/studies/{{study_id}}
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -527,19 +513,20 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "type": "caries",
-  "status": "suspected",
+  "status": "draft",
   "toothNumber": 36,
   "visitId": "{{imaging_visit_id}}",
   "patientId": "{{patient_id}}",
   "branchId": "{{branch_id}}",
   "note": "Mesial caries suspected"
 }
-HTTP 200
+HTTP 201
 [Captures]
 finding_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.type" == "caries"
 jsonpath "$.toothNumber" == 36
+jsonpath "$.status" == "draft"
 
 
 # 21. List findings for image
@@ -567,7 +554,7 @@ jsonpath "$.status" == "confirmed"
 # 23. Delete imaging finding
 DELETE {{api}}/dental/imaging/findings/{{finding_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 204
 
 
 # ============================================================
@@ -580,13 +567,15 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "type": "distance",
-  "geometry": {"points": [{"x": 100, "y": 200}, {"x": 150, "y": 250}]}
+  "geometry": {"type": "distance", "points": [{"x": 100, "y": 200}, {"x": 150, "y": 250}]}
 }
-HTTP 200
+HTTP 201
 [Captures]
 measurement_id: jsonpath "$.id"
 [Asserts]
-jsonpath "$.type" == "distance"
+# API maps the input measurement type 'distance' onto the stored annotation enum 'line'.
+jsonpath "$.type" == "line"
+jsonpath "$.geometry.type" == "distance"
 
 
 # 25. List measurements for image
@@ -594,13 +583,13 @@ GET {{api}}/dental/imaging/images/{{image_id}}/measurements
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
 
 
 # 26. Delete measurement
 DELETE {{api}}/dental/imaging/measurements/{{measurement_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 204
 
 
 # ============================================================
@@ -615,10 +604,10 @@ HTTP 200
 jsonpath "$.items" isCollection
 
 
-# 28. Delete a landmark by code
-DELETE {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/N
+# 28. Delete a landmark by code — use S (still 'placed'); N is locked and would 422.
+DELETE {{api}}/dental/imaging/images/{{image_id}}/ceph/landmarks/S
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 204
 
 
 # 29. Update image modality
@@ -640,6 +629,7 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 
 
-# 31. Findings auth check
+# 31. Findings auth check → 401 (invalid bearer overrides hurl's stored cookie)
 GET {{api}}/dental/imaging/images/{{image_id}}/findings
+Authorization: Bearer invalid-no-session
 HTTP 401

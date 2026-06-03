@@ -17,48 +17,28 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; the caller becomes the org
+# owner + a dentist_owner member, so the rest of the suite runs on the user's token).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "PMD Test Clinic {{suffix}}",
+  "organizationName": "PMD Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
+  "countryCode": "PH",
+  "branchName": "Main Branch",
   "timezone": "Asia/Manila",
   "address": "123 Test Street",
   "city": "Manila",
-  "phone": "+639001234567"
+  "phone": "+639001234567",
+  "ownerDisplayName": "Dr. PMD Tester"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0c. Create branch membership for this user (grants branch access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. PMD Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # 0d. Create dental patient 1 (primary)
@@ -128,9 +108,63 @@ Content-Type: application/json
   "priceCents": 15000
 }
 HTTP 201
+[Captures]
+treatment_id: jsonpath "$.id"
 
 
-# 4. Complete the visit
+# 3a. Create a consent form for the visit (required to mark a treatment performed
+#     and to complete the visit — hard completion gates).
+POST {{api}}/dental/visits/{{visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "tmpl-restorative",
+  "templateName": "Restorative Consent"
+}
+HTTP 201
+[Captures]
+consent_id: jsonpath "$.id"
+
+
+# 3b. Sign the consent form
+POST {{api}}/dental/visits/{{visit_id}}/consents/{{consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgo="
+}
+HTTP 200
+[Asserts]
+jsonpath "$.signed" == true
+
+
+# 3c. Advance treatment diagnosed → planned (two-step state machine)
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "planned"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "planned"
+
+
+# 3d. Advance treatment planned → performed (requires signed consent)
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "performed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "performed"
+
+
+# 4. Complete the visit (no open treatments, signed consent present)
 PATCH {{api}}/dental/visits/{{visit_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -214,6 +248,7 @@ Content-Type: application/json
   "patientId": "{{patient_id}}",
   "sourceFacility": "City Dental Clinic",
   "sourceReference": "REF-2025-001",
+  "sourceDescription": "Open Dental v21.1",
   "content": "{\"conditions\":[\"I10\"],\"medications\":[\"Amoxicillin\"]}"
 }
 HTTP 201
@@ -252,15 +287,28 @@ jsonpath "$.id" == "{{imported_id}}"
 jsonpath "$.sourceFacility" isString
 
 
-# NEW: G2.5-S6 — imported PMD auth check
-GET {{api}}/dental/pmd/imported/{{imported_id}}
-HTTP 401
-
-
 # NEW: G2.5-S6 — export PMD from visit (download as file)
 GET {{api}}/dental/visits/{{visit_id}}/pmd/export
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+
+
+# ------------------------------------------------------------
+# AUTH CHECKS (run last). Sign out first so hurl's cookie store
+# is cleared (Set-Cookie Max-Age=0); the requests below carry no
+# session and must be rejected with 401.
+# ------------------------------------------------------------
+POST {{api}}/auth/sign-out
+Cookie: better-auth.session_token={{session_token}}
+Origin: {{api}}
+Content-Type: application/json
+{}
+HTTP 200
+
+
+# NEW: G2.5-S6 — imported PMD auth check
+GET {{api}}/dental/pmd/imported/{{imported_id}}
+HTTP 401
 
 
 # NEW: G2.5-S6 — visit PMD export auth check

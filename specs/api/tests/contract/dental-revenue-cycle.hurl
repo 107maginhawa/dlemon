@@ -20,34 +20,17 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — org + default branch + owner membership in one call
+# (replaces the old org→branch→member setup; caller becomes owner + dentist_owner).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
-{ "name": "RC Clinic {{suffix}}", "tier": "clinic", "countryCode": "PH" }
+{ "organizationName": "RC Clinic {{suffix}}", "tier": "clinic", "countryCode": "PH", "branchName": "Main Branch", "timezone": "Asia/Manila", "city": "Manila", "ownerDisplayName": "Dr. Revenue Cycle" }
 HTTP 201
 [Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{ "name": "Main Branch", "timezone": "Asia/Manila", "city": "Manila" }
-HTTP 201
-[Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0c. Membership (grants branch access — must precede patient create)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{ "displayName": "Dr. Revenue Cycle", "role": "dentist_owner", "personId": "{{user_id}}" }
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # 0d. Patient (branchId sets preferredBranchId → drives branch-access checks)

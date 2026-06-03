@@ -20,48 +20,27 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch (UTC so the contract
+# slots are timezone-stable) + owner membership (the bookable provider) in one call.
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Online Booking Clinic {{suffix}}",
+  "organizationName": "Online Booking Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Branch (UTC so the contract slots are timezone-stable)
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Booking Branch",
+  "countryCode": "PH",
+  "branchName": "Booking Branch",
   "timezone": "UTC",
   "address": "1 Booking Ave",
   "city": "Manila",
-  "phone": "+639001234567"
+  "phone": "+639001234567",
+  "ownerDisplayName": "Dr. Booking Owner"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0c. Provider membership (owner is a bookable provider)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Booking Owner",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-provider_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+provider_id: jsonpath "$.membershipId"
 
 
 # 0d. Working hours: open every day 00:00–23:59 so contract slots are always inside.
@@ -110,7 +89,7 @@ jsonpath "$.providers" count > 0
 
 
 # 2. Public availability is reachable unauthenticated and PII-free.
-GET {{api}}/dental/public/branches/{{branch_id}}/availability?visitType=checkup&date_from=2099-01-05&date_to=2099-01-05&providerId={{provider_id}}
+GET {{api}}/dental/public/branches/{{branch_id}}/availability?visitType=checkup&date_from=2026-09-01&date_to=2026-09-01&providerId={{provider_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.branchId" == "{{branch_id}}"
@@ -124,7 +103,7 @@ POST {{api}}/dental/public/branches/{{branch_id}}/holds
 Content-Type: application/json
 {
   "providerId": "{{provider_id}}",
-  "startAt": "2099-01-05T09:00:00Z",
+  "startAt": "2026-09-01T09:00:00Z",
   "visitType": "checkup"
 }
 HTTP 201
@@ -140,7 +119,7 @@ POST {{api}}/dental/public/branches/{{branch_id}}/bookings
 Content-Type: application/json
 {
   "providerId": "{{provider_id}}",
-  "startAt": "2099-01-05T09:00:00Z",
+  "startAt": "2026-09-01T09:00:00Z",
   "visitType": "checkup",
   "sessionToken": "{{session_token_hold}}",
   "firstName": "Jordan",
@@ -161,7 +140,7 @@ POST {{api}}/dental/public/branches/{{branch_id}}/bookings
 Content-Type: application/json
 {
   "providerId": "{{provider_id}}",
-  "startAt": "2099-01-05T09:00:00Z",
+  "startAt": "2026-09-01T09:00:00Z",
   "visitType": "checkup",
   "firstName": "Second",
   "lastName": "Booker"
@@ -174,7 +153,7 @@ POST {{api}}/dental/public/branches/{{branch_id}}/bookings
 Content-Type: application/json
 {
   "providerId": "{{provider_id}}",
-  "startAt": "2099-01-05T11:00:00Z",
+  "startAt": "2026-09-01T11:00:00Z",
   "visitType": "emergency",
   "firstName": "Urgent"
 }
@@ -192,7 +171,7 @@ jsonpath "$.confirmationState" == "pending"
 
 # 8. The online appointment is visible to staff and can be checked in
 #    (flows through the existing lifecycle). First list to find it.
-GET {{api}}/dental/appointments?branchId={{branch_id}}&date_from=2099-01-05&date_to=2099-01-05
+GET {{api}}/dental/appointments?branchId={{branch_id}}&date_from=2026-09-01&date_to=2026-09-01
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
@@ -201,5 +180,16 @@ jsonpath "$[0].status" == "scheduled"
 
 
 # 9. Staff routes still require auth — listing without a session is 401.
-GET {{api}}/dental/appointments?branchId={{branch_id}}&date_from=2099-01-05&date_to=2099-01-05
+# Sign out first: better-auth's sign-out emits an expiring Set-Cookie that purges
+# the owner session from hurl's in-file cookie jar (a blank request Cookie header
+# can't override the jar in hurl 8.x — the jar cookie is always sent first and the
+# server reads it). After sign-out the jar is empty, modelling a genuinely
+# unauthenticated caller.
+POST {{api}}/auth/sign-out
+Origin: {{api}}
+Content-Type: application/json
+{}
+HTTP 200
+
+GET {{api}}/dental/appointments?branchId={{branch_id}}&date_from=2026-09-01&date_to=2026-09-01
 HTTP 401
