@@ -1,5 +1,16 @@
 # Follow-up A — Test-bootstrap rework for admin-gated org creation
 
+> **SUPERSEDED 2026-06-03 by the self-service onboarding work.** The conclusion below
+> ("org admin-gating is intended; thread an admin token into the bootstraps") was
+> reversed: investigation proved admin-only org creation is a real product bug (a clinic
+> owner cannot onboard). The fix shipped is a NEW guarded endpoint `POST /dental/onboarding`
+> (the admin endpoint + EM-ORG-002 stay enforced and untouched). The test bootstraps now
+> use ONE `/dental/onboarding` call instead of admin-token threading. See
+> **`docs/decisions/ADR-007-self-service-onboarding.md`** and the plan
+> `~/.claude/plans/splendid-roaming-kitten.md`. This file is kept for history only.
+>
+> _Original (now-obsolete) note below._
+
 > Created 2026-06-03 during the "run the authored E2E + contract tests" pass.
 > Scope decision (with the user): **do this as a follow-up**; org admin-gating is **intended**
 > (admins / seed provision orgs — no product change). This doc is the spec for that follow-up.
