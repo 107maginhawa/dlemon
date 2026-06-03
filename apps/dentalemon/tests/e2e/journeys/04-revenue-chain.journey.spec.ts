@@ -77,14 +77,16 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    // Step 2: close slideout / navigate to Treatment Plan tab (best-effort).
+    // Step 2: close the slideout so the always-visible Treatment Breakdown
+    // (treatment-table) is fully interactable. Do NOT open the Treatment Plan
+    // sheet here: that overlay exposes only a Decline control (no Mark Done) and
+    // it covers the breakdown's Mark Done button — a force-click would land on
+    // the overlay and fire no PATCH. The revenue-chain Mark Done lives in the
+    // breakdown, which is already on screen below the carousel.
     const closeBtn = slideout.getByRole('button', { name: /close|×|cancel/i }).first()
     if (await closeBtn.count()) await closeBtn.click().catch(() => {})
 
-    const tpBtn = page.getByRole('button', { name: /treatment plan/i }).first()
-    if (await tpBtn.count()) await tpBtn.click().catch(() => {})
-
-    // Step 3: locate "Mark Done" affordance.
+    // Step 3: locate "Mark Done" affordance in the breakdown.
     const markDone = page
       .getByRole('button', { name: /mark done|mark complete|complete treatment/i })
       .first()
@@ -226,10 +228,15 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     }
 
     // Step 8: independent read — confirm invoice exists for this patient.
-    const invListResp = await apiReader.get(`/dental/patients/${patientId}/invoices`)
+    // Invoices are listed under /dental/billing/invoices (there is no
+    // /dental/patients/:id/invoices route — that 404s).
+    const invListResp = await apiReader.get(
+      `/dental/billing/invoices?patientId=${patientId}&branchId=${branchId}`,
+    )
     const invListBody = invListResp.ok() ? await invListResp.json() : null
-    const hasInvoice =
-      Array.isArray(invListBody) ? invListBody.length > 0 : (invListBody?.items?.length ?? 0) > 0
+    const hasInvoice = Array.isArray(invListBody)
+      ? invListBody.length > 0
+      : ((invListBody?.data?.length ?? invListBody?.items?.length) ?? 0) > 0
 
     if (!hasInvoice) {
       await expectJourneyBroken(
