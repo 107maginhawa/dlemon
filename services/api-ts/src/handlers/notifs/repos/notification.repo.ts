@@ -13,7 +13,7 @@ import {
   type NotificationFilters,
   type CreateNotificationRequest
 } from './notification.schema';
-import { PersonRepository } from '../../person/repos/person.repo';
+import { findNotificationRecipient } from '../../person/repos/person-notifs.facade';
 import { ValidationError, NotFoundError, ForbiddenError } from '@/core/errors';
 import * as OneSignal from '@onesignal/node-onesignal';
 import { SYSTEM_USER_ID } from '@/core/constants';
@@ -21,20 +21,17 @@ import { subDays } from 'date-fns';
 import type { EmailService } from '@/core/email';
 
 export class NotificationRepository extends DatabaseRepository<Notification, NewNotification, NotificationFilters> {
-  private personRepo: PersonRepository;
   private oneSignalClient?: OneSignal.DefaultApi;
   private oneSignalAppId?: string;
   private emailService?: EmailService;
 
   constructor(
     db: DatabaseInstance,
-    personRepo: PersonRepository,
     logger?: any,
     oneSignalConfig?: { appId: string; apiKey: string },
     emailService?: EmailService
   ) {
     super(db, notifications, logger);
-    this.personRepo = personRepo;
     this.emailService = emailService;
 
     // Initialize OneSignal if config provided
@@ -99,7 +96,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     this.logger?.debug({ request }, 'Creating notification from module');
 
     // Validate recipient exists (optional - Person records may not exist for all User IDs)
-    const recipient = await this.personRepo.findOneById(request.recipient);
+    const recipient = await findNotificationRecipient(this.db, request.recipient, this.logger);
 
     if (!recipient) {
       // Log warning but allow notification creation
@@ -407,8 +404,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
           const templateTag = this.mapNotificationToEmailTemplate(notification.type);
 
           if (templateTag) {
-            // Get recipient email from person repository
-            const person = await this.personRepo.findOneById(notification.recipient);
+            // Get recipient email via the person facade
+            const person = await findNotificationRecipient(this.db, notification.recipient, this.logger);
             const recipientEmail = person?.contactInfo?.email;
 
             if (person && recipientEmail) {

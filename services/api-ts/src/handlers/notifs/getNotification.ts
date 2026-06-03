@@ -4,7 +4,6 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { NotFoundError, ForbiddenError } from '@/core/errors';
 import { NotificationRepository } from './repos/notification.repo';
-import { PersonRepository } from '../person/repos/person.repo';
 
 /**
  * getNotification
@@ -28,8 +27,7 @@ export async function getNotification(
   const userId = user.id; // Get user's person ID
 
   // Instantiate repositories
-  const personRepo = new PersonRepository(db, logger);
-  const repo = new NotificationRepository(db, personRepo, logger);
+  const repo = new NotificationRepository(db, logger);
 
   // Get notification with ownership check
   const notification = await repo.findOneByIdAndRecipient(params.notif, userId);

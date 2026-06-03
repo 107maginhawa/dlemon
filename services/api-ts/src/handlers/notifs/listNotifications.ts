@@ -4,7 +4,6 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { parsePagination, buildPaginationMeta, parseFilters } from '@/utils/query';
 import { NotificationRepository } from './repos/notification.repo';
-import { PersonRepository } from '../person/repos/person.repo';
 import type { NotificationFilters } from './repos/notification.schema';
 
 /**
@@ -45,8 +44,7 @@ export async function listNotifications(
   }
 
   // Instantiate repositories
-  const personRepo = new PersonRepository(db, logger);
-  const repo = new NotificationRepository(db, personRepo, logger);
+  const repo = new NotificationRepository(db, logger);
 
   // Get notifications for the current user only
   const result = await repo.findManyByRecipient(

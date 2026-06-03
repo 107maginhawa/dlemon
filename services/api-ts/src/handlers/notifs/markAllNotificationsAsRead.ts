@@ -3,7 +3,6 @@ import type { MarkAllNotificationsAsReadQuery } from '@/generated/openapi/valida
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { NotificationRepository } from './repos/notification.repo';
-import { PersonRepository } from '../person/repos/person.repo';
 
 /**
  * markAllNotificationsAsRead
@@ -27,8 +26,7 @@ export async function markAllNotificationsAsRead(
   const userId = user.id; // Get user's person ID
   
   // Instantiate repositories
-  const personRepo = new PersonRepository(db, logger);
-  const repo = new NotificationRepository(db, personRepo, logger);
+  const repo = new NotificationRepository(db, logger);
   
   // Mark all notifications as read for the user
   const markedCount = await repo.markAllAsRead(userId, query.type);

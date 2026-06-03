@@ -13,7 +13,6 @@ import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
-import { PersonRepository } from '@/handlers/person/repos/person.repo';
 import { reminderArmerJob } from './reminderArmer';
 import { DentalAppointmentRepository } from '../repos/dental-appointment.repo';
 import { notifications } from '@/handlers/notifs/repos/notification.schema';
@@ -35,8 +34,7 @@ const MEMBER_ID = 'c0000000-0000-1000-8000-0000000000d1';
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 function buildNotifsRepo() {
-  const personRepo = new PersonRepository(db, noopLogger as any);
-  return new NotificationRepository(db, personRepo, noopLogger);
+  return new NotificationRepository(db, noopLogger);
 }
 
 // Minimal NotificationService surface the armer needs, backed by the real repo.

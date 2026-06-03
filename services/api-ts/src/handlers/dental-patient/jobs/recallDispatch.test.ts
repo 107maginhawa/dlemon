@@ -13,7 +13,6 @@ import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
-import { PersonRepository } from '@/handlers/person/repos/person.repo';
 import { recallDispatchJob } from './recallDispatch';
 import { RecallRepository } from '../repos/recall.repo';
 import { dentalRecalls } from '../repos/recall.schema';
@@ -35,8 +34,7 @@ const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000f1';
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 function buildNotifsService() {
-  const personRepo = new PersonRepository(db, noopLogger as any);
-  const repo = new NotificationRepository(db, personRepo, noopLogger);
+  const repo = new NotificationRepository(db, noopLogger);
   return {
     enqueueScheduledIfAbsent: repo.enqueueScheduledIfAbsent.bind(repo),
     expireQueuedByEntity: repo.expireQueuedByEntity.bind(repo),

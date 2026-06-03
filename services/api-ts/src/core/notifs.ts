@@ -9,7 +9,6 @@ import type { Logger } from '@/types/logger';
 import type { WebSocketService } from '@/core/ws';
 import type { EmailService } from '@/core/email';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
-import { PersonRepository } from '@/handlers/person/repos/person.repo';
 import type {
   Notification,
   CreateNotificationRequest
@@ -91,10 +90,9 @@ class NotificationServiceImpl implements NotificationService {
     ws: WebSocketService,
     emailService?: EmailService
   ) {
-    const personRepo = new PersonRepository(db, logger);
     // Extract OneSignal config from notification config
     const oneSignalConfig = notifConfig.onesignal;
-    this.repo = new NotificationRepository(db, personRepo, logger, oneSignalConfig, emailService);
+    this.repo = new NotificationRepository(db, logger, oneSignalConfig, emailService);
     this.ws = ws;
     this.logger = logger;
 
