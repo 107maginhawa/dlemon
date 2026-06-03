@@ -70,6 +70,9 @@
 
 **Fix:** Add `authMiddleware({ roles: ['admin'] })` on the route, or add an admin check inside the handler (check `user.role === 'admin'`).
 
+**Status (2026-06-03): RESOLVED + ENFORCED — admin gate present; self-service added separately.**
+`DentalOrganizationManagement_create.ts:24` enforces `user.role === 'admin'` (throws `ForbiddenError`), so `POST /dental/organizations` is admin-only as the spec requires — EM-ORG-002 is **closed and still enforced**. Real clinic owners onboard through a **separate, guarded** endpoint `POST /dental/onboarding` (`createOnboarding`), an *added, compensated capability* — NOT a relaxation of this P0. The admin endpoint is untouched. Compensating controls on the self-service path (verified-email in prod, one-active-org partial-unique index `dental_org_one_active_per_owner`, self-service-tier restriction, per-IP rate-limit) and the full rationale are recorded in **`docs/decisions/ADR-007-self-service-onboarding.md`**. Do not re-flag the admin endpoint, and do not treat the new self-service capability as an EM-ORG-002 regression.
+
 ---
 
 ### EM-ORG-003 — P1 — updateMember handler is dead code (PATCH /dental/org/members/:memberId not registered)
