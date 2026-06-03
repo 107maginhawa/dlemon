@@ -1524,6 +1524,60 @@ async function seed() {
 
   // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
 
+  // ── 8.7 Free-tier clinic (B01 ceph free-tier gate) ──────────────────────────
+  // A SEPARATE org whose imagingTier is left at the default (NULL = 'free'), with a
+  // patient + cephalometric image. Ceph analysis on this org's image must 403
+  // (IMAGING_TIER_REQUIRED). The demo org is 'addon' (paid), so the free-tier gate
+  // can ONLY be exercised against this dedicated free clinic. Fully self-contained:
+  // its own account + org + member PIN — it never touches the demo org.
+  section('8.7 Free-tier clinic (ceph gate)')
+  try {
+    const free = await signUpOrIn('free@dentalemon.com', 'FreeClinic1!', 'Dr. Ben Tan')
+    await post('/persons', { firstName: 'Ben', lastName: 'Tan', gender: 'male', timezone: 'Asia/Manila' }, free.cookie)
+    let fOrgId: string, fBranchId: string, fMemberId: string
+    const fctx = await get('/dental/org/context', free.cookie)
+    if (fctx.ok && fctx.data?.branch?.id) {
+      fOrgId = fctx.data.org.id; fBranchId = fctx.data.branch.id; fMemberId = fctx.data.member.id
+      log(`→ Existing free clinic: ${fctx.data.org.name}`)
+    } else {
+      const onb = must(await post('/dental/onboarding', {
+        organizationName: 'Budget Dental Clinic', tier: 'solo', countryCode: 'PH',
+        branchName: 'Free Branch', timezone: 'Asia/Manila', ownerDisplayName: 'Dr. Ben Tan',
+      }, free.cookie), 'free-clinic onboarding')
+      fOrgId = onb.organizationId; fBranchId = onb.branchId; fMemberId = onb.membershipId
+      log('✓ Onboarded free clinic: Budget Dental Clinic')
+    }
+    await post(`/dental/organizations/${fOrgId}/branches/${fBranchId}/members/${fMemberId}/set-pin`, { pin: '111111' }, free.cookie)
+    const fPatient = must(await post('/dental/patients', {
+      displayName: 'Free Patient', dateOfBirth: '1990-01-01', gender: 'male',
+      consentGiven: true, branchId: fBranchId,
+    }, free.cookie), 'free patient')
+    const fVisit = await activateVisit(fPatient.id, fBranchId, fMemberId, 0, 'Cephalometric consult', free.cookie)
+    // Cephalometric study CREATE is itself addon-gated (createImagingStudy V-IMG-001),
+    // so a free org can never normally hold a ceph image. Reproduce the realistic
+    // DOWNGRADE scenario: a clinic that HAD the add-on (uploaded a ceph), then dropped
+    // to free. Temporarily enable addon → create the ceph image → revert to free, so
+    // the image exists but ceph ANALYSIS is gated to 403 (CIMG-001/002).
+    await patch(`/dental/organizations/${fOrgId}`, { imagingTier: 'addon' }, free.cookie)
+    const studyR = await post('/dental/imaging/studies', {
+      patientId: fPatient.id, ...(fVisit ? { visitId: fVisit } : {}), branchId: fBranchId,
+      modality: 'cephalometric', filename: 'free-ceph-lateral.jpg', mimeType: 'image/jpeg', size: 2048000,
+    }, free.cookie)
+    if (studyR.ok) {
+      const imageId = studyR.data.image?.id ?? studyR.data.imageId
+      if (studyR.data.fileId) await uploadDemoImage(studyR.data.fileId, 'image/jpeg').catch(() => {})
+      // Downgrade back to free — image stays, ceph analysis now 403s.
+      const downR = await patch(`/dental/organizations/${fOrgId}`, { imagingTier: 'free' }, free.cookie)
+      log(downR.ok
+        ? `  ✓ Free-tier ceph image (imageId ${String(imageId).slice(0, 8)}… — downgraded to free → analysis 403). Login free@dentalemon.com / FreeClinic1! · PIN 1 1 1 1 1 1`
+        : `  ⚠ Free-tier downgrade failed (${downR.status}) — org may still be addon`)
+    } else {
+      log(`  ⚠ Free-tier ceph study (${studyR.status}): ${JSON.stringify(studyR.data).slice(0, 120)}`)
+    }
+  } catch (e: any) {
+    log(`  ⚠ Free-tier clinic seed skipped: ${String(e?.message).slice(0, 140)}`)
+  }
+
   // ── 9. Appointments ──────────────────────────────────────────────────────
   section('9. Appointments')
 
