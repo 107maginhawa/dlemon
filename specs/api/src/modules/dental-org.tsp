@@ -362,6 +362,22 @@ namespace DentalOrgModule {
     @doc("IANA timezone for the default branch — defaults to Asia/Manila when omitted")
     @maxLength(64)
     timezone?: string;
+
+    @doc("Street address for the default branch")
+    @maxLength(255)
+    address?: string;
+
+    @doc("City for the default branch")
+    @maxLength(80)
+    city?: string;
+
+    @doc("Phone number for the default branch")
+    @maxLength(40)
+    phone?: string;
+
+    @doc("Display name for the owner's membership (PIN-select / provider name). Defaults to the caller's account name when omitted.")
+    @maxLength(80)
+    ownerDisplayName?: string;
   }
 
   @doc("Self-service onboarding result — the provisioned org, default branch, and owner membership")

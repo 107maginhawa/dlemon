@@ -2074,7 +2074,11 @@ export const DentalOrgModuleOnboardingRequestSchema = z.object({
   tier: z.enum(["solo", "clinic", "group", "enterprise"]),
   countryCode: z.string().max(2),
   branchName: z.string().max(120).optional(),
-  timezone: z.string().max(64).optional()
+  timezone: z.string().max(64).optional(),
+  address: z.string().max(255).optional(),
+  city: z.string().max(80).optional(),
+  phone: z.string().max(40).optional(),
+  ownerDisplayName: z.string().max(80).optional()
 });
 
 export const DentalOrgModuleOnboardingResponseSchema = z.object({

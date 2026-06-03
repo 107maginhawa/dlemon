@@ -108,7 +108,7 @@ export async function createOnboarding(
   const branchName = body.branchName?.trim() || orgName;
   const timezone = body.timezone?.trim() || DEFAULT_TIMEZONE;
   const countryCode = body.countryCode.toUpperCase().slice(0, 2);
-  const ownerDisplayName = user.name?.trim() || user.email || 'Owner';
+  const ownerDisplayName = body.ownerDisplayName?.trim() || user.name?.trim() || user.email || 'Owner';
 
   let provisioned: {
     orgId: string;
@@ -139,6 +139,9 @@ export async function createOnboarding(
           organizationId: org.id,
           name: branchName,
           timezone,
+          address: body.address?.trim() || null,
+          city: body.city?.trim() || null,
+          phone: body.phone?.trim() || null,
           active: true,
           createdBy: user.id,
           updatedBy: user.id,

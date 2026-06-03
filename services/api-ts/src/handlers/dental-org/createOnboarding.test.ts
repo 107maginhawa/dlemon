@@ -136,6 +136,10 @@ describe('createOnboarding handler', () => {
       countryCode: 'PH',
       branchName: 'Main Branch',
       timezone: 'Asia/Manila',
+      address: '123 Ayala Ave',
+      city: 'Makati',
+      phone: '+63 2 8888 1234',
+      ownerDisplayName: 'Dr. Jane Owner',
     });
 
     expect(res.status).toBe(201);
@@ -164,6 +168,9 @@ describe('createOnboarding handler', () => {
     expect(branch!.organizationId).toBe(body.organizationId);
     expect(branch!.name).toBe('Main Branch');
     expect(branch!.timezone).toBe('Asia/Manila');
+    expect(branch!.address).toBe('123 Ayala Ave');
+    expect(branch!.city).toBe('Makati');
+    expect(branch!.phone).toBe('+63 2 8888 1234');
 
     // Membership: caller is the dentist_owner in the branch
     const [membership] = await db
@@ -175,6 +182,7 @@ describe('createOnboarding handler', () => {
     expect(membership!.personId).toBe(OWNER_ID);
     expect(membership!.role).toBe('dentist_owner');
     expect(membership!.status).toBe('active');
+    expect(membership!.displayName).toBe('Dr. Jane Owner');
   });
 
   test('defaults branchName to org name and timezone to Asia/Manila', async () => {
