@@ -9,7 +9,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { listDentalPatientsWithPerson, countDentalPatientsWithPerson } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { buildPaginationMeta } from '@/utils/query';
 import { sql, inArray } from 'drizzle-orm';
@@ -58,10 +58,9 @@ export async function listDentalPatients(
   const limit = Math.min(q.limit ?? 50, 200);
   const offset = q.offset ?? 0;
 
-  const repo = new PatientRepository(db, logger);
   const [allPatients, total] = await Promise.all([
-    repo.findManyWithPerson(filters, { pagination: { limit, offset } }),
-    repo.countWithPerson(filters),
+    listDentalPatientsWithPerson(db, filters, { pagination: { limit, offset } }),
+    countDentalPatientsWithPerson(db, filters),
   ]);
 
   // Batch visit counts + last visit for all patients in one query

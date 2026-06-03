@@ -11,7 +11,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
 import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
@@ -29,8 +29,7 @@ export async function getDentalPatientSafetyFloor(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // Branch-level authorization

@@ -9,7 +9,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq, desc, and } from 'drizzle-orm';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
@@ -29,8 +29,7 @@ export async function getDentalPatient(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneByIdWithPerson(patientId);
+  const patient = await getDentalPatientWithPerson(db, patientId);
 
   if (!patient) throw new NotFoundError('Patient not found');
 

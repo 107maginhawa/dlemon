@@ -7,9 +7,10 @@
 
 import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
-import { patients } from './patient.schema';
+import type { PaginationOptions } from '@/core/database.repo';
+import { patients, type Patient, type PatientWithPerson } from './patient.schema';
 import { persons } from '../../person/repos/person.schema';
-import { PatientRepository } from './patient.repo';
+import { PatientRepository, type PatientFilters, type ArchiveResult } from './patient.repo';
 
 /** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
 export async function getPatientForDentalPatient(
@@ -167,6 +168,74 @@ export async function matchOrCreatePatientForOnlineBooking(
   } as Parameters<PatientRepository['createOne']>[0]);
 
   return { patientId: patient.id, personId, created: true };
+}
+
+// ---------------------------------------------------------------------------
+// dental-patient/identity CRUD surface
+//
+// dental-patient/identity/* operates on patient records but lives in a separate
+// module, so it goes through these thin wrappers rather than importing
+// PatientRepository directly (Phase 10 boundary lint). Behaviour mirrors the
+// underlying repo methods exactly.
+// ---------------------------------------------------------------------------
+
+/** Fetch a patient record by id, or null. */
+export async function getDentalPatientRecord(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<Patient | null> {
+  return new PatientRepository(db).findOneById(patientId);
+}
+
+/** Fetch a patient joined to its person by id, or null. */
+export async function getDentalPatientWithPerson(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<PatientWithPerson | null> {
+  return new PatientRepository(db).findOneByIdWithPerson(patientId);
+}
+
+/** List patients joined to person, filtered + paginated. */
+export async function listDentalPatientsWithPerson(
+  db: DatabaseInstance,
+  filters?: PatientFilters,
+  options?: { pagination?: PaginationOptions },
+): Promise<PatientWithPerson[]> {
+  return new PatientRepository(db).findManyWithPerson(filters, options);
+}
+
+/** Count patients matching filters. */
+export async function countDentalPatientsWithPerson(
+  db: DatabaseInstance,
+  filters?: PatientFilters,
+): Promise<number> {
+  return new PatientRepository(db).countWithPerson(filters);
+}
+
+/** Apply a partial update to a patient record. */
+export async function updateDentalPatientRecord(
+  db: DatabaseInstance,
+  patientId: string,
+  data: Partial<Patient>,
+): Promise<Patient> {
+  return new PatientRepository(db).updateOneById(patientId, data);
+}
+
+/** Soft-archive a patient record (optional reason note). */
+export async function archiveDentalPatientRecord(
+  db: DatabaseInstance,
+  patientId: string,
+  note?: string,
+): Promise<ArchiveResult> {
+  return new PatientRepository(db).archivePatient(patientId, note);
+}
+
+/** Restore a soft-archived patient record. */
+export async function restoreDentalPatientRecord(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<ArchiveResult> {
+  return new PatientRepository(db).restorePatient(patientId);
 }
 
 /** Insert a patient row inside a Drizzle transaction (importPatients use case). */

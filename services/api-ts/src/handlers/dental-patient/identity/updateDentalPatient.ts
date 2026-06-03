@@ -10,7 +10,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord, updateDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 
@@ -27,8 +27,7 @@ export async function updateDentalPatient(
 
   const body = ctx.req.valid('json');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // EF-PAT-001: block writes on archived patients
@@ -76,7 +75,7 @@ export async function updateDentalPatient(
   if (body['recallNote'] !== undefined) updates['recallNote'] = body['recallNote'];
 
   updates['updatedBy'] = user.id;
-  const updated = await repo.updateOneById(patientId, updates);
+  const updated = await updateDentalPatientRecord(db, patientId, updates);
 
   logger?.info({ action: 'updateDentalPatient', patientId, updates }, 'Dental patient updated');
 

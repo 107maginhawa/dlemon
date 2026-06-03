@@ -9,7 +9,7 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError, ConflictError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord, archiveDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { ArchiveDentalPatientParams } from '@/generated/openapi/validators';
@@ -25,11 +25,10 @@ export async function archiveDentalPatient(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
 
   // Branch-level authorization — dentist_owner only (EM-PAT-002).
   // V-PAT-002: a missing branch must DENY, never bypass the guard.
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
   if (!patient.preferredBranchId) {
     throw new ForbiddenError('Patient has no assigned branch');
@@ -47,7 +46,7 @@ export async function archiveDentalPatient(
     // no body or invalid JSON — reason remains undefined
   }
 
-  const result = await repo.archivePatient(patientId, reason);
+  const result = await archiveDentalPatientRecord(db, patientId, reason);
 
   if (!result.success) {
     if (result.reason === 'Patient not found') {
@@ -76,6 +75,6 @@ export async function archiveDentalPatient(
     metadata: { reason: reason ?? null },
   });
 
-  const updated = await repo.findOneById(patientId);
+  const updated = await getDentalPatientRecord(db, patientId);
   return ctx.json(updated, 200);
 }
