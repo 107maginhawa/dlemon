@@ -200,7 +200,10 @@ describe('DentalBranchManagement_list handler', () => {
       id: ORG2_ID,
       name: 'Second Clinic',
       tier: 'solo',
-      ownerPersonId: OWNER_ID,
+      // Distinct owner: the dental_org_one_active_per_owner invariant forbids one
+      // owner holding two active solo/clinic orgs. This test only needs a SEPARATE
+      // org to prove branch-list isolation, so a different owner is the faithful seed.
+      ownerPersonId: STRANGER_ID,
       countryCode: 'PH',
       active: true,
     });

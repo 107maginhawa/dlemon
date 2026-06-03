@@ -2069,6 +2069,20 @@ export const DentalOrgModuleMemberRoleSchema = z.enum(["dentist_owner", "dentist
 
 export const DentalOrgModuleMemberStatusSchema = z.enum(["active", "inactive"]);
 
+export const DentalOrgModuleOnboardingRequestSchema = z.object({
+  organizationName: z.string().min(1).max(120),
+  tier: z.enum(["solo", "clinic", "group", "enterprise"]),
+  countryCode: z.string().max(2),
+  branchName: z.string().max(120).optional(),
+  timezone: z.string().max(64).optional()
+});
+
+export const DentalOrgModuleOnboardingResponseSchema = z.object({
+  organizationId: z.string().uuid(),
+  branchId: z.string().uuid(),
+  membershipId: z.string().uuid()
+});
+
 export const DentalOrgModuleOrgContextResponseSchema = z.object({
   organizationId: UUIDSchema,
   branchId: UUIDSchema,
@@ -20581,6 +20595,11 @@ export const ReleaseLegalHoldParams = z.object({
 export type ReleaseLegalHoldParams = z.infer<typeof ReleaseLegalHoldParams>;
 
 export const ReleaseLegalHoldResponse = z.union([DentalLegalHoldModuleLegalHoldSchema, ErrorResponseSchema]);
+
+export const CreateOnboardingBody = DentalOrgModuleOnboardingRequestSchema;
+export type CreateOnboardingBody = z.infer<typeof CreateOnboardingBody>;
+
+export const CreateOnboardingResponse = ErrorResponseSchema;
 
 export const GetOrgContextResponse = DentalOrgModuleOrgContextResponseSchema;
 

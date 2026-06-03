@@ -1121,6 +1121,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.releaseLegalHold as unknown as Handler
   );
 
+  // createOnboarding
+  app.post('/dental/onboarding',
+    authMiddleware(),
+    zValidator('json', validators.CreateOnboardingBody, validationErrorHandler),
+    registry.createOnboarding as unknown as Handler
+  );
+
   // getOrgContext
   app.get('/dental/org/context',
     authMiddleware({ roles: ["user"] }),

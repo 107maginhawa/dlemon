@@ -341,6 +341,41 @@ namespace DentalOrgModule {
     };
   }
 
+  @doc("Self-service clinic onboarding request — provisions the caller's first clinic")
+  model OnboardingRequest {
+    @doc("Practice / clinic name")
+    @minLength(1)
+    @maxLength(120)
+    organizationName: string;
+
+    @doc("Subscription tier (self-service supports solo or clinic)")
+    tier: OrgTier;
+
+    @doc("ISO 3166-1 alpha-2 country code")
+    @maxLength(2)
+    countryCode: string;
+
+    @doc("Default branch name — defaults to the organization name when omitted")
+    @maxLength(120)
+    branchName?: string;
+
+    @doc("IANA timezone for the default branch — defaults to Asia/Manila when omitted")
+    @maxLength(64)
+    timezone?: string;
+  }
+
+  @doc("Self-service onboarding result — the provisioned org, default branch, and owner membership")
+  model OnboardingResponse {
+    @doc("Newly created organization (caller is the owner)")
+    organizationId: UUID;
+
+    @doc("Default branch created for the organization")
+    branchId: UUID;
+
+    @doc("Caller's dentist_owner membership in the default branch")
+    membershipId: UUID;
+  }
+
   @doc("List of organizations")
   model OrganizationList {
     items: DentalOrganization[];
@@ -647,6 +682,21 @@ namespace DentalOrgModule {
       @path id: UUID,
       @body body: UpdateOrganizationRequest,
     ): DentalOrganization | NotFoundError | ApiUnauthorizedResponse | ErrorResponse;
+  }
+
+  @doc("Self-service clinic onboarding — provisions org + default branch + owner membership in one call")
+  interface DentalOnboarding {
+    @doc("Provision a new clinic for the authenticated caller (self-service). Creates the organization (caller becomes owner, status 'provisional'), a default branch, and the caller's dentist_owner membership transactionally. Guardrails: verified email (production), one active org per owner, IP rate-limit.")
+    @useAuth(bearerAuth)
+    @operationId("createOnboarding")
+    @post
+    createOnboarding(@body body: OnboardingRequest):
+      ApiCreatedResponse<OnboardingResponse>
+      | ApiBadRequestResponse
+      | ApiForbiddenResponse
+      | ApiConflictResponse
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
   }
 
   @doc("Dental branch management")

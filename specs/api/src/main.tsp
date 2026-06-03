@@ -323,6 +323,10 @@ namespace MonobaseAPI {
   // ========================================================================
 
   @tag("Dental:Org")
+  @route("/dental/onboarding")
+  interface DentalOnboarding extends DentalOrgModule.DentalOnboarding {}
+
+  @tag("Dental:Org")
   @route("/dental/organizations")
   interface DentalOrganizationManagement extends DentalOrgModule.DentalOrganizationManagement {}
 

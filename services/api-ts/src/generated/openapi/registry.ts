@@ -107,6 +107,7 @@ import { DentalOrganizationManagement_get } from '../../handlers/dental-org/Dent
 import { DentalOrganizationManagement_update } from '../../handlers/dental-org/DentalOrganizationManagement_update';
 import { createConsentTemplate } from '../../handlers/dental-org/createConsentTemplate';
 import { createMember } from '../../handlers/dental-org/createMember';
+import { createOnboarding } from '../../handlers/dental-org/createOnboarding';
 import { deleteConsentTemplate } from '../../handlers/dental-org/deleteConsentTemplate';
 import { getBranchSettings } from '../../handlers/dental-org/getBranchSettings';
 import { getBranchesByUser } from '../../handlers/dental-org/getBranchesByUser';
@@ -474,6 +475,7 @@ export const registry = {
   DentalOrganizationManagement_update,
   createConsentTemplate,
   createMember,
+  createOnboarding,
   deleteConsentTemplate,
   getBranchSettings,
   getBranchesByUser,

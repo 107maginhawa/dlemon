@@ -159,7 +159,11 @@ async function seedOrgsAndMembers() {
     },
     {
       id: FREE_ORG_ID, name: 'Imaging Int Free Clinic', tier: 'solo',
-      ownerPersonId: DENTIST.id, countryCode: 'PH', imagingTier: 'free',
+      // Distinct owner: the dental_org_one_active_per_owner invariant forbids one
+      // owner holding two active solo/clinic orgs. The dentist exercises the free
+      // branch via its membership below (tier-gate test, not ownership), so a
+      // separate owner is the faithful seed.
+      ownerPersonId: 'c1a00000-0000-4000-8000-0000000000ff', countryCode: 'PH', imagingTier: 'free',
       createdBy: DENTIST.id, updatedBy: DENTIST.id,
     },
   ]).onConflictDoNothing();
