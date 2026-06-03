@@ -378,7 +378,7 @@ export function ImagingWorkspace({
         </label>
         <button
           onClick={() => setFindingsPanelOpen((prev) => !prev)}
-          className={`px-2 py-1 text-xs rounded ${findingsPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
+          className={`px-2 py-1 text-xs rounded ${findingsPanelOpen ? 'bg-lemon/20 text-lemon border border-lemon/40' : 'text-white bg-zinc-700'}`}
           aria-pressed={findingsPanelOpen}
         >
           Findings
@@ -386,7 +386,7 @@ export function ImagingWorkspace({
         {isCeph && (
           <button
             onClick={() => setCephPanelOpen((prev) => !prev)}
-            className={`px-2 py-1 text-xs rounded ${cephPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
+            className={`px-2 py-1 text-xs rounded ${cephPanelOpen ? 'bg-lemon/20 text-lemon border border-lemon/40' : 'text-white bg-zinc-700'}`}
             aria-pressed={cephPanelOpen}
             aria-label="Toggle ceph panel"
           >

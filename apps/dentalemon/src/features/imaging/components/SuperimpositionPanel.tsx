@@ -78,7 +78,7 @@ export function SuperimpositionPanel({
                 className={[
                   'rounded-md px-3 py-1.5 text-xs font-medium border transition-colors',
                   selected
-                    ? 'bg-lemon text-[#4A4018] border-lemon'
+                    ? 'bg-lemon text-lemon-foreground border-lemon'
                     : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50',
                   !r.v1 ? 'opacity-50 cursor-not-allowed' : '',
                 ].join(' ')}

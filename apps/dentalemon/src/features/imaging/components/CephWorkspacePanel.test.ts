@@ -206,7 +206,7 @@ describe('CephWorkspacePanel', () => {
     const { container } = renderPanel({ selectedCode: 'N', onSelectCode: mock(() => {}) })
     await screen.findByText('Cephalometric')
     const nBtn = container.querySelector('[data-landmark-code="N"]') as HTMLButtonElement
-    expect(nBtn.className).toContain('border-[#FFE97D]')
+    expect(nBtn.className).toContain('border-lemon')
   })
 
   test('#15 renders the analysis-protocol switcher defaulting to Steiner', async () => {

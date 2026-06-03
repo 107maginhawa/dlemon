@@ -52,7 +52,7 @@ export function FmxMount({ images, onSelectImage }: FmxMountProps) {
                     title={slot.position.label}
                     className={
                       item
-                        ? 'flex aspect-[3/4] flex-col items-center justify-center rounded border border-zinc-300 bg-zinc-900 text-[10px] text-white hover:border-[#FFE97D]'
+                        ? 'flex aspect-[3/4] flex-col items-center justify-center rounded border border-zinc-300 bg-zinc-900 text-[10px] text-white hover:border-lemon'
                         : 'flex aspect-[3/4] flex-col items-center justify-center rounded border border-dashed border-zinc-200 bg-zinc-50 text-[10px] text-zinc-400'
                     }
                   >

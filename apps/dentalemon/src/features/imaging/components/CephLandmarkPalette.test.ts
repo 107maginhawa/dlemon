@@ -117,7 +117,7 @@ describe('CephLandmarkPalette', () => {
   test('selected code button has visual selection class', () => {
     const { container } = renderPalette([], 'N')
     const btn = container.querySelector('[data-landmark-code="N"]') as HTMLButtonElement
-    expect(btn.className).toContain('border-[#FFE97D]')
+    expect(btn.className).toContain('border-lemon')
   })
 
   test('Go landmark has title attribute containing "bilateral"', () => {

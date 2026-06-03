@@ -66,11 +66,11 @@ export function CephLoupe({
   return (
     <div
       data-testid="ceph-loupe"
-      className="pointer-events-none absolute top-2 right-2 z-20 rounded-md border border-[#FFE97D]/50 bg-black/80 shadow-lg"
+      className="pointer-events-none absolute top-2 right-2 z-20 rounded-md border border-lemon/50 bg-black/80 shadow-lg"
       style={{ width: size, height: size }}
     >
       <canvas ref={canvasRef} width={size} height={size} className="block rounded-md" />
-      <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] font-medium text-[#FFE97D] tabular-nums">
+      <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] font-medium text-lemon tabular-nums">
         {zoom}×
       </span>
       <span className="absolute top-1 left-1 rounded bg-black/70 px-1 text-[10px] font-medium text-white">

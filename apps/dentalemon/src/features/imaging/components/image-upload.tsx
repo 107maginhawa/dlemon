@@ -139,7 +139,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
       {isUploading && (
         <div className="w-full bg-zinc-700 rounded-full h-2">
           <div
-            className="bg-[#FFE97D] h-2 rounded-full transition-all"
+            className="bg-lemon h-2 rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -149,7 +149,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
         <button
           type="submit"
           disabled={!file || isUploading || Boolean(error)}
-          className="flex-1 bg-[#FFE97D] text-black font-semibold py-2 rounded text-sm disabled:opacity-50"
+          className="flex-1 bg-lemon text-black font-semibold py-2 rounded text-sm disabled:opacity-50"
         >
           {isUploading ? `Uploading… ${progress}%` : 'Upload'}
         </button>

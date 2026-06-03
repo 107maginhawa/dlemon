@@ -129,7 +129,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
             onClick={() => setMode('compare')}
             className={[
               'text-xs px-2 py-1 rounded',
-              mode === 'compare' ? 'bg-lemon text-[#4A4018] font-semibold' : 'text-zinc-300 hover:text-white',
+              mode === 'compare' ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-zinc-300 hover:text-white',
             ].join(' ')}
           >
             Compare
@@ -140,7 +140,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
             onClick={() => setMode('superimpose')}
             className={[
               'text-xs px-2 py-1 rounded',
-              mode === 'superimpose' ? 'bg-lemon text-[#4A4018] font-semibold' : 'text-zinc-300 hover:text-white',
+              mode === 'superimpose' ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-zinc-300 hover:text-white',
             ].join(' ')}
           >
             Superimpose

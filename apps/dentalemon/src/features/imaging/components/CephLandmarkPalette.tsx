@@ -91,9 +91,9 @@ export function CephLandmarkPalette({
             }}
             className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm border transition-colors ${
               isSelected
-                ? 'bg-[#FFE97D]/20 border-[#FFE97D]'
+                ? 'bg-lemon/20 border-lemon'
                 : 'border-zinc-700 hover:border-zinc-500'
-            } ${isNext ? 'ring-1 ring-[#FFE97D]' : ''} ${
+            } ${isNext ? 'ring-1 ring-lemon' : ''} ${
               isDisabled ? 'opacity-60 cursor-not-allowed' : ''
             }`}
           >

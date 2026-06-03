@@ -121,7 +121,7 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
         {/* D-G: analysis label badge */}
         <span
           data-testid="analysis-label-badge"
-          className="text-xs px-2 py-1 rounded bg-zinc-800 text-[#FFE97D] font-medium whitespace-nowrap print:bg-transparent print:text-zinc-900 print:border print:border-zinc-800"
+          className="text-xs px-2 py-1 rounded bg-zinc-800 text-lemon font-medium whitespace-nowrap print:bg-transparent print:text-zinc-900 print:border print:border-zinc-800"
         >
           {snapshot.analysis_label}
         </span>

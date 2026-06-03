@@ -143,7 +143,7 @@ export function CephMeasurementsPanel({
           Measurements
         </span>
         {/* D-G: analysis type badge */}
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-[#FFE97D] font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-lemon font-medium">
           {analysis.analysisType}
         </span>
       </div>

@@ -151,7 +151,7 @@ export function CephWorkspacePanel({
           <Select value={analysisType} onValueChange={setAnalysisType}>
             <SelectTrigger
               aria-label="Analysis protocol"
-              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-[#FFE97D]"
+              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-lemon"
             >
               <SelectValue>{ANALYSIS_LABELS[analysisType] ?? analysisType}</SelectValue>
             </SelectTrigger>
@@ -191,7 +191,7 @@ export function CephWorkspacePanel({
 
       {addonRequired ? (
         <div className="px-4 py-3 m-4 rounded-md bg-zinc-800 border border-zinc-700">
-          <p className="text-sm text-[#FFE97D]">
+          <p className="text-sm text-lemon">
             Cephalometric analysis requires the Addon tier
           </p>
         </div>
@@ -223,7 +223,7 @@ export function CephWorkspacePanel({
                 type="button"
                 disabled={!gatePassed || createReport.isPending}
                 onClick={() => createReport.mutate()}
-                className="bg-[#FFE97D] text-zinc-900 hover:bg-[#FFE97D]/90 text-xs font-medium flex-1"
+                className="bg-lemon text-zinc-900 hover:bg-lemon/90 text-xs font-medium flex-1"
               >
                 <FileText size={12} className="mr-1" />
                 {createReport.isPending ? 'Creating…' : 'Generate Report'}

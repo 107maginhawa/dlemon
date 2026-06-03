@@ -57,7 +57,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
             onClick={() => setView((v) => (v === 'list' ? 'fmx' : 'list'))}
             aria-pressed={view === 'fmx'}
             data-testid="fmx-toggle"
-            className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-[#FFE97D]"
+            className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
           >
             {view === 'fmx' ? 'List view' : 'FMX mount'}
           </button>
@@ -70,7 +70,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                 onCompare?.([selected[0]!, selected[1]!])
               }
             }}
-            className="bg-[#FFE97D] text-black text-xs font-semibold px-3 py-1.5 rounded-md"
+            className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md"
             data-testid="compare-btn"
           >
             Compare ▶
@@ -78,7 +78,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
         )}
         <Sheet open={uploadOpen} onOpenChange={setUploadOpen}>
           <SheetTrigger asChild>
-            <button className="bg-[#FFE97D] text-black text-xs font-semibold px-3 py-1.5 rounded-md">
+            <button className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md">
               Upload Image
             </button>
           </SheetTrigger>
@@ -132,7 +132,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     type="checkbox"
                     checked={selectedIds.has(item.id)}
                     onChange={(e) => toggleSelect(item, e)}
-                    className="shrink-0 accent-[#FFE97D]"
+                    className="shrink-0 accent-lemon"
                     data-testid={`select-image-${item.id}`}
                   />
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
