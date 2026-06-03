@@ -4071,6 +4071,66 @@ export type DentalOrgModuleMemberRole = 'dentist_owner' | 'dentist_associate' | 
 export type DentalOrgModuleMemberStatus = 'active' | 'inactive';
 
 /**
+ * Self-service clinic onboarding request — provisions the caller's first clinic
+ */
+export type DentalOrgModuleOnboardingRequest = {
+    /**
+     * Practice / clinic name
+     */
+    organizationName: string;
+    /**
+     * Subscription tier (self-service supports solo or clinic)
+     */
+    tier: 'solo' | 'clinic' | 'group' | 'enterprise';
+    /**
+     * ISO 3166-1 alpha-2 country code
+     */
+    countryCode: string;
+    /**
+     * Default branch name — defaults to the organization name when omitted
+     */
+    branchName?: string;
+    /**
+     * IANA timezone for the default branch — defaults to Asia/Manila when omitted
+     */
+    timezone?: string;
+    /**
+     * Street address for the default branch
+     */
+    address?: string;
+    /**
+     * City for the default branch
+     */
+    city?: string;
+    /**
+     * Phone number for the default branch
+     */
+    phone?: string;
+    /**
+     * Display name for the owner's membership (PIN-select / provider name). Defaults to the caller's account name when omitted.
+     */
+    ownerDisplayName?: string;
+};
+
+/**
+ * Self-service onboarding result — the provisioned org, default branch, and owner membership
+ */
+export type DentalOrgModuleOnboardingResponse = {
+    /**
+     * Newly created organization (caller is the owner)
+     */
+    organizationId: string;
+    /**
+     * Default branch created for the organization
+     */
+    branchId: string;
+    /**
+     * Caller's dentist_owner membership in the default branch
+     */
+    membershipId: string;
+};
+
+/**
  * Org context for the authenticated user
  */
 export type DentalOrgModuleOrgContextResponse = {
@@ -66947,6 +67007,47 @@ export type ReleaseLegalHoldResponses = {
 };
 
 export type ReleaseLegalHoldResponse = ReleaseLegalHoldResponses[keyof ReleaseLegalHoldResponses];
+
+export type CreateOnboardingData = {
+    body: DentalOrgModuleOnboardingRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/onboarding';
+};
+
+export type CreateOnboardingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type CreateOnboardingError = CreateOnboardingErrors[keyof CreateOnboardingErrors];
+
+export type CreateOnboardingResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * Resource created response
+     */
+    201: DentalOrgModuleOnboardingResponse;
+};
+
+export type CreateOnboardingResponse = CreateOnboardingResponses[keyof CreateOnboardingResponses];
 
 export type GetOrgContextData = {
     body?: never;
