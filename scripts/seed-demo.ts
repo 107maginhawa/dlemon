@@ -369,9 +369,89 @@ async function addNotes(visitId: string, soap: any, cookie: string): Promise<str
   return r.ok ? (r.data?.id ?? null) : null
 }
 
+// Set once the branch consent templates are created (section 5). completeVisit
+// signs a consent per visit so the completion gate (and treatment→performed,
+// which also requires consent) is satisfied.
+let SEED_GENERAL_CONSENT_TPL_ID: string | null = null
+
+/** Create + sign a general treatment consent for a visit (idempotent enough for seed). */
+async function ensureSignedConsent(visitId: string, patientId: string, cookie: string) {
+  if (!SEED_GENERAL_CONSENT_TPL_ID || SEED_GENERAL_CONSENT_TPL_ID === 'general') return
+  const consentR = await post(`/dental/visits/${visitId}/consents`, {
+    visitId, patientId,
+    templateId: SEED_GENERAL_CONSENT_TPL_ID, templateName: 'General Treatment Consent',
+  }, cookie)
+  if (consentR.ok) {
+    await post(
+      `/dental/visits/${visitId}/consents/${consentR.data.id}/sign`,
+      { signatureData: 'data:image/png;base64,iVBORw0KGgo=' },
+      cookie,
+    )
+  }
+}
+
 async function completeVisit(visitId: string, patientId: string, cookie: string) {
-  await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
+  // The completion gate (updateDentalVisit §completed) rejects the transition
+  // unless: (a) NO treatment is left at diagnosed/planned, (b) a signed consent
+  // exists, (c) a notes row exists (createDentalVisit auto-seeds one). If it
+  // rejects, the PATCH 422s and the visit stays ACTIVE — which makes every later
+  // visit for this patient 409 (ACTIVE_VISIT_EXISTS) and collapses the patient's
+  // whole timeline to a single card. Satisfy the gate here so historical visits
+  // actually persist as `completed`.
+  //
+  // Consent must be signed BEFORE advancing treatments to `performed` — the
+  // treatment FSM also enforces TREATMENT_CONSENT_REQUIRED on planned→performed.
+  await ensureSignedConsent(visitId, patientId, cookie)
+
+  const listR = await get(`/dental/visits/${visitId}/treatments`, cookie)
+  const treatments: any[] = listR.ok ? (listR.data?.data ?? listR.data ?? []) : []
+  for (const t of treatments) {
+    // FSM is two-step: diagnosed→planned→performed (single jump 422s).
+    if (t.status === 'diagnosed') {
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'planned' }, cookie)
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'performed' }, cookie)
+    } else if (t.status === 'planned') {
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'performed' }, cookie)
+    }
+  }
+
+  const r = await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
+  if (!r.ok) log(`  ⚠ Complete visit (${r.status}): ${JSON.stringify(r.data).slice(0, 120)}`)
   await post(`/dental/visits/${visitId}/pmd`, { visitId, patientId }, cookie)
+}
+
+interface OpenTreatment { cdtCode: string; description: string; priceCents: number; toothNumber?: number; plan?: boolean }
+
+/**
+ * Add an ACTIVE "current" visit carrying an OPEN treatment plan — the realistic
+ * in-progress visit a clinician is working in. Deliberately NOT completed: the
+ * workspace carousel needs an editable active card with a chart to click and
+ * pending treatments to plan/decline. Items with `plan:true` advance to
+ * `planned` (accepted, awaiting delivery); the rest stay `diagnosed` (new
+ * finding). A signed consent is attached so accepted items CAN be marked
+ * performed from the UI (revenue-chain demo) without forcing them performed.
+ *
+ * Chart teeth are layered on the patient's cumulative snapshot, so the active
+ * card shows prior conditions PLUS this visit's new findings — coherent with the
+ * carousel's cumulative-snapshot model.
+ */
+async function addCurrentVisit(
+  patientId: string, branchId: string, memberId: string,
+  complaint: string, chartTeeth: any[], openTreatments: OpenTreatment[],
+  cookie: string, opts: { soap?: any; signConsent?: boolean } = {},
+): Promise<string | null> {
+  const vid = await activateVisit(patientId, branchId, memberId, 0, complaint, cookie)
+  if (!vid) return null
+  await addChart(vid, patientId, chartTeeth, cookie)
+  for (const t of openTreatments) {
+    const { plan, ...body } = t
+    const r = await post(`/dental/visits/${vid}/treatments`, { visitId: vid, patientId, ...body }, cookie)
+    // New treatments POST at `diagnosed`. `plan:true` → advance to `planned`.
+    if (r.ok && plan) await patch(`/dental/visits/${vid}/treatments/${r.data.id}`, { status: 'planned' }, cookie)
+  }
+  if (opts.soap) await addNotes(vid, opts.soap, cookie)
+  if (opts.signConsent) await ensureSignedConsent(vid, patientId, cookie)
+  return vid
 }
 
 async function makeInvoice(
@@ -542,12 +622,20 @@ async function seed() {
       title: consentNames[i], content: consentBodies[i],
       name: consentNames[i], body: consentBodies[i],
     }, cookie)
-    if (r.ok) { consentTemplateIds.push(r.data.id); log(`✓ Consent template: ${consentNames[i]}`) }
-    else log(`⚠ Consent template (${r.status}): ${consentNames[i]}`)
+    // Create returns { template: { id, … } } — NOT a bare { id }. Reading r.data.id
+    // (undefined) silently left every consent template unusable, so generalConsentTplId
+    // fell back to 'general', no consent was ever signed, and every visit completion
+    // 422'd (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
+    const tplId = r.data?.template?.id ?? r.data?.id
+    if (r.ok && tplId) { consentTemplateIds.push(tplId); log(`✓ Consent template: ${consentNames[i]}`) }
+    else log(`⚠ Consent template (${r.status}): ${consentNames[i]} ${r.ok ? '(no id in response)' : ''}`)
   }
   const generalConsentTplId = consentTemplateIds[0] ?? 'general'
   const extractionConsentTplId = consentTemplateIds[1] ?? 'extraction'
   const rctConsentTplId = consentTemplateIds[2] ?? 'rct'
+  // Expose to completeVisit so every historical visit gets a signed consent
+  // (required by both the visit-completion gate and treatment→performed).
+  SEED_GENERAL_CONSENT_TPL_ID = generalConsentTplId
 
   // ── 6. Patients ──────────────────────────────────────────────────────────
   section('6. Patients')
@@ -1277,6 +1365,92 @@ async function seed() {
 
   log(`\n  ✓ Total: ${completedCount} completed visits, ${activeCount} active`)
 
+  // ── 8.6 Current open visits (one active in-progress visit per patient) ───────
+  // Every demo patient EXCEPT Maria (already has active V4) and Diego (checked in
+  // via today's appointment in §9) gets ONE active "current" visit with an OPEN
+  // plan, so the workspace carousel always opens on an editable card: a chart to
+  // click + pending treatments to plan/decline/bill. Teeth layer on the cumulative
+  // snapshot (prior conditions + this visit's new findings).
+  section('8.6 Current open visits')
+
+  const currentVisitSpecs: Array<{
+    p: any; complaint: string; teeth: any[]; plan: OpenTreatment[]; soap?: any
+  }> = [
+    { p: P[0], complaint: 'Recall exam — sensitivity upper right',
+      teeth: [{ toothNumber: 17, state: 'caries', surfaces: ['occlusal'], conditionCode: 'K02.1', note: 'Occlusal caries — restorable' }],
+      plan: [
+        { cdtCode: 'D0120', description: 'Periodic oral evaluation', priceCents: 100000 },
+        { cdtCode: 'D2392', description: 'Resin composite #17 — two surfaces', priceCents: 450000, toothNumber: 17, plan: true },
+      ],
+      soap: { subjective: 'Sensitivity upper right when chewing.', objective: 'Occlusal caries #17. Cold test positive, subsides quickly.' } },
+    { p: P[2], complaint: 'Crown review + new interproximal finding #15',
+      teeth: [{ toothNumber: 15, state: 'caries', surfaces: ['mesial'], note: 'Interproximal caries' }],
+      plan: [
+        { cdtCode: 'D0140', description: 'Limited oral evaluation — problem focused', priceCents: 120000 },
+        { cdtCode: 'D2391', description: 'Resin composite #15 — one surface', priceCents: 350000, toothNumber: 15, plan: true },
+      ],
+      soap: { subjective: 'Crown comfortable. New cold sensitivity #15.', objective: '#46 crown well seated. #15 mesial caries on bitewing.' } },
+    { p: P[3], complaint: 'Pediatric recall — fluoride + watch #46',
+      teeth: [{ toothNumber: 46, state: 'watchlist', surfaces: ['occlusal'], note: 'Deep fissure — monitor' }],
+      plan: [
+        { cdtCode: 'D1206', description: 'Topical fluoride varnish', priceCents: 80000 },
+        { cdtCode: 'D1351', description: 'Sealant #46', priceCents: 150000, toothNumber: 46, plan: true },
+      ],
+      soap: { subjective: 'Routine pediatric recall. No complaints.', objective: 'Good OH. Deep occlusal fissure #46 — sealant indicated.' } },
+    { p: P[4], complaint: 'Implant planning — #46 site + caries #37',
+      teeth: [{ toothNumber: 37, state: 'caries', surfaces: ['distal'], note: 'Distal caries' }],
+      plan: [
+        { cdtCode: 'D6010', description: 'Surgical placement implant body #46', priceCents: 6500000, toothNumber: 46, plan: true },
+        { cdtCode: 'D2393', description: 'Resin composite #37 — three surfaces', priceCents: 550000, toothNumber: 37 },
+      ],
+      soap: { subjective: 'Ready to proceed with implant. Mild sensitivity #37.', objective: '#46 edentulous site healed. #37 distal caries.' } },
+    { p: P[5], complaint: 'Recall — endo evaluation #36',
+      teeth: [
+        { toothNumber: 16, state: 'watchlist', surfaces: ['cervical'], note: 'Cervical abrasion — monitor' },
+        { toothNumber: 36, state: 'caries', surfaces: ['mesial', 'occlusal'], conditionCode: 'K04.0', note: 'Deep caries → pulpitis' },
+      ],
+      plan: [
+        { cdtCode: 'D0120', description: 'Periodic oral evaluation', priceCents: 100000 },
+        { cdtCode: 'D3330', description: 'Endodontic therapy — molar #36 (RCT)', priceCents: 1800000, toothNumber: 36 },
+        { cdtCode: 'D2950', description: 'Core buildup #36', priceCents: 350000, toothNumber: 36, plan: true },
+      ],
+      soap: { subjective: 'Lingering pain #36 to hot. Considering options.', objective: 'Deep mesio-occlusal caries #36, irreversible pulpitis. RCT vs extraction discussed.' } },
+    { p: P[6], complaint: 'Ortho review + restorative #25',
+      teeth: [{ toothNumber: 25, state: 'caries', surfaces: ['occlusal'], note: 'Occlusal caries' }],
+      plan: [
+        { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 180000 },
+        { cdtCode: 'D2391', description: 'Resin composite #25 — one surface', priceCents: 350000, toothNumber: 25, plan: true },
+      ],
+      soap: { subjective: 'Ortho progressing. Sensitivity #25.', objective: 'Alignment improving. #25 occlusal caries.' } },
+    { p: P[7], complaint: 'Follow-up — perio maintenance + #44 finding',
+      teeth: [{ toothNumber: 44, state: 'caries', surfaces: ['buccal'], note: 'Cervical caries' }],
+      plan: [
+        { cdtCode: 'D4910', description: 'Periodontal maintenance', priceCents: 250000 },
+        { cdtCode: 'D2391', description: 'Resin composite #44 — one surface', priceCents: 350000, toothNumber: 44, plan: true },
+      ],
+      soap: { subjective: 'Here for perio maintenance. Notes #44 sensitivity.', objective: 'Stable perio. #44 buccal cervical caries.' } },
+    { p: P[9], complaint: 'New patient transfer — comprehensive plan',
+      teeth: [
+        { toothNumber: 26, state: 'caries', surfaces: ['occlusal'], note: 'Occlusal caries' },
+        { toothNumber: 47, state: 'watchlist', surfaces: ['occlusal'], note: 'Stained fissure — monitor' },
+      ],
+      plan: [
+        { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 180000 },
+        { cdtCode: 'D2392', description: 'Resin composite #26 — two surfaces', priceCents: 450000, toothNumber: 26, plan: true },
+      ],
+      soap: { subjective: 'Transferred from previous clinic. Wants full plan.', objective: 'Generalized good OH. #26 occlusal caries. #47 watch.' } },
+  ]
+
+  for (const s of currentVisitSpecs) {
+    if (!s.p) continue
+    const vid = await addCurrentVisit(
+      s.p.id, branch.id, ownerMember.id, s.complaint, s.teeth, s.plan, cookie,
+      { soap: s.soap, signConsent: true },
+    )
+    if (vid) { activeCount++; log(`  ◎ Current visit: ${s.p.displayName} (open plan: ${s.plan.length} items)`) }
+  }
+  log(`\n  ✓ Current open visits added (carousel now opens on an editable active card)`)
+
   // ── 8.5 Imaging studies (all patients) ──────────────────────────────────────
   section('8.5 Imaging studies')
 
@@ -1499,16 +1673,23 @@ async function seedAuditLogRows() {
   const DB_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
   const sql = new Bun.SQL(DB_URL)
   try {
+    // API-created visits leave dental_visit.created_by NULL, so fall back to a
+    // branch membership's person_id for a valid (non-null) audit actor — the
+    // actor_id column is NOT NULL.
     const rows = await sql`
-      SELECT v.id, v.branch_id, v.created_by as actor_id, b.organization_id as tenant_id
+      SELECT v.id, v.branch_id,
+             COALESCE(v.created_by, m.person_id) as actor_id,
+             b.organization_id as tenant_id
       FROM dental_visit v
       JOIN dental_branch b ON b.id = v.branch_id
+      LEFT JOIN dental_membership m ON m.branch_id = v.branch_id AND m.person_id IS NOT NULL
       WHERE v.status = 'completed'
       ORDER BY v.created_at
       LIMIT 1
     `
     if (!rows.length) { log('⚠ Audit seed: no completed visit found'); return }
     const { id: visitId, branch_id: branchId, actor_id: actorId, tenant_id: tenantId } = rows[0]
+    if (!actorId) { log('⚠ Audit seed: no valid actor (created_by + membership.person_id both null)'); return }
     const events = [
       { action: 'visit.complete',      target_type: 'dental_visit',      target_id: visitId },
       { action: 'treatment.performed', target_type: 'dental_treatment',   target_id: visitId },
