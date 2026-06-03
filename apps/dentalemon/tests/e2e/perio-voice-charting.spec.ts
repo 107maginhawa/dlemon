@@ -16,9 +16,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, APP, setMemberPin, unlockWorkspace, spaNavigate } from './helpers/perio-e2e';
 
 /**
  * Install a scripted SpeechProvider on window before any app script runs. The
@@ -74,56 +72,6 @@ async function feed(page: Page, transcript: string, confidence = 1, isFinal = tr
     },
     [transcript, confidence, isFinal] as const,
   );
-}
-
-/** Set a 6-digit PIN on a membership via the org admin endpoint. */
-async function setMemberPin(
-  page: Page,
-  opts: { orgId: string; branchId: string; memberId: string; pin: string },
-): Promise<void> {
-  await page.evaluate(
-    async ({ api, orgId, branchId, memberId, pin }) => {
-      const res = await fetch(
-        `${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ pin }),
-        },
-      );
-      if (!res.ok) throw new Error(`set-pin failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
-    },
-    { api: API, ...opts },
-  );
-}
-
-/**
- * Drive the real PIN-select → PIN-entry flow to mint the in-memory pinSession.
- * The workspace route tree is PIN-gated; the session lives only in memory, so it
- * must be unlocked through the UI (it cannot be seeded via localStorage).
- */
-async function unlockWorkspace(page: Page, pin: string): Promise<void> {
-  await page.goto(`${APP}/auth/pin-select`);
-  await page.waitForLoadState('networkidle');
-  await expect(page.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
-  for (const digit of pin) {
-    await page.getByRole('button', { name: digit, exact: true }).click();
-  }
-  await page.waitForURL((url) => !url.pathname.includes('/auth/pin'), { timeout: 15000 });
-}
-
-/**
- * Client-side (SPA) navigation that preserves the in-memory PIN session. A hard
- * `page.goto` reloads the app and resets pinSession, bouncing back to the PIN gate.
- */
-async function spaNavigate(page: Page, path: string): Promise<void> {
-  await page.evaluate((p) => {
-    window.history.pushState({}, '', p);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
-  await page.waitForURL((url) => url.pathname === path, { timeout: 15000 });
-  await page.waitForLoadState('networkidle');
 }
 
 async function signUpSeedOrgAndVisit(page: Page) {
