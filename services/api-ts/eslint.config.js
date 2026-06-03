@@ -22,7 +22,11 @@ const boundaryRule = {
       patterns: [
         {
           // Relative cross-module: ../other-module/repos/ or ../../other-module/repos/
-          regex: '\\.\\./[a-zA-Z][a-zA-Z0-9-]*/repos/',
+          // The (?!.*\.facade) lookahead exempts *.facade imports — these ARE the
+          // approved cross-module bridge (mirrors check-module-boundaries.ts, which
+          // skips .facade paths). Without it, already-migrated facade consumers
+          // (e.g. emr/*) are flagged as false-positive violations.
+          regex: '\\.\\./[a-zA-Z][a-zA-Z0-9-]*/repos/(?!.*\\.facade)',
           message: 'Cross-module repo import. Add a *.facade.ts in the target module\'s repos/ directory instead.',
         },
       ],
