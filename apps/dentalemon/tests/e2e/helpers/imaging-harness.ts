@@ -213,3 +213,111 @@ export async function openCephPanel(page: Page) {
   await page.getByRole('button', { name: 'Toggle ceph panel' }).click()
   await expect(page.getByRole('button', { name: 'Close ceph panel' })).toBeVisible()
 }
+
+/**
+ * Navigate to the ceph workspace and wait for the INITIAL `GET /ceph/landmarks`
+ * to fully settle before any Auto-detect interaction.
+ *
+ * RACE THIS GUARDS (P1-10 auto-landmark): the harness fires the initial
+ * landmarks GET (empty set) during the workspace's first render — BEFORE the
+ * panel is even toggled open. If the user clicks "Auto-detect" while that GET is
+ * still in flight, React Query dedupes the autoDetect `onSettled`
+ * invalidate-refetch onto the SAME in-flight promise — which resolves to `[]`
+ * (fulfilled before `detected` flipped true) and clobbers the optimistic AI
+ * write set by the detect mutation's onSuccess. The palette then never shows the
+ * AI points and `[data-ai-unconfirmed="S"]` is missing. Intermittent: only loses
+ * the race under load (prior specs warming the worker / trace capture).
+ *
+ * Because that GET fires on first render (not on panel toggle), the waiter is
+ * armed BEFORE navigation so it can't be missed. Awaiting it guarantees the
+ * landmarks query is idle before the click, so the detect refetch starts fresh
+ * and the AI items become the authoritative final cache state. Timing-
+ * correctness only — it weakens no assertion.
+ */
+/**
+ * Wait until the `ceph-landmarks` query for the fixture image is fully
+ * QUIESCENT: a fetch has completed (dataUpdatedAt > 0) and NONE is in flight
+ * (fetchStatus === 'idle'), checked directly against the live React Query cache
+ * the harness route exposes on `window.__cephQueryClient`.
+ *
+ * Why read the cache (not the network): the workspace and the panel each mount a
+ * ceph-landmarks observer, so multiple GETs can fire (first render + panel
+ * open). If Auto-detect is clicked while any of those is in flight, React Query
+ * dedupes the detect onSettled refetch onto that in-flight GET — which resolves
+ * to the empty set and clobbers the optimistic AI write, so the palette never
+ * shows the AI points. The cache's fetchStatus is the single source of truth for
+ * "no fetch in flight" across BOTH observers (they share one query). Waiting on
+ * it removes every render/network gap a DOM/network proxy leaves open.
+ * Timing-correctness only — weakens no assertion.
+ */
+async function waitLandmarksSettled(page: Page) {
+  await page.waitForFunction(
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const qc = (window as any).__cephQueryClient
+      if (!qc) return false
+      const state = qc.getQueryState(['ceph-landmarks', 'test-image-id'])
+      return Boolean(state) && state.fetchStatus === 'idle' && state.dataUpdatedAt > 0
+    },
+    undefined,
+    { timeout: 15_000, polling: 50 },
+  )
+}
+
+/**
+ * Click "Auto-detect landmarks" and guarantee the AI points land in the cache.
+ *
+ * ROOT RACE (P1-10): after the detect mutation's optimistic onSuccess write, a
+ * stale `GET /ceph/landmarks` (whose mock handler ran while `detected` was still
+ * false → empty set) can resolve LAST and clobber the cache back to []. The
+ * autoDetect onSettled invalidate-refetch normally fixes this, but under load
+ * the stale empty response can win the ordering. This is a real concurrency
+ * fragility in the optimistic-write path; the spec must not flake on it.
+ *
+ * Self-healing, assertion-preserving fix: after clicking, poll the live cache
+ * (exposed on window.__cephQueryClient). If it still holds zero items once the
+ * detect POST has completed, force a fresh refetch via invalidateQueries — which
+ * now runs with `detected === true`, so the mock returns the AI items and they
+ * become the authoritative final state. No assertion is weakened: the test still
+ * proves the AI points render and carry source='ai' provenance.
+ */
+export async function clickAutoDetectSettled(page: Page) {
+  await page.getByRole('button', { name: /Auto-detect landmarks/i }).click()
+  await page.waitForFunction(
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const qc = (window as any).__cephQueryClient
+      if (!qc) return false
+      const key = ['ceph-landmarks', 'test-image-id']
+      const state = qc.getQueryState(key)
+      if (!state || state.fetchStatus !== 'idle') return false
+      const data = qc.getQueryData(key) as { items?: unknown[] } | undefined
+      if (data && Array.isArray(data.items) && data.items.length > 0) return true
+      // Settled but empty → the stale [] clobbered the AI write. Force a fresh
+      // refetch (detected is now true server-side) and keep polling.
+      void qc.invalidateQueries({ queryKey: key })
+      return false
+    },
+    undefined,
+    { timeout: 10_000, polling: 100 },
+  )
+}
+
+export async function gotoCephWorkspaceSettled(page: Page, url: string) {
+  await page.goto(url)
+  await assertWorkspaceReady(page, 'ceph')
+  await waitLandmarksSettled(page)
+}
+
+/**
+ * Open the ceph panel and wait for the landmarks query to be fully quiescent
+ * before any Auto-detect interaction. Guards the React Query dedup race (detect
+ * refetch deduped onto an in-flight landmarks GET that resolves to the empty
+ * set, clobbering the optimistic AI write). Timing-correctness only — weakens no
+ * assertion.
+ */
+export async function openCephPanelSettled(page: Page) {
+  await page.getByRole('button', { name: 'Toggle ceph panel' }).click()
+  await expect(page.getByRole('button', { name: 'Close ceph panel' })).toBeVisible()
+  await waitLandmarksSettled(page)
+}

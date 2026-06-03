@@ -79,6 +79,14 @@ function makeSeededClient(): QueryClient {
     ['imaging', 'patient', TEST_IDS.patientId, TEST_IDS.branchId],
     studiesFixture(),
   )
+  // Expose the QueryClient so the E2E harness can read the live ceph-landmarks
+  // fetchStatus and wait for it to be quiescent before driving Auto-detect (see
+  // waitLandmarksSettled in imaging-harness.ts). This is the single source of
+  // truth for "no landmarks fetch in flight" across the workspace + panel
+  // observers, eliminating the React Query dedup clobber race. Harness-route
+  // only — this file is excluded from the production bundle.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__cephQueryClient = qc
   return qc
 }
 

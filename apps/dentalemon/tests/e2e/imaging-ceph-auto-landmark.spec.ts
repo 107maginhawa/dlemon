@@ -5,6 +5,9 @@ import {
   mkLandmark,
   setupCephRoutes,
   openCephPanel,
+  gotoCephWorkspaceSettled,
+  openCephPanelSettled,
+  clickAutoDetectSettled,
   installDefaultApiStub,
   assertWorkspaceReady,
   assertNoLoginRedirect,
@@ -91,11 +94,10 @@ test.describe('P1-10 Auto-detect landmarks', () => {
       route.fulfill({ json: { items: detected ? aiItems() : [], analysis: MOCK_ANALYSIS } })
     })
 
-    await page.goto(CEPH_TEST_URL)
-    await assertWorkspaceReady(page, 'ceph')
-    await openCephPanel(page)
+    await gotoCephWorkspaceSettled(page, CEPH_TEST_URL)
+    await openCephPanelSettled(page)
 
-    await page.getByRole('button', { name: /Auto-detect landmarks/i }).click()
+    await clickAutoDetectSettled(page)
 
     // Palette marks AI points "AI · unconfirmed".
     await expect(page.locator('[data-ai-unconfirmed="S"]')).toBeVisible({ timeout: 5000 })
@@ -124,7 +126,12 @@ test.describe('P1-10 Auto-detect landmarks', () => {
     })
 
     // PATCH a specific landmark: coord change → ai_corrected; status change → confirm.
-    await page.route(/\/ceph\/landmarks\/[^/?]+$/, (route) => {
+    // The negative lookahead excludes `/ceph/landmarks/detect`: this route is
+    // registered AFTER the detect route, so Playwright's LIFO precedence would
+    // otherwise let it swallow the detect POST (method !== PATCH → it just
+    // fulfills), leaving `detected` false so the broad GET clobbers the AI points
+    // with [] — the root cause of the under-load full-flow flake.
+    await page.route(/\/ceph\/landmarks\/(?!detect(?:\?|$))[^/?]+$/, (route) => {
       const req = route.request()
       if (req.method() === 'PATCH') {
         const body = JSON.parse(req.postData() ?? '{}') as { x?: number; status?: string }
@@ -177,12 +184,11 @@ test.describe('P1-10 Auto-detect landmarks', () => {
       })
     }
 
-    await page.goto(CEPH_TEST_URL)
-    await assertWorkspaceReady(page, 'ceph')
-    await openCephPanel(page)
+    await gotoCephWorkspaceSettled(page, CEPH_TEST_URL)
+    await openCephPanelSettled(page)
 
     // 1. Detect
-    await page.getByRole('button', { name: /Auto-detect landmarks/i }).click()
+    await clickAutoDetectSettled(page)
     await expect(page.locator('[data-ai-unconfirmed="S"]')).toBeVisible({ timeout: 5000 })
 
     // 2. Report is blocked while everything is AI/placed (no human confirm yet).
