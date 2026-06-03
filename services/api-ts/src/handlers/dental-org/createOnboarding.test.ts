@@ -267,17 +267,24 @@ describe('createOnboarding handler', () => {
   // Rate limit
   // --------------------------------------------------------------------------
 
-  test('returns 429 once the per-IP rate limit is exhausted', async () => {
-    const ip = '203.0.113.42';
-    // Exhaust the limiter for this IP key (limit-agnostic) using the handler's key shape.
-    let r;
-    do {
-      r = onboardingLimiter.check(`onboard:${ip}`);
-    } while (r.allowed);
+  test('returns 429 once the per-IP rate limit is exhausted (production)', async () => {
+    // The IP limiter is production-only (stopgap), so assert it under NODE_ENV=production.
+    const prev = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    try {
+      const ip = '203.0.113.42';
+      // Exhaust the limiter for this IP key (limit-agnostic) using the handler's key shape.
+      let r;
+      do {
+        r = onboardingLimiter.check(`onboard:${ip}`);
+      } while (r.allowed);
 
-    const app = buildTestApp(verifiedOwner);
-    const res = await onboard(app, validBody, ip);
-    expect(res.status).toBe(429);
+      const app = buildTestApp({ ...verifiedOwner, emailVerified: true });
+      const res = await onboard(app, validBody, ip);
+      expect(res.status).toBe(429);
+    } finally {
+      process.env['NODE_ENV'] = prev;
+    }
   });
 
   // --------------------------------------------------------------------------

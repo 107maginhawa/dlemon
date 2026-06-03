@@ -134,6 +134,17 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   /**
+   * Server-side-encryption params, applied ONLY for real S3. MinIO (dev/offline
+   * storage) has no SSE backend and returns 501 NotImplemented ("Server side
+   * encryption specified but KMS is not configured") on CreateMultipartUpload, and
+   * 400 on presigned single-PUTs whose signed headers include x-amz-server-side-
+   * encryption. Production uses provider 's3', so at-rest SSE is unchanged there.
+   */
+  private get sseParams(): { ServerSideEncryption: 'AES256' } | Record<string, never> {
+    return this.config.provider === 's3' ? { ServerSideEncryption: 'AES256' } : {};
+  }
+
+  /**
    * Generate presigned URL for file upload
    */
   async generateUploadUrl(fileId: string, mimeType: string): Promise<string> {
@@ -142,7 +153,7 @@ export class S3StorageProvider implements StorageProvider {
       Bucket: this.config.bucket,
       Key: fileId,
       ContentType: mimeType,
-      ServerSideEncryption: 'AES256',
+      ...this.sseParams,
     });
 
     // Use publicClient for generating URLs accessible from outside Docker network
@@ -289,7 +300,7 @@ export class S3StorageProvider implements StorageProvider {
       Key: fileId,
       ContentType: mimeType,
       ContentDisposition: `attachment; filename="${filename}"`,
-      ServerSideEncryption: 'AES256',
+      ...this.sseParams,
     });
     const result = await this.client.send(command);
     if (!result.UploadId) {

@@ -67,13 +67,19 @@ export async function createOnboarding(
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  // Guardrail 1 — per-IP rate limit BEFORE any DB work. Stopgap (see note above).
-  const ip = clientIp(ctx.req.raw.headers);
-  const rl = onboardingLimiter.check(`onboard:${ip}`);
-  if (!rl.allowed) {
-    throw new RateLimitError('Too many onboarding attempts. Please try again later.', {
-      retryAfter: Math.max(0, Math.ceil((rl.resetAt - Date.now()) / 1000)),
-    });
+  // Guardrail 1 — per-IP rate limit BEFORE any DB work. Production-only: it is a
+  // single-instance STOPGAP (the one-active-org index is the real control), and in
+  // dev/test many onboardings legitimately originate from one IP (the contract suite,
+  // local demo seed), so enforcing it there only causes false 429s. Mirrors the
+  // production-only verified-email guard below.
+  if (process.env['NODE_ENV'] === 'production') {
+    const ip = clientIp(ctx.req.raw.headers);
+    const rl = onboardingLimiter.check(`onboard:${ip}`);
+    if (!rl.allowed) {
+      throw new RateLimitError('Too many onboarding attempts. Please try again later.', {
+        retryAfter: Math.max(0, Math.ceil((rl.resetAt - Date.now()) / 1000)),
+      });
+    }
   }
 
   // Guardrail 2 — verified email REQUIRED in production (its OWN check, not the
