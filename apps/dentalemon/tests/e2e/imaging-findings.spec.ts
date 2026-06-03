@@ -41,10 +41,13 @@ test.describe('FindingsSidebar — create / update / delete', () => {
     await page.route('**/dental/imaging/images/*/findings', async (route) => {
       const method = route.request().method()
       if (method === 'GET') {
+        // GET /findings returns { data: ImagingFinding[] } — useImagingFindings
+        // reads data.data. Returning { items } makes the list resolve to
+        // undefined so created findings never surface in the sidebar.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ items: storedFindings }),
+          body: JSON.stringify({ data: storedFindings }),
         })
         return
       }

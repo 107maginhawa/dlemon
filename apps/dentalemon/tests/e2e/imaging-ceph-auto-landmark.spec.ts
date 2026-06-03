@@ -110,7 +110,13 @@ test.describe('P1-10 Auto-detect landmarks', () => {
     let corrected = false
     const confirmed = new Set<string>()
 
-    await page.route(/\/ceph\/analysis/, (route) => route.fulfill({ json: MOCK_ANALYSIS }))
+    // GET /ceph/analysis returns the list-response shape { items, analysis };
+    // useCephAnalysis reads data.analysis. A bare analysis object resolves the
+    // queryFn to `undefined` → React Query errors → the panel falsely shows
+    // "requires the Addon tier" and the Auto-detect button never mounts.
+    await page.route(/\/ceph\/analysis/, (route) =>
+      route.fulfill({ json: { items: [], analysis: MOCK_ANALYSIS } }),
+    )
 
     await page.route(/\/ceph\/landmarks\/detect/, (route) => {
       detected = true

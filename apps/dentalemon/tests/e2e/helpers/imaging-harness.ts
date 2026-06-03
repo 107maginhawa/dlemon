@@ -164,7 +164,12 @@ export async function setupCephRoutes(page: Page, landmarksResp = mkLandmarksRes
     route.fulfill({ json: landmarksResp })
   })
   await page.route(/\/ceph\/analysis/, (route) => {
-    route.fulfill({ json: MOCK_ANALYSIS })
+    // GET /ceph/analysis returns the list-response shape { items, analysis };
+    // useCephAnalysis reads data.analysis. Returning a bare analysis object makes
+    // the queryFn resolve to `undefined`, which React Query treats as an error →
+    // the panel falsely shows "requires the Addon tier". Wrap it to match the
+    // real contract.
+    route.fulfill({ json: { items: landmarksResp.items, analysis: MOCK_ANALYSIS } })
   })
 }
 

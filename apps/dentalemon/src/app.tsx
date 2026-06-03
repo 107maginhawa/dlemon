@@ -26,7 +26,12 @@ const router = createRouter()
 const noop = () => {}
 
 function isHarnessRoute() {
-  return /^\/imaging-ceph-report/.test(window.location.pathname)
+  // E2E test-only harness routes: ceph-report print route + the two imaging
+  // harness routes (/imaging-test, /imaging-comparison-test). These mock the API
+  // via page.route(); a stray unmocked 401 must NOT bounce them to /auth/sign-in.
+  return /^\/imaging-ceph-report|^\/imaging-test|^\/imaging-comparison-test/.test(
+    window.location.pathname,
+  )
 }
 
 /**
