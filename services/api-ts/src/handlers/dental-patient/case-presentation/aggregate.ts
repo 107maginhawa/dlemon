@@ -12,7 +12,7 @@ import {
   CasePresentationRepository,
   type CasePresentationItem,
 } from '../repos/case-presentation.repo';
-import { TREATMENT_PHASE_ORDER, type DentalTreatmentPhase } from '../../dental-visit/repos/treatment.schema';
+import { TREATMENT_PHASE_ORDER, type DentalTreatmentPhase } from '../../dental-visit/repos/visit-dental-patient.facade';
 import {
   listPatientAnnotatedImages,
   type CasePresentationImageRef,

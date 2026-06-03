@@ -11,9 +11,11 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { DentalChartRepository } from '../../dental-visit/repos/dental-chart.repo';
-import { VisitRepository } from '../../dental-visit/repos/visit.repo';
-import type { ToothChartState } from '../../dental-visit/repos/dental-chart.schema';
+import {
+  getVisitById,
+  upsertDentitionChart,
+  type ToothChartState,
+} from '../../dental-visit/repos/visit-dental-patient.facade';
 import type { InitializeDentitionBody, InitializeDentitionParams } from '@/generated/openapi/validators';
 
 // ISO 3950 deciduous tooth numbers (primary dentition)
@@ -64,8 +66,7 @@ export async function initializeDentition(
   const body = ctx.req.valid('json');
 
   // Branch authorization — look up visit to get branchId
-  const visitRepo = new VisitRepository(db);
-  const visit = await visitRepo.findOneById(body.visitId);
+  const visit = await getVisitById(db, body.visitId);
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
@@ -88,12 +89,11 @@ export async function initializeDentition(
     dentitionType = 'permanent';
   }
 
-  const repo = new DentalChartRepository(db, logger);
-  const chart = await repo.upsert({
+  const chart = await upsertDentitionChart(db, {
     visitId: body.visitId,
     patientId,
     teeth,
-  });
+  }, logger);
 
   logger?.info({ action: 'initializeDentition', patientId, dentitionType }, 'Dentition initialized');
 

@@ -11,7 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import type { FollowUpNote } from '../../patient/repos/patient.schema';
+import type { FollowUpNote } from '../../patient/repos/patient-dental-patient.facade';
 import { patients } from '../../patient/repos/patient.schema';
 import { eq } from 'drizzle-orm';
 

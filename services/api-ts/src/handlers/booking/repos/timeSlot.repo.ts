@@ -15,7 +15,6 @@ import {
   type BookingEvent,
   type ScheduleException
 } from './booking.schema';
-import { persons } from '../../person/repos/person.schema';
 import {
   generateSlotsForEvent,
   batchGenerateSlots,

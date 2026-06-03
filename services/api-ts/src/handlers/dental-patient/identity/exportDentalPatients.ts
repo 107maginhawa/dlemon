@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { listDentalPatientsWithPerson } from '../../patient/repos/patient-dental-patient.facade';
-import type { PatientWithPerson } from '../../patient/repos/patient.schema';
+import type { PatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';

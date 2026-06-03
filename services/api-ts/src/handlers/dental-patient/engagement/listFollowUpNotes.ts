@@ -10,7 +10,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import type { FollowUpNote } from '../../patient/repos/patient.schema';
+import type { FollowUpNote } from '../../patient/repos/patient-dental-patient.facade';
 import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
 
 // V-PAT-003: follow-up notes are restricted to clinical/full-staff roles.

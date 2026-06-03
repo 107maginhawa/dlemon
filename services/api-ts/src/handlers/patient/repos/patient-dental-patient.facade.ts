@@ -12,6 +12,10 @@ import { patients, type Patient, type PatientWithPerson } from './patient.schema
 import { persons } from '../../person/repos/person.schema';
 import { PatientRepository, type PatientFilters, type ArchiveResult } from './patient.repo';
 
+/** Re-exported so dental-patient handlers can type patient payloads without
+ *  importing the patient schema directly (Phase 10 boundary lint). */
+export type { FollowUpNote, PatientWithPerson } from './patient.schema';
+
 /** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
 export async function getPatientForDentalPatient(
   db: DatabaseInstance,
