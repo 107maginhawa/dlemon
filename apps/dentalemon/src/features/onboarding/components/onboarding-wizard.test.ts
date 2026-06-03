@@ -2,16 +2,15 @@
  * OnboardingWizard component tests
  *
  * Drives the SHIPPED OnboardingWizard through its real multi-step flow and the
- * handleFinish submit chain (onboarding-wizard.tsx). The previous version of
- * this file asserted re-declared copies of the validation/label helpers and
- * never rendered the component or exercised the create chain — it proved nothing
- * about shipped behaviour. This rewrite mounts the wizard and verifies:
+ * handleFinish submit chain (onboarding-wizard.tsx). Verifies:
  *   - per-step validation blocks Next and surfaces errors
- *   - the full "Get Started" path fires the 5 POSTs in order
- *     (org → branch → member → set-pin → patient) with the entered data,
- *     seeds the org-context store, and calls onComplete
+ *   - the "Get Started" path fires the new 3-call chain in order
+ *     (onboarding → set-pin → patient) with the entered data, seeds the
+ *     org-context store from the 3-ID onboarding response, and calls onComplete
  *   - "Skip for now" runs the same chain minus the patient call
  *   - a failure mid-chain surfaces the error and does NOT call onComplete
+ *   - a 409 (already have a clinic) routes straight to the dashboard
+ *   - a 403 EMAIL_NOT_VERIFIED surfaces the verify-email message and stops
  */
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
@@ -23,7 +22,12 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 
 interface FetchCall { url: string; method: string; body: any }
 
-function installFetch(failOn?: string) {
+type OnboardingOutcome =
+  | { kind: 'ok' }
+  | { kind: 'fail'; on: 'onboarding' | 'pin' }
+  | { kind: 'status'; status: number; body: Record<string, unknown> };
+
+function installFetch(outcome: OnboardingOutcome = { kind: 'ok' }) {
   const calls: FetchCall[] = [];
   const original = global.fetch;
   global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
@@ -32,17 +36,19 @@ function installFetch(failOn?: string) {
     const raw = req instanceof Request ? await req.clone().text() : (init?.body as string | undefined);
     calls.push({ url, method, body: raw ? JSON.parse(raw) : undefined });
 
-    const fail = (status = 422, message = 'boom') =>
-      new Response(JSON.stringify({ message }), { status, headers: { 'Content-Type': 'application/json' } });
-    const ok = (data: unknown, status = 201) =>
+    const json = (data: unknown, status = 201) =>
       new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
-    if (url.endsWith('/dental/organizations')) return failOn === 'org' ? fail() : ok({ id: 'org-1' });
-    if (url.endsWith('/branches')) return failOn === 'branch' ? fail() : ok({ id: 'branch-1' });
-    if (url.endsWith('/members')) return failOn === 'member' ? fail() : ok({ id: 'member-1' });
-    if (url.endsWith('/set-pin')) return failOn === 'pin' ? fail() : ok({ ok: true }, 200);
-    if (url.endsWith('/dental/patients')) return ok({ id: 'pat-1' });
-    return ok({});
+    if (url.endsWith('/dental/onboarding')) {
+      if (outcome.kind === 'fail' && outcome.on === 'onboarding') return json({ message: 'boom' }, 422);
+      if (outcome.kind === 'status') return json(outcome.body, outcome.status);
+      return json({ organizationId: 'org-1', branchId: 'branch-1', membershipId: 'member-1' });
+    }
+    if (url.endsWith('/set-pin')) {
+      return outcome.kind === 'fail' && outcome.on === 'pin' ? json({ message: 'boom' }, 422) : json({ ok: true }, 200);
+    }
+    if (url.endsWith('/dental/patients')) return json({ id: 'pat-1' });
+    return json({});
   }) as unknown as typeof fetch;
   return { calls, restore: () => { global.fetch = original; } };
 }
@@ -100,7 +106,7 @@ describe('OnboardingWizard — shipped component', () => {
     }
   });
 
-  test('runs the full 5-call submit chain in order and completes', async () => {
+  test('runs the onboarding → set-pin → patient chain in order and completes', async () => {
     const user = userEvent.setup();
     const onComplete = mock(() => {});
     const f = installFetch();
@@ -119,25 +125,25 @@ describe('OnboardingWizard — shipped component', () => {
       await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
 
       const posts = f.calls.filter(c => c.method === 'POST').map(c => c.url);
-      expect(posts[0]!.endsWith('/dental/organizations')).toBe(true);
-      expect(posts[1]!.endsWith('/organizations/org-1/branches')).toBe(true);
-      expect(posts[2]!.endsWith('/branches/branch-1/members')).toBe(true);
-      expect(posts[3]!.endsWith('/members/member-1/set-pin')).toBe(true);
-      expect(posts[4]!.endsWith('/dental/patients')).toBe(true);
+      expect(posts[0]!.endsWith('/dental/onboarding')).toBe(true);
+      expect(posts[1]!.endsWith('/members/member-1/set-pin')).toBe(true);
+      expect(posts[2]!.endsWith('/dental/patients')).toBe(true);
 
-      // entered data flowed into the requests
-      expect(f.calls.find(c => c.url.endsWith('/dental/organizations'))!.body.name).toBe('Bright Smiles');
-      expect(f.calls.find(c => c.url.endsWith('/members'))!.body.displayName).toBe('Dr. Ana Reyes');
+      // entered data flowed into the single onboarding request
+      const onb = f.calls.find(c => c.url.endsWith('/dental/onboarding'))!.body;
+      expect(onb.organizationName).toBe('Bright Smiles');
+      expect(onb.tier).toBe('solo');
+      expect(onb.ownerDisplayName).toBe('Dr. Ana Reyes');
       expect(f.calls.find(c => c.url.endsWith('/set-pin'))!.body.pin).toBe('123456');
+
       const patientBody = f.calls.find(c => c.url.endsWith('/dental/patients'))!.body;
       expect(patientBody.displayName).toBe('Juan dela Cruz');
       // Regression: the first-patient call must carry branchId + consentGiven, or
-      // createDentalPatient rejects it (branchId required / CONSENT_REQUIRED) and
-      // the patient the user entered is silently dropped.
+      // createDentalPatient rejects it and the entered patient is silently dropped.
       expect(patientBody.branchId).toBe('branch-1');
       expect(patientBody.consentGiven).toBe(true);
 
-      // org context seeded from the created ids
+      // org context seeded from the 3-ID onboarding response
       const ctx = useOrgContextStore.getState();
       expect(ctx.orgId).toBe('org-1');
       expect(ctx.branchId).toBe('branch-1');
@@ -162,16 +168,17 @@ describe('OnboardingWizard — shipped component', () => {
 
       await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
       expect(f.calls.some(c => c.url.endsWith('/dental/patients'))).toBe(false);
-      expect(f.calls.filter(c => c.method === 'POST').length).toBe(4);
+      // onboarding + set-pin only
+      expect(f.calls.filter(c => c.method === 'POST').length).toBe(2);
     } finally {
       f.restore();
     }
   });
 
-  test('stops the chain and surfaces an error when branch creation fails', async () => {
+  test('stops the chain and surfaces an error when onboarding fails', async () => {
     const user = userEvent.setup();
     const onComplete = mock(() => {});
-    const f = installFetch('branch');
+    const f = installFetch({ kind: 'fail', on: 'onboarding' });
     try {
       render(React.createElement(OnboardingWizard, { onComplete }));
       await fillClinicAndAdvance(user);
@@ -179,11 +186,49 @@ describe('OnboardingWizard — shipped component', () => {
       await advanceFees(user);
       await user.click(screen.getByRole('button', { name: /skip for now/i }));
 
-      await waitFor(() => expect(screen.getByText(/boom|Branch creation failed/i)).not.toBeNull());
+      await waitFor(() => expect(screen.getByText(/boom|Clinic setup failed/i)).not.toBeNull());
       expect(onComplete.mock.calls.length).toBe(0);
-      // org POST happened, member/set-pin did not
-      expect(f.calls.some(c => c.url.endsWith('/dental/organizations'))).toBe(true);
-      expect(f.calls.some(c => c.url.endsWith('/members'))).toBe(false);
+      // onboarding POST happened, set-pin did not
+      expect(f.calls.some(c => c.url.endsWith('/dental/onboarding'))).toBe(true);
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('routes to the dashboard when onboarding returns 409 (already have a clinic)', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch({ kind: 'status', status: 409, body: { code: 'ORG_LIMIT_REACHED', message: 'You already have an active clinic' } });
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      // 409 → straight to dashboard, no set-pin, no error surfaced
+      await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('surfaces a verify-email message on 403 EMAIL_NOT_VERIFIED and stops', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch({ kind: 'status', status: 403, body: { code: 'EMAIL_NOT_VERIFIED', message: 'forbidden' } });
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      await waitFor(() => expect(screen.getByText(/verify your email/i)).not.toBeNull());
+      expect(onComplete.mock.calls.length).toBe(0);
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
     } finally {
       f.restore();
     }
