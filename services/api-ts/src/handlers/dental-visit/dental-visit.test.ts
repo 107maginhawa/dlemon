@@ -298,6 +298,26 @@ describe('createDentalVisit handler', () => {
     expect(body.chiefComplaint).toBe('Toothache upper left');
   });
 
+  // Audit attribution: a visit must record WHO created it. Previously created_by
+  // was left NULL, breaking downstream audit/attribution (and crashing the
+  // audit-log seed which COALESCEs around it).
+  test('persists created_by / updated_by = authenticated user', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/visits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        dentistMemberId: DENTIST_MEMBER_ID,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.createdBy).toBe(TEST_USER.id);
+    expect(body.updatedBy).toBe(TEST_USER.id);
+  });
+
   // V-VIS-003 / BR-001: app-level guard returns 409 (not a raw 500 from the
   // partial unique index) when a patient already has an ACTIVE visit.
   test('returns 409 ACTIVE_VISIT_EXISTS when the patient already has an active visit', async () => {
