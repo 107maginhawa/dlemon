@@ -7,7 +7,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { PatientRepository } from './repos/patient.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findPersonById, ensurePersonForUser } from '../person/repos/person-provisioning.facade';
 import { addUserRole } from '@/utils/auth';
 import type { User } from '@/types/auth';
 
@@ -49,13 +49,12 @@ export async function createPatient(ctx: HandlerContext) {
 
   // Instantiate repositories
   const patientRepo = new PatientRepository(db, logger);
-  const personRepo = new PersonRepository(db, logger);
 
   let person;
 
   if (body.personId) {
     // Staff-created patient: link to an existing person record
-    person = await personRepo.findOneById(body.personId);
+    person = await findPersonById(db, body.personId, logger);
     if (!person) {
       throw new NotFoundError('Person not found');
     }
@@ -82,7 +81,7 @@ export async function createPatient(ctx: HandlerContext) {
     }
 
     // Ensure person exists for the user (create if needed)
-    person = await personRepo.ensurePersonForUser(user, personData);
+    person = await ensurePersonForUser(db, user, personData, logger);
   }
 
   // Check if patient profile already exists for this person
