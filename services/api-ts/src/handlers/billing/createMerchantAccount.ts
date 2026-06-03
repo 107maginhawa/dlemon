@@ -15,7 +15,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { CreateMerchantAccountBody } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { MerchantAccountRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { MerchantMetadata } from './billing.types';
 
 /**
@@ -46,10 +46,9 @@ export async function createMerchantAccount(
 
   // Create repository instances
   const merchantAccountRepo = new MerchantAccountRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
 
   // Check person exists
-  const person = await personRepo.findOneById(personId);
+  const person = await findBillingParty(database, personId, logger);
   if (!person) {
     throw new NotFoundError('Person not found', {
       resourceType: 'person',

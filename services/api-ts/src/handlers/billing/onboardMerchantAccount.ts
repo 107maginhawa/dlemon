@@ -15,7 +15,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { OnboardMerchantAccountBody, OnboardMerchantAccountParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { MerchantAccountRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { MerchantMetadata } from './billing.types';
 
 /**
@@ -87,8 +87,7 @@ export async function onboardMerchantAccount(
       }, 'Merchant account missing Stripe account - creating one now');
 
       // Get person data for Stripe account creation
-      const personRepo = new PersonRepository(database, logger);
-      const person = await personRepo.findOneById(merchantAccount.person);
+      const person = await findBillingParty(database, merchantAccount.person, logger);
 
       if (!person) {
         throw new NotFoundError('Person not found for merchant account', {
