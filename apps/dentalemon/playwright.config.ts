@@ -46,6 +46,11 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      // Journeys are a separate audit harness (need `bun run db:reseed`); they run
+      // via the dedicated `journeys` project / `bun run test:journeys`, not the
+      // default E2E sweep. (Playwright 1.59 removed the old `--ignore-glob` CLI flag,
+      // so the exclusion lives here in config.)
+      testIgnore: '**/journeys/**',
     },
     {
       name: 'ipad-portrait',
@@ -56,6 +61,11 @@ export default defineConfig({
       name: 'ipad-landscape',
       use: { ...devices['iPad (gen 7) landscape'], viewport: { width: 1366, height: 1024 } },
       testMatch: '**/ipad-*.spec.ts',
+    },
+    {
+      name: 'journeys',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/journeys/**/*.spec.ts',
     },
   ],
 

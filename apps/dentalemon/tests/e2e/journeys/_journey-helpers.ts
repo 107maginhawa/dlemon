@@ -257,7 +257,17 @@ export async function pinAuth(page: Page, persona: PersonaKey): Promise<void> {
 /** Open the clinical workspace for a patient (DOM navigation). */
 export async function openWorkspace(page: Page, patientId: string): Promise<void> {
   // Route is /$patientId — _workspace is a pathless layout (TanStack Router).
-  await page.goto(`${APP}/${patientId}`)
+  // SPA-navigate (history.pushState) instead of a hard page.goto: the workspace
+  // route is PIN-gated and the PIN session minted by pinAuth() lives ONLY in
+  // memory. A full reload (page.goto) wipes that session and bounces back to
+  // /auth/pin-select, so the carousel never mounts. TanStack Router intercepts
+  // the same-origin history change and renders the workspace with the session
+  // intact (same approach as tests/e2e/helpers/perio-e2e.ts spaNavigate).
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, `/${patientId}`)
+  await page.waitForURL((u: URL) => u.pathname === `/${patientId}`, { timeout: 15_000 })
   await page.waitForLoadState('networkidle')
   // Workspace mounted = carousel zone present, not the loading shell.
   await expect(
