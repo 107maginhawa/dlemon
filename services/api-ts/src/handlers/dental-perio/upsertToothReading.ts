@@ -73,40 +73,16 @@ export async function upsertToothReading(
   const repo = new PerioReadingRepository(db);
 
   // The chairside flow PATCHes ONE site per keystroke, so most fields are absent
-  // from any given request. Merge the patch over the existing row instead of
-  // replacing it — otherwise each single-site write nulls every other site already
-  // recorded on the tooth (the data-loss bug behind the red-line never rendering).
-  // `??` lets an explicitly-sent value (including 0 / false) override while an
-  // omitted field falls back to the stored value, then the column default.
-  const prev = await repo.findByChartAndTooth(chartId, toothNumber);
+  // from any given request. Pass the patch straight through: repo.upsert writes
+  // ONLY the columns present in `body` on conflict, so a single-site write leaves
+  // every other site on the tooth untouched (no full-row replace, and no
+  // read-then-write — the upsert is one atomic, race-free statement).
+  // `createdBy` is used only on first insert; the conflict-update never touches it.
   const reading = await repo.upsert({
     chartId,
     toothNumber,
-    depthBM: body.depthBM ?? prev?.depthBM ?? null,
-    depthBC: body.depthBC ?? prev?.depthBC ?? null,
-    depthBD: body.depthBD ?? prev?.depthBD ?? null,
-    depthLM: body.depthLM ?? prev?.depthLM ?? null,
-    depthLC: body.depthLC ?? prev?.depthLC ?? null,
-    depthLD: body.depthLD ?? prev?.depthLD ?? null,
-    bopBM: body.bopBM ?? prev?.bopBM ?? null,
-    bopBC: body.bopBC ?? prev?.bopBC ?? null,
-    bopBD: body.bopBD ?? prev?.bopBD ?? null,
-    bopLM: body.bopLM ?? prev?.bopLM ?? null,
-    bopLC: body.bopLC ?? prev?.bopLC ?? null,
-    bopLD: body.bopLD ?? prev?.bopLD ?? null,
-    recession: body.recession ?? prev?.recession ?? null,
-    gmBM: body.gmBM ?? prev?.gmBM ?? null,
-    gmBC: body.gmBC ?? prev?.gmBC ?? null,
-    gmBD: body.gmBD ?? prev?.gmBD ?? null,
-    gmLM: body.gmLM ?? prev?.gmLM ?? null,
-    gmLC: body.gmLC ?? prev?.gmLC ?? null,
-    gmLD: body.gmLD ?? prev?.gmLD ?? null,
-    mobility: body.mobility ?? prev?.mobility ?? 0,
-    furcation: body.furcation ?? prev?.furcation ?? 0,
-    plaque: body.plaque ?? prev?.plaque ?? false,
-    suppuration: body.suppuration ?? prev?.suppuration ?? false,
-    notes: body.notes ?? prev?.notes ?? undefined,
-    createdBy: prev?.createdBy ?? user.id,
+    ...body,
+    createdBy: user.id,
     updatedBy: user.id,
   });
 

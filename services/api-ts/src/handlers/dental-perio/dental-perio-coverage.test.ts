@@ -310,6 +310,50 @@ describe('upsertToothReading', () => {
     expect(body.depthBC).toBe(5);
   });
 
+  // BOP is a nullable boolean (null = not assessed). Toggling a bleeding dot OFF
+  // sends {bopBM:false}; that explicit false must persist, not fall back to the
+  // prior value or null. (false is not nullish, so it overrides.)
+  test('persists an explicit BOP toggle-off (true → false)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    await app.request(`/dental/perio-charts/${chartId}/readings/47`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bopBM: true }),
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/47`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bopBM: false }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.bopBM).toBe(false);
+  });
+
+  // A single-site PATCH must touch ONLY the columns it carries — a later depth
+  // entry must not reset an unrelated per-tooth field (mobility) back to its
+  // default. Proves the partial-update (no full-row replace) holds for non-depth
+  // columns too.
+  test('a single-site patch leaves untouched columns intact (mobility preserved)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    await app.request(`/dental/perio-charts/${chartId}/readings/46`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobility: 2 }),
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/46`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 4 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.mobility).toBe(2); // not reset to default 0 by the depth patch
+    expect(body.depthBM).toBe(4);
+  });
+
   test('returns 403 for staff_scheduling role', async () => {
     const chartId = await getChartId();
     const app = buildApp(NON_DENTIST);
