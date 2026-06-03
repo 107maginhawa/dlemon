@@ -11,83 +11,23 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 
 async function signUpAndSeedOrg(page: Page) {
-  const suffix = Date.now();
-  const email = `patient-e2e-owner-${suffix}@example.org`;
-  const password = 'E2eTestPass123!';
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
+  const { email, password, orgId, branchId } = await signUpOnboardAndUnlock(page, {
+    tier: 'solo',
+    label: 'Patient',
+  });
 
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Patient Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially(password, { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create person profile to bypass onboarding redirect
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'Patient', lastName: 'Owner' }),
-    });
-  }, API);
-
-  // Seed org
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Patient Test Clinic', tier: 'solo', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-
-  // Seed branch
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId: orgRes.id });
-
-  // Set dental context in localStorage so the dashboard guard doesn't redirect to dental-onboarding
-  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
-    localStorage.setItem('currentOrgId', orgId);
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, { orgId: orgRes.id, branchId: branchRes.id });
-
-  return { email, password, orgId: orgRes.id, branchId: branchRes.id };
+  return { email, password, orgId, branchId };
 }
 
 test.describe('Patient Registration flow', () => {
   test('FR2.1: navigates to patients page and shows empty state', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     // Patient list loads from API — empty branch shows empty state
     await expect(page.getByTestId('patient-list-empty')).toBeVisible();
@@ -95,8 +35,7 @@ test.describe('Patient Registration flow', () => {
 
   test('FR2.3: register patient button opens registration modal with required fields', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     await page.getByTestId('register-patient-btn').click();
 
@@ -107,8 +46,7 @@ test.describe('Patient Registration flow', () => {
 
   test('FR2.3: cancel button closes modal without registering', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     await page.getByTestId('register-patient-btn').click();
     await expect(page.getByLabel(/full name/i)).toBeVisible();
@@ -119,8 +57,7 @@ test.describe('Patient Registration flow', () => {
 
   test('FR2.3: form validation prevents submission with empty name', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     await page.getByTestId('register-patient-btn').click();
     // Check consent but leave name empty
@@ -133,8 +70,7 @@ test.describe('Patient Registration flow', () => {
 
   test('FR2.20: consent checkbox blocks registration when unchecked', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     await page.getByTestId('register-patient-btn').click();
     await page.getByLabel(/full name/i).fill('Maria Santos');
@@ -148,8 +84,7 @@ test.describe('Patient Registration flow', () => {
 
   test('FR2.3: registering a patient calls POST /dental/patients and refreshes list', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     // Intercept the dental patients API call
     const dentalPatientsRequest = page.waitForRequest(
@@ -234,8 +169,7 @@ test.describe('Patient Registration flow', () => {
       return;
     }
 
-    await page.goto(`${APP}/patients`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/patients');
 
     // If the list is empty even though a patient exists, the implementation
     // is using a hardcoded empty array (the old bug)
