@@ -318,24 +318,26 @@ GET {{api}}/dental/patients/{{patient_id}}/visits
 HTTP 401
 
 
-# NEW: G2.5-S6 — get treatment plan (may be empty for new patient)
-GET {{api}}/dental/patients/{{patient_id}}/treatment-plan
+# G2.5-S6 — get treatment plan: a new patient has an empty v0 plan (branchId required)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP [200, 404]
+HTTP 200
 
 
-# NEW: G2.5-S6 — get treatment plan version 1 (404 acceptable if no plan exists)
-GET {{api}}/dental/patients/{{patient_id}}/treatment-plan/versions/1
-Cookie: better-auth.session_token={{session_token}}
-HTTP [200, 404]
-
-
-# NEW: G2.5-S6 — accept treatment plan (body is optional — consentFormId not required)
-POST {{api}}/dental/patients/{{patient_id}}/treatment-plan/accept
+# G2.5-S6 — accept the treatment plan → creates version 1 (branchId required)
+POST {{api}}/dental/patients/{{patient_id}}/treatment-plan/accept?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {}
-HTTP [201, 400, 404]
+HTTP 201
+[Captures]
+plan_version_id: jsonpath "$.id"
+
+
+# G2.5-S6 — fetch that plan version by id (versionId is a UUID, not a sequence number)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan/versions/{{plan_version_id}}?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
 
 
 # NEW: G2.5-S6 — initialize dentition chart

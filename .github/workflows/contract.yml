@@ -35,6 +35,10 @@ jobs:
       PORT: 7213
       API_URL: http://localhost:7213
       AUTH_SECRET: contract-test-secret-do-not-use-in-prod
+      # The contract runner's admin preflight signs up admin@contract-tests.local;
+      # it is only granted the admin role (needed for admin-gated ops, e.g. org
+      # creation EM-ORG-002) when its email is in AUTH_ADMIN_EMAILS.
+      AUTH_ADMIN_EMAILS: admin@contract-tests.local
       STORAGE_PROVIDER: minio
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_BUCKET: monobase-files
