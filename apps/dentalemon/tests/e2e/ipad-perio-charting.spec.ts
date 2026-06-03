@@ -152,10 +152,10 @@ async function openPerioGrid(page: Page, patientId: string): Promise<void> {
   await spaNavigate(page, `/${patientId}`);
   await page.getByTestId('perio-tab-btn').click();
   await expect(page.getByTestId('perio-overlay')).toBeVisible();
-  const startBtn = page.getByTestId('perio-start-btn');
-  if (await startBtn.isVisible().catch(() => false)) {
-    await startBtn.click();
-  }
+  // Fresh visit → empty state. Click the start button directly (Playwright
+  // auto-waits for it to become actionable, which also rides out the chart-load
+  // spinner — a bare isVisible() guard would race the spinner and skip the click).
+  await page.getByTestId('perio-start-btn').click();
   await expect(page.getByTestId('perio-grid')).toBeVisible();
 }
 
