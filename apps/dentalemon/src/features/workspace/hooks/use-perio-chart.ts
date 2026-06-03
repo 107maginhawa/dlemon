@@ -89,8 +89,11 @@ export function usePerioChart({ visitId, patientId, enabled = true }: UsePerioCh
       const res = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/perio-chart`, {
         credentials: 'include',
       });
-      // 404 = no chart for this visit yet → not an error, just "start exam" state.
-      if (res.status === 404) return null;
+      // No chart for this visit yet → not an error, just the "start exam" state.
+      // The API signals this with 204 No Content (empty body); 404 is also tolerated.
+      // 204 is `res.ok`, so it must be handled BEFORE res.json() — calling json() on
+      // an empty body throws and would surface a false "couldn't load chart" error.
+      if (res.status === 404 || res.status === 204) return null;
       if (!res.ok) throw await readError(res);
       return (await res.json()) as PerioChart;
     },

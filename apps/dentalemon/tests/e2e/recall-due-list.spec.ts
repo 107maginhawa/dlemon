@@ -36,37 +36,43 @@ async function signUpAndSeedOrg(page: Page) {
   await page.getByRole('button', { name: /create an account/i }).click();
   await signupResponse;
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+  // Let the post-signup redirect chain settle before any page.evaluate seeding, so a
+  // racing navigation can't destroy the execution context mid-fetch (ROOT PROBLEM #2).
+  await page.waitForLoadState('networkidle');
 
   await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
     await fetch(`${api}/persons`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ firstName: 'Recare', lastName: 'Staff' }),
     });
   }, API);
 
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
+  // Provision org + default branch + dentist_owner membership in ONE self-service
+  // call (org creation is admin-only now — EM-ORG-002). The caller becomes owner.
+  const onb = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/onboarding`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-      body: JSON.stringify({ name: 'Recare Test Clinic', tier: 'clinic', countryCode: 'PH' }),
+      body: JSON.stringify({
+        organizationName: 'Recare Test Clinic', tier: 'clinic', countryCode: 'PH',
+        branchName: 'Main Branch', timezone: 'Asia/Manila', ownerDisplayName: 'Recare Staff',
+      }),
     });
+    if (!res.ok) throw new Error(`Onboarding failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
   }, API);
+  const orgId = onb.organizationId as string;
+  const branchId = onb.branchId as string;
+  const memberId = onb.membershipId as string;
 
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId: orgRes.id });
-
-  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
+  await page.evaluate(({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
     localStorage.setItem('currentOrgId', orgId);
     localStorage.setItem('currentBranchId', branchId);
+    localStorage.setItem('currentMemberId', memberId);
     localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, { orgId: orgRes.id, branchId: branchRes.id });
+  }, { orgId, branchId, memberId });
 
-  return { orgId: orgRes.id, branchId: branchRes.id };
+  return { orgId, branchId, memberId };
 }
 
 test.describe('Recare due engine + due-list (P1-24 Slice B)', () => {
@@ -76,7 +82,7 @@ test.describe('Recare due engine + due-list (P1-24 Slice B)', () => {
     const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
       const patient = await fetch(`${api}/dental/patients`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ displayName: 'Recare Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Recare Patient', branchId, consentGiven: true }),
       }).then((r) => r.json() as any);
 
       // Assign the patient to the branch so the branch-scoped recall handlers permit access.
@@ -116,7 +122,7 @@ test.describe('Recare due engine + due-list (P1-24 Slice B)', () => {
     const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
       const patient = await fetch(`${api}/dental/patients`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ displayName: 'Recurring Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Recurring Patient', branchId, consentGiven: true }),
       }).then((r) => r.json() as any);
       await fetch(`${api}/dental/patients/${patient.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include',

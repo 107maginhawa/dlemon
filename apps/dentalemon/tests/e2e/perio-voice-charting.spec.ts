@@ -90,9 +90,12 @@ async function signUpSeedOrgAndVisit(page: Page) {
   await pwInput.pressSequentially(password, { delay: 10 });
   await page.getByRole('button', { name: /create an account/i }).click();
   await page.waitForURL((url) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+  // Let the post-signup redirect chain settle before any page.evaluate seeding, so a
+  // racing navigation can't destroy the execution context mid-fetch (ROOT PROBLEM #2).
   await page.waitForLoadState('networkidle');
 
   await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
     await fetch(`${api}/persons`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,40 +104,29 @@ async function signUpSeedOrgAndVisit(page: Page) {
     });
   }, API);
 
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
+  // Provision org + default branch + dentist_owner membership in ONE self-service
+  // call (org creation is admin-only now — EM-ORG-002). The caller becomes owner +
+  // dentist_owner member, so we use organizationId/branchId/membershipId directly.
+  const onb = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/onboarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name: 'Voice Clinic', tier: 'clinic', countryCode: 'PH' }),
+      body: JSON.stringify({
+        organizationName: 'Voice Clinic',
+        tier: 'clinic',
+        countryCode: 'PH',
+        branchName: 'Main Branch',
+        timezone: 'Asia/Manila',
+        ownerDisplayName: 'Perio Voice Dentist',
+      }),
     });
+    if (!res.ok) throw new Error(`Onboarding failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
   }, API);
-
-  const branchRes = await page.evaluate(
-    async ({ api, orgId }: { api: string; orgId: string }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name: 'Main', timezone: 'Asia/Manila' }),
-      });
-      return res.json();
-    },
-    { api: API, orgId: orgRes.id as string },
-  );
-
-  const memberId = await page.evaluate(
-    async ({ api, orgId }: { api: string; orgId: string }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/members`, {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      const data = await res.json();
-      return (data.items?.[0]?.id ?? data[0]?.id) as string;
-    },
-    { api: API, orgId: orgRes.id as string },
-  );
+  const orgId = onb.organizationId as string;
+  const branchId = onb.branchId as string;
+  const memberId = onb.membershipId as string;
 
   const patientRes = await page.evaluate(
     async ({ api, branchId }: { api: string; branchId: string }) => {
@@ -143,16 +135,17 @@ async function signUpSeedOrgAndVisit(page: Page) {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          firstName: 'Perio',
-          lastName: 'Patient',
+          displayName: 'Perio Patient',
           dateOfBirth: '1990-01-01',
-          sex: 'female',
+          gender: 'female',
           branchId,
+          consentGiven: true,
         }),
       });
+      if (!res.ok) throw new Error(`Patient create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
       return res.json();
     },
-    { api: API, branchId: branchRes.id as string },
+    { api: API, branchId },
   );
 
   const visitRes = await page.evaluate(
@@ -163,17 +156,22 @@ async function signUpSeedOrgAndVisit(page: Page) {
         credentials: 'include',
         body: JSON.stringify({ patientId, branchId, dentistMemberId: memberId }),
       });
+      if (!res.ok) throw new Error(`Visit create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
       return res.json();
     },
-    { api: API, patientId: patientRes.id as string, branchId: branchRes.id as string, memberId },
+    { api: API, patientId: patientRes.id as string, branchId, memberId },
   );
 
   await page.evaluate(
-    ({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    ({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
       localStorage.setItem('selectedOrgId', orgId);
       localStorage.setItem('selectedBranchId', branchId);
+      localStorage.setItem('currentOrgId', orgId);
+      localStorage.setItem('currentBranchId', branchId);
+      localStorage.setItem('currentMemberId', memberId);
+      localStorage.setItem('currentMemberRole', 'dentist_owner');
     },
-    { orgId: orgRes.id as string, branchId: branchRes.id as string },
+    { orgId, branchId, memberId },
   );
 
   return { patientId: patientRes.id as string, visitId: visitRes.id as string };

@@ -42,7 +42,10 @@ async function signUpAndSeed(page: Page) {
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
 
+  // Mark email verified + create the caller's person record so the workspace/
+  // dashboard guards don't bounce the authenticated owner to a setup wizard.
   await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
     await fetch(`${api}/persons`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,63 +54,104 @@ async function signUpAndSeed(page: Page) {
     });
   }, API);
 
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
+  // Provision org + default branch + dentist_owner membership in ONE self-service
+  // call (org creation is admin-only now — EM-ORG-002). The caller becomes owner.
+  const onb = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/onboarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name: 'Insurance Test Clinic', tier: 'clinic', countryCode: 'PH' }),
+      body: JSON.stringify({
+        organizationName: 'Insurance Test Clinic',
+        tier: 'clinic',
+        countryCode: 'PH',
+        branchName: 'Main Branch',
+        timezone: 'Asia/Manila',
+        ownerDisplayName: 'Insurance Owner',
+      }),
     });
+    if (!res.ok) throw new Error(`Onboarding failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
   }, API);
-
-  const branchRes = await page.evaluate(
-    async ({ api, orgId }: { api: string; orgId: string }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-      });
-      return res.json();
-    },
-    { api: API, orgId: orgRes.id },
-  );
+  const orgId = onb.organizationId as string;
+  const branchId = onb.branchId as string;
+  const memberId = onb.membershipId as string;
 
   await page.evaluate(
-    ({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    ({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
       localStorage.setItem('currentOrgId', orgId);
       localStorage.setItem('currentBranchId', branchId);
+      localStorage.setItem('currentMemberId', memberId);
       localStorage.setItem('currentMemberRole', 'dentist_owner');
     },
-    { orgId: orgRes.id, branchId: branchRes.id },
+    { orgId, branchId, memberId },
   );
 
+  // Set a PIN on the owner membership, then drive the real PIN-unlock UI so the
+  // in-memory pinSession exists (dashboard routes are PIN-gated and the session
+  // cannot be seeded via localStorage — it lives only in memory).
+  await setMemberPin(page, { orgId, branchId, memberId, pin: '135790' });
+  await unlockWorkspace(page, '135790');
+
+  return { orgId, branchId };
+}
+
+/** Set a 6-digit PIN on a membership via the org admin endpoint. */
+async function setMemberPin(
+  page: Page,
+  opts: { orgId: string; branchId: string; memberId: string; pin: string },
+): Promise<void> {
   await page.evaluate(
-    async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-      const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-      const session = (await sessionRes.json()) as any;
-      const personId = session?.user?.id;
-      if (personId) {
-        await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
+    async ({ api, orgId, branchId, memberId, pin }) => {
+      const res = await fetch(
+        `${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ displayName: 'Insurance Owner', role: 'dentist_owner', personId }),
-        });
-      }
+          body: JSON.stringify({ pin }),
+        },
+      );
+      if (!res.ok) throw new Error(`set-pin failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
     },
-    { api: API, orgId: orgRes.id, branchId: branchRes.id },
+    { api: API, ...opts },
   );
+}
 
-  return { orgId: orgRes.id, branchId: branchRes.id };
+/**
+ * Drive the real PIN-select → PIN-entry flow to mint the in-memory pinSession.
+ * A single-member branch auto-advances pin-select → pin-entry; we then tap the
+ * keypad. On success the app navigates to the role landing page.
+ */
+async function unlockWorkspace(page: Page, pin: string): Promise<void> {
+  await page.goto(`${APP}/auth/pin-select`);
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
+  for (const digit of pin) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+  await page.waitForURL((url) => !url.pathname.includes('/auth/pin'), { timeout: 15000 });
+}
+
+/**
+ * Client-side (SPA) navigation that preserves the in-memory PIN session. A hard
+ * `page.goto` reloads the app and resets pinSession (it lives only in memory),
+ * bouncing back to the PIN gate. Using the history API + popstate lets TanStack
+ * Router handle the navigation in-app so the unlocked session survives.
+ */
+async function spaNavigate(page: Page, path: string): Promise<void> {
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, path);
+  await page.waitForURL((url) => url.pathname === path, { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('Insurance / Revenue-Cycle (P1-26)', () => {
   test('Insurance tab surfaces the claims worklist (empty state for a fresh branch)', async ({ page }) => {
     await signUpAndSeed(page);
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     await page.getByRole('tab', { name: /insurance/i }).click();
 
@@ -117,8 +161,7 @@ test.describe('Insurance / Revenue-Cycle (P1-26)', () => {
 
   test('cash path untouched: Invoices tab still renders the invoice list', async ({ page }) => {
     await signUpAndSeed(page);
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     // Default tab is Invoices — the cash-patient majority sees no insurance friction.
     await expect(page.getByTestId('billing-list')).toBeVisible();

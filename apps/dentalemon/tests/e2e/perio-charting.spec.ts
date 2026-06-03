@@ -52,6 +52,14 @@ async function signUpSeedOrgAndVisit(page: Page): Promise<SeedContext> {
   await page.waitForURL((url) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
   await page.waitForLoadState('networkidle');
 
+  // Mark email verified so the frontend guard doesn't bounce to /verify-email,
+  // and so any in-app navigation has settled before the seeding fetches below.
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+  }, API);
+
+  // Create the caller's person record so the workspace guards don't bounce the
+  // authenticated owner to the /onboarding (profile-setup) wizard.
   await page.evaluate(async (api) => {
     await fetch(`${api}/persons`, {
       method: 'POST',
@@ -61,41 +69,28 @@ async function signUpSeedOrgAndVisit(page: Page): Promise<SeedContext> {
     });
   }, API);
 
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
+  // Provision org + default branch + dentist_owner membership in ONE self-service
+  // call (org creation is admin-only now — EM-ORG-002). The caller becomes owner.
+  const onb = await page.evaluate(async (api) => {
+    const res = await fetch(`${api}/dental/onboarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name: 'Perio E2E Clinic', tier: 'clinic', countryCode: 'PH' }),
+      body: JSON.stringify({
+        organizationName: 'Perio E2E Clinic',
+        tier: 'clinic',
+        countryCode: 'PH',
+        branchName: 'Main Branch',
+        timezone: 'Asia/Manila',
+        ownerDisplayName: 'Perio E2E Dentist',
+      }),
     });
+    if (!res.ok) throw new Error(`Onboarding failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
   }, API);
-
-  const branchRes = await page.evaluate(
-    async ({ api, orgId }: { api: string; orgId: string }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name: 'Main', timezone: 'Asia/Manila' }),
-      });
-      return res.json();
-    },
-    { api: API, orgId: orgRes.id as string },
-  );
-
-  const memberId = await page.evaluate(
-    async ({ api, orgId }: { api: string; orgId: string }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/members`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      const data = await res.json();
-      return (data.items?.[0]?.id ?? data[0]?.id) as string;
-    },
-    { api: API, orgId: orgRes.id as string },
-  );
+  const orgId = onb.organizationId as string;
+  const branchId = onb.branchId as string;
+  const memberId = onb.membershipId as string;
 
   const patientRes = await page.evaluate(
     async ({ api, branchId }: { api: string; branchId: string }) => {
@@ -104,16 +99,17 @@ async function signUpSeedOrgAndVisit(page: Page): Promise<SeedContext> {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          firstName: 'Perio',
-          lastName: 'Patient',
+          displayName: 'Perio Patient',
           dateOfBirth: '1985-01-01',
-          sex: 'female',
+          gender: 'female',
           branchId,
+          consentGiven: true,
         }),
       });
+      if (!res.ok) throw new Error(`Patient create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
       return res.json();
     },
-    { api: API, branchId: branchRes.id as string },
+    { api: API, branchId },
   );
 
   const visitRes = await page.evaluate(
@@ -124,25 +120,91 @@ async function signUpSeedOrgAndVisit(page: Page): Promise<SeedContext> {
         credentials: 'include',
         body: JSON.stringify({ patientId, branchId, dentistMemberId: memberId }),
       });
+      if (!res.ok) throw new Error(`Visit create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
       return res.json();
     },
-    { api: API, patientId: patientRes.id as string, branchId: branchRes.id as string, memberId },
+    { api: API, patientId: patientRes.id as string, branchId, memberId },
   );
 
   await page.evaluate(
-    ({ orgId, branchId }: { orgId: string; branchId: string }) => {
+    ({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
       localStorage.setItem('selectedOrgId', orgId);
       localStorage.setItem('selectedBranchId', branchId);
+      localStorage.setItem('currentOrgId', orgId);
+      localStorage.setItem('currentBranchId', branchId);
+      localStorage.setItem('currentMemberId', memberId);
+      localStorage.setItem('currentMemberRole', 'dentist_owner');
     },
-    { orgId: orgRes.id as string, branchId: branchRes.id as string },
+    { orgId, branchId, memberId },
   );
 
+  // Set a PIN on the owner membership, then drive the real PIN-unlock UI so the
+  // in-memory pinSession exists (the workspace route tree is PIN-gated and the
+  // session cannot be seeded via localStorage — it lives only in memory).
+  await setMemberPin(page, { orgId, branchId, memberId, pin: '135790' });
+  await unlockWorkspace(page, '135790');
+
   return {
-    orgId: orgRes.id as string,
-    branchId: branchRes.id as string,
+    orgId,
+    branchId,
     patientId: patientRes.id as string,
     visitId: visitRes.id as string,
   };
+}
+
+/** Set a 6-digit PIN on a membership via the org admin endpoint. */
+async function setMemberPin(
+  page: Page,
+  opts: { orgId: string; branchId: string; memberId: string; pin: string },
+): Promise<void> {
+  await page.evaluate(
+    async ({ api, orgId, branchId, memberId, pin }) => {
+      const res = await fetch(
+        `${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ pin }),
+        },
+      );
+      if (!res.ok) throw new Error(`set-pin failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    },
+    { api: API, ...opts },
+  );
+}
+
+/**
+ * Drive the real PIN-select → PIN-entry flow to mint the in-memory pinSession.
+ * A single-member branch auto-advances pin-select → pin-entry; we then tap the
+ * keypad. On success the app navigates to the role landing page (dashboard).
+ */
+async function unlockWorkspace(page: Page, pin: string): Promise<void> {
+  await page.goto(`${APP}/auth/pin-select`);
+  await page.waitForLoadState('networkidle');
+  // Single member → auto-navigates to pin-entry; wait for the keypad.
+  await expect(page.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
+  for (const digit of pin) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+  // Successful verify navigates away from the PIN flow to the landing page.
+  await page.waitForURL((url) => !url.pathname.includes('/auth/pin'), { timeout: 15000 });
+}
+
+/**
+ * Client-side (SPA) navigation that preserves the in-memory PIN session. A hard
+ * `page.goto` reloads the app and resets pinSession (it lives only in memory),
+ * which would bounce us back to the PIN gate. Injecting an in-page anchor and
+ * clicking it lets TanStack Router intercept the same-origin navigation, so the
+ * unlocked session survives.
+ */
+export async function spaNavigate(page: Page, path: string): Promise<void> {
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, path);
+  await page.waitForURL((url) => url.pathname === path, { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('Perio charting (P0-1)', () => {
@@ -156,8 +218,9 @@ test.describe('Perio charting (P0-1)', () => {
     }
     if (!ctx) return;
 
-    await page.goto(`${APP}/patients/${ctx.patientId}`);
-    await page.waitForLoadState('networkidle');
+    // SPA-navigate to the perio workspace (/$patientId) so the in-memory PIN
+    // session survives — a hard goto would reset it and bounce to the PIN gate.
+    await spaNavigate(page, `/${ctx.patientId}`);
 
     // Open the Perio tab and start an exam.
     await page.getByTestId('perio-tab-btn').click();
