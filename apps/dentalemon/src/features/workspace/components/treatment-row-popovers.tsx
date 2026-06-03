@@ -45,7 +45,7 @@ export function DismissTreatmentPopover({
           onChange={(e) => onReasonChange(e.target.value)}
           minLength={3}
           placeholder="e.g. Patient declined"
-          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-lemon outline-none"
         />
         <button
           type="button"
@@ -114,7 +114,7 @@ export function DeclineTreatmentPopover({
           onChange={(e) => onReasonChange(e.target.value)}
           minLength={3}
           placeholder="e.g. Cannot afford, prefers alternative"
-          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-lemon outline-none"
         />
         <button
           type="button"

@@ -203,14 +203,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-start gap-1">
               <div className="flex flex-col items-center gap-1 w-16">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${i <= stepIndex ? 'bg-[#FFE97D] text-[#4A4018]' : 'bg-secondary text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${i <= stepIndex ? 'bg-lemon text-lemon-foreground' : 'bg-secondary text-muted-foreground'}`}>
                   {i + 1}
                 </div>
                 <span className={`text-[10px] text-center leading-tight ${i <= stepIndex ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                   {STEP_LABELS[s]}
                 </span>
               </div>
-              {i < STEPS.length - 1 && <div className={`w-6 h-0.5 mt-4 ${i < stepIndex ? 'bg-[#FFE97D]' : 'bg-border'}`} />}
+              {i < STEPS.length - 1 && <div className={`w-6 h-0.5 mt-4 ${i < stepIndex ? 'bg-lemon' : 'bg-border'}`} />}
             </div>
           ))}
         </div>
@@ -264,7 +264,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {step === 'patient' && (
             <Button type="button" variant="ghost" onClick={handleSkipPatient} disabled={saving} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50">Skip for now</Button>
           )}
-          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
             {saving ? 'Setting up...' : isLast ? 'Get Started' : 'Next'}
           </Button>
         </div>

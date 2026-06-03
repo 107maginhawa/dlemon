@@ -88,7 +88,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
         {/* Avatar */}
         <div
           data-testid="patient-avatar"
-          className="w-10 h-10 shrink-0 rounded-full bg-[#FFE97D]/30 flex items-center justify-center text-sm font-bold text-[#4A4018] select-none"
+          className="w-10 h-10 shrink-0 rounded-full bg-lemon/30 flex items-center justify-center text-sm font-bold text-lemon-foreground select-none"
         >
           {initials(patient.displayName)}
         </div>

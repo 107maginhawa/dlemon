@@ -296,7 +296,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
             checked
               ? isDanger
                 ? 'bg-red-100 border-red-300 text-red-700'
-                : 'bg-[#FFE97D] border-[#F5DC60] text-[#4A4018]'
+                : 'bg-lemon border-lemon-hover text-lemon-foreground'
               : 'border-border bg-background'
           }`}
         >
@@ -481,12 +481,12 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
                 <div
                   className={`w-[22px] h-[22px] rounded-full border-[1.5px] flex items-center justify-center flex-shrink-0 ${
                     pregnancyStatus === opt.value
-                      ? 'border-[#F5DC60] bg-[#FFE97D]'
+                      ? 'border-lemon-hover bg-lemon'
                       : 'border-border bg-background'
                   }`}
                 >
                   {pregnancyStatus === opt.value && (
-                    <div className="w-2 h-2 rounded-full bg-[#4A4018]" />
+                    <div className="w-2 h-2 rounded-full bg-lemon-foreground" />
                   )}
                 </div>
                 <span className="text-sm">{opt.label}</span>
@@ -532,7 +532,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
         <button
           type="button"
           onClick={handleSaveSpecialFields}
-          className="h-10 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
+          className="h-10 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors"
           data-testid="save-medical-history-btn"
         >
           💾 Save Medical History

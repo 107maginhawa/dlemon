@@ -239,7 +239,7 @@ function CalendarPage() {
             aria-pressed={view === 'day'}
             className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
               view === 'day'
-                ? 'bg-[#FFE97D] text-[#4A4018] font-semibold'
+                ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
             }`}
           >
@@ -251,7 +251,7 @@ function CalendarPage() {
             aria-pressed={view === 'week'}
             className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
               view === 'week'
-                ? 'bg-[#FFE97D] text-[#4A4018] font-semibold'
+                ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
             }`}
           >
@@ -263,7 +263,7 @@ function CalendarPage() {
             aria-pressed={view === 'month'}
             className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
               view === 'month'
-                ? 'bg-[#FFE97D] text-[#4A4018] font-semibold'
+                ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
             }`}
           >
@@ -295,7 +295,7 @@ function CalendarPage() {
           <button
             type="button"
             onClick={() => handleNewAppointment(false)}
-            className="h-11 px-4 rounded-[10px] bg-[#FFE97D] text-[#4A4018] text-[13px] font-semibold flex items-center gap-1.5 hover:bg-[#F5DC60] transition-colors"
+            className="h-11 px-4 rounded-[10px] bg-lemon text-lemon-foreground text-[13px] font-semibold flex items-center gap-1.5 hover:bg-lemon-hover transition-colors"
             aria-label="Create new appointment"
           >
             <span className="text-xs">+</span> New Appointment

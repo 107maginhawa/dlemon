@@ -235,12 +235,12 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                       aria-label={`${calcProgress(plan.paidCents, plan.totalCents)}% paid`}
                     >
                       <div
-                        className="h-full rounded-full bg-[#FFE97D] transition-all duration-300"
+                        className="h-full rounded-full bg-lemon transition-all duration-300"
                         style={{ width: `${calcProgress(plan.paidCents, plan.totalCents)}%` }}
                       />
                     </div>
                     <div className="flex justify-between mt-1">
-                      <span className="text-[11px] font-semibold text-[#4A4018] tabular-nums">
+                      <span className="text-[11px] font-semibold text-lemon-foreground tabular-nums">
                         {calcProgress(plan.paidCents, plan.totalCents)}% paid
                       </span>
                       <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -293,7 +293,7 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                   </thead>
                   <tbody>
                     {plan.installments.map((inst) => (
-                      <tr key={inst.id} className="hover:bg-[rgba(255,233,125,0.15)] transition-colors border-b border-border last:border-b-0">
+                      <tr key={inst.id} className="hover:bg-lemon-soft transition-colors border-b border-border last:border-b-0">
                         <td className="px-4 h-12 align-middle pl-5">
                           <span className={`w-6 h-6 rounded-full text-[11px] font-bold inline-flex items-center justify-center ${getInstallmentNumClass(inst.status)}`}>
                             {inst.number}

@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<LabOrderStatus, string> = {
   ordered: 'bg-blue-100 text-blue-700',
   in_fabrication: 'bg-orange-100 text-orange-700',
   delivered: 'bg-green-100 text-green-700',
-  fitted: 'bg-[#FFE97D] text-[#4A4018]',
+  fitted: 'bg-lemon text-lemon-foreground',
   cancelled: 'bg-gray-100 text-gray-500',
 };
 
@@ -174,7 +174,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
             <button
               type="button"
               onClick={() => setShowCreate(v => !v)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#FFE97D] text-[#4A4018] hover:bg-[#F5DC60] transition-colors"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-lemon text-lemon-foreground hover:bg-lemon-hover transition-colors"
             >
               + New Order
             </button>
@@ -205,7 +205,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.labName}
                   onChange={e => setForm(f => ({ ...f, labName: e.target.value }))}
                   placeholder="e.g. Precision Dental Lab"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div>
@@ -216,7 +216,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. PFM Crown tooth 21"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div className="flex gap-3">
@@ -277,7 +277,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   type="button"
                   onClick={handleCreate}
                   disabled={createMutation.isPending}
-                  className="flex-1 h-10 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                  className="flex-1 h-10 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
                 >
                   {createMutation.isPending ? 'Creating…' : 'Create order'}
                 </button>

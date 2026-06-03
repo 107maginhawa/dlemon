@@ -140,7 +140,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, co
               e.stopPropagation();
               onCheckIn(appointment.id);
             }}
-            className="bg-[#FFE97D] text-[#4A4018] text-[11px] font-semibold px-2.5 py-1 rounded-md"
+            className="bg-lemon text-lemon-foreground text-[11px] font-semibold px-2.5 py-1 rounded-md"
             aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
           >
             Check In

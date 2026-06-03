@@ -90,7 +90,7 @@ export function CasePresentationView({
       </section>
 
       {/* Grand total */}
-      <div className="flex items-center justify-between rounded-xl bg-[#FFE97D]/40 px-4 py-3">
+      <div className="flex items-center justify-between rounded-xl bg-lemon/40 px-4 py-3">
         <span className="text-sm font-semibold">Estimated total</span>
         <span className="text-base font-bold" data-testid="grand-total">
           {formatCents(aggregate.grandTotalCents)}
@@ -113,7 +113,7 @@ export function CasePresentationView({
                     <span className="flex items-center gap-1.5">
                       {opt.description}
                       {opt.recommended && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#FFE97D] px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-lemon px-2 py-0.5 text-[10px] font-semibold text-foreground">
                           <Star className="h-3 w-3" /> Recommended
                         </span>
                       )}
@@ -187,7 +187,7 @@ export function CasePresentationView({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Want to think it over"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-[#FFE97D]"
+                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-lemon"
               />
               <button
                 type="button"

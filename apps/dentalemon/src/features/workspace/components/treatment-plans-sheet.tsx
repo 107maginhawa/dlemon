@@ -133,7 +133,7 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting }: PlanRo
               data-testid="present-to-patient-btn"
               disabled={isPresenting}
               onClick={() => onPresent(plan.id)}
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 bg-[#FFE97D]"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 bg-lemon"
             >
               {isPresenting ? 'Presenting…' : 'Present to patient'}
             </button>

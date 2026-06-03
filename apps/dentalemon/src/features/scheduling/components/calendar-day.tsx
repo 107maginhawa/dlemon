@@ -173,12 +173,12 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
           {/* Current time line */}
           {currentTimeTop !== null && (
             <div
-              className="absolute left-0 right-0 h-0.5 bg-[#FFE97D] z-10 pointer-events-none"
+              className="absolute left-0 right-0 h-0.5 bg-lemon z-10 pointer-events-none"
               style={{ top: currentTimeTop }}
               role="presentation"
               aria-label={`Current time`}
             >
-              <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-[#FFE97D]" />
+              <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-lemon" />
             </div>
           )}
         </div>

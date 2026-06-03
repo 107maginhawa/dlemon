@@ -84,7 +84,7 @@ function TabButton({
       className={[
         'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
         active
-          ? 'border-[#FFE97D] text-[#4A4018]'
+          ? 'border-lemon text-lemon-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
       ].join(' ')}
     >
@@ -324,7 +324,7 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
           <div className="flex items-start gap-5">
             {/* Avatar */}
             <div
-              className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-[#4A4018] shrink-0"
+              className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-lemon-foreground shrink-0"
               style={{ background: BRAND_GOLD }}
               aria-hidden="true"
             >

@@ -26,7 +26,7 @@ function MatchBadge({ matchType }: { matchType: DuplicateCandidateGroup['matchTy
       data-testid="match-badge"
       className={[
         'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-        strong ? 'bg-[#FFE97D] text-[#4A4018]' : 'bg-muted text-muted-foreground',
+        strong ? 'bg-lemon text-lemon-foreground' : 'bg-muted text-muted-foreground',
       ].join(' ')}
     >
       {strong ? 'Likely duplicate' : 'Possible match'}

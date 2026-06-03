@@ -121,7 +121,7 @@ export function WorkingHours() {
     }
   }
 
-  const inputClass = 'h-9 rounded-lg border border-border px-2 text-sm bg-background focus:border-[#FFE97D] outline-none';
+  const inputClass = 'h-9 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
   if (isError) return <div className="text-sm text-destructive">Failed to load working hours. Please try again.</div>;
@@ -164,7 +164,7 @@ export function WorkingHours() {
             <button
               type="button"
               onClick={() => handleToggle(day)}
-              className={`w-10 h-6 rounded-full transition-colors relative ${hours[day].open ? 'bg-[#FFE97D]' : 'bg-secondary'}`}
+              className={`w-10 h-6 rounded-full transition-colors relative ${hours[day].open ? 'bg-lemon' : 'bg-secondary'}`}
               aria-label={`Toggle ${DAY_LABELS[day]}`}
             >
               <span
@@ -195,7 +195,7 @@ export function WorkingHours() {
         type="button"
         onClick={handleSave}
         disabled={isPending}
-        className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60 w-fit px-8"
+        className="h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60 w-fit px-8"
       >
         {isPending ? 'Saving...' : 'Save Working Hours'}
       </button>

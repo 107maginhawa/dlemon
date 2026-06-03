@@ -100,20 +100,20 @@ export function FeeSchedule() {
                   ) : (
                     <input type="text" placeholder="D0000" value={fee.cdtCode}
                       onChange={e => { const u = [...fees]; u[i] = { ...fee, cdtCode: e.target.value }; setFees(u); }}
-                      className="w-20 h-8 rounded-lg border border-border px-2 text-sm font-mono bg-background focus:border-[#FFE97D] outline-none" />
+                      className="w-20 h-8 rounded-lg border border-border px-2 text-sm font-mono bg-background focus:border-lemon outline-none" />
                   )}
                 </td>
                 <td className="px-4 py-2">
                   {fee.description || (
                     <input type="text" placeholder="Description" value={fee.description}
                       onChange={e => { const u = [...fees]; u[i] = { ...fee, description: e.target.value }; setFees(u); }}
-                      className="w-full h-8 rounded-lg border border-border px-2 text-sm bg-background focus:border-[#FFE97D] outline-none" />
+                      className="w-full h-8 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none" />
                   )}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <input type="number" min="0" step="0.01" value={fee.priceCents / 100 || ''}
                     onChange={e => updateFee(i, Math.round(parseFloat(e.target.value || '0') * 100))}
-                    className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus:border-[#FFE97D] outline-none" />
+                    className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus:border-lemon outline-none" />
                 </td>
               </tr>
             ))}
@@ -128,7 +128,7 @@ export function FeeSchedule() {
           type="button"
           onClick={handleSave}
           disabled={isPending}
-          className="h-9 px-6 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60"
+          className="h-9 px-6 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60"
         >
           {isPending ? 'Saving…' : 'Save'}
         </button>

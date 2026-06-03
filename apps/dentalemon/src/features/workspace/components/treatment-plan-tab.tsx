@@ -407,7 +407,7 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
           data-testid="accept-plan-btn"
           onClick={() => acceptPlan()}
           disabled={isAccepting}
-          className="shrink-0 h-9 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-xs font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+          className="shrink-0 h-9 px-4 rounded-xl bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
         >
           {isAccepting ? 'Accepting…' : 'Accept Plan'}
         </button>

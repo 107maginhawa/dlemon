@@ -72,7 +72,7 @@ export function LocaleSettings() {
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Country / Region</label>
         <select value={selectedCode} onChange={e => { setSelectedCode(e.target.value); const l = LOCALES.find(x => x.code === e.target.value); if (l) setNotation(l.toothNotation); }}
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none">
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none">
           {LOCALES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
         </select>
       </div>
@@ -93,7 +93,7 @@ export function LocaleSettings() {
         <div className="flex gap-2">
           {(['FDI', 'Universal', 'Palmer'] as const).map(n => (
             <button key={n} type="button" onClick={() => setNotation(n)}
-              className={`flex-1 h-10 rounded-xl text-sm font-medium transition-colors ${notation === n ? 'bg-[#FFE97D] text-[#4A4018]' : 'border border-border hover:bg-secondary'}`}>
+              className={`flex-1 h-10 rounded-xl text-sm font-medium transition-colors ${notation === n ? 'bg-lemon text-lemon-foreground' : 'border border-border hover:bg-secondary'}`}>
               {n}
             </button>
           ))}
@@ -113,7 +113,7 @@ export function LocaleSettings() {
         type="button"
         onClick={handleSave}
         disabled={isPending}
-        className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60"
+        className="h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60"
       >
         {isPending ? 'Saving…' : 'Save Locale Settings'}
       </button>

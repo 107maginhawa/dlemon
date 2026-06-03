@@ -285,12 +285,12 @@ export function WorkspacePaymentModal({
             {lineItems.length > 0 && (
               <div
                 data-testid="subtotal-row"
-                className="mx-0 flex items-center justify-between bg-[rgba(255,233,125,0.15)] px-5 py-3 border-y border-border"
+                className="mx-0 flex items-center justify-between bg-lemon-soft px-5 py-3 border-y border-border"
               >
-                <span className="text-[13px] font-semibold text-[#4A4018]">Subtotal</span>
+                <span className="text-[13px] font-semibold text-lemon-foreground">Subtotal</span>
                 <span
                   data-testid="subtotal-amount"
-                  className="text-[15px] font-bold tabular-nums text-[#4A4018]"
+                  className="text-[15px] font-bold tabular-nums text-lemon-foreground"
                 >
                   {formatCents(subtotalCents)}
                 </span>
@@ -305,7 +305,7 @@ export function WorkspacePaymentModal({
                 type="button"
                 onClick={() => setInvoiceDetailId(latestInvoice.id)}
                 data-testid="open-invoice-detail-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFE97D] py-3 text-[15px] font-semibold text-[#4A4018] hover:bg-[#F5DC60] transition-colors min-h-[44px]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
               >
                 <CreditCard className="h-4 w-4" />
                 Record Payment
@@ -316,7 +316,7 @@ export function WorkspacePaymentModal({
                 onClick={handleCreateInvoice}
                 disabled={createInvoice.isPending || lineItems.length === 0}
                 data-testid="create-invoice-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFE97D] py-3 text-[15px] font-semibold text-[#4A4018] hover:bg-[#F5DC60] transition-colors min-h-[44px] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
               >
                 <CreditCard className="h-4 w-4" />
                 {createInvoice.isPending ? 'Creating Invoice…' : 'Create Invoice & Pay'}

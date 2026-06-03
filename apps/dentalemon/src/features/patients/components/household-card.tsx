@@ -77,7 +77,7 @@ export function HouseholdCard({ patientId }: { patientId: string }) {
             {m.isGuarantor && (
               <span
                 data-testid="guarantor-badge"
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#FFE97D] text-[#4A4018]"
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-lemon text-lemon-foreground"
               >
                 Guarantor
               </span>

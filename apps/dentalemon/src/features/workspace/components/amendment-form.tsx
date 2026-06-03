@@ -94,7 +94,7 @@ export function AmendmentForm({
           id="amendment-reason"
           value={reason}
           onChange={e => setReason(e.target.value as AmendmentReason)}
-          className="h-9 rounded-lg border border-border px-2.5 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="h-9 rounded-lg border border-border px-2.5 text-sm bg-background focus:border-lemon outline-none"
         >
           <option value="">Select reason…</option>
           {AMENDMENT_REASONS.map(r => (
@@ -114,7 +114,7 @@ export function AmendmentForm({
           onChange={e => setContent(e.target.value)}
           placeholder="Describe the amendment…"
           rows={3}
-          className="rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-[#FFE97D] outline-none resize-none"
+          className="rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none"
         />
         {content.length > 0 && content.trim().length < 10 && (
           <p className="text-xs text-muted-foreground">{10 - content.trim().length} more characters needed</p>
@@ -134,7 +134,7 @@ export function AmendmentForm({
           type="button"
           onClick={handleSave}
           disabled={!isValid || saving}
-          className="flex-1 h-9 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+          className="flex-1 h-9 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Amendment'}
         </button>

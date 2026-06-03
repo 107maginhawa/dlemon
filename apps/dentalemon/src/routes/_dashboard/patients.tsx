@@ -113,7 +113,7 @@ function PatientsPage() {
             className={[
               'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
               showDuplicates
-                ? 'border-[#FFE97D] bg-[#FFF9DB] text-[#4A4018]'
+                ? 'border-lemon bg-[#FFF9DB] text-lemon-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground',
             ].join(' ')}
             data-testid="find-duplicates-btn"
@@ -122,7 +122,7 @@ function PatientsPage() {
           </button>
           <button
             onClick={() => setShowRegistration(true)}
-            className="px-4 py-2 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-medium hover:bg-[#F5DC60] transition-colors"
+            className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-medium hover:bg-lemon-hover transition-colors"
             data-testid="register-patient-btn"
           >
             + New Patient

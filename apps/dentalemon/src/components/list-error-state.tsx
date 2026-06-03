@@ -31,7 +31,7 @@ export function ListErrorState({ message, onRetry }: ListErrorStateProps) {
         type="button"
         data-testid="list-error-retry"
         onClick={onRetry}
-        className="mt-1 h-9 px-4 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgba(255,233,125,0.35)]"
+        className="mt-1 h-9 px-4 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors focus:outline-none focus:ring-2 focus:ring-lemon-focus"
       >
         Retry
       </button>

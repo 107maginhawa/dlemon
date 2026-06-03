@@ -76,7 +76,7 @@ function ToothSelector({
         aria-pressed={selected.includes(n)}
         className={`h-5 w-full rounded-sm text-[8px] font-semibold transition-colors ${
           selected.includes(n)
-            ? 'bg-[#FFE97D] text-[#4A4018]'
+            ? 'bg-lemon text-lemon-foreground'
             : 'bg-muted text-muted-foreground hover:bg-muted/70'
         }`}
       >
@@ -165,7 +165,7 @@ function UploadZone({
         data-testid="upload-zone"
         className={`flex h-20 w-full items-center justify-center gap-3 rounded-xl border-[1.5px] border-dashed transition-colors ${
           dragOver
-            ? 'border-[#FFE97D] bg-[#FFE97D]/10'
+            ? 'border-lemon bg-lemon/10'
             : 'border-border hover:border-muted-foreground/50'
         } disabled:opacity-40`}
       >
@@ -378,7 +378,7 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
                       onClick={() => setImageType(type)}
                       className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                         imageType === type
-                          ? 'bg-[#FFE97D] text-[#4A4018] font-semibold'
+                          ? 'bg-lemon text-lemon-foreground font-semibold'
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >

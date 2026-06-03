@@ -85,7 +85,7 @@ export function FiveSurfaceSelector({ toothNumber, selectedSurfaces, onToggle, h
               isSelected(surface)
                 ? highlightColor
                   ? 'border-2 text-foreground font-semibold'
-                  : 'bg-[#FFE97D] border-[#c8b800] text-foreground font-semibold'
+                  : 'bg-lemon border-[#c8b800] text-foreground font-semibold'
                 : 'border-border hover:bg-secondary',
             ].join(' ')}
             style={isSelected(surface) && highlightColor ? { backgroundColor: `${highlightColor}30`, borderColor: highlightColor } : undefined}

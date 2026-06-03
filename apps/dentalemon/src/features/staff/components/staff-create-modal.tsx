@@ -211,7 +211,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="e.g. Dr. Maria Santos"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
           </div>
 
@@ -231,7 +231,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
                     opt.disabled
                       ? 'border-border bg-secondary/50 opacity-50 cursor-not-allowed'
                       : role === opt.value
-                        ? 'border-[#FFE97D] bg-[#FFE97D]/10'
+                        ? 'border-lemon bg-lemon/10'
                         : 'border-border hover:bg-secondary/50 cursor-pointer'
                   }`}
                 >
@@ -294,7 +294,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Enter 6-digit PIN"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none tracking-widest"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
             />
           </div>
 
@@ -310,7 +310,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={confirmPin}
               onChange={e => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Re-enter 6-digit PIN"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none tracking-widest"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
             />
           </div>
         </div>
@@ -328,7 +328,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
             type="button"
             onClick={handleSubmit}
             disabled={isCreating}
-            className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
           >
             {isCreating ? 'Creating...' : 'Create Staff Member'}
           </button>

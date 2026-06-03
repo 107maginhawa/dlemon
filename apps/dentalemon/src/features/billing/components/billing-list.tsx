@@ -256,10 +256,10 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                   <tr
                     key={inv.id}
                     onClick={() => onInvoiceClick?.(inv)}
-                    className="cursor-pointer hover:bg-[rgba(255,233,125,0.15)] transition-colors border-t border-border first:border-t-0"
+                    className="cursor-pointer hover:bg-lemon-soft transition-colors border-t border-border first:border-t-0"
                   >
                     <td className="px-4 py-0 h-12 align-middle pl-5">
-                      <span className="text-xs font-semibold text-[#4A4018]">{inv.invoiceNumber}</span>
+                      <span className="text-xs font-semibold text-lemon-foreground">{inv.invoiceNumber}</span>
                     </td>
                     <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium">
                       {inv.patientName ?? inv.patientId}
@@ -285,7 +285,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                           e.stopPropagation();
                           onInvoiceClick?.(inv);
                         }}
-                        className="text-xs font-medium text-[#4A4018] hover:underline"
+                        className="text-xs font-medium text-lemon-foreground hover:underline"
                       >
                         View
                       </button>

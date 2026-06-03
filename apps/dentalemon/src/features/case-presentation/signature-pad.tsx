@@ -87,7 +87,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
         disabled={submitted}
         onChange={(e) => setSignerName(e.target.value)}
         placeholder="Full name (patient or guardian)"
-        className="mb-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-[#FFE97D] disabled:opacity-60"
+        className="mb-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-lemon disabled:opacity-60"
       />
       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Signature
@@ -118,7 +118,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
           data-testid="accept-sign-btn"
           disabled={!canSubmit}
           onClick={submit}
-          className="flex-1 rounded-xl bg-[#FFE97D] px-3 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex-1 rounded-xl bg-lemon px-3 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitted ? 'Accepted' : isSubmitting ? 'Submitting…' : 'Accept & Sign'}
         </button>

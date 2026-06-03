@@ -46,7 +46,7 @@ export function PatientFilterTabs({ activeFilter, counts, onFilterChange }: Pati
             className={[
               'flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
               isActive
-                ? 'bg-[#FFE97D] text-[#4A4018]'
+                ? 'bg-lemon text-lemon-foreground'
                 : 'bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
             ].join(' ')}
           >

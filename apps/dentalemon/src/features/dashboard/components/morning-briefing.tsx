@@ -104,7 +104,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
           type="button"
           data-testid="quick-new-patient"
           onClick={() => navigate({ to: '/patients' })}
-          className="h-11 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold flex items-center gap-1.5 hover:bg-[#F5DC60] transition-colors"
+          className="h-11 px-4 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold flex items-center gap-1.5 hover:bg-lemon-hover transition-colors"
         >
           <span className="text-base leading-none">+</span> New Patient
         </button>
@@ -150,7 +150,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               {/* Next patient */}
               {nextAppt && (
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="w-6 h-6 rounded-full bg-[#FFE97D] text-[#4A4018] text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-lemon text-lemon-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(nextAppt.patientName)}
                   </div>
                   <span className="text-[13px] font-medium truncate">
@@ -315,7 +315,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                 <button
                   type="button"
                   onClick={() => navigate({ to: '/calendar' })}
-                  className="text-xs font-medium text-[#4A4018] hover:underline"
+                  className="text-xs font-medium text-lemon-foreground hover:underline"
                 >
                   Open Calendar
                 </button>

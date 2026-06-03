@@ -276,7 +276,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
                   className={[
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
                     isActive
-                      ? 'bg-[#FFE97D] text-foreground'
+                      ? 'bg-lemon text-foreground'
                       : isCompleted
                         ? 'bg-green-400 text-white'
                         : 'bg-muted text-muted-foreground',
