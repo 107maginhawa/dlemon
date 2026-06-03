@@ -29,3 +29,19 @@ export async function getPatientWithPersonForInvoice(
     .limit(1);
   return row ?? null;
 }
+
+/**
+ * Patient id + preferred branch, for billing branch-level authorization.
+ * Returns null when the patient does not exist.
+ */
+export async function getPatientBranchForBilling(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<{ id: string; preferredBranchId: string | null } | null> {
+  const [row] = await db
+    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  return row ?? null;
+}

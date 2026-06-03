@@ -9,7 +9,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
-import { PatientRepository } from '../patient/repos/patient.repo';
+import { getPatientBranchForBilling } from '../patient/repos/patient-billing.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 
 export async function getPatientBalance(ctx: BaseContext) {
@@ -21,8 +21,7 @@ export async function getPatientBalance(ctx: BaseContext) {
   const logger = ctx.get('logger');
 
   // Branch-level authorization via patient's preferred branch
-  const patientRepo = new PatientRepository(db);
-  const patient = await patientRepo.findOneById(patientId);
+  const patient = await getPatientBranchForBilling(db, patientId);
   if (patient?.preferredBranchId) {
     await assertBranchAccess(db, user.id, patient.preferredBranchId);
   }
