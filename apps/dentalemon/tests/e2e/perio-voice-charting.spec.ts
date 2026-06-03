@@ -76,6 +76,56 @@ async function feed(page: Page, transcript: string, confidence = 1, isFinal = tr
   );
 }
 
+/** Set a 6-digit PIN on a membership via the org admin endpoint. */
+async function setMemberPin(
+  page: Page,
+  opts: { orgId: string; branchId: string; memberId: string; pin: string },
+): Promise<void> {
+  await page.evaluate(
+    async ({ api, orgId, branchId, memberId, pin }) => {
+      const res = await fetch(
+        `${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ pin }),
+        },
+      );
+      if (!res.ok) throw new Error(`set-pin failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    },
+    { api: API, ...opts },
+  );
+}
+
+/**
+ * Drive the real PIN-select → PIN-entry flow to mint the in-memory pinSession.
+ * The workspace route tree is PIN-gated; the session lives only in memory, so it
+ * must be unlocked through the UI (it cannot be seeded via localStorage).
+ */
+async function unlockWorkspace(page: Page, pin: string): Promise<void> {
+  await page.goto(`${APP}/auth/pin-select`);
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
+  for (const digit of pin) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+  await page.waitForURL((url) => !url.pathname.includes('/auth/pin'), { timeout: 15000 });
+}
+
+/**
+ * Client-side (SPA) navigation that preserves the in-memory PIN session. A hard
+ * `page.goto` reloads the app and resets pinSession, bouncing back to the PIN gate.
+ */
+async function spaNavigate(page: Page, path: string): Promise<void> {
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, path);
+  await page.waitForURL((url) => url.pathname === path, { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
+}
+
 async function signUpSeedOrgAndVisit(page: Page) {
   const suffix = Date.now();
   const email = `perio-voice-${suffix}@example.org`;
@@ -174,6 +224,11 @@ async function signUpSeedOrgAndVisit(page: Page) {
     { orgId, branchId, memberId },
   );
 
+  // Set a PIN on the owner membership, then drive the real PIN-unlock UI so the
+  // in-memory pinSession exists (the workspace route tree is PIN-gated).
+  await setMemberPin(page, { orgId, branchId, memberId, pin: '135790' });
+  await unlockWorkspace(page, '135790');
+
   return { patientId: patientRes.id as string, visitId: visitRes.id as string };
 }
 
@@ -192,8 +247,12 @@ test.describe('Voice perio charting (scripted provider)', () => {
     }
     if (!ctx) return;
 
-    await page.goto(`${APP}/patients/${ctx.patientId}/visits/${ctx.visitId}/perio`);
-    await page.waitForLoadState('networkidle');
+    // SPA-navigate to the workspace (/$patientId) so the in-memory PIN session
+    // survives, then open the Perio tab — there is no standalone perio route; the
+    // perio chart is a tab inside the PIN-gated workspace.
+    await spaNavigate(page, `/${ctx.patientId}`);
+    await page.getByTestId('perio-tab-btn').click();
+    await expect(page.getByTestId('perio-overlay')).toBeVisible();
 
     // Start a draft chart if the empty state is showing.
     const startBtn = page.getByTestId('perio-start-btn');
