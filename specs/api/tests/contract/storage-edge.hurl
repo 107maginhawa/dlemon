@@ -24,13 +24,15 @@ Content-Type: application/json
 HTTP 201
 
 
-# 1. Files larger than 50MB are rejected at presign time (52428801 bytes
-# is just over the 50 MiB cap).
+# 1. Oversized files are rejected at presign time. The generic (non-DICOM)
+# per-MIME ceiling is STORAGE_MAX_FILE_SIZE_BYTES (default 100 MiB, P2-7),
+# so 104857601 bytes is just over the cap. (Was 52428801 against the old
+# flat 50 MiB cap — stale since the per-MIME ceilings landed.)
 POST {{api}}/storage/files/upload
 Content-Type: application/json
 {
   "filename": "too-big.bin",
-  "size": 52428801,
+  "size": 104857601,
   "mimeType": "application/octet-stream"
 }
 HTTP 400

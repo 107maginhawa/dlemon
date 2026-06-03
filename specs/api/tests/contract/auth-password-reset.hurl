@@ -1,7 +1,7 @@
 # Auth password-reset round-trip:
 #
 #   1. Sign up a user, capture the original password.
-#   2. POST /auth/forget-password -> Better-Auth queues a reset email.
+#   2. POST /auth/request-password-reset -> Better-Auth queues a reset email.
 #   3. Poll Mailpit for the message; extract the reset token from the link.
 #      The link shape is: <api>/auth/reset-password/<token>?callbackURL=...
 #   4. POST /auth/reset-password with { token, newPassword } -> 200.
@@ -19,8 +19,9 @@ Origin: {{api}}
 HTTP 200
 
 
-# 2. Request a password reset.
-POST {{api}}/auth/forget-password
+# 2. Request a password reset. (Better-Auth renamed the legacy
+# /auth/forget-password endpoint to /auth/request-password-reset.)
+POST {{api}}/auth/request-password-reset
 Content-Type: application/json
 Origin: {{api}}
 {
