@@ -452,13 +452,20 @@ async function seed() {
     org = ctxR.data.org; branch = ctxR.data.branch; ownerMember = ctxR.data.member
     log(`→ Existing: ${org.name} / ${branch.name}`)
   } else {
-    org = must(await post('/dental/organizations', { name: 'Reyes Family Dental', tier: 'clinic', countryCode: 'PH' }, cookie), 'create org')
-    log(`✓ Org: ${org.name}`)
-    branch = must(await post(`/dental/organizations/${org.id}/branches`, {
-      name: 'Main Clinic', timezone: 'Asia/Manila',
+    // Self-service onboarding — the demo owner provisions org + default branch +
+    // their dentist_owner membership in ONE call, exactly as a real clinic owner
+    // does (demo@dentalemon.com is NOT a platform admin; org creation is admin-only,
+    // EM-ORG-002). Proves the real onboarding path end-to-end on every db:reseed.
+    const onb = must(await post('/dental/onboarding', {
+      organizationName: 'Reyes Family Dental', tier: 'clinic', countryCode: 'PH',
+      branchName: 'Main Clinic', timezone: 'Asia/Manila',
       address: '123 Bonifacio Ave', city: 'Makati', phone: '+63 2 8123 4567',
-    }, cookie), 'create branch')
-    log(`✓ Branch: ${branch.name}`)
+      ownerDisplayName: 'Dr. Maria Reyes',
+    }, cookie), 'self-service onboarding')
+    org = { id: onb.organizationId, name: 'Reyes Family Dental' }
+    branch = { id: onb.branchId, name: 'Main Clinic' }
+    ownerMember = { id: onb.membershipId, displayName: 'Dr. Maria Reyes', role: 'dentist_owner' }
+    log(`✓ Onboarded: ${org.name} / ${branch.name} (owner membership ${ownerMember.id})`)
   }
 
   // ── 4. Staff ─────────────────────────────────────────────────────────────
