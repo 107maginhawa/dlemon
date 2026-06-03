@@ -4,7 +4,7 @@
  * Uses global.fetch mocking — no mock.module() to prevent process contamination.
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 import { TreatmentPlanTab } from '../components/treatment-plan-tab';
@@ -152,5 +152,38 @@ describe('TreatmentPlanTab', () => {
     renderTab(() => jsonResponse(PLAN_RESPONSE));
     await waitFor(() => expect(screen.getByTestId('group-diagnosed')).not.toBeNull());
     expect(screen.queryByTestId('group-phase-systemic')).toBeNull();
+  });
+
+  // ── J06 / Gap #14: clinical-phase ASSIGNMENT control ──────────────────────
+  test('J06: each treatment row exposes a phase selector', async () => {
+    renderTab(() => jsonResponse(PLAN_RESPONSE));
+    await waitFor(() => expect(screen.getAllByTestId('phase-select').length).toBe(2));
+  });
+
+  test('J06: changing the phase selector PATCHes the treatment phase', async () => {
+    const calls: Array<{ url: string; method?: string; body: Record<string, unknown> | undefined }> = [];
+    global.fetch = mock((async (url: string, init?: RequestInit) => {
+      calls.push({
+        url,
+        method: init?.method,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      });
+      if (init?.method === 'PATCH') return jsonResponse({ ...DIAGNOSED_ITEM, phase: 'definitive' });
+      return jsonResponse(PLAN_RESPONSE);
+    }) as Parameters<typeof mock>[0]);
+    const qc = freshClient();
+    render(React.createElement(TreatmentPlanTab, PROPS), { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(screen.getAllByTestId('phase-select').length).toBe(2));
+    fireEvent.change(screen.getAllByTestId('phase-select')[0]!, {
+      target: { value: 'definitive' },
+    });
+
+    await waitFor(() => {
+      const patch = calls.find((c) => c.method === 'PATCH');
+      expect(patch).toBeDefined();
+      expect(patch!.url).toContain(`/treatments/${DIAGNOSED_ITEM.id}`);
+      expect(patch!.body?.phase).toBe('definitive');
+    });
   });
 });

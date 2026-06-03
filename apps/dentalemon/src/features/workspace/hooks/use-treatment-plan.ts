@@ -113,6 +113,30 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
     },
   });
 
+  // P1-18 / J06: assign a clinical sequencing phase to a treatment. The plan is
+  // re-sorted server-side by (phase order, priority), so the grouped phase view
+  // updates on refetch.
+  const assignPhaseMutation = useMutation({
+    mutationFn: async ({ treatmentId, visitId, phase }: { treatmentId: string; visitId: string; phase: TreatmentPhase }) => {
+      const params = new URLSearchParams();
+      if (branchId) params.set('branchId', branchId);
+      const res = await fetch(
+        `${apiBaseUrl}/dental/visits/${visitId}/treatments/${treatmentId}?${params}`,
+        {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase }),
+        },
+      );
+      if (!res.ok) throw new Error(`Assign phase failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   return {
     data: query.data ?? null,
     isLoading: query.isLoading,
@@ -124,5 +148,8 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
     declineTreatment: (treatmentId: string, visitId: string, reason: string) =>
       declineMutation.mutate({ treatmentId, visitId, reason }),
     isDeclining: declineMutation.isPending,
+    assignPhase: (treatmentId: string, visitId: string, phase: TreatmentPhase) =>
+      assignPhaseMutation.mutate({ treatmentId, visitId, phase }),
+    isAssigningPhase: assignPhaseMutation.isPending,
   };
 }
