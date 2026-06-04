@@ -4,6 +4,12 @@ const config: Config = {
   darkMode: ["class"],
   content: [
     "./src/**/*.{ts,tsx}",
+    // @monobase/ui is consumed as source (workspace:*, exports → ./src, no dist build),
+    // so its class strings must be scanned here too — otherwise Tailwind purges every
+    // class used ONLY in the package. That is what broke the sidebar (QA-001): the
+    // primitive's structural/toggle classes (w-[--sidebar-width], group-data-
+    // [collapsible=offcanvas]:*, h-svh, fixed md:flex) were never generated.
+    "../../packages/ui/src/**/*.{ts,tsx}",
     "./node_modules/@daveyplate/better-auth-ui/dist/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {

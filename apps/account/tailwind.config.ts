@@ -4,6 +4,10 @@ const config: Config = {
   darkMode: ["class"],
   content: [
     "./src/**/*.{ts,tsx}",
+    // @monobase/ui is consumed as source (workspace:*, no dist) — scan it here or
+    // Tailwind purges the package-only classes (e.g. the shared sidebar). See the
+    // dentalemon config / QA-001.
+    "../../packages/ui/src/**/*.{ts,tsx}",
     "./node_modules/@daveyplate/better-auth-ui/dist/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
