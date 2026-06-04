@@ -31,6 +31,7 @@ export async function markUncollectible(
   // via zValidator('param', MarkUncollectibleParams); reading raw keeps the
   // handler usable in test apps that register the route without that middleware.
   const invoiceId = ctx.req.param('invoiceId');
+  if (!invoiceId) throw new NotFoundError('Invoice');
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new DentalInvoiceRepository(db);
 

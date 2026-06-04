@@ -5,7 +5,7 @@
  *          and marks uncollectible debt.
  *
  * ACs closed: GAP_DASHBOARD item #14 — Morgan billing journey (all 3 steps)
- * BRs: BR-011 (void with active payment plan → error), BR-013 (mark uncollectible — implementation gap)
+ * BRs: BR-011 (void with active payment plan → error), BR-013 (mark uncollectible — owner-only write-off)
  *
  * Pattern: signUpAndSeedOrg → seed patient+visit+invoice via API → UI + API action → verify
  */
@@ -153,15 +153,49 @@ test.describe('Morgan — Void Invoice', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Step 3: Mark uncollectible
-// (BR-013: implementation gap — dental invoice uncollectible not yet implemented)
+// Step 3: Mark uncollectible (BR-013 — owner-only write-off)
 // ---------------------------------------------------------------------------
 
-test.skip('[BR-013] mark dental invoice as uncollectible — implementation gap', () => {
-  // The dental billing module does not yet expose a mark-uncollectible endpoint.
-  // The generic billing module has POST /billing/invoices/{invoice}/mark-uncollectible
-  // but the dental-specific invoice status enum (draft|issued|partial|paid|overdue|voided)
-  // does not include 'uncollectible'.
-  // This test is a placeholder for when BR-013 is implemented.
-  // Expected flow: issue invoice → POST /dental/billing/invoices/:id/mark-uncollectible → status='uncollectible'
+test.describe('Morgan — Mark Uncollectible (BR-013)', () => {
+  test('issue → mark uncollectible → status becomes uncollectible', async ({ page }) => {
+    const { branchId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId);
+    if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
+
+    const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
+      // Issue the draft so it becomes outstanding (write-off requires issued/partial/overdue).
+      const issueRes = await fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!issueRes.ok) return { ok: false, step: 'issue', status: issueRes.status, body: await issueRes.text() };
+
+      const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/uncollectible`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) return { ok: false, step: 'uncollectible', status: res.status, body: await res.text() };
+      const written = await res.json() as any;
+      return { ok: true, status: written.status };
+    }, { api: API, invoiceId: seeded.invoiceId });
+
+    expect(result.ok, `failed at ${result.step}: ${result.body}`).toBe(true);
+    expect(result.status).toBe('uncollectible');
+  });
+
+  test('terminal — a second write-off on an uncollectible invoice returns 4xx', async ({ page }) => {
+    const { branchId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId);
+    if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
+
+    const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
+      await fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, { method: 'PATCH', credentials: 'include' });
+      await fetch(`${api}/dental/billing/invoices/${invoiceId}/uncollectible`, { method: 'POST', credentials: 'include' });
+      // Second write-off — already uncollectible, must be rejected.
+      const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/uncollectible`, { method: 'POST', credentials: 'include' });
+      return { status: res.status };
+    }, { api: API, invoiceId: seeded.invoiceId });
+
+    expect(result.status).toBeGreaterThanOrEqual(400);
+  });
 });
