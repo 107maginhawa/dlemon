@@ -205,6 +205,9 @@ model DentalTreatment {
 
   /** P1-18: intra-phase ordering — lower is scheduled sooner */
   priority: int32;
+
+  /** P1-21: linked scheduled appointment (proposed → scheduled → done). */
+  appointmentId?: UUID;
 }
 
 model CreateDentalTreatmentRequest {

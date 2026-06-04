@@ -7644,6 +7644,10 @@ export type DentalTreatment = {
      * P1-18: intra-phase ordering — lower is scheduled sooner
      */
     priority: number;
+    /**
+     * P1-21: linked scheduled appointment (proposed → scheduled → done).
+     */
+    appointmentId?: string;
 };
 
 /**
