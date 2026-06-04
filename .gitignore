@@ -264,3 +264,6 @@ apps/dentalemon/.journey-tmp/
 
 # Scratch/working prompt directories
 docs/prompts-erase/
+
+# Claude Code agent worktree scratch (transient)
+.claude/worktrees/
