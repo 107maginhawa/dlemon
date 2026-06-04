@@ -20,7 +20,7 @@ import {
   type BillingConfig,
   DayOfWeek
 } from './booking.schema';
-import { persons } from '../../person/repos/person.schema';
+import { getBookingEventWithOwnerById, findBookingEventsWithOwner } from './bookingEvent-person.facade';
 
 export interface BookingEventFilters {
   owner?: string;
@@ -481,31 +481,7 @@ export interface BookingEventFilters {
    * Find booking event by ID with owner (person) data joined
    */
   async findOneByIdWithOwner(eventId: string): Promise<any | null> {
-    this.logger?.debug({ eventId }, 'Finding booking event with owner data');
-
-    const result = await this.db
-      .select({
-        event: bookingEvents,
-        owner: persons
-      })
-      .from(bookingEvents)
-      .innerJoin(persons, eq(bookingEvents.owner, persons.id))
-      .where(eq(bookingEvents.id, eventId))
-      .limit(1);
-
-    if (result.length === 0 || !result[0]) {
-      return null;
-    }
-
-    const { event, owner } = result[0];
-
-    this.logger?.debug({
-      eventId,
-      ownerId: owner.id
-    }, 'Booking event with owner retrieved');
-
-    // Return event with owner as Person object instead of UUID
-    return { ...event, owner };
+    return getBookingEventWithOwnerById(this.db, eventId);
   }
 
   /**
@@ -515,31 +491,6 @@ export interface BookingEventFilters {
     this.logger?.debug({ filters, options }, 'Finding booking events with owner data');
 
     const whereConditions = this.buildWhereConditions(filters);
-
-    const query = this.db
-      .select({
-        event: bookingEvents,
-        owner: persons
-      })
-      .from(bookingEvents)
-      .innerJoin(persons, eq(bookingEvents.owner, persons.id))
-      .where(whereConditions);
-
-    if (options?.limit) {
-      query.limit(options.limit);
-    }
-    if (options?.offset) {
-      query.offset(options.offset);
-    }
-
-    const results = await query;
-
-    this.logger?.debug({
-      filters,
-      resultCount: results.length
-    }, 'Booking events with owner retrieved');
-
-    // Return events with owner as Person object
-    return results.map(({ event, owner }) => ({ ...event, owner }));
+    return findBookingEventsWithOwner(this.db, whereConditions, options);
   }
 }

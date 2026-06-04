@@ -1,4 +1,4 @@
-import { eq, and, inArray, lte, sql, asc } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import {
   dentalRecalls,
@@ -6,8 +6,7 @@ import {
   type NewDentalRecall,
   type RecallStatus,
 } from './recall.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { persons } from '../../person/repos/person.schema';
+import { getDueRecallsByBranch, getDispatchableRecalls } from './recall-person.facade';
 
 export class RecallRepository {
   constructor(
@@ -63,30 +62,7 @@ export class RecallRepository {
     to: string,
     options?: { limit?: number; offset?: number },
   ): Promise<Array<DentalRecall & { patientName: string }>> {
-    const limit = options?.limit ?? 50;
-    const offset = options?.offset ?? 0;
-    const rows = await this.db
-      .select({
-        recall: dentalRecalls,
-        firstName: persons.firstName,
-        lastName: persons.lastName,
-      })
-      .from(dentalRecalls)
-      .innerJoin(patients, eq(patients.id, dentalRecalls.patientId))
-      .innerJoin(persons, eq(persons.id, patients.person))
-      .where(and(
-        eq(patients.preferredBranchId, branchId),
-        inArray(dentalRecalls.status, ['pending', 'sent']),
-        sql`${dentalRecalls.dueDate} >= ${from}`,
-        sql`${dentalRecalls.dueDate} <= ${to}`,
-      ))
-      .orderBy(asc(dentalRecalls.dueDate))
-      .limit(limit)
-      .offset(offset);
-    return rows.map((r) => ({
-      ...r.recall,
-      patientName: [r.firstName, r.lastName].filter(Boolean).join(' ').trim(),
-    }));
+    return getDueRecallsByBranch(this.db, branchId, from, to, options);
   }
 
   /**
@@ -117,18 +93,7 @@ export class RecallRepository {
     maxAttempts: number,
     limit = 100,
   ): Promise<Array<DentalRecall & { preferredBranchId: string | null; personId: string }>> {
-    const rows = await this.db
-      .select({ recall: dentalRecalls, preferredBranchId: patients.preferredBranchId, personId: patients.person })
-      .from(dentalRecalls)
-      .innerJoin(patients, eq(patients.id, dentalRecalls.patientId))
-      .where(sql`(
-        (${dentalRecalls.status} = 'pending' AND ${dentalRecalls.dueDate} <= ${asOfDate})
-        OR (${dentalRecalls.status} = 'sent'
-            AND ${dentalRecalls.sendAttempts} < ${maxAttempts}
-            AND (${dentalRecalls.lastSentAt} IS NULL OR ${dentalRecalls.lastSentAt} <= ${reattemptCutoff.toISOString()}))
-      )`)
-      .limit(limit);
-    return rows.map((r) => ({ ...r.recall, preferredBranchId: r.preferredBranchId, personId: r.personId }));
+    return getDispatchableRecalls(this.db, asOfDate, reattemptCutoff, maxAttempts, limit);
   }
 
   async markDispatched(id: string, attempts: number, actorId: string): Promise<DentalRecall | null> {

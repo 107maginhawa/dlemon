@@ -24,7 +24,7 @@ import {
 
 // Re-export InvoiceFilters for handler use
 export type { InvoiceFilters };
-import { persons } from '../../person/repos/person.schema';
+import { findMerchantAccountWithPerson } from './billing-person.facade';
 
 /**
  * Invoice Repository - Manages invoice data operations
@@ -284,35 +284,7 @@ export class MerchantAccountRepository extends DatabaseRepository<MerchantAccoun
    * Find merchant account with person details (TypeSpec-aligned)
    */
   async findOneWithPerson(id: string): Promise<MerchantAccountWithPerson | null> {
-    this.logger?.debug({ merchantAccountId: id }, 'Finding merchant account with person details');
-
-    const result = await this.db
-      .select({
-        merchantAccount: merchantAccounts,
-        person: {
-          id: persons.id,
-          // Add other person fields as needed
-        }
-      })
-      .from(merchantAccounts)
-      .leftJoin(persons, eq(merchantAccounts.person, persons.id))
-      .where(eq(merchantAccounts.id, id))
-      .limit(1);
-
-    if (result.length === 0) {
-      this.logger?.debug({ merchantAccountId: id }, 'Merchant account not found');
-      return null;
-    }
-
-    const row = result[0];
-    if (!row) {
-      return null;
-    }
-    
-    return {
-      ...row.merchantAccount,
-      person: row.person
-    };
+    return findMerchantAccountWithPerson(this.db, id);
   }
 
   /**
