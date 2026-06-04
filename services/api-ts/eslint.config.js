@@ -18,7 +18,10 @@ const boundaryRule = {
     'src/handlers/**/repos/*.facade.ts',
   ],
   rules: {
-    'no-restricted-imports': ['warn', {
+    // Migration complete (2026-06-04): every cross-module repo reach-in now
+    // routes through a *.facade.ts, so this is enforced as an error to keep the
+    // boundary at zero. Add a facade in the target/owning module to fix a hit.
+    'no-restricted-imports': ['error', {
       patterns: [
         {
           // Relative cross-module: ../other-module/repos/ or ../../other-module/repos/
