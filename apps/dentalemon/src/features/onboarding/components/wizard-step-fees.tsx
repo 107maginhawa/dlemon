@@ -43,7 +43,7 @@ export function FeesStep({ fees, onFeesChange }: FeesStepProps) {
                     updated[i] = { ...fee, priceCents: Math.round(parseFloat(e.target.value || '0') * 100) };
                     onFeesChange(updated);
                   }}
-                  className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus:border-lemon outline-none"
                 />
               </td>
             </tr>

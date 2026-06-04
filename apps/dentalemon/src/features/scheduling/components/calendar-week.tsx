@@ -97,19 +97,19 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
             <div
               key={d}
               className={`h-12 flex flex-col items-center justify-center gap-0.5 border-r border-border/40 cursor-pointer hover:bg-secondary/40 transition-colors ${
-                isToday ? 'bg-[rgba(255,233,125,0.15)]' : isWeekend ? 'bg-secondary/20' : ''
+                isToday ? 'bg-lemon-soft' : isWeekend ? 'bg-secondary/20' : ''
               }`}
               role="columnheader"
               aria-label={`${DAY_NAMES[i]} ${dayNum}${isToday ? ', today' : ''}`}
               onClick={() => onDayClick(d)}
             >
-              <span className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-[#4A4018]' : 'text-muted-foreground'}`}>
+              <span className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-lemon-foreground' : 'text-muted-foreground'}`}>
                 {DAY_NAMES[i]}
               </span>
               <span
                 className={`text-lg font-bold tabular-nums leading-none ${
                   isToday
-                    ? 'bg-[#FFE97D] text-[#4A4018] w-[30px] h-[30px] rounded-full flex items-center justify-center text-[15px]'
+                    ? 'bg-lemon text-lemon-foreground w-[30px] h-[30px] rounded-full flex items-center justify-center text-[15px]'
                     : ''
                 }`}
               >
@@ -203,11 +203,11 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                 {/* Current time line */}
                 {currentTimeTop !== null && (
                   <div
-                    className="absolute left-0 right-0 h-0.5 bg-[#FFE97D] z-10 pointer-events-none"
+                    className="absolute left-0 right-0 h-0.5 bg-lemon z-10 pointer-events-none"
                     style={{ top: currentTimeTop }}
                     role="presentation"
                   >
-                    <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-[#FFE97D]" />
+                    <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-lemon" />
                   </div>
                 )}
               </div>

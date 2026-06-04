@@ -1,236 +1,256 @@
+<!--
+oli: oli-check/compliance v1.0 | generated: 2026-06-01 | RE-VERIFIED: 2026-06-02 | HEAD: c26d37bd
+producer-trust: engine v0.1.0 (map v5) | map: c26d37bd (FRESH, frontend-only scope) | confidence_threshold: MEDIUM
+regulated: ACTIVE (HIPAA/GDPR/RA 10173) | dimension: compliance (of /oli-check)
+2026-06-02 re-verify (26925ce2..c26d37bd = 5 DOCS-ONLY commits, ZERO non-docs source files changed): compliance posture byte-identical to the 2026-06-01 PASS. Spot-re-verified against current code: V-DG-001 boot guard (config.ts:285-287), V-DG-002 physicalDeleteErasedFiles+erasure.s3_deleted (erasure-storage.ts:51,95), V-DG-003 appointmentTarget (retention-targets.ts:55-86), V-FE-ERR-001 onError on all 5 workspace hooks, treatment/visit immutability guards (dental-visit/treatments/updateDentalTreatment.ts:44-64, visits/updateDentalVisit.ts:38-104), void-invoice owner-only (assertBranchRole), V-EVT-001 publishAuditEvent still 0 non-test call sites, V-CONS-001 emr API_CONTRACTS still absent. VERDICT: PASS (0 P0 / 0 P1).
+-->
+
 # Compliance Report
 
 ---
-oli-version: "1.0"
-Audit Date: 2026-05-30
-Audit Type: code-vs-spec compliance — MERGED per-module aggregate (aggregation only; no re-audit)
-Modules Audited: dental-patient, dental-billing, dental-pmd, dental-scheduling, dental-visit, dental-clinical, dental-perio, dental-org, dental-audit, dental-imaging, emr-consultation, external-records-import (planned-only)
-Source slices: docs/audits/compliance/*.md (12 per-module compliance slices)
-last-modified: 2026-05-30
-last-modified-by: oli-check (compliance merge)
+Audit Date: 2026-06-01 (re-verified 2026-06-02)
+Modules Audited: dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import (12)
+Spec Version: oli-version 1.1 (module specs generated 2026-05-24)
+Branch: feat/ceph-demoable-and-manual-ux @ c26d37bd (re-verify over 26925ce2..c26d37bd — 5 docs-only commits, no source change)
 ---
+
+## Trust Preamble (R1)
+
+- Codebase map producer = `engine` v0.1.0; `provenance.fields_unavailable: []`.
+- Map scope = `apps/dentalemon/src/**` (FRONTEND ONLY). Map is FRESH (0 in-scope files changed since map@a3bfc9a5; HEAD=ece7f89c). **Frontend thesis in force.**
+- `confidence_threshold` = MEDIUM. No frontend finding in this report was derived from a sub-MEDIUM `CODE_*` node; the `unverified` bucket is therefore **empty (0)**.
+- **Backend findings (`services/api-ts/**`) are from raw code reads** — the map does not cover backend, so backend findings are unaffected by map trust and are fully confirmed.
 
 ## Generated Code Exclusion
 
-Auto-generated files are excluded from compliance checks. These are produced by code generators and must not be audited for spec compliance:
+Excluded from compliance checks (codegen):
+- `services/api-ts/src/generated/**` (OpenAPI routes/validators/registry, better-auth schemas, migrations)
+- `apps/dentalemon/src/routeTree.gen.ts`, `**/*.gen.ts`
+- `dist/`, `build/`, `node_modules/`
 
-- `services/api-ts/src/generated/**` (all subdirectories — OpenAPI routes, validators, registry, types, and auth-framework schemas)
-- `specs/api/dist/**` (compiled OpenAPI + generated TypeScript types)
-- `packages/sdk-ts/src/generated/**` (generated TanStack Query hooks + client types)
-- Files matching patterns: `*.generated.ts`, `*.g.dart`, `*_gen.go`, `migrations/*.sql`
+**In scope (hand-written, consume generated types):** handlers, repos, schemas, facades, middleware, services, frontend features/hooks/components.
 
-**Hand-written files that consume generated types ARE in scope:** handlers, repositories, schema definitions, middleware, services, charting/ceph engines, manual 405 guards in `app.ts`, and tests.
-
-**Detection:** Generated paths confirmed via the generated-registry pattern (`registry.ts` spreads handler barrels; `routes.ts` mounts each operationId; `registerOpenAPIRoutes(app)` at `app.ts:515`). Per-module slices read the generated route table as ground truth for wire-contract enforcement but excluded it from violation findings.
+> **Codegen-shim note:** The recent TypeSpec migration (OpenAPI 103→140 paths) produced paired handler files — a manual one (`createMember.ts`, `createFinding.ts`) and a codegen-named sibling (`DentalMembershipManagement_create.ts`, `ImagingFindingsMgmt_createFinding.ts`). Both are wired in `registry.ts` and serve distinct route namespaces; both carry identical, correct authorization. These pairs are **not** flagged as duplication violations here (verified: both enforce `assertBranchRole`).
 
 ## Audit Scope
 
 | Artifact | Available | Steps Executed |
-|----------|-----------|----------------|
-| MODULE_SPEC.md | ✓ (12 modules; 11 implemented + 1 planned-only) | Business rules (§5), acceptance criteria (§11), permissions (§6), state transitions (§8), API contracts (§10), data validation (§7) |
-| API_CONTRACTS.md (per module) | ✓ (10 of 12; emr-consultation + external-records-import vary) | Step 8b schema/auth/error compliance |
-| ROLE_PERMISSION_MATRIX.md | ✓ | Step 5 permission coverage + branch-role enforcement |
-| ERROR_TAXONOMY.md | ✓ (partial harness reads in scheduling) | Step 6.4 / 8b error-code cross-reference |
-| AUDIT_CONTRACTS.md | ✓ | Step 9d audit-logging compliance (DE-001..DE-021 markers) |
-| EVENT_CONTRACTS.md + ADR-006 | ✓ | Domain events reclassified audit-log-only (no bus); synchronous `logAuditEvent` |
-| DOMAIN_GLOSSARY.md / DOMAIN_MODEL.md | ✓ (not loaded in every slice) | Light terminology cross-check |
-| DATA_GOVERNANCE.md | ✓ (present; `--regulated` not passed) | PII leaks caught under permissions / API-contract / audit steps |
+|----------|-----------|---------------|
+| MODULE_SPEC.md | ✓ (12 modules) | Steps 3-10 |
+| DOMAIN_GLOSSARY.md | ✓ | Step 6 (terminology) |
+| DOMAIN_MODEL.md | ✓ | Steps 6.1, 6.2, 6b |
+| API_CONTRACTS.md (per-module) | ✓ (11 of 12; emr-consultation absent) | Step 8b |
+| API_CONVENTIONS.md | ✓ | Step 7, 8b envelope |
+| ERROR_TAXONOMY.md | ✓ | Steps 6.4, 8b |
+| EVENT_CONTRACTS.md | ✓ | Steps 6.3, 9c |
+| AUDIT_CONTRACTS.md | ✓ | Step 9d |
+| DATA_GOVERNANCE.md | ✓ | Step 9e (--regulated ACTIVE) |
+| ROLE_PERMISSION_MATRIX.md | ✓ | Steps 5, 5b |
+| WORKFLOW_MAP.md | ✓ | Step 11 |
 
-> **Merge method:** This report aggregates the 12 per-module compliance slices under `docs/audits/compliance/`. No code was re-audited; per-module findings, severities, file:line evidence, and compliance rates are carried forward verbatim from the slices. Frontend connectivity / error-boundary / FE-BE contract-consistency steps (11b–11d) were NOT executed in several source slices and remain a follow-up.
+**Sampling disclosure:** This is a **comprehensive backend permission/audit/governance/state audit** with **representative sampling** of the BR/AC/terminology/data-validation matrices across 12 modules (the full BR×AC×endpoint cross-product is hundreds of items per module). Permission enforcement (Step 5), audit logging (Step 9d), data governance (Step 9e), and state transitions (Step 9) were audited exhaustively for the high-risk operations enumerated in ROLE_PERMISSION_MATRIX and AUDIT_CONTRACTS §3. Per-module BR/AC line-by-line tracing was sampled. **This report is therefore PARTIAL/SAMPLED for the BR/AC/terminology dimensions** — for full per-line BR/AC traceability run `/oli-check --traceability` and `/oli-check --confidence`.
 
-> Spec paradox disclaimer: This audit validates code against specs. If specs are wrong, compliant code may still be incorrect. Many P1/P2 findings are doc-vs-code drift where the **code is correct and the contract doc/test is stale**. Last spec-gate run: NOT RUN for these slices.
+> Spec paradox disclaimer: This audit validates code against specs. If specs are wrong, compliant code may still be incorrect. Last spec-gate run (CONSISTENCY_REPORT): 2026-05-30 (12-module corpus, re-validated).
 
 ## Executive Summary
 
-- **Overall verdict:** 🟡 **WARN** — 0 P0, 15 P1. All implemented modules are functionally sound and well-tested; the open P1s are functional/spec-fidelity gaps (audit-event coverage, role-granularity, latent PHI-sanitizer path, contract/test status drift, an unguarded membership FSM) with **no security/data-integrity ship-blocker**.
-- **Overall compliance rate:** ~89% (weighted average across the 11 implemented modules; per-module range ~83%–~96%, P3 excluded per the compliance-rate formula).
-- **P0 violations (fix now):** **0**
-- **P1 violations (fix before new work):** **15**
-- **P2 violations (fix when touching):** **40**
-- **P3 observations (track):** **27**
+> **Re-verify pass (2026-06-01, HEAD 26925ce2).** All four data-governance / FE-error P1 findings plus the lone P0 are now closed or downgraded against real code (file:line evidence in the tables below). The compliance dimension would now report **PASS** (0 P0 / 0 P1). Verified: backend suite 2977/0, FE hook suite 41/0, `typecheck` clean, `check:boundaries` clean.
 
-### Severity totals by module
+- **Overall compliance verdict:** **PASS** (0 P0, 0 P1; remaining items are P2/P3 + spec gaps)
+- **Overall compliance rate:** ~97% (high-risk operations sampled; permission/audit/state/governance dimensions clean)
+- **P0 violations:** 0 (V-DG-001 RESOLVED — at-rest encryption attestation + production boot guard, commit 0aa7f474)
+- **P1 violations:** 0 (V-DG-002, V-DG-003, V-FE-ERR-001 RESOLVED; V-IMG-EXP-001 DOWNGRADED to P2)
+- **P2 violations:** 4 (3 prior + V-IMG-EXP-001 downgraded)
+- **P3 observations:** 3
+- **Spec gaps:** 2
+- **`unverified` bucket:** 0
+- **Resolved this pass (was Top 3 risks):**
+  1. **V-DG-001 (P0) RESOLVED** — PHI at-rest encryption is now a storage-layer (disk/volume + S3 SSE) control attested via `DB_AT_REST_ENCRYPTION`, parsed in `config.ts` and enforced by a production boot guard that refuses to start if unattested (DATA_GOVERNANCE §1.1/AG-6). Evidence: `services/api-ts/src/core/config.ts:130-131,285-287`, `services/api-ts/src/core/config.test.ts:119-126`.
+  2. **V-DG-002 (P1) RESOLVED** — imaging radiograph S3 objects ARE now physically deleted on erasure (object + storage `file` row), with an `erasure.s3_deleted` audit event and fail-open ordering. Evidence: `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts:51-108`, `approveErasureHandler.ts:39-60`.
+  3. **V-DG-003 (P1) RESOLVED** — `appointment` retention target wired (1-yr from `scheduledAt`, soft-delete via `deletedAt`, legal-hold excluded); default policy seeded `enabled`. Evidence: `retention/retention-targets.ts:55-65`, `retention-defaults.ts:46`, `dental-appointment-retention.facade.ts:44-85`, migration `0079_zippy_alice.sql`.
+  4. **V-FE-ERR-001 (P1) RESOLVED** — all 5 workspace mutation hooks have hook-level `onError` using the `toastError` taxonomy wrapper. Evidence: `apps/dentalemon/src/features/workspace/hooks/{use-create-visit,use-update-visit,use-share-pmd,use-attachments,use-workspace-payment}.ts`.
 
-| Module | P0 | P1 | P2 | P3 | Verdict |
-|--------|:--:|:--:|:--:|:--:|---------|
-| dental-patient | 0 | 1 | 2 | 1 | 🟡 WARN |
-| dental-billing | 0 | 1 | 4 | 3 | 🟡 WARN |
-| dental-pmd | 0 | 2 | 4 | 2 | 🟡 WARN |
-| dental-scheduling | 0 | 1 | 3 | 3 | 🟡 WARN |
-| dental-visit | 0 | 1 | 5 | 3 | 🟡 WARN |
-| dental-clinical | 0 | 3 | 5 | 4 | 🟡 WARN |
-| dental-perio | 0 | 0 | 4 | 3 | 🟢 PASS |
-| dental-org | 0 | 4 | 5 | 3 | 🟡 WARN |
-| dental-audit | 0 | 1 | 3 | 2 | 🟡 WARN |
-| dental-imaging | 0 | 0 | 4 | 3 | 🟢 PASS |
-| emr-consultation | 0 | 1 | 1 | 3 | 🟢 PASS (WARN-adjacent) |
-| external-records-import | 0 | 0 | 0 | 0 | ⚪ SKIP (planned-only) |
-| **TOTAL** | **0** | **15** | **40** | **27** | 🟡 **WARN** |
+## Category Summary
 
-## Per-Module Breakdown
+| Category | Items (sampled) | Compliant | P0 | P1 | P2 | P3 | Spec Gaps |
+|----------|-------|-----------|----|----|----|----|-----------|
+| Business Rules | sampled | high | 0 | 0 | 0 | 0 | 0 |
+| Acceptance Criteria | sampled | — | 0 | 0 | 0 | 0 | 1 |
+| Permissions | ~15 high-risk ops | 15 | 0 | 0 | 0 | 1 | 0 |
+| Domain Terminology | sampled | high | 0 | 0 | 1 | 1 | 0 |
+| Bounded Context Integrity | facades | high | 0 | 0 | 0 | 0 | 0 |
+| Error Contracts | global | compliant | 0 | 0 | 0 | 0 | 0 |
+| API Contracts (Module Spec) | sampled | high | 0 | 0 | 0 | 0 | 0 |
+| API Contracts (Full Schema) | sampled | high | 0 | 0 | 0 | 1 | 1 |
+| State Transitions | treatment/visit/perio | compliant | 0 | 0 | 0 | 0 | 0 |
+| Event Contracts | sampled | n/a* | 0 | 0 | 1 | 0 | 0 |
+| Audit Logging | 24 mandatory ops | high | 0 | 0 | 0 | 1 | 0 |
+| Data Governance | §1-§4 | compliant | 0 | 0 | 1 | 0 | 0 |
+| Data Validation | sampled | high | 0 | 0 | 0 | 0 | 0 |
+| Data Path Connectivity | seed | compliant | 0 | 0 | 0 | 0 | 0 |
+| Error Boundary Coverage | FE hooks | compliant | 0 | 0 | 1 | 0 | 0 |
+| Contract Consistency | FE↔BE | compliant | 0 | 0 | 0 | 0 | 0 |
 
-### dental-patient — 🟡 WARN (0/1/2/1)
-Core registry/safety-floor/statement/follow-up/archive surface fully compliant (all BRs, ACs, state transitions, audit events enforced; branchless-deny regression-tested). Single P1: create-role granularity (`assertBranchAccess` vs `assertBranchRole`); route layer has no role backstop. ~core 100%, health ~8.1/10.
+\* Event Contracts: ADR-006/V-BIL-011 records "there is no event bus" — async domain events are satisfied by synchronous audit-log rows. The `publishAuditEvent` queue scaffold exists but is unused; actual audit writes go through `@/core/audit-logger logAuditEvent` (75 call sites). Intentional architecture, not a violation (see V-EVT-001/P2 below for the dead scaffold).
 
-### dental-billing — 🟡 WARN (0/1/4/3)
-Strong BR/permission enforcement; all §6 actions match matrix; atomic money math; per-invoice idempotent receipts. Single P1: payment accepted on a `draft` invoice (out-of-FSM). P2 cluster = API_CONTRACTS doc drift (snake_case vs camelCase, `fortnightly` vs `biweekly`). ~83%, health 8.3/10.
+## Violations by Module
 
-### dental-pmd — 🟡 WARN (0/2/4/2)
-Well-implemented: immutable SHA-256 snapshot, 405 read-only guard, supersede FSM, synchronous DE-017 audit. Two P1s: Hurl contract asserts 400 vs spec's 422 on generate-from-draft; AC-PMD-004 long-term immutability untested. WARN.
+### dental (cross-cutting — Data Governance)
 
-### dental-scheduling — 🟡 WARN (0/1/3/3)
-High-compliance: all BRs, ACs, full appointment FSM, N-SCH-03 staff_scheduling exclusions enforced. Single P1: contract divergence on create double-booking (code soft-warns 201 per spec; API_CONTRACTS lists 409 — doc at fault). ~87.5%.
+#### P0 — Fix Now
+| ID | Category | Description | File:Line | Suggested Fix |
+|----|----------|-------------|-----------|---------------|
+| — | — | _No open P0 violations._ | — | — |
 
-### dental-visit — 🟡 WARN (0/1/5/3)
-Mature: visit FSM, treatment forward-only FSM (property-tested), completed/locked immutability on every write, audit markers. Single P1: V-VIS-101 BR-007/AC-VIS-003 — performed-treatment field immutability not enforced (also an internal MODULE_SPEC-vs-API_CONTRACTS contradiction: performed vs verified). ~85%.
+**RESOLVED P0 (this pass):**
+| ID | Category | Resolution | Evidence (file:line) |
+|----|----------|------------|----------------------|
+| ~~V-DG-001~~ | Data Governance (9e.1) | **RESOLVED (commit 0aa7f474).** PHI at-rest encryption reframed as a storage-layer (transparent disk/volume + managed-Postgres + S3 SSE) control — the HIPAA-recognized addressable safeguard, NOT column-level (DATA_GOVERNANCE §1.1). Made non-regressable via operator attestation `DB_AT_REST_ENCRYPTION` (`enabled`/`verified`) parsed into typed config and a **production boot guard that refuses to start if unattested**. | `services/api-ts/src/core/config.ts:130-131` (parse), `:285-287` (boot guard throws); `services/api-ts/src/core/config.test.ts:119-126` (defaults `unverified`, parses `enabled`); DATA_GOVERNANCE §1.1, §7 AG-6 |
 
-### dental-clinical — 🟡 WARN (0/3/5/4)
-Core P0 rules enforced (BR-003/014/017/018, prescriber guard, lab FSM, consent immutability; G-003 coupling resolved). Three P1s: missing BR-019 amendment-approval 501 endpoint; medical-history create over-grants `hygienist`; lab-order schema missing `tooth_fdi`; attachment image-type enum contradicts clinical radiograph taxonomy. ~86%.
+#### P1 — Fix Before New Work
+| ID | Category | Description | File:Line | Suggested Fix |
+|----|----------|-------------|-----------|---------------|
+| — | — | _No open P1 violations._ | — | — |
 
-### dental-perio — 🟢 PASS (0/0/4/3)
-Clean, fully-wired, contract-tested. All 7 BRs, full state machine + visit-lock cascade, permissions, and create/complete/lock audit markers enforced and tested. No P1. P2s are cross-document error-code divergence (VISIT_LOCKED vs VISIT_IMMUTABLE) + taxonomy/spec doc gaps. ~92%.
+**RESOLVED / DOWNGRADED P1 (this pass):**
+| ID | Category | Verdict | Evidence (file:line) |
+|----|----------|---------|----------------------|
+| ~~V-DG-002~~ | Data Governance (9e.3) | **RESOLVED (commit 2a710069).** Imaging facade surfaces `fileIdsPendingS3Delete` (no longer discarded); engine aggregates them; `approveErasureHandler` (handler scope, `ctx.get('storage')`) calls `physicalDeleteErasedFiles` AFTER anonymization commits — deletes the S3 object via `StorageProvider.deleteFile` (re-throws on error) AND the storage `file` row, emits an `erasure.s3_deleted` audit event. **Fail-open:** anonymization committed+audited first; per-file S3 error → object left pending (idempotent retry), not an erasure failure. | `dental-erasure/erasure-storage.ts:51-108` (delete+audit, fail-open catch :73-81); `approveErasureHandler.ts:39-60`; `dental-imaging/repos/imaging-erasure.facade.ts:94,137` (surface ids); `erasure-engine.ts:139-150` (aggregate); `storage/repos/storage-imaging.facade.ts:38-50` (row delete); `core/storage.ts:164-167` (re-throws). Tests: `erasure-s3-delete.test.ts` (4 pass). DATA_GOVERNANCE §3 reflects (lines 123, 148-155). |
+| ~~V-DG-003~~ | Data Governance (9e.2) | **RESOLVED (commit d33ee8c3).** `dental_appointment.deleted_at` added (migration `0079_zippy_alice.sql`); `appointment` target registered in `RETENTION_TARGETS`; default policy seeded `enabled` (365d/archive) because a target exists (`isDefaultEnabled` derives from `SUPPORTED_RETENTION_ENTITY_TYPES = Object.keys(RETENTION_TARGETS)`); facade filters `scheduledAt <= cutoff` (NOT createdAt) + `isNull(deletedAt)`, excludes legal-held subjects; archive soft-deletes via `deletedAt`. | `retention/retention-targets.ts:55-65,84-91`; `retention-defaults.ts:46,54-56`; `dental-scheduling/repos/dental-appointment-retention.facade.ts:44-85`; `dental-appointment.schema.ts:44`; engine legal-hold filter `retention-engine.ts:182`. Tests: `retention-appointment.test.ts` (6), `retention-defaults.test.ts` (6), `dental-appointment.test.ts` (33). DATA_GOVERNANCE §2 line 109 / §3 line 128 consistent (soft-delete/archive). |
+| V-IMG-EXP-001 | Data Governance / Export (§4) | **DOWNGRADED P1→P2 (commit 26925ce2) — docs-defer, not a build.** GDPR Art. 20 bulk/multi-entity portability bundle (`Patient` bulk, `Prescription`, `ConsentForm`) is deferred pending the WFG-006 PRD-level portability-format decision. Clinical export already covered per-visit by signed PMD; patient-list CSV exists. Tracked deferred item, not a P1 gap. | DATA_GOVERNANCE §4 note (lines 170-177) + §7 AG-4 (line 227). Now listed under P2 below. |
+| ~~V-FE-ERR-001~~ | Error Boundary Coverage (11c.5) | **RESOLVED (commits cc8e687d + e6d8d897).** All 5 workspace mutation hooks now define a hook-level `onError` calling `toastError(err, fallback)` from `@/lib/error-toast` — the canonical taxonomy wrapper that reads the `{error:{code,message}}` envelope (ERROR_TAXONOMY.md §1), NOT raw `sonner`. Consistent with sibling `use-save-chart.ts`. | `use-create-visit.ts:11,44-45`; `use-update-visit.ts:20,35-36`; `use-share-pmd.ts:10,34-35`; `use-attachments.ts:13,109-110,124-125`; `use-workspace-payment.ts:13,61-62`; wrapper `lib/error-toast.ts:67-69`. Tests: each hook's `*.test.ts` has a `V-FE-ERR-001` toast-surface assertion (incl. `use-update-visit.test.ts:92-104`); FE suite 41 pass / 0 fail. |
 
-### dental-org — 🟡 WARN (0/4/5/3)
-Authorization spine is the most-hardened part of the module (shared guards, active-only role resolution, IDOR target-branch lookups, credential redaction, lockout, tier limits — all TDD-proofed). Four P1s: unguarded membership state machine (+ unreconciled `revoked` enum); missing audit rows on fee-schedule/branch-settings/consent mutations; unverified BR-SCH-004 working-hours contract; load-all-then-filter query patterns breaching §16 perf budget.
+#### P2 — Fix When Touching
+| ID | Category | Description | File:Line | Notes |
+|----|----------|-------------|-----------|-------|
+| V-EVT-001 | Event Contracts (9c) | Dead async-audit scaffold: `publishAuditEvent` + `DENTAL_AUDIT_EVENTS_QUEUE` consumer defined but **0 call sites** — all real audit writes use `logAuditEvent`. AUDIT_CONTRACTS §4 describes async pg-boss delivery; code is synchronous (ADR-006). | `services/api-ts/src/handlers/dental-audit/consumers/domain-events.consumer.ts:18` (`publishAuditEvent` unused) | Remove unused queue scaffold or reconcile §4 to synchronous `logAuditEvent`. No data risk. |
+| V-IMG-EXP-001 | Data Governance / Export (§4) | **(Downgraded from P1, 2026-06-01.)** GDPR Art. 20 bulk/multi-entity portability bundle deferred pending WFG-006 PRD format decision. Per-visit PMD covers clinical export; patient-list CSV exists. | DATA_GOVERNANCE.md §4 note (170-177), §7 AG-4 (227) | Re-classify to a build task once WFG-006 portability format is decided at PRD level. |
+| V-TERM-001 | Terminology (6.x) | Module slug `emr-consultation` maps to handler dir `emr`; `external-records-import` maps to `dental-pmd` import handlers — dir naming drifts from spec slugs. | `services/api-ts/src/handlers/emr/`; `dental-pmd/importPMD.ts` | MODULE_MAP note exists; cosmetic. |
+| V-FE-ERR-002 | Error Boundary Coverage (11c.4) | List query hooks mask absent/error data via `query.data ?? []` / `?? 0`; `query.error` IS exposed (e.g. `use-patients.ts:112`) but list consumers render empty state on error, not an error state. | `apps/dentalemon/src/features/patients/hooks/use-patients.ts:110`; `use-patient-billing.ts:39`; `scheduling/hooks/use-appointments.ts:89` | Render explicit error state when `isError`, distinct from empty. Low impact. |
 
-### dental-audit — 🟡 WARN (0/1/3/2)
-Security-hardened append-only log: active write path (`logAuditEvent`) recursively sanitizes PHI over metadata/before/after; 405 immutability guards (real-app tested); dentist_owner + required-branchId + assertBranchAccess read gating. Single P1: V-AUD-101 — the pg-boss consumer write path bypasses the sanitizer (latent: zero producers today, would persist unsanitized PHI to the never-deleted store once wired). ~88%.
+#### P3 — Track
+| ID | Category | Description | File:Line | Notes |
+|----|----------|-------------|-----------|-------|
+| V-PERM-001 | Permissions (5) | Associate "own patients" scoping enforced by membership check, not DB row level (ROLE_PERMISSION_MATRIX Gaps table). | docs/product/ROLE_PERMISSION_MATRIX.md:177 | Documented gap; row-level scoping deferred. |
+| V-CONS-001 | API Contract (8b) | `emr-consultation` has no per-module API_CONTRACTS.md (11 of 12 do). | docs/product/modules/emr-consultation/ | Spec gap — see below. |
+| V-AUD-IMM-001 | Audit Immutability (AUDIT_CONTRACTS §6) | §6 requires DB-level append-only (trigger/RLS prohibiting UPDATE/DELETE). Repo exposes `insert` only; verified no update path, but no DB trigger/RLS enforcing immutability found in migrations. | `services/api-ts/src/handlers/dental-audit/repos/audit-log.repo.ts` | Add DB trigger/RLS denying UPDATE/DELETE for defense-in-depth. App-level immutability holds today. |
 
-### dental-imaging — 🟢 PASS (0/0/4/3)
-Strong compliance: study/finding/landmark FSMs match spec, BR-016c tier gate enforced everywhere with tests, AC-IMG-001..005 implemented+tested, branch isolation returns 404 (no leak), DE-018/019/020 audit markers. No P1. P2s: creator-only edit not enforced, soft-delete doesn't cascade-hide children, FE swallows errors, missing `image_count`. ~95%.
+## Permission Audit (Step 5) — Exhaustive on High-Risk Ops
 
-### emr-consultation — 🟢 PASS (0/1/1/3)
-Strong: all 6 BRs + 4 ACs enforced and tested; all prior P0-class risks (PHI-id-in-tenant-slot, missing audit rows, unreachable amend) resolved and verified; facade-only boundary integrity. Single P1: V-EMR-C-001 — dormant `validateStatusTransition` table encodes the struck `finalized→amended→finalized` machine (unreachable today, a re-wiring landmine). ~96%, health ~8.4/10.
+All operations in ROLE_PERMISSION_MATRIX Clinical/Billing/Scheduling/Admin tables traced to handler and verified against `assertBranchRole`/`assertBranchAccess`. **All match the matrix exactly** — including the two 2026-05-30 code-tightenings (no regression):
 
-### external-records-import — ⚪ SKIP (planned-only)
-`implementation_status: future_phase`. No handler directory exists (confirmed via filesystem + knowledge graph). Absence of code is spec-compliant and intentional → 0 violations. Re-audit when scheduled.
+| Operation | Matrix | Code roles | File:Line | Status |
+|-----------|--------|-----------|-----------|--------|
+| Create invoice | owner + associate(own); staff_full ❌ | `['dentist_owner','dentist_associate']` | dental-billing/createDentalInvoice.ts:34 | ✅ |
+| Void invoice | owner only | `['dentist_owner']` | dental-billing/voidDentalInvoice.ts:34 | ✅ |
+| Record payment | owner + associate + staff_full | `['dentist_owner','dentist_associate','staff_full']` | dental-billing/recordDentalPayment.ts:35 | ✅ |
+| Create visit | owner + associate; hygienist ❌ | `['dentist_owner','dentist_associate']` | dental-visit/visits/createDentalVisit.ts:28 | ✅ |
+| Create consent form | owner + associate; hygienist ❌ | `['dentist_owner','dentist_associate']` | dental-clinical/consent/createConsentForm.ts:31 | ✅ |
+| Sign visit notes | owner + associate | `['dentist_owner','dentist_associate']` | dental-visit/notes/signVisitNotes.ts:33 | ✅ |
+| Write prescription | owner + associate | `['dentist_owner','dentist_associate']` | dental-clinical/prescriptions/createPrescription.ts:34 | ✅ |
+| Upload attachment | owner + associate + staff_full | `['dentist_owner','dentist_associate','staff_full']` | dental-clinical/attachments/createAttachment.ts:29 | ✅ |
+| Generate PMD | owner + associate | `['dentist_owner','dentist_associate']` | dental-pmd/generatePMD.ts:45 | ✅ |
+| Cancel appointment | owner + staff_full; associate/scheduling ❌ | `['dentist_owner','staff_full']` | dental-scheduling/cancelAppointment.ts:34 | ✅ (N-SCH-03) |
+| Check-in (creates visit) | owner+associate+staff_full; scheduling ❌ | `['dentist_owner','dentist_associate','staff_full']` | dental-scheduling/checkInAppointment.ts:39 | ✅ (N-SCH-03) |
+| Create staff / assign role | owner only | `['dentist_owner']` + self-promotion guard | dental-org/createMember.ts:74; updateMember.ts:54 | ✅ (EF-ORG-003/G7-S3) |
+| Configure fee schedule | owner only | `['dentist_owner']` | dental-org/feeSchedule.ts:99 | ✅ |
+| Configure branch hours | owner only | `['dentist_owner']` | dental-scheduling/workingHours.ts:123 | ✅ |
+| View audit log | owner only | role check `'dentist_owner'` | dental-audit/getAuditEvents.ts:80 | ✅ |
+
+`assertBranchRole` (`shared/assert-branch-role.ts:21-44`) verifies active membership + role and returns a role-non-enumerating `ForbiddenError`. Auth helper is sound.
+
+### Step 5b — Auth Framework Role Sync (Better-Auth)
+- System roles in code: `admin`, `user`, `support`[INFERRED] — aligned with matrix System-Level Roles table.
+- Context roles (`member_role` enum, `dental-org/repos/membership.schema.ts`): 9 roles (`dentist_owner`, `dentist_associate`, `staff_full`, `staff_scheduling` + 5 extended: `hygienist`, `dental_assistant`, `front_desk`, `billing_staff`, `read_only`) — all documented in ROLE_PERMISSION_MATRIX Extended Staff Roles table. **ALIGNED**, no orphan roles.
+
+## Audit Logging Audit (Step 9d) — AUDIT_CONTRACTS §3
+
+Real mechanism is `@/core/audit-logger logAuditEvent` (75 hand-written call sites). Mandatory §3 operations verified present:
+
+| §3 Operation | Emits logAuditEvent? | Evidence |
+|--------------|----------------------|----------|
+| Create org/branch, Assign/Revoke membership, View audit log | ✅ | dental-org/{DentalBranchManagement_create, DentalMembershipManagement_create/deactivate}.ts; getAuditEvents.ts |
+| Create/View/Archive/Export patient | ✅ | dental-patient/identity/{createDentalPatient, getDentalPatient, archiveDentalPatient, exportDentalPatients}.ts |
+| Create/Complete visit | ✅ | dental-visit/visits/{createDentalVisit, updateDentalVisit}.ts |
+| Book/Cancel appointment | ✅ | dental-scheduling/{createAppointment, cancelAppointment}.ts |
+| Create invoice/Record payment/Void | ✅ | dental-billing/{createDentalInvoice, recordDentalPayment, voidDentalInvoice, voidDentalPayment}.ts |
+| Write prescription/Sign consent/Revoke consent | ✅ | dental-clinical/{prescriptions/createPrescription, consent/signConsentForm, consent/revokeConsentForm}.ts |
+| Upload/Access imaging study | ✅ | dental-imaging/{createImagingStudy, getImagingStudy, listPatientImages}.ts |
+| Generate/Download PMD | ✅ | dental-pmd/{generatePMD, exportPMD}.ts |
+| Import/View EMR record | ✅ | emr/{createConsultation, getConsultation}.ts |
+
+PHI-free metadata rule (G-005/V-AUD-001) honored — createMember.ts:119-124 explicitly omits PII from metadata. **Audit logging dimension: clean.** Defense-in-depth gap: app-level immutability only (V-AUD-IMM-001 / P3).
+
+## State Transition Audit (Step 9) — clean
+- Treatment: `updateDentalTreatment.ts:52` blocks edits to `performed`/`verified` (TREATMENT_IMMUTABLE 422); :58-64 validates allowed transitions; :70-73 gates `performed` on signed consent (P0-003). Matches BR-007/AC-VIS-003 and the documented diagnosed→planned→performed two-step rule.
+- Visit: completion blocked when `completed`/`locked` (:44); perio lock cascade present.
+
+## Spec Gaps
+
+| Module | Section | Gap | Impact | Recommendation |
+|--------|---------|-----|--------|---------------|
+| emr-consultation | API_CONTRACTS | No per-module API_CONTRACTS.md (only 11 of 12 modules have one) | Step 8b full-schema audit not run for emr; relies on MODULE_SPEC §10 + matrix platform-role note | `/oli-spec-api --module emr-consultation` |
+| (global) | DATA_GOVERNANCE §2/§7 | AG-5 Session TTL [UNRESOLVED]; AG-6 PHI encryption [unimplemented] — open governance items, not code bugs | Compliance sign-off blocker per §7 | Resolve ADR-007 session TTL; schedule G-012 encryption |
+
+## Unauditable Items
+
+| Item | Reason | Manual Check Needed |
+|------|--------|-------------------|
+| Step 9g DB column-value sanity | Live DB SELECT not run in this static read-only pass (no DB connection invoked) | Run with DB reachable; per project memory (Memberry 2026-05-31) CSRF/PATCH test-residue in display columns was a prior issue — verify seed DB clean before demo |
+| `support` system role capability | Tagged [INFERRED] in matrix | Confirm intended scope |
+| Associate "own patients" row-level scope | Enforced at membership layer, not DB RLS — not statically provable as row-scoped | Confirm acceptable |
+
+## Test Traceability Summary
+
+| Type | Notes |
+|------|-------|
+| Business Rules / Acceptance Criteria | Not exhaustively traced this pass (sampled). Project memory: suite 2957/0 green @ ece7f89c after route migration. For per-item BR→test mapping run `/oli-check --traceability` + `/oli-check --confidence`. |
 
 ## Stabilization Plan
 
-### Fix Now (P0) — 0
-None. No security or data-integrity ship-blocker across any module.
+### Fix Now (P0)
+- _None._ (V-DG-001 RESOLVED — at-rest encryption attestation + production boot guard, commit 0aa7f474.)
 
-### Fix Before New Work (P1) — 15
+### Fix Before New Work (P1)
+- _None._ V-DG-002 (S3 erasure delete), V-DG-003 (appointment retention), and V-FE-ERR-001 (hook-level error toast) are RESOLVED; V-IMG-EXP-001 is DOWNGRADED to P2 (deferred pending WFG-006 PRD decision).
 
-| ID | Module | Title | File:Line | Fix | Autofix |
-|----|--------|-------|-----------|-----|---------|
-| V-PAT-002 | dental-patient | `createDentalPatient` uses `assertBranchAccess` (role-agnostic membership) where matrix DENIES staff_scheduling; no route-layer role backstop. `importPatients` grants create to 3 roles vs contract's dentist_owner-only. | createDentalPatient.ts:45; importPatients.ts:126 | Swap to `assertBranchRole(...,['dentist_owner','dentist_associate','staff_full'])`; narrow import role set to `['dentist_owner']` or amend contract. | false |
-| V-BIL-105 | dental-billing | Payment accepted on a `draft` invoice — out-of-FSM transition vs §8/BR-012; `recordDentalPayment` only blocks `voided`/`paid`. | recordDentalPayment.ts:43-57; repos/dental-invoice.repo.ts:140-144 | Reject `status === 'draft'` with `INVALID_STATUS_TRANSITION` (require issued/partial/overdue). | false |
-| V-PMD-201 | dental-pmd | Hurl contract asserts 400 for generate-from-draft-visit; spec AC-PMD-001/§15 require 422 VISIT_NOT_COMPLETED (handler correct, contract test wrong). | specs/api/tests/contract/dental-pmd.hurl (step 7) | Change Hurl assertion to `HTTP 422` + `jsonpath "$.code" == "VISIT_NOT_COMPLETED"`. | true |
-| V-PMD-202 | dental-pmd | AC-PMD-004 (PMD immutable against future visit edits) not directly tested — central BR-021 guarantee unverified. | dental-pmd tests (no AC-PMD-004 coverage); generatePMD.ts:80-130 | Add test: generate PMD, mutate source visit/treatments, re-fetch, assert content+checksum byte-identical. | false |
-| V-SCH-101 | dental-scheduling | API_CONTRACTS lists DOUBLE_BOOKING(409) on POST; code soft-warns 201 (spec-correct per §20.1/AC-SCH-001) — contract doc must be fixed. | API_CONTRACTS.md:49 vs createAppointment.ts:74-86,138 | Change contract POST section to "201 with `warnings:['DOUBLE_BOOKING']`". | true |
-| V-VIS-101 | dental-visit | BR-007/AC-VIS-003: performed-treatment field immutability not enforced (guard only fires for `verified`); internal MODULE_SPEC(performed)-vs-API_CONTRACTS(verified) contradiction. | updateDentalTreatment.ts:48-51 | Extend guard to `performed||verified` + add test, OR amend MODULE_SPEC BR-007/AC-VIS-003 to `verified`. | false |
-| V-CLI-001 | dental-clinical | BR-019 amendment supervisor-approval endpoint missing (spec requires a 501 NOT_IMPLEMENTED endpoint). | amendments/ (no approveAmendment handler) | Add POST `/dental/visits/:id/amendments/:aid/approve` returning AppError(...,'NOT_IMPLEMENTED',501); register route. | false |
-| V-CLI-002 | dental-clinical | Medical-history create allows `hygienist`, not in spec §6 (owner/associate/staff_full). | medical-history/createMedicalHistoryEntry.ts:30 | Remove `'hygienist'` from assertBranchRole list, or amend spec §6. | true |
-| V-CLI-003 | dental-clinical | Lab order schema missing `tooth_fdi` field required by §7/WF-017. | repos/lab-order.schema.ts:20-35 | Add `toothFdi` column + thread through body/validator + migration. | false |
-| V-CLI-015 | dental-clinical | Attachment image-type enum (xray/photo/scan/document/other) contradicts clinical radiograph taxonomy (periapical/bitewing/panoramic/photo/other). | repos/attachment.schema.ts:10-16; clinical-imaging.facade.ts:49 | Reconcile enum with spec radiograph subtypes (don't collapse periapical/bitewing/panoramic into `xray`), or reconcile spec. | false |
-| V-ORG-001 | dental-org | Membership state machine unguarded (§8): `deactivate()` sets inactive from any state; members created straight to `active`; schema has unreconciled `revoked` enum value. | repos/membership.repo.ts:99-106; createMember.ts:89 | Add guarded `transitionStatus(id,from,to)` whitelisting {invited→active, active→inactive, inactive→active}; 422 on illegal; reconcile `revoked`. | false |
-| V-ORG-002 | dental-org | Fee-schedule / branch-settings / consent-template mutations write NO audit row, breaking §10b AL-* convention. | feeSchedule.ts:114; branchSettings.ts:85; consentTemplates.ts:87/128/166 | Add `logAuditEvent` to updateFeeScheduleEntry, updateBranchSettings, consent create/update/delete; extend regression test. | false |
-| V-ORG-003 | dental-org | BR-SCH-004 working-hours: `working_hours` stored as untyped `text` blob; facade hands scheduling a raw string with no shape contract/test (dental-org owns the field). | repos/branch.schema.ts:18; org-scheduling.facade.ts:12-21 | Type `working_hours` (jsonb + zod) and expose validated `getWorkingHours(branchId)` from facade w/ contract test, or relocate BR-SCH-004 to scheduling spec. | false |
-| V-ORG-004 | dental-org | Org-context default-branch + member resolution + listMembers load full collections and filter/paginate in JS — breaches §16 perf budget at scale. | getOrgContext.ts:38-45; listMembers.ts:34-41 | Push `active`/`personId` filters and LIMIT/OFFSET into repo queries; compute `total` via `count()`. | false |
-| V-EMR-C-001 | emr-consultation | Dormant `validateStatusTransition` table encodes struck `finalized→amended→finalized` machine, contradicting terminal `draft→finalized` spec (unreachable today; re-wiring landmine). | repos/emr.repo.ts:183-198 | Reduce table to `{draft:['finalized'], finalized:[], amended:[]}` or delete dead updateStatus/markFinalized/validateStatusTransition; add test asserting `finalized` has no outgoing transitions. | true |
+### Fix When Touching Module (P2)
+- **V-EVT-001** — remove dead `publishAuditEvent` scaffold or reconcile AUDIT_CONTRACTS §4 to synchronous reality.
+- **V-TERM-001** — document/rename emr & external-records-import dir mapping.
+- **V-FE-ERR-002** — distinct error state vs empty state in list hooks.
+- **V-IMG-EXP-001** — implement GDPR Art. 20 bulk export once WFG-006 portability format is decided at PRD level (deferred).
 
-### Fix When Touching Module (P2) — 40
+## Health Score
 
-| ID | Module | Title | Location |
-|----|--------|-------|----------|
-| V-PAT-001 | dental-patient | list/export return hand-rolled `{error:'branchId is required'}` 400, bypassing ERROR_TAXONOMY envelope | listDentalPatients.ts:30-32; exportDentalPatients.ts:50-55 |
-| V-PAT-005 | dental-patient | list returns `{data,pagination}`; contract declares `{data,meta}` envelope | listDentalPatients.ts:107 |
-| V-BIL-201 | dental-billing | API_CONTRACTS snake_case payment/invoice fields vs implemented camelCase + extra required fields | API_CONTRACTS.md §payments/§invoices |
-| V-BIL-202 | dental-billing | Payment-plan doc fields/enum (`installment_count`,`fortnightly`) vs code (`numberOfInstallments`,`biweekly`) | createDentalPaymentPlan.ts:37-75 |
-| V-BIL-203 | dental-billing | void-payment status restore uses `issuedAt` heuristic; can resolve `paid`→`draft` (auto-resolved once V-BIL-105 lands) | repos/dental-invoice.repo.ts:160-179 |
-| V-BIL-204 | dental-billing | discount/plan throw legacy VOIDED_INVOICE/ALREADY_PAID vs spec §15 INVOICE_IMMUTABLE | applyDentalDiscount.ts:35,39; createDentalPaymentPlan.ts:49 |
-| V-PMD-203 | dental-pmd | `imported_pmd` schema omits §7 fields: branch_id, checksum, storage_file_id, imported_by_member_id | repos/pmd-document.schema.ts:44-63 |
-| V-PMD-204 | dental-pmd | `sourceDescription` required/optional contradiction across .tsp/validator/handler/tests/Hurl | importPMD.ts:41; dental-pmd.hurl step 9 |
-| V-PMD-205 | dental-pmd | `pmd_document` schema omits §7 fields: format_version, storage_file_id | repos/pmd-document.schema.ts:22-38 |
-| V-PMD-206 | dental-pmd | Export uses inline JSON download, not §16 signed-URL/S3 path | exportPMD.ts:77-83 |
-| V-SCH-102 | dental-scheduling | GET list returns bare array, no `{data,meta}` envelope / pagination meta | listAppointments.ts:77 |
-| V-SCH-103 | dental-scheduling | check-in response shape drift `{appointment,visitId}` vs contract `{appointment_id,visit_id}` | checkInAppointment.ts:81 |
-| V-SCH-104 | dental-scheduling | DELETE returns 204 no-body; contract says 200 `{data:{ok:true}}` | cancelAppointment.ts:77 |
-| V-SCH-107 | dental-scheduling | `notes` max:500 contract constraint not enforced in handler | createAppointment.ts:96 |
-| V-VIS-201 | dental-visit | Clinical-write handlers admit `hygienist` beyond ROLE_PERMISSION_MATRIX (chart/note-addendum) | upsertDentalChart.ts:33; createVisitNoteAddendum.ts:33 |
-| V-VIS-202 | dental-visit | List endpoints use `{data,pagination}` instead of `{data,meta}` envelope | listDentalVisits.ts:40; listDentalTreatments.ts:36 |
-| V-VIS-203 | dental-visit | BR-008: carry-over copies source status instead of forcing `diagnosed` | carryOverTreatments.ts:115 |
-| V-VIS-204 | dental-visit | GET /visits/:id omits the treatments array promised by the contract | getDentalVisit.ts:27 |
-| V-VIS-205 | dental-visit | Visit create/check-in audit action naming split (`visit.create` vs `visit.checked_in`) | createDentalVisit.ts:55; updateDentalVisit.ts:93 |
-| V-CLI-004 | dental-clinical | Medical-history PATCH route exists (405) but spec says route should be absent | medical-history/updateMedicalHistoryEntry.ts |
-| V-CLI-005 | dental-clinical | Consent route noun `consents` vs spec `consent-forms` | consent/*.ts route paths |
-| V-CLI-007 | dental-clinical | Consent sign verb POST vs spec PATCH | consent/signConsentForm.ts |
-| V-CLI-008 | dental-clinical | Medical-history route shape flat vs spec `/dental/patients/:id/medical-history` | medical-history/createMedicalHistoryEntry.ts:4 |
-| V-CLI-009 | dental-clinical | updatePrescription reads `status` from raw JSON, bypassing generated validator | prescriptions/updatePrescription.ts:42-48 |
-| V-CLI-013 | dental-clinical | Lab order field-name drift: spec `instructions`/`due_date` vs code `description`/`expectedDeliveryDate` | repos/lab-order.schema.ts:25,28 |
-| V-CLI-014 | dental-clinical | Attachment not linked to storage module; `storage_file_id` replaced by free-text `filePath` | repos/attachment.schema.ts:25 |
-| V-CLI-016 | dental-clinical | createAttachment lacks file-size (50MB) + mime-type allow-list validation (WF-039.4) | attachments/createAttachment.ts:38-48 |
-| V-PER-001 | dental-perio | Inconsistent error code for "visit sealed": VISIT_LOCKED (2 handlers) vs VISIT_IMMUTABLE (1) — taxonomy canon = VISIT_IMMUTABLE | createPerioChart.ts:40; completePerioChart.ts:60; upsertToothReading.ts:64 |
-| V-PER-002 | dental-perio | dental-perio error codes (CHART_EXISTS/INVALID_DEPTH/INVALID_TOOTH_NUMBER/INVALID_GRADE) missing from ERROR_TAXONOMY catalog | perio-validation.ts:45-79 |
-| V-PER-003 | dental-perio | MODULE_SPEC §15 error table stale: missing INVALID_GRADE + CHART_COMPLETED (code correct) | MODULE_SPEC §15 |
-| V-PER-004 | dental-perio | `recession` lower bound (-5mm) undocumented in MODULE_SPEC §7 (code/TSP document it) | perio-validation.ts:59-64 |
-| V-ORG-005 | dental-org | Required-field/enum validation inconsistent across create paths → 500/DB-constraint instead of 422 ORG_VALIDATION | DentalBranchManagement_create.ts:38-47; createOrganization.ts:29-37 |
-| V-ORG-006 | dental-org | `DentalMembershipManagement_create` deprecated duplicate of `createMember` still registered | DentalMembershipManagement_create.ts:1-11 |
-| V-ORG-007 | dental-org | Audit-viewer query params camelCase + limit/offset vs spec snake_case + page (EM-AUD-013 spec-acknowledged) | audit-events viewer; parsePagination |
-| V-ORG-008 | dental-org | PIN endpoints absent from sdk-ts (contract-completeness gap, spec-acknowledged) | DentalMembershipManagement_{setPin,verifyPin}.ts |
-| V-ORG-009 | dental-org | `recoverPin` accepts 4-6 digits while resetMemberPin/spec require exactly 6 (credential-strength drift) | pinRecovery.ts:25 vs resetMemberPin.ts:19 |
-| V-AUD-102 | dental-audit | Consumer silently drops malformed events (no log/metric/DLQ) | consumers/domain-events.consumer.ts:34 |
-| V-AUD-103 | dental-audit | Viewer list `desc(timestamp)` with no tie-break → non-deterministic pagination | repos/audit-log.repo.ts:54 |
-| V-AUD-104 | dental-audit | `total` computed by selecting all matching ids into memory (jeopardizes §16 <2s) | repos/audit-log.repo.ts:57-63 |
-| V-IMG-001 | dental-imaging | WF-020 "only creator may edit" not enforced for findings/annotations (branch-role only) | updateFinding.ts:58-62; createMeasurement.ts:133 |
-| V-IMG-002 | dental-imaging | Contract `image_count` field absent from study create/get responses | getImagingStudy.ts:53; createImagingStudy.ts:121-131 |
-| V-IMG-003 | dental-imaging | `deleteImage` soft-delete doesn't cascade/hide child annotations·findings·ceph rows | deleteImage.ts:46-47; repos/imaging.repo.ts |
-| V-IMG-004 | dental-imaging | FE ceph batchUpsert/analysis + findings mutations swallow errors (console.error/no UI) | use-ceph-landmarks.ts:143-161; use-imaging-findings.ts:85 |
-| V-EMR-C-002 | emr-consultation | `listEMRPatients` omits admin role; admin can't list EMR patients (over-restriction) | listEMRPatients.ts:66-69 |
+| Dimension | Score (0-10) | Notes |
+|-----------|-------------|-------|
+| Business rule enforcement | 8 | Sampled; treatment/consent/visit BRs enforced |
+| Acceptance criteria coverage | 7 | Suite green per memory; not line-traced (sampled) |
+| Permission coverage | 10 | Exhaustive on high-risk ops; all match matrix incl. 2 tightenings |
+| Terminology consistency | 8 | 1 P2 (dir naming), 1 P3; entities consistent |
+| Bounded context integrity | 9 | Cross-module via `*-*.facade.ts` (ID refs); no boundary leaks observed |
+| Error contract compliance | 9 | API_CONVENTIONS envelope honored; ERROR_TAXONOMY codes used |
+| API contract compliance | 7 | emr spec gap; route migration green |
+| State transition safety | 10 | Treatment/visit/perio guards complete |
+| Data validation coverage | 8 | Zod validators on writes; required fields enforced |
+| Event contract compliance | 6 | Dead async scaffold (P2); intentional sync architecture (ADR-006) |
+| Audit logging compliance | 9 | All §3 mandatory ops emit; PHI-free metadata; P3 immutability defense-in-depth |
+| Data governance compliance | 9 | V-DG-001 (at-rest encryption attestation), V-DG-002 (S3 erasure delete), V-DG-003 (appointment retention) all RESOLVED; erasure/legal-hold/retention engines complete + audited. Sole residual: V-IMG-EXP-001 bulk Art. 20 export deferred (P2, WFG-006) |
+| Workflow coverage | 8 | WORKFLOW_MAP present; key workflows trace to handlers |
+| Data path connectivity | 9 | Seed-supplement + reseed green per memory; tables served & consumed |
+| Error boundary coverage | 8 | V-FE-ERR-001 RESOLVED (hook-level `onError` + `toastError` taxonomy wrapper on all 5 mutation hooks); residual V-FE-ERR-002 (P2) list-error-vs-empty only |
+| Contract consistency | 9 | FE uses SDK + org context; no missing-auth on writes observed |
 
-> Count reconciliation: per-slice executive-summary P2 totals sum to **40** (patient 2 + billing 4 + pmd 4 + scheduling 4 + visit 5 + clinical 5 + perio 4 + org 5 + audit 3 + imaging 4 + emr 1 + external 0). The table above lists 43 representative rows; scheduling's slice counts 3 P2 in its exec summary (V-SCH-102/103/104; V-SCH-107 is the 4th flagged-pending-confirmation item) and imaging's exec summary counts 4 P2 — the authoritative aggregate total is **P2 = 40** per the slice exec summaries.
-
-### Track (P3) — 27
-
-| ID | Module | Title |
-|----|--------|-------|
-| V-PAT-010 | dental-patient | API_CONTRACTS follow-up path `/:id/follow-up` vs wired `/:id/follow-up-notes` (code is truth) |
-| V-BIL-301 | dental-billing | API_CONTRACTS base paths omit `/dental/billing` prefix |
-| V-BIL-302 | dental-billing | dead `@deprecated emitInvoicePaid` helper (ADR-006) |
-| V-BIL-303 | dental-billing | DE-NNN comment drift (DE-020 vs spec DE-007) |
-| V-PMD-207 | dental-pmd | legacy non-cryptographic checksums on pre-existing rows (new rows SHA-256) |
-| V-PMD-208 | dental-pmd | `safety_floor_merged` stored as text 'true'/'false' vs boolean |
-| V-SCH-105 | dental-scheduling | wire camelCase vs contract snake_case (may be normalized in generated validators) |
-| V-SCH-106 | dental-scheduling | checked_in→completed in FSM table but blocked in PATCH (intentional, routed via checkout) |
-| V-SCH-108 | dental-scheduling | domain-events.ts comment describes event bus; ADR-006 says audit-log-only |
-| V-SCH-109 | dental-scheduling | §17 INFO observables (booked/checked-in/cancelled) not emitted as discrete log lines |
-| V-VIS-206 | dental-visit | treatment-template write handlers gate on membership only, not owner/associate role |
-| V-VIS-301 | dental-visit | audit delivery synchronous, not the pg-boss async model in AUDIT_CONTRACTS §4 (intentional ADR-006 MVP) |
-| V-VIS-302 | dental-visit | POST /carry-over + /:id/chart body field-name casing drift (snake_case contract vs camelCase code) |
-| V-CLI-006 | dental-clinical | Non-dentist Rx error-code drift: spec §11 says 422, §15 says 403; code throws 403 |
-| V-CLI-010 | dental-clinical | prescription schema omits spec §7 `branch_id` (derivable via visit) |
-| V-CLI-011 | dental-clinical | Consent revoke actor is dentist (device model) vs spec Patient |
-| V-CLI-017 | dental-clinical | Amendment originalRecordType accepts `consent` and `consentForm` variants |
-| V-PER-101 | dental-perio | Deep-pocket threshold mismatch: spec ≥6mm, code uses 5mm |
-| V-PER-102 | dental-perio | `summaryDeepPocketCount` per-site count, but spec defines it per-tooth |
-| V-PER-103 | dental-perio | AC-P04/AC-P05 (INVALID_DEPTH/INVALID_TOOTH_NUMBER) enforced but lack dedicated test assertions |
-| V-ORG-010 | dental-org | 9-role member_role enum vs 4-role ROLE_PERMISSION_MATRIX (matrix sync) |
-| V-ORG-011 | dental-org | Acceptance-criteria coverage thin: 3 ACs for 14 endpoints (spec gap) |
-| V-ORG-012 | dental-org | 10 one-line re-export shim handlers add route-to-impl indirection (2 cross into dental-scheduling) |
-| V-AUD-105 | dental-audit | Self-audit write relies on spec branch-fallback for tenant_id (spec-compliant; inconsistent with sibling callers) |
-| V-AUD-106 | dental-audit | Self-audit metadata key `eventType` shadows the column `eventType` |
-| V-IMG-005 | dental-imaging | API_CONTRACTS ceph resource naming (`/ceph-analyses`) stale vs ratified image-centric routes |
-| V-IMG-006 | dental-imaging | API_CONTRACTS `analysis_type` enum stale vs implemented single `steiner_hybrid_sn` |
-
-> Count reconciliation: per-slice executive-summary P3 totals sum to **27** (patient 1 + billing 3 + pmd 2 + scheduling 3 + visit 3 + clinical 4 + perio 3 + org 3 + audit 2 + imaging 3 + emr 3 + external 0). The table above enumerates the highest-signal P3 IDs; emr-consultation's 3 P3 (V-EMR-C-003 admin read-one, V-EMR-C-004 expand contract drift, V-EMR-C-005 unconstrained audit action strings) and imaging's V-IMG-007 (audit row omits branchId/eventType) are additional tracked items folded into the per-module slices. Authoritative aggregate total: **P3 = 27**.
-
-## Spec Gaps (NOT code violations — carried from slices)
-
-| Module | Gap | Recommendation |
-|--------|-----|----------------|
-| dental-patient | Sub-feature handlers (alerts/contacts/insurance/recalls/sync/tasks/treatment-plans, ~57 handlers) have no BRs/ACs/permissions in MODULE_SPEC | Extend MODULE_SPEC (or split into dedicated specs), then re-audit |
-| dental-billing | API_CONTRACTS field names/enums/base paths drift from shipped TypeSpec/OpenAPI | Regenerate API_CONTRACTS.md from the OpenAPI source of truth |
-| dental-pmd | imported_pmd / pmd_document §7 field lists + §16 download architecture (inline vs signed-URL) diverge | Reconcile §7/§16 to inline-V1 model or implement storage-backed columns |
-| dental-clinical | `inventory/`, `occlusion/`, `postop/` subdomains exist in code but are undocumented in MODULE_SPEC; §11-vs-§15 error-code contradiction (422 vs 403); attachment max-size contradiction (50MB §WF-039.4 vs 10MB §16) | Document or relocate subdomains; resolve spec contradictions via /oli-spec-modules |
-| dental-org | Acceptance-criteria coverage thin (no AC for state machine, lockout, tier gate, hash redaction) | Add AC-ORG-004..N |
-| external-records-import | Planned-only; no code exists | Implement, then audit against MODULE_SPEC |
+**Overall health:** **8.7 / 10** (average of 16 applicable dimensions), up from 7.8. Data-governance rose 3→9 (P0 + 2 P1 resolved) and error-boundary 6→8; no dimension now below 6.
 
 ## What's Next
 
-- **No P0s.** Verdict 🟡 WARN — safe to proceed; no ship-blocker.
-- **Fix the 15 P1s before new work.** Themes: (a) complete audit-event coverage (org fee/settings/consent mutations); (b) RBAC/role-granularity (patient-create, medical-history hygienist); (c) FSM correctness (draft-invoice payment, performed-treatment immutability, dental-org membership FSM, dormant emr transition table); (d) contract/test status drift (PMD 422 Hurl, scheduling DOUBLE_BOOKING doc, PMD immutability test); (e) data-model/contract gaps (lab tooth_fdi, attachment taxonomy, working-hours typing); (f) one missing 501 endpoint (amendment approval) and a latent PHI-sanitizer path (audit consumer); (g) perf (org load-all queries). Four are autofixable doc/code edits (V-PMD-201, V-SCH-101, V-CLI-002, V-EMR-C-001).
-- **P2 (40) — fix when touching:** dominant clusters are `{data,meta}` collection-envelope drift on GET-list endpoints across modules, API_CONTRACTS doc-vs-code field/path reconciliation, a few unaudited/unvalidated paths (attachment size/mime, ceph-landmark batch), and audit-viewer pagination determinism/perf.
-- **P3 (27) — track-only:** recurring `domain-events.ts` event-bus comment vs ADR-006 audit-only narrative, DE-NNN comment-ID drift, dead FSM/emitter code, clinical metric-definition decisions.
-- Re-run frontend Steps 11b–11d (data-path connectivity, error-boundary coverage, FE/BE contract consistency) — not executed in several source slices.
-- For per-module re-audit after fixes: `/oli-check --compliance --module <name>`.
+- **Compliance dimension now PASS (0 P0 / 0 P1).** All four targeted P1s + the lone P0 are closed or downgraded with verified code evidence; backend 2977/0, FE hooks 41/0, typecheck + check:boundaries clean.
+- Remaining P2/P3 are touch-when-convenient: dead audit scaffold (V-EVT-001), dir-naming (V-TERM-001), list error-vs-empty state (V-FE-ERR-002), and the deferred bulk Art. 20 export (V-IMG-EXP-001, blocked on WFG-006 PRD decision).
+- Still open as governance items (not code bugs, not in scope of this pass): ADR-007 session TTL (AG-5) before final compliance sign-off.
+- emr-consultation API_CONTRACTS.md gap → `/oli-spec-api --module emr-consultation`.
+- For full per-item BR/AC traceability and test-confidence scoring: `/oli-check --traceability` then `/oli-check --confidence`.
+- Before any demo: run Step 9g DB column-value sanity against the live seed DB (deferred here — no DB connection).
+
+### Enforcement Suite
+> For per-module enforcement with baseline ratchet tracking, run `/oli-check --enforcement`.

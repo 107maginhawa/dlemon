@@ -74,7 +74,7 @@ export class PrescriptionRepository extends DatabaseRepository<Prescription, New
     return { prescription: updated ?? null };
   }
 
-  async update(id: string, patch: Partial<Pick<Prescription, 'rxNormCode' | 'drugName' | 'dosage' | 'frequency' | 'duration' | 'quantity' | 'instructions'>>): Promise<Prescription | null> {
+  async update(id: string, patch: Partial<Pick<Prescription, 'rxNormCode' | 'drugName' | 'dosage' | 'frequency' | 'duration' | 'quantity' | 'instructions' | 'controlledSubstanceSchedule' | 'prescriberDea' | 'prescriberNpi'>>): Promise<Prescription | null> {
     const [updated] = await this.db
       .update(prescriptions)
       .set({ ...patch, updatedAt: new Date() })

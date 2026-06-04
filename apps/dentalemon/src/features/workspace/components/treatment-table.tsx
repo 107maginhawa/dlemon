@@ -188,7 +188,7 @@ export function TreatmentTable({
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
                     'border-t border-border/40 transition-colors',
-                    isSelected ? 'bg-[#F2F2F7]' : 'hover:bg-[#FFE97D]/10',
+                    isSelected ? 'bg-[#F2F2F7]' : 'hover:bg-lemon/10',
                     onSelectTreatment ? 'cursor-pointer' : '',
                   ].join(' ')}
                 >
@@ -251,6 +251,15 @@ export function TreatmentTable({
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1.5">
                       <StatusBadge status={t.status} />
+                      {/* P1-21: scheduled-to-appointment indicator (proposed → scheduled → done). */}
+                      {t.appointmentId ? (
+                        <span
+                          className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                          title="Linked to a scheduled appointment"
+                        >
+                          Scheduled
+                        </span>
+                      ) : null}
                       {/* TXTBL-03: dismiss popover */}
                       {!readOnly && !isTerminal && (
                         <DismissTreatmentPopover
@@ -324,7 +333,7 @@ export function TreatmentTable({
                           if (e.key === 'Escape') setEditingPriceId(null);
                         }}
                         aria-label={`Edit price for treatment ${t.description ?? ''}`}
-                        className="w-20 text-right border border-border rounded px-1 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                        className="w-20 text-right border border-border rounded px-1 text-sm bg-background focus:border-lemon outline-none"
                       />
                     ) : (
                       <button
@@ -367,7 +376,7 @@ export function TreatmentTable({
                           }
                         }}
                         placeholder="Add notes…"
-                        className={`w-full text-sm border border-border rounded px-2 py-1.5 resize-none bg-background focus:border-[#FFE97D] outline-none ${readOnly ? 'opacity-70 cursor-default' : ''}`}
+                        className={`w-full text-sm border border-border rounded px-2 py-1.5 resize-none bg-background focus:border-lemon outline-none ${readOnly ? 'opacity-70 cursor-default' : ''}`}
                       />
                     </td>
                   </tr>

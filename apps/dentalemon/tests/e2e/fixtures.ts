@@ -88,43 +88,30 @@ export async function setupDentalOrg(page: Page) {
     await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
   }, API);
 
-  // Create dental org + branch + member via API
+  // Provision dental org + default branch + owner membership in ONE self-service
+  // call (the caller becomes the org owner + dentist_owner member). Replaces the old
+  // org→branch→member sequence, which now 403s for a normal user (org creation is
+  // admin-only — EM-ORG-002; self-service goes through /dental/onboarding).
   const ctx = await page.evaluate(async (api) => {
-    // Get the current user's ID so membership can be linked to their person record
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    if (!sessionRes.ok) throw new Error(`Session fetch failed: ${sessionRes.status}`);
-    const session = await sessionRes.json();
-    const personId: string = session?.user?.id;
-    if (!personId) throw new Error('Could not determine current user personId from session');
-
-    const orgRes = await fetch(`${api}/dental/organizations`, {
+    const onbRes = await fetch(`${api}/dental/onboarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name: 'E2E Test Clinic', tier: 'solo', countryCode: 'PH' }),
+      body: JSON.stringify({
+        organizationName: 'E2E Test Clinic',
+        tier: 'solo',
+        countryCode: 'PH',
+        branchName: 'Main Branch',
+        timezone: 'Asia/Manila',
+        ownerDisplayName: 'E2E Dentist',
+      }),
     });
-    if (!orgRes.ok) throw new Error(`Org creation failed: ${orgRes.status}`);
-    const org = await orgRes.json();
-
-    const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    if (!branchRes.ok) throw new Error(`Branch creation failed: ${branchRes.status}`);
-    const branch = await branchRes.json();
-
-    const memberRes = await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'E2E Dentist', role: 'dentist_owner', personId }),
-    });
-    if (!memberRes.ok) throw new Error(`Member creation failed: ${memberRes.status}`);
-    const member = await memberRes.json();
-
-    return { orgId: org.id, branchId: branch.id, memberId: member.id };
+    if (!onbRes.ok) {
+      const body = await onbRes.text().catch(() => '<unreadable>');
+      throw new Error(`Onboarding failed (${onbRes.status}): ${body.slice(0, 300)}`);
+    }
+    const onb = await onbRes.json();
+    return { orgId: onb.organizationId, branchId: onb.branchId, memberId: onb.membershipId };
   }, API);
 
   // Set localStorage context

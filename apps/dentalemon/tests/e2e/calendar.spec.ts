@@ -12,106 +12,24 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { setupDentalOrg, createDentalPatient, createAppointment } from './fixtures';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 
 async function signUpAndSeedOrg(page: Page) {
-  const suffix = Date.now();
-  const email = `calendar-e2e-${suffix}@example.org`;
-  const password = 'E2eTestPass123!';
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace. The returned
+  // memberId is the dentist_owner membership used as dentistMemberId.
+  const { orgId, branchId, memberId } = await signUpOnboardAndUnlock(page, {
+    tier: 'clinic',
+    label: 'Calendar',
+  });
 
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Calendar Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially(password, { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-  await page.waitForLoadState('networkidle');
-
-  // Create person profile to bypass onboarding redirect
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'Calendar', lastName: 'Owner' }),
-    });
-  }, API);
-
-  // Seed org + branch
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Calendar Test Clinic', tier: 'clinic', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId: orgRes.id });
-
-  // Create member linked to current user (required for dentistMemberId in appointments)
-  const memberRes = await page.evaluate(
-    async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-      const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-      if (!sessionRes.ok) throw new Error(`Session fetch failed: ${sessionRes.status}`);
-      const session = await sessionRes.json() as any;
-      const personId: string = session?.user?.id;
-      if (!personId) throw new Error('Could not determine personId from session');
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Calendar Owner', role: 'dentist_owner', personId }),
-      });
-      if (!res.ok) throw new Error(`Member creation failed: ${res.status}`);
-      return res.json() as any;
-    },
-    { api: API, orgId: orgRes.id, branchId: branchRes.id },
-  );
-
-  await page.evaluate(
-    ({ orgId, branchId, memberId }: { orgId: string; branchId: string; memberId: string }) => {
-      localStorage.setItem('currentOrgId', orgId);
-      localStorage.setItem('currentBranchId', branchId);
-      localStorage.setItem('currentMemberId', memberId);
-      localStorage.setItem('currentMemberRole', 'dentist_owner');
-    },
-    { orgId: orgRes.id, branchId: branchRes.id, memberId: memberRes.id },
-  );
-
-  return { orgId: orgRes.id, branchId: branchRes.id, memberId: memberRes.id };
+  return { orgId, branchId, memberId };
 }
 
 test.describe('Calendar UI (FR3.x)', () => {
   test('FR3.1: calendar page loads with day/week view toggle', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     // Day/week toggle buttons exist
     const dayBtn = page.getByRole('button', { name: 'Day', exact: true });
@@ -126,8 +44,7 @@ test.describe('Calendar UI (FR3.x)', () => {
 
   test('FR3.1: clicking Week toggle switches to week view', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     await page.getByRole('button', { name: 'Week', exact: true }).click();
 
@@ -137,24 +54,21 @@ test.describe('Calendar UI (FR3.x)', () => {
 
   test('FR3.8: Walk-In button is visible on calendar toolbar', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     await expect(page.getByRole('button', { name: /add walk-in appointment/i })).toBeVisible();
   });
 
   test('FR3.6: New Appointment button is visible on calendar toolbar', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     await expect(page.getByRole('button', { name: /create new appointment/i })).toBeVisible();
   });
 
   test('FR3.8: clicking Walk-In button opens appointment modal', async ({ page }) => {
     await signUpAndSeedOrg(page);
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     await page.getByRole('button', { name: /add walk-in appointment/i }).click();
 
@@ -216,8 +130,7 @@ test.describe('Calendar UI (FR3.x)', () => {
       { timeout: 5000 },
     ).catch(() => null);
 
-    await page.goto(`${APP}/calendar`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/calendar');
 
     // If the appointment card has a check-in button, click it
     const checkInBtn = page.getByTestId('appointment-check-in');

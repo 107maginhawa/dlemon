@@ -32,7 +32,9 @@ jobs:
         with:
           bun-version: 1.2.21
       - run: bun install --frozen-lockfile
-      - run: cd apps/dentalemon && bun run lint
+      # Root lint covers dentalemon + @monobase/api-ts (eslint, 0 errors gate)
+      # and the FSM state-machine token drift guard (scripts/check-fsm-tokens.ts).
+      - run: bun run lint
 
   unit-test:
     name: Unit Tests
@@ -81,6 +83,18 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Security audit (new advisories block merge — accepted list in docs/audits/SECURITY_ADVISORIES.md)
         run: bash scripts/check-audit.sh
+
+  rust-security:
+    name: Rust Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Cargo audit (services/cadence + services/api-ts-embedded)
+        run: bash scripts/cargo-audit.sh
 
   migration-safety:
     name: Migration Safety Lint

@@ -17,6 +17,7 @@ import { logAuditEvent } from '@/core/audit-logger';
 import { eq, and } from 'drizzle-orm';
 import type { User } from '@/types/auth';
 import type { CreatePrescriptionBody, CreatePrescriptionParams } from '@/generated/openapi/validators';
+import { checkDrugInteractions } from '../utils/drug-interactions';
 
 export async function createPrescription(
   ctx: ValidatedContext<CreatePrescriptionBody, never, CreatePrescriptionParams>
@@ -60,6 +61,21 @@ export async function createPrescription(
     .filter(a => a.displayName.toLowerCase().includes(drugName) || drugName.includes(a.displayName.toLowerCase()))
     .map(a => a.displayName);
 
+  // P1-2: Drug-drug interaction check — warn (non-blocking) if drug interacts with
+  // any active medication. Uses a curated dental-relevant interaction reference;
+  // NOT a full drug interaction database. See utils/drug-interactions.ts for scope.
+  const activeMedications = await db.select().from(medicalHistoryEntries).where(
+    and(
+      eq(medicalHistoryEntries.patientId, body.patientId),
+      eq(medicalHistoryEntries.entryType, 'medication'),
+      eq(medicalHistoryEntries.active, true)
+    )
+  );
+  const drugInteractions = checkDrugInteractions(
+    body.drugName,
+    activeMedications.map(m => m.displayName),
+  );
+
   const prescription = await repo.createOne({
     visitId,
     patientId: body.patientId,
@@ -72,6 +88,11 @@ export async function createPrescription(
     quantity: body.quantity,
     instructions: body.instructions,
     dispenseAsWritten: body.dispenseAsWritten ?? false,
+    // P2-13: US-context legal Rx fields (record-only). Optional + additive;
+    // `controlledSubstanceSchedule` defaults to 'none' when omitted.
+    controlledSubstanceSchedule: body.controlledSubstanceSchedule ?? 'none',
+    prescriberDea: body.prescriberDea,
+    prescriberNpi: body.prescriberNpi,
   });
 
   ctx.get('logger')?.info(
@@ -91,10 +112,16 @@ export async function createPrescription(
     metadata: { visitId, patientId: body.patientId, prescriberMemberId: body.prescriberMemberId },
   });
 
+  const hasAllergyWarnings = allergyWarnings.length > 0;
+  const hasDrugInteractions = drugInteractions.length > 0;
+
   return ctx.json({
     ...prescription,
-    warnings: allergyWarnings.length > 0
-      ? { allergyConflicts: allergyWarnings }
+    warnings: (hasAllergyWarnings || hasDrugInteractions)
+      ? {
+          ...(hasAllergyWarnings ? { allergyConflicts: allergyWarnings } : {}),
+          ...(hasDrugInteractions ? { drugInteractions } : {}),
+        }
       : undefined,
   }, 201);
 }

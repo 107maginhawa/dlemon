@@ -13,7 +13,7 @@ import {
   type NotificationFilters,
   type CreateNotificationRequest
 } from './notification.schema';
-import { PersonRepository } from '../../person/repos/person.repo';
+import { findNotificationRecipient } from '../../person/repos/person-notifs.facade';
 import { ValidationError, NotFoundError, ForbiddenError } from '@/core/errors';
 import * as OneSignal from '@onesignal/node-onesignal';
 import { SYSTEM_USER_ID } from '@/core/constants';
@@ -21,20 +21,17 @@ import { subDays } from 'date-fns';
 import type { EmailService } from '@/core/email';
 
 export class NotificationRepository extends DatabaseRepository<Notification, NewNotification, NotificationFilters> {
-  private personRepo: PersonRepository;
   private oneSignalClient?: OneSignal.DefaultApi;
   private oneSignalAppId?: string;
   private emailService?: EmailService;
 
   constructor(
     db: DatabaseInstance,
-    personRepo: PersonRepository,
     logger?: any,
     oneSignalConfig?: { appId: string; apiKey: string },
     emailService?: EmailService
   ) {
     super(db, notifications, logger);
-    this.personRepo = personRepo;
     this.emailService = emailService;
 
     // Initialize OneSignal if config provided
@@ -99,7 +96,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     this.logger?.debug({ request }, 'Creating notification from module');
 
     // Validate recipient exists (optional - Person records may not exist for all User IDs)
-    const recipient = await this.personRepo.findOneById(request.recipient);
+    const recipient = await findNotificationRecipient(this.db, request.recipient, this.logger);
 
     if (!recipient) {
       // Log warning but allow notification creation
@@ -160,6 +157,60 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     }, 'Notification created successfully');
 
     return notification;
+  }
+
+  /**
+   * P1-24: idempotently enqueue a scheduled notification keyed on
+   * (relatedEntity, type, channel, scheduledAt). If a row with that exact key
+   * already exists (any status), nothing is written and the existing row is
+   * returned — this is the duplicate-send guard for the reminder/recall jobs.
+   * Returns { created: boolean, notification }.
+   */
+  async enqueueScheduledIfAbsent(request: CreateNotificationRequest): Promise<{ created: boolean; notification: Notification }> {
+    const scheduledAt = request.scheduledAt ?? null;
+    const existingConds = [
+      eq(notifications.type, request.type as any),
+      eq(notifications.channel, request.channel as any),
+    ];
+    if (request.relatedEntity) existingConds.push(eq(notifications.relatedEntity, request.relatedEntity));
+    else existingConds.push(isNull(notifications.relatedEntity));
+    if (scheduledAt) existingConds.push(eq(notifications.scheduledAt, scheduledAt));
+    else existingConds.push(isNull(notifications.scheduledAt));
+
+    const [existing] = await this.db
+      .select()
+      .from(notifications)
+      .where(and(...existingConds))
+      .limit(1);
+
+    if (existing) {
+      return { created: false, notification: existing };
+    }
+
+    const notification = await this.createNotificationForModule(request);
+    return { created: true, notification };
+  }
+
+  /**
+   * P1-24: synchronously expire queued reminder/confirmation-request rows for an
+   * appointment (or any related entity). Called inside cancel/reschedule/check-in/
+   * confirm handlers so a reminder can never fire after the appointment moved on.
+   * Only touches `queued` rows (delivered/read are left intact for history).
+   * Returns the number of rows expired.
+   */
+  async expireQueuedByEntity(
+    relatedEntity: string,
+    types: readonly string[],
+  ): Promise<number> {
+    const result = await this.db
+      .update(notifications)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(and(
+        eq(notifications.relatedEntity, relatedEntity),
+        eq(notifications.status, 'queued'),
+        inArray(notifications.type, types as any),
+      ));
+    return result.rowCount ?? 0;
   }
 
   /**
@@ -353,8 +404,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
           const templateTag = this.mapNotificationToEmailTemplate(notification.type);
 
           if (templateTag) {
-            // Get recipient email from person repository
-            const person = await this.personRepo.findOneById(notification.recipient);
+            // Get recipient email via the person facade
+            const person = await findNotificationRecipient(this.db, notification.recipient, this.logger);
             const recipientEmail = person?.contactInfo?.email;
 
             if (person && recipientEmail) {
@@ -468,6 +519,15 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
         }
         break;
         
+      case 'sms':
+        // P1-24: SMS channel enum lands now; the actual provider (Twilio/Vonage/
+        // OneSignal-SMS) is deferred to P4. Until then an `sms` row is a logged
+        // no-op marked `failed` ("no SMS provider configured") — mirrors the
+        // OneSignal-not-configured path. Consent/cadence logic is unaffected.
+        this.logger?.warn({ notificationId: notification.id }, 'No SMS provider configured — SMS notification not delivered (P4)');
+        await this.updateOneById(notification.id, { status: 'failed' });
+        break;
+
       case 'in-app':
         // In-app notifications are already available in database
         // Just update status to indicate they're ready
@@ -498,7 +558,11 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     const mapping: Record<string, string> = {
       'security': 'auth.password-reset',
       'system': 'auth.welcome',
-      // Add more mappings as needed
+      // P1-24: appointment reminder + recall (continuing-care) templates
+      'appointment.reminder': 'appointment.reminder',
+      'appointment.confirmation-request': 'appointment.confirmation-request',
+      'recall.due': 'recall.due',
+      'recall.reminder': 'recall.reminder',
     };
     
     return mapping[type] || null;

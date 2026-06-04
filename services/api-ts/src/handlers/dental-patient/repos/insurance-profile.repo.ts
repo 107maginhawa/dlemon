@@ -59,7 +59,7 @@ export class InsuranceProfileRepository {
   async update(
     id: string,
     patientId: string,
-    values: Partial<Pick<DentalInsuranceProfile, 'insurerName' | 'policyNumber' | 'groupNumber' | 'subscriberName' | 'subscriberDob' | 'relationship' | 'active' | 'notes'>>,
+    values: Partial<Pick<DentalInsuranceProfile, 'insurerName' | 'policyNumber' | 'groupNumber' | 'subscriberName' | 'subscriberDob' | 'relationship' | 'active' | 'notes' | 'payerType' | 'accredited' | 'annualLimitCents' | 'annualLimitUsedCents'>>,
   ): Promise<DentalInsuranceProfile | null> {
     const [row] = await this.db
       .update(dentalInsuranceProfiles)

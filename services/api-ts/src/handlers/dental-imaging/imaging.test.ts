@@ -66,6 +66,15 @@ function makeStorage() {
   return {
     generateUploadUrl: async (_fileId: string, _mime: string) =>
       'https://storage.example.com/presigned-upload-url',
+    generateDownloadUrl: async (fileId: string) =>
+      `https://storage.example.com/presigned-get/${fileId}`,
+    // P1-9 multipart upload methods
+    initiateMultipartUpload: async (_fileId: string, _filename: string, _mime: string) =>
+      'test-upload-id',
+    generatePartUploadUrl: async (_fileId: string, _uploadId: string, partNumber: number) =>
+      `https://storage.example.com/presigned-part/${partNumber}`,
+    completeMultipartUpload: async () => undefined,
+    abortMultipartUpload: async () => undefined,
   };
 }
 
@@ -175,12 +184,14 @@ function makeDb(opts: {
       from: (table: any) => buildSelectChain(table, fields),
     }),
     insert: (table: any) => ({
-      values: (_data: any) => ({
-        // imagingStudyImages has studyId column; imagingStudies has patientId but not studyId
+      values: (data: any) => ({
+        // imagingStudyImages has studyId column; imagingStudies has patientId but not studyId.
+        // For imaging_study_image, echo the inserted row merged onto MOCK_IMAGE so tests can
+        // observe persisted fields (e.g. P1-9 DICOM pixelSpacingMm / dicomMetadata).
         returning: () =>
           table?.studyId !== undefined
-            ? Promise.resolve([image ?? MOCK_IMAGE])   // imaging_study_image insert
-            : Promise.resolve([study ?? MOCK_STUDY]),  // imaging_study insert
+            ? Promise.resolve([{ ...(image ?? MOCK_IMAGE), ...data }]) // imaging_study_image insert
+            : Promise.resolve([study ?? MOCK_STUDY]),                  // imaging_study insert
         // imagingStudyTeeth insert (addToothLink) doesn't call .returning()
         then: (resolve: any, reject: any) => Promise.resolve(undefined).then(resolve, reject),
       }),
@@ -568,6 +579,264 @@ describe('BR-034 mime type validation', () => {
 });
 
 // ---------------------------------------------------------------------------
+// P1-9 DICOM ingest — MIME allowlist, PixelSpacing calibration, multipart routing
+// ---------------------------------------------------------------------------
+
+describe('P1-9 DICOM ingest', () => {
+  test('accepts application/dicom (MIME allowlist)', async () => {
+    expect(ALLOWED_IMAGING_MIME_TYPES).toContain('application/dicom');
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cephalometric',
+        filename: 'ceph.dcm',
+        mimeType: 'application/dicom',
+        size: 204800,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+  });
+
+  test('persists DICOM PixelSpacing as calibration (dicom_tag provenance)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'panoramic',
+        filename: 'pano.dcm',
+        mimeType: 'application/dicom',
+        size: 204800,
+        pixelSpacingMm: 0.15,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.image.pixelSpacingMm).toBe(0.15);
+    expect(body.image.dicomMetadata.calibrationMethod).toBe('dicom_tag');
+    expect(body.image.dicomMetadata.isDicom).toBe(true);
+  });
+
+  test('ignores pixelSpacingMm for non-DICOM uploads (behaviour unchanged)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        filename: 'xray.jpg',
+        mimeType: 'image/jpeg',
+        size: 204800,
+        pixelSpacingMm: 0.15, // ignored for JPEG
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    // Non-DICOM: no DICOM-tag calibration applied; single PUT.
+    expect(body.image.pixelSpacingMm ?? null).toBeNull();
+    expect(body.uploadMethod).toBe('PUT');
+  });
+
+  test('rejects an implausible DICOM spacing (no bad calibration)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cephalometric',
+        filename: 'ceph.dcm',
+        mimeType: 'application/dicom',
+        size: 204800,
+        pixelSpacingMm: 99, // implausible mm/px → not persisted
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.image.pixelSpacingMm ?? null).toBeNull();
+  });
+
+  test('small DICOM uses single PUT (under multipart threshold)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cephalometric',
+        filename: 'ceph.dcm',
+        mimeType: 'application/dicom',
+        size: 1 * 1024 * 1024, // 1 MB
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('PUT');
+    expect(body.uploadUrl).toMatch(/^https:\/\//);
+  });
+
+  test('large DICOM routes to S3 multipart with part URLs', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        modality: 'cbct',
+        filename: 'cbct.dcm',
+        mimeType: 'application/dicom',
+        size: 50 * 1024 * 1024, // 50 MB pano/CBCT
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('MULTIPART');
+    expect(body.uploadId).toBe('test-upload-id');
+    expect(body.partCount).toBe(10); // 50 MB / 5 MB
+    expect(Array.isArray(body.partUrls)).toBe(true);
+    expect(body.partUrls.length).toBe(10);
+  });
+
+  test('large non-DICOM stays single PUT (multipart is DICOM-only)', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, {
+      user: DENTIST_USER,
+      role: 'dentist',
+      method: 'POST',
+      path: '/',
+    });
+
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        branchId: BRANCH_ID,
+        filename: 'huge.tiff',
+        mimeType: 'image/tiff',
+        size: 50 * 1024 * 1024,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('PUT');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2-7 size ceiling — per-class cap (images 100 MB, DICOM higher, hard cap).
+// Tests rely on createImagingStudy's no-config fallback (DICOM 2 GB / image 100 MB).
+// ---------------------------------------------------------------------------
+
+describe('P2-7 per-class upload size ceiling', () => {
+  test('DICOM above 100 MB but within the DICOM cap is accepted', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom',
+        size: 500 * 1024 * 1024, // 500 MB ≤ 2 GB DICOM cap
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('MULTIPART');
+  });
+
+  test('DICOM above the absolute hard cap → 422 validation error', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom',
+        size: 3 * 1024 * 1024 * 1024, // 3 GB > 2 GB fallback DICOM cap
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  test('non-DICOM image above 100 MB is still rejected', async () => {
+    const { createImagingStudy } = await import('./createImagingStudy');
+    const app = buildApp(createImagingStudy as any, { user: DENTIST_USER, role: 'dentist', method: 'POST', path: '/' });
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, branchId: BRANCH_ID,
+        filename: 'huge.tiff', mimeType: 'image/tiff',
+        size: 200 * 1024 * 1024, // 200 MB > 100 MB image cap
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BR-026 delete roles - hygienist forbidden
 // @BR-026 Only dentists and admins may delete images; hygienists get 403
 // @BR-028 Soft delete only (deletion sets status='archived', no hard delete)
@@ -716,6 +985,8 @@ describe('union adapter legacy mapping', () => {
 
     expect(mapped.source).toBe('legacy');
     expect(mapped.modality).toBe('other');
+    // Legacy attachments have no object-store backing → no presigned URL.
+    expect(mapped.downloadUrl).toBeNull();
   });
 
   test('dental_attachment photo maps to source:legacy modality:intraoral_photo', async () => {

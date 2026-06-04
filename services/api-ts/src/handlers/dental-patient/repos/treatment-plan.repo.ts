@@ -1,16 +1,26 @@
-import { eq, and, inArray, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import {
   dentalTreatmentPlans,
   dentalTreatmentPlanApprovals,
+  dentalTreatmentPlanStatusHistory,
   deriveTreatmentPlanStatus,
   type DentalTreatmentPlan,
   type NewDentalTreatmentPlan,
   type DentalTreatmentPlanApproval,
   type NewDentalTreatmentPlanApproval,
+  type DentalTreatmentPlanStatusHistory,
+  type NewDentalTreatmentPlanStatusHistory,
   type TreatmentPlanStatus,
 } from './treatment-plan.schema';
-import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
+import {
+  linkPendingTreatmentsToPlan,
+  getTreatmentStatusesByPlan,
+  setTreatmentAppointment,
+  getTreatmentPlanRef,
+  getOptionGroupTreatments,
+  acceptTreatmentOption,
+} from '../../dental-visit/repos/visit-treatment-plan.facade';
 
 export class TreatmentPlanRepository {
   constructor(
@@ -60,18 +70,7 @@ export class TreatmentPlanRepository {
    * so re-running is safe. Returns the number of treatments newly linked.
    */
   async linkPendingTreatments(planId: string, patientId: string): Promise<number> {
-    const linked = await this.db
-      .update(dentalTreatments)
-      .set({ treatmentPlanId: planId })
-      .where(
-        and(
-          eq(dentalTreatments.patientId, patientId),
-          inArray(dentalTreatments.status, ['diagnosed', 'planned']),
-          isNull(dentalTreatments.treatmentPlanId),
-        ),
-      )
-      .returning({ id: dentalTreatments.id });
-    return linked.length;
+    return linkPendingTreatmentsToPlan(this.db, patientId, planId);
   }
 
   /**
@@ -83,10 +82,7 @@ export class TreatmentPlanRepository {
     const plan = await this.findOneById(planId, patientId);
     if (!plan) return null;
 
-    const items = await this.db
-      .select({ status: dentalTreatments.status })
-      .from(dentalTreatments)
-      .where(eq(dentalTreatments.treatmentPlanId, planId));
+    const items = await getTreatmentStatusesByPlan(this.db, planId);
 
     const derived = deriveTreatmentPlanStatus(
       plan.status,
@@ -96,12 +92,30 @@ export class TreatmentPlanRepository {
     return this.update(planId, patientId, { status: derived });
   }
 
+  /**
+   * P1-21: attach a planned treatment item to a scheduled appointment (loose ref).
+   * Scoped by patientId so a caller can only schedule that patient's own items.
+   * Returns null if the treatment doesn't exist for the patient.
+   */
+  async attachAppointment(
+    treatmentId: string,
+    patientId: string,
+    appointmentId: string,
+  ): Promise<{ id: string; appointmentId: string | null } | null> {
+    return setTreatmentAppointment(this.db, treatmentId, patientId, appointmentId);
+  }
+
+  /** P1-21: detach a planned treatment item from its appointment (clear the loose ref). */
+  async detachAppointment(
+    treatmentId: string,
+    patientId: string,
+  ): Promise<{ id: string; appointmentId: string | null } | null> {
+    return setTreatmentAppointment(this.db, treatmentId, patientId, null);
+  }
+
   /** Recompute the plan a given treatment belongs to (if any). Used by the treatment-update trigger. */
   async recomputeForTreatment(treatmentId: string): Promise<void> {
-    const [t] = await this.db
-      .select({ planId: dentalTreatments.treatmentPlanId, patientId: dentalTreatments.patientId })
-      .from(dentalTreatments)
-      .where(eq(dentalTreatments.id, treatmentId));
+    const t = await getTreatmentPlanRef(this.db, treatmentId);
     if (t?.planId) await this.recomputeStatus(t.planId, t.patientId);
   }
 
@@ -119,5 +133,51 @@ export class TreatmentPlanRepository {
       .select()
       .from(dentalTreatmentPlanApprovals)
       .where(eq(dentalTreatmentPlanApprovals.treatmentPlanId, planId));
+  }
+
+  /**
+   * P1-19: the treatments in an alternate-case option group, scoped to the patient.
+   * Used to present "Option A / Option B" and to validate accept-one-rejects-siblings.
+   */
+  async findOptionGroup(
+    optionGroupId: string,
+    patientId: string,
+  ): Promise<Array<{ id: string; status: string; recommended: boolean }>> {
+    return getOptionGroupTreatments(this.db, optionGroupId, patientId);
+  }
+
+  /**
+   * P1-19: accept ONE option in an alternate-case group. The chosen treatment moves
+   * to `planned`; every other non-terminal sibling in the group is `declined` with a
+   * refusal reason. Returns the option group's post-state. Idempotent-ish: re-running
+   * on an already-accepted option is a no-op beyond touching updatedAt.
+   */
+  async acceptOption(
+    optionGroupId: string,
+    chosenTreatmentId: string,
+    patientId: string,
+  ): Promise<Array<{ id: string; status: string; recommended: boolean }>> {
+    return acceptTreatmentOption(this.db, optionGroupId, chosenTreatmentId, patientId);
+  }
+
+  /** P2-8: append a status-history row (who / when / from → to). */
+  async recordStatusHistory(
+    values: Omit<NewDentalTreatmentPlanStatusHistory, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'changedAt'>,
+  ): Promise<DentalTreatmentPlanStatusHistory> {
+    const [row] = await this.db
+      .insert(dentalTreatmentPlanStatusHistory)
+      .values(values)
+      .returning();
+    if (!row) throw new Error('Insert returned no row');
+    return row;
+  }
+
+  /** P2-8: the chronological status timeline for a plan. */
+  async findStatusHistoryByPlanId(planId: string): Promise<DentalTreatmentPlanStatusHistory[]> {
+    return this.db
+      .select()
+      .from(dentalTreatmentPlanStatusHistory)
+      .where(eq(dentalTreatmentPlanStatusHistory.treatmentPlanId, planId))
+      .orderBy(dentalTreatmentPlanStatusHistory.changedAt);
   }
 }

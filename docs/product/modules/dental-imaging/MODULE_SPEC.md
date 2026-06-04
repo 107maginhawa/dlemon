@@ -21,7 +21,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 |------|-----------|
 | Imaging Study | Container for one or more radiographic images (CBCT, periapical, panoramic, ceph) |
 | Imaging Image | Individual radiograph within a study |
-| Imaging Annotation | Per-image drawn overlay (arrow, circle, text, measurement); state: draft→confirmed→resolved |
+| Imaging Annotation | Per-image drawn overlay (arrow, circle, text, measurement); stateless presentation layer with a `visible` flag only — carries **no** state machine (V-IMG-008). SM-01 belongs to Imaging Finding. |
 | Imaging Finding | Clinically significant observation; state machine SM-01 |
 | Ceph Analysis | Cephalometric measurement set for one lateral ceph image |
 | Ceph Landmark | Anatomical point placed by dentist; state: not_placed→placed→locked (SM-02) |
@@ -162,7 +162,7 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 
 ## 11. Acceptance Criteria
 **AC-IMG-001:** Upload study without imagingTier for ceph → 403 (BR-016c).
-**AC-IMG-002:** Annotation status reversal (confirmed → draft) → 422 (SM-01).
+**AC-IMG-002:** Finding status reversal (confirmed → draft) → 422 (SM-01). _(SM-01 is carried by `imaging_finding`, not annotations — see §7 V-IMG-008 + §8 V-IMG-007. Enforced in `updateFinding.ts` via `FINDING_TRANSITIONS`; tested by `imaging-finding.fsm.property.test.ts` + `imaging.test.ts`.)_
 **AC-IMG-003:** Ceph landmark: placed → not_placed → 422 (SM-02).
 **AC-IMG-004:** Study images stored in S3 — URL returned in response, not raw data.
 **AC-IMG-005:** Study list returns only studies for requesting user's branch.

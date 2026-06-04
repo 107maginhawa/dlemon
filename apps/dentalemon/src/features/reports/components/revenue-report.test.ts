@@ -1,4 +1,6 @@
 import { describe, test, expect } from 'bun:test';
+// Inline locale constant — tests must not import from @/constants (no bundler in Bun test runner)
+const APP_LOCALE = 'en-PH';
 
 interface Invoice {
   id: string;
@@ -25,7 +27,7 @@ function formatDateRange(start: string, end: string): string {
   const e = new Date(end);
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const yearOpts: Intl.DateTimeFormatOptions = { ...opts, year: 'numeric' };
-  return `${s.toLocaleDateString('en-US', opts)} – ${e.toLocaleDateString('en-US', yearOpts)}`;
+  return `${s.toLocaleDateString(APP_LOCALE, opts)} – ${e.toLocaleDateString(APP_LOCALE, yearOpts)}`;
 }
 
 function calcRevenueSummary(invoices: Invoice[]) {

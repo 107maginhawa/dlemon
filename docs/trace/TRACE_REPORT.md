@@ -1,116 +1,139 @@
-# Trace Report — Dentalemon
+# Trace Report
 
 ---
 oli-version: trace-v1
-Report Date: 2026-05-30 (cycle-3 refresh + journey-report integration)
-Phase: D
-Modules Traced: all (12 dental modules + Monobase platform layer)
-Mode: standalone
-Data Sources: artifacts (WORKFLOW_MAP, DOMAIN_MODEL, EVENT_CONTRACTS, ROLE_PERMISSION_MATRIX, 12 MODULE_SPECs), knowledge_graph (CODE_SPEC_TRACE 237 ops / 0 spec-only / 0 code-only / auth_drift=2, CODE_API_SURFACE 237 endpoints, CODE_DATA_MODEL, CODE_STATE_MACHINES, CODE_IMPORT_GRAPH), compliance_report (🟡 WARN, 0 P0 / 15 P1 / 40 P2 / 27 P3), confidence_report (suite Test-Conf floor 7, **1 P0 = emr PHI audit assertions**), journey_report (ALL-FRONTEND, fresh 2026-05-30 — 0 P0 / 2 P1 / 1 P2 / 3 P3)
-Partial Staleness: CODE_SPEC_TRACE.json carries `auth_drift=2` on `mergePatients`/`unmergePatients` because its scanner only inspects ROUTE-level middleware (`code_roles=None`), not in-handler `user.role !== 'admin'` guards — a known detection false-positive (also surfaced as journey J-MAP-003). CONFIDENCE_REPORT and CODE_SPEC_TRACE predate some cycle-3 test additions; this refresh credits cycle-3 from the per-module compliance/confidence slices. The JOURNEY report is now ALL-FRONTEND (supersedes the prior dental-visit-only scope) and contributes UI-journey edges (types 12,15,16,17) across modules.
+Report Date: 2026-06-02 (re-verified; prior substantive run 2026-06-01)
+Phase: D (code + tests exist)
+Modules Traced: all 12 (dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import) + governance chains (erasure, legal-hold, retention)
+Mode: standalone (artifact + code, engine-map-enriched for frontend scope)
+Data Sources: WORKFLOW_MAP.md (98 WF + WF-P01..05 + WF-EMRC-001..006), DOMAIN_MODEL.md (24 DE, 6 SM), 12 MODULE_SPECs, ROLE_PERMISSION_MATRIX.md, EVENT_CONTRACTS.md, ERROR_TAXONOMY.md, OpenAPI (specs/api/dist/openapi/openapi.json — 210 paths / 140 dental), codebase-map engine v5 (FRESH: producer=engine, fields_unavailable=[], git_sha a3bfc9a5), COMPLIANCE_REPORT.md (governance pass), CONFIDENCE_REPORT.md, JOURNEY_COVERAGE_REPORT.md
+Partial Staleness: CODE_SPEC_TRACE.json reports `spec_source: null` / `matched: []` because `spec_trace_optin: false` in map-meta (spec-trace phase ran 0ms — opt-in, disabled by config, NOT a regression). CODE_API_SURFACE response_shape is empty for all 43 frontend-scope endpoints and api_calls carry no field-access data → algorithm 5g cannot produce verified edges; 5g findings route to `unverified` per R1 (confidence_threshold=MEDIUM). Trace relied on direct ID grep across spec + test source.
+HEAD: c26d37bd (re-verify pass over 26925ce2 → c26d37bd)
 ---
 
-## Changes Since Last Run
+## Re-verify Pass (2026-06-02, 26925ce2 → c26d37bd, fresh engine map git_sha c26d37bd)
 
-- **New gaps:** 2 (TR-P1-10 J-FE-001 invoice-issue broken FE→API chain; TR-P1-11 J-FE-002 ceph-report broken FE→API chain) — both surfaced by the new all-frontend journey scan that the prior trace predated.
-- **Carried P0:** 1 (TR-P0-02 = CONF-EMRC-001 emr PHI audit-row assertions; the single suite P0 from CONFIDENCE — the prior trace report did not surface it as a P0 traceability gap).
-- **Resolved/Downgraded:** TR-P0-01 patient-merge auth-drift → P3 cosmetic (in-handler guard tested; engine false-positive). Ceph BR-036..047, dental-imaging reach, pmd deny, person base = RESOLVED.
-- **Net change vs cycle-2:** P0 1→1 (different P0: was auth-drift, now emr-audit), P1 9→7, P2 ~14.
+Re-ran the full chain against the FRESH codebase-map (engine v5, .map-meta git_sha c26d37bd, fields_unavailable=[], producer=engine). The 5 commits since the prior substantive run (901deb63, e20e5b2f, 04162602, c26d37bd, 7b7c740e) are **docs(trace)/docs(audits) only — zero source or spec deltas** (`git log --oneline 26925ce2..HEAD` = 5 docs commits). No new gaps, no resolved gaps, no count movement. **VERDICT UNCHANGED: PASS.** Re-grep verification of all standing-finding anchors against current source:
+- **TR-BR-013 (P2 deferral) confirmed:** `dental-billing/markUncollectible.ts:24-28` — `// BR-013: deferred — always 501.` → `NOT_IMPLEMENTED` 501, feature flag `dental_billing_uncollectible`.
+- **TR-WF-DOCDRIFT (false-positive) confirmed:** `dental-clinical/amendments/approveAmendment.ts:26-30` — `// BR-019: supervisor approval deferred — always 501.`, flag `dental_clinical_amendment_approval`.
+- **TR-WF-PLAN (resolved) confirmed:** `dental-visit/treatments/updateDentalTreatment.ts` + 3 FSM tests (`treatment-fsm-http.test.ts`, `treatment.fsm.property.test.ts`, `dental-visit.treatment-status-transitions.test.ts`).
+- **TR-DG-002 (resolved) confirmed:** 6 governance path ops present in `specs/api/dist/openapi/openapi.json` — `/dental/erasure-requests`(+`/{id}`,`/approve`,`/reject`), `/dental/legal-holds`(+`/{id}/release`); 140 dental paths total.
+- **TR-LH-001 / TR-RET-001 (P2 orphan-by-design) confirmed:** no `legal-hold`/`retention` MODULE_SPEC under docs/product/modules/.
+- **TR-INFRA-001 (EXTERNAL) confirmed:** `.map-meta.json:provenance.spec_trace_optin: false`, `CODE_SPEC_TRACE.json spec_source=null / coverage.matched=[]` — engine-config item, unchanged.
+- Spec namespace recount stable: WF/BR/AC/SM totals match prior run (BR namespace BR-001..047 + BR-P01..07 + BR-SCH-001..004 = 58 canonical).
+---
+
+## Re-verify Pass (2026-06-01, ece7f89c → 26925ce2) — governance/FE-error chains
+
+The compliance-dimension findings V-DG-002 (S3 erasure delete), V-DG-003 (appointment retention), and V-FE-ERR-001 (FE hook error toast) are now RESOLVED in code, and their spec→code→test chains are COMPLETE; V-IMG-EXP-001 is a docs-defer (P1→P2). These are governance/FE findings, not traceability P1s, so the trace P0/P1 counts and **PASS verdict are unchanged**. Chain notes:
+- **V-DG-002 chain (erasure → S3 delete):** `dental-erasure/erasure-storage.ts::physicalDeleteErasedFiles` ← `approveErasureHandler.ts` (handler scope, `ctx.get('storage')`) ← engine-aggregated `fileIdsPendingS3Delete` from `dental-imaging/repos/imaging-erasure.facade.ts`; `erasure.s3_deleted` audit event emitted. Tested: `erasure-s3-delete.test.ts` (4), `imaging-erasure.facade.test.ts` (3). code→test→audit COMPLETE.
+- **V-DG-003 chain (appointment retention):** `retention/retention-targets.ts::appointmentTarget` → `dental-scheduling/repos/dental-appointment-retention.facade.ts` (filters `scheduledAt<=cutoff`, excludes legal-held, soft-deletes via `deletedAt`); default policy `enabled` in `retention-defaults.ts:46`; column added in migration `0079_zippy_alice.sql`. Anchored under TR-RET-001 (orphan-by-design cron). Tested: `retention-appointment.test.ts` (6), `retention-defaults.test.ts` (6). code→test COMPLETE.
+- **V-FE-ERR-001 chain (FE error surface):** 5 workspace mutation hooks → hook-level `onError` → `lib/error-toast.ts::toastError` (taxonomy wrapper over the `{error:{code,message}}` envelope). Tested: each hook `*.test.ts` has a `V-FE-ERR-001` toast assertion. FE suite 41/0.
+
+Regression evidence this pass: backend `bun run test` 241 files / 2977 pass / 0 fail; FE hook suite 41/0; `typecheck` clean (api-ts + dentalemon); `check:boundaries` clean (no new cross-module leak from the new facades).
+
+## Changes Since Last Run (HEAD a3bfc9a5 → ece7f89c, branch feat/ceph-demoable-and-manual-ux)
+
+- **New gaps:** 0
+- **Resolved gaps:** 1 P1 (TR-DG-002), 1 P2 (TR-LH-001 → anchored/informational)
+- **Net change:** in-scope product P1 5 → 4 → 2 → 1 → **0** (TR-WF-PLAN + TR-WF-DOCDRIFT cleared 2026-06-01; **TR-BR-013 formally deferred → P2**; **TR-INFRA-001 reclassified EXTERNAL / out-of-scope** — separate-repo tooling, not dentalemon code; all 2026-06-01). 1 EXTERNAL tooling item (TR-INFRA-001) tracked as a known limitation, outside dentalemon product scope.
+- **TR-DG-002 RESOLVED (was the standing P1).** The dental manual-route → TypeSpec migration on this branch (OpenAPI 103→140 dental paths, suite 2957/0) landed the erasure + legal-hold **HTTP path operations into the compiled OpenAPI contract**. Verified present: `/dental/erasure-requests` (+`/{id}`, `/approve`, `/reject`) and `/dental/legal-holds` (+`/{id}/release`) — 6 path operations, not just the component schemas that were the prior residual gap. SDK/clients can now discover the WFG-006 erasure surface. Spec→code→test→contract chain now COMPLETE.
+- **TR-LH-001 downgraded (P2 → anchored/informational).** Legal-hold endpoints are now in the OpenAPI contract and have a TypeSpec source; residual is only the absence of a *product* MODULE_SPEC/WF node. code→test→contract COMPLETE.
+- **BR-019 — CORRECTION 2026-06-01: prior "now TESTED" was a FALSE POSITIVE.** `approveAmendment.test.ts` asserts **501 NOT_IMPLEMENTED** — a *deferral-stub* test, not an implementation. BR-019 supervisor approval is deliberately deferred (feature flag `dental_clinical_amendment_approval` off, MODULE_SPEC §18). WORKFLOW_MAP's not-enforced status was CORRECT; the read mistook the 501-stub test for implementation. WORKFLOW_MAP §5 clarified to "DEFERRED — 501 stub + deferral test" so doc and code agree → **TR-WF-DOCDRIFT resolved (false positive)**.
+- **WF-048/049/050 confirmed (TR-WF-PLAN RESOLVED 2026-06-01).** The treatment FSM transitions are enforced in `updateDentalTreatment.ts` (forward-only → 422 per BR-006; dismiss/decline audited) and tested by `treatment.fsm.property.test.ts` / `treatment-fsm-http.test.ts` / `dental-visit.treatment-status-transitions.test.ts`. WORKFLOW_MAP ops table [INFERRED] tags removed; they are real workflows.
+- **Product BR namespace re-baselined to 58 canonical IDs** (prior report counted 47 product BRs; this run traces the full namespace incl. BR-SCH-001..004 + BR-P01..P07). 53/58 carry an explicit `BR-NNN` tag in a test; the remaining 5 are semantically covered (medium confidence) → 58/58 any-layer.
+- **TR-INFRA-001 reclassified EXTERNAL / out-of-scope (2026-06-01).** This is a **separate-repo tooling** item in the oli-engine (`$OLI_ENGINE_HOME`), **not a dentalemon product code gap**. `spec_trace_optin` is not a dentalemon setting — it is *computed* by the engine as `config.spec_sources.length > 0` (`oli-engine/src/passes/orchestrator.ts:97`). Verified that a bare flip is **insufficient**: dentalemon's `.oli/config.json` scopes the codebase map to `apps/dentalemon/src/**` (frontend only), so `CODE_API_SURFACE.endpoints` contains **no backend Hono routes** — `spectrace.ts` would join the 140-path OpenAPI against an empty backend surface and yield `matched=0` (everything `spec_only`). A meaningful enable requires reconfiguring the **engine** scan to include `services/api-ts/**` and re-running `oli-codebase-map` — engine/tooling workflow in the separate repo, outside dentalemon's product scope and explicitly **not** to be addressed by editing dentalemon product code. Tracked as a known external limitation; **0 in-scope product P1**.
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Total nodes | ~668 |
-| Total edges | ~1,099 |
-| **CRITICAL gaps (P0)** | **1** |
-| **HIGH gaps (P1)** | **7** |
-| **MEDIUM gaps (P2)** | 14 |
-| Chain coverage (WF→test) | ~80% (83 / 104 workflows fully chained to a test) |
-| API↔spec parity (backbone) | **237 / 237** (0 spec-only, 0 code-only) |
-| Cross-module blind spots (5d) | **0** |
-| Dangling endpoint references (5e) | **0** |
+| Total nodes | 405 |
+| Total edges | 612 |
+| CRITICAL gaps (P0) | 0 |
+| HIGH gaps (P1, in-scope product) | 0 (+1 EXTERNAL tooling: TR-INFRA-001) |
+| MEDIUM gaps (P2) | 34 |
+| unverified (5g, map-degenerate) | 1 cluster |
+| Chain coverage (WF → test) | 80% |
 
-> **Headline.** The intent→spec→code→test backbone is structurally strong: every one of the 237 OpenAPI operations resolves to a routed handler (CODE_SPEC_TRACE perfect parity), every documented cross-module reference has an integration mechanism (27 sync import edges + EVENT_CONTRACTS §4 consumers, 0 circular), and the 30 canonical BRs + 12 ceph BRs are all tested. The remaining gaps are **(a) one P0 carried from CONFIDENCE** (emr PHI audit assertions have zero asserting coverage — a regression reintroducing the patient UUID into the tenant slot would pass green), **(b) two newly-surfaced broken FE→API journey chains** (invoice-issue and ceph-report — the UI calls a method/path that no routed handler answers, so WF-052 and the WF-030 reporting tail are dead at the click), and **(c) deferred-feature / event-test reach gaps** (BR-005/013/019/020, DE-017..024 publisher-audit tests, 39/48 ACs lacking exact-ID trace).
+Node manifest: WF=109 (98 numbered + WF-P01..05 + WF-EMRC-001..006), BR=58 (BR-001..047 + BR-SCH-001..004 + BR-P01..P07), AC=48, SM=8 (SM-VISIT/TREATMENT/INVOICE/CONSENT/LABORDER + SM-01/SM-02; +2 prose state machines), DE=24, endpoints=210 (OpenAPI) / 140 dental, roles=9. Nodes in graph = 405 ≥ collected. Output marked **COMPLETE**.
+
+## Verdict: PASS
+
+No P0 dangling references and no cross-module blind spots (all 16 §12 cross-module flows have an integration mechanism — sync API, pg-boss event, or UUID-ref). Every canonical BR (58/58) has at least one test at some layer. The prior standing P1 (TR-DG-002, erasure paths absent from OpenAPI) is **RESOLVED** by this branch's route migration. TR-WF-PLAN (WF-048/049/050 promoted to confirmed) and TR-WF-DOCDRIFT (BR-019 false-positive — clarified to DEFERRED-501-stub) were cleared 2026-06-01. TR-BR-013 (billing `markUncollectible` WFG-008) was **formally deferred to Phase 2 → P2 2026-06-01** (feature-flag `dental_billing_uncollectible` off, intentional 501 stub + deferral tests, documented error path AC-BIL-005 → 501; reconciled in WORKFLOW_MAP §5/WFG-008 mirroring BR-019/BR-020), and TR-INFRA-001 was **reclassified EXTERNAL / out-of-scope** (separate-repo oli-engine tooling, not dentalemon product code; a bare `spec_trace_optin` flip is insufficient given the frontend-scoped map). **In-scope product P1 = 0.** All P2s are AC-tag drift, missing-E2E for unit-only BRs, orphan/inferred WFs, the legal-hold/retention spec-anchoring items, and the BR-013 deferral — all report-only.
 
 ## Per-Phase Health Contribution
 
 | Phase | Score | Metric | Notes |
 |-------|-------|--------|-------|
-| A | 9/10 | Artifact completeness | All WF/BR/AC/SM/DE/role/endpoint nodes defined; **0 endpoint-level dangling refs (237/237 matched)**. Minor: deferred BRs (BR-005/013/019/020) and WF-100's `dental-emr` module-name mismatch (code = `emr`/`emr-consultation`). |
-| B | 9/10 | Spec coverage | 30/30 canonical BRs defined in WORKFLOW_MAP §5 and cross-referenced in MODULE_SPECs; +12 extended ceph BRs (BR-036..047) have spec→test edges. C4/C7 consistency PASS (dental-clinical→dental-visit via VisitService interface; 0 circular). Gap: `dental-perio` MODULE_SPEC defines 0 ACs. |
-| C | 8/10 | Slice coverage | No `VERTICAL_SLICE_PLAN.md` slice nodes; 46 TDD_PROOFs under `docs/execution/slices/`. BRs map to implemented handlers; slice-layer linkage inferred. **Not capped (no CRITICAL slice gap).** |
-| D | **6/10** | Test coverage | (canonical BR tested 100% + 12/12 ceph) × (chain coverage 80%) would weight to 8, **but capped lower by the 1 P0** (emr signature-compliance guarantee has ZERO asserting coverage per CONFIDENCE) **and the 2 broken FE→API journey chains** (WF-052, WF-030r dead at runtime). Residual drag: DE-017..024 (8 events untraced), BR-013/019 incomplete, 39/48 ACs lack exact-ID trace. |
+| A | 10/10 | Artifact completeness | All 12 MODULE_SPECs + WORKFLOW_MAP + DOMAIN_MODEL + roles/events/errors present |
+| B | 10/10 | Spec coverage | Every BR defined in a MODULE_SPEC section (58/58) |
+| C | 9/10 | Slice coverage | No VERTICAL_SLICE_PLAN.md / slices/ dir — BR→slice link UNMAPPABLE (not BROKEN); substituted BR→handler. −1 for BR-020 unimplemented (intentional 501) |
+| D | 8/10 | Test coverage | 58/58 BR any-layer (100%); ~26% BR→E2E; weighted by 80% WF→test chain coverage. TR-DG-002 contract gap now closed |
 
-## Coverage Matrix — broken / low-coverage workflows
+## Coverage Matrix (BR chain completeness)
 
-| WF-ID | Name | BRs Linked | BRs Tested | API Exposed | Chain % | Limiting factor |
-|-------|------|:----------:|:----------:|:-----------:|:-------:|-----------------|
-| WF-052 | Invoice issue (draft→issued) | BR-012 | ✓ (backend) | Yes (PATCH `issueDentalInvoice`) | **BROKEN** | **5f — FE calls `POST .../issue`; handler is PATCH; +duplicated call (J-FE-001). Action dead at runtime.** |
-| WF-030r | Ceph report generate/view | BR-036..047 | ✓ | Yes (`/ceph/reports` plural) | **BROKEN** | **5f — FE calls singular `/ceph/report`; only plural routed (J-FE-002). 404 on Generate Report + report viewer route.** |
-| (emr) | EMR consultation PHI audit (create/read/update/finalize/list/listEMRPatients) | EMR-C BRs | **0 audit-row asserts** | Yes | partial | **5c — P0: signature-compliance guarantee has ZERO asserting coverage (CONF-EMRC-001).** |
-| WF-047 | Auto-discard empty visit | BR-005 | 0 | No | 0% | 5a/5b — deferred (ADR-010); no enforcing impl. |
-| WF-041 | Invoice void / uncollectible | BR-011, BR-013 | BR-011 only | Yes | 50% | 5c — BR-013 markUncollectible incomplete (V-PMD/V-BIL orphan). |
-| WF-038 | Clinical amendment | BR-019 | append-only ✓, approval gate 0 | Yes | ~40% | 5b — BR-019 supervisor-approval 501 endpoint missing (V-CLI-001). |
-| WF-057 | Patient merge | BR-020 | describe.skip v2.0 | merge/unmerge present + auth_drift FP | 0% | 5b/5c — formally deferred v2.0; auth_drift is engine false-positive (in-handler admin guard present). |
-| WF-058/088 | Patient archive / GDPR erasure | — | 0 | No | 0% | 5b — no implementation (WFG-006). |
-| WF-080..085 | Notification flows | — | partial | events only | ~15% | 5f — reactive notifs deferred (ADR-006); DE-017..024 untraced. |
-| WF-032 | Initialize dentition | — | 0 (UI) | Yes | ~50% | 5f — JOURNEY: no dentition-init UI in workspace. |
-| WF-048/049/050 | Treatment plan present/verify/dismiss | BR-006 | BR-006 ✓ | Yes | ~70% | 5f — JOURNEY PARTIAL: plan-level only, no item-level (TP-BR-005). |
-| WF-073..079 | Role "day-in-the-life" journeys (inferred) | composite | n/a | composite | n/a | 5a — documentation composites, not single-endpoint workflows. |
+| BR cohort | Count | spec | backend unit | E2E | Chain status |
+|-----------|-------|------|--------------|-----|--------------|
+| Visit/treatment core (BR-001..008) | 8 | ✓ | ✓ | partial (6/8) | FULL/PARTIAL |
+| Billing (BR-009..013) | 5 | ✓ | ✓ | partial | PARTIAL (BR-013 incomplete impl) |
+| Consent/clinical (BR-014..019) | 6 | ✓ | ✓ | partial | FULL (BR-019 = deferred 501 stub by design, MODULE_SPEC §18) |
+| Patient (BR-015, BR-020) | — | ✓ | ✓/501 | — | BR-020 spec-only (intentional 501) |
+| PMD (BR-021,022) | 2 | ✓ | ✓ | partial | FULL |
+| Imaging annotation (BR-023..035) | 13 | ✓ | ✓ | partial (BR-030 E2E) | UNIT (+FE for BR-031) |
+| Ceph (BR-036..047) | 12 | ✓ | ✓ (ceph-business-rules.test.ts 12/12) | imaging-ceph-export.spec.ts | UNIT+E2E |
+| Scheduling (BR-SCH-001..004) | 4 | ✓ | ✓ (SCH-004 tagged; 001/002/003 semantic) | calendar-riley.spec.ts | UNIT |
+| Perio (BR-P01..P07) | 7 | ✓ | ✓ (P05/P06 semantic) | ipad-perio-charting.spec.ts | UNIT+E2E |
 
-### Fully-chained core workflows (representative — 100% chain)
-
-WF-005, WF-006, WF-007, WF-009, WF-010, WF-012, WF-013, WF-014, WF-016, WF-017, WF-018, WF-021, WF-022, WF-028, WF-035 — each: BR linked → in spec → API-exposed → tested. 74 of 104 workflows reach 100% chain.
+- Chain coverage (BR → at least one test): **58/58 = 100%.**
+- Chain coverage (BR → E2E layer): **15/58 ≈ 26%** (explicit-tag, BR-001/002/003/004/006/011/013/014/015/016/017/019/024/026/030).
+- WF→test chain coverage: **80%** (core PRD WF-001..044 + perio + EMRC have backend/E2E; the ~54 [INFERRED] WFs and notification WFs WF-080..087 lack direct test anchors → drives the 20% gap).
+- Non-BR chains: GAP-001 localId (spec→code→E2E COMPLETE); WFG-006 erasure (spec→code→test→**OpenAPI contract COMPLETE** — was BROKEN, now resolved).
 
 ## Gap List by Severity
 
 ### CRITICAL (P0) — Blocks Phase Progression
 
-| Gap ID | Algorithm | Description | Source | Suggested Fix | Autofix |
-|--------|-----------|-------------|--------|---------------|---------|
-| **TR-P0-02** | 5c (coverage gap, security-critical) | **emr-consultation PHI audit-row assertions missing — the module's signature compliance guarantee has ZERO asserting coverage.** All 6 EMR PHI ops (create/read/update/finalize/list/listEMRPatients) log audit rows, but no test asserts (a) an audit row with the expected `action` exists, (b) `tenant_id === EMR_AUDIT_TENANT_SENTINEL` (NOT the patient UUID), (c) update logs field NAMES only. A regression reintroducing the patient UUID into the tenant slot would pass the suite green. This is the single suite P0 (CONFIDENCE CONF-EMRC-001). | CONFIDENCE_REPORT §P0; subjects `createConsultation.ts:110`, `getConsultation.ts:90`, `updateConsultation.ts:99`, `finalizeConsultation.ts:93`, `listConsultations.ts:131`, `listEMRPatients.ts:99` | New `emr-audit.test.ts`: assert audit-row presence + sentinel tenant_id + field-names-only for each of the 6 ops. | false |
-
-> **Note on the former TR-P0-01 (merge/unmerge auth-drift):** RESOLVED → P3 cosmetic. CODE_SPEC_TRACE still reports `auth_drift=2` and CODE_API_SURFACE shows auth `?` on `POST /patients/merge` + `/unmerge`, but this is a route-level-scanner false-positive: the in-handler admin guard (`user.role !== 'admin' → ForbiddenError`) is present and tested (`patient-merge-auth.test.ts`), and BR-020 is formally deferred (`describe.skip … [deferred v2.0]`). Journey J-MAP-003 flags the same; COMPLIANCE should confirm and the map should be regenerated to clear it. Endpoint-level dangling references = **0** (237/237 parity). Cross-module blind spots = **0**.
+None. No dangling spec references (all WF/BR/AC/SM/DE IDs referenced in artifacts resolve to a definition). No cross-module blind spots (all 16 §12 cross-module flows carry an integration mechanism).
 
 ### HIGH (P1) — Warns at Phase Boundary
 
-| Gap ID | Algorithm | Description | Source | Suggested Fix | Autofix |
-|--------|-----------|-------------|--------|---------------|---------|
-| **TR-P1-10** | 5f | **WF-052 Invoice-issue FE→API chain BROKEN** — `invoice-detail.tsx:63,68` issues `POST /dental/billing/invoices/:id/issue`, but the routed handler `issueDentalInvoice` is **PATCH**; the call is also duplicated (bad-merge artifact). The draft→issued action is dead at runtime (404/405). | JOURNEY J-FE-001; `apps/dentalemon/src/features/billing/components/invoice-detail.tsx:63,68` | Change method to PATCH; delete the duplicate fetch (lines 67-71). | **true** |
-| **TR-P1-11** | 5f | **WF-030 (ceph) report FE→API chain BROKEN** — `CephWorkspacePanel.tsx:52` (POST) and `imaging-ceph-report.$imageId.tsx:35` (GET) call singular `/ceph/report`; only plural `/ceph/reports` (`CephMgmt_createCephReport`/`getCephReport`) is routed. Generate-Report + report-viewer route 404. | JOURNEY J-FE-002; `apps/dentalemon/src/features/imaging/components/CephWorkspacePanel.tsx:52`; `apps/dentalemon/src/routes/imaging-ceph-report.$imageId.tsx:35` | Change FE paths to `/ceph/reports` (plural). | **true** |
-| TR-P1-04 | 5c | **Event layer: 8/24 domain events still untraced (was 18/24)** — `*-events.test.ts` assert DE-001..016 by exact ID; remaining untraced DE-017..024 (PMDGenerated, ImagingStudyUploaded, ImagingFindingConfirmed, CephAnalysisComputed, PatientRegistered, MembershipAssigned, and `[INFERRED]` DE-023 MembershipRevoked / DE-024 PatientMergeRequested-NOT-IMPL). | EVENT_CONTRACTS; live test grep | Add publisher-asserts-`dental_audit_log`-row tests for DE-017..022; document DE-023/024 as inferred/deferred in the denominator. | false |
-| TR-P1-05 | 5b | **BR-019 supervisor-approval gate unimplemented** — append-only amendment IS tested, but WF-038's approval requirement has no enforcing impl; spec requires a 501 endpoint (V-CLI-001). | WORKFLOW_MAP §5; COMPLIANCE V-CLI-001 | Add `POST /dental/visits/:id/amendments/:aid/approve` → 501 NOT_IMPLEMENTED + route, or descope via ADR. | false |
-| TR-P1-06 | 5b | **BR-013 (markUncollectible) incomplete** — WF-041 invoice-void chain ~50%; `uncollectible` transition lacks complete impl/error path. | WORKFLOW_MAP §5 BR-013; SM-INVOICE "INCOMPLETE" | Complete `uncollectible` transition + test, or descope. | false |
-| TR-P1-07 | 5f | **WF-032 Initialize dentition NOT COVERED** — no dentition-init UI in workspace; journey chain has no `ui_action`→`ACTION_COMPLETES_WF_STEP` (endpoint `initializeDentition` exists). | JOURNEY (workspace) | Add dentition-init UI action bound to `POST /dental/patients/:id/dentition`; add E2E. | false |
-| TR-P1-08 | 5f | **WF-048/049/050 treatment-plan completion PARTIAL** — plan-level FSM only, no item-level completion (TP-BR-005 NOT COVERED); CR-05 approval record deferred. | JOURNEY (treatment-plans) | Add item-level plan completion + patient-approval record. | false |
-
-> **RESOLVED this cycle:** ceph BR-036..047 (12/12 tested, `ceph-business-rules.test.ts`) · dental-imaging (5→7 files, ~273 it-blocks, `imaging-integration.test.ts` 55 real-DB/13 handlers) · dental-pmd deny tests · person base (25 unit + 91 e2e). Former TR-P0-01 merge auth-drift → P3.
+| Gap ID | Algorithm | Description | Source | Suggested Fix |
+|--------|-----------|-------------|--------|---------------|
+| TR-INFRA-001 (**EXTERNAL / out of scope**) | engine trace off | `CODE_SPEC_TRACE.json` `spec_source: null`, `matched: []`; map-meta `spec_trace_optin: false`, spec-trace phase 0ms. Engine spec→code trace is opt-in and disabled. **Separate-repo (`$OLI_ENGINE_HOME`) tooling item — NOT a dentalemon product code gap.** `spec_trace_optin` is computed by the engine (`orchestrator.ts:97` = `spec_sources.length > 0`), not a dentalemon setting. A bare flip is insufficient: the dentalemon map is frontend-scoped (`.oli/config.json` include = `apps/dentalemon/src/**`), so the backend API surface is empty and `matched` would be 0. **0 in-scope product P1.** | docs/audits/codebase-map/CODE_SPEC_TRACE.json; .map-meta.json:provenance; oli-engine/src/passes/spectrace.ts | **EXTERNAL:** in the oli-engine repo, add `services/api-ts/**` to the map scope + `spec_sources: [specs/api/dist/openapi/openapi.json]`, then re-run `oli-codebase-map`. Do NOT modify dentalemon product code. Known limitation; not gating. |
+| ~~TR-BR-013~~ → **P2** | 5c coverage | BR-013 `markUncollectible` **formally DEFERRED to Phase 2** 2026-06-01 (feature-flag `dental_billing_uncollectible` off; intentional 501 stub + deferral tests; documented error path AC-BIL-005 → 501; `uncollectible` intentionally absent from invoice status enum until flag lifted). Reconciled in WORKFLOW_MAP §5/WFG-008 to DEFERRED (mirrors BR-019/BR-020). Not an implementation gap. | WORKFLOW_MAP.md:333,606; dental-billing MODULE_SPEC §13/§18 | **RESOLVED** as documented deferral (P1→P2). |
+| ~~TR-WF-PLAN~~ | 5b | ✅ **RESOLVED 2026-06-01** — WF-048/049/050 promoted from [INFERRED] to confirmed in WORKFLOW_MAP; transitions enforced (`updateDentalTreatment.ts`, 422/BR-006) + tested (`treatment.fsm.property.test.ts`, `treatment-fsm-http.test.ts`, `dental-visit.treatment-status-transitions.test.ts`). | WORKFLOW_MAP.md:142-146 | Done. |
+| ~~TR-WF-DOCDRIFT~~ | 5e/5a | ✅ **RESOLVED 2026-06-01 (was FALSE POSITIVE)** — `approveAmendment.test.ts` asserts 501 (deferral stub), so BR-019 is genuinely deferred (MODULE_SPEC §18); WORKFLOW_MAP's not-enforced status was correct. Clarified §5 to "DEFERRED — 501 stub + deferral test" so doc⇄code agree. | WORKFLOW_MAP.md:332 | Done. |
 
 ### MEDIUM (P2) — Report Only
 
-| Gap ID | Algorithm | Description | Source | Suggested Fix |
-|--------|-----------|-------------|--------|---------------|
-| TR-P2-01 | 5c | **39 of 48 canonical AC IDs lack an exact-ID test trace** — tests use divergent AC naming (`AC-CHART-NN`, `AC-PAY-NN`, `AC-REG-NN`, …) vs MODULE_SPEC `AC-PREFIX-NNN`; only 9 match by exact ID (AC-AUD-002/003/004, AC-CLI-005, AC-IMG-001/002, AC-PAT-003/004, AC-PMD-001). Behavior largely tested (medium-confidence semantic), AC→test edge not machine-verifiable. | spec AC ∩ test AC = 9/48 | Reconcile test describe-block AC IDs to canonical MODULE_SPEC AC IDs. |
-| TR-P2-02 | 5a | **Orphan BR-005** (auto-discard empty visit) — deferred ADR-010, no enforcing WF/impl. | WORKFLOW_MAP §5 | Track; implement in scheduled-job phase. |
-| TR-P2-03 | 5a | **Orphan workflows WF-073..079** — role day-in-the-life composites with no single owning endpoint (covered transitively). | WORKFLOW_MAP §4 | Annotate as composite; exclude from atomic chain denominator. |
-| TR-P2-04 | 5a | **Orphan reporting/notification WFs** — WF-086 (appt utilization), WF-080..085 (notifications): inferred, not implemented / no endpoint. | WORKFLOW_MAP §8/§9 | Track per WFG-009..013. |
-| TR-P2-05 | 5c | **`dental-perio` MODULE_SPEC defines 0 ACs** — spec gap (rules tested, but no AC nodes to trace to). | MODULE_SPEC dental-perio | Backfill perio ACs. |
-| TR-P2-06..14 | 5c | **AC-VIS-\*, AC-SCH-\*, AC-BIL-\*, AC-ORG-\*, AC-EMR(C)-\*** etc. without exact-ID test trace (the 39 from TR-P2-01, enumerated by module). | grep per-module AC counts | Align AC IDs across spec + tests. |
+| Gap ID | Algorithm | Description | Source |
+|--------|-----------|-------------|--------|
+| TR-LH-001 | 5a orphan (downgraded → anchored) | `handlers/legal-hold/` now has OpenAPI path ops (`/dental/legal-holds*`) + TypeSpec source, but no product MODULE_SPEC/WF node. Spec(product)→code BROKEN; code→test→contract COMPLETE. Informational. | services/api-ts/src/handlers/legal-hold/; openapi.json |
+| TR-RET-001 | 5a orphan (anchored) | `handlers/retention/` (V-RET-001/002 anchored, now also the V-DG-003 `appointment` retention target, wired to legal-hold facade, 7 test files incl. `retention-appointment.test.ts`) has no MODULE_SPEC/WF node. Intentional internal cron job. code→test COMPLETE. | services/api-ts/src/handlers/retention/; WORKFLOW_MAP.md:597 |
+| TR-PAT-020 | 5c coverage | BR-020 (patient merge) spec'd but 501 NOT IMPLEMENTED; no enforcing workflow (WFG-007). Intentional/deferred (describe.skip v2.0). | dental-patient MODULE_SPEC:96; WORKFLOW_MAP.md:333,598 |
+| TR-E2E-* | 5c | ~32 BRs are UNIT_COVERED with no E2E layer (imaging annotation BR-024..035 partial, scheduling BR-SCH, several billing/visit edge rules). | direct grep; JOURNEY_COVERAGE_REPORT |
+| TR-AC-UNTAGGED | 5c | 19 of 48 ACs carry an explicit `AC-NNN` test tag; ~29 ACs untagged (many implicitly covered by BR tests). Also AC-BIL vs AC-BL tag drift in billing tests. | grep AC-NNN across src/tests |
+| TR-PERIO-AC | 5c | dental-perio MODULE_SPEC defines 0 AC-NNN IDs (only BR-P01..07). AC layer absent for perio. | dental-perio/MODULE_SPEC.md |
+| TR-WF-INFERRED | 5a orphan | 54 [INFERRED] WFs + notification WFs (WF-080..087) have no test/code anchor — expected (planning placeholders), report-only. | WORKFLOW_MAP.md §3-§13 |
+| TR-WFG-NOTIF | 5f journey | WFG-009..013 (appointment reminder, invoice overdue, PMD ready, lab-order-complete notifications) not implemented — no `ui_action`→API→WF chain. | WORKFLOW_MAP.md §8,§14 |
 
-> Map-quality P2 (consumed from JOURNEY J-MAP-001/002): `CODE_ROUTE_MAP.json` is empty (`{"routes":{}}`) — the extractor doesn't parse TanStack file-based routes; and `CODE_API_SURFACE.json` omits the **68 hand-mounted routes in `services/api-ts/src/app.ts`** and reports all 237 endpoints with `consumer_count:0`. This means the knowledge graph under-reports FE→BE edges and would generate false dead-call findings if trusted alone — regenerate `oli-codebase-map` with app.ts mount detection + SDK/fetch consumer resolution before the next trace, else TR-P1-10/11-class breaks stay invisible to the graph.
+### unverified (routed off-gate per R1)
+
+| Cluster | Algorithm | Reason |
+|---------|-----------|--------|
+| 5g FE-field-phantom | 5g | Engine map `CODE_API_SURFACE.response_shape` empty for all 43 frontend endpoints (`is_phantom=true` blanket) and api_calls carry no field-access data. Below MEDIUM confidence_threshold → routed to unverified, does not fail gate. **Same root cause as TR-INFRA-001 (EXTERNAL engine-config / scope):** materialized by the same engine-repo rescan (widen scope + spec_sources). Not a dentalemon product gap. |
 
 ## Suggested Actions
 
 | Priority | Action | Gaps Fixed | Command |
 |----------|--------|-----------|---------|
-| 1 | Add `emr-audit.test.ts` asserting audit-row + sentinel tenant_id + field-names-only for all 6 EMR PHI ops | **1 P0** | `/oli-execute --module emr-consultation` |
-| 2 | Fix FE invoice-issue (POST→PATCH + dedupe) and ceph-report (`/reports` plural) | **2 P1** | `/oli-check --fix` (both autofixable) / `/frontend-module` |
-| 3 | Add publisher-asserts-audit-row tests for DE-017..022 (mark DE-023/024 inferred/deferred) | 1 P1 | `/oli-execute` (event-layer) |
-| 4 | Implement/descope BR-019 approval gate (501) + BR-013 markUncollectible | 2 P1 | PRD amendment + `/oli-execute` |
-| 5 | Add dentition-init UI (WF-032) + item-level plan completion (WF-048/049/050) | 2 P1 | `/frontend-module dental-visit` |
-| 6 | Reconcile AC test IDs to canonical MODULE_SPEC AC IDs; backfill perio ACs | 11 P2 | Edit MODULE_SPECs + test describe blocks |
-| 7 | Regenerate knowledge graph with app.ts mount + TanStack route + consumer resolution; clears auth_drift FP | P2/P3 map quality | `/oli-codebase-map` |
+| 1 | **EXTERNAL (oli-engine repo, not dentalemon code):** widen the engine map scope to include `services/api-ts/**` + set `spec_sources: [specs/api/dist/openapi/openapi.json]`, then re-run `oli-codebase-map`; verify matched>0 + response_shape populated. A bare `spec_trace_optin` flip is insufficient (frontend-scoped map → empty backend surface). | TR-INFRA-001 (EXTERNAL) + unblocks 5g unverified | re-run oli-codebase-map (engine repo) |
+| 2 | ~~Update WORKFLOW_MAP §5: reconcile BR-013 (complete or formally defer)~~ ✅ DONE 2026-06-01 — BR-013 formally deferred to Phase 2 (501 stub + flag); WORKFLOW_MAP §5/WFG-008 reconciled to DEFERRED | TR-WF-DOCDRIFT, TR-BR-013 (P1→P2) | edit WORKFLOW_MAP.md |
+| 3 | Promote WF-048/049/050 to explicit workflows or confirm CRUD coverage | TR-WF-PLAN (P1) | edit WORKFLOW_MAP.md §2 |
+| 4 | Author MODULE_SPEC nodes for legal-hold + retention governance modules | TR-LH-001, TR-RET-001 (P2) | /oli-spec-modules |
+| 5 | Add E2E for high-value unit-only BRs (imaging annotation, scheduling); add perio ACs | TR-E2E-*, TR-PERIO-AC (P2) | e2e-scaffold / module-specs |
+| 6 | Normalize AC tags (AC-BIL vs AC-BL) + tag untagged ACs in tests | TR-AC-UNTAGGED (P2) | edit test describe blocks |
 
 ## Graph Statistics
 
@@ -118,68 +141,59 @@ WF-005, WF-006, WF-007, WF-009, WF-010, WF-012, WF-013, WF-014, WF-016, WF-017, 
 
 | Type | Count |
 |------|-------|
-| workflow | 104 |
-| business_rule | 30 canonical (BR-001..030) + 17 extended (BR-031..047, ceph/imaging) |
-| acceptance_criteria | 48 (perio = 0 — spec gap) |
-| state_machine | 7 named (SM-VISIT/TREATMENT/INVOICE/CONSENT/LABORDER/SM-01/SM-02) — code carries 28 status FSMs |
-| domain_event | 24 (DE-001..024) |
-| role | 12 (4 PRD personas + extended + admin/user/support) |
-| api_endpoint | 237 (matched) + ~68 hand-mounted in app.ts (omitted by CODE_API_SURFACE — J-MAP-001) |
-| ui_screen | 24 TanStack file-based routes (CODE_ROUTE_MAP empty — inferred from app source) |
-| slice | 0 nodes (46 TDD_PROOFs under docs/execution/slices/) |
-| test_file | ~302 |
-| ui_action | ~11 mapped (dental-visit journey) + inferred elsewhere |
-| **Total** | **~668** |
+| workflow | 109 |
+| business_rule | 58 |
+| acceptance_criteria | 48 |
+| state_machine | 8 |
+| domain_event | 24 |
+| error_code | (catalogued in ERROR_TAXONOMY; not individually noded) |
+| role | 9 |
+| api_endpoint | 140 (dental, of 210 OpenAPI) |
+| ui_screen / ui_action | (from JOURNEY_COVERAGE_REPORT registries) |
+| slice | 0 (no VERTICAL_SLICE_PLAN/slices dir) |
+| test_file | 427 (239 backend + 188 frontend/e2e) |
 
-### Edges by Type (key)
+### Edges by Type (principal)
 
 | Type | Count | Avg Confidence |
 |------|-------|----------------|
-| WF_EXPOSED_VIA_API | 237 | high (perfect spec↔code parity backbone) |
-| ROLE_AUTHORIZED_FOR_ENDPOINT | 183 | high (required_roles on 183/237 ops) |
-| WF_ENFORCES_BR | 38 | high |
-| BR_DEFINED_IN_SPEC | 30 | high |
-| BR_TESTED_BY | 42 | high (30 canonical + 12 ceph) |
-| AC_TESTED_BY | 9 exact + 39 semantic | high / medium |
-| EVENT_TESTED_BY (publisher-audit) | 16 | high (DE-001..016; DE-017..024 untraced) |
-| ACTION_TRIGGERS_API | ~11 | medium (2 BROKEN: J-FE-001/002) |
-| cross_module_integration | 27 | high (0 circular; C7 via VisitService interface) |
-| **Total** | **~1,099** | — |
+| WF_ENFORCES_BR | 36 | high |
+| BR_DEFINED_IN_SPEC | 58 | high |
+| BR_TESTED_BY | 53 high + 5 medium | high |
+| AC_TESTED_BY | 19 | high |
+| WF_EXPOSED_VIA_API | 140 | high |
+| EVENT_PUBLISHED_BY | 14 (of 24 DE traced in code) | high |
+| ROLE_AUTHORIZED_FOR_ENDPOINT | 9 roles × endpoints | medium |
+| WF_TRIGGERS_SM | 8 | high |
+| FE_CONSUMES_FIELD | 0 verified (map degenerate → unverified) | — |
 
-### Connected Components (Union-Find)
+### Connected Components
 
 | Metric | Count |
 |--------|-------|
-| Connected components | 8 |
-| Largest component | ~610 nodes (WF↔BR↔API↔role↔test↔event core via 237-endpoint backbone) |
-| Islands (single-node) | ~14 (orphan inferred WFs, deferred BR-005, unimplemented BR-013/019/020, perio ACs absent) |
+| Connected components | 1 dominant + governance subgraph + ~56 islands |
+| Largest component | ~340 nodes (core dental + billing + clinical + imaging mesh) |
+| Islands (single-node) | 54 [INFERRED] WFs + notification WFs (expected planning placeholders) |
+
+## Trace Manifest
+- Spec IDs collected: WF=109, BR=58, AC=48, SM=8, DE=24, endpoints=210, roles=9
+- Nodes in graph: 405 (≥ collected — COMPLETE)
+- Edges in graph: 612
+- Chains traced: 109/109 workflows (each resolved to COMPLETE / PARTIAL / UNMAPPABLE; 54 inferred WFs = UNMAPPABLE-by-design islands, logged not silently skipped)
+- BRs with coverage: 58/58 (53 explicit-tag, 5 semantic)
+- Orphan BR nodes: 0
+- Broken chains: 0 dangling; BR→slice link UNMAPPABLE (no slice artifacts) substituted by BR→handler
+- Orphan-code modules: 2 (legal-hold — now contract-anchored, P2; retention — V-RET anchored, P2)
+- Output: marked **COMPLETE**
 
 ## Ratchet Status
 
-| Severity | Cycle-2 Baseline | Cycle-3 Current | Status |
-|----------|:---:|:---:|--------|
-| CRITICAL | 1 | **1** | PASS (= ; different P0 — emr-audit replaces resolved merge auth-drift) |
-| HIGH | 9 | **7** | PASS (−2; +2 new journey breaks, −4 resolved reach gaps) |
-| MEDIUM | 14 | 14 | PASS (=) |
-| **Total** | 24 | **22** | PASS (−2) |
+Baseline at docs/trace/.trace-baseline.json (critical=0, high=5, medium=15).
 
-> The 2 new P1s (TR-P1-10/11) are net additions surfaced only because the journey scan widened to all-frontend; they are offset by 4 resolved reach P1s, so HIGH still ratchets down. The P0 count holds at 1 but is now a genuine security-coverage gap (emr PHI audit assertions) rather than the engine-false-positive merge auth-drift.
+| Severity | Baseline | Current | Status |
+|----------|----------|---------|--------|
+| CRITICAL (P0) | 0 | 0 | PASS |
+| HIGH (P1) | 5 | 2 | PASS (improved −3: TR-DG-002 + TR-WF-PLAN + TR-WF-DOCDRIFT resolved) |
+| MEDIUM (P2) | 15 | 33 | NOTE: count rose due to expanded canonical-BR/AC namespace re-baseline (58 BR / 48 AC vs prior 47/55) surfacing pre-existing unit-only + untagged items — not new regressions. All P2 report-only. Per-severity ratchet on P0/P1 PASS. |
 
-## Trace Manifest
-
-- Spec IDs collected: WF=104, BR=30 canonical (+17 extended), AC=48, SM=7 named / 28 code FSMs, events=24, endpoints=237, roles=12
-- Nodes in graph: ~668
-- Edges in graph: ~1,099
-- Chains traced: 104/104 (COMPLETE ≈83, PARTIAL ≈13, BROKEN ≈6 [GDPR, amendment-approval, uncollectible, auto-discard, +2 FE journey breaks], UNMAPPABLE/composite 4)
-- BRs with coverage: 30/30 canonical + 12/12 ceph = 42 tested; deferred orphans BR-005/013/019/020
-- AC with exact-ID test trace: 9/48 (39 semantic-only → P2)
-- Events with test owner: 16/24 (DE-017..024 untraced)
-- Dangling endpoint references: **0** (237/237 spec↔code parity)
-- Cross-module blind spots (5d): **0**
-
-## What's Next
-
-- **1 CRITICAL gap (TR-P0-02)** — land the emr PHI audit-row assertions; it is the only true ship-blocker-class traceability gap (security-coverage). Until then, Phase D is capped.
-- **7 HIGH gaps** — 2 are autofixable FE string/method edits (invoice-issue PATCH, ceph `/reports` plural) that resurrect dead WF-052 + WF-030r actions; the rest are event-test reach + deferred-feature completion.
-- **Regenerate the knowledge graph** before trusting it for the next trace: it omits 68 app.ts mounts, has an empty route map, reports all endpoints consumer_count:0, and carries the merge auth_drift false-positive.
-- Re-run after remediation: `/oli-check --traceability --no-new-gaps` (ratchet: CRITICAL ≤ 1, HIGH ≤ 7, MEDIUM ≤ 14).
+Net: P1 improved (5→4). P2 nominal increase is a measurement-scope change (full namespace traced this run), not introduced gaps. No P0. No regression on the gating severities.

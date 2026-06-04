@@ -46,6 +46,11 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      // Journeys are a separate audit harness (need `bun run db:reseed`); they run
+      // via the dedicated `journeys` project / `bun run test:journeys`, not the
+      // default E2E sweep. (Playwright 1.59 removed the old `--ignore-glob` CLI flag,
+      // so the exclusion lives here in config.)
+      testIgnore: '**/journeys/**',
     },
     {
       name: 'ipad-portrait',
@@ -57,12 +62,31 @@ export default defineConfig({
       use: { ...devices['iPad (gen 7) landscape'], viewport: { width: 1366, height: 1024 } },
       testMatch: '**/ipad-*.spec.ts',
     },
+    {
+      name: 'journeys',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/journeys/**/*.spec.ts',
+    },
   ],
 
-  webServer: {
-    command: 'bun run dev',
-    url: 'http://localhost:3003',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // Boot BOTH the API (services/api-ts on :7213) and the web app (:3003) so
+  // `bun run test:e2e` runs the full stack with one command. Imaging specs mock
+  // the API via page.route and ignore the live one; the self-seed specs (perio,
+  // reminders, recall, insurance, voice) drive the real API. reuseExistingServer
+  // locally so an already-running dev server / API is reused instead of re-spawned.
+  webServer: [
+    {
+      command: 'bun run dev',
+      cwd: '../../services/api-ts',
+      url: 'http://localhost:7213/livez',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      command: 'bun run dev',
+      url: 'http://localhost:3003',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 })

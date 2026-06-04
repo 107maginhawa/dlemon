@@ -1,19 +1,19 @@
 {
-  "version": 5,
+  "version": 6,
   "modules": {
-    "components": {
-      "name": "components",
+    "src/components": {
+      "name": "src/components",
       "source_path": "apps/dentalemon/src/components",
       "framework": "react",
       "entry_points": [],
       "public_exports": [],
-      "file_count": 9,
+      "file_count": 12,
       "has_spec": false,
       "spec_path": null,
       "confidence": "MEDIUM"
     },
-    "constants": {
-      "name": "constants",
+    "src/constants": {
+      "name": "src/constants",
       "source_path": "apps/dentalemon/src/constants",
       "framework": "generic",
       "entry_points": [],
@@ -23,54 +23,109 @@
       "spec_path": null,
       "confidence": "LOW"
     },
-    "features": {
-      "name": "features",
-      "source_path": "apps/dentalemon/src/features",
-      "framework": "react",
+    "src/core": {
+      "name": "src/core",
+      "source_path": "services/api-ts/src/core",
+      "framework": "hono",
       "entry_points": [],
       "public_exports": [],
-      "file_count": 147,
+      "file_count": 24,
       "has_spec": false,
       "spec_path": null,
       "confidence": "MEDIUM"
     },
-    "hooks": {
-      "name": "hooks",
-      "source_path": "apps/dentalemon/src/hooks",
+    "src/db": {
+      "name": "src/db",
+      "source_path": "services/api-ts/src/db",
       "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 2,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "src/features": {
+      "name": "src/features",
+      "source_path": "apps/dentalemon/src/features",
+      "framework": "react",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 210,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "src/generated": {
+      "name": "src/generated",
+      "source_path": "services/api-ts/src/generated",
+      "framework": "hono",
       "entry_points": [],
       "public_exports": [],
       "file_count": 1,
       "has_spec": false,
       "spec_path": null,
-      "confidence": "LOW"
+      "confidence": "MEDIUM"
     },
-    "lib": {
-      "name": "lib",
-      "source_path": "apps/dentalemon/src/lib",
+    "src/handlers": {
+      "name": "src/handlers",
+      "source_path": "services/api-ts/src/handlers",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 671,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "src/hooks": {
+      "name": "src/hooks",
+      "source_path": "apps/dentalemon/src/hooks",
       "framework": "generic",
       "entry_points": [],
       "public_exports": [],
-      "file_count": 8,
+      "file_count": 3,
       "has_spec": false,
       "spec_path": null,
       "confidence": "LOW"
     },
-    "routes": {
-      "name": "routes",
+    "src/lib": {
+      "name": "src/lib",
+      "source_path": "apps/dentalemon/src/lib",
+      "framework": "generic",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 11,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "LOW"
+    },
+    "src/middleware": {
+      "name": "src/middleware",
+      "source_path": "services/api-ts/src/middleware",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 7,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "src/routes": {
+      "name": "src/routes",
       "source_path": "apps/dentalemon/src/routes",
       "framework": "react",
       "entry_points": [
         "apps/dentalemon/src/routes/index.tsx"
       ],
       "public_exports": [],
-      "file_count": 21,
+      "file_count": 24,
       "has_spec": false,
       "spec_path": null,
       "confidence": "MEDIUM"
     },
-    "stores": {
-      "name": "stores",
+    "src/stores": {
+      "name": "src/stores",
       "source_path": "apps/dentalemon/src/stores",
       "framework": "generic",
       "entry_points": [],
@@ -79,6 +134,28 @@
       "has_spec": false,
       "spec_path": null,
       "confidence": "LOW"
+    },
+    "src/types": {
+      "name": "src/types",
+      "source_path": "services/api-ts/src/types",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 3,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
+    },
+    "src/utils": {
+      "name": "src/utils",
+      "source_path": "services/api-ts/src/utils",
+      "framework": "hono",
+      "entry_points": [],
+      "public_exports": [],
+      "file_count": 6,
+      "has_spec": false,
+      "spec_path": null,
+      "confidence": "MEDIUM"
     }
   }
 }

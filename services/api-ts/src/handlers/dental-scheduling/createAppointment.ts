@@ -129,11 +129,13 @@ export async function createAppointment(ctx: HandlerContext) {
   }).catch(() => {/* non-blocking */});
 
   // DE-010: emit AppointmentBooked domain event (best-effort, non-blocking)
-  scheduler && emitAppointmentBooked(scheduler, {
-    appointmentId: appt.id,
-    patientId: appt.patientId,
-    branchId: appt.branchId,
-  }).catch(() => {/* non-blocking */});
+  if (scheduler) {
+    void emitAppointmentBooked(scheduler, {
+      appointmentId: appt.id,
+      patientId: appt.patientId,
+      branchId: appt.branchId,
+    }).catch(() => {/* non-blocking */});
+  }
 
   return ctx.json(toWire(appt, { warnings }), 201);
 }

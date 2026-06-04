@@ -21,6 +21,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: TEST_IDS.visitId,
     toothNumbers: [],
     createdAt: '2026-01-01T00:00:00.000Z',
+    downloadUrl: null,
   },
   {
     id: 'test-image-id-2',
@@ -33,6 +34,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: null,
     toothNumbers: [],
     createdAt: '2026-01-02T00:00:00.000Z',
+    downloadUrl: null,
   },
   {
     id: 'test-image-id-3',
@@ -45,6 +47,25 @@ const STUDY_ITEMS: PatientImageItem[] = [
     visitId: null,
     toothNumbers: [14],
     createdAt: '2026-01-03T00:00:00.000Z',
+    downloadUrl: null,
+  },
+  // P2-7: a CBCT volume fixture — renders as a volume card (not a flat row), so the
+  // E2E can verify the truthful volume affordance + "Open in viewer" handoff.
+  {
+    id: 'test-image-id-cbct',
+    source: 'imaging',
+    modality: 'cbct',
+    fileName: 'cone-beam.dcm',
+    mimeType: 'application/dicom',
+    fileSizeBytes: 52428800,
+    studyId: 'test-study-id-cbct',
+    visitId: null,
+    toothNumbers: [],
+    createdAt: '2026-01-04T00:00:00.000Z',
+    downloadUrl: null,
+    isVolume: true,
+    frameCount: 128,
+    viewerKind: 'volume',
   },
 ]
 

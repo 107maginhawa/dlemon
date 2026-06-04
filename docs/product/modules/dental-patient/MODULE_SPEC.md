@@ -93,22 +93,52 @@ Visit/treatment records (dental-visit), billing invoices (dental-billing), clini
 | BR-015 | IF registering patient THEN explicit marketing consent required | Registration | Checkbox required; defaults to unchecked |
 | BR-015b | IF patient.status = archived THEN record is read-only | All write handlers | 403 |
 | BR-015c | IF follow-up note added THEN append-only (no edit/delete) | Follow-up notes | 405 on PATCH/DELETE |
-| BR-020 | Patient merge not implemented — manual deduplication only | Merge endpoint | 501 NOT IMPLEMENTED |
+| BR-020 | Patient merge **intentionally deferred to Phase 2** (feature-flag `dental_patient_merge_enabled`, default false) — manual deduplication only until then; endpoint returns `501` by design, not a coverage gap (TR-PAT-020). | Merge endpoint | 501 NOT IMPLEMENTED |
 | TP-BR-005 | Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete | Treatment-plan completion (derived) | Plan status derived from linked treatments: all done→`completed`, some done→`partially_completed`, none→`approved`; `dismissed`/`declined` excluded |
 
 ### Treatment plans (TR-P1-08)
 
-Plan FSM: `draft → presented → approved → partially_completed → completed` (`cancelled`
-reachable from any non-terminal state). The completion states (`partially_completed`,
-`completed`) are **derived**, not manually set: a treatment is linked to a plan
-(`dental_treatment.treatment_plan_id`) at approval time, and any treatment status change
-recomputes the parent plan per **TP-BR-005**. `approved`+ plans only.
+Plan FSM: `draft → presented → approved → scheduled → partially_completed → completed`.
+`presented` may instead go to `rejected` (patient declined — terminal); `cancelled` is
+reachable from any non-terminal state. The completion states (`partially_completed`,
+`completed`) and `scheduled` are reconciled with the linked-item set: a treatment is
+linked to a plan (`dental_treatment.treatment_plan_id`) at approval time, and any
+treatment status change recomputes the parent plan per **TP-BR-005** (only for
+`approved`/`scheduled`/`partially_completed`/`completed` plans — `draft`/`presented`/
+`rejected`/`cancelled` are left under manual control).
 
-**CR-05 — approval record:** approving a plan writes an append-only
-`dental_treatment_plan_approval` row (`approved_by_person_id`, `method` =
-signature/verbal/portal, optional `consent_form_id` / `plan_version_id` /
-`signature_data`). Approval also links the patient's pending (diagnosed/planned)
-treatments as the plan's items.
+**P2-8 — status history:** every transition appends an immutable
+`dental_treatment_plan_status_history` row (`from_status`, `to_status`,
+`changed_by_person_id`, `changed_at`); the initial draft creation seeds the timeline
+with `from = null → to = draft`. Read it via
+`GET /dental/patients/:patientId/treatment-plans/:planId/status-history`.
+
+**P2-10 — CDT versioning:** each plan stamps `cdt_code_set_year` (the ADA CDT code-set
+year its procedure codes were authored against; default `DEFAULT_CDT_CODE_SET_YEAR`), so
+a plan stays interpretable as the catalog is updated annually. Existing plans keep their
+stamped year. Surfaced on the plan header response and in the treatment-plans sheet.
+
+#### Approve vs Accept — the canonical lifecycle (P2-9)
+
+The module historically exposed two acceptance verbs. They are reconciled as follows —
+**`approval` is the canonical, documented path; `accept` is its versioning sidecar:**
+
+- **`POST …/treatment-plans/:planId/approval` (CR-05) — CANONICAL.** Records *who*
+  approved the plan, *how* (signature/verbal/portal), and against *which* snapshot, then
+  binds the patient's pending (diagnosed/planned) treatments as the plan's items and moves
+  the header `presented → approved`. This is the user-facing "the patient accepted this
+  case" action and the medico-legal record. Writes an append-only
+  `dental_treatment_plan_approval` row.
+- **`POST …/treatment-plans/:planId/accept` — BACKING SNAPSHOT (sidecar).** Owned by
+  dental-visit (re-export shim); it snapshots the live pending-treatment set into an
+  immutable `treatment_plan_version` row. It does **not** drive the header FSM. Think of
+  it as "freeze the as-accepted line items," invoked by/alongside approval rather than as
+  a competing acceptance verb. `approval` carries an optional `plan_version_id` linking to
+  the snapshot `accept` produced.
+
+Rule of thumb for callers and UI: **drive lifecycle through `approval`** (and the header
+FSM); use `accept` only to capture the immutable line-item snapshot. New surfaces should
+not present "Approve" and "Accept" as two separate user choices.
 
 ---
 
@@ -193,11 +223,20 @@ archived ──► active  (reactivation by dentist_owner)
 | PATCH /dental/patients/:id | Update demographics | fields | patient | 403, 422 |
 | POST /dental/patients/:id/archive | Archive | reason | patient | 403 |
 | GET /dental/patients/:id/statement | Financial statement | — | statement | — |
-| POST /dental/patients/:id/follow-up | Add follow-up note | text | note | 403 |
+| POST /dental/patients/:id/follow-up-notes | Add follow-up note (append-only) | text | note | 403 |
+| GET /dental/patients/:id/follow-up-notes | List follow-up notes | — | note[] | 403 |
 | POST /dental/patients/bulk-archive | Bulk archive | ids[] | count | 403 |
 | POST /dental/patients/import | CSV/JSON import | file | result | 422 |
 | GET /dental/patients/:id/export | Export record | — | JSON/CSV | — |
-| POST /dental/patients/:id/treatment-plans/:planId/approval | CR-05: approve plan, link items, write approval record | approvedByPersonId, method, consentFormId?, planVersionId?, signatureData? | { approval, plan } | 404, 422 (PLAN_NOT_APPROVABLE) |
+| POST /dental/patients/:patientId/treatment-plans/:planId/accept | **Sidecar (P2-9):** snapshot the live pending-treatment set into an immutable `treatment_plan_version` (logic owned by dental-visit; re-export shim). Does NOT drive the header FSM — use `/approval` for lifecycle. | — | plan version | 404, 422 |
+| POST /dental/patients/:patientId/treatment-plans/:planId/approval | **CANONICAL (P2-9)** CR-05 / TP-BR-005: records patient approval, binds pending (diagnosed/planned) treatments as plan items, writes approval record, moves header `presented → approved` | approvedByPersonId, method, consentFormId?, planVersionId?, signatureData? | { approval, plan } | 404, 422 (PLAN_NOT_APPROVABLE) |
+| GET /dental/patients/:patientId/treatment-plans/:planId/status-history | **P2-8:** chronological status-transition timeline (who/when/from→to) | — | statusHistory[] | 404 |
+| POST /dental/patients/:patientId/treatments/:treatmentId/appointment | **P1-21:** link a planned treatment item to a scheduled appointment (loose ref) | appointmentId | { id, appointmentId } | 400, 404 |
+| DELETE /dental/patients/:patientId/treatments/:treatmentId/appointment | **P1-21:** unlink a treatment item from its appointment | — | { id, appointmentId: null } | 404 |
+| GET /dental/patients/:patientId/treatment-options/:optionGroupId | **P1-19:** list alternate-case options (implant vs bridge) incl. recommended flag | — | { optionGroupId, options[] } | 404 |
+| POST /dental/patients/:patientId/treatment-options/:optionGroupId/accept | **P1-19:** accept one option → planned; decline its siblings | chosenTreatmentId | { options[] } | 404, 422 |
+| GET /dental/patients/:patientId/communication-consent | **P1-28:** read per-channel communication consent | — | { registrationConsent, channels, channelsUpdatedAt } | 404 |
+| PATCH /dental/patients/:patientId/communication-consent | **P1-28:** set per-channel communication consent (partial) | sms?, email?, phone?, marketing? | consent | 403, 404 |
 
 ---
 

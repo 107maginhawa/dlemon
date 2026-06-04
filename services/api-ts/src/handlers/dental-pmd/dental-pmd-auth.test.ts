@@ -32,10 +32,16 @@ import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { generatePMD } from './generatePMD';
 import { getPMDForVisit } from './getPMDForVisit';
+import { listPMDs } from './listPMDs';
+import { listImportedPMDs } from './listImportedPMDs';
+import { exportPMD } from './exportPMD';
 import {
   GeneratePMDBody,
   GeneratePMDParams,
   GetPMDForVisitParams,
+  ListPMDsQuery,
+  ListImportedPMDsQuery,
+  ExportPMDParams,
 } from '@/generated/openapi/validators';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -53,6 +59,8 @@ const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 const OWNER = { id: '00000000-0000-0000-0000-000000000a51', email: 'owner@clinic.com' }; // dentist_owner — authorized
 const HYGIENIST = { id: '00000000-0000-0000-0000-000000000a52', email: 'hyg@clinic.com' }; // staff_full member of branch — wrong role for generatePMD, but read-allowed
 const OUTSIDER = { id: '00000000-0000-0000-0000-000000000a53', email: 'outsider@clinic.com' }; // NOT a member of the branch
+// PATIENT_SELF: a user whose id IS the patient's person id — V-PMD-008 self-access.
+const PATIENT_SELF = { id: PERSON_ID, email: 'patient@self.com' };
 
 const OWNER_MEMBER_ID = '7c000000-0000-4000-8000-000000000a51';
 const HYG_MEMBER_ID = '7c000000-0000-4000-8000-000000000a52';
@@ -101,6 +109,9 @@ function buildTestApp(user?: { id: string; email: string }) {
   const GeneratePMDBodyOnly = GeneratePMDBody.omit({ visitId: true });
   app.post('/dental/visits/:visitId/pmd', zValidator('param', GeneratePMDParams, ve), zValidator('json', GeneratePMDBodyOnly, ve), generatePMD as any);
   app.get('/dental/visits/:visitId/pmd', zValidator('param', GetPMDForVisitParams, ve), getPMDForVisit as any);
+  app.get('/dental/visits/:visitId/pmd/export', zValidator('param', ExportPMDParams, ve), exportPMD as any);
+  app.get('/dental/visits/pmd', zValidator('query', ListPMDsQuery, ve), listPMDs as any);
+  app.get('/dental/pmd/imported', zValidator('query', ListImportedPMDsQuery, ve), listImportedPMDs as any);
 
   return app;
 }
@@ -227,5 +238,55 @@ describe('generatePMD identity binding [N-PMD-02 regression pin]', () => {
     // ...and so is the checksum-sealed content snapshot (no client-controllable leak).
     const content = JSON.parse(body.content);
     expect(content.patientId).toBe(visit!.patientId);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (c) patient-self read/export — V-PMD-008 / EF-PMD-007 (P1-BE-3)
+// A user whose id === patient.person may read/export their OWN PMDs even without
+// a branch membership (the `patient.person === user.id` allow branch). Pinned as
+// not-403 against the shipped handlers.
+// ---------------------------------------------------------------------------
+
+describe('patient-self read/export [V-PMD-008]', () => {
+  test('ALLOW: patient-self getPMDForVisit → not 403', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(PATIENT_SELF);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`);
+    expect(res.status).not.toBe(403);
+  });
+
+  test('ALLOW: patient-self listPMDs (own patientId) → not 403', async () => {
+    const app = buildTestApp(PATIENT_SELF);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
+    expect(res.status).not.toBe(403);
+  });
+
+  test('ALLOW: patient-self listImportedPMDs (own patientId) → not 403', async () => {
+    const app = buildTestApp(PATIENT_SELF);
+    const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
+    expect(res.status).not.toBe(403);
+  });
+
+  test('ALLOW: patient-self exportPMD of own generated PMD → not 403', async () => {
+    const visit = await seedCompletedVisit();
+    // Generate a PMD as the owner so there is something to export.
+    const ownerApp = buildTestApp(OWNER);
+    const gen = await ownerApp.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(gen.status).toBe(201);
+
+    const selfApp = buildTestApp(PATIENT_SELF);
+    const res = await selfApp.request(`/dental/visits/${visit!.id}/pmd/export`);
+    expect(res.status).not.toBe(403);
+  });
+
+  test('DENY: an unrelated outsider (no membership, not patient-self) listPMDs → 403', async () => {
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
+    expect(res.status).toBe(403);
   });
 });

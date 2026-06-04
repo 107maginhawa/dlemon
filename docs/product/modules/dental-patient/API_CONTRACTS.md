@@ -167,9 +167,9 @@ Financial statement for patient.
 
 ---
 
-### POST /api/v1/dental/patients/:id/follow-up
+### POST /api/v1/dental/patients/:id/follow-up-notes
 
-Append a follow-up note (append-only).
+Append a follow-up note (append-only). A companion `GET /api/v1/dental/patients/:id/follow-up-notes` lists the notes.
 
 **Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
 **Path params:** `id` (uuid)

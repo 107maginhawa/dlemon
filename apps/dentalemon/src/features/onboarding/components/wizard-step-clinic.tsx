@@ -29,7 +29,7 @@ export function ClinicStep({
           onChange={e => onClinicNameChange(e.target.value)}
           placeholder="e.g. Smile Dental Clinic"
           aria-label="Clinic Name"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
         />
       </div>
       <div>
@@ -39,7 +39,7 @@ export function ClinicStep({
         <Select value={countryCode} onValueChange={onCountryCodeChange}>
           <SelectTrigger
             aria-label="Country"
-            className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+            className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
           >
             <SelectValue />
           </SelectTrigger>
@@ -59,7 +59,7 @@ export function ClinicStep({
           value={address}
           onChange={e => onAddressChange(e.target.value)}
           aria-label="Address"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
         />
       </div>
       <div>
@@ -71,7 +71,7 @@ export function ClinicStep({
           value={clinicPhone}
           onChange={e => onClinicPhoneChange(e.target.value)}
           aria-label="Phone"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
         />
       </div>
     </>

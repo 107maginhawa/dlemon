@@ -32,6 +32,8 @@ const CreateFindingSchema = z.object({
   note: z.string().max(5000).optional(),
   annotationId: z.string().optional(),
   treatmentId: z.string().optional(),
+  // P2-7 CBCT: slice/frame index a finding was placed on (multi-frame volume).
+  frameIndex: z.number().int().min(0).optional(),
 });
 
 export async function createFinding(ctx: BaseContext): Promise<Response> {
@@ -80,6 +82,7 @@ export async function createFinding(ctx: BaseContext): Promise<Response> {
     toothNumber: parsed.toothNumber ?? null,
     surfaces: parsed.surfaces ?? null,
     note: parsed.note ?? null,
+    frameIndex: parsed.frameIndex ?? null,
   });
 
   // V-IMG-006: findings are clinical PHI — record the mutation in the audit log.

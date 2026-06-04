@@ -42,6 +42,10 @@ export async function updateInsuranceProfile(ctx: any): Promise<Response> {
     ...(body.relationship !== undefined && { relationship: body.relationship }),
     ...(body.active !== undefined && { active: body.active }),
     ...(body.notes !== undefined && { notes: body.notes }),
+    ...(body.payerType !== undefined && { payerType: body.payerType }),
+    ...(body.accredited !== undefined && { accredited: body.accredited }),
+    ...(body.annualLimitCents !== undefined && { annualLimitCents: body.annualLimitCents }),
+    ...(body.annualLimitUsedCents !== undefined && { annualLimitUsedCents: body.annualLimitUsedCents }),
   });
 
   logger?.info({ action: 'updateInsuranceProfile', patientId, profileId }, 'Insurance profile updated');

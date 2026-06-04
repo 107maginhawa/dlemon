@@ -151,7 +151,9 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_treatment WHERE visit_id IN ${visitIds}`);
   await db.execute(sql`DELETE FROM medical_history_entry WHERE patient_id = ${PATIENT_ID}`);
   await db.execute(sql`DELETE FROM dental_visit     WHERE patient_id = ${PATIENT_ID}`);
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE target_type = 'dental_lab_order'`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   // Note: dental_membership, dental_branch, dental_organization are seeded once in beforeAll and NOT cleaned here
 });
 
@@ -921,5 +923,45 @@ describe('revokeConsentForm handler', () => {
     );
 
     expect(secondRevoke.status).toBe(409);
+  });
+
+  // BR: a SIGNED consent cannot be revoked (illegal signed→revoked transition).
+  // revokeConsentForm.ts:49 → 422 CONSENT_ALREADY_SIGNED. Signed-check precedes
+  // the already-revoked check, so signing then revoking surfaces this code.
+  test('returns 422 CONSENT_ALREADY_SIGNED when revoking a signed consent form', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        templateId: 'tpl-revoke-signed',
+        templateName: 'Signed Consent',
+      }),
+    });
+    const created = await createRes.json() as any;
+    expect(createRes.status).toBe(201);
+
+    // Sign it.
+    const signRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/sign`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureData: 'data:image/png;base64,abc123' }),
+      },
+    );
+    expect(signRes.status).toBe(200);
+
+    // Now revoking must be rejected with the signed-transition code.
+    const revokeRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+    expect(revokeRes.status).toBe(422);
+    const body = await revokeRes.json() as any;
+    expect(body.code).toBe('CONSENT_ALREADY_SIGNED');
   });
 });

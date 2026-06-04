@@ -21,6 +21,9 @@ export async function voidDentalInvoice(
   if (!session) throw new UnauthorizedError();
 
   const { invoiceId } = ctx.req.valid('param');
+  // Contract requires an auditable reason (min 5, max 500). The generated json
+  // validator rejects an empty/short body with 400 before we get here.
+  const { reason } = ctx.req.valid('json') as { reason: string };
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new DentalInvoiceRepository(db);
 
@@ -61,6 +64,7 @@ export async function voidDentalInvoice(
     action: 'invoice.voided',
     resourceType: 'dental_invoice',
     resourceId: invoiceId,
+    metadata: { reason },
   });
 
   return ctx.json(voided);

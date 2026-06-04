@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listLabOrdersOptions,
@@ -31,7 +32,7 @@ const STATUS_COLORS: Record<LabOrderStatus, string> = {
   ordered: 'bg-blue-100 text-blue-700',
   in_fabrication: 'bg-orange-100 text-orange-700',
   delivered: 'bg-green-100 text-green-700',
-  fitted: 'bg-[#FFE97D] text-[#4A4018]',
+  fitted: 'bg-lemon text-lemon-foreground',
   cancelled: 'bg-gray-100 text-gray-500',
 };
 
@@ -46,6 +47,9 @@ export const NEXT_STATUS: Record<LabOrderStatus, LabOrderStatus | null> = {
 interface CreateForm {
   labName: string;
   description: string;
+  shade: string;
+  material: string;
+  dueDate: string;
   expectedDeliveryDate: string;
 }
 
@@ -56,6 +60,23 @@ export function validateLabOrderForm(form: Pick<CreateForm, 'labName' | 'descrip
   return errs;
 }
 
+/**
+ * Returns due-date display state for a lab order card (P2-12).
+ * `overdue` when the due date is in the past for a non-terminal order.
+ */
+export function labOrderDueState(
+  dueDate: string | Date | null | undefined,
+  status: LabOrderStatus,
+  now: Date = new Date(),
+): { label: string; overdue: boolean } | null {
+  if (!dueDate) return null;
+  const due = dueDate instanceof Date ? dueDate : new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return null;
+  const terminal = status === 'fitted' || status === 'cancelled';
+  const overdue = !terminal && due.getTime() < now.getTime();
+  return { label: due.toLocaleDateString(), overdue };
+}
+
 export interface LabOrdersSheetProps {
   visitId: string;
   patientId: string;
@@ -64,7 +85,10 @@ export interface LabOrdersSheetProps {
 }
 
 export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersSheetProps) {
-  const [form, setForm] = useState<CreateForm>({ labName: '', description: '', expectedDeliveryDate: '' });
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
+  const [form, setForm] = useState<CreateForm>({ labName: '', description: '', shade: '', material: '', dueDate: '', expectedDeliveryDate: '' });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -90,7 +114,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
     onSuccess: () => {
       invalidate();
       setShowCreate(false);
-      setForm({ labName: '', description: '', expectedDeliveryDate: '' });
+      setForm({ labName: '', description: '', shade: '', material: '', dueDate: '', expectedDeliveryDate: '' });
     },
   });
 
@@ -121,6 +145,10 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
         patientId,
         labName: form.labName.trim(),
         description: form.description.trim(),
+        // P2-12: restoration detail + clinically-needed due date
+        shade: form.shade.trim() || undefined,
+        material: form.material.trim() || undefined,
+        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
         expectedDeliveryDate: form.expectedDeliveryDate ? new Date(form.expectedDeliveryDate).toISOString() : undefined,
       } as Parameters<typeof createMutation.mutate>[0]['body'],
     });
@@ -146,7 +174,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
             <button
               type="button"
               onClick={() => setShowCreate(v => !v)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#FFE97D] text-[#4A4018] hover:bg-[#F5DC60] transition-colors"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-lemon text-lemon-foreground hover:bg-lemon-hover transition-colors"
             >
               + New Order
             </button>
@@ -177,7 +205,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.labName}
                   onChange={e => setForm(f => ({ ...f, labName: e.target.value }))}
                   placeholder="e.g. Precision Dental Lab"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div>
@@ -188,18 +216,54 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. PFM Crown tooth 21"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block" htmlFor="lo-delivery">Expected Delivery</label>
-                <input
-                  id="lo-delivery"
-                  type="date"
-                  value={form.expectedDeliveryDate}
-                  onChange={e => setForm(f => ({ ...f, expectedDeliveryDate: e.target.value }))}
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
-                />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block" htmlFor="lo-shade">Shade</label>
+                  <input
+                    id="lo-shade"
+                    type="text"
+                    value={form.shade}
+                    onChange={e => setForm(f => ({ ...f, shade: e.target.value }))}
+                    placeholder="e.g. A2"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block" htmlFor="lo-material">Material</label>
+                  <input
+                    id="lo-material"
+                    type="text"
+                    value={form.material}
+                    onChange={e => setForm(f => ({ ...f, material: e.target.value }))}
+                    placeholder="e.g. Zirconia"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block" htmlFor="lo-due">Due Date</label>
+                  <input
+                    id="lo-due"
+                    type="date"
+                    value={form.dueDate}
+                    onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block" htmlFor="lo-delivery">Expected Delivery</label>
+                  <input
+                    id="lo-delivery"
+                    type="date"
+                    value={form.expectedDeliveryDate}
+                    onChange={e => setForm(f => ({ ...f, expectedDeliveryDate: e.target.value }))}
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -213,7 +277,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   type="button"
                   onClick={handleCreate}
                   disabled={createMutation.isPending}
-                  className="flex-1 h-10 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                  className="flex-1 h-10 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
                 >
                   {createMutation.isPending ? 'Creating…' : 'Create order'}
                 </button>
@@ -228,6 +292,8 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
           )}
           {orders.map(order => {
             const next = NEXT_STATUS[order.status as LabOrderStatus];
+            const due = labOrderDueState(order.dueDate, order.status as LabOrderStatus);
+            const detailBits = [order.shade && `Shade ${order.shade}`, order.material].filter(Boolean) as string[];
             return (
               <div
                 key={order.id}
@@ -238,10 +304,25 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   <div>
                     <p className="text-sm font-semibold">{order.description}</p>
                     <p className="text-xs text-muted-foreground">{order.labName}</p>
+                    {detailBits.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{detailBits.join(' · ')}</p>
+                    )}
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status as LabOrderStatus]}`}>
-                    {STATUS_LABELS[order.status as LabOrderStatus]}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status as LabOrderStatus]}`}>
+                      {STATUS_LABELS[order.status as LabOrderStatus]}
+                    </span>
+                    {due && (
+                      <span
+                        data-testid={`lab-order-due-${order.id}`}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          due.overdue ? 'bg-destructive/15 text-destructive' : 'bg-secondary text-muted-foreground'
+                        }`}
+                      >
+                        {due.overdue ? `Overdue · ${due.label}` : `Due ${due.label}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {next && (
                   <div className="flex gap-2 mt-1">

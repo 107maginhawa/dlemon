@@ -8,13 +8,15 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
+import { getVisitsByPatientId } from '../../dental-visit/repos/visit-dental-patient.facade';
+import {
+  getInvoicesByPatientId,
+  getInvoiceLineItemsByInvoiceId,
+  getPaymentsByPatientId,
+} from '../../dental-billing/repos/billing-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
-import { dentalVisits } from '../../dental-visit/repos/visit.schema';
-import { dentalInvoices, dentalInvoiceLineItems } from '../../dental-billing/repos/dental-invoice.schema';
-import { dentalPayments } from '../../dental-billing/repos/dental-payment.schema';
-import { eq, desc } from 'drizzle-orm';
 import type { GetDentalPatientStatementParams } from '@/generated/openapi/validators';
 
 export async function getDentalPatientStatement(
@@ -28,44 +30,28 @@ export async function getDentalPatientStatement(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneByIdWithPerson(patientId);
+  const patient = await getDentalPatientWithPerson(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // Branch-level authorization
   await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // All visits
-  const visits = await db
-    .select()
-    .from(dentalVisits)
-    .where(eq(dentalVisits.patientId, patientId))
-    .orderBy(desc(dentalVisits.createdAt));
+  const visits = await getVisitsByPatientId(db, patientId);
 
   // All invoices
-  const invoices = await db
-    .select()
-    .from(dentalInvoices)
-    .where(eq(dentalInvoices.patientId, patientId))
-    .orderBy(desc(dentalInvoices.createdAt));
+  const invoices = await getInvoicesByPatientId(db, patientId);
 
   // Line items for each invoice
   const invoicesWithLines = await Promise.all(
     invoices.map(async (inv) => {
-      const lines = await db
-        .select()
-        .from(dentalInvoiceLineItems)
-        .where(eq(dentalInvoiceLineItems.invoiceId, inv.id));
+      const lines = await getInvoiceLineItemsByInvoiceId(db, inv.id);
       return { ...inv, lineItems: lines };
     })
   );
 
   // All payments
-  const payments = await db
-    .select()
-    .from(dentalPayments)
-    .where(eq(dentalPayments.patientId, patientId))
-    .orderBy(desc(dentalPayments.createdAt));
+  const payments = await getPaymentsByPatientId(db, patientId);
 
   const totalBilledCents = invoices
     .filter(inv => inv.status !== 'voided')

@@ -89,6 +89,8 @@ export async function createDentalInvoice(
     totalCents,
     balanceCents: totalCents,
     dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+    // GAP-001: persist optional client-generated id for offline-first idempotent sync.
+    localId: body.localId,
   });
 
   // Create line items from treatments
@@ -122,12 +124,14 @@ export async function createDentalInvoice(
 
   // DE-020: emit InvoiceCreated domain event (best-effort, non-blocking)
   const scheduler = ctx.get('jobs') as JobScheduler | undefined;
-  scheduler && emitInvoiceCreated(scheduler, {
-    invoiceId: invoice.id,
-    patientId: invoice.patientId,
-    branchId: invoice.branchId,
-    totalCents: invoice.totalCents,
-  }).catch(() => {/* non-blocking */});
+  if (scheduler) {
+    void emitInvoiceCreated(scheduler, {
+      invoiceId: invoice.id,
+      patientId: invoice.patientId,
+      branchId: invoice.branchId,
+      totalCents: invoice.totalCents,
+    }).catch(() => {/* non-blocking */});
+  }
 
   return ctx.json({ ...invoice, lineItems: createdLineItems }, 201);
 }

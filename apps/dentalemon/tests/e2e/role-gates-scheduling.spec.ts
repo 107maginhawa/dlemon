@@ -12,9 +12,7 @@
  */
 
 import { test, expect, type Browser } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, APP, signUpOnboardAndUnlock } from './helpers/e2e-seed';
 
 async function signUpApi(page: { evaluate: Function }, email: string, name: string): Promise<string> {
   return page.evaluate(async ({ api, app, email, name }: { api: string; app: string; email: string; name: string }) => {
@@ -38,55 +36,32 @@ test.describe('Role Gates: staff_scheduling blocked from clinical writes', () =>
     const ownerCtx = await browser.newContext();
     const ownerPage = await ownerCtx.newPage();
 
-    // Sign up owner via UI
-    const ownerEmail = `g1-owner-${suffix}@example.org`;
-    await ownerPage.goto(`${APP}/auth/sign-up`);
-    await ownerPage.waitForLoadState('networkidle');
-    await ownerPage.getByLabel('Name', { exact: true }).fill(`G1 Owner ${suffix}`);
-    await ownerPage.getByLabel('Email', { exact: true }).fill(ownerEmail);
-    const pwInput = ownerPage.locator('input[type="password"]');
-    await pwInput.click();
-    await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-    await ownerPage.getByRole('button', { name: /create an account/i }).click();
-    await ownerPage.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-    await ownerPage.evaluate(async (api: string) => {
-      await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-    }, API);
+    // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+    // — EM-ORG-002), set a PIN, and unlock. The owner then seeds a patient + visit
+    // and (below) adds the scheduling user as an EXTRA member (member creation by an
+    // owner is allowed; only org creation was gated).
+    const owner = await signUpOnboardAndUnlock(ownerPage, { tier: 'solo', label: 'G1' });
 
-    // Create org + branch + owner member + patient + visit
-    const ownerData = await ownerPage.evaluate(async (api: string) => {
-      const session = await (await fetch(`${api}/auth/get-session`, { credentials: 'include' })).json() as any;
-      const personId: string = session?.user?.id;
-
-      const org = await (await fetch(`${api}/dental/organizations`, {
+    // Create patient + visit
+    const ownerData = await ownerPage.evaluate(async ({ api, branchId, memberId, orgId }: { api: string; branchId: string; memberId: string; orgId: string }) => {
+      const patientRes = await fetch(`${api}/dental/patients`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ name: 'G1 Role Gate Clinic', tier: 'solo', countryCode: 'PH' }),
-      })).json() as any;
+        body: JSON.stringify({ displayName: 'G1 Patient', dateOfBirth: '1990-01-01', gender: 'male', branchId, consentGiven: true }),
+      });
+      if (!patientRes.ok) throw new Error(`Patient creation failed: ${patientRes.status} ${await patientRes.text()}`);
+      const patient = await patientRes.json() as any;
 
-      const branch = await (await fetch(`${api}/dental/organizations/${org.id}/branches`, {
+      const visitRes = await fetch(`${api}/dental/visits`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ name: 'Main', timezone: 'Asia/Manila' }),
-      })).json() as any;
-
-      const ownerMember = await (await fetch(`${api}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ displayName: 'G1 Owner', role: 'dentist_owner', personId }),
-      })).json() as any;
-
-      const patient = await (await fetch(`${api}/dental/patients`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ displayName: 'G1 Patient', dateOfBirth: '1990-01-01', gender: 'male', branchId: branch.id, consentGiven: true }),
-      })).json() as any;
-
-      const visit = await (await fetch(`${api}/dental/visits`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ patientId: patient.id, branchId: branch.id, dentistMemberId: ownerMember.id }),
-      })).json() as any;
+        body: JSON.stringify({ patientId: patient.id, branchId, dentistMemberId: memberId }),
+      });
+      if (!visitRes.ok) throw new Error(`Visit creation failed: ${visitRes.status} ${await visitRes.text()}`);
+      const visit = await visitRes.json() as any;
 
       if (!visit.id) throw new Error(`Visit creation failed: ${JSON.stringify(visit)}`);
 
-      return { orgId: org.id, branchId: branch.id, patientId: patient.id, visitId: visit.id, memberId: ownerMember.id };
-    }, API);
+      return { orgId, branchId, patientId: patient.id, visitId: visit.id, memberId };
+    }, { api: API, branchId: owner.branchId, memberId: owner.memberId, orgId: owner.orgId });
 
     // ── Create staff_scheduling user (sign up via API) ─────────────────────
     const schedEmail = `g1-sched-${suffix}@example.org`;

@@ -220,7 +220,7 @@ invited ──► active ──► inactive
 
 | API Need | Purpose | Inputs | Outputs | Errors |
 |----------|---------|--------|---------|--------|
-| POST /dental/orgs | Create org | name, country_code, owner | org | 422 |
+| POST /dental/organizations | Create org | name, country_code, owner | org | 422 |
 | POST /dental/branches | Create branch | org_id, name, address | branch | 422 |
 | GET /dental/branches/:id | Get branch | — | branch | 404 |
 | POST /dental/memberships | Invite staff | branch_id, email, role | membership | 409 |
@@ -230,9 +230,13 @@ invited ──► active ──► inactive
 | GET /dental/dashboard | Practice summary | branch_id | summary stats | 403 |
 | GET /dental/audit-events | Audit log | branch_id, filters | events[] | 403 |
 
+> **Path note:** org creation is `POST /dental/organizations` (there is no flat `/dental/orgs` surface). Branch
+> and membership management are nested under `/dental/organizations/:orgId/branches/...` and the member-PIN
+> operations under `/dental/org/members/...` (see the PIN table below).
+
 ### PIN-based local auth (G8-S1)
 
-Local "device PIN" auth for fast member switching at a shared operatory workstation. PINs are digit-only (validator: `^\d{4,8}$` for set/verify, `^\d{6}$` for reset) and stored bcrypt-hashed; hash fields are never returned in responses (G7-S2). Lockout per BR-016b.
+Local "device PIN" auth for fast member switching at a shared operatory workstation. PINs are digit-only (validator: `^\d{4,8}$` for set/verify, `^\d{6}$` for owner reset, `^\d{4,6}$` for self-service recover) and stored bcrypt-hashed; hash fields are never returned in responses (G7-S2). Lockout per BR-016b.
 
 | API Need | Purpose | Inputs | Outputs | Errors |
 |----------|---------|--------|---------|--------|
@@ -240,7 +244,7 @@ Local "device PIN" auth for fast member switching at a shared operatory workstat
 | POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin | Verify a PIN to unlock a session | pin (4–8 digits) | { verified, sessionToken? } | 401, 404, 422, 429 (lockout) |
 | POST /dental/org/members/:memberId/security-question | Set the member's PIN-recovery security question + answer | securityQuestion, answer | ok | 403, 422 |
 | POST /dental/org/members/:memberId/reset-pin | Owner resets a member's PIN | newPin (exactly 6 digits) | membership (no hash fields) | 403, 422 |
-| POST /dental/org/members/:memberId/recover-pin | Self-service PIN recovery via security answer | answer, newPin | ok | 401, 422, 429 |
+| POST /dental/org/members/:memberId/recover-pin | Self-service PIN recovery via security answer | answer, newPin (4–6 digits, `^\d{4,6}$` — distinct from reset-pin's exactly-6) | ok | 401, 422, 429 |
 
 > **Known contract gaps (EM-AUD-013, tracked):** the audit viewer query params use camelCase (`branchId`, `actorId`) and `limit`/`offset` pagination, vs the spec's snake_case + `page`. PIN endpoints are absent from `sdk-ts` because no frontend consumes them yet (PIN UI is local-only). Folded into a future normalization pass, not G8.
 

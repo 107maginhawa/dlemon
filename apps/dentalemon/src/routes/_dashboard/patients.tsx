@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import { PatientFilterTabs, type PatientFilter } from '@/features/patients/components/patient-filter-tabs';
+import { DuplicatePatientsPanel } from '@/features/patients/components/duplicate-patients-panel';
 import type { PatientCardData } from '@/features/patients/components/patient-folder-card';
 import { usePatients } from '@/features/patients/hooks/use-patients';
 import {
@@ -38,6 +39,8 @@ function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<PatientFilter>('all');
   const [showRegistration, setShowRegistration] = useState(false);
+  // P2-16: toggle the duplicate-detection review panel.
+  const [showDuplicates, setShowDuplicates] = useState(false);
 
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
 
@@ -46,7 +49,7 @@ function PatientsPage() {
   const { bulkArchive, isPending: isBulkPending } = useBulkArchive();
   const { exportPatients, isExporting } = useExportPatients();
 
-  const { patients, isLoading, error } = usePatients({
+  const { patients, isLoading, error, refetch } = usePatients({
     branchId,
     searchQuery: searchQuery || undefined,
     status: activeFilter === 'all' ? undefined : activeFilter === 'archived' ? 'archived' : 'active',
@@ -58,6 +61,7 @@ function PatientsPage() {
     dateOfBirth: string;
     gender: string;
     consentGiven: boolean;
+    communicationConsent?: { sms: boolean; email: boolean; phone: boolean; marketing: boolean };
   }) {
     const res = await fetch(`${API}/dental/patients`, {
       method: 'POST',
@@ -79,6 +83,19 @@ function PatientsPage() {
       return;
     }
 
+    // P1-28: persist per-channel communication consent on the new patient.
+    const created = (await res.json().catch(() => null)) as { id?: string } | null;
+    if (created?.id && data.communicationConsent) {
+      await fetch(`${API}/dental/patients/${created.id}/communication-consent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data.communicationConsent),
+      }).catch(() => {
+        /* non-blocking: registration already succeeded */
+      });
+    }
+
     setShowRegistration(false);
     // Invalidate the patients query so the list refreshes
     queryClient.invalidateQueries({ queryKey: ['dental-patients'] });
@@ -89,32 +106,48 @@ function PatientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Patients</h1>
-        <button
-          onClick={() => setShowRegistration(true)}
-          className="px-4 py-2 rounded-lg bg-[#FFE97D] text-[#4A4018] text-sm font-medium hover:bg-[#F5DC60] transition-colors"
-          data-testid="register-patient-btn"
-        >
-          + New Patient
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDuplicates((v) => !v)}
+            aria-pressed={showDuplicates}
+            className={[
+              'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+              showDuplicates
+                ? 'border-lemon bg-[#FFF9DB] text-lemon-foreground'
+                : 'border-border text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+            data-testid="find-duplicates-btn"
+          >
+            {showDuplicates ? 'Back to list' : 'Find duplicates'}
+          </button>
+          <button
+            onClick={() => setShowRegistration(true)}
+            className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-medium hover:bg-lemon-hover transition-colors"
+            data-testid="register-patient-btn"
+          >
+            + New Patient
+          </button>
+        </div>
       </div>
 
+      {showDuplicates ? (
+        /* P2-16: duplicate-patient review */
+        <DuplicatePatientsPanel branchId={branchId ?? null} />
+      ) : (
+      <>
       {/* Filter tabs */}
       <PatientFilterTabs
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />
 
-      {/* Error state */}
-      {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load patients. Please refresh.
-        </div>
-      )}
-
       {/* Patient list */}
       <PatientList
         patients={patients}
         isLoading={isLoading}
+        isError={!!error}
+        errorMessage={error ? 'Failed to load patients.' : undefined}
+        onRetry={() => refetch()}
         onSelect={(patient: PatientCardData) =>
           navigate({ to: '/$patientId', params: { patientId: patient.id } })
         }
@@ -131,6 +164,8 @@ function PatientsPage() {
         isActionPending={isArchivePending || isRestorePending || isBulkPending}
         isExporting={isExporting}
       />
+      </>
+      )}
 
       <PatientRegistrationModal
         open={showRegistration}

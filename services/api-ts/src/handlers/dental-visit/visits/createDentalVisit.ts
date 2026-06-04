@@ -44,6 +44,13 @@ export async function createDentalVisit(
     branchId: body.branchId,
     dentistMemberId: body.dentistMemberId,
     chiefComplaint: body.chiefComplaint,
+    // GAP-001: persist optional client-generated id for offline-first idempotent sync.
+    // syncStatus stays at its 'synced' default — a server-acknowledged write is synced.
+    localId: body.localId,
+    // Audit attribution: record who created the visit (otherwise created_by is
+    // NULL and downstream audit/attribution has no actor).
+    createdBy: user.id,
+    updatedBy: user.id,
   });
 
   const logger = ctx.get('logger');

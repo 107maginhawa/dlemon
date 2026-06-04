@@ -15,7 +15,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { UpdateInvoiceBody, UpdateInvoiceParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { Config } from '@/core/config';
 
 /**
@@ -51,7 +51,6 @@ export async function updateInvoice(
 
   // Create repository instances
   const invoiceRepo = new InvoiceRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
 
   // Get existing invoice
   const invoice = await invoiceRepo.findOneById(invoiceId);
@@ -65,7 +64,7 @@ export async function updateInvoice(
   }
 
   // Authorization check: must be the provider who created the invoice
-  const merchantPerson = await personRepo.findOneById(invoice.merchant);
+  const merchantPerson = await findBillingParty(database, invoice.merchant, logger);
   if (!merchantPerson) {
     throw new NotFoundError('Merchant person not found', {
       resourceType: 'person',

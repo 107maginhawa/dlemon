@@ -50,6 +50,20 @@ enum MedicalHistoryEntryType {
   family_history,
 }
 
+/**
+ * DEA controlled-substance schedule for a prescription.
+ * `none` is the default for non-controlled drugs. II–V follow the US DEA
+ * classification (21 CFR 1308). Additive/optional — does not affect the
+ * non-controlled ₱/PH prescribing flow.
+ */
+enum ControlledSubstanceSchedule {
+  none,
+  ii: "II",
+  iii: "III",
+  iv: "IV",
+  v: "V",
+}
+
 // ---------------------------------------------------------------------------
 // Models — Prescription
 // ---------------------------------------------------------------------------
@@ -70,6 +84,7 @@ enum MedicalHistoryEntryType {
   quantity: "21 capsules",
   instructions: "Take with food. Complete the full course.",
   dispenseAsWritten: true,
+  controlledSubstanceSchedule: ControlledSubstanceSchedule.none,
 }, #{ title: "Amoxicillin prescription post-extraction" })
 model Prescription {
   id: UUID;
@@ -87,6 +102,17 @@ model Prescription {
   quantity?: string;
   instructions?: string;
   dispenseAsWritten: boolean;
+
+  /**
+   * P2-13: US-context legal Rx fields (record-only; EPCS/Surescripts
+   * transmission is out of scope). All optional + additive so the ₱/PH
+   * non-controlled flow is unaffected.
+   */
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  /** Prescriber DEA registration number (controlled substances). */
+  prescriberDea?: string;
+  /** Prescriber National Provider Identifier (10-digit NPI). */
+  prescriberNpi?: string;
 }
 
 model CreatePrescriptionRequest {
@@ -101,6 +127,11 @@ model CreatePrescriptionRequest {
   quantity?: string;
   instructions?: string;
   dispenseAsWritten?: boolean;
+
+  // P2-13 legal fields (optional, US-context)
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  prescriberDea?: string;
+  prescriberNpi?: string;
 }
 
 model UpdatePrescriptionRequest {
@@ -111,6 +142,11 @@ model UpdatePrescriptionRequest {
   duration?: string;
   quantity?: string;
   instructions?: string;
+
+  // P2-13 legal fields (optional, US-context)
+  controlledSubstanceSchedule?: ControlledSubstanceSchedule;
+  prescriberDea?: string;
+  prescriberNpi?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +175,16 @@ model ConsentForm {
   patientId: UUID;
   templateId: string;
   templateName: string;
+  /** ADA: nature of the proposed procedure (P1-3 structured consent) */
+  procedureNature?: string;
+  /** ADA: expected benefits of the procedure */
+  benefits?: string;
+  /** ADA: material risks of the procedure */
+  risks?: string;
+  /** ADA: reasonable alternatives to the procedure */
+  alternatives?: string;
+  /** ADA: risks of not receiving treatment */
+  risksOfNonTreatment?: string;
   signedAt?: utcDateTime;
   signatureData?: string;
   signed: boolean;
@@ -149,10 +195,67 @@ model CreateConsentFormRequest {
   patientId: UUID;
   templateId: string;
   templateName: string;
+  /** ADA: nature of the proposed procedure */
+  procedureNature?: string;
+  /** ADA: expected benefits of the procedure */
+  benefits?: string;
+  /** ADA: material risks of the procedure */
+  risks?: string;
+  /** ADA: reasonable alternatives */
+  alternatives?: string;
+  /** ADA: risks of not receiving treatment */
+  risksOfNonTreatment?: string;
 }
 
 model SignConsentFormRequest {
   signatureData: string;
+}
+
+// ---------------------------------------------------------------------------
+// Models — Informed Refusal (P1-3)
+// ---------------------------------------------------------------------------
+
+/**
+ * InformedRefusal — records a patient's explicit refusal of recommended treatment.
+ * Distinct from consent (which is granted); immutable once recorded.
+ * Required by ADA guidelines and medico-legal best practice.
+ */
+@example(#{
+  id: "ir-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+  version: 1,
+  visitId: "vi-1a2b3c4d-0000-4000-8000-000000000001",
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  refusingMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
+  procedureDescription: "Extraction of tooth #48 (lower right wisdom tooth)",
+  refusalReason: "Patient requests conservative management first",
+  patientAcknowledgement: "I understand the risks of declining treatment and choose to do so.",
+  refusedAt: utcDateTime.fromISO("2026-03-15T10:00:00Z"),
+}, #{ title: "Patient informed refusal of tooth extraction" })
+model InformedRefusal {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  version: int32;
+  visitId: UUID;
+  patientId: UUID;
+  /** Member (dentist) who presented the treatment and recorded the refusal */
+  refusingMemberId: UUID;
+  procedureDescription: string;
+  refusalReason: string;
+  /** Verbatim patient acknowledgement that they understand risks of non-treatment */
+  patientAcknowledgement: string;
+  refusedAt: utcDateTime;
+}
+
+model RecordConsentRefusalRequest {
+  visitId: UUID;
+  patientId: UUID;
+  refusingMemberId: UUID;
+  procedureDescription: string;
+  refusalReason: string;
+  patientAcknowledgement: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +320,12 @@ model LabOrder {
   toothFdi?: string;
   labName: string;
   description: string;
+  /** P2-12: restoration shade (e.g. VITA "A2") */
+  shade?: string;
+  /** P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max") */
+  material?: string;
+  /** P2-12: date the case is needed chairside (distinct from expectedDeliveryDate). */
+  dueDate?: utcDateTime;
   status: LabOrderStatus;
   orderedAt: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
@@ -235,11 +344,20 @@ model CreateLabOrderRequest {
   toothFdi?: string;
   labName: string;
   description: string;
+  /** P2-12: restoration shade (e.g. VITA "A2") */
+  shade?: string;
+  /** P2-12: restoration material (e.g. "Zirconia", "PFM", "E.max") */
+  material?: string;
+  /** P2-12: date the case is needed chairside. */
+  dueDate?: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
 }
 
 model UpdateLabOrderRequest {
   status?: LabOrderStatus;
+  shade?: string;
+  material?: string;
+  dueDate?: utcDateTime;
   expectedDeliveryDate?: utcDateTime;
   cancelReason?: string;
   isDefective?: boolean;
@@ -296,6 +414,59 @@ model UpdateMedicalHistoryEntryRequest {
   notes?: string;
   resolvedDate?: string;
   active?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Models — Medical History Review (P1-4: ASA + periodic re-confirmation)
+// ---------------------------------------------------------------------------
+
+/**
+ * ASA Physical Status classification (American Society of Anesthesiologists).
+ * I–VI plus the "E" emergency modifier is captured separately (asaEmergency).
+ */
+enum AsaClassification {
+  asa_i: "I",
+  asa_ii: "II",
+  asa_iii: "III",
+  asa_iv: "IV",
+  asa_v: "V",
+  asa_vi: "VI",
+}
+
+/**
+ * MedicalHistoryReview — patient-level review attestation (P1-4).
+ * Captures the ASA Physical Status and the date the history was last reviewed,
+ * supporting the periodic (3–6 month) re-confirmation requirement. Latest review
+ * per patient is the current one; prior reviews are retained as history.
+ */
+@example(#{
+  id: "mr-1a2b3c4d-0000-4000-8000-000000000001",
+  createdAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+  version: 1,
+  patientId: "d1a2b3c4-0000-4000-8000-000000000001",
+  asaClassification: AsaClassification.asa_ii,
+  asaEmergency: false,
+  reviewedAt: utcDateTime.fromISO("2026-03-01T10:00:00Z"),
+}, #{ title: "ASA II review, no emergency modifier" })
+model MedicalHistoryReview {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  version: int32;
+  patientId: UUID;
+  /** ASA Physical Status I–VI; null when not yet classified */
+  asaClassification?: AsaClassification;
+  /** ASA "E" emergency modifier */
+  asaEmergency: boolean;
+  /** Timestamp the medical history was last reviewed/re-confirmed */
+  reviewedAt: utcDateTime;
+}
+
+model RecordMedicalHistoryReviewRequest {
+  patientId: UUID;
+  asaClassification?: AsaClassification;
+  asaEmergency?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +573,48 @@ namespace DentalClinicalModule {
     ): ApiOkResponse<ConsentForm>
       | ApiBadRequestResponse
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // EM-CLI-001: revoke an unsigned consent form. A signed form cannot be
+    // revoked (422 CONSENT_ALREADY_SIGNED). Path param is `cid` to match the
+    // handler's parameter contract. Previously hand-registered in app.ts only.
+    @patch
+    @route("/{visitId}/consents/{cid}/revoke")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("revokeConsentForm")
+    revoke(
+      @path visitId: UUID,
+      @path cid: UUID
+    ): ApiOkResponse<ConsentForm>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  // P1-3: Informed refusal management (distinct from consent — records explicit
+  // treatment refusal with patient acknowledgement)
+  interface InformedRefusalManagement {
+    @post
+    @route("/{visitId}/consent-refusals")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("recordConsentRefusal")
+    create(
+      @path visitId: UUID,
+      @body body: RecordConsentRefusalRequest
+    ): ApiCreatedResponse<InformedRefusal>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/{visitId}/consent-refusals")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listConsentRefusals")
+    list(
+      @path visitId: UUID
+    ): ApiOkResponse<PaginatedResponse<InformedRefusal>>
       | ApiUnauthorizedResponse;
   }
 
@@ -510,6 +723,29 @@ namespace DentalClinicalModule {
       @path entryId: UUID,
       @body body: UpdateMedicalHistoryEntryRequest
     ): ApiOkResponse<MedicalHistoryEntry>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // P1-4: ASA classification + periodic re-confirmation
+    @post
+    @route("/medical-history-review")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("recordMedicalHistoryReview")
+    recordReview(
+      @body body: RecordMedicalHistoryReviewRequest
+    ): ApiCreatedResponse<MedicalHistoryReview>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @route("/medical-history-review")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getMedicalHistoryReview")
+    getReview(
+      @query patientId: UUID
+    ): ApiOkResponse<MedicalHistoryReview>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

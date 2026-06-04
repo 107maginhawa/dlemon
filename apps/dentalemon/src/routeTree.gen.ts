@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as DentalOnboardingRouteImport } from './routes/dental-onboarding'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ImagingCephReportImageIdRouteImport } from './routes/imaging-ceph-report.$imageId'
+import { Route as BookBranchIdRouteImport } from './routes/book.$branchId'
 import { Route as AuthPinSelectRouteImport } from './routes/auth/pin-select'
 import { Route as AuthAuthViewRouteImport } from './routes/auth/$authView'
 import { Route as WorkspaceQueueBoardRouteImport } from './routes/_workspace/queue-board'
@@ -23,7 +25,6 @@ import { Route as DashboardStaffRouteImport } from './routes/_dashboard/staff'
 import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
 import { Route as DashboardReportsRouteImport } from './routes/_dashboard/reports'
 import { Route as DashboardPatientsRouteImport } from './routes/_dashboard/patients'
-import { Route as DashboardDentalOnboardingRouteImport } from './routes/_dashboard/dental-onboarding'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCalendarRouteImport } from './routes/_dashboard/calendar'
 import { Route as DashboardBillingRouteImport } from './routes/_dashboard/billing'
@@ -38,6 +39,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentalOnboardingRoute = DentalOnboardingRouteImport.update({
+  id: '/dental-onboarding',
+  path: '/dental-onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -59,6 +65,11 @@ const ImagingCephReportImageIdRoute =
     path: '/imaging-ceph-report/$imageId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const BookBranchIdRoute = BookBranchIdRouteImport.update({
+  id: '/book/$branchId',
+  path: '/book/$branchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthPinSelectRoute = AuthPinSelectRouteImport.update({
   id: '/auth/pin-select',
   path: '/auth/pin-select',
@@ -99,12 +110,6 @@ const DashboardPatientsRoute = DashboardPatientsRouteImport.update({
   path: '/patients',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardDentalOnboardingRoute =
-  DashboardDentalOnboardingRouteImport.update({
-    id: '/dental-onboarding',
-    path: '/dental-onboarding',
-    getParentRoute: () => DashboardRoute,
-  } as any)
 const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -134,12 +139,12 @@ const DashboardPatientsPatientIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dental-onboarding': typeof DentalOnboardingRoute
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/billing': typeof DashboardBillingRoute
   '/calendar': typeof DashboardCalendarRoute
   '/dashboard': typeof DashboardDashboardRoute
-  '/dental-onboarding': typeof DashboardDentalOnboardingRoute
   '/patients': typeof DashboardPatientsRoute
   '/reports': typeof DashboardReportsRoute
   '/settings': typeof DashboardSettingsRoute
@@ -148,18 +153,19 @@ export interface FileRoutesByFullPath {
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dental-onboarding': typeof DentalOnboardingRoute
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/billing': typeof DashboardBillingRoute
   '/calendar': typeof DashboardCalendarRoute
   '/dashboard': typeof DashboardDashboardRoute
-  '/dental-onboarding': typeof DashboardDentalOnboardingRoute
   '/patients': typeof DashboardPatientsRoute
   '/reports': typeof DashboardReportsRoute
   '/settings': typeof DashboardSettingsRoute
@@ -168,6 +174,7 @@ export interface FileRoutesByTo {
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
@@ -177,12 +184,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
   '/_workspace': typeof WorkspaceRouteWithChildren
+  '/dental-onboarding': typeof DentalOnboardingRoute
   '/onboarding': typeof OnboardingRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_dashboard/billing': typeof DashboardBillingRoute
   '/_dashboard/calendar': typeof DashboardCalendarRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
-  '/_dashboard/dental-onboarding': typeof DashboardDentalOnboardingRoute
   '/_dashboard/patients': typeof DashboardPatientsRoute
   '/_dashboard/reports': typeof DashboardReportsRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
@@ -191,6 +198,7 @@ export interface FileRoutesById {
   '/_workspace/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
+  '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
@@ -199,12 +207,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dental-onboarding'
     | '/onboarding'
     | '/verify-email'
     | '/billing'
     | '/calendar'
     | '/dashboard'
-    | '/dental-onboarding'
     | '/patients'
     | '/reports'
     | '/settings'
@@ -213,18 +221,19 @@ export interface FileRouteTypes {
     | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dental-onboarding'
     | '/onboarding'
     | '/verify-email'
     | '/billing'
     | '/calendar'
     | '/dashboard'
-    | '/dental-onboarding'
     | '/patients'
     | '/reports'
     | '/settings'
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
@@ -241,12 +251,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_dashboard'
     | '/_workspace'
+    | '/dental-onboarding'
     | '/onboarding'
     | '/verify-email'
     | '/_dashboard/billing'
     | '/_dashboard/calendar'
     | '/_dashboard/dashboard'
-    | '/_dashboard/dental-onboarding'
     | '/_dashboard/patients'
     | '/_dashboard/reports'
     | '/_dashboard/settings'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/_workspace/queue-board'
     | '/auth/$authView'
     | '/auth/pin-select'
+    | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/_dashboard/patients_/$patientId'
     | '/auth/pin-entry/$memberId'
@@ -264,10 +275,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  DentalOnboardingRoute: typeof DentalOnboardingRoute
   OnboardingRoute: typeof OnboardingRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   AuthAuthViewRoute: typeof AuthAuthViewRoute
   AuthPinSelectRoute: typeof AuthPinSelectRoute
+  BookBranchIdRoute: typeof BookBranchIdRoute
   ImagingCephReportImageIdRoute: typeof ImagingCephReportImageIdRoute
   AuthPinEntryMemberIdRoute: typeof AuthPinEntryMemberIdRoute
 }
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dental-onboarding': {
+      id: '/dental-onboarding'
+      path: '/dental-onboarding'
+      fullPath: '/dental-onboarding'
+      preLoaderRoute: typeof DentalOnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_workspace': {
@@ -314,6 +334,13 @@ declare module '@tanstack/react-router' {
       path: '/imaging-ceph-report/$imageId'
       fullPath: '/imaging-ceph-report/$imageId'
       preLoaderRoute: typeof ImagingCephReportImageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$branchId': {
+      id: '/book/$branchId'
+      path: '/book/$branchId'
+      fullPath: '/book/$branchId'
+      preLoaderRoute: typeof BookBranchIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/pin-select': {
@@ -372,13 +399,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPatientsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/dental-onboarding': {
-      id: '/_dashboard/dental-onboarding'
-      path: '/dental-onboarding'
-      fullPath: '/dental-onboarding'
-      preLoaderRoute: typeof DashboardDentalOnboardingRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_dashboard/dashboard': {
       id: '/_dashboard/dashboard'
       path: '/dashboard'
@@ -421,7 +441,6 @@ interface DashboardRouteChildren {
   DashboardBillingRoute: typeof DashboardBillingRoute
   DashboardCalendarRoute: typeof DashboardCalendarRoute
   DashboardDashboardRoute: typeof DashboardDashboardRoute
-  DashboardDentalOnboardingRoute: typeof DashboardDentalOnboardingRoute
   DashboardPatientsRoute: typeof DashboardPatientsRoute
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
@@ -433,7 +452,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardBillingRoute: DashboardBillingRoute,
   DashboardCalendarRoute: DashboardCalendarRoute,
   DashboardDashboardRoute: DashboardDashboardRoute,
-  DashboardDentalOnboardingRoute: DashboardDentalOnboardingRoute,
   DashboardPatientsRoute: DashboardPatientsRoute,
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
@@ -463,10 +481,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   WorkspaceRoute: WorkspaceRouteWithChildren,
+  DentalOnboardingRoute: DentalOnboardingRoute,
   OnboardingRoute: OnboardingRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   AuthAuthViewRoute: AuthAuthViewRoute,
   AuthPinSelectRoute: AuthPinSelectRoute,
+  BookBranchIdRoute: BookBranchIdRoute,
   ImagingCephReportImageIdRoute: ImagingCephReportImageIdRoute,
   AuthPinEntryMemberIdRoute: AuthPinEntryMemberIdRoute,
 }

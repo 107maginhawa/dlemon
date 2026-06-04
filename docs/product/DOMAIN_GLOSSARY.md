@@ -69,6 +69,23 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 
 ---
 
+## Periodontal Terms
+
+| Term | Definition | Source |
+|------|-----------|--------|
+| **Perio Chart** | Per-visit periodontal examination record. One chart per visit, immutable after visit locked. | [CODE] |
+| **Probing Depth** | Measurement in mm from gingival margin to base of periodontal pocket, per site. Normal: ≤3 mm. | [CODE] |
+| **BOP** | Bleeding on Probing — boolean per site, recorded within 30s of probe withdrawal. | [CODE] |
+| **Recession** | Gingival recession in mm — distance from CEJ (cement-enamel junction) to gingival margin. | [CODE] |
+| **Mobility** | Tooth mobility grade: 0 (none), 1 (≤1 mm horizontal), 2 (>1 mm horizontal), 3 (vertical). | [CODE] |
+| **Furcation** | Furcation involvement for multi-rooted teeth: 0 (none), F1 (≤3 mm), F2 (>3 mm), F3 (through-and-through). | [CODE] |
+| **Probing Site** | One of 6 per tooth: buccal-mesial (BM), buccal-center (BC), buccal-distal (BD), lingual-mesial (LM), lingual-center (LC), lingual-distal (LD). | [CODE] |
+| **CEJ** | Cement-Enamel Junction — anatomical landmark used to measure recession. | [CODE] |
+| **PSR** | Periodontal Screening and Recording — sextant-based screening (not a full chart; future feature). | [CODE] |
+| **Perio Staging** | AAP 2017 Classification: Stage I–IV (severity). Out of scope — P3. | [CODE] |
+
+---
+
 ## Technical Terms
 
 | Term | Definition | Source |

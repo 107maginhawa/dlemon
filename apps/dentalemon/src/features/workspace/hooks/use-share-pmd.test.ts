@@ -6,6 +6,9 @@ import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { useSharePMD } from './use-share-pmd';
 import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
@@ -58,5 +61,20 @@ describe('useSharePMD', () => {
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.isError).toBe(true);
+  });
+
+  test('V-FE-ERR-001: surfaces a toast on fetch failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({}, 500));
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useSharePMD(),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

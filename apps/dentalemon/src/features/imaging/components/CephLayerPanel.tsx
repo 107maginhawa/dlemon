@@ -28,7 +28,7 @@ export function CephLayerPanel({ layers, onChange }: CephLayerPanelProps) {
             onClick={() => onChange(key, !active)}
             className={`px-2 py-1 text-xs rounded transition-colors ${
               active
-                ? 'bg-zinc-700 text-[#FFE97D]'
+                ? 'bg-zinc-700 text-lemon'
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
             }`}
           >

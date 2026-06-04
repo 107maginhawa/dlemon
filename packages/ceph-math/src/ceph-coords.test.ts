@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { imageToScreen, screenToImage, type CephTransformState } from './ceph-coords'
+import { imageToScreen, screenToImage, type CephTransformState } from './coords'
 
 // ─── DOMMatrix Oracle ────────────────────────────────────────────────────────
 //
@@ -36,6 +36,13 @@ function oracleScreenToImage(sx: number, sy: number, s: CephTransformState): { x
 
 const PREC = 8 // toBeCloseTo decimal places
 
+// DOMMatrix is a browser API and is absent in the bun/node test runner. The
+// oracle blocks below cross-check our hand-coded transform against it, so they
+// only run where DOMMatrix exists (jsdom/browser); the roundtrip + drawn-dims
+// blocks need no DOM and always run. Without this guard the oracle tests
+// false-fail with "DOMMatrix is not defined" in the headless runner.
+const describeOracle = typeof DOMMatrix === 'undefined' ? describe.skip : describe
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const identity: CephTransformState = {
@@ -65,7 +72,7 @@ const combined: CephTransformState = {
 
 // ─── DOMMatrix-oracle tests ───────────────────────────────────────────────────
 
-describe('imageToScreen — DOMMatrix oracle', () => {
+describeOracle('imageToScreen — DOMMatrix oracle', () => {
   test('identity state: image centre maps to canvas centre', () => {
     const { x, y } = imageToScreen(200, 150, identity)
     const o = oracleImageToScreen(200, 150, identity)
@@ -121,7 +128,7 @@ describe('imageToScreen — DOMMatrix oracle', () => {
   })
 })
 
-describe('screenToImage — DOMMatrix oracle', () => {
+describeOracle('screenToImage — DOMMatrix oracle', () => {
   test('identity state: canvas centre maps to image centre', () => {
     const { x, y } = screenToImage(400, 300, identity)
     const o = oracleScreenToImage(400, 300, identity)

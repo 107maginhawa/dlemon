@@ -42,6 +42,26 @@ function renderView(snapshot: CephReportSnapshot, version = 1, imageUrl?: string
   )
 }
 
+// Image composite (bug fix): the report must actually render the radiograph
+describe('radiograph composite', () => {
+  test('renders an <img> with the provided imageUrl', () => {
+    const { container } = renderView(mkSnapshot(), 1, 'https://example.test/ceph.jpg')
+    const img = container.querySelector('img')
+    expect(img).not.toBeNull()
+    expect(img!.getAttribute('src')).toBe('https://example.test/ceph.jpg')
+  })
+
+  test('renders no <img> when imageUrl is absent', () => {
+    const { container } = renderView(mkSnapshot())
+    expect(container.querySelector('img')).toBeNull()
+  })
+
+  test('keeps the D-N "not to scale" labeling on the overlay', () => {
+    const { container } = renderView(mkSnapshot(), 1, 'https://example.test/ceph.jpg')
+    expect(container.textContent?.toLowerCase()).toContain('not to scale')
+  })
+})
+
 // D-G: analysis label badge
 describe('D-G — analysis label', () => {
   test('shows steiner_hybrid_sn badge', () => {

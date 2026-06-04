@@ -56,6 +56,7 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 const USER_OWNER    = { id: 'ac100000-0000-4000-8000-000000000001', email: 'owner@sch-rbac.test' };
 const USER_READONLY = { id: 'ac100000-0000-4000-8000-000000000002', email: 'readonly@sch-rbac.test' };
 const USER_SCHED    = { id: 'ac100000-0000-4000-8000-000000000003', email: 'sched@sch-rbac.test' };
+const USER_ASSOC    = { id: 'ac100000-0000-4000-8000-000000000004', email: 'assoc@sch-rbac.test' };
 // Non-dental user: authenticated but has NO branch membership at all
 const USER_NO_MEMBERSHIP = { id: 'ac100000-0000-4000-8000-000000000099', email: 'nomember@sch-rbac.test' };
 
@@ -68,6 +69,7 @@ const PATIENT_PERSON_ID = 'ac200000-0000-4000-8000-000000000004';
 const MEMBER_OWNER    = 'ac600000-0000-4000-8000-000000000001';
 const MEMBER_READONLY = 'ac600000-0000-4000-8000-000000000002';
 const MEMBER_SCHED    = 'ac600000-0000-4000-8000-000000000003';
+const MEMBER_ASSOC    = 'ac600000-0000-4000-8000-000000000004';
 
 // ---------------------------------------------------------------------------
 // Hono app factory
@@ -152,6 +154,7 @@ async function ensureOrg() {
     [USER_OWNER.id,    MEMBER_OWNER,    'dentist_owner'],
     [USER_READONLY.id, MEMBER_READONLY, 'read_only'],
     [USER_SCHED.id,    MEMBER_SCHED,    'staff_scheduling'],
+    [USER_ASSOC.id,    MEMBER_ASSOC,    'dentist_associate'],
   ] as const) {
     await db.insert(dentalMemberships).values({
       id: memberId, branchId: BRANCH_ID, personId: userId,
@@ -294,6 +297,64 @@ describe('RBAC — POST check-in: read_only blocked [EM-SCH-001]', () => {
       { method: 'POST' },
     );
     expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EM-SCH-001 — check-in role exclusion: staff_scheduling NOT allowed
+// (checkInAppointment allows dentist_owner / dentist_associate / staff_full only)
+// ---------------------------------------------------------------------------
+
+describe('RBAC — POST check-in: staff_scheduling excluded, capable roles allowed [EM-SCH-001]', () => {
+  test('staff_scheduling member check-in → 403 (not a check-in-capable role)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_SCHED);
+    const res = await app.request(`/dental/appointments/${appt.id}/check-in`, { method: 'POST' });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_associate member check-in → not 403 (capable role passes gate)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_ASSOC);
+    const res = await app.request(`/dental/appointments/${appt.id}/check-in`, { method: 'POST' });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EM-SCH-001 — cancel role exclusion: staff_scheduling AND dentist_associate
+// NOT allowed (cancelAppointment allows dentist_owner / staff_full only)
+// ---------------------------------------------------------------------------
+
+describe('RBAC — DELETE appointment: scheduling/associate excluded, owner allowed [EM-SCH-001]', () => {
+  test('staff_scheduling member cancel → 403 (cancel is owner/staff_full only)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_SCHED);
+    const res = await app.request(
+      `/dental/appointments/${appt.id}?reason=${encodeURIComponent('scheduling tries to cancel')}`,
+      { method: 'DELETE' },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_associate member cancel → 403 (cancel is owner/staff_full only)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_ASSOC);
+    const res = await app.request(
+      `/dental/appointments/${appt.id}?reason=${encodeURIComponent('associate tries to cancel')}`,
+      { method: 'DELETE' },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner member cancel → not 403 (role gate passes)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_OWNER);
+    const res = await app.request(
+      `/dental/appointments/${appt.id}?reason=${encodeURIComponent('owner cancels appointment')}`,
+      { method: 'DELETE' },
+    );
+    expect(res.status).not.toBe(403);
   });
 });
 

@@ -6,7 +6,15 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { generateTimeSlots, formatTimeLabel } from './calendar-day';
+import {
+  generateTimeSlots,
+  formatTimeLabel,
+  pxDeltaToMinutes,
+  computeDraggedStart,
+  computeResizedDuration,
+  canReschedule,
+  RESCHEDULE_SNAP_MINUTES,
+} from './calendar-day';
 
 // ---------------------------------------------------------------------------
 // Local helpers not exported by the component
@@ -94,5 +102,67 @@ describe('CalendarDay — groupAppointmentsByHour', () => {
     const grouped = groupAppointmentsByHour(appts);
     expect(grouped[9]).toHaveLength(2);
     expect(grouped[10]).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Drag-to-reschedule geometry (P2-15 feature 3)
+// SLOT_HEIGHT_PX = 48 over 30 min → 1.6 px/min. Snap = 15 min = 24px.
+// ---------------------------------------------------------------------------
+
+describe('CalendarDay — pxDeltaToMinutes', () => {
+  test('snaps to 15-minute increments', () => {
+    expect(pxDeltaToMinutes(24)).toBe(15);   // exactly one snap unit down
+    expect(pxDeltaToMinutes(48)).toBe(30);   // one slot
+    expect(pxDeltaToMinutes(-24)).toBe(-15); // upward drag
+  });
+
+  test('rounds near-snap deltas to the nearest increment', () => {
+    expect(pxDeltaToMinutes(20)).toBe(15); // 12.5 min → snaps to 15
+    expect(pxDeltaToMinutes(5)).toBe(0);   // tiny jitter → no change
+  });
+});
+
+describe('CalendarDay — computeDraggedStart', () => {
+  test('moving down by one slot (48px) advances start by 30 minutes', () => {
+    const next = computeDraggedStart('2026-06-01T09:00:00', 48, 30);
+    expect(new Date(next).getHours()).toBe(9);
+    expect(new Date(next).getMinutes()).toBe(30);
+  });
+
+  test('moving up by 24px moves start back 15 minutes', () => {
+    const next = computeDraggedStart('2026-06-01T09:00:00', -24, 30);
+    expect(new Date(next).getMinutes()).toBe(45);
+    expect(new Date(next).getHours()).toBe(8);
+  });
+
+  test('clamps to the day start (cannot drag before 7AM)', () => {
+    const next = computeDraggedStart('2026-06-01T07:15:00', -240, 30);
+    expect(new Date(next).getHours()).toBe(7);
+    expect(new Date(next).getMinutes()).toBe(0);
+  });
+});
+
+describe('CalendarDay — computeResizedDuration', () => {
+  test('dragging the handle down one slot adds 30 minutes', () => {
+    expect(computeResizedDuration(30, 48)).toBe(60);
+  });
+
+  test('cannot shrink below the snap minimum', () => {
+    expect(computeResizedDuration(30, -480)).toBe(RESCHEDULE_SNAP_MINUTES);
+  });
+});
+
+describe('CalendarDay — canReschedule', () => {
+  test('scheduled and confirmed are draggable', () => {
+    expect(canReschedule('scheduled')).toBe(true);
+    expect(canReschedule('confirmed')).toBe(true);
+  });
+
+  test('checked-in / terminal states are not draggable', () => {
+    expect(canReschedule('checked_in')).toBe(false);
+    expect(canReschedule('completed')).toBe(false);
+    expect(canReschedule('cancelled')).toBe(false);
+    expect(canReschedule('no_show')).toBe(false);
   });
 });

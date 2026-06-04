@@ -16,6 +16,9 @@ import {
 } from './use-attachments';
 import { makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 const mockFetch = mock(() => jsonResponse({ data: [], pagination: {} }));
 
 const ATTACHMENT = {
@@ -191,6 +194,26 @@ describe('useUploadAttachment', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as Error).message).toContain('Failed to upload file');
   });
+
+  it('V-FE-ERR-001: surfaces a toast on upload failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ file: 'fid', uploadUrl: 'https://s3.example/url', uploadMethod: 'PUT' }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 403 }));
+
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(
+      () => useUploadAttachment('visit-1', 'pat-1'),
+      { wrapper },
+    );
+
+    const file = new File(['data'], 'xray.jpg', { type: 'image/jpeg' });
+    result.current.mutate({ file, imageType: 'photo' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
+  });
 });
 
 describe('useDeleteAttachment', () => {
@@ -233,5 +256,19 @@ describe('useDeleteAttachment', () => {
 
     result.current.mutate('att-missing');
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('V-FE-ERR-001: surfaces a toast on delete failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({}), { status: 404, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => useDeleteAttachment('visit-1'), { wrapper });
+
+    result.current.mutate('att-missing');
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

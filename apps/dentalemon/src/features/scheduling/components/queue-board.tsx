@@ -34,7 +34,7 @@ export const COLUMNS: { status: QueueItemStatus; label: string }[] = [
 const COLUMN_HEADER_CLASS: Record<string, string> = {
   waiting: 'bg-yellow-50 text-yellow-800 border-yellow-200',
   called: 'bg-blue-50 text-blue-800 border-blue-200',
-  in_progress: 'bg-[#FFF8D6] text-[#4A4018] border-[#FFE97D]',
+  in_progress: 'bg-[#FFF8D6] text-lemon-foreground border-lemon',
   completed: 'bg-green-50 text-green-800 border-green-200',
 };
 
@@ -88,7 +88,7 @@ function QueueCard({ item, onUpdateStatus, isUpdating }: QueueCardProps) {
             type="button"
             disabled={isUpdating}
             onClick={() => onUpdateStatus(item.id, primaryAction.next)}
-            className="rounded px-2.5 py-1 text-xs font-semibold bg-[#FFE97D] text-[#4A4018] hover:bg-[#f5df6a] disabled:opacity-50 transition-colors"
+            className="rounded px-2.5 py-1 text-xs font-semibold bg-lemon text-lemon-foreground hover:bg-[#f5df6a] disabled:opacity-50 transition-colors"
           >
             {primaryAction.label}
           </button>

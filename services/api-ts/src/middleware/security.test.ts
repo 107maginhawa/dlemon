@@ -32,6 +32,7 @@ function makeConfig(overrides: Partial<Config['cors']> = {}): Config {
     notifs: {} as any,
     billing: {} as any,
     webrtc: { iceServers: [] },
+    features: { dentalImagingAutoLandmark: false },
   } as Config;
 }
 

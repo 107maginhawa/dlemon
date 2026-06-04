@@ -2,13 +2,20 @@
  * J08 — Informed refusal — declined treatment persisted with reason.
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J08
- * Rubric: J4 decision point; Q20 (C4). Persona: front-desk presents;
- * dentist documents. Expected verdict: BROKEN (provisional).
- * P0 ref: Gap #11 (no informed-refusal capture).
+ * Rubric: J4 decision point; Q20 (C4). Persona: dentist documents.
+ * Expected verdict: PASS.
+ * P0 ref: Gap #11 (informed-refusal capture) — now IMPLEMENTED (verified live):
+ *         the Treatment Plan sheet renders a Decline control + refusal-reason
+ *         field per pending treatment, wired to PATCH status='declined' +
+ *         refusalReason. This spec drives that flow DOM-only and asserts the
+ *         goal state via an INDEPENDENT read.
  *
- * NOTE: the seed provisions no dedicated front-desk role; this spec uses the
- * `staff` persona (staff_full) as the closest seeded role and records the
- * substitution.
+ * Patient: Ana Reyes (P5) has a non-empty pending plan (diagnosed + planned).
+ * The prior probe used Carlos, whose plan is empty, so the Decline control
+ * never rendered — a seed-selection bug, not a missing feature.
+ *
+ * NOTE: the seed provisions no dedicated front-desk role; the dentist persona
+ * documents the refusal.
  */
 import {
   test,
@@ -19,7 +26,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -32,68 +38,65 @@ const META: JourneyMeta = {
   rubricIds: ['Q20'],
 }
 
+const REFUSAL_REASON = 'Patient declined RCT — cost; opts for extraction.'
+
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
   try {
     const { branchId } = await readOrgContext(apiReader)
-    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.carlos)
+    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.ana)
 
-    // Persona substitution note (no front-desk role seeded).
     await pinAuth(page, 'dentist')
     await openWorkspace(page, patientId)
 
+    // Step 1: open the Treatment Plan sheet from the top bar.
     const tpBtn = page.getByRole('button', { name: /treatment plan/i }).first()
-    if (!(await tpBtn.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
-        'No Treatment Plan affordance — cannot present a plan to decline. Step 1 impossible.',
-      )
-      return
-    }
+    await expect(tpBtn, 'workspace must expose a Treatment Plan affordance').toBeVisible({
+      timeout: 10_000,
+    })
     await tpBtn.click()
-    await page.waitForLoadState('networkidle')
-    const tpPanel = page.locator('[data-testid="treatment-plan-tab"], [role="dialog"]').first()
 
-    // Step 2: mark an item declined + enter a refusal reason.
-    const declineCtl = tpPanel
-      .getByRole('button', { name: /decline|refuse|reject/i })
-      .or(tpPanel.locator('[data-testid*="decline"], [data-testid*="refus"]'))
-      .first()
+    // The plan sheet must mount with the patient's pending treatments.
+    const tpPanel = page.getByTestId('treatment-plan-tab')
+    await expect(tpPanel, 'Treatment Plan sheet must render the pending plan').toBeVisible({
+      timeout: 10_000,
+    })
 
-    if (!(await declineCtl.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
-        'Treatment Plan tab exposes no decline/refusal control with a reason ' +
-          'field (Gap #11). Informed refusal cannot be captured through the ' +
-          'UI — legally-critical C4 requirement unmet. Goal state (persisted ' +
-          'declined status + reason) unreachable.',
-      )
-      return
-    }
-
+    // Step 2: a Decline (informed-refusal) control must exist for a pending item.
+    const declineCtl = tpPanel.getByTestId('decline-btn').first()
+    await expect(
+      declineCtl,
+      'Treatment Plan must expose a Decline / informed-refusal control (Gap #11)',
+    ).toBeVisible()
     await declineCtl.click()
-    const reason = tpPanel.getByRole('textbox').first()
-    if (await reason.count()) await reason.fill('Patient declined RCT — cost; opts for extraction.')
-    const save = tpPanel.getByRole('button', { name: /save|confirm|done/i }).first()
-    if (await save.count()) await save.click()
+
+    // A refusal-reason field is legally required (C4); document the reason.
+    const reasonField = tpPanel.getByLabel(/refusal reason/i).first()
+    await expect(reasonField, 'Decline must require a refusal-reason field').toBeVisible()
+    await reasonField.fill(REFUSAL_REASON)
+
+    // Step 3: confirm the refusal.
+    await tpPanel.getByTestId('confirm-decline-btn').first().click()
     await page.waitForLoadState('networkidle')
 
-    const planResp = await apiReader.get(`/dental/patients/${patientId}/treatment-plan`)
-    const planStr = planResp.ok() ? JSON.stringify(await planResp.json()) : ''
-    const hasDeclined = /"status":"declined"/.test(planStr) && /reason/i.test(planStr)
-
-    if (hasDeclined) {
-      // Informed-refusal capture is implemented — declined status + reason persist.
-      recordJourneyPass(META)
-      return
-    }
-
-    await expectJourneyBroken(
-      page,
-      META,
-      'Independent read shows no persisted declined status with reason (Gap #11 confirmed).',
+    // ── Independent read: goal state persisted (declined status + reason) ──────
+    const planResp = await apiReader.get(
+      `/dental/patients/${patientId}/treatment-plan?branchId=${branchId}`,
     )
+    expect(planResp.ok(), `treatment-plan read → ${planResp.status()}`).toBe(true)
+    const plan = await planResp.json()
+    const declined = (plan.treatments ?? []).find(
+      (t: { status?: string }) => t.status === 'declined',
+    )
+    expect(
+      declined,
+      'a treatment must be persisted with status=declined after the refusal',
+    ).toBeTruthy()
+    expect(
+      String(declined.reason ?? ''),
+      'the declined treatment must persist the exact refusal reason entered in the UI',
+    ).toContain('extraction')
+
+    recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)
     throw err

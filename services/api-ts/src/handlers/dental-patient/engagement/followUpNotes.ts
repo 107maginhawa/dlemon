@@ -9,11 +9,9 @@ import { z } from 'zod';
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord, setPatientFollowUpNotes } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import type { FollowUpNote } from '../../patient/repos/patient.schema';
-import { patients } from '../../patient/repos/patient.schema';
-import { eq } from 'drizzle-orm';
+import type { FollowUpNote } from '../../patient/repos/patient-dental-patient.facade';
 
 // V-PAT-003: follow-up notes are restricted to clinical/full-staff roles.
 const FOLLOW_UP_ROLES = ['staff_full', 'dentist_associate', 'dentist_owner'] as const;
@@ -32,8 +30,7 @@ export async function listFollowUpNotes(ctx: BaseContext) {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // V-PAT-002/003: branch+role guard; a missing branch DENIES (never bypasses).
@@ -59,8 +56,7 @@ export async function addFollowUpNote(ctx: BaseContext) {
   const rawBody = await ctx.req.json();
   const { text } = addFollowUpNoteSchema.parse(rawBody);
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // EF-PAT-001: block writes on archived patients
@@ -84,17 +80,8 @@ export async function addFollowUpNote(ctx: BaseContext) {
   const existingNotes: FollowUpNote[] = patient.followUpNotes ?? [];
   const updatedNotes = [...existingNotes, newNote];
 
-  // Append note to JSONB array
-  await db
-    .update(patients)
-    .set({ followUpNotes: updatedNotes, updatedAt: new Date() })
-    .where(eq(patients.id, patientId));
-
-  // Also set needsFollowUp=true when a follow-up note is added
-  await db
-    .update(patients)
-    .set({ needsFollowUp: true, updatedAt: new Date() })
-    .where(eq(patients.id, patientId));
+  // Append note to JSONB array + flag needsFollowUp (single update)
+  await setPatientFollowUpNotes(db, patientId, updatedNotes);
 
   logger?.info({ action: 'addFollowUpNote', patientId, noteId: newNote.id }, 'Follow-up note added');
 

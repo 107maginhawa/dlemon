@@ -121,7 +121,7 @@ export async function updateDentalTreatment(
   }
 
   // EC4: priceCents is locked at creation — updates are ignored
-  const patch: Partial<Pick<DentalTreatment, 'status' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'clinicalNotes' | 'performedAt'>> = {};
+  const patch: Partial<Pick<DentalTreatment, 'status' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'clinicalNotes' | 'performedAt' | 'phase' | 'priority'>> = {};
   if (body.status) patch.status = body.status as DentalTreatment['status'];
   if (body.status === 'performed') patch.performedAt = new Date();
   if (body.toothNumber !== undefined) patch.toothNumber = body.toothNumber;
@@ -130,6 +130,10 @@ export async function updateDentalTreatment(
   if (body.description) patch.description = body.description;
   if (body.conditionCode) patch.conditionCode = body.conditionCode;
   if (body.clinicalNotes !== undefined) patch.clinicalNotes = body.clinicalNotes;
+  // P1-18: phase + priority are sequencing metadata (not clinical-record fields),
+  // so they remain editable even on performed/verified items.
+  if (body.phase !== undefined) patch.phase = body.phase as DentalTreatment['phase'];
+  if (body.priority !== undefined) patch.priority = body.priority;
 
   const updated = await repo.update(treatmentId, patch);
 

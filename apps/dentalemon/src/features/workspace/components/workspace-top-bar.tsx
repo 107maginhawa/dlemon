@@ -10,7 +10,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature } from 'lucide-react';
-import { usePatientProfile } from '@/features/patients/hooks/use-patient-profile';
+import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { BRAND_GOLD_TEXT } from '@/constants/brand';
 

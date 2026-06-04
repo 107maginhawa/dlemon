@@ -35,6 +35,31 @@ export interface StorageConfig {
   };
   uploadUrlExpiry: number;
   downloadUrlExpiry: number;
+  // P2-7: per-class upload size ceilings (bytes). Ordinary images stay at the
+  // default cap; `application/dicom` (CBCT volumes are 100 MB – multiple GB) gets
+  // a higher, env-configurable cap bounded by an absolute hard cap to limit abuse.
+  maxFileSizeBytes: number;
+  dicomMaxFileSizeBytes: number;
+  absoluteMaxFileSizeBytes: number;
+}
+
+/**
+ * P2-7: resolve the upload size ceiling for a given MIME type. `application/dicom`
+ * uses the higher CBCT cap; everything else uses the default image cap. The result
+ * is clamped to the absolute hard cap so a misconfigured env can never disable the
+ * abuse bound.
+ */
+export function maxUploadSizeForMime(config: StorageConfig, mimeType: string | undefined): number {
+  const cap = mimeType === 'application/dicom' ? config.dicomMaxFileSizeBytes : config.maxFileSizeBytes;
+  return Math.min(cap, config.absoluteMaxFileSizeBytes);
+}
+
+/** Human-readable byte size for error messages (e.g. "2 GB", "100 MB"). */
+export function formatByteCeiling(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+  const mb = bytes / (1024 * 1024);
+  return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
 }
 
 export interface StorageProvider {
@@ -109,6 +134,17 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   /**
+   * Server-side-encryption params, applied ONLY for real S3. MinIO (dev/offline
+   * storage) has no SSE backend and returns 501 NotImplemented ("Server side
+   * encryption specified but KMS is not configured") on CreateMultipartUpload, and
+   * 400 on presigned single-PUTs whose signed headers include x-amz-server-side-
+   * encryption. Production uses provider 's3', so at-rest SSE is unchanged there.
+   */
+  private get sseParams(): { ServerSideEncryption: 'AES256' } | Record<string, never> {
+    return this.config.provider === 's3' ? { ServerSideEncryption: 'AES256' } : {};
+  }
+
+  /**
    * Generate presigned URL for file upload
    */
   async generateUploadUrl(fileId: string, mimeType: string): Promise<string> {
@@ -117,7 +153,7 @@ export class S3StorageProvider implements StorageProvider {
       Bucket: this.config.bucket,
       Key: fileId,
       ContentType: mimeType,
-      ServerSideEncryption: 'AES256',
+      ...this.sseParams,
     });
 
     // Use publicClient for generating URLs accessible from outside Docker network
@@ -264,7 +300,7 @@ export class S3StorageProvider implements StorageProvider {
       Key: fileId,
       ContentType: mimeType,
       ContentDisposition: `attachment; filename="${filename}"`,
-      ServerSideEncryption: 'AES256',
+      ...this.sseParams,
     });
     const result = await this.client.send(command);
     if (!result.UploadId) {

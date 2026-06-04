@@ -41,9 +41,12 @@ function _makeIcon(name: string) {
 }
 const _lucideMock = {
   Activity: _makeIcon('activity'),
+  AlertCircle: _makeIcon('alertcircle'),
   AlertTriangle: _makeIcon('alerttriangle'),
+  ArrowLeft: _makeIcon('arrowleft'),
   ArrowRight: _makeIcon('arrowright'),
   Calendar: _makeIcon('calendar'),
+  CalendarClock: _makeIcon('calendarclock'),
   CalendarIcon: _makeIcon('calendaricon'),
   Camera: _makeIcon('camera'),
   Check: _makeIcon('check'),
@@ -70,16 +73,21 @@ const _lucideMock = {
   LogOut: _makeIcon('logout'),
   Mail: _makeIcon('mail'),
   Maximize2: _makeIcon('maximize2'),
+  Mic: _makeIcon('mic'),
+  MicOff: _makeIcon('micoff'),
   Minimize2: _makeIcon('minimize2'),
   MoreHorizontal: _makeIcon('morehorizontal'),
   PanelLeft: _makeIcon('panelleft'),
   Paperclip: _makeIcon('paperclip'),
+  Pause: _makeIcon('pause'),
   Pencil: _makeIcon('pencil'),
   Phone: _makeIcon('phone'),
   Pill: _makeIcon('pill'),
+  Plus: _makeIcon('plus'),
   RefreshCw: _makeIcon('refreshcw'),
   Search: _makeIcon('search'),
   Shield: _makeIcon('shield'),
+  Star: _makeIcon('star'),
   Trash2: _makeIcon('trash2'),
   Upload: _makeIcon('upload'),
   Users: _makeIcon('users'),
@@ -107,6 +115,51 @@ mock.module('@/components/dialog', () => ({
     React.createElement('p', null, children),
   DialogFooter: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+}))
+
+// @radix-ui/react-dialog — Radix portal + focus-trap don't behave under
+// happy-dom. Stub the raw primitive globally so EVERY consumer is deterministic,
+// including @monobase/ui's Dialog (used by features/imaging/CalibrationDialog).
+//
+// This MUST be global, not per-file: `mock.module()` in Bun is a process-wide
+// registry override that persists across files and cannot be cleanly reverted.
+// A partial per-file stub (e.g. one that omits `Close`/`Trigger`) leaks into
+// sibling tests and makes @monobase/ui's DialogContent throw (it renders
+// DialogPrimitive.Close), which is what caused FE-FLAKE-CALIBRATION. Exporting
+// the full surface here keeps the suite order-independent.
+const _DialogPassthrough = ({ children }: { children?: React.ReactNode }) =>
+  React.createElement(React.Fragment, null, children)
+const _DialogPlainDiv = React.forwardRef<HTMLDivElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('div', { ref }, children),
+)
+_DialogPlainDiv.displayName = 'DialogStubDiv'
+const _DialogTitle = React.forwardRef<HTMLHeadingElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('h2', { ref }, children),
+)
+_DialogTitle.displayName = 'DialogStubTitle'
+const _DialogDescription = React.forwardRef<HTMLParagraphElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('p', { ref }, children),
+)
+_DialogDescription.displayName = 'DialogStubDescription'
+// The export surface below is a faithful SUPERSET covering every consumer in the
+// repo: @monobase/ui Dialog (Root/Trigger/Portal/Overlay/Close/Content/Title/
+// Description), @radix-ui/react-alert-dialog (adds WarningProvider +
+// createDialogScope), and pre-completion-checklist.tsx (namespace import). Keep
+// it complete — an omitted member silently breaks a leaking sibling test.
+mock.module('@radix-ui/react-dialog', () => ({
+  Root: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
+    open !== false ? React.createElement('div', { role: 'dialog' }, children) : null,
+  Trigger: _DialogPassthrough,
+  Portal: _DialogPassthrough,
+  Overlay: () => null,
+  Close: _DialogPlainDiv,
+  Content: _DialogPlainDiv,
+  Title: _DialogTitle,
+  Description: _DialogDescription,
+  WarningProvider: _DialogPassthrough,
+  // alert-dialog composes the dialog scope at module-eval time; return stub
+  // scope factories so its `* as DialogPrimitive` namespace import resolves.
+  createDialogScope: () => () => ({}),
 }))
 
 // @/components/sheet — Radix portal won't work in happy-dom
@@ -181,9 +234,12 @@ mock.module('@/features/workspace/components/dental-chart', () => ({
   DentalChart: () => React.createElement('div', { 'data-testid': 'dental-chart-stub' }),
 }))
 
-mock.module('@/features/workspace/hooks/use-update-visit', () => ({
-  useUpdateVisit: () => ({ mutate: () => {}, isPending: false, error: null }),
-}))
+// NOTE: use-update-visit is intentionally NOT mocked here. Per the convention
+// documented at the top of this file, hook mocks must NOT live in the global
+// preload — doing so shadows the real hook for its own unit test
+// (use-update-visit.test.ts). Component tests that need a stub (e.g.
+// timeline-carousel) declare a per-file mock.module() instead; those test files
+// sort after hooks/ so the real hook unit test runs first against the real impl.
 
 // ─── Imaging workspace (comparison-view dep) ──────────────────────────────
 

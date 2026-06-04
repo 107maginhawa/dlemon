@@ -4,7 +4,6 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { NotFoundError } from '@/core/errors';
 import { NotificationRepository } from './repos/notification.repo';
-import { PersonRepository } from '../person/repos/person.repo';
 
 /**
  * markNotificationAsRead
@@ -28,8 +27,7 @@ export async function markNotificationAsRead(
   const userId = user.id; // Get user's person ID
 
   // Instantiate repositories
-  const personRepo = new PersonRepository(db, logger);
-  const repo = new NotificationRepository(db, personRepo, logger);
+  const repo = new NotificationRepository(db, logger);
 
   // Mark notification as read (includes ownership check)
   const updatedNotification = await repo.markAsRead(params.notif, userId);

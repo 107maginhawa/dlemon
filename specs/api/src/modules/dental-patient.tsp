@@ -101,10 +101,58 @@ namespace DentalPatientModule {
     conditionCount: int32;
   }
 
-  @doc("Persisted registration consent (single-consent model)")
+  @doc("Per-channel communication consent (P1-28)")
+  model CommunicationChannelConsent {
+    @doc("Consent to SMS communication")
+    sms?: boolean;
+
+    @doc("Consent to email communication")
+    email?: boolean;
+
+    @doc("Consent to phone communication")
+    phone?: boolean;
+
+    @doc("Consent to marketing communication")
+    marketing?: boolean;
+  }
+
+  @doc("Persisted consent: registration gate + per-channel communication consent")
   model PersonConsentInfo {
     registrationConsent: boolean;
     capturedAt: string;
+
+    @doc("Per-channel communication consent (P1-28)")
+    channels?: CommunicationChannelConsent;
+
+    @doc("When per-channel consent was last updated (ISO 8601)")
+    channelsUpdatedAt?: string;
+  }
+
+  @doc("A patient's communication-consent state (P1-28)")
+  model CommunicationConsentResponse {
+    @doc("Registration consent gate")
+    registrationConsent: boolean;
+
+    @doc("Per-channel communication consent")
+    channels: CommunicationChannelConsent;
+
+    @doc("When per-channel consent was last updated (ISO 8601), if ever")
+    channelsUpdatedAt: string | null;
+  }
+
+  @doc("Body to update per-channel communication consent (partial; omitted channels unchanged)")
+  model UpdateCommunicationConsentRequest {
+    @doc("Consent to SMS communication")
+    sms?: boolean;
+
+    @doc("Consent to email communication")
+    email?: boolean;
+
+    @doc("Consent to phone communication")
+    phone?: boolean;
+
+    @doc("Consent to marketing communication")
+    marketing?: boolean;
   }
 
   @doc("Duplicate warning on patient creation")
@@ -112,6 +160,36 @@ namespace DentalPatientModule {
     hasDuplicates: boolean;
     count: int32;
     duplicateIds: UUID[];
+  }
+
+  // ── P2-16: duplicate-patient detection ────────────────────────────────────
+
+  @doc("A patient summary in a duplicate-candidate group")
+  model DuplicateCandidatePatient {
+    id: UUID;
+    displayName: string;
+    dateOfBirth: string | null;
+    email: string | null;
+    phone: string | null;
+    createdAt: string;
+  }
+
+  @doc("A cluster of likely-duplicate patients for staff to review/merge")
+  model DuplicateCandidateGroup {
+    @doc("'strong' = name+DOB or name+shared-contact match; 'name' = name-only")
+    matchType: string;
+
+    @doc("The normalized key the cluster matched on")
+    matchKey: string;
+
+    @doc("The patients in the cluster (2+)")
+    patients: DuplicateCandidatePatient[];
+  }
+
+  @doc("Duplicate-detection result for a branch")
+  model DuplicateCandidatesResponse {
+    groups: DuplicateCandidateGroup[];
+    groupCount: int32;
   }
 
   @doc("Response after creating a dental patient")
@@ -377,7 +455,7 @@ namespace DentalPatientModule {
       @query q?: string,
       @query needsFollowUp?: boolean,
       @query status?: string,
-      @query branchId?: UUID,
+      @query branchId: UUID,
       @query limit?: int32,
       @query offset?: int32,
     ): ApiOkResponse<PaginatedResponse<DentalPatient>>
@@ -419,6 +497,17 @@ namespace DentalPatientModule {
       @statusCode statusCode: 200;
       @body response: BulkArchiveDentalPatientsResponse;
     } | ApiUnauthorizedResponse;
+
+    @doc("Detect likely-duplicate patients in a branch for staff review (P2-16)")
+    @get
+    @route("/duplicates")
+    @operationId("detectDuplicatePatients")
+    @extension("x-security-required-roles", #["user"])
+    @useAuth(BearerAuth)
+    detectDuplicatePatients(@query branchId: UUID): {
+      @statusCode statusCode: 200;
+      @body response: DuplicateCandidatesResponse;
+    } | ApiUnauthorizedResponse | ApiForbiddenResponse;
 
     @doc("Get a dental patient by ID")
     @get
@@ -518,5 +607,30 @@ namespace DentalPatientModule {
       @statusCode statusCode: 201;
       @body response: InitializeDentitionResponse;
     } | ApiUnauthorizedResponse | ApiNotFoundResponse;
+
+    @doc("Get a patient's per-channel communication consent (P1-28)")
+    @get
+    @route("/{patientId}/communication-consent")
+    @operationId("getPatientCommunicationConsent")
+    @extension("x-security-required-roles", #["user"])
+    @useAuth(BearerAuth)
+    getPatientCommunicationConsent(@path patientId: UUID): {
+      @statusCode statusCode: 200;
+      @body response: CommunicationConsentResponse;
+    } | ApiUnauthorizedResponse | ApiNotFoundResponse;
+
+    @doc("Update a patient's per-channel communication consent (P1-28)")
+    @patch(#{ implicitOptionality: false })
+    @route("/{patientId}/communication-consent")
+    @operationId("updatePatientCommunicationConsent")
+    @extension("x-security-required-roles", #["user"])
+    @useAuth(BearerAuth)
+    updatePatientCommunicationConsent(
+      @path patientId: UUID,
+      @body body: UpdateCommunicationConsentRequest,
+    ): {
+      @statusCode statusCode: 200;
+      @body response: CommunicationConsentResponse;
+    } | ApiUnauthorizedResponse | ApiNotFoundResponse | ApiForbiddenResponse;
   }
 }

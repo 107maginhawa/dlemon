@@ -9,7 +9,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { ProviderRepository } from './repos/provider.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { ensurePersonForUser } from '../person/repos/person-provisioning.facade';
 import { type ProviderCreateRequest, type ProviderWithPerson } from './repos/provider.schema';
 import { addUserRole } from '@/utils/auth';
 
@@ -38,10 +38,9 @@ export async function createProvider(ctx: HandlerContext) {
   
   // Instantiate repositories
   const providerRepo = new ProviderRepository(db, logger);
-  const personRepo = new PersonRepository(db, logger);
-  
+
   // Ensure person exists for the user (create if needed)
-  const person = await personRepo.ensurePersonForUser(user, body.person);
+  const person = await ensurePersonForUser(db, user, body.person, logger);
 
   logger?.info({
     userId: user.id,

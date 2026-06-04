@@ -73,6 +73,7 @@ describe('parseConfig', () => {
     process.env['DATABASE_URL'] = 'postgres://real:cred@db.example.com:5432/prod';
     process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
     process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+    process.env['DB_AT_REST_ENCRYPTION'] = 'enabled';
     delete process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'];
     expect(parseConfig().auth.requireEmailVerification).toBe(true);
   });
@@ -84,6 +85,7 @@ describe('parseConfig', () => {
     process.env['DATABASE_URL'] = 'postgres://real:cred@db.example.com:5432/prod';
     process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
     process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+    process.env['DB_AT_REST_ENCRYPTION'] = 'enabled';
     process.env['AUTH_REQUIRE_EMAIL_VERIFICATION'] = 'false';
     expect(parseConfig().auth.requireEmailVerification).toBe(false);
   });
@@ -104,6 +106,34 @@ describe('parseConfig', () => {
     delete process.env['STORAGE_PROVIDER'];
     const config = parseConfig();
     expect(config.storage.provider).toBe('minio');
+  });
+
+  // --------------------------------------------------------------------------
+  // V-DG-001: PHI at-rest encryption attestation (storage-layer / disk-volume).
+  // The control is transparent disk/volume encryption provisioned at the infra
+  // layer; the operator attests it is in force via DB_AT_REST_ENCRYPTION. This
+  // attestation is parsed into typed config and asserted at startup in prod, so
+  // it can never silently regress (DATA_GOVERNANCE §1 / §2 / §7 AG-6 / G-012).
+  // --------------------------------------------------------------------------
+
+  test('database.atRestEncryption defaults to "unverified" when env unset', () => {
+    delete process.env['DB_AT_REST_ENCRYPTION'];
+    expect(parseConfig().database.atRestEncryption).toBe('unverified');
+  });
+
+  test('DB_AT_REST_ENCRYPTION=enabled parses into typed config', () => {
+    process.env['DB_AT_REST_ENCRYPTION'] = 'enabled';
+    expect(parseConfig().database.atRestEncryption).toBe('enabled');
+  });
+
+  test('DB_AT_REST_ENCRYPTION=verified parses into typed config', () => {
+    process.env['DB_AT_REST_ENCRYPTION'] = 'verified';
+    expect(parseConfig().database.atRestEncryption).toBe('verified');
+  });
+
+  test('unrecognized DB_AT_REST_ENCRYPTION value falls back to "unverified"', () => {
+    process.env['DB_AT_REST_ENCRYPTION'] = 'maybe';
+    expect(parseConfig().database.atRestEncryption).toBe('unverified');
   });
 
   // --------------------------------------------------------------------------
@@ -201,9 +231,28 @@ describe('parseConfig', () => {
       process.env['DATABASE_URL'] = 'postgres://app:strong@prod-db:5432/monobase';
       process.env['STORAGE_ACCESS_KEY_ID'] = 'real-access-key';
       process.env['STORAGE_SECRET_ACCESS_KEY'] = 'real-secret-key';
+      // V-DG-001: attest PHI at-rest (storage-layer) encryption is in force.
+      process.env['DB_AT_REST_ENCRYPTION'] = 'enabled';
     });
 
     test('prod-safe env: does not throw', () => {
+      expect(() => parseConfig()).not.toThrow();
+    });
+
+    // V-DG-001: production refuses to start unless the at-rest encryption
+    // control is attested (enabled/verified). RED without the guard.
+    test('missing DB_AT_REST_ENCRYPTION attestation throws', () => {
+      delete process.env['DB_AT_REST_ENCRYPTION'];
+      expect(() => parseConfig()).toThrow('DB_AT_REST_ENCRYPTION');
+    });
+
+    test('disabled DB_AT_REST_ENCRYPTION attestation throws', () => {
+      process.env['DB_AT_REST_ENCRYPTION'] = 'disabled';
+      expect(() => parseConfig()).toThrow('DB_AT_REST_ENCRYPTION');
+    });
+
+    test('DB_AT_REST_ENCRYPTION=verified satisfies the prod guard', () => {
+      process.env['DB_AT_REST_ENCRYPTION'] = 'verified';
       expect(() => parseConfig()).not.toThrow();
     });
 

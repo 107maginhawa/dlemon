@@ -10,93 +10,15 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 
 async function setupWithActiveVisit(page: Page) {
-  const suffix = Date.now();
-  const email = `consent-e2e-${suffix}@example.org`;
-  const password = 'E2eTestPass123!';
-
-  // Sign up
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Consent Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially(password, { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page
-    .waitForResponse(
-      (resp: any) =>
-        /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-      { timeout: 10000 },
-    )
-    .catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), {
-    timeout: 15000,
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
+  const { branchId, memberId } = await signUpOnboardAndUnlock(page, {
+    tier: 'solo',
+    label: 'Consent',
   });
-  await page.waitForLoadState('networkidle');
-
-  // Verify email (required for subsequent API calls)
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-  }, API);
-
-  // Create org/branch/member — include personId for branch access
-  const ctx = await page.evaluate(async (api) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    if (!sessionRes.ok) throw new Error(`Session fetch failed: ${sessionRes.status}`);
-    const session = await sessionRes.json();
-    const personId: string = session?.user?.id;
-    if (!personId) throw new Error('Could not determine current user personId from session');
-
-    const orgRes = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Consent Clinic', tier: 'solo', countryCode: 'PH' }),
-    });
-    if (!orgRes.ok) throw new Error(`Org creation failed: ${orgRes.status}`);
-    const org = await orgRes.json();
-
-    const branchRes = await fetch(`${api}/dental/organizations/${org.id}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    if (!branchRes.ok) throw new Error(`Branch creation failed: ${branchRes.status}`);
-    const branch = await branchRes.json();
-
-    const memberRes = await fetch(
-      `${api}/dental/organizations/${org.id}/branches/${branch.id}/members`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Dr. Consent', role: 'dentist_owner', personId }),
-      },
-    );
-    if (!memberRes.ok) throw new Error(`Member creation failed: ${memberRes.status}`);
-    const member = await memberRes.json();
-    return { orgId: org.id, branchId: branch.id, memberId: member.id };
-  }, API);
-
-  await page.evaluate((ids) => {
-    localStorage.setItem('currentOrgId', ids.orgId);
-    localStorage.setItem('currentBranchId', ids.branchId);
-    localStorage.setItem('currentMemberId', ids.memberId);
-    localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, ctx);
 
   // Create patient
   const patientId = await page.evaluate(
@@ -117,7 +39,7 @@ async function setupWithActiveVisit(page: Page) {
       const patient = await res.json();
       return patient.id as string;
     },
-    { api: API, branchId: ctx.branchId },
+    { api: API, branchId },
   );
 
   // Create + activate visit
@@ -144,14 +66,14 @@ async function setupWithActiveVisit(page: Page) {
       if (!patchRes.ok) throw new Error(`Visit activation failed: ${patchRes.status}`);
       return visit.id as string;
     },
-    { api: API, patientId, branchId: ctx.branchId, memberId: ctx.memberId },
+    { api: API, patientId, branchId, memberId },
   );
 
   return {
     patientId,
     visitId,
-    branchId: ctx.branchId,
-    memberId: ctx.memberId,
+    branchId,
+    memberId,
   };
 }
 
@@ -159,8 +81,7 @@ test.describe('Consent Signing (AC-MED-03, BR-014)', () => {
   test('workspace loads with active visit', async ({ page }) => {
     // [AC-MED-03] workspace is accessible before consent signing
     const { patientId } = await setupWithActiveVisit(page);
-    await page.goto(`${APP}/${patientId}`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, `/${patientId}`);
     await expect(page.getByTestId('timeline-carousel')).toBeVisible();
   });
 
@@ -169,8 +90,7 @@ test.describe('Consent Signing (AC-MED-03, BR-014)', () => {
   }) => {
     // [AC-MED-03] signing flow end-to-end via UI
     const { patientId } = await setupWithActiveVisit(page);
-    await page.goto(`${APP}/${patientId}`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, `/${patientId}`);
 
     // Open consent sheet — button with aria-label "Consent"
     const consentBtn = page.getByRole('button', { name: 'Consent', exact: true });
@@ -234,8 +154,7 @@ test.describe('Consent Signing (AC-MED-03, BR-014)', () => {
   test('signed consent form is immutable — re-sign returns error', async ({ page }) => {
     // [BR-014] backend immutability: signing an already-signed form must fail
     const { patientId, visitId, branchId } = await setupWithActiveVisit(page);
-    await page.goto(`${APP}/${patientId}`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, `/${patientId}`);
 
     // Create + sign a consent form via API
     const result = await page.evaluate(

@@ -13,6 +13,20 @@ export interface PerioReadingFilters {
   chartId?: string;
 }
 
+/**
+ * Columns a PATCH may set. The conflict-update touches ONLY the subset of these
+ * present in the request, so a single-site write never replaces the whole row.
+ * Excludes the conflict target (chartId/toothNumber) and audit fields handled
+ * separately (createdBy never updates; updatedBy/updatedAt always bump).
+ */
+const PATCHABLE_READING_COLUMNS = [
+  'depthBM', 'depthBC', 'depthBD', 'depthLM', 'depthLC', 'depthLD',
+  'bopBM', 'bopBC', 'bopBD', 'bopLM', 'bopLC', 'bopLD',
+  'recession',
+  'gmBM', 'gmBC', 'gmBD', 'gmLM', 'gmLC', 'gmLD',
+  'mobility', 'furcation', 'plaque', 'suppuration', 'notes',
+] as const satisfies readonly (keyof NewDentalPerioToothReading)[];
+
 export class PerioReadingRepository extends DatabaseRepository<DentalPerioToothReading, NewDentalPerioToothReading, PerioReadingFilters> {
   constructor(db: DatabaseInstance, logger?: any) {
     super(db, dentalPerioToothReadings, logger);
@@ -43,34 +57,33 @@ export class PerioReadingRepository extends DatabaseRepository<DentalPerioToothR
     return row ?? null;
   }
 
-  /** Upsert reading for (chartId, toothNumber). Returns final row. */
+  /**
+   * Upsert reading for (chartId, toothNumber). Returns the final row.
+   *
+   * The conflict-update set is built from ONLY the patchable columns actually
+   * present in `values`, so a single-site PATCH (one depth per chairside
+   * keystroke) leaves every other site on the tooth untouched. This is a single
+   * atomic statement — no read-then-write — so concurrent same-tooth patches
+   * cannot race each other's sites back to null. Omitted columns keep their
+   * stored value; `createdBy`/`createdAt` are never in the set, so the original
+   * creator/timestamp survive updates.
+   *
+   * Note: there is no clear-to-null path through this method — an omitted column
+   * is preserved, not erased (the chart UI never sends null; it skips empty
+   * input). A value, once set, is changed to another value, not un-set.
+   */
   async upsert(values: NewDentalPerioToothReading): Promise<DentalPerioToothReading> {
+    const set: Record<string, unknown> = { updatedAt: new Date() };
+    if (values.updatedBy !== undefined) set['updatedBy'] = values.updatedBy;
+    for (const col of PATCHABLE_READING_COLUMNS) {
+      if (values[col] !== undefined) set[col] = values[col];
+    }
     const [row] = await this.db
       .insert(dentalPerioToothReadings)
       .values(values)
       .onConflictDoUpdate({
         target: [dentalPerioToothReadings.chartId, dentalPerioToothReadings.toothNumber],
-        set: {
-          depthBM: values.depthBM ?? null,
-          depthBC: values.depthBC ?? null,
-          depthBD: values.depthBD ?? null,
-          depthLM: values.depthLM ?? null,
-          depthLC: values.depthLC ?? null,
-          depthLD: values.depthLD ?? null,
-          bopBM: values.bopBM ?? null,
-          bopBC: values.bopBC ?? null,
-          bopBD: values.bopBD ?? null,
-          bopLM: values.bopLM ?? null,
-          bopLC: values.bopLC ?? null,
-          bopLD: values.bopLD ?? null,
-          recession: values.recession ?? null,
-          mobility: values.mobility ?? 0,
-          furcation: values.furcation ?? 0,
-          plaque: values.plaque ?? false,
-          suppuration: values.suppuration ?? false,
-          notes: values.notes ?? null,
-          updatedAt: new Date(),
-        },
+        set: set as Partial<NewDentalPerioToothReading>,
       })
       .returning();
     if (!row) throw new Error('Upsert returned no row');

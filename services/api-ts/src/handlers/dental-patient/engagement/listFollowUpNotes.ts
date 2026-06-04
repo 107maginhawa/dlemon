@@ -8,9 +8,9 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import type { FollowUpNote } from '../../patient/repos/patient.schema';
+import type { FollowUpNote } from '../../patient/repos/patient-dental-patient.facade';
 import type { ListFollowUpNotesParams } from '@/generated/openapi/validators';
 
 // V-PAT-003: follow-up notes are restricted to clinical/full-staff roles.
@@ -27,8 +27,7 @@ export async function listFollowUpNotes(
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  const repo = new PatientRepository(db, logger);
-  const patient = await repo.findOneById(patientId);
+  const patient = await getDentalPatientRecord(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
 
   // V-PAT-002/003: branch+role guard; a missing branch DENIES (never bypasses).

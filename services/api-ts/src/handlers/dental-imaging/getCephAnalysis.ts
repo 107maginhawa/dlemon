@@ -10,11 +10,11 @@
 import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { logAuditEvent } from '@/core/audit-logger';
-import { computeCephAnalysis } from '@monobase/ceph-math';
+import { computeAnalysis, ANALYSIS_TYPES } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
 
@@ -23,6 +23,16 @@ export async function getCephAnalysis(ctx: BaseContext): Promise<Response> {
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const { imageId } = ctx.req.param() as { imageId: string };
+
+  // #15: analysisType selects the protocol. Unknown values are rejected rather
+  // than silently falling back — showing the wrong analysis is a safety bug.
+  const analysisType = ctx.req.query('analysisType') ?? 'steiner_hybrid_sn';
+  if (!(ANALYSIS_TYPES as readonly string[]).includes(analysisType)) {
+    throw new BusinessLogicError(
+      `Unsupported analysis type "${analysisType}". Supported: ${ANALYSIS_TYPES.join(', ')}.`,
+      'UNSUPPORTED_ANALYSIS_TYPE',
+    );
+  }
 
   const db = ctx.get('database') as DatabaseInstance;
   const imagingRepo = new ImagingRepository(db);
@@ -54,7 +64,7 @@ export async function getCephAnalysis(ctx: BaseContext): Promise<Response> {
 
   const allLandmarks = await cephRepo.listByImage(imageId);
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));
-  const result = computeCephAnalysis(landmarkMap, image.pixelSpacingMm ?? null);
+  const result = computeAnalysis(analysisType, landmarkMap, image.pixelSpacingMm ?? null);
   const analysisRow = await cephRepo.findAnalysis(imageId);
 
   // V-IMG-006: ceph analysis exposes patient radiograph PHI — audit the read.
@@ -75,7 +85,7 @@ export async function getCephAnalysis(ctx: BaseContext): Promise<Response> {
       items: allLandmarks,
       analysis: {
         imageId,
-        analysisType: 'steiner_hybrid_sn',
+        analysisType,
         measurements: result.measurements,
         missing: result.missing,
         uncalibrated: result.uncalibrated,

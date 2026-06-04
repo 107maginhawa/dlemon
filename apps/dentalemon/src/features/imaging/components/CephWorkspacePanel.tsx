@@ -1,6 +1,15 @@
 import { useState } from 'react'
-import { X, Lock, FileText, Download } from 'lucide-react'
-import { Button } from '@monobase/ui'
+import { X, Lock, FileText, Download, RefreshCw } from 'lucide-react'
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@monobase/ui'
+import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
+import { apiBaseUrl } from '@/lib/config'
 import { useMutation } from '@tanstack/react-query'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
@@ -17,10 +26,28 @@ export interface CephWorkspacePanelProps {
   onExportPng?: (reportVersion: number) => void
   /** Called when a layer toggle changes; parent uses this to show/hide canvas overlays */
   onLayerChange?: (key: keyof LayerState, value: boolean) => void
+  /**
+   * Controlled landmark selection. When provided, the workspace owns selection
+   * (shared with the canvas landmark layer + keyboard flow + loupe). Omit for
+   * the uncontrolled fallback (internal state) used by isolated tests.
+   */
+  selectedCode?: CephLandmarkCode | null
+  onSelectCode?: (code: CephLandmarkCode | null) => void
 }
 
 // D-L: report gate landmarks
 const GATE_CODES: CephLandmarkCode[] = ['A', 'B', 'Go', 'Po']
+
+// #15 / P1-8: human-readable protocol labels for the analysis switcher.
+// Wits is a single metric (AO-BO), NOT a protocol — intentionally not listed.
+const ANALYSIS_LABELS: Record<string, string> = {
+  steiner_hybrid_sn: 'Steiner (SN)',
+  ricketts: 'Ricketts (FH)',
+  downs: 'Downs (FH)',
+  tweed: 'Tweed (FH)',
+  mcnamara: 'McNamara',
+  jarabak: 'Jarabak',
+}
 
 function isAddonError(err: unknown): boolean {
   if (!err) return false
@@ -29,17 +56,36 @@ function isAddonError(err: unknown): boolean {
   return /403|forbidden|add-?on|imaging_tier_required/i.test(msg)
 }
 
+// P1-10: the auto-landmark kill-switch returns 403 FEATURE_DISABLED when the
+// dental_imaging_auto_landmark flag is off — distinct from a tier block.
+function isFeatureDisabledError(err: unknown): boolean {
+  if (!err) return false
+  const msg = err instanceof Error ? err.message : String(err)
+  return /feature_disabled/i.test(msg)
+}
+
 export function CephWorkspacePanel({
   imageId,
   isOpen,
   onClose,
   onExportPng,
   onLayerChange,
+  selectedCode: controlledSelectedCode,
+  onSelectCode,
 }: CephWorkspacePanelProps) {
-  const { landmarks, commitLandmark } = useCephLandmarks(imageId)
-  const { analysis, isError } = useCephAnalysis(imageId)
+  const { landmarks, commitLandmark, autoDetect } = useCephLandmarks(imageId)
+  // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
+  const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
+  // P2-6: reference-population selector for norm display (default = classic literature).
+  const [population, setPopulation] = useState<string>(DEFAULT_POPULATION)
+  const { analysis, isError } = useCephAnalysis(imageId, analysisType)
 
-  const [selectedCode, setSelectedCode] = useState<CephLandmarkCode | null>(null)
+  // Controlled/uncontrolled selection: when the parent passes selectedCode +
+  // onSelectCode the workspace owns it (shared with canvas/keyboard/loupe);
+  // otherwise fall back to local state (isolated component tests).
+  const [internalSelectedCode, setInternalSelectedCode] = useState<CephLandmarkCode | null>(null)
+  const selectedCode = controlledSelectedCode !== undefined ? controlledSelectedCode : internalSelectedCode
+  const setSelectedCode = onSelectCode ?? setInternalSelectedCode
   const [layers, setLayers] = useState<LayerState>({
     landmarks: true,
     tracing: true,
@@ -49,8 +95,9 @@ export function CephWorkspacePanel({
 
   const createReport = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/reports`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/reports`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       })
       if (!res.ok) throw new Error(await res.text())
@@ -100,10 +147,38 @@ export function CephWorkspacePanel({
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">Cephalometric</span>
-          {/* D-G */}
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-700 text-[#FFE97D] font-medium">
-            steiner_hybrid_sn
-          </span>
+          {/* #15: analysis-protocol switcher (was a static D-G badge). Data-driven. */}
+          <Select value={analysisType} onValueChange={setAnalysisType}>
+            <SelectTrigger
+              aria-label="Analysis protocol"
+              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-lemon"
+            >
+              <SelectValue>{ANALYSIS_LABELS[analysisType] ?? analysisType}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="border-zinc-700 bg-zinc-800 text-zinc-100">
+              {ANALYSIS_TYPES.map((t) => (
+                <SelectItem key={t} value={t} className="text-xs">
+                  {ANALYSIS_LABELS[t] ?? t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* P2-6: reference-population selector — switches the norm set used for chips. */}
+          <Select value={population} onValueChange={setPopulation}>
+            <SelectTrigger
+              aria-label="Norm population"
+              className="h-6 gap-1 rounded-full border-zinc-700 bg-zinc-700 px-2 py-0 text-[10px] font-medium text-zinc-300"
+            >
+              <SelectValue>{getPopulationLabel(population)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="border-zinc-700 bg-zinc-800 text-zinc-100">
+              {NORM_POPULATIONS.map((p) => (
+                <SelectItem key={p} value={p} className="text-xs">
+                  {getPopulationLabel(p)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <button
           onClick={onClose}
@@ -116,7 +191,7 @@ export function CephWorkspacePanel({
 
       {addonRequired ? (
         <div className="px-4 py-3 m-4 rounded-md bg-zinc-800 border border-zinc-700">
-          <p className="text-sm text-[#FFE97D]">
+          <p className="text-sm text-lemon">
             Cephalometric analysis requires the Addon tier
           </p>
         </div>
@@ -124,7 +199,7 @@ export function CephWorkspacePanel({
         <>
           <CephLayerPanel layers={layers} onChange={handleLayerChange} />
 
-          <CephMeasurementsPanel analysis={analysis ?? null} />
+          <CephMeasurementsPanel analysis={analysis ?? null} population={population} />
 
           {/* D-L: confirm gate */}
           <div className="px-4 py-3 border-b border-zinc-700">
@@ -148,7 +223,7 @@ export function CephWorkspacePanel({
                 type="button"
                 disabled={!gatePassed || createReport.isPending}
                 onClick={() => createReport.mutate()}
-                className="bg-[#FFE97D] text-zinc-900 hover:bg-[#FFE97D]/90 text-xs font-medium flex-1"
+                className="bg-lemon text-zinc-900 hover:bg-lemon/90 text-xs font-medium flex-1"
               >
                 <FileText size={12} className="mr-1" />
                 {createReport.isPending ? 'Creating…' : 'Generate Report'}
@@ -197,6 +272,35 @@ export function CephWorkspacePanel({
             {createReport.isError && (
               <p className="text-xs text-red-400 mt-1">
                 {String(createReport.error)}
+              </p>
+            )}
+          </div>
+
+          {/* P1-10: AI / auto landmark detection (addon + dental_imaging_auto_landmark
+              flag gated). Primary action uses LEMON TOKENS. The AI visual state on the
+              overlay / palette deliberately does NOT use the lemon accent. */}
+          <div className="px-4 py-3 border-b border-zinc-700">
+            <Button
+              type="button"
+              disabled={autoDetect.isPending}
+              onClick={() => autoDetect.mutate()}
+              className="bg-lemon hover:bg-lemon-hover text-lemon-foreground text-xs font-medium w-full"
+            >
+              <RefreshCw size={12} className="mr-1" />
+              {autoDetect.isPending ? 'Detecting…' : 'Auto-detect landmarks'}
+            </Button>
+            {/* Honest disclosure (plan §4) — every AI point is a draft to confirm. */}
+            <p data-ai-disclosure className="mt-2 text-[10px] text-zinc-500 leading-snug">
+              Landmarks suggested by automated detection — confirm each before
+              generating a report.
+            </p>
+            {autoDetect.isError && (
+              <p data-ai-detect-error className="mt-1 text-xs text-amber-400">
+                {isFeatureDisabledError(autoDetect.error)
+                  ? 'Automatic detection is currently disabled.'
+                  : isAddonError(autoDetect.error)
+                    ? 'Automatic detection requires the imaging add-on.'
+                    : 'Detection failed. Place landmarks manually.'}
               </p>
             )}
           </div>

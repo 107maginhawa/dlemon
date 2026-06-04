@@ -5,8 +5,11 @@ based-on:
   - docs/product/THREAT_MODEL.md
   - docs/product/ROLE_PERMISSION_MATRIX.md
   - docs/product/modules/*/API_CONTRACTS.md
-last-modified: 2026-05-30T00:00:00Z
+  - docs/audits/codebase-map/CODE_ROUTE_MAP.json (v5)
+  - docs/audits/codebase-map/CODE_COMPONENT_REGISTRY.json (v5)
+last-modified: 2026-06-02T00:00:00Z
 last-modified-by: oli-runtime-plan
+runtime-live-status: "LIVE boot-smoke PASS (2026-06-02) — API (services/api-ts, :7213, bun src/index.ts) booted clean: '🚀 Server running on http://0.0.0.0:7213', 10 jobs scheduled, zero errors/fatals in startup log; GET /livez=200, GET /readyz=503 (storage/MinIO check fails — known infra quirk; database=pass, jobs=pass). WEB (apps/dentalemon, :3003, bun run dev) booted clean: 'VITE ready in 821ms', GET /=200 valid SPA shell, /src/app.tsx transforms 200 with no Vite transform/resolve errors. Plan content unchanged (design-time, fresh vs all inputs)."
 ---
 
 # Runtime Test Plan — Dentalemon
@@ -16,12 +19,16 @@ last-modified-by: oli-runtime-plan
 > The team fills these in and runs them with its own test infrastructure. This
 > document plans runtime tests; it does not execute them.
 
-> **Boot-smoke (this run — PASS):** the api-ts server (`services/api-ts`, port 7213,
+> **Boot-smoke (2026-05-31 run — PASS):** the api-ts server (`services/api-ts`, port 7213,
 > `bun src/index.ts`) booted headless and bound successfully —
 > `🚀 Server running on http://0.0.0.0:7213`, job scheduler started (9 jobs), no
-> errors in startup log. Poll results: `GET /` → 405 (no root GET handler — expected),
-> `GET /health` → 404. Both are valid HTTP responses (process alive and serving),
-> not crashes. No console-error, no process crash → boot-smoke PASS.
+> errors/fatals/unhandled-rejections in startup log. Probe results: `GET /livez` → 200,
+> `GET /auth/ok` → 200, `GET /auth/get-session` → 200, `POST /auth/sign-in/email` → 200
+> (demo admin session minted), `GET /dental/branches` (no auth) → 401 (auth gate works).
+> `GET /` → 405 and `GET /health` → 404 are valid responses (unmapped path / wrong method),
+> not crashes. **Note:** `GET /readyz` → 503 — an optional dependency (MinIO/Valkey)
+> readiness probe fails; this is a degraded-readiness signal, NOT a boot crash (liveness
+> green, API serves authed requests). No console-error, no process crash → boot-smoke PASS.
 
 ---
 
@@ -338,7 +345,50 @@ module.exports = {
 
 ---
 
-## 7. What's Next
+## 7. Cross-Layer Contract Walker (FE↔BE) [TEMPLATE]
+
+> **Mode: FULL.** `docs/audits/codebase-map/CODE_ROUTE_MAP.json` (v5) and
+> `CODE_COMPONENT_REGISTRY.json` (v5) both present at version ≥ 4 → the full
+> FE↔BE `api_call` contract walker applies (route-list-only Tier-3-lite is NOT
+> needed here). 20 page-component routes enumerated in CODE_ROUTE_MAP.
+>
+> **This is a PLAN reference, not the executor.** The live, interaction-clicking
+> implementation is `~/.claude/skills/oli-check/dimensions/runtime/templates/oli-runtime-loop.spec.ts.tmpl`,
+> run by `/oli-check --runtime --live`. Do not diverge from that runner contract —
+> generate the spec once into `apps/dentalemon`, commit it, regenerate only on a
+> contract-version bump.
+
+What the walker asserts for every GET route carrying a `page_component`:
+- **(a) no console-error / pageerror / unhandledrejection / crash** (asset & analytics URLs ignored)
+- **(b) skeleton ceiling** — page resolves past any loading/skeleton state within `skeletonCeilingMs` (5000ms default); infinite-skeleton = FAIL
+- **(c) nav-link resolution** — every rendered `<a href>` / `[role=link]` resolves to a known route pattern; data-driven dead links = P1
+- **(d) own 4xx-inclusive `page.on('response')`** — a `401`/`403` must FAIL the route (do NOT inherit an app fixture that only catches ≥500)
+- **(e) no `/undefined` rendered** in URL/src attributes or link text (URL-undefined class)
+- **(f) no raw UUID rendered** as a whole table-cell display value (UUID-render class)
+- **(full mode) api_call contract** — every `api_call` the component declares in CODE_COMPONENT_REGISTRY must actually fire (network-intercepted) on mount/interaction
+
+```ts
+// apps/dentalemon/e2e/oli-runtime-loop.spec.ts  [TEMPLATE — generate via /oli-check --runtime --live]
+// Reads CODE_ROUTE_MAP.json + CODE_COMPONENT_REGISTRY.json + oli-runtime.config.ts at run time.
+// Auth: wrap the app's existing Playwright fixture (do NOT build a second login flow).
+//   baseURL:        http://localhost:3001         (apps/dentalemon dev server)
+//   apiBaseURL:     http://localhost:7213         (api-ts)
+//   mapsDir:        docs/audits/codebase-map
+//   skeletonCeilingMs: 5000
+//   paramFixtures:  { ':patientId': '<seeded patient id>', ':branchId': '09f48304-...' }
+//   denyList:       []   // routes intentionally excluded
+// Param tokens ($id/:id) resolve from paramFixtures + dynamic ones the auth adapter returns.
+// Route normalization: strip pathless layout segments (_workspace) and groups ((auth)).
+```
+
+**Config to tune per repo** (`apps/dentalemon/oli-runtime.config.ts`): `baseURL`,
+`apiBaseURL`, `mapsDir`, `skeletonCeilingMs`, `testid` map, **data-surface bindings**
+(opener → surface → expected network), `paramFixtures`, `denyList`. This is the only
+file humans edit per repo.
+
+---
+
+## 8. What's Next
 
 Pipeline: `/oli-plan-slices` → `/oli-check --traceability` → **YOU ARE HERE
 (runtime plan)** → execution begins.

@@ -25,7 +25,9 @@ import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { generatePMD } from './generatePMD';
-import { GeneratePMDBody, GeneratePMDParams } from '@/generated/openapi/validators';
+import { importPMD } from './importPMD';
+import { exportPMD } from './exportPMD';
+import { GeneratePMDBody, GeneratePMDParams, ImportPMDBody, ExportPMDParams } from '@/generated/openapi/validators';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -67,6 +69,8 @@ function buildTestApp(user?: typeof TEST_USER) {
   const ve = (r: any, c: any) => { if (!r.success) return c.json({ error: r.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ') }, 400); };
   const GeneratePMDBodyOnly = GeneratePMDBody.omit({ visitId: true });
   app.post('/dental/visits/:visitId/pmd', zValidator('param', GeneratePMDParams, ve), zValidator('json', GeneratePMDBodyOnly, ve), generatePMD as any);
+  app.post('/dental/pmd/import', zValidator('json', ImportPMDBody, ve), importPMD as any);
+  app.get('/dental/visits/:visitId/pmd/export', zValidator('param', ExportPMDParams, ve), exportPMD as any);
   return app;
 }
 
@@ -87,8 +91,10 @@ async function auditRows(action: string, targetId: string) {
 }
 
 afterEach(async () => {
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE branch_id = ${BRANCH_ID}`);
-  await db.execute(sql`TRUNCATE TABLE pmd_document, dental_visit CASCADE`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
+  await db.execute(sql`TRUNCATE TABLE pmd_document, imported_pmd, dental_visit CASCADE`);
 });
 
 // ---------------------------------------------------------------------------
@@ -129,6 +135,86 @@ describe('DE-017 PMDGenerated — audit-row marker on PMD generation', () => {
 
     const rows = await db.select().from(dentalAuditLog)
       .where(and(eq(dentalAuditLog.action, 'pmd.generated'), eq(dentalAuditLog.branchId, BRANCH_ID)));
+    expect(rows).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// pmd.import — audit-row marker on PMD import (P1-BE-2 / V-PMD-007)
+// ---------------------------------------------------------------------------
+
+const VALID_PMD_CONTENT = JSON.stringify({ conditions: ['I10'], medications: ['Amoxicillin'], allergies: [] });
+
+describe('pmd.import — audit-row marker on imported PMD', () => {
+  test('writes a dental_audit_log row (pmd.import) referencing the imported PMD', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, sourceFacility: 'City Dental', sourceDescription: 'Open Dental v21.1', content: VALID_PMD_CONTENT }),
+    });
+    expect(res.status).toBe(201);
+    const imported = await res.json() as any;
+
+    const rows = await auditRows('pmd.import', imported.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.targetType).toBe('imported-pmd');
+    expect(rows[0]?.actorId).toBe(TEST_USER.id);
+    expect(rows[0]?.branchId).toBe(BRANCH_ID);
+  });
+
+  test('does NOT write a pmd.import row when the import fails (unknown patient)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/pmd/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: 'a0000000-0000-1000-8000-0000000bdeff', sourceFacility: 'City Dental', sourceDescription: 'Open Dental', content: VALID_PMD_CONTENT }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    const rows = await db.select().from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.action, 'pmd.import'), eq(dentalAuditLog.branchId, BRANCH_ID)));
+    expect(rows).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// pmd.export — audit-row marker on PMD export (P1-BE-2 / V-PMD-007)
+// ---------------------------------------------------------------------------
+
+describe('pmd.export — audit-row marker on exported PMD', () => {
+  async function seedGeneratedPMD(app: ReturnType<typeof buildTestApp>) {
+    const visit = await seedCompletedVisit();
+    const gen = await app.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(gen.status).toBe(201);
+    const pmd = await gen.json() as any;
+    return { visitId: visit!.id, pmd };
+  }
+
+  test('writes a dental_audit_log row (pmd.export) referencing the exported PMD', async () => {
+    const app = buildTestApp(TEST_USER);
+    const { visitId, pmd } = await seedGeneratedPMD(app);
+
+    const res = await app.request(`/dental/visits/${visitId}/pmd/export`);
+    expect(res.status).toBe(200);
+
+    const rows = await auditRows('pmd.export', pmd.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.targetType).toBe('pmd');
+    expect(rows[0]?.actorId).toBe(TEST_USER.id);
+    expect(rows[0]?.branchId).toBe(BRANCH_ID);
+  });
+
+  test('does NOT write a pmd.export row when export fails (no PMD for visit)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedDraftVisit();
+    const res = await app.request(`/dental/visits/${visit.id}/pmd/export`);
+    expect(res.status).toBe(404);
+    const rows = await db.select().from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.action, 'pmd.export'), eq(dentalAuditLog.branchId, BRANCH_ID)));
     expect(rows).toHaveLength(0);
   });
 });

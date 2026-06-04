@@ -26,7 +26,12 @@ const router = createRouter()
 const noop = () => {}
 
 function isHarnessRoute() {
-  return /^\/imaging-ceph-report/.test(window.location.pathname)
+  // E2E test-only harness routes: ceph-report print route + the two imaging
+  // harness routes (/imaging-test, /imaging-comparison-test). These mock the API
+  // via page.route(); a stray unmocked 401 must NOT bounce them to /auth/sign-in.
+  return /^\/imaging-ceph-report|^\/imaging-test|^\/imaging-comparison-test/.test(
+    window.location.pathname,
+  )
 }
 
 /**
@@ -103,14 +108,29 @@ function App() {
     window.location.assign('/auth/sign-in?session_expired=1')
   }, [])
 
-  // UJ-ORG-003: Reset PIN inactivity timer on any user activity.
-  // Global listeners are registered once so the timer is always reset when
-  // the user interacts with the page, regardless of which route is active.
+  // UJ-ORG-003 / P2-17: HIPAA workstation auto-logoff.
+  // Reset the PIN inactivity timer on any user activity, and ACTIVELY lock +
+  // redirect the moment the timer fires (not lazily on the next navigation).
+  // The PinSessionManager already locks the in-memory session when the timer
+  // elapses; here we register the onExpire callback that drives the UI so an
+  // unattended chairside workstation is locked even if the user never navigates.
   useEffect(() => {
     const handleActivity = () => pinSession.updateActivity()
     window.addEventListener('mousemove', handleActivity)
     window.addEventListener('keydown', handleActivity)
     window.addEventListener('click', handleActivity)
+
+    // Active auto-logoff: when idle expiry fires, the session is already locked
+    // by the manager. Bounce the user to PIN re-entry so the workstation can't
+    // sit on an authenticated screen unattended. memberId is preserved so the
+    // PIN screen knows who to re-prompt.
+    pinSession.onExpire(() => {
+      if (isHarnessRoute()) return
+      const memberId = pinSession.getSession()?.memberId
+      const target = memberId ? `/auth/pin-entry/${memberId}` : '/auth/pin-select'
+      window.location.assign(target)
+    })
+
     return () => {
       window.removeEventListener('mousemove', handleActivity)
       window.removeEventListener('keydown', handleActivity)

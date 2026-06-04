@@ -22,8 +22,9 @@ using TypeSpec.OpenAPI;
  * The dental_audit_log table's beforeSnapshot/afterSnapshot JSONB columns are
  * NOT part of this contract and are never serialized in the viewer response.
  */
-@route("/dental/audit-events")
-@tag("Dental Audit")
+// Routes emit via the `DentalAuditMgmt` interface re-declared in main.tsp
+// (@route/@tag live there, matching the other dental modules); the operation
+// below carries no base route of its own.
 namespace DentalAuditModule {
 
   @doc("Classification of an audited event against the domain event catalog")
@@ -64,6 +65,10 @@ namespace DentalAuditModule {
     action: "invoice.voided",
     resourceType: "dental_invoice",
     resourceId: "in-1a2b3c4d-0000-4000-8000-000000000001",
+    reason: null,
+    ipAddress: null,
+    userAgent: null,
+    metadata: null,
     timestamp: utcDateTime.fromISO("2026-05-26T09:00:00Z"),
   }, #{ title: "Invoice voided — data modification event" })
   @doc("A single append-only dental audit event (viewer DTO — no PHI snapshots)")
@@ -139,7 +144,7 @@ namespace DentalAuditModule {
     @operationId("getAuditEvents")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["dentist_owner"])
+    @extension("x-security-required-roles", #["user"])
     getAuditEvents(
       @doc("Branch to query — REQUIRED; the viewer is always branch-scoped")
       @query branchId: UUID,

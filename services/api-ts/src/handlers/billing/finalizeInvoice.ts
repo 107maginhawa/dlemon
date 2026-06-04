@@ -15,7 +15,7 @@ import type { FinalizeInvoiceParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import type { NotificationService } from '@/core/notifs';
 import { InvoiceRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 
 /**
  * finalizeInvoice
@@ -44,7 +44,6 @@ export async function finalizeInvoice(
 
   // Create repository instances
   const invoiceRepo = new InvoiceRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
 
   // Get existing invoice
   const invoice = await invoiceRepo.findOneById(invoiceId);
@@ -58,7 +57,7 @@ export async function finalizeInvoice(
   }
 
   // Authorization check: must be the provider who created the invoice
-  const merchantPerson = await personRepo.findOneById(invoice.merchant);
+  const merchantPerson = await findBillingParty(database, invoice.merchant, logger);
   if (!merchantPerson) {
     throw new NotFoundError('Merchant person not found', {
       resourceType: 'person',

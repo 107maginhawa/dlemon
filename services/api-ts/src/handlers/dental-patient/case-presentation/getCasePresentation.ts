@@ -1,0 +1,53 @@
+/**
+ * getCasePresentation —
+ *   GET /dental/patients/:patientId/case-presentations/:presentationId
+ *
+ * P1-20 (Phase 1, staff bearerAuth): return the denormalized, patient-readable
+ * aggregate (phased ₱ breakdown + alternates + annotated-image refs + first name)
+ * and record engagement telemetry (firstViewedAt once, lastViewedAt each time,
+ * draft/sent → viewed).
+ */
+
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { CasePresentationRepository } from '../repos/case-presentation.repo';
+import { getPatientFirstName } from '../repos/patient-name.facade';
+import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
+import { buildCasePresentationAggregate } from './aggregate';
+import type { DatabaseInstance } from '@/core/database';
+
+export async function getCasePresentation(ctx: any): Promise<Response> {
+  const user = ctx.get('user');
+  if (!user) throw new UnauthorizedError('Authentication required');
+
+  const { patientId, presentationId } = ctx.req.valid('param');
+
+  const db = ctx.get('database') as DatabaseInstance;
+  const logger = ctx.get('logger');
+
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
+
+  const repo = new CasePresentationRepository(db, logger);
+  const presentation = await repo.findOneById(presentationId, patientId);
+  if (!presentation) throw new NotFoundError('Case presentation not found');
+
+  const planRepo = new TreatmentPlanRepository(db, logger);
+  const plan = await planRepo.findOneById(presentation.treatmentPlanId, patientId);
+  if (!plan) throw new NotFoundError('Treatment plan not found');
+
+  const firstName = await getPatientFirstName(db, patientId);
+  const aggregate = await buildCasePresentationAggregate(db, repo, presentation, plan, firstName);
+
+  // Engagement telemetry — record the view (does not mutate a terminal decision).
+  await repo.recordView(presentation);
+
+  logger?.info(
+    { action: 'getCasePresentation', patientId, presentationId },
+    'Case presentation viewed',
+  );
+
+  return ctx.json(aggregate, 200);
+}

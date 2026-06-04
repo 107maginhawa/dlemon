@@ -11,7 +11,7 @@
 import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
@@ -33,6 +33,23 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
 
   const { imageId } = ctx.req.param() as { imageId: string };
   const body = (await ctx.req.json()) as { landmarks: LandmarkInput[] };
+
+  // P1-10 SAFETY (plan §4): an AI write must NOT be able to confirm/lock in the
+  // same write. AI output is a DRAFT — only a human may drive placed → confirmed
+  // → locked via updateCephLandmark. No code path auto-confirms an AI landmark.
+  const illegalAiWrite = (body.landmarks ?? []).find(
+    (lm) =>
+      (lm.source === 'ai' || lm.source === 'ai_corrected') &&
+      (lm.status === 'confirmed' || lm.status === 'locked'),
+  );
+  if (illegalAiWrite) {
+    throw new BusinessLogicError(
+      `AI-sourced landmark '${illegalAiWrite.landmarkCode}' cannot be written as ` +
+        `'${illegalAiWrite.status}'. AI predictions must enter at 'placed' and be ` +
+        `confirmed by a human.`,
+      'AI_LANDMARK_CANNOT_AUTOCONFIRM',
+    );
+  }
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

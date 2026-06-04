@@ -37,6 +37,7 @@ import {
   RecordDentalPaymentParams,
   RecordDentalPaymentBody,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
   CreateDentalPaymentPlanParams,
   CreateDentalPaymentPlanBody,
   ApplyDentalDiscountParams,
@@ -107,6 +108,7 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.post(
     '/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
   );
   app.post(
@@ -412,7 +414,11 @@ describe('voidDentalInvoice — BR-011, paid invoice, already-voided', () => {
     });
 
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Active plan void attempt' }),
+    });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('ACTIVE_PAYMENT_PLAN');
@@ -421,7 +427,11 @@ describe('voidDentalInvoice — BR-011, paid invoice, already-voided', () => {
   test('allows voiding a paid invoice (admin correction use case)', async () => {
     const invoice = await seedInvoice({ status: 'paid', totalCents: 5000, paidCents: 5000, balanceCents: 0 });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Admin correction of paid invoice' }),
+    });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('voided');
@@ -430,7 +440,11 @@ describe('voidDentalInvoice — BR-011, paid invoice, already-voided', () => {
   test('returns 400 ALREADY_VOIDED when voiding an already-voided invoice', async () => {
     const invoice = await seedInvoice({ status: 'voided', totalCents: 5000, balanceCents: 5000 });
     const app = buildTestApp(TEST_USER);
-    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, { method: 'POST' });
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Already voided attempt' }),
+    });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
     expect(body.code).toBe('ALREADY_VOIDED');

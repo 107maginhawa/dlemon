@@ -1,5 +1,8 @@
 {
-  "include": ["apps/dentalemon/src/**/*.{ts,tsx}"],
+  "include": [
+    "apps/dentalemon/src/**/*.{ts,tsx}",
+    "services/api-ts/src/**/*.{ts,tsx}"
+  ],
   "exclude_patterns": [
     "**/generated/**",
     "**/vendor/**",
@@ -12,10 +15,13 @@
     "**/routeTree.gen.ts",
     "**/*.gen.ts"
   ],
-  "module_roots": ["apps/dentalemon/src"],
+  "module_roots": ["apps/dentalemon/src", "services/api-ts/src"],
   "module_depth": 1,
   "plugins": ["react", "tanstack"],
+  "hono_route_tables": ["services/api-ts/src/generated/openapi/routes.ts"],
+  "sdk_operation_sources": ["packages/sdk-ts/src/generated/**/*.ts"],
   "sdk_import_specifiers": ["@monobase/sdk-ts"],
+  "spec_sources": ["specs/api/dist/openapi/openapi.json"],
   "confidence_threshold": "MEDIUM",
   "out_dir": "docs/audits/codebase-map"
 }

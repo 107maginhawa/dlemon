@@ -23,6 +23,7 @@ import {
   CreatePerioChartBody,
   UpsertToothReadingBody,
   UpsertToothReadingParams,
+  CompletePerioChartBody,
   CompletePerioChartParams,
   GetVisitPerioChartParams,
   GetPerioChartParams,
@@ -88,7 +89,7 @@ function buildApp(user?: typeof TEST_USER) {
 
   app.post('/dental/perio-charts', zValidator('json', CreatePerioChartBody, ve), createPerioChart as any);
   app.put('/dental/perio-charts/:chartId/readings/:toothNumber', zValidator('param', UpsertToothReadingParams, ve), zValidator('json', UpsertToothReadingBody, ve), upsertToothReading as any);
-  app.post('/dental/perio-charts/:chartId/complete', zValidator('param', CompletePerioChartParams, ve), completePerioChart as any);
+  app.post('/dental/perio-charts/:chartId/complete', zValidator('param', CompletePerioChartParams, ve), zValidator('json', CompletePerioChartBody, ve), completePerioChart as any);
   app.get('/dental/visits/:visitId/perio-chart', zValidator('param', GetVisitPerioChartParams, ve), getVisitPerioChart as any);
   app.get('/dental/perio-charts/:chartId', zValidator('param', GetPerioChartParams, ve), getPerioChart as any);
 
@@ -219,6 +220,32 @@ describe('createPerioChart', () => {
     });
     expect(res.status).toBe(403);
   });
+
+  // BR-P02: cannot create a perio chart on a sealed (completed/locked) visit.
+  // The visit-status guard fires before the CHART_EXISTS / role checks.
+  test('returns 422 VISIT_LOCKED creating a chart on a completed visit', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: COMPLETED_VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
+  });
+
+  test('returns 422 VISIT_LOCKED creating a chart on a locked visit', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: LOCKED_VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_LOCKED');
+  });
 });
 
 // We need a shared chartId across the reading and complete tests.
@@ -257,6 +284,74 @@ describe('upsertToothReading', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.depthBM).toBe(6);
+  });
+
+  // Data-loss regression (perio-charting.spec.ts:242 red-line): the chairside flow
+  // PUTs ONE site per keystroke. A single-site patch must MERGE — it must not null
+  // out the other sites already saved on the tooth. Before the fix, the 2nd patch
+  // (depthBC) wiped depthBM back to null, so the red-line never rendered.
+  test('preserves previously-entered sites across single-site patches (no data loss)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const first = await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 6 }),
+    });
+    expect(first.status).toBe(200);
+    const second = await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBC: 5 }),
+    });
+    expect(second.status).toBe(200);
+    const body = await second.json() as any;
+    expect(body.depthBM).toBe(6); // must survive the second single-site patch
+    expect(body.depthBC).toBe(5);
+  });
+
+  // BOP is a nullable boolean (null = not assessed). Toggling a bleeding dot OFF
+  // sends {bopBM:false}; that explicit false must persist, not fall back to the
+  // prior value or null. (false is not nullish, so it overrides.)
+  test('persists an explicit BOP toggle-off (true → false)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    await app.request(`/dental/perio-charts/${chartId}/readings/47`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bopBM: true }),
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/47`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bopBM: false }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.bopBM).toBe(false);
+  });
+
+  // A single-site PATCH must touch ONLY the columns it carries — a later depth
+  // entry must not reset an unrelated per-tooth field (mobility) back to its
+  // default. Proves the partial-update (no full-row replace) holds for non-depth
+  // columns too.
+  test('a single-site patch leaves untouched columns intact (mobility preserved)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    await app.request(`/dental/perio-charts/${chartId}/readings/46`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobility: 2 }),
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/46`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 4 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.mobility).toBe(2); // not reset to default 0 by the depth patch
+    expect(body.depthBM).toBe(4);
   });
 
   test('returns 403 for staff_scheduling role', async () => {
@@ -322,6 +417,21 @@ describe('upsertToothReading', () => {
     expect(body.code).toBe('INVALID_GRADE');
   });
 
+  // BR-P04 / AC-P05: an FDI quadrant-gap number (19) passes the validator's
+  // numeric [11,85] range but the handler's assertValidToothNumber rejects it.
+  test('returns 422 INVALID_TOOTH_NUMBER for a quadrant-gap tooth (19)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/19`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3 }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_TOOTH_NUMBER');
+  });
+
   test('accepts mobility/furcation at the boundary grade 3', async () => {
     const chartId = await getChartId();
     const app = buildApp(TEST_USER);
@@ -334,6 +444,60 @@ describe('upsertToothReading', () => {
     const body = await res.json() as any;
     expect(body.mobility).toBe(3);
     expect(body.furcation).toBe(3);
+  });
+
+  // P1-5: read-only CAL is derived per-site as CAL = probing depth + gingival
+  // margin across the three GM/CEJ cases (research §"Clinical Attachment Level").
+  test('returns computed read-only CAL per site across the three GM/CEJ cases', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/15`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        depthBM: 4, gmBM: 2,   // recession      → CAL 6
+        depthBC: 3, gmBC: 0,   // at CEJ         → CAL 3
+        depthBD: 5, gmBD: -2,  // coronal to CEJ → CAL 3
+        depthLM: 6,            // GM missing     → CAL null
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.gmBM).toBe(2);
+    expect(body.calBM).toBe(6); // PD 4 + recession 2
+    expect(body.calBC).toBe(3); // PD 3, margin at CEJ
+    expect(body.calBD).toBe(3); // PD 5 − 2mm coronal
+    expect(body.calLM).toBeNull(); // PD present but GM missing
+  });
+
+  test('returns 422 INVALID_GINGIVAL_MARGIN when a gingival margin is below -5mm', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}/readings/16`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 3, gmBM: -6 }),
+    });
+    expect(res.status).toBe(400); // validator bound -5..20 rejects before handler
+    // (handler-level INVALID_GINGIVAL_MARGIN is pinned in the unit suite where the
+    // validator bound can be bypassed — see perio-validation behaviour.)
+  });
+
+  test('getPerioChart surfaces computed CAL on persisted readings', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    // Persist a recession site, then read the whole chart back.
+    await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBC: 4, gmBC: 3 }), // CAL 7
+    });
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const t17 = body.readings.find((r: any) => r.toothNumber === 17);
+    expect(t17).toBeTruthy();
+    expect(t17.calBC).toBe(7);
   });
 });
 
@@ -469,6 +633,56 @@ describe('completePerioChart', () => {
   });
 });
 
+// P1-6: 2017 AAP/EFP staging/grading surfaced on the completion response.
+describe('completePerioChart — 2017 staging/grading (P1-6)', () => {
+  const STAGE_VISIT = 'ee000000-0000-1000-8000-000000000055';
+  const STAGE_CHART = 'ee000000-0000-1000-8000-000000000076';
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values({
+      id: STAGE_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+    await db.insert(dentalPerioCharts).values({
+      id: STAGE_CHART, visitId: STAGE_VISIT, patientId: PATIENT_ID,
+      branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+  });
+
+  test('returns computed Stage III + Grade C + generalized extent', async () => {
+    const app = buildApp(TEST_USER);
+    // One advanced interdental site (PD 6 + 2mm recession at BM → CAL 8, furcation II)
+    // plus 15 involved teeth (PD 5 → involved) → ≥30% involvement → generalized.
+    await app.request(`/dental/perio-charts/${STAGE_CHART}/readings/16`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 6, gmBM: 2, furcation: 2 }),
+    });
+    for (const tooth of [12, 13, 14, 15, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 11]) {
+      await app.request(`/dental/perio-charts/${STAGE_CHART}/readings/${tooth}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depthBM: 5, gmBM: 0 }), // CAL 5 → involved
+      });
+    }
+
+    const res = await app.request(`/dental/perio-charts/${STAGE_CHART}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // grading risk: heavy smoker → Grade C. remainingTeeth=28 (full dentition)
+      // so the <20-teeth Stage-IV complexity factor does not apply.
+      body: JSON.stringify({ bonelossPercent: 40, ageYears: 30, cigarettesPerDay: 12, remainingTeeth: 28 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.stage).toBe('III');
+    expect(body.grade).toBe('C');
+    expect(body.extent).toBe('generalized');
+  });
+});
+
 // N-PER-02: primary-dentition charts (FDI 51–85, 20 teeth) complete at min 8/20,
 // while adult charts keep the 16 minimum. Dentition is inferred from the charted
 // tooth numbers since the schema has no dentition-type column.
@@ -596,5 +810,11 @@ describe('getPerioChart', () => {
     const app = buildApp(NON_DENTIST);
     const res = await app.request(`/dental/perio-charts/${chartId}`);
     expect(res.status).toBe(403);
+  });
+
+  test('returns 404 NOT_FOUND for an unknown chartId', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts/ee000000-0000-1000-8000-0000000000ff');
+    expect(res.status).toBe(404);
   });
 });

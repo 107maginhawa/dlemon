@@ -212,7 +212,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
                 className={[
                   'text-xs px-2 py-0.5 rounded-full border transition-colors',
                   selected?.code === entry.code
-                    ? 'bg-[#FFE97D] border-[#c8b800] text-foreground font-semibold'
+                    ? 'bg-lemon border-[#c8b800] text-foreground font-semibold'
                     : 'border-border hover:bg-secondary',
                 ].join(' ')}
               >
@@ -242,7 +242,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             className={[
               'whitespace-nowrap text-[10px] font-medium px-2 py-1 rounded-md border transition-colors shrink-0',
               activeSpecialty === id
-                ? 'bg-[#FFE97D] border-[#c8b800] text-foreground'
+                ? 'bg-lemon border-[#c8b800] text-foreground'
                 : 'border-border hover:bg-secondary text-muted-foreground',
             ].join(' ')}
           >
@@ -266,7 +266,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             className={[
               'flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
               selected?.code === entry.code
-                ? 'border-[#c8b800] bg-[rgba(255,233,125,0.15)]'
+                ? 'border-[#c8b800] bg-lemon-soft'
                 : 'border-border hover:bg-secondary',
             ].join(' ')}
             role="option"
@@ -335,7 +335,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             type="button"
             data-testid="cdt-continue-btn"
             onClick={handleContinue}
-            className="w-full rounded-lg bg-[#FFE97D] border border-[#c8b800] text-foreground font-semibold text-sm py-2 hover:bg-[#F5DC60] transition-colors"
+            className="w-full rounded-lg bg-lemon border border-[#c8b800] text-foreground font-semibold text-sm py-2 hover:bg-lemon-hover transition-colors"
           >
             Continue
           </button>

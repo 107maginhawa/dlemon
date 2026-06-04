@@ -80,9 +80,21 @@ export const imagingStudyImages = pgTable('imaging_study_image', {
   fileId: uuid('file_id').notNull(),
   pixelSpacingMm: real('pixel_spacing_mm'),
   sequenceNumber: integer('sequence_number').notNull().default(0),
-  dicomMetadata: jsonb('dicom_metadata'),
+  dicomMetadata: jsonb('dicom_metadata').$type<DicomMetadata | null>(),
   modality: modalityEnum('modality').notNull().default('other'),
   status: imagingStatusEnum('status').notNull().default('active'),
+  // P2-7 CBCT: volume descriptor (all nullable / default-false — additive, non-breaking).
+  // A `cbct`/multi-frame DICOM is a VOLUME, not a flat raster. is_volume drives the
+  // truthful frontend affordance (volume card + viewer handoff, never a flat <img>).
+  isVolume: boolean('is_volume').notNull().default(false),
+  // DICOM (0018,0050) SliceThickness in mm.
+  sliceThicknessMm: real('slice_thickness_mm'),
+  // DICOM (0028,0008) NumberOfFrames — slice count of the multi-frame volume.
+  frameCount: integer('frame_count'),
+  // DICOM (0020,000E) SeriesInstanceUID / (0020,000D) StudyInstanceUID — identity for
+  // dedupe + viewer deep-link (Phase 2). No DB-level uniqueness in v1.
+  seriesInstanceUid: text('series_instance_uid'),
+  studyInstanceUid: text('study_instance_uid'),
 });
 
 /** JOIN TABLE: one image → many tooth numbers */
@@ -126,9 +138,58 @@ export const ALLOWED_IMAGING_MIME_TYPES = [
   'image/png',
   'image/tiff',
   'image/bmp',
+  // P1-9: DICOM ingest. application/dicom is the standard radiology interchange
+  // type; large DICOM/CBCT payloads route through the S3 multipart upload path.
+  'application/dicom',
 ] as const;
 
 export type AllowedImagingMimeType = (typeof ALLOWED_IMAGING_MIME_TYPES)[number];
+
+// ---------------------------------------------------------------------------
+// P2-7 / P1-9: typed dicomMetadata JSONB shape
+// ---------------------------------------------------------------------------
+
+/**
+ * Formalized `dicom_metadata` JSONB contents (replaces the `{ fileName }`-only stub).
+ * All fields optional: a flat 2-D upload populates only fileName/mimeType; a parsed
+ * DICOM/CBCT volume populates the geometry + identity tags. Spacing is [x, y, z] mm
+ * (z = slice thickness) so a future MPR phase has the full voxel geometry, never guessed.
+ */
+export interface DicomMetadata {
+  fileName?: string;
+  mimeType?: string;
+  isDicom?: boolean;
+  /** mm/px persisted as the calibration value (also mirrored onto pixelSpacingMm). */
+  pixelSpacingMm?: number;
+  /** Provenance of pixelSpacingMm — only ever 'dicom_tag' here (matches ceph enum). */
+  calibrationMethod?: 'dicom_tag';
+  // --- parsed DICOM tags (P1-9 server-side parse) ---
+  modality?: string;        // (0008,0060)
+  manufacturer?: string;    // (0008,0070)
+  rows?: number;            // (0028,0010)
+  columns?: number;         // (0028,0011)
+  frameCount?: number;      // (0028,0008) NumberOfFrames
+  /** voxel spacing [x, y, z] in mm (z = SliceThickness). */
+  spacing?: [number | null, number | null, number | null];
+  studyInstanceUid?: string;   // (0020,000D)
+  seriesInstanceUid?: string;  // (0020,000E)
+  /** field-of-view in mm [width, height] when derivable from rows×cols×spacing. */
+  fovMm?: [number | null, number | null];
+  // Additional raw DICOM header fields may be retained (and are PHI-scrubbed by the
+  // erasure facade). The known fields above are strongly typed; everything else is
+  // an opaque JSON value.
+  [key: string]: unknown;
+}
+
+/**
+ * Frontend affordance discriminator. `volume` → CBCT/3-D card + "Open in viewer"
+ * handoff (never a flat <img>); `image` → ordinary 2-D raster viewer.
+ */
+export type ImagingViewerKind = 'image' | 'volume';
+
+export function viewerKindFor(opts: { isVolume?: boolean | null; modality?: string | null }): ImagingViewerKind {
+  return opts.isVolume === true || opts.modality === 'cbct' ? 'volume' : 'image';
+}
 
 // ---------------------------------------------------------------------------
 // TypeScript types

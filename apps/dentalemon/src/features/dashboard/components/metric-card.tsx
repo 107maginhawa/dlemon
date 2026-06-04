@@ -18,7 +18,7 @@ export interface MetricCardProps {
 }
 
 const ACCENT_VALUE_CLASS: Record<string, string> = {
-  lemon: 'text-[#4A4018]',
+  lemon: 'text-lemon-foreground',
   red: 'text-red-500',
   green: 'text-green-600',
   amber: 'text-amber-600',
@@ -52,7 +52,7 @@ export function MetricCard({
           <button
             type="button"
             onClick={action.onClick}
-            className="text-xs font-medium text-[#4A4018] hover:underline"
+            className="text-xs font-medium text-lemon-foreground hover:underline"
           >
             {action.label}
           </button>

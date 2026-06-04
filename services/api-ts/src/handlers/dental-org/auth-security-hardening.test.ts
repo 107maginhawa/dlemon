@@ -153,8 +153,10 @@ afterEach(async () => {
     TRUNCATE dental_membership, dental_branch, dental_organization
     RESTART IDENTITY CASCADE
   `);
-  // Clean up any audit log entries created during tests
-  await db.delete(dentalAuditLog).execute();
+  // Clean up any audit log entries created during tests.
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 });
 
 // ---------------------------------------------------------------------------

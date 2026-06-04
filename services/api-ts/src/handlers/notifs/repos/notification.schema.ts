@@ -23,14 +23,21 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'comms.video-call-joined',
   'comms.video-call-left',
   'comms.video-call-ended',
-  'comms.chat-message'
+  'comms.chat-message',
+  // P1-24: appointment reminder + recall (continuing-care) engine notifications
+  'appointment.reminder',
+  'appointment.confirmation-request',
+  'recall.due',
+  'recall.reminder'
 ]);
 
 // Notification channel enum - matches TypeSpec definition
 export const notificationChannelEnum = pgEnum('notification_channel', [
   'email',
   'push',
-  'in-app'
+  'in-app',
+  // P1-24: SMS channel (enum-now, provider-later — see deliverNotification no-op path)
+  'sms'
 ]);
 
 // Notification status enum - matches TypeSpec definition

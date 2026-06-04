@@ -373,3 +373,69 @@ describe('useCephLandmarks — deleteLandmark', () => {
     await waitFor(() => expect(result.current.deleteLandmark.isSuccess).toBe(true))
   })
 })
+
+describe('useCephLandmarks — autoDetect (P1-10)', () => {
+  test('POSTs to the detect endpoint and seeds caches with AI points', async () => {
+    let detectUrl = ''
+    let detectMethod = ''
+    let detected = false
+    const aiItem = makeLandmark({
+      id: 'ai-s',
+      landmarkCode: 'S',
+      source: 'ai',
+      confidence: 0.94,
+      status: 'placed',
+    })
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      const url = typeof req === 'string' ? req : req.toString()
+      if (url.includes('/ceph/landmarks/detect')) {
+        detectUrl = url
+        detectMethod = init?.method ?? ''
+        detected = true
+        return jsonResponse({
+          jobId: 'job-1',
+          status: 'succeeded',
+          modelVersion: 'fake-detector-v0',
+          provider: 'fake',
+          predictions: [{ landmarkCode: 'S', x: 320, y: 130, confidence: 0.94 }],
+          items: [aiItem],
+          analysis: makeAnalysis(),
+        })
+      }
+      // The list query reflects the persisted state: AI point present post-detect
+      // (so onSettled's invalidation/refetch stays consistent with the server).
+      return jsonResponse(makeResponse(detected ? [aiItem] : []))
+    }) as unknown as typeof fetch
+
+    const qc = freshClientWithMutations()
+    const { result } = renderHook(() => useCephLandmarks('img-1'), { wrapper: makeWrapper(qc) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => { result.current.autoDetect.mutate() })
+    await waitFor(() => expect(result.current.autoDetect.isSuccess).toBe(true))
+
+    expect(detectMethod).toBe('POST')
+    expect(detectUrl).toContain('/dental/imaging/images/img-1/ceph/landmarks/detect')
+    // The AI point seeds the landmark cache so the overlay renders it.
+    await waitFor(() =>
+      expect(result.current.landmarks.find((l) => l.landmarkCode === 'S')?.source).toBe('ai'),
+    )
+  })
+
+  test('exposes the detect error on failure (tier/flag gate)', async () => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = typeof req === 'string' ? req : req.toString()
+      if (url.includes('/ceph/landmarks/detect'))
+        return jsonResponse({ error: 'disabled', code: 'FEATURE_DISABLED' }, 403)
+      return jsonResponse(makeResponse([]))
+    }) as unknown as typeof fetch
+
+    const qc = freshClientWithMutations()
+    const { result } = renderHook(() => useCephLandmarks('img-1'), { wrapper: makeWrapper(qc) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => { result.current.autoDetect.mutate() })
+    await waitFor(() => expect(result.current.autoDetect.isError).toBe(true))
+    expect(String(result.current.autoDetect.error)).toContain('FEATURE_DISABLED')
+  })
+})

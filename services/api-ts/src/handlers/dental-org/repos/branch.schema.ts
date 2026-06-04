@@ -44,6 +44,14 @@ export interface BranchSettings {
   locale?: string;       // e.g. 'en-PH'
   currency?: string;     // e.g. 'PHP'
   dateFormat?: string;   // e.g. 'MM/DD/YYYY'
+  // P1-24: appointment reminder + recall cadence policy. Stored here (JSONB) to
+  // avoid a config table/migration; a hardcoded default applies when absent.
+  reminderPolicy?: {
+    leadHours?: number[];                       // e.g. [72, 24, 2]
+    channels?: ('sms' | 'email' | 'push' | 'in-app')[];
+    recallReattemptDays?: number;               // min days between recall outreach
+    recallMaxAttempts?: number;                 // cap on recall outreach attempts
+  };
 }
 
 export type DentalBranch = typeof dentalBranches.$inferSelect;

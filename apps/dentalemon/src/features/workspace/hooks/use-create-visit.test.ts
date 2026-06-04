@@ -6,6 +6,9 @@ import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { useCreateVisit } from './use-create-visit';
 import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 afterEach(cleanup);
 
 const originalFetch = global.fetch;
@@ -83,5 +86,20 @@ describe('useCreateVisit', () => {
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(invalidatedKeys.length).toBe(0);
+  });
+
+  test('V-FE-ERR-001: surfaces a toast on fetch failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    global.fetch = mock(() => jsonResponse({}, 500));
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useCreateVisit('p1'),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

@@ -41,6 +41,46 @@ function getHeightPx(durationMinutes: number): number {
   return (durationMinutes / 30) * SLOT_HEIGHT_PX - 6; // -6 for visual gap
 }
 
+const PX_PER_MINUTE = SLOT_HEIGHT_PX / 30;
+/** Snap granularity for drag-to-reschedule (15-minute increments). */
+export const RESCHEDULE_SNAP_MINUTES = 15;
+
+/** Convert a vertical pixel delta into a minute delta snapped to RESCHEDULE_SNAP_MINUTES. */
+export function pxDeltaToMinutes(deltaPx: number, snap = RESCHEDULE_SNAP_MINUTES): number {
+  const rawMinutes = deltaPx / PX_PER_MINUTE;
+  return Math.round(rawMinutes / snap) * snap;
+}
+
+/**
+ * Compute the new start time after dragging an appointment by a pixel delta.
+ * Clamps the start so the appointment stays within the day window.
+ */
+export function computeDraggedStart(
+  scheduledAt: string,
+  deltaPx: number,
+  durationMinutes: number,
+  dayStartHour = DAY_START_HOUR,
+  dayEndHour = DAY_END_HOUR,
+): string {
+  const start = new Date(scheduledAt);
+  const minuteDelta = pxDeltaToMinutes(deltaPx);
+  let next = new Date(start.getTime() + minuteDelta * 60_000);
+  const lowerBound = new Date(start);
+  lowerBound.setHours(dayStartHour, 0, 0, 0);
+  const upperBound = new Date(start);
+  upperBound.setHours(dayEndHour, 0, 0, 0);
+  upperBound.setTime(upperBound.getTime() - durationMinutes * 60_000);
+  if (next.getTime() < lowerBound.getTime()) next = lowerBound;
+  if (next.getTime() > upperBound.getTime()) next = upperBound;
+  return next.toISOString();
+}
+
+/** Compute a new duration after resizing by a pixel delta. Minimum 15 minutes. */
+export function computeResizedDuration(durationMinutes: number, deltaPx: number): number {
+  const next = durationMinutes + pxDeltaToMinutes(deltaPx);
+  return Math.max(RESCHEDULE_SNAP_MINUTES, next);
+}
+
 function formatSlotTime(hour: number, minute: number): string {
   const period = hour >= 12 ? 'PM' : 'AM';
   const displayH = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
@@ -53,9 +93,12 @@ export interface CalendarDayProps {
   onAppointmentClick: (appointment: Appointment) => void;
   onSlotClick: (time: string) => void;
   onCheckIn: (appointmentId: string) => void;
+  onConfirm?: (appointmentId: string) => void;
+  /** Drag-to-reschedule callback. newStartAt is a full ISO-8601 UTC timestamp. */
+  onReschedule?: (appointmentId: string, newStartAt: string, newDurationMinutes: number) => void;
 }
 
-export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClick, onCheckIn }: CalendarDayProps) {
+export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClick, onCheckIn, onConfirm, onReschedule }: CalendarDayProps) {
   const slots = generateTimeSlots();
 
   // Current time indicator
@@ -114,37 +157,139 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
           ))}
 
           {/* Appointment blocks */}
-          {appointments.map(appt => {
-            const top = getTopPx(appt.scheduledAt);
-            const height = getHeightPx(appt.durationMinutes);
-            return (
-              <div
-                key={appt.id}
-                className="absolute left-2 right-2 z-[2]"
-                style={{ top, height: Math.max(height, 36) }}
-              >
-                <AppointmentCard
-                  appointment={appt}
-                  onClick={onAppointmentClick}
-                  onCheckIn={onCheckIn}
-                />
-              </div>
-            );
-          })}
+          {appointments.map(appt => (
+            <DraggableAppointment
+              key={appt.id}
+              appt={appt}
+              top={getTopPx(appt.scheduledAt)}
+              height={Math.max(getHeightPx(appt.durationMinutes), 36)}
+              onAppointmentClick={onAppointmentClick}
+              onCheckIn={onCheckIn}
+              onConfirm={onConfirm}
+              onReschedule={onReschedule}
+            />
+          ))}
 
           {/* Current time line */}
           {currentTimeTop !== null && (
             <div
-              className="absolute left-0 right-0 h-0.5 bg-[#FFE97D] z-10 pointer-events-none"
+              className="absolute left-0 right-0 h-0.5 bg-lemon z-10 pointer-events-none"
               style={{ top: currentTimeTop }}
               role="presentation"
               aria-label={`Current time`}
             >
-              <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-[#FFE97D]" />
+              <div className="absolute -left-px -top-[4px] w-[10px] h-[10px] rounded-full bg-lemon" />
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Statuses whose appointments may be dragged/resized on the grid. */
+export function canReschedule(status: string): boolean {
+  return status === 'scheduled' || status === 'confirmed';
+}
+
+interface DraggableAppointmentProps {
+  appt: Appointment;
+  top: number;
+  height: number;
+  onAppointmentClick: (appointment: Appointment) => void;
+  onCheckIn: (appointmentId: string) => void;
+  onConfirm?: (appointmentId: string) => void;
+  onReschedule?: (appointmentId: string, newStartAt: string, newDurationMinutes: number) => void;
+}
+
+/**
+ * Wraps an AppointmentCard with pointer-driven drag-to-reschedule (move) and a
+ * bottom resize handle (duration). Both snap to 15-minute increments and commit
+ * via onReschedule on pointer-up. Dragging is disabled for non-reschedulable
+ * statuses (checked-in / completed / cancelled / no-show).
+ */
+function DraggableAppointment({
+  appt, top, height, onAppointmentClick, onCheckIn, onConfirm, onReschedule,
+}: DraggableAppointmentProps) {
+  const dragEnabled = !!onReschedule && canReschedule(appt.status);
+  const [offsetY, setOffsetY] = React.useState(0);
+  const [extraHeight, setExtraHeight] = React.useState(0);
+  const modeRef = React.useRef<'move' | 'resize' | null>(null);
+  const startYRef = React.useRef(0);
+  const movedRef = React.useRef(false);
+
+  function endDrag(deltaPx: number) {
+    const mode = modeRef.current;
+    modeRef.current = null;
+    setOffsetY(0);
+    setExtraHeight(0);
+    if (!onReschedule || !movedRef.current) return;
+    if (mode === 'move') {
+      const newStart = computeDraggedStart(appt.scheduledAt, deltaPx, appt.durationMinutes);
+      const changed = pxDeltaToMinutes(deltaPx) !== 0;
+      if (changed) onReschedule(appt.id, newStart, appt.durationMinutes);
+    } else if (mode === 'resize') {
+      const newDuration = computeResizedDuration(appt.durationMinutes, deltaPx);
+      if (newDuration !== appt.durationMinutes) {
+        onReschedule(appt.id, new Date(appt.scheduledAt).toISOString(), newDuration);
+      }
+    }
+  }
+
+  function handlePointerDown(mode: 'move' | 'resize', e: React.PointerEvent) {
+    if (!dragEnabled) return;
+    e.preventDefault();
+    e.stopPropagation();
+    modeRef.current = mode;
+    startYRef.current = e.clientY;
+    movedRef.current = false;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!modeRef.current) return;
+    const delta = e.clientY - startYRef.current;
+    if (Math.abs(delta) > 2) movedRef.current = true;
+    const snapped = pxDeltaToMinutes(delta) * PX_PER_MINUTE;
+    if (modeRef.current === 'move') setOffsetY(snapped);
+    else setExtraHeight(snapped);
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!modeRef.current) return;
+    endDrag(e.clientY - startYRef.current);
+  }
+
+  return (
+    <div
+      className="absolute left-2 right-2 z-[2] touch-none"
+      style={{ top: top + offsetY, height: Math.max(height + extraHeight, 36) }}
+      onPointerMove={dragEnabled ? handlePointerMove : undefined}
+      onPointerUp={dragEnabled ? handlePointerUp : undefined}
+    >
+      <div
+        onPointerDown={(e) => handlePointerDown('move', e)}
+        className={dragEnabled ? 'cursor-grab active:cursor-grabbing h-full' : 'h-full'}
+        data-testid={`appt-draggable-${appt.id}`}
+      >
+        <AppointmentCard
+          appointment={appt}
+          onClick={onAppointmentClick}
+          onCheckIn={onCheckIn}
+          onConfirm={onConfirm}
+        />
+      </div>
+      {dragEnabled && (
+        <div
+          onPointerDown={(e) => handlePointerDown('resize', e)}
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-2 cursor-ns-resize flex items-center justify-center"
+          role="separator"
+          aria-label={`Resize ${appt.serviceType} appointment`}
+          data-testid={`appt-resize-${appt.id}`}
+        >
+          <div className="w-6 h-1 rounded-full bg-border" />
+        </div>
+      )}
     </div>
   );
 }

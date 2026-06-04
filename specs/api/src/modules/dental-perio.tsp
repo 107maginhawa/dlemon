@@ -44,6 +44,10 @@ enum PerioChartStatus {
   bopBM: true, bopBC: false, bopBD: true,
   bopLM: false, bopLC: false, bopLD: false,
   recession: 1,
+  gmBM: 2, gmBC: 0, gmBD: 2,
+  gmLM: 1, gmLC: 0, gmLD: 1,
+  calBM: 6, calBC: 3, calBD: 7,
+  calLM: 4, calLC: 3, calLD: 5,
   mobility: 0,
   furcation: 1,
   plaque: true,
@@ -94,6 +98,39 @@ model PerioToothReading {
   @maxValue(20)
   recession?: int32;
 
+  @doc("P1-5: per-site gingival-margin position vs CEJ (mm). Buccal-mesial. positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20.")
+  @minValue(-5)
+  @maxValue(20)
+  gmBM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBD?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLD?: int32;
+
+  @doc("P1-5: read-only Clinical Attachment Level (mm) per site, derived as CAL = probing depth + gingival margin. null when either input is missing. Never persisted.")
+  calBM?: int32 | null;
+  calBC?: int32 | null;
+  calBD?: int32 | null;
+  calLM?: int32 | null;
+  calLC?: int32 | null;
+  calLD?: int32 | null;
+
   @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility: int32;
 
@@ -143,6 +180,31 @@ model UpsertToothReadingRequest {
   @minValue(-5)
   @maxValue(20)
   recession?: int32;
+
+  @doc("P1-5: per-site gingival-margin position vs CEJ (mm). positive = apical/recession, 0 = at CEJ, negative = coronal. -5..20. Feeds read-only CAL.")
+  @minValue(-5)
+  @maxValue(20)
+  gmBM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmBD?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLM?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLC?: int32;
+
+  @minValue(-5)
+  @maxValue(20)
+  gmLD?: int32;
 
   @doc("Miller mobility grade 0-3. V-PER-004 (enforced in handler → 422 INVALID_GRADE).")
   mobility?: int32;
@@ -198,6 +260,61 @@ model CreatePerioChartRequest {
   notes?: string;
 }
 
+@doc("P1-6: optional 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted.")
+model CompletePerioChartRequest {
+  @doc("Teeth lost due to periodontitis (staging complexity).")
+  toothLossCount?: int32;
+
+  @doc("Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.")
+  remainingTeeth?: int32;
+
+  @doc("Masticatory dysfunction / bite collapse (Stage-IV factor).")
+  biteCollapse?: boolean;
+
+  @doc("Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.")
+  bonelossPercent?: float64;
+
+  @doc("Patient age in years (denominator of the %bone-loss÷age grading ratio).")
+  ageYears?: int32;
+
+  @doc("Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.")
+  fiveYearProgressionMm?: float64;
+
+  @doc("Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.")
+  cigarettesPerDay?: int32;
+
+  @doc("Whether the patient has diabetes (grading modifier).")
+  hasDiabetes?: boolean;
+
+  @doc("Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.")
+  hba1cPercent?: float64;
+
+  @doc("Whether involvement follows a molar/incisor pattern (extent descriptor).")
+  molarIncisorPattern?: boolean;
+}
+
+@doc("2017 AAP/EFP stage (severity/complexity).")
+enum PerioStage {
+  I: "I",
+  II: "II",
+  III: "III",
+  IV: "IV",
+}
+
+@doc("2017 AAP/EFP grade (progression rate).")
+enum PerioGrade {
+  A: "A",
+  B: "B",
+  C: "C",
+}
+
+@doc("2017 AAP/EFP extent descriptor.")
+enum PerioExtent {
+  localized,
+  generalized,
+  molar_incisor,
+}
+
 model CompletePerioChartResponse {
   id: UUID;
   status: PerioChartStatus;
@@ -205,6 +322,15 @@ model CompletePerioChartResponse {
   summaryBopPercent: float64;
   summaryMeanDepth: float64;
   summaryDeepPocketCount: int32;
+
+  @doc("P1-6: computed 2017 AAP/EFP stage. null when there is no CAL evidence to stage.")
+  stage?: PerioStage | null;
+
+  @doc("P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence).")
+  grade?: PerioGrade;
+
+  @doc("P1-6: computed extent descriptor. null when no teeth were examined.")
+  extent?: PerioExtent | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -258,7 +384,9 @@ namespace DentalPerioModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("completePerioChart")
     complete(
-      @path chartId: UUID
+      @path chartId: UUID,
+      @doc("Optional 2017 staging/grading risk factors (P1-6). Omit for measurement-only classification.")
+      @body body?: CompletePerioChartRequest
     ): ApiOkResponse<CompletePerioChartResponse>
       | ApiBadRequestResponse
       | ApiNotFoundResponse

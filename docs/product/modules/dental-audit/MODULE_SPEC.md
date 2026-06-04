@@ -57,7 +57,7 @@ None — append-only, no state machine.
 ---
 
 ## 10. API Expectations
-GET /dental/audit-events (branch_id, actor_id?, event_type?, date_range?, page) → paginated events list
+GET /dental/audit-events (branchId [required], actorId?, eventType?, targetType?, targetId?, action?, from?/to?, limit/offset) → paginated events list. Query params are **camelCase** and pagination is **offset-based** (`limit`/`offset`, not `page`/`per_page`) — this matches `getAuditEvents.ts` and is intentional (EM-AUD-013 / V-AUD-004); the handler is authoritative. See API_CONTRACTS.md for the full param table.
 
 ---
 

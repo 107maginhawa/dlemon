@@ -122,40 +122,68 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     setSaving(true);
     setErrors([]);
     try {
-      const orgRes = await fetch(`${API}/dental/organizations`, {
+      // ONE atomic self-service call provisions org + default branch + owner
+      // membership (replaces the old org→branch→member sequence that could leave a
+      // half-provisioned tenant and trap a localStorage resume into a 409).
+      const onbRes = await fetch(`${API}/dental/onboarding`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ name: clinicName.trim(), tier: 'solo', countryCode }),
+        body: JSON.stringify({
+          organizationName: clinicName.trim(),
+          tier: 'solo',
+          countryCode,
+          branchName: 'Main Branch',
+          timezone: 'Asia/Manila',
+          address: address.trim() || undefined,
+          phone: clinicPhone.trim() || undefined,
+          ownerDisplayName: dentistName.trim() || undefined,
+        }),
       });
-      if (!orgRes.ok) { const e = await orgRes.json().catch(() => ({})); throw new Error(e.message || `Organization creation failed (${orgRes.status})`); }
-      const org = await orgRes.json();
 
-      const branchRes = await fetch(`${API}/dental/organizations/${org.id}/branches`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila', address: address.trim() || undefined, phone: clinicPhone.trim() || undefined }),
-      });
-      if (!branchRes.ok) { const e = await branchRes.json().catch(() => ({})); throw new Error(e.message || `Branch creation failed (${branchRes.status})`); }
-      const branch = await branchRes.json();
+      if (onbRes.status === 409) {
+        // Already have an active clinic — the tenant is fully provisioned, so it is
+        // always safe to drop straight into the dashboard.
+        localStorage.removeItem(STORAGE_KEY);
+        onComplete();
+        return;
+      }
+      if (!onbRes.ok) {
+        const e = await onbRes.json().catch(() => ({}));
+        const code = e.code as string | undefined;
+        if (onbRes.status === 403 && code === 'EMAIL_NOT_VERIFIED') {
+          throw new Error('Please verify your email address before creating a clinic.');
+        }
+        if (onbRes.status === 403 && code === 'TIER_NOT_SELF_SERVICE') {
+          throw new Error('Group and enterprise plans are set up by our team — please contact support.');
+        }
+        if (onbRes.status === 429) {
+          throw new Error('Too many attempts. Please wait a moment and try again.');
+        }
+        throw new Error(e.message || `Clinic setup failed (${onbRes.status})`);
+      }
+      const onb = await onbRes.json() as { organizationId: string; branchId: string; membershipId: string };
 
-      const memberRes = await fetch(`${API}/dental/organizations/${org.id}/branches/${branch.id}/members`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ displayName: dentistName.trim(), role: 'dentist_owner' }),
-      });
-      if (!memberRes.ok) { const e = await memberRes.json().catch(() => ({})); throw new Error(e.message || `Member creation failed (${memberRes.status})`); }
-      const member = await memberRes.json();
+      useOrgContextStore.getState().setContext({ orgId: onb.organizationId, branchId: onb.branchId, memberId: onb.membershipId });
 
-      const pinRes = await fetch(`${API}/dental/organizations/${org.id}/branches/${branch.id}/members/${member.id}/set-pin`, {
+      // Set the owner's PIN on the membership the onboarding call created.
+      const pinRes = await fetch(`${API}/dental/organizations/${onb.organizationId}/branches/${onb.branchId}/members/${onb.membershipId}/set-pin`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ pin }),
       });
       if (!pinRes.ok) { const e = await pinRes.json().catch(() => ({})); throw new Error(e.message || `PIN setup failed (${pinRes.status})`); }
 
-      useOrgContextStore.getState().setContext({ orgId: org.id, branchId: branch.id, memberId: member.id });
-
       if (!skipPatient && patientName.trim()) {
-        await fetch(`${API}/dental/patients`, {
+        // createDentalPatient REQUIRES branchId AND consentGiven=true (else
+        // CONSENT_REQUIRED). Registering the first patient implies the owner
+        // captured registration consent. Surface a failure rather than silently
+        // dropping the patient the user just entered.
+        const patRes = await fetch(`${API}/dental/patients`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender }),
+          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender, branchId: onb.branchId, consentGiven: true }),
         });
+        if (!patRes.ok) {
+          const e = await patRes.json().catch(() => ({}));
+          throw new Error(e.message || `First patient could not be created (${patRes.status})`);
+        }
       }
 
       localStorage.removeItem(STORAGE_KEY);
@@ -175,14 +203,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-start gap-1">
               <div className="flex flex-col items-center gap-1 w-16">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${i <= stepIndex ? 'bg-[#FFE97D] text-[#4A4018]' : 'bg-secondary text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${i <= stepIndex ? 'bg-lemon text-lemon-foreground' : 'bg-secondary text-muted-foreground'}`}>
                   {i + 1}
                 </div>
                 <span className={`text-[10px] text-center leading-tight ${i <= stepIndex ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                   {STEP_LABELS[s]}
                 </span>
               </div>
-              {i < STEPS.length - 1 && <div className={`w-6 h-0.5 mt-4 ${i < stepIndex ? 'bg-[#FFE97D]' : 'bg-border'}`} />}
+              {i < STEPS.length - 1 && <div className={`w-6 h-0.5 mt-4 ${i < stepIndex ? 'bg-lemon' : 'bg-border'}`} />}
             </div>
           ))}
         </div>
@@ -236,7 +264,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {step === 'patient' && (
             <Button type="button" variant="ghost" onClick={handleSkipPatient} disabled={saving} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50">Skip for now</Button>
           )}
-          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
             {saving ? 'Setting up...' : isLast ? 'Get Started' : 'Next'}
           </Button>
         </div>

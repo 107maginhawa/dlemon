@@ -19,6 +19,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Brand lemon button. Resolves to the exact brand literals via the
+        // `lemon` Tailwind token (#FFE97D / #4A4018 / #F5DC60). Prefer this
+        // over hardcoded bg-[#FFE97D] arbitrary values.
+        lemon:
+          "bg-lemon text-lemon-foreground shadow hover:bg-lemon-hover",
       },
       size: {
         default: "h-9 px-4 py-2",

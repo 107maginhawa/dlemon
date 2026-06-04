@@ -8,8 +8,8 @@
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
-import type { PatientWithPerson } from '../../patient/repos/patient.schema';
+import { listDentalPatientsWithPerson } from '../../patient/repos/patient-dental-patient.facade';
+import type { PatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { ExportDentalPatientsQuery } from '@/generated/openapi/validators';
@@ -59,9 +59,8 @@ export async function exportDentalPatients(
   const filters: Record<string, any> = {};
   if (q.branchId) filters['branchId'] = q.branchId;
 
-  const repo = new PatientRepository(db, logger);
   // Fetch up to 10k for export
-  const patients = await repo.findManyWithPerson(filters, { pagination: { limit: 10000, offset: 0 } });
+  const patients = await listDentalPatientsWithPerson(db, filters, { pagination: { limit: 10000, offset: 0 } });
 
   const statusFilter = q['status'];
   const filtered = statusFilter

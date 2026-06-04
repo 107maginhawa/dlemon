@@ -18,9 +18,11 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/utils/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import type { NotificationService } from '@/core/notifs';
 import type { User } from '@/types/auth';
 import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
 import { toWire } from './appointment-wire';
+import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 
 export async function checkInAppointment(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -72,6 +74,12 @@ export async function checkInAppointment(ctx: HandlerContext) {
     const linked = await txAppointmentRepo.linkVisit(appointmentId, visit.id);
     return { appointment: linked, visitId: visit.id };
   });
+
+  // P1-24: patient has arrived — expire any queued reminders for this appointment.
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
+  if (notifs) {
+    await notifs.expireQueuedByEntity(appointmentId, REMINDER_NOTIFICATION_TYPES).catch(() => {/* best-effort */});
+  }
 
   // V-SCH-010 / DE-001 VisitCheckedIn ownership: the VisitCheckedIn semantic marker
   // is OWNED by dental-visit (it is the visit lifecycle that begins here). createVisit

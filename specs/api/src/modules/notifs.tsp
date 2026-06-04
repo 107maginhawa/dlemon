@@ -57,6 +57,19 @@ enum NotificationType {
 
   @doc("Chat message received")
   commsChatMessage: "comms.chat-message",
+
+  // P1-24: appointment reminder + recall (continuing-care) engine notifications
+  @doc("Pre-appointment reminder at a configured lead time")
+  appointmentReminder: "appointment.reminder",
+
+  @doc("Reminder asking the patient to confirm an upcoming appointment")
+  appointmentConfirmationRequest: "appointment.confirmation-request",
+
+  @doc("Recall (recare) due notice")
+  recallDue: "recall.due",
+
+  @doc("Recall (recare) re-attempt reminder")
+  recallReminder: "recall.reminder",
 }
 
 /**
@@ -69,9 +82,15 @@ enum NotificationChannel {
   
   @doc("Push notification")
   push: "push",
-  
+
   @doc("In-app notification")
   inApp: "in-app",
+
+  // P1-24: SMS channel. Enum lands now (consent/cadence logic is provider-agnostic);
+  // a real SMS provider is deferred (P4). Until then `sms` rows are written but
+  // delivery is a logged no-op marked `failed` ("no SMS provider configured").
+  @doc("SMS notification")
+  sms: "sms",
 }
 
 /**

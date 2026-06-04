@@ -125,7 +125,7 @@ describe('FindingsSidebar', () => {
       (btn) => btn.textContent === 'Bone Loss' && btn.getAttribute('type') === 'button',
     );
     await user.click(chips[0]!);
-    expect(chips[0]!.className).toContain('FFE97D');
+    expect(chips[0]!.className).toContain('lemon');
   });
 
   test('Add Finding button is disabled when no type selected', async () => {

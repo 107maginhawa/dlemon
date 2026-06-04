@@ -1,118 +1,236 @@
-import { describe, test, expect } from 'bun:test';
+/**
+ * OnboardingWizard component tests
+ *
+ * Drives the SHIPPED OnboardingWizard through its real multi-step flow and the
+ * handleFinish submit chain (onboarding-wizard.tsx). Verifies:
+ *   - per-step validation blocks Next and surfaces errors
+ *   - the "Get Started" path fires the new 3-call chain in order
+ *     (onboarding → set-pin → patient) with the entered data, seeds the
+ *     org-context store from the 3-ID onboarding response, and calls onComplete
+ *   - "Skip for now" runs the same chain minus the patient call
+ *   - a failure mid-chain surfaces the error and does NOT call onComplete
+ *   - a 409 (already have a clinic) routes straight to the dashboard
+ *   - a 403 EMAIL_NOT_VERIFIED surfaces the verify-email message and stops
+ */
 
-type Step = 'clinic' | 'dentist' | 'fees' | 'patient';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { OnboardingWizard } from './onboarding-wizard';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
-interface ClinicData { name: string; countryCode: string; address: string; phone: string; }
-interface DentistData { name: string; licenseNumber: string; specialization: string; }
-interface FeeEntry { cdtCode: string; description: string; priceCents: number; }
-interface PatientData { name: string; birthDate: string; gender: string; phone: string; }
+interface FetchCall { url: string; method: string; body: any }
 
-function getStepLabel(step: Step): string {
-  const labels: Record<Step, string> = { clinic: 'Clinic Setup', dentist: 'Dentist Profile', fees: 'Fee Schedule', patient: 'First Patient' };
-  return labels[step];
+type OnboardingOutcome =
+  | { kind: 'ok' }
+  | { kind: 'fail'; on: 'onboarding' | 'pin' }
+  | { kind: 'status'; status: number; body: Record<string, unknown> };
+
+function installFetch(outcome: OnboardingOutcome = { kind: 'ok' }) {
+  const calls: FetchCall[] = [];
+  const original = global.fetch;
+  global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+    const url = req instanceof Request ? req.url : String(req);
+    const method = (req instanceof Request ? req.method : init?.method ?? 'GET').toUpperCase();
+    const raw = req instanceof Request ? await req.clone().text() : (init?.body as string | undefined);
+    calls.push({ url, method, body: raw ? JSON.parse(raw) : undefined });
+
+    const json = (data: unknown, status = 201) =>
+      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+
+    if (url.endsWith('/dental/onboarding')) {
+      if (outcome.kind === 'fail' && outcome.on === 'onboarding') return json({ message: 'boom' }, 422);
+      if (outcome.kind === 'status') return json(outcome.body, outcome.status);
+      return json({ organizationId: 'org-1', branchId: 'branch-1', membershipId: 'member-1' });
+    }
+    if (url.endsWith('/set-pin')) {
+      return outcome.kind === 'fail' && outcome.on === 'pin' ? json({ message: 'boom' }, 422) : json({ ok: true }, 200);
+    }
+    if (url.endsWith('/dental/patients')) return json({ id: 'pat-1' });
+    return json({});
+  }) as unknown as typeof fetch;
+  return { calls, restore: () => { global.fetch = original; } };
 }
 
-function getStepNumber(step: Step): number {
-  const nums: Record<Step, number> = { clinic: 1, dentist: 2, fees: 3, patient: 4 };
-  return nums[step];
+async function fillClinicAndAdvance(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('Clinic Name'), 'Bright Smiles');
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
+}
+async function fillDentistAndAdvance(user: ReturnType<typeof userEvent.setup>) {
+  await waitFor(() => expect(screen.getByLabelText('6-digit PIN')).not.toBeNull());
+  await user.type(screen.getByLabelText('Full Name'), 'Dr. Ana Reyes');
+  await user.type(screen.getByLabelText('6-digit PIN'), '123456');
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
+}
+async function advanceFees(user: ReturnType<typeof userEvent.setup>) {
+  // "Fee Schedule" also appears in the step indicator — match the step heading.
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'Fee Schedule' })).not.toBeNull());
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
 }
 
-function validateClinicStep(data: ClinicData): string[] {
-  const errors: string[] = [];
-  if (!data.name.trim()) errors.push('Clinic name is required');
-  if (!data.countryCode.trim()) errors.push('Country is required');
-  return errors;
-}
-
-function validateDentistStep(data: DentistData): string[] {
-  const errors: string[] = [];
-  if (!data.name.trim()) errors.push('Dentist name is required');
-  return errors;
-}
-
-function validateFeeScheduleStep(_data: FeeEntry[]): string[] {
-  return [];
-}
-
-function validatePatientStep(data: PatientData): string[] {
-  const errors: string[] = [];
-  if (!data.name.trim()) errors.push('Patient name is required');
-  if (!data.birthDate.trim()) errors.push('Date of birth is required');
-  return errors;
-}
-
-function canProceedToNext(step: Step, data: { clinic: ClinicData; dentist: DentistData; fees: FeeEntry[]; patient: PatientData }): boolean {
-  switch (step) {
-    case 'clinic': return validateClinicStep(data.clinic).length === 0;
-    case 'dentist': return validateDentistStep(data.dentist).length === 0;
-    case 'fees': return validateFeeScheduleStep(data.fees).length === 0;
-    case 'patient': return validatePatientStep(data.patient).length === 0;
-  }
-}
-
-describe('Onboarding Wizard — step labels', () => {
-  test('clinic label', () => expect(getStepLabel('clinic')).toBe('Clinic Setup'));
-  test('dentist label', () => expect(getStepLabel('dentist')).toBe('Dentist Profile'));
-  test('fees label', () => expect(getStepLabel('fees')).toBe('Fee Schedule'));
-  test('patient label', () => expect(getStepLabel('patient')).toBe('First Patient'));
+beforeEach(() => {
+  localStorage.clear();
+  useOrgContextStore.getState().clearContext?.();
 });
+afterEach(cleanup);
 
-describe('Onboarding Wizard — step numbers', () => {
-  test('clinic is step 1', () => expect(getStepNumber('clinic')).toBe(1));
-  test('dentist is step 2', () => expect(getStepNumber('dentist')).toBe(2));
-  test('fees is step 3', () => expect(getStepNumber('fees')).toBe(3));
-  test('patient is step 4', () => expect(getStepNumber('patient')).toBe(4));
-});
+describe('OnboardingWizard — shipped component', () => {
+  test('blocks Next on the clinic step until the clinic name is filled', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete: () => {} }));
+      await user.click(screen.getByRole('button', { name: /^next$/i }));
+      expect(screen.getByText('Clinic name is required')).not.toBeNull();
+      // still on clinic step — no network calls
+      expect(f.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
 
-describe('Onboarding Wizard — clinic validation', () => {
-  test('missing name → error', () => {
-    expect(validateClinicStep({ name: '', countryCode: 'PH', address: '', phone: '' })).toContain('Clinic name is required');
+  test('requires a valid 6-digit PIN on the dentist step', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete: () => {} }));
+      await fillClinicAndAdvance(user);
+      await waitFor(() => expect(screen.getByLabelText('6-digit PIN')).not.toBeNull());
+      await user.type(screen.getByLabelText('Full Name'), 'Dr. Ana Reyes');
+      // no PIN entered → Next blocked
+      await user.click(screen.getByRole('button', { name: /^next$/i }));
+      expect(screen.getByText('PIN must be exactly 6 digits')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
   });
-  test('missing country → error', () => {
-    expect(validateClinicStep({ name: 'Test', countryCode: '', address: '', phone: '' })).toContain('Country is required');
-  });
-  test('valid data → no errors', () => {
-    expect(validateClinicStep({ name: 'Test', countryCode: 'PH', address: '123 St', phone: '' })).toHaveLength(0);
-  });
-});
 
-describe('Onboarding Wizard — dentist validation', () => {
-  test('missing name → error', () => {
-    expect(validateDentistStep({ name: '', licenseNumber: '', specialization: '' })).toContain('Dentist name is required');
-  });
-  test('valid data → no errors', () => {
-    expect(validateDentistStep({ name: 'Dr. Test', licenseNumber: '1234567', specialization: 'General' })).toHaveLength(0);
-  });
-});
+  test('runs the onboarding → set-pin → patient chain in order and completes', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch();
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
 
-describe('Onboarding Wizard — fee schedule validation', () => {
-  test('always valid', () => expect(validateFeeScheduleStep([])).toHaveLength(0));
-});
+      // patient step
+      await waitFor(() => expect(screen.getByLabelText('Date of Birth')).not.toBeNull());
+      await user.type(screen.getByLabelText('Full Name'), 'Juan dela Cruz');
+      await user.type(screen.getByLabelText('Date of Birth'), '2000-01-01');
+      await user.click(screen.getByRole('button', { name: /get started/i }));
 
-describe('Onboarding Wizard — patient validation', () => {
-  test('missing name → error', () => {
-    expect(validatePatientStep({ name: '', birthDate: '2000-01-01', gender: 'male', phone: '' })).toContain('Patient name is required');
-  });
-  test('missing birthDate → error', () => {
-    expect(validatePatientStep({ name: 'Jose', birthDate: '', gender: 'male', phone: '' })).toContain('Date of birth is required');
-  });
-  test('valid data → no errors', () => {
-    expect(validatePatientStep({ name: 'Jose', birthDate: '2000-01-01', gender: 'male', phone: '' })).toHaveLength(0);
-  });
-});
+      await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
 
-describe('Onboarding Wizard — canProceedToNext', () => {
-  const validData = {
-    clinic: { name: 'Test', countryCode: 'PH', address: '', phone: '' },
-    dentist: { name: 'Dr Test', licenseNumber: '', specialization: '' },
-    fees: [] as FeeEntry[],
-    patient: { name: 'Jose', birthDate: '2000-01-01', gender: 'male', phone: '' },
-  };
+      const posts = f.calls.filter(c => c.method === 'POST').map(c => c.url);
+      expect(posts[0]!.endsWith('/dental/onboarding')).toBe(true);
+      expect(posts[1]!.endsWith('/members/member-1/set-pin')).toBe(true);
+      expect(posts[2]!.endsWith('/dental/patients')).toBe(true);
 
-  test('valid clinic → can proceed', () => expect(canProceedToNext('clinic', validData)).toBe(true));
-  test('invalid clinic → cannot proceed', () => {
-    expect(canProceedToNext('clinic', { ...validData, clinic: { ...validData.clinic, name: '' } })).toBe(false);
+      // entered data flowed into the single onboarding request
+      const onb = f.calls.find(c => c.url.endsWith('/dental/onboarding'))!.body;
+      expect(onb.organizationName).toBe('Bright Smiles');
+      expect(onb.tier).toBe('solo');
+      expect(onb.ownerDisplayName).toBe('Dr. Ana Reyes');
+      expect(f.calls.find(c => c.url.endsWith('/set-pin'))!.body.pin).toBe('123456');
+
+      const patientBody = f.calls.find(c => c.url.endsWith('/dental/patients'))!.body;
+      expect(patientBody.displayName).toBe('Juan dela Cruz');
+      // Regression: the first-patient call must carry branchId + consentGiven, or
+      // createDentalPatient rejects it and the entered patient is silently dropped.
+      expect(patientBody.branchId).toBe('branch-1');
+      expect(patientBody.consentGiven).toBe(true);
+
+      // org context seeded from the 3-ID onboarding response
+      const ctx = useOrgContextStore.getState();
+      expect(ctx.orgId).toBe('org-1');
+      expect(ctx.branchId).toBe('branch-1');
+      expect(ctx.memberId).toBe('member-1');
+    } finally {
+      f.restore();
+    }
   });
-  test('fees always → can proceed', () => expect(canProceedToNext('fees', validData)).toBe(true));
-  test('valid patient → can proceed', () => expect(canProceedToNext('patient', validData)).toBe(true));
+
+  test('"Skip for now" runs the chain without the patient call', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch();
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: /skip for now/i })).not.toBeNull());
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
+      expect(f.calls.some(c => c.url.endsWith('/dental/patients'))).toBe(false);
+      // onboarding + set-pin only
+      expect(f.calls.filter(c => c.method === 'POST').length).toBe(2);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('stops the chain and surfaces an error when onboarding fails', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch({ kind: 'fail', on: 'onboarding' });
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      await waitFor(() => expect(screen.getByText(/boom|Clinic setup failed/i)).not.toBeNull());
+      expect(onComplete.mock.calls.length).toBe(0);
+      // onboarding POST happened, set-pin did not
+      expect(f.calls.some(c => c.url.endsWith('/dental/onboarding'))).toBe(true);
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('routes to the dashboard when onboarding returns 409 (already have a clinic)', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch({ kind: 'status', status: 409, body: { code: 'ORG_LIMIT_REACHED', message: 'You already have an active clinic' } });
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      // 409 → straight to dashboard, no set-pin, no error surfaced
+      await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('surfaces a verify-email message on 403 EMAIL_NOT_VERIFIED and stops', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch({ kind: 'status', status: 403, body: { code: 'EMAIL_NOT_VERIFIED', message: 'forbidden' } });
+    try {
+      render(React.createElement(OnboardingWizard, { onComplete }));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+
+      await waitFor(() => expect(screen.getByText(/verify your email/i)).not.toBeNull());
+      expect(onComplete.mock.calls.length).toBe(0);
+      expect(f.calls.some(c => c.url.endsWith('/set-pin'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
 });

@@ -21,8 +21,8 @@ export class AuditLogRepository {
   async insert(entry: NewDentalAuditLog): Promise<DentalAuditLog> {
     // V-AUD-101 / CONF-AUD-001 (PHI choke point): strip PHI from the JSONB fields
     // HERE, in the repository, so EVERY write path is covered regardless of caller —
-    // including the pg-boss `domain-events.consumer.ts` path, which calls insert()
-    // directly with caller-supplied snapshots. The audit store is append-only and
+    // any future caller that writes a row directly (not just `logAuditEvent`) is
+    // sanitized at this single seam. The audit store is append-only and
     // never deleted (DATA_GOVERNANCE §2/§3), so PHI written here is unremediable
     // (AC-AUD-004 / MODULE_SPEC §5 "No PHI in log body"). Sanitization is idempotent,
     // so callers that already sanitized (logAuditEvent) pass through unchanged.

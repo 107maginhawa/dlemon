@@ -18,11 +18,18 @@ const boundaryRule = {
     'src/handlers/**/repos/*.facade.ts',
   ],
   rules: {
-    'no-restricted-imports': ['warn', {
+    // Migration complete (2026-06-04): every cross-module repo reach-in now
+    // routes through a *.facade.ts, so this is enforced as an error to keep the
+    // boundary at zero. Add a facade in the target/owning module to fix a hit.
+    'no-restricted-imports': ['error', {
       patterns: [
         {
           // Relative cross-module: ../other-module/repos/ or ../../other-module/repos/
-          regex: '\\.\\./[a-zA-Z][a-zA-Z0-9-]*/repos/',
+          // The (?!.*\.facade) lookahead exempts *.facade imports — these ARE the
+          // approved cross-module bridge (mirrors check-module-boundaries.ts, which
+          // skips .facade paths). Without it, already-migrated facade consumers
+          // (e.g. emr/*) are flagged as false-positive violations.
+          regex: '\\.\\./[a-zA-Z][a-zA-Z0-9-]*/repos/(?!.*\\.facade)',
           message: 'Cross-module repo import. Add a *.facade.ts in the target module\'s repos/ directory instead.',
         },
       ],

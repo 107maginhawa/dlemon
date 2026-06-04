@@ -3,6 +3,29 @@
 #        list payments, void payment, create payment plan, get payment plan,
 #        list invoices, get invoice with line items.
 
+# ============================================================
+# Unauthenticated auth-gate checks (G2.5-S6).
+# Run BEFORE any sign-up so Hurl's cookie jar is empty — libcurl auto-replays a
+# persisted session cookie on every later request, so these 401 checks would
+# otherwise see the signed-in session. The auth gate fires before any resource
+# lookup, so fixed placeholder UUIDs are sufficient.
+# ============================================================
+
+# Auth check — collections summary
+GET {{api}}/dental/billing/collections/summary?period=today
+HTTP 401
+
+# Auth check — patient balance
+GET {{api}}/dental/billing/patients/00000000-0000-0000-0000-000000000000/balance
+HTTP 401
+
+# Auth check — void invoice
+POST {{api}}/dental/billing/invoices/00000000-0000-0000-0000-000000000000/void
+Content-Type: application/json
+{}
+HTTP 401
+
+
 # 0. Sign up
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
@@ -18,61 +41,42 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; the caller becomes the org
+# owner + a dentist_owner member, so the rest of the suite runs on the user's token).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Billing Test Clinic {{suffix}}",
+  "organizationName": "Billing Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
+  "countryCode": "PH",
+  "branchName": "Main Branch",
   "timezone": "Asia/Manila",
   "address": "123 Test Street",
   "city": "Manila",
-  "phone": "+639001234567"
+  "phone": "+639001234567",
+  "ownerDisplayName": "Dr. Billing Tester"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
-# 0c. Create a dental patient
+# 0b. Create a dental patient
 POST {{api}}/dental/patients
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "displayName": "Billing Test Patient {{suffix}}",
-  "consentGiven": true
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
 }
 HTTP 201
 [Captures]
 patient_id: jsonpath "$.id"
-
-
-# 0d. Create branch membership for this user (grants branch access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Billing Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
 
 
 # 1. Create a dental visit (draft)
@@ -136,6 +140,34 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 treatment_id_2: jsonpath "$.id"
+
+
+# 4a. Create a consent form for the visit (required before any treatment can be
+# marked 'performed' — the treatment-performed guard enforces signed consent).
+POST {{api}}/dental/visits/{{visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "general-consent",
+  "templateName": "General Treatment Consent"
+}
+HTTP 201
+[Captures]
+consent_id: jsonpath "$.id"
+
+
+# 4b. Sign the consent form (signed=true unblocks treatment 'performed' transition).
+POST {{api}}/dental/visits/{{visit_id}}/consents/{{consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgo="
+}
+HTTP 200
+[Asserts]
+jsonpath "$.signed" == true
 
 
 # 5a. Plan treatment 1 (diagnosed → planned)
@@ -206,7 +238,7 @@ jsonpath "$.balanceCents" >= 0
 
 
 # 8. Issue invoice
-POST {{api}}/dental/billing/invoices/{{invoice_id}}/issue
+PATCH {{api}}/dental/billing/invoices/{{invoice_id}}/issue
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
@@ -293,8 +325,8 @@ jsonpath "$.status" == "on_track"
 jsonpath "$.installments" count == 3
 
 
-# 15. List invoices filtered by status
-GET {{api}}/dental/billing/invoices?status=issued
+# 15. List invoices filtered by status (branchId is required to scope the query)
+GET {{api}}/dental/billing/invoices?branchId={{branch_id}}&status=issued
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 
@@ -333,13 +365,9 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.totalCollectedCents" isInteger
-jsonpath "$.period" isString
+jsonpath "$.period.from" isString
+jsonpath "$.period.to" isString
 jsonpath "$.invoiceCount" isInteger
-
-
-# NEW: G2.5-S6 — collections summary auth check
-GET {{api}}/dental/billing/collections/summary?period=today
-HTTP 401
 
 
 # NEW: G2.5-S6 — patient balance
@@ -348,13 +376,8 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.patientId" == "{{patient_id}}"
-jsonpath "$.balanceCents" isInteger
-jsonpath "$.overdueInvoices" isInteger
-
-
-# NEW: G2.5-S6 — patient balance auth check
-GET {{api}}/dental/billing/patients/{{patient_id}}/balance
-HTTP 401
+jsonpath "$.outstandingBalanceCents" isInteger
+jsonpath "$.overdueInvoiceCount" isInteger
 
 
 # NEW: G2.5-S6 — payment receipt
@@ -363,15 +386,113 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 
 
-# NEW: G2.5-S6 — void invoice (create a fresh invoice to void)
+# NEW: G2.5-S6 — void invoice.
+# Complete the first (still-active) visit first — a patient may only have ONE active
+# visit at a time, so we must close it before opening the void test visit. All its
+# treatments are 'performed' and consent is signed, so completion guards pass.
+PATCH {{api}}/dental/visits/{{visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "completed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "completed"
+
+
+# The first visit's treatments are already billed, so build a fresh billable visit
+# (visit → activate → treatment → signed consent → planned → performed → invoice)
+# to get a standalone invoice we can void without disturbing the main flow above.
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Void test visit"
+}
+HTTP 201
+[Captures]
+void_visit_id: jsonpath "$.id"
+
+
+PATCH {{api}}/dental/visits/{{void_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "active"
+}
+HTTP 200
+
+
+POST {{api}}/dental/visits/{{void_visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{void_visit_id}}",
+  "patientId": "{{patient_id}}",
+  "cdtCode": "D2391",
+  "description": "Resin composite, one surface",
+  "toothNumber": 36,
+  "surfaces": ["mesial"],
+  "priceCents": 15000
+}
+HTTP 201
+[Captures]
+void_treatment_id: jsonpath "$.id"
+
+
+POST {{api}}/dental/visits/{{void_visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{void_visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "general-consent",
+  "templateName": "General Treatment Consent"
+}
+HTTP 201
+[Captures]
+void_consent_id: jsonpath "$.id"
+
+
+POST {{api}}/dental/visits/{{void_visit_id}}/consents/{{void_consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgo="
+}
+HTTP 200
+
+
+PATCH {{api}}/dental/visits/{{void_visit_id}}/treatments/{{void_treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "planned"
+}
+HTTP 200
+
+
+PATCH {{api}}/dental/visits/{{void_visit_id}}/treatments/{{void_treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "performed"
+}
+HTTP 200
+
+
 POST {{api}}/dental/billing/invoices
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "patientId": "{{patient_id}}",
   "branchId": "{{branch_id}}",
-  "visitId": "{{visit_id}}",
-  "issuedByMemberId": "{{dentist_member_id}}"
+  "visitId": "{{void_visit_id}}",
+  "dentistMemberId": "{{dentist_member_id}}"
 }
 HTTP 201
 [Captures]
@@ -381,15 +502,10 @@ void_invoice_id: jsonpath "$.id"
 POST {{api}}/dental/billing/invoices/{{void_invoice_id}}/void
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
-{}
+{
+  "reason": "Duplicate invoice created in error"
+}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "voided"
 jsonpath "$.voidedAt" != null
-
-
-# NEW: G2.5-S6 — void invoice auth check
-POST {{api}}/dental/billing/invoices/{{void_invoice_id}}/void
-Content-Type: application/json
-{}
-HTTP 401

@@ -9,6 +9,9 @@ import { QueryClient } from '@tanstack/react-query';
 import { usePatientInvoices, useCreateInvoice } from './use-workspace-payment';
 import { makeWrapper, jsonResponse } from '@/test-utils';
 
+const _toastError = mock(() => {});
+mock.module('sonner', () => ({ toast: { error: _toastError } }));
+
 const originalFetch = global.fetch;
 const mockFetch = mock(() => jsonResponse([]));
 
@@ -154,5 +157,19 @@ describe('useCreateInvoice', () => {
     result.current.mutate({ patientId: 'pat-1' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('V-FE-ERR-001: surfaces a toast on create failure', async () => {
+    const callsBefore = _toastError.mock.calls.length;
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({}), { status: 422, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
+    result.current.mutate({ patientId: 'pat-1' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

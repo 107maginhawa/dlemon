@@ -4,7 +4,7 @@ import { describe, test, expect, afterEach } from 'bun:test';
 import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 import { getThumbnailPipClass, DentalChartThumbnail } from './dental-chart-thumbnail';
-import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 
 afterEach(cleanup);
 

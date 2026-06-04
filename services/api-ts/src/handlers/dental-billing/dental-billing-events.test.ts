@@ -26,6 +26,7 @@ import {
   CreateDentalInvoiceBody,
   RecordDentalPaymentParams, RecordDentalPaymentBody,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
 } from '@/generated/openapi/validators';
 import { createDentalInvoice } from './createDentalInvoice';
 import { recordDentalPayment } from './recordDentalPayment';
@@ -74,7 +75,9 @@ beforeAll(async () => {
 
 afterEach(async () => {
   const visitIds = sql`(SELECT id FROM dental_visit WHERE patient_id = ${PATIENT_ID})`;
-  await db.execute(sql`DELETE FROM dental_audit_log WHERE branch_id = ${BRANCH_ID}`);
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   await db.execute(sql`DELETE FROM dental_payment WHERE patient_id = ${PATIENT_ID}`);
   await db.execute(sql`DELETE FROM dental_invoice WHERE patient_id = ${PATIENT_ID}`);
   await db.execute(sql`DELETE FROM consent_form WHERE visit_id IN ${visitIds}`);
@@ -107,6 +110,7 @@ function buildTestApp() {
     recordDentalPayment as any);
   app.post('/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, ve),
+    zValidator('json', VoidDentalInvoiceBody, ve),
     voidDentalInvoice as any);
   return app;
 }
@@ -267,7 +271,7 @@ describe('DE-009 InvoiceVoided — audit-row marker on void', () => {
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT}/void`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'x' }),
+      body: JSON.stringify({ reason: 'Unknown invoice void attempt' }),
     });
     expect(res.status).toBe(404);
     expect(await auditRows('invoice.voided', NONEXISTENT)).toHaveLength(0);

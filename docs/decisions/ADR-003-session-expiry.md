@@ -103,3 +103,26 @@ For mid-visit forms on iPad, a hard redirect may cause data loss. **Deferred to 
 - No data auto-save before redirect (Phase 5 concern)
 - PIN session is cleared — staff must re-select and re-enter PIN after cloud sign-in
 - The `sessionExpiredRedirecting` flag is not reset between SPA navigations within a session — this is fine because a 401 indicates the session is truly invalid
+
+---
+
+## Addendum (2026-06-04): Session TTL value policy — DECIDED
+
+The original ADR fixed the expiry *behavior* but the 7-day TTL *value* was left
+as an undecided/inherited default (deferred item "D1"). Decision: **keep the
+7-day Better-Auth session; no code change.** Rationale — the value is correct
+for this app's **two-layer** auth model, which meets/exceeds healthcare norms:
+
+| Layer | Lifetime | Purpose | Standard |
+|-------|----------|---------|----------|
+| Better-Auth cloud session (`AUTH_SESSION_EXPIRES_IN`) | **7 days** absolute, DB-stored, revoke → immediate 401 | "Stay signed in" device trust | 7-day web session is a common industry default |
+| In-memory PIN session (`apps/dentalemon/src/lib/pin-session.ts`, `INACTIVITY_TIMEOUT_MS`) | **5 min** inactivity auto-lock; lost on reload/tab close | Per-operator PHI re-auth at the workstation | HIPAA §164.312(a)(2)(iii) "automatic logoff" has no fixed value; common practice is 10–15 min — **5 min is stricter** |
+
+The short PHI safeguard is the PIN idle-lock (the HIPAA automatic-logoff
+equivalent), so the outer cloud session does not also need to be short; a 7-day
+outer session is standard and keeps clinicians from re-typing credentials daily
+while the 5-min PIN lock protects PHI on shared/unattended devices. Operators
+can still tighten the cloud session per-deployment via `AUTH_SESSION_EXPIRES_IN`.
+
+**No change to code or config.** This addendum records the value as a deliberate,
+standard-aligned decision so it is no longer an open item.

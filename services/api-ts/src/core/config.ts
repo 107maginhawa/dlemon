@@ -65,6 +65,15 @@ export interface Config {
   webrtc: {
     iceServers: IceServer[];
   };
+
+  // Feature flags
+  features: {
+    // P1-10: kill-switch for AI / auto cephalometric landmark detection.
+    // OFF by default — the detect endpoint hard-returns 403 FEATURE_DISABLED
+    // so the feature can be turned off without a deploy if accuracy /
+    // regulatory issues surface. Enable with DENTAL_IMAGING_AUTO_LANDMARK=true.
+    dentalImagingAutoLandmark: boolean;
+  };
 }
 
 /**
@@ -122,6 +131,15 @@ export function parseConfig(): Config {
       idleTimeoutMs: parseIntValue(process.env['DB_IDLE_TIMEOUT'], 30000),
       ssl: parseBool(process.env['DB_SSL'], false),
       logging: parseBool(process.env['DB_LOGGING'], false),
+      // V-DG-001: PHI at-rest encryption attestation. The control is storage-
+      // layer (transparent disk/volume / managed-Postgres storage) encryption,
+      // NOT column-level. Operators attest it is in force via
+      // DB_AT_REST_ENCRYPTION=enabled|verified; anything else parses to
+      // 'unverified' and the production guard below refuses to start.
+      atRestEncryption: ((): 'enabled' | 'verified' | 'unverified' => {
+        const v = process.env['DB_AT_REST_ENCRYPTION']?.toLowerCase();
+        return v === 'enabled' || v === 'verified' ? v : 'unverified';
+      })(),
     },
     
     // CORS configuration — prod defaults are restrictive; dev defaults are permissive.
@@ -182,6 +200,12 @@ export function parseConfig(): Config {
       },
       uploadUrlExpiry: parseIntValue(process.env['STORAGE_UPLOAD_URL_EXPIRY'] || '300', 300), // 5 minutes
       downloadUrlExpiry: parseIntValue(process.env['STORAGE_DOWNLOAD_URL_EXPIRY'] || '900', 900), // 15 minutes
+      // P2-7: per-class upload ceilings. Images stay at 100 MB; DICOM/CBCT gets a
+      // higher cap (default 2 GB) for cone-beam volumes. The absolute cap (default
+      // 8 GB) bounds abuse even if the DICOM cap is misconfigured upward.
+      maxFileSizeBytes: parseIntValue(process.env['STORAGE_MAX_FILE_SIZE_BYTES'], 100 * 1024 * 1024),
+      dicomMaxFileSizeBytes: parseIntValue(process.env['STORAGE_DICOM_MAX_FILE_SIZE_BYTES'], 2 * 1024 * 1024 * 1024),
+      absoluteMaxFileSizeBytes: parseIntValue(process.env['STORAGE_ABSOLUTE_MAX_FILE_SIZE_BYTES'], 8 * 1024 * 1024 * 1024),
     },
     
     // Email configuration
@@ -247,6 +271,12 @@ export function parseConfig(): Config {
         ? parseIceServerUrls(process.env['WEBRTC_ICE_SERVERS'])
         : DEFAULT_ICE_SERVERS
     },
+
+    // Feature flags
+    features: {
+      // P1-10 AI landmarking kill-switch — OFF by default.
+      dentalImagingAutoLandmark: parseBool(process.env['DENTAL_IMAGING_AUTO_LANDMARK'], false),
+    },
   };
 
   if (process.env['NODE_ENV'] === 'production') {
@@ -267,6 +297,17 @@ export function parseConfig(): Config {
     }
     if (!process.env['STORAGE_SECRET_ACCESS_KEY'] || process.env['STORAGE_SECRET_ACCESS_KEY'] === 'minioadmin') {
       weak.push('STORAGE_SECRET_ACCESS_KEY (must not use the default "minioadmin")');
+    }
+    // V-DG-001: PHI at-rest encryption control must be attested in production.
+    // The control is storage-layer (transparent disk/volume) encryption; the
+    // operator attests it is provisioned/verified via DB_AT_REST_ENCRYPTION.
+    // Refusing to start when unattested makes the §1 "Yes (at rest)" claim a
+    // deterministic, non-regressable startup invariant (DATA_GOVERNANCE §2/§7).
+    if (config.database.atRestEncryption !== 'enabled' && config.database.atRestEncryption !== 'verified') {
+      weak.push(
+        'DB_AT_REST_ENCRYPTION (must be "enabled" or "verified" — attest the ' +
+          'database volume / managed storage is encrypted at rest)',
+      );
     }
     if (weak.length > 0) {
       throw new Error(

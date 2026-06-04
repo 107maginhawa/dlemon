@@ -9,6 +9,7 @@
 
 import React from 'react';
 import type { Appointment } from './appointment-card';
+import { APP_LOCALE } from '@/constants/brand';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -117,7 +118,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
     byDate[d].push(appt);
   }
 
-  const monthTitle = selected.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthTitle = selected.toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' });
 
   return (
     <div className="flex-1 bg-background overflow-auto p-4" role="main" aria-label="Month schedule">
@@ -151,10 +152,10 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
               onClick={() => onDayClick(dateStr)}
               className={[
                 'relative h-20 border-r border-b border-border p-1.5 text-left transition-colors',
-                'hover:bg-secondary/40 focus:outline-none focus:ring-1 focus:ring-[#FFE97D] focus:ring-inset',
+                'hover:bg-secondary/40 focus:outline-none focus:ring-1 focus:ring-lemon focus:ring-inset',
                 overflow ? 'bg-secondary/10' : 'bg-background',
                 isToday ? 'bg-[rgba(255,233,125,0.1)]' : '',
-                isSelected ? 'ring-1 ring-[#FFE97D] ring-inset' : '',
+                isSelected ? 'ring-1 ring-lemon ring-inset' : '',
               ].join(' ')}
               aria-label={`${dateStr}${count > 0 ? `, ${count} appointment${count > 1 ? 's' : ''}` : ''}${isToday ? ', today' : ''}`}
               data-testid={`month-day-${dateStr}`}
@@ -164,7 +165,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
                 className={[
                   'inline-flex items-center justify-center text-sm font-semibold tabular-nums',
                   isToday
-                    ? 'bg-[#FFE97D] text-[#4A4018] w-7 h-7 rounded-full text-[13px]'
+                    ? 'bg-lemon text-lemon-foreground w-7 h-7 rounded-full text-[13px]'
                     : overflow
                       ? 'text-muted-foreground/40'
                       : 'text-foreground',
@@ -181,7 +182,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
                     'flex items-center justify-center px-1',
                     overflow
                       ? 'bg-muted text-muted-foreground'
-                      : 'bg-[#FFE97D] text-[#4A4018]',
+                      : 'bg-lemon text-lemon-foreground',
                   ].join(' ')}
                   data-testid={`month-badge-${dateStr}`}
                 >

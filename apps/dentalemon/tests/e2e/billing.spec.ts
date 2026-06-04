@@ -11,96 +11,23 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 
 async function signUpAndSeedBilling(page: Page) {
-  const suffix = Date.now();
-  const email = `billing-e2e-${suffix}@example.org`;
-  const password = 'E2eTestPass123!';
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
+  const { orgId, branchId } = await signUpOnboardAndUnlock(page, {
+    tier: 'clinic',
+    label: 'Billing',
+  });
 
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Billing Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially(password, { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create person profile to bypass onboarding redirect
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'Billing', lastName: 'Owner' }),
-    });
-  }, API);
-
-  // Seed org + branch
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Billing Test Clinic', tier: 'clinic', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId: orgRes.id });
-
-  await page.evaluate(({ orgId, branchId }: { orgId: string; branchId: string }) => {
-    localStorage.setItem('currentOrgId', orgId);
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentMemberRole', 'dentist_owner');
-  }, { orgId: orgRes.id, branchId: branchRes.id });
-
-  // Create owner membership so assertBranchAccess + requireRole guards pass
-  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    const session = await sessionRes.json() as any;
-    const personId = session?.user?.id;
-    if (personId) {
-      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Billing Owner', role: 'dentist_owner', personId }),
-      });
-    }
-  }, { api: API, orgId: orgRes.id, branchId: branchRes.id });
-
-  return { orgId: orgRes.id, branchId: branchRes.id };
+  return { orgId, branchId };
 }
 
 test.describe('Billing (FR4.x)', () => {
   test('FR4.1: billing page loads with invoice list container', async ({ page }) => {
     await signUpAndSeedBilling(page);
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     // Page heading present
     await expect(page.getByRole('heading', { name: /billing/i })).toBeVisible();
@@ -111,8 +38,7 @@ test.describe('Billing (FR4.x)', () => {
 
   test('FR4.1: billing page shows empty state when no invoices', async ({ page }) => {
     await signUpAndSeedBilling(page);
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     // Billing list container must always be visible — either showing rows or an empty state
     await expect(page.getByTestId('billing-list')).toBeVisible();
@@ -120,8 +46,7 @@ test.describe('Billing (FR4.x)', () => {
 
   test('FR4.1b: invoice status filter is visible on billing page', async ({ page }) => {
     await signUpAndSeedBilling(page);
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     // Status filter dropdown/select should be present (FR4.1b: status badges imply filter)
     await expect(page.getByLabel(/invoice status filter/i)).toBeVisible();
@@ -213,8 +138,7 @@ test.describe('Billing (FR4.x)', () => {
 
     expect(result, 'Seeding failed: member lookup or invoice creation returned null').not.toBeNull();
 
-    await page.goto(`${APP}/billing`);
-    await page.waitForLoadState('networkidle');
+    await spaNavigate(page, '/billing');
 
     // Invoice list should render with at least one status badge
     await expect(page.getByTestId('billing-list')).toBeVisible();

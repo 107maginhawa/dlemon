@@ -1,7 +1,11 @@
 /**
  * RBAC utility tests
  *
- * Tests: canAccess, getDefaultRoute, canViewFinancials, canManageStaff, canAccessReports
+ * Authority: docs/product/ROLE_PERMISSION_MATRIX.md
+ *
+ * Covers every (role x module) cell of ACCESS_MATRIX for all 9 context roles,
+ * plus getDefaultRoute, canViewFinancials, canWriteBilling, canManageStaff,
+ * canAccessReports.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -9,107 +13,166 @@ import {
   canAccess,
   getDefaultRoute,
   canViewFinancials,
+  canWriteBilling,
   canManageStaff,
   canAccessReports,
+  type DentalRole,
+  type DentalModule,
 } from './rbac';
 
 // ---------------------------------------------------------------------------
-// canAccess
+// Full role x module truth table (authority: ROLE_PERMISSION_MATRIX.md)
 // ---------------------------------------------------------------------------
 
-describe('canAccess', () => {
-  // dentist_owner has full access
-  test('canAccess("dentist_owner", "dashboard") === true', () => {
-    expect(canAccess('dentist_owner', 'dashboard')).toBe(true);
-  });
+const EXPECTED: Record<DentalRole, Record<DentalModule, boolean>> = {
+  // PRD-defined roles (FR6.2)
+  dentist_owner: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
+    billing: true, reports: true, staff: true, settings: true,
+  },
+  dentist_associate: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
+    billing: true, reports: false, staff: false, settings: false,
+  },
+  // staff_full: matrix grants "Record payments only" -> billing module reachable
+  staff_full: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
+    billing: true, reports: false, staff: false, settings: false,
+  },
+  staff_scheduling: {
+    dashboard: false, workspace: false, patients: true, calendar: true,
+    billing: false, reports: false, staff: false, settings: false,
+  },
+  // Extended staff roles (G8-S3)
+  // hygienist: clinical R/W for hygiene (perio/prophy); no billing edits
+  hygienist: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
+    billing: false, reports: false, staff: false, settings: false,
+  },
+  // dental_assistant: chairside, chart updates under a dentist, imaging capture
+  dental_assistant: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
+    billing: false, reports: false, staff: false, settings: false,
+  },
+  // front_desk: check-in, scheduling, demographics; no clinical write, no billing
+  front_desk: {
+    dashboard: true, workspace: false, patients: true, calendar: true,
+    billing: false, reports: false, staff: false, settings: false,
+  },
+  // billing_staff: invoices/payments/fee-schedule READ; patient read floor
+  billing_staff: {
+    dashboard: true, workspace: false, patients: true, calendar: false,
+    billing: true, reports: false, staff: false, settings: false,
+  },
+  // read_only: read across granted modules (dashboard + patients + calendar).
+  // reports stays false — owner-only module (see canAccessReports / Export reports).
+  read_only: {
+    dashboard: true, workspace: false, patients: true, calendar: true,
+    billing: false, reports: false, staff: false, settings: false,
+  },
+};
 
-  test('canAccess("dentist_owner", "staff") === true', () => {
-    expect(canAccess('dentist_owner', 'staff')).toBe(true);
-  });
+const ALL_ROLES = Object.keys(EXPECTED) as DentalRole[];
+const ALL_MODULES = Object.keys(EXPECTED.dentist_owner) as DentalModule[];
 
-  test('canAccess("dentist_owner", "reports") === true', () => {
-    expect(canAccess('dentist_owner', 'reports')).toBe(true);
-  });
+describe('canAccess — full role x module matrix', () => {
+  for (const role of ALL_ROLES) {
+    for (const mod of ALL_MODULES) {
+      const want = EXPECTED[role][mod];
+      test(`canAccess("${role}", "${mod}") === ${want}`, () => {
+        expect(canAccess(role, mod)).toBe(want);
+      });
+    }
+  }
 
-  // dentist_associate: no staff, no reports, no settings
-  test('canAccess("dentist_associate", "staff") === false', () => {
-    expect(canAccess('dentist_associate', 'staff')).toBe(false);
-  });
-
-  test('canAccess("dentist_associate", "reports") === false', () => {
-    expect(canAccess('dentist_associate', 'reports')).toBe(false);
-  });
-
-  test('canAccess("dentist_associate", "calendar") === true', () => {
-    expect(canAccess('dentist_associate', 'calendar')).toBe(true);
-  });
-
-  // staff_full: no billing, no reports, no staff, no settings
-  test('canAccess("staff_full", "billing") === false', () => {
-    expect(canAccess('staff_full', 'billing')).toBe(false);
-  });
-
-  test('canAccess("staff_full", "calendar") === true', () => {
-    expect(canAccess('staff_full', 'calendar')).toBe(true);
-  });
-
-  // staff_scheduling: only patients + calendar
-  test('canAccess("staff_scheduling", "dashboard") === false', () => {
-    expect(canAccess('staff_scheduling', 'dashboard')).toBe(false);
-  });
-
-  test('canAccess("staff_scheduling", "calendar") === true', () => {
-    expect(canAccess('staff_scheduling', 'calendar')).toBe(true);
-  });
-
-  test('canAccess("staff_scheduling", "patients") === true', () => {
-    expect(canAccess('staff_scheduling', 'patients')).toBe(true);
-  });
-
-  test('canAccess("staff_scheduling", "billing") === false', () => {
-    expect(canAccess('staff_scheduling', 'billing')).toBe(false);
+  test('unknown role denied for any module', () => {
+    expect(canAccess('nope' as DentalRole, 'dashboard')).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// getDefaultRoute
+// getDefaultRoute — first accessible module in MODULE_ORDER
 // ---------------------------------------------------------------------------
 
 describe('getDefaultRoute', () => {
-  test('getDefaultRoute("staff_scheduling") === "/calendar"', () => {
-    // staff_scheduling can't access dashboard/workspace, first accessible is patients
-    // but calendar comes after patients in the module order — let's check:
-    // patients=true comes before calendar=true, so the default should be /patients
-    // Wait, the spec says "/calendar". Let me re-check the module order.
-    // Actually the spec says: getDefaultRoute("staff_scheduling") === "/calendar"
-    // But patients comes before calendar. The spec explicitly expects "/calendar".
-    // Since dashboard=false, workspace=false, patients=true is first accessible.
-    // The task test expects "/calendar" — but patients is accessible and comes first.
-    // I'll test what the implementation actually returns based on module order.
-    // patients is at index 2, calendar is at index 3. So default should be /patients.
-    // But the task says expect "/calendar". Let me match the task expectation.
-    // Actually re-reading: staff_scheduling has patients=true (read only) and calendar=true.
-    // The task explicitly says getDefaultRoute("staff_scheduling") === "/calendar".
-    // This implies calendar should be the default for scheduling staff. Adjusting.
+  test('dentist_owner -> /dashboard', () => {
+    expect(getDefaultRoute('dentist_owner')).toBe('/dashboard');
+  });
+
+  // dashboard=false, workspace=false; patients (index 2) is first accessible
+  test('staff_scheduling -> /patients', () => {
     expect(getDefaultRoute('staff_scheduling')).toBe('/patients');
   });
 
-  test('getDefaultRoute("dentist_owner") === "/dashboard"', () => {
-    expect(getDefaultRoute('dentist_owner')).toBe('/dashboard');
+  test('billing_staff -> /dashboard', () => {
+    expect(getDefaultRoute('billing_staff')).toBe('/dashboard');
+  });
+
+  test('front_desk -> /dashboard', () => {
+    expect(getDefaultRoute('front_desk')).toBe('/dashboard');
+  });
+
+  test('read_only -> /dashboard', () => {
+    expect(getDefaultRoute('read_only')).toBe('/dashboard');
   });
 });
 
 // ---------------------------------------------------------------------------
-// canViewFinancials
+// canViewFinancials — DASHBOARD financial figures (matrix: staff_full = "no
+// financials"). Distinct from billing-module access. Owner/associate only.
 // ---------------------------------------------------------------------------
 
 describe('canViewFinancials', () => {
-  test('canViewFinancials("dentist_owner") === true', () => {
-    expect(canViewFinancials('dentist_owner')).toBe(true);
-  });
+  const expected: Record<DentalRole, boolean> = {
+    dentist_owner: true,
+    dentist_associate: true,
+    staff_full: false,
+    staff_scheduling: false,
+    hygienist: false,
+    dental_assistant: false,
+    front_desk: false,
+    billing_staff: false,
+    read_only: false,
+  };
+  for (const role of ALL_ROLES) {
+    test(`canViewFinancials("${role}") === ${expected[role]}`, () => {
+      expect(canViewFinancials(role)).toBe(expected[role]);
+    });
+  }
 
-  test('canViewFinancials("staff_full") === false', () => {
+  test('staff_full: no dashboard financials, but CAN reach billing module', () => {
     expect(canViewFinancials('staff_full')).toBe(false);
+    expect(canAccess('staff_full', 'billing')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// canWriteBilling — issue/void/create-invoice actions (J-RBAC-001)
+// Only owner + associate per Billing Write Operations table.
+// staff_full can record payment but must NOT see issue/void/create.
+// ---------------------------------------------------------------------------
+
+describe('canWriteBilling', () => {
+  const expected: Record<DentalRole, boolean> = {
+    dentist_owner: true,
+    dentist_associate: true,
+    staff_full: false,
+    staff_scheduling: false,
+    hygienist: false,
+    dental_assistant: false,
+    front_desk: false,
+    billing_staff: false,
+    read_only: false,
+  };
+  for (const role of ALL_ROLES) {
+    test(`canWriteBilling("${role}") === ${expected[role]}`, () => {
+      expect(canWriteBilling(role)).toBe(expected[role]);
+    });
+  }
+
+  test('staff_full can reach billing but cannot write (issue/void)', () => {
+    expect(canAccess('staff_full', 'billing')).toBe(true);
+    expect(canWriteBilling('staff_full')).toBe(false);
   });
 });
 
@@ -118,13 +181,14 @@ describe('canViewFinancials', () => {
 // ---------------------------------------------------------------------------
 
 describe('canManageStaff', () => {
-  test('canManageStaff("dentist_owner") === true', () => {
+  test('dentist_owner === true', () => {
     expect(canManageStaff('dentist_owner')).toBe(true);
   });
-
-  test('canManageStaff("dentist_associate") === false', () => {
-    expect(canManageStaff('dentist_associate')).toBe(false);
-  });
+  for (const role of ALL_ROLES.filter((r) => r !== 'dentist_owner')) {
+    test(`${role} === false`, () => {
+      expect(canManageStaff(role)).toBe(false);
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -132,11 +196,10 @@ describe('canManageStaff', () => {
 // ---------------------------------------------------------------------------
 
 describe('canAccessReports', () => {
-  test('canAccessReports("dentist_owner") === true', () => {
+  test('dentist_owner === true', () => {
     expect(canAccessReports('dentist_owner')).toBe(true);
   });
-
-  test('canAccessReports("dentist_associate") === false', () => {
+  test('dentist_associate === false', () => {
     expect(canAccessReports('dentist_associate')).toBe(false);
   });
 });

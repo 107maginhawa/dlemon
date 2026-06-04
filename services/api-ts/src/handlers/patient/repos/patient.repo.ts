@@ -3,7 +3,7 @@
  * Encapsulates all database operations for the patients table
  */
 
-import { eq, and, or, ilike, isNull, inArray, sql, type SQL, isNotNull } from 'drizzle-orm';
+import { eq, and, inArray, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
@@ -11,9 +11,14 @@ import {
   type Patient,
   type NewPatient,
   type PatientWithPerson,
-  type PersonData
 } from './patient.schema';
-import { persons } from '../../person/repos/person.schema';
+import {
+  findPatientWithPersonById,
+  findManyPatientsWithPerson,
+  countPatientsWithPerson,
+  findPotentialDuplicatePatients,
+  findActivePatientsWithPersonByBranch,
+} from './patient-person.facade';
 
 export interface PatientFilters {
   person?: string;
@@ -89,31 +94,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Find patient with person data joined
    */
   async findOneByIdWithPerson(patientId: string): Promise<PatientWithPerson | null> {
-    this.logger?.debug({ patientId }, 'Finding patient with person data');
-    
-    const result = await this.db
-      .select({
-        patient: patients,
-        person: persons
-      })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .where(eq(patients.id, patientId))
-      .limit(1);
-    
-    const row = result[0];
-    if (!row) {
-      return null;
-    }
-
-    const { patient, person } = row;
-
-    this.logger?.debug({ patientId, found: true }, 'Patient with person data retrieved');
-
-    return {
-      ...patient,
-      person: person as unknown as PersonData
-    };
+    return findPatientWithPersonById(this.db, patientId);
   }
 
   /**
@@ -132,83 +113,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
     filters?: PatientFilters,
     options?: { pagination?: PaginationOptions }
   ): Promise<PatientWithPerson[]> {
-    this.logger?.debug({ filters, options }, 'Finding patients with person data');
-    
-    const query = this.db
-      .select({
-        patient: patients,
-        person: persons
-      })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .$dynamic();
-
-    // Apply filters
-    const conditions = [];
-
-    if (filters?.person) {
-      conditions.push(eq(patients.person, filters.person));
-    }
-
-    if (filters?.ids && filters.ids.length > 0) {
-      conditions.push(inArray(patients.id, filters.ids));
-    }
-
-    // General search across person fields
-    if (filters?.q) {
-      conditions.push(
-        or(
-          ilike(persons.firstName, `%${filters.q}%`),
-          ilike(persons.lastName, `%${filters.q}%`)
-        )
-      );
-    }
-
-    if (filters?.branchIds && filters.branchIds.length > 0) {
-      conditions.push(
-        or(
-          inArray(patients.preferredBranchId, filters.branchIds),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    } else if (filters?.branchId) {
-      conditions.push(
-        or(
-          eq(patients.preferredBranchId, filters.branchId),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    }
-
-    if (filters?.needsFollowUp !== undefined) {
-      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
-    }
-
-    if (filters?.status) {
-      conditions.push(eq(patients.status, filters.status));
-    }
-
-    if (conditions.length > 0) {
-      query.where(and(...conditions));
-    }
-
-    // Apply pagination
-    if (options?.pagination) {
-      const { limit = 25, offset = 0 } = options.pagination;
-      query.limit(limit).offset(offset);
-    }
-
-    const results = await query;
-
-    this.logger?.debug({
-      filters,
-      resultCount: results.length
-    }, 'Patients with person data retrieved');
-
-    return results.map(({ patient, person }) => ({
-      ...patient,
-      person
-    })) as PatientWithPerson[];
+    return findManyPatientsWithPerson(this.db, filters, options);
   }
 
   /**
@@ -218,61 +123,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
   async countWithPerson(
     filters?: PatientFilters
   ): Promise<number> {
-    const conditions = [];
-
-    if (filters?.person) {
-      conditions.push(eq(patients.person, filters.person));
-    }
-
-    if (filters?.ids && filters.ids.length > 0) {
-      conditions.push(inArray(patients.id, filters.ids));
-    }
-
-    if (filters?.q) {
-      conditions.push(
-        or(
-          ilike(persons.firstName, `%${filters.q}%`),
-          ilike(persons.lastName, `%${filters.q}%`)
-        )
-      );
-    }
-
-    if (filters?.branchIds && filters.branchIds.length > 0) {
-      conditions.push(
-        or(
-          inArray(patients.preferredBranchId, filters.branchIds),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    } else if (filters?.branchId) {
-      conditions.push(
-        or(
-          eq(patients.preferredBranchId, filters.branchId),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    }
-
-    if (filters?.needsFollowUp !== undefined) {
-      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
-    }
-
-    if (filters?.status) {
-      conditions.push(eq(patients.status, filters.status));
-    }
-
-    const query = this.db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .$dynamic();
-
-    if (conditions.length > 0) {
-      query.where(and(...conditions));
-    }
-
-    const result = await query;
-    return Number(result[0]?.count ?? 0);
+    return countPatientsWithPerson(this.db, filters);
   }
 
   /**
@@ -342,29 +193,69 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Returns matching patients for the same branch — non-blocking (caller decides).
    */
   async findPotentialDuplicates(firstName: string, lastName: string | null, branchId?: string): Promise<PatientWithPerson[]> {
-    const conditions: SQL<unknown>[] = [
-      ilike(persons.firstName, `%${firstName}%`),
-    ];
+    return findPotentialDuplicatePatients(this.db, firstName, lastName, branchId);
+  }
 
-    if (lastName) {
-      conditions.push(ilike(persons.lastName, `%${lastName}%`));
+  /**
+   * P2-16: duplicate-patient detection. Scans the active patients in a branch and
+   * clusters likely duplicates by a normalized match key:
+   *   - "strong"  — same lower(firstName)+lower(lastName)+dateOfBirth, OR same
+   *                 name + a shared phone/email (a DOB-less but contact-confirmed dup)
+   *   - "name"    — same lower(firstName)+lower(lastName) but DOB differs/missing
+   * Returns one group per cluster of 2+ patients for staff to review/merge. Merge
+   * itself already exists (patient/mergePatients.ts) — this only surfaces candidates.
+   */
+  async findDuplicateCandidates(branchId: string): Promise<
+    Array<{
+      matchType: 'strong' | 'name';
+      matchKey: string;
+      patients: PatientWithPerson[];
+    }>
+  > {
+    const records = await findActivePatientsWithPersonByBranch(this.db, branchId);
+
+    const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
+    const nameKey = (p: PatientWithPerson) => `${norm(p.person.firstName)}|${norm(p.person.lastName)}`;
+    const contactValues = (p: PatientWithPerson): string[] => {
+      const c = p.person.contactInfo as { email?: string; phone?: string } | null | undefined;
+      return [norm(c?.email), norm(c?.phone)].filter((v) => v.length > 0);
+    };
+
+    // Cluster by strong key (name + DOB) and by name-only key.
+    const strong = new Map<string, PatientWithPerson[]>();
+    const byName = new Map<string, PatientWithPerson[]>();
+    for (const r of records) {
+      byName.set(nameKey(r), [...(byName.get(nameKey(r)) ?? []), r]);
+      if (r.person.dateOfBirth) {
+        const k = `${nameKey(r)}|${r.person.dateOfBirth}`;
+        strong.set(k, [...(strong.get(k) ?? []), r]);
+      }
     }
 
-    if (branchId) {
-      conditions.push(eq(patients.preferredBranchId, branchId));
+    const groups: Array<{ matchType: 'strong' | 'name'; matchKey: string; patients: PatientWithPerson[] }> = [];
+    const claimed = new Set<string>();
+
+    // Strong groups first (name + DOB).
+    for (const [key, members] of strong) {
+      if (members.length < 2) continue;
+      members.forEach((m) => claimed.add(m.id));
+      groups.push({ matchType: 'strong', matchKey: key, patients: members });
     }
 
-    const results = await this.db
-      .select({ patient: patients, person: persons })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .where(and(...conditions))
-      .limit(5);
+    // Name-only groups: same name, plus either a shared contact (→ strong) or
+    // simply not already claimed by a strong DOB group.
+    for (const [key, members] of byName) {
+      const unclaimed = members.filter((m) => !claimed.has(m.id));
+      if (unclaimed.length < 2) continue;
+      // Promote to "strong" if any two share a contact value.
+      const contactCounts = new Map<string, number>();
+      for (const m of unclaimed) for (const v of contactValues(m)) contactCounts.set(v, (contactCounts.get(v) ?? 0) + 1);
+      const sharesContact = [...contactCounts.values()].some((n) => n >= 2);
+      unclaimed.forEach((m) => claimed.add(m.id));
+      groups.push({ matchType: sharesContact ? 'strong' : 'name', matchKey: key, patients: unclaimed });
+    }
 
-    return results.map(({ patient, person }) => ({
-      ...patient,
-      person,
-    })) as PatientWithPerson[];
+    return groups;
   }
 
 }

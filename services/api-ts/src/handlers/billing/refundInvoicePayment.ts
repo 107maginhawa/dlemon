@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { RefundInvoicePaymentBody, RefundInvoicePaymentParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
 
 /**
@@ -43,7 +43,6 @@ export async function refundInvoicePayment(
   // Create repository instances
   const invoiceRepo = new InvoiceRepository(database, logger);
   const merchantAccountRepo = new MerchantAccountRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
 
   // Get the invoice record
   const invoice = await invoiceRepo.findOneById(invoiceId);
@@ -63,7 +62,7 @@ export async function refundInvoicePayment(
   if (!isAdmin) {
     // Non-admin users must be the provider (owner)
     // Find the provider account for the authenticated user
-    const authenticatedUserPerson = await personRepo.findOneById(user.id);
+    const authenticatedUserPerson = await findBillingParty(database, user.id, logger);
     if (!authenticatedUserPerson) {
       throw new ForbiddenError('Provider account not found for authenticated user');
     }

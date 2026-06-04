@@ -1,18 +1,26 @@
 import { useState } from 'react'
 import { useImagingUpload } from '@/features/imaging/hooks/use-imaging-upload'
+import { DICOM_MIME_TYPE, isDicomMimeType } from '@/features/imaging/lib/dicom'
 
 const MODALITY_OPTIONS = [
   { value: 'periapical', label: 'Periapical' },
   { value: 'bitewing', label: 'Bitewing' },
   { value: 'panoramic', label: 'Panoramic' },
   { value: 'cephalometric', label: 'Cephalometric' },
+  { value: 'cbct', label: 'CBCT' },
   { value: 'intraoral_photo', label: 'Intraoral Photo' },
   { value: 'extraoral_photo', label: 'Extraoral Photo' },
   { value: 'other', label: 'Other' },
 ] as const
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp']
+// P1-9: DICOM joins the allowlist. Browsers often leave .dcm files with an empty
+// MIME type, so the extension is treated as a DICOM signal at validation time.
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp', DICOM_MIME_TYPE]
 const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024 // 100 MB
+
+function isDicomFile(f: File): boolean {
+  return isDicomMimeType(f.type) || /\.dcm$/i.test(f.name)
+}
 
 interface ImageUploadProps {
   patientId: string
@@ -29,8 +37,8 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
   const { progress, upload, isUploading, abort } = useImagingUpload()
 
   const validateFile = (f: File): string => {
-    if (!ALLOWED_TYPES.includes(f.type)) {
-      return 'Unsupported format. Use JPEG, PNG, TIFF, or BMP.'
+    if (!ALLOWED_TYPES.includes(f.type) && !isDicomFile(f)) {
+      return 'Unsupported format. Use JPEG, PNG, TIFF, BMP, or DICOM.'
     }
     if (f.size > MAX_FILE_SIZE_BYTES) {
       return `File too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Maximum 100 MB.`
@@ -117,7 +125,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
         <label className="text-sm text-zinc-300 block mb-2">Image File</label>
         <input
           type="file"
-          accept=".jpg,.jpeg,.png,.tif,.tiff,.bmp"
+          accept=".jpg,.jpeg,.png,.tif,.tiff,.bmp,.dcm,application/dicom"
           onChange={handleFileChange}
           className="text-sm text-zinc-300"
         />
@@ -131,7 +139,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
       {isUploading && (
         <div className="w-full bg-zinc-700 rounded-full h-2">
           <div
-            className="bg-[#FFE97D] h-2 rounded-full transition-all"
+            className="bg-lemon h-2 rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -141,7 +149,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
         <button
           type="submit"
           disabled={!file || isUploading || Boolean(error)}
-          className="flex-1 bg-[#FFE97D] text-black font-semibold py-2 rounded text-sm disabled:opacity-50"
+          className="flex-1 bg-lemon text-black font-semibold py-2 rounded text-sm disabled:opacity-50"
         >
           {isUploading ? `Uploading… ${progress}%` : 'Upload'}
         </button>

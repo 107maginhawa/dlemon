@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createDentalVisit } from '@monobase/sdk-ts/generated';
 import { listDentalVisitsQueryKey } from '@monobase/sdk-ts/generated/react-query';
+import { toastError } from '@/lib/error-toast';
 
 interface CreateVisitInput {
   patientId: string;
@@ -37,6 +38,11 @@ export function useCreateVisit(patientId: string) {
       queryClient.invalidateQueries({
         queryKey: listDentalVisitsQueryKey({ query: { patientId } }),
       });
+    },
+    // V-FE-ERR-001: hook-level error surface so a failed create isn't swallowed
+    // when a call site forgets its own .catch.
+    onError: (err) => {
+      toastError(err, 'Failed to create visit. Please try again.');
     },
   });
 }

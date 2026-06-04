@@ -56,11 +56,26 @@ namespace DentalOrgModule {
     @doc("Associate dentist, clinical access for own patients")
     dentistAssociate: "dentist_associate",
 
+    @doc("Hygienist — clinical hygiene access")
+    hygienist: "hygienist",
+
     @doc("Full operations staff — billing, scheduling, patient records")
     staffFull: "staff_full",
 
     @doc("Scheduling-only staff")
     staffScheduling: "staff_scheduling",
+
+    @doc("Dental assistant — chairside clinical support")
+    dentalAssistant: "dental_assistant",
+
+    @doc("Front-desk reception staff")
+    frontDesk: "front_desk",
+
+    @doc("Billing-only staff")
+    billingStaff: "billing_staff",
+
+    @doc("Read-only access")
+    readOnly: "read_only",
   }
 
   @doc("Membership status")
@@ -197,6 +212,21 @@ namespace DentalOrgModule {
 
     @doc("Profile photo URL")
     avatarUrl?: string;
+
+    @doc("Provider license number (used on clinical records + claims). Null for non-clinical staff.")
+    @maxLength(64)
+    licenseNumber?: string;
+
+    @doc("National Provider Identifier (NPI) — 10 digits. Null for non-clinical staff.")
+    @pattern("^\\d{10}$")
+    npi?: string;
+
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'.")
+    @maxLength(32)
+    credentialType?: string;
+
+    @doc("License expiry date (ISO 8601 date).")
+    licenseExpiry?: utcDateTime;
   }
 
   // ==========================================================================
@@ -311,6 +341,57 @@ namespace DentalOrgModule {
     };
   }
 
+  @doc("Self-service clinic onboarding request — provisions the caller's first clinic")
+  model OnboardingRequest {
+    @doc("Practice / clinic name")
+    @minLength(1)
+    @maxLength(120)
+    organizationName: string;
+
+    @doc("Subscription tier (self-service supports solo or clinic)")
+    tier: OrgTier;
+
+    @doc("ISO 3166-1 alpha-2 country code")
+    @maxLength(2)
+    countryCode: string;
+
+    @doc("Default branch name — defaults to the organization name when omitted")
+    @maxLength(120)
+    branchName?: string;
+
+    @doc("IANA timezone for the default branch — defaults to Asia/Manila when omitted")
+    @maxLength(64)
+    timezone?: string;
+
+    @doc("Street address for the default branch")
+    @maxLength(255)
+    address?: string;
+
+    @doc("City for the default branch")
+    @maxLength(80)
+    city?: string;
+
+    @doc("Phone number for the default branch")
+    @maxLength(40)
+    phone?: string;
+
+    @doc("Display name for the owner's membership (PIN-select / provider name). Defaults to the caller's account name when omitted.")
+    @maxLength(80)
+    ownerDisplayName?: string;
+  }
+
+  @doc("Self-service onboarding result — the provisioned org, default branch, and owner membership")
+  model OnboardingResponse {
+    @doc("Newly created organization (caller is the owner)")
+    organizationId: UUID;
+
+    @doc("Default branch created for the organization")
+    branchId: UUID;
+
+    @doc("Caller's dentist_owner membership in the default branch")
+    membershipId: UUID;
+  }
+
   @doc("List of organizations")
   model OrganizationList {
     items: DentalOrganization[];
@@ -356,6 +437,35 @@ namespace DentalOrgModule {
 
     @doc("Profile photo URL")
     avatarUrl?: string;
+  }
+
+  @doc("Update a member's profile, role, and provider credentials")
+  model UpdateMemberRequest {
+    @doc("New display name")
+    @minLength(1)
+    @maxLength(80)
+    displayName?: string;
+
+    @doc("New role (dentist_owner only)")
+    role?: MemberRole;
+
+    @doc("Profile photo URL")
+    avatarUrl?: string;
+
+    @doc("Provider license number")
+    @maxLength(64)
+    licenseNumber?: string;
+
+    @doc("National Provider Identifier (NPI) — 10 digits")
+    @pattern("^\\d{10}$")
+    npi?: string;
+
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'")
+    @maxLength(32)
+    credentialType?: string;
+
+    @doc("License expiry date (ISO 8601 date)")
+    licenseExpiry?: utcDateTime;
   }
 
   @doc("Reset a member's PIN")
@@ -497,6 +607,70 @@ namespace DentalOrgModule {
   }
 
   // ==========================================================================
+  // Granular feature permissions (P2-17)
+  // ==========================================================================
+
+  @doc("A single feature in the permission catalog")
+  model PermissionCatalogEntry {
+    @doc("Stable feature key, e.g. 'billing.invoice.void'")
+    feature: string;
+
+    @doc("Human-readable label for the settings grid")
+    label: string;
+
+    @doc("Grouping category for the settings grid")
+    category: string;
+
+    @doc("Roles allowed by default (absent override falls back to these)")
+    defaultAllowedRoles: MemberRole[];
+  }
+
+  @doc("Effective decision for one (role, feature) cell")
+  model PermissionGridCell {
+    @doc("Role this cell applies to")
+    role: MemberRole;
+
+    @doc("Feature key this cell applies to")
+    feature: string;
+
+    @doc("Whether this role is currently allowed the feature")
+    allowed: boolean;
+
+    @doc("'override' if set explicitly by the org, 'default' if from the catalog")
+    source: string;
+  }
+
+  @doc("Full permission grid for an organization: catalog + effective cells")
+  model PermissionGridResponse {
+    @doc("Organization the grid belongs to")
+    organizationId: UUID;
+
+    @doc("Feature catalog (labels, categories, defaults)")
+    catalog: PermissionCatalogEntry[];
+
+    @doc("Effective decision for every (role, feature) pair")
+    cells: PermissionGridCell[];
+  }
+
+  @doc("A single permission override to apply")
+  model PermissionOverrideInput {
+    @doc("Role to override")
+    role: MemberRole;
+
+    @doc("Feature key to override")
+    feature: string;
+
+    @doc("Allow (true) or deny (false) this role the feature")
+    allowed: boolean;
+  }
+
+  @doc("Update one or more permission overrides for an organization")
+  model UpdatePermissionsRequest {
+    @doc("Override decisions to upsert")
+    overrides: PermissionOverrideInput[];
+  }
+
+  // ==========================================================================
   // Interfaces
   // ==========================================================================
 
@@ -524,6 +698,21 @@ namespace DentalOrgModule {
       @path id: UUID,
       @body body: UpdateOrganizationRequest,
     ): DentalOrganization | NotFoundError | ApiUnauthorizedResponse | ErrorResponse;
+  }
+
+  @doc("Self-service clinic onboarding — provisions org + default branch + owner membership in one call")
+  interface DentalOnboarding {
+    @doc("Provision a new clinic for the authenticated caller (self-service). Creates the organization (caller becomes owner, status 'provisional'), a default branch, and the caller's dentist_owner membership transactionally. Guardrails: verified email (production), one active org per owner, IP rate-limit.")
+    @useAuth(bearerAuth)
+    @operationId("createOnboarding")
+    @post
+    createOnboarding(@body body: OnboardingRequest):
+      ApiCreatedResponse<OnboardingResponse>
+      | ApiBadRequestResponse
+      | ApiForbiddenResponse
+      | ApiConflictResponse
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
   }
 
   @doc("Dental branch management")
@@ -646,6 +835,19 @@ namespace DentalOrgModule {
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
+    @patch(#{implicitOptionality: true})
+    @route("/{memberId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateMember")
+    updateMember(
+      @path memberId: UUID,
+      @body body: UpdateMemberRequest
+    ): ApiOkResponse<DentalMembership>
+      | ApiNotFoundResponse
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
     @post
     @route("/{memberId}/reset-pin")
     @useAuth(bearerAuth)
@@ -683,7 +885,43 @@ namespace DentalOrgModule {
       | ApiNotFoundResponse;
   }
 
+  @doc("Granular feature-permission grid management (P2-17)")
+  interface PermissionManagement {
+    @doc("Get the effective permission grid for an organization")
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getPermissionGrid")
+    getPermissionGrid(
+      @query organizationId?: UUID
+    ): ApiOkResponse<PermissionGridResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("Upsert permission overrides for an organization (owner only)")
+    @put
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updatePermissions")
+    updatePermissions(
+      @query organizationId?: UUID,
+      @body body: UpdatePermissionsRequest
+    ): ApiOkResponse<PermissionGridResponse>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
   interface BranchConfigManagement {
+    @doc("List all branches the authenticated user has an active membership in")
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getBranchesByUser")
+    getBranchesByUser(): ApiOkResponse<BranchList>
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
+
     @get
     @route("/{branchId}/working-hours")
     @useAuth(bearerAuth)

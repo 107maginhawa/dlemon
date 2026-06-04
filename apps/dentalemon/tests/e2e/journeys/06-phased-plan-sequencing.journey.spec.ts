@@ -3,7 +3,12 @@
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J06
  * Rubric: J6; Q26, Q27, Q28. Persona: dentist plans; front-desk schedules.
- * Expected verdict: BROKEN (provisional). P0 ref: Gap #14 (no sequencing).
+ * Expected verdict: PASS.
+ * Gap #14 RESOLVED: the 5-phase clinical sequencing model is implemented
+ * (dental_treatment_phase enum + phase/priority columns; updateDentalTreatment
+ * accepts phase; getTreatmentPlan sorts + groups by phase). The Treatment Plan
+ * tab now exposes a per-treatment phase selector. This spec DOM-assigns a phase
+ * and confirms it persisted via an independent read.
  */
 import {
   test,
@@ -15,6 +20,7 @@ import {
   readPatientIdByName,
   SEED_PATIENTS,
   expectJourneyBroken,
+  recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
 
@@ -22,7 +28,7 @@ const META: JourneyMeta = {
   id: 'J06',
   name: 'Multi-visit / phased treatment plan sequencing',
   set: 'A',
-  expectedVerdict: 'BROKEN',
+  expectedVerdict: 'PASS',
   rubricIds: ['Q26', 'Q27', 'Q28'],
 }
 
@@ -50,35 +56,53 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const tpPanel = page.locator('[data-testid="treatment-plan-tab"], [role="dialog"]').first()
     await expect(tpPanel).toBeVisible({ timeout: 10_000 }).catch(() => {})
 
-    // Step 2: a phase / sequence / priority assignment control must exist.
-    const phaseCtl = tpPanel
-      .getByRole('button', { name: /phase|sequence|priority/i })
-      .or(tpPanel.locator('[data-testid*="phase"], [data-testid*="sequence"]'))
-      .first()
-
+    // Step 2: a phase-assignment control must exist for a pending treatment.
+    const phaseCtl = tpPanel.getByTestId('phase-select').first()
     if (!(await phaseCtl.count())) {
       await expectJourneyBroken(
         page,
         META,
-        'Treatment Plan tab exposes no phase/sequence/priority assignment ' +
-          'controls (Gap #14). Phased sequencing cannot be expressed through ' +
-          'the UI; the goal state (persisted phase/sequence fields) is ' +
-          'unreachable. No out-of-order warning surface either.',
+        'Treatment Plan tab exposes no phase/sequence assignment control (Gap #14). ' +
+          'Phased sequencing cannot be expressed through the UI.',
       )
       return
     }
 
-    const planResp = await apiReader.get(`/dental/patients/${patientId}/treatment-plan`)
-    const planStr = planResp.ok() ? JSON.stringify(await planResp.json()) : ''
-    const hasPhase = /"(phase|sequence|priority)":/.test(planStr)
+    // Step 3: assign a clinical phase through the UI (DOM-only) and capture the PATCH.
+    const patchPromise = page
+      .waitForResponse(
+        (r) =>
+          /\/dental\/visits\/.+\/treatments\/.+/.test(r.url()) &&
+          r.request().method() === 'PATCH',
+        { timeout: 10_000 },
+      )
+      .catch(() => null)
+    await phaseCtl.selectOption('definitive')
+    await patchPromise
+    await page.waitForLoadState('networkidle')
+
+    // Step 4: independent read — the assigned phase must persist on the plan
+    // (which the server then sequences by phase order).
+    const planResp = await apiReader.get(
+      `/dental/patients/${patientId}/treatment-plan?branchId=${branchId}`,
+    )
+    const plan = planResp.ok() ? await planResp.json() : null
+    const phased = (plan?.treatments ?? []).some(
+      (t: { phase?: string }) => t.phase === 'definitive',
+    )
+
+    if (phased) {
+      // Sequencing is expressible end-to-end: UI assigned a phase, server persisted
+      // and ordered it.
+      recordJourneyPass(META)
+      return
+    }
 
     await expectJourneyBroken(
       page,
       META,
-      hasPhase
-        ? 'Phase/sequence/priority fields persisted — sequencing may be implemented.'
-        : 'Independent read shows treatment plan is a flat unordered list with no phase/sequence fields (Gap #14 confirmed).',
-      { unexpectedlyOk: hasPhase },
+      `UI phase assignment did not persist. GET treatment-plan → ${planResp.status()}, ` +
+        `no treatment carries phase='definitive' (Gap #14).`,
     )
   } catch (err) {
     recordJourneyError(META, err)

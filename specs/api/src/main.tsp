@@ -32,6 +32,13 @@ import "./modules/dental-scheduling.tsp";
 import "./modules/dental-billing.tsp";
 import "./modules/dental-imaging.tsp";
 import "./modules/dental-perio.tsp";
+import "./modules/dental-erasure.tsp";
+import "./modules/dental-audit.tsp";
+import "./modules/dental-legal-hold.tsp";
+import "./modules/dental-patient-engagement.tsp";
+import "./modules/dental-patient-finance.tsp";
+import "./modules/dental-clinical-ops.tsp";
+import "./modules/dental-ops-extras.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -316,6 +323,10 @@ namespace MonobaseAPI {
   // ========================================================================
 
   @tag("Dental:Org")
+  @route("/dental/onboarding")
+  interface DentalOnboarding extends DentalOrgModule.DentalOnboarding {}
+
+  @tag("Dental:Org")
   @route("/dental/organizations")
   interface DentalOrganizationManagement extends DentalOrgModule.DentalOrganizationManagement {}
 
@@ -392,6 +403,11 @@ namespace MonobaseAPI {
   @route("/dental/visits")
   interface AmendmentMgmt extends DentalClinicalModule.AmendmentManagement {}
 
+  // P1-3: Informed refusal management
+  @tag("Dental:Clinical")
+  @route("/dental/visits")
+  interface InformedRefusalMgmt extends DentalClinicalModule.InformedRefusalManagement {}
+
   // PMD
   @tag("Dental:PMD")
   @route("/dental/visits")
@@ -414,6 +430,10 @@ namespace MonobaseAPI {
   interface FlatMemberMgmt extends DentalOrgModule.FlatMemberManagement {}
 
   @tag("Dental:Org")
+  @route("/dental/org/permissions")
+  interface PermissionMgmt extends DentalOrgModule.PermissionManagement {}
+
+  @tag("Dental:Org")
   @route("/dental/branches")
   interface BranchConfigMgmt extends DentalOrgModule.BranchConfigManagement {}
 
@@ -421,6 +441,12 @@ namespace MonobaseAPI {
   @tag("Dental:Scheduling")
   @route("/dental/appointments")
   interface AppointmentMgmt extends DentalSchedulingModule.AppointmentManagement {}
+
+  // P1-25: public self-service booking (unauthenticated, rate-limited).
+  // Tagged Dental:Scheduling so handlers resolve under handlers/dental-scheduling/.
+  @tag("Dental:Scheduling")
+  @route("/dental/public")
+  interface PublicBookingMgmt extends DentalSchedulingModule.PublicBookingManagement {}
 
   // Dental Billing
   // Dental Imaging
@@ -453,6 +479,135 @@ namespace MonobaseAPI {
   @tag("Dental:Billing")
   @route("/dental/billing")
   interface BillingExtrasMgmt extends DentalBillingModule.BillingExtras {}
+
+  // P1-26: insurance / revenue-cycle (PH HMO) — claims, remittance, estimate, aging
+  @tag("Dental:Billing")
+  @route("/dental/billing")
+  interface DentalRevenueCycleMgmt extends DentalBillingModule.RevenueCycle {}
+
+  // Dental Erasure (right-to-erasure / V-DG-002 / WFG-006)
+  @tag("Dental:Erasure")
+  @route("/dental/erasure-requests")
+  interface DentalErasureMgmt extends DentalErasureModule.ErasureManagement {}
+
+  // Dental Audit viewer (append-only; read-only via API)
+  @tag("Dental:Audit")
+  @route("/dental/audit-events")
+  interface DentalAuditMgmt extends DentalAuditModule.DentalAuditManagement {}
+
+  // Dental Legal Hold (V-DG-002 support / WFG-006)
+  @tag("Dental:LegalHold")
+  @route("/dental/legal-holds")
+  interface DentalLegalHoldMgmt extends DentalLegalHoldModule.LegalHoldManagement {}
+
+  // ── TR-DG-002 manual-route migration: patient engagement ─────────────────
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface PatientContactMgmt extends DentalPatientEngagementModule.PatientContactManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface RecallMgmt extends DentalPatientEngagementModule.RecallManagement {}
+
+  // P1-24: branch-scoped recare due-list (front-desk continuing-care queue)
+  @tag("Dental:Patient")
+  @route("/dental/recalls")
+  interface RecallDueListMgmt extends DentalPatientEngagementModule.RecallDueListManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalAlertMgmt extends DentalPatientEngagementModule.DentalAlertManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface PatientTaskMgmt extends DentalPatientEngagementModule.PatientTaskManagement {}
+
+  // ── TR-DG-002 manual-route migration: patient finance ────────────────────
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalTreatmentPlanHeaderMgmt extends DentalPatientFinanceModule.TreatmentPlanHeaderManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalTreatmentApptLinkMgmt extends DentalPatientFinanceModule.TreatmentAppointmentLinkManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalTreatmentOptionMgmt extends DentalPatientFinanceModule.TreatmentOptionManagement {}
+
+  // P1-20: patient-facing case presentation + e-signature accept/reject (staff bearerAuth)
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalCasePresentationMgmt extends DentalPatientFinanceModule.CasePresentationManagement {}
+
+  // P1-27: household / guarantor (family file)
+  @tag("Dental:Patient")
+  @route("/dental/households")
+  interface DentalHouseholdMgmt extends DentalPatientFinanceModule.HouseholdManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalPatientHouseholdMgmt extends DentalPatientFinanceModule.PatientHouseholdManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/sync-logs")
+  interface DentalSyncLogMgmt extends DentalPatientFinanceModule.SyncLogManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalInsuranceProfileMgmt extends DentalPatientFinanceModule.InsuranceProfileManagement {}
+
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalClaimDraftMgmt extends DentalPatientFinanceModule.ClaimDraftManagement {}
+
+  // P1-26: coverage authorization (LOA) capture
+  @tag("Dental:Patient")
+  @route("/dental/patients")
+  interface DentalCoverageAuthMgmt extends DentalPatientFinanceModule.CoverageAuthorizationManagement {}
+
+  // ── TR-DG-002 manual-route migration: clinical ops ───────────────────────
+  @tag("Dental:Clinical")
+  @route("/dental/patients")
+  interface OcclusionScreeningMgmt extends DentalClinicalOpsModule.OcclusionScreeningManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/branches")
+  interface PostopTemplateMgmt extends DentalClinicalOpsModule.PostopTemplateManagement {}
+
+  @tag("Dental:Clinical")
+  @route("/dental/branches")
+  interface InventoryMgmt extends DentalClinicalOpsModule.InventoryManagement {}
+
+  // ── TR-DG-002 manual-route migration: fee schedule + queue ───────────────
+  @tag("Dental:Org")
+  @route("/dental/fee-schedule")
+  interface FeeScheduleMgmt extends DentalFeeScheduleModule.FeeScheduleManagement {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/appointments")
+  interface QueueItemCreationMgmt extends DentalQueueModule.QueueItemCreation {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/branches")
+  interface QueueBoardListingMgmt extends DentalQueueModule.QueueBoardListing {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/queue-items")
+  interface QueueItemStatusMgmt extends DentalQueueModule.QueueItemStatusManagement {}
+
+  // ── P2-15: scheduling waitlist (ASAP fill) ───────────────────────────────
+  @tag("Dental:Scheduling")
+  @route("/dental/branches")
+  interface WaitlistEntryCreationMgmt extends DentalWaitlistModule.WaitlistEntryCreation {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/branches")
+  interface WaitlistListingMgmt extends DentalWaitlistModule.WaitlistListing {}
+
+  @tag("Dental:Scheduling")
+  @route("/dental/waitlist")
+  interface WaitlistPromotionMgmt extends DentalWaitlistModule.WaitlistPromotion {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

@@ -11,7 +11,48 @@
  */
 import React, { useState } from 'react';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
-import { useTreatmentPlan, type TreatmentPlanItem } from '../hooks/use-treatment-plan';
+import { useTreatmentPlan, type TreatmentPlanItem, type TreatmentPhase } from '../hooks/use-treatment-plan';
+
+/**
+ * P1-18: clinical sequencing phases, in canonical clinical order, with the
+ * human-facing labels a clinician uses to communicate the plan sequence.
+ */
+const PHASE_ORDER: TreatmentPhase[] = [
+  'systemic',
+  'disease_control',
+  're_evaluation',
+  'definitive',
+  'maintenance',
+];
+
+const PHASE_LABELS: Record<TreatmentPhase, string> = {
+  systemic: 'Phase 1 · Systemic / Urgent',
+  disease_control: 'Phase 2 · Disease Control',
+  re_evaluation: 'Phase 3 · Re-evaluation',
+  definitive: 'Phase 4 · Definitive',
+  maintenance: 'Phase 5 · Maintenance',
+};
+
+/** Short labels for the phase-assignment <select> (distinct from the grouped
+ *  section headers above, which read "Phase N · …"). */
+const PHASE_SHORT_LABELS: Record<TreatmentPhase, string> = {
+  systemic: 'Systemic / Urgent',
+  disease_control: 'Disease Control',
+  re_evaluation: 'Re-evaluation',
+  definitive: 'Definitive',
+  maintenance: 'Maintenance',
+};
+
+const PHASE_ACCENTS: Record<TreatmentPhase, string> = {
+  systemic: '#DC2626',
+  disease_control: '#EA580C',
+  re_evaluation: '#7C3AED',
+  definitive: BRAND_GOLD_TEXT,
+  maintenance: '#059669',
+};
+
+const PHASE_RANK = (p: TreatmentPhase | null | undefined): number =>
+  p ? PHASE_ORDER.indexOf(p) : 99;
 
 interface TreatmentPlanTabProps {
   patientId: string;
@@ -21,9 +62,10 @@ interface TreatmentPlanTabProps {
 interface TreatmentRowProps {
   treatment: TreatmentPlanItem;
   onDecline: (treatmentId: string, visitId: string, reason: string) => void;
+  onAssignPhase: (treatmentId: string, visitId: string, phase: TreatmentPhase) => void;
 }
 
-function TreatmentRow({ treatment, onDecline }: TreatmentRowProps) {
+function TreatmentRow({ treatment, onDecline, onAssignPhase }: TreatmentRowProps) {
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -86,6 +128,26 @@ function TreatmentRow({ treatment, onDecline }: TreatmentRowProps) {
               Surfaces: {treatment.surfaces.join(', ')}
             </p>
           )}
+          {/* J06 / Gap #14: assign a clinical sequencing phase. */}
+          <select
+            data-testid="phase-select"
+            aria-label={`Treatment phase for ${treatment.description || 'treatment'}`}
+            value={treatment.phase ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v) onAssignPhase(treatment.id, treatment.visitId, v as TreatmentPhase);
+            }}
+            className="mt-1 text-xs border border-border rounded px-1.5 py-0.5 bg-background text-muted-foreground max-w-[15rem]"
+          >
+            <option value="" disabled>
+              Assign phase…
+            </option>
+            {PHASE_ORDER.map((p) => (
+              <option key={p} value={p}>
+                {PHASE_SHORT_LABELS[p]}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Price + Decline */}
@@ -141,12 +203,14 @@ function GroupSection({
   testId,
   accentColor,
   onDecline,
+  onAssignPhase,
 }: {
   title: string;
   treatments: TreatmentPlanItem[];
   testId: string;
   accentColor: string;
   onDecline: (treatmentId: string, visitId: string, reason: string) => void;
+  onAssignPhase: (treatmentId: string, visitId: string, phase: TreatmentPhase) => void;
 }) {
   return (
     <section data-testid={testId} className="mb-2" aria-label={title}>
@@ -160,7 +224,7 @@ function GroupSection({
         </span>
       </h3>
       {treatments.map((t) => (
-        <TreatmentRow key={t.id} treatment={t} onDecline={onDecline} />
+        <TreatmentRow key={t.id} treatment={t} onDecline={onDecline} onAssignPhase={onAssignPhase} />
       ))}
     </section>
   );
@@ -192,7 +256,7 @@ function EmptyState() {
 
 export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps) {
   // Hook must be called unconditionally (Rules of Hooks)
-  const { data, isLoading, error, acceptPlan, isAccepting, declineTreatment } = useTreatmentPlan({ patientId, branchId });
+  const { data, isLoading, error, acceptPlan, isAccepting, declineTreatment, assignPhase } = useTreatmentPlan({ patientId, branchId });
 
   // P1-A: Empty/null branchId — query is disabled; surface this explicitly
   // so clinicians don't see a misleading "No pending treatments" empty state
@@ -227,6 +291,25 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
     return <EmptyState />;
   }
 
+  // P1-18: when any pending item carries a clinical phase, group + sequence the
+  // plan by phase (stabilise → control → re-eval → definitive → maintenance)
+  // instead of by status. Items are pre-sorted by (phase, priority) on the server.
+  const active = [...diagnosed, ...planned];
+  const hasPhases = active.some((t) => !!t.phase);
+  const phaseGroups: { phase: TreatmentPhase; items: TreatmentPlanItem[] }[] = hasPhases
+    ? PHASE_ORDER
+        .map((phase) => ({
+          phase,
+          items: active
+            .filter((t) => t.phase === phase)
+            .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0)),
+        }))
+        .filter((g) => g.items.length > 0)
+    : [];
+  const unphased = hasPhases
+    ? active.filter((t) => PHASE_RANK(t.phase) === 99)
+    : [];
+
   const totalDisplay = (data.totalEstimateCents / 100).toLocaleString(APP_LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -236,23 +319,54 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
     <div className="flex flex-col h-full overflow-hidden" data-testid="treatment-plan-tab">
       {/* Scrollable treatment groups */}
       <div className="flex-1 overflow-y-auto">
-        {diagnosed.length > 0 && (
-          <GroupSection
-            title="Diagnosed"
-            treatments={diagnosed}
-            testId="group-diagnosed"
-            accentColor="#DC2626"
-            onDecline={declineTreatment}
-          />
-        )}
-        {planned.length > 0 && (
-          <GroupSection
-            title="Planned"
-            treatments={planned}
-            testId="group-planned"
-            accentColor={BRAND_GOLD_TEXT}
-            onDecline={declineTreatment}
-          />
+        {hasPhases ? (
+          <>
+            {/* P1-18: clinical-phase sequencing view */}
+            {phaseGroups.map((g) => (
+              <GroupSection
+                key={g.phase}
+                title={PHASE_LABELS[g.phase]}
+                treatments={g.items}
+                testId={`group-phase-${g.phase}`}
+                accentColor={PHASE_ACCENTS[g.phase]}
+                onDecline={declineTreatment}
+                onAssignPhase={assignPhase}
+              />
+            ))}
+            {unphased.length > 0 && (
+              <GroupSection
+                title="Unphased"
+                treatments={unphased}
+                testId="group-unphased"
+                accentColor="#6B7280"
+                onDecline={declineTreatment}
+                onAssignPhase={assignPhase}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {diagnosed.length > 0 && (
+              <GroupSection
+                title="Diagnosed"
+                treatments={diagnosed}
+                testId="group-diagnosed"
+                accentColor="#DC2626"
+                onDecline={declineTreatment}
+                onAssignPhase={assignPhase}
+              />
+            )}
+            {planned.length > 0 && (
+              <GroupSection
+                title="Planned"
+                treatments={planned}
+                testId="group-planned"
+                accentColor={BRAND_GOLD_TEXT}
+                onDecline={declineTreatment}
+                onAssignPhase={assignPhase}
+              />
+            )}
+          </>
         )}
         {declined.length > 0 && (
           <GroupSection
@@ -261,6 +375,7 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
             testId="group-declined"
             accentColor="#6B7280"
             onDecline={declineTreatment}
+            onAssignPhase={assignPhase}
           />
         )}
       </div>
@@ -292,7 +407,7 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
           data-testid="accept-plan-btn"
           onClick={() => acceptPlan()}
           disabled={isAccepting}
-          className="shrink-0 h-9 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-xs font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+          className="shrink-0 h-9 px-4 rounded-xl bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
         >
           {isAccepting ? 'Accepting…' : 'Accept Plan'}
         </button>

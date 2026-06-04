@@ -19,11 +19,15 @@ import {
 import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { isPrimaryToothNumber } from './utils/perio-validation';
+import { classifyChart, type PerioRiskFactors } from './utils/perio-classify-chart';
 import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
-import type { CompletePerioChartParams } from '@/generated/openapi/validators';
+import type {
+  CompletePerioChartBody,
+  CompletePerioChartParams,
+} from '@/generated/openapi/validators';
 
 // BR-P07: minimum tooth readings required to complete a chart. Adult dentition
 // (32 teeth) requires 16; primary dentition (20 teeth, FDI 51–85) requires 8.
@@ -35,12 +39,20 @@ const DEPTH_FIELDS = ['depthBM', 'depthBC', 'depthBD', 'depthLM', 'depthLC', 'de
 const BOP_FIELDS = ['bopBM', 'bopBC', 'bopBD', 'bopLM', 'bopLC', 'bopLD'] as const;
 
 export async function completePerioChart(
-  ctx: ValidatedContext<never, never, CompletePerioChartParams>,
+  ctx: ValidatedContext<CompletePerioChartBody, never, CompletePerioChartParams>,
 ): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const { chartId } = ctx.req.valid('param');
+  // P1-6: optional 2017 staging/grading risk factors (medical-history sourced).
+  // The body is optional, so tolerate its absence (no-body POST).
+  let riskFactors: PerioRiskFactors = {};
+  try {
+    riskFactors = (ctx.req.valid('json') as PerioRiskFactors | undefined) ?? {};
+  } catch {
+    riskFactors = {};
+  }
   const db = ctx.get('database') as DatabaseInstance;
 
   const chartRepo = new PerioChartRepository(db);
@@ -108,6 +120,11 @@ export async function completePerioChart(
   const meanDepth = depthCount > 0 ? depthSum / depthCount : 0;
   const bopPercent = bopTotal > 0 ? (bopTrue / bopTotal) * 100 : 0;
 
+  // P1-6: compute the 2017 AAP/EFP classification from the charted readings
+  // (CAL, PD, furcation, mobility) plus the optional medical-history risk
+  // factors. Stage/extent are null when there is no evidence to classify.
+  const classification = classifyChart(readings, riskFactors);
+
   const updated = await chartRepo.complete(chartId, {
     bopPercent,
     meanDepth,
@@ -149,6 +166,10 @@ export async function completePerioChart(
       summaryMeanDepth: Number(meanDepth.toFixed(2)),
       summaryDeepPocketCount: deepPocketCount,
       readingCount: readings.length,
+      // P1-6: persist the computed 2017 classification in the audit trail.
+      stage: classification.stage,
+      grade: classification.grade,
+      extent: classification.extent,
     },
   });
 
@@ -159,5 +180,10 @@ export async function completePerioChart(
     summaryBopPercent: Number(updated.summaryBopPercent ?? 0),
     summaryMeanDepth: Number(updated.summaryMeanDepth ?? 0),
     summaryDeepPocketCount: updated.summaryDeepPocketCount ?? 0,
+    // P1-6: 2017 AAP/EFP staging/grading on the completion summary (read-only,
+    // derived). Surfacing in the clinical UI requires the deferred perio-frontend.
+    stage: classification.stage,
+    grade: classification.grade,
+    extent: classification.extent,
   });
 }

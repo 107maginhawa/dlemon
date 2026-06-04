@@ -10,6 +10,9 @@ import {
   canIssue,
   canVoid,
   canRecord,
+  showIssueButton,
+  showVoidButton,
+  showRecordButton,
   validatePaymentForm,
   buildPaymentPayload,
   calcChangeAmount,
@@ -66,6 +69,49 @@ describe('InvoiceDetail -- canRecord', () => {
 
   test('canRecord("paid") === false', () => {
     expect(canRecord('paid')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// J-RBAC-001: role-gated action button visibility
+// ---------------------------------------------------------------------------
+
+describe('InvoiceDetail -- showIssueButton (status x canWrite)', () => {
+  test('draft + canWrite -> true', () => {
+    expect(showIssueButton('draft', true)).toBe(true);
+  });
+  test('draft + NO write (staff_full) -> false', () => {
+    expect(showIssueButton('draft', false)).toBe(false);
+  });
+  test('issued + canWrite -> false (status gate)', () => {
+    expect(showIssueButton('issued', true)).toBe(false);
+  });
+});
+
+describe('InvoiceDetail -- showVoidButton (status x canWrite)', () => {
+  test('issued + canWrite -> true', () => {
+    expect(showVoidButton('issued', true)).toBe(true);
+  });
+  test('issued + NO write (staff_full) -> false', () => {
+    expect(showVoidButton('issued', false)).toBe(false);
+  });
+  test('draft + canWrite -> false (status gate)', () => {
+    expect(showVoidButton('draft', true)).toBe(false);
+  });
+});
+
+describe('InvoiceDetail -- showRecordButton (status only, role-independent)', () => {
+  test('issued -> true regardless of write permission', () => {
+    expect(showRecordButton('issued')).toBe(true);
+  });
+  test('partial -> true', () => {
+    expect(showRecordButton('partial')).toBe(true);
+  });
+  test('draft -> false', () => {
+    expect(showRecordButton('draft')).toBe(false);
+  });
+  test('paid -> false', () => {
+    expect(showRecordButton('paid')).toBe(false);
   });
 });
 

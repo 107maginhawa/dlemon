@@ -10,6 +10,7 @@ import {
   validateLabOrderForm,
   STATUS_LABELS,
   NEXT_STATUS,
+  labOrderDueState,
 } from './lab-orders-sheet';
 
 describe('validateLabOrderForm', () => {
@@ -79,5 +80,33 @@ describe('NEXT_STATUS (linear advance chain)', () => {
   test('no status advances to cancelled via NEXT_STATUS (cancellation is a separate action)', () => {
     const values = Object.values(NEXT_STATUS);
     expect(values).not.toContain('cancelled');
+  });
+});
+
+describe('labOrderDueState (P2-12 due-date indicator)', () => {
+  const now = new Date('2026-06-01T00:00:00Z');
+
+  test('returns null when no due date', () => {
+    expect(labOrderDueState(undefined, 'ordered', now)).toBeNull();
+    expect(labOrderDueState(null, 'ordered', now)).toBeNull();
+  });
+
+  test('flags a past due date on an active order as overdue', () => {
+    const state = labOrderDueState('2026-05-01T00:00:00Z', 'in_fabrication', now);
+    expect(state!.overdue).toBe(true);
+  });
+
+  test('a future due date is not overdue', () => {
+    const state = labOrderDueState('2026-07-01T00:00:00Z', 'ordered', now);
+    expect(state!.overdue).toBe(false);
+  });
+
+  test('a past due date on a terminal order is not flagged overdue', () => {
+    expect(labOrderDueState('2026-05-01T00:00:00Z', 'fitted', now)!.overdue).toBe(false);
+    expect(labOrderDueState('2026-05-01T00:00:00Z', 'cancelled', now)!.overdue).toBe(false);
+  });
+
+  test('returns null for an unparseable date', () => {
+    expect(labOrderDueState('not-a-date', 'ordered', now)).toBeNull();
   });
 });

@@ -140,6 +140,52 @@ describe('PinSessionManager', () => {
   });
 
   // --------------------------------------------------------------------------
+  // Active auto-logoff (HIPAA workstation security) — timer fires onExpire
+  // --------------------------------------------------------------------------
+
+  test('onExpire callback fires and session locks after the inactivity timeout elapses', async () => {
+    const shortManager = new PinSessionManager();
+    let expiredCalls = 0;
+    shortManager.onExpire(() => { expiredCalls += 1; });
+    shortManager.startSession({ memberId: 'mem-1', displayName: 'Staff Ana', role: 'staff_full', timeoutMs: 20 });
+
+    expect(shortManager.isLocked()).toBe(false);
+    await new Promise((r) => setTimeout(r, 40));
+
+    expect(expiredCalls).toBe(1);
+    expect(shortManager.isLocked()).toBe(true);
+    // Session identity preserved so the re-auth screen knows who to prompt.
+    expect(shortManager.getSession()!.memberId).toBe('mem-1');
+  });
+
+  test('updateActivity defers the auto-logoff (timer is reset on interaction)', async () => {
+    const shortManager = new PinSessionManager();
+    let expiredCalls = 0;
+    shortManager.onExpire(() => { expiredCalls += 1; });
+    shortManager.startSession({ memberId: 'mem-1', displayName: 'Staff Ana', role: 'staff_full', timeoutMs: 40 });
+
+    // Keep interacting before the timeout would fire.
+    await new Promise((r) => setTimeout(r, 25));
+    shortManager.updateActivity();
+    await new Promise((r) => setTimeout(r, 25));
+
+    expect(expiredCalls).toBe(0);
+    expect(shortManager.isLocked()).toBe(false);
+  });
+
+  test('onExpire does not double-fire when already locked', async () => {
+    const shortManager = new PinSessionManager();
+    let expiredCalls = 0;
+    shortManager.onExpire(() => { expiredCalls += 1; });
+    shortManager.startSession({ memberId: 'mem-1', displayName: 'Staff Ana', role: 'staff_full', timeoutMs: 15 });
+    await new Promise((r) => setTimeout(r, 30));
+    // Already locked; a stray updateActivity must not re-arm and re-fire.
+    shortManager.updateActivity();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(expiredCalls).toBe(1);
+  });
+
+  // --------------------------------------------------------------------------
   // INACTIVITY_TIMEOUT_MS constant
   // --------------------------------------------------------------------------
 

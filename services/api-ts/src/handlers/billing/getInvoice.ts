@@ -10,7 +10,7 @@ import type { GetInvoiceQuery, GetInvoiceParams } from '@/generated/openapi/vali
 import { ForbiddenError, NotFoundError } from '@/core/errors';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { Config } from '@/core/config';
 
 /**
@@ -42,7 +42,6 @@ export async function getInvoice(
 
   // Create repository instances
   const invoiceRepo = new InvoiceRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
 
   // Get invoice with line items
   const invoice = await invoiceRepo.findOneWithLineItems(invoiceId);
@@ -58,7 +57,7 @@ export async function getInvoice(
   // Authorization check: user must be the provider who created the invoice
   // or the patient who is being billed (when we have patient auth)
   // Authorization: merchant, customer, or admin can view
-  const merchantPerson = await personRepo.findOneById(invoice.merchant);
+  const merchantPerson = await findBillingParty(database, invoice.merchant, logger);
   if (!merchantPerson) {
     throw new NotFoundError('Merchant person not found', {
       resourceType: 'person',

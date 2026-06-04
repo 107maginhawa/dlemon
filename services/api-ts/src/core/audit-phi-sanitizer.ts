@@ -13,9 +13,9 @@
  * counts, codes, flags) are preserved.
  *
  * This lives in a shared module (rather than inside `logAuditEvent`) so that EVERY
- * audit write path is covered at a single choke point — including the pg-boss
- * `domain-events.consumer.ts` path, which calls `AuditLogRepository.insert` directly
- * and would otherwise persist caller-supplied snapshots verbatim (V-AUD-101).
+ * audit write path is covered at a single choke point — it is invoked from
+ * `AuditLogRepository.insert`, so any future caller that writes a row directly
+ * (not just `logAuditEvent`) is sanitized regardless of entry point (V-AUD-101).
  *
  * Never throws — sanitization must never break the audit write or the originating
  * request (best-effort).

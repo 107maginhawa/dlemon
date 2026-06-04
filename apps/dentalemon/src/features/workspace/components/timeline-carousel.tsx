@@ -4,6 +4,11 @@
  * Visits are sorted chronologically (oldest → newest). The most-recent visit
  * is the initialSlide (last index). Selecting a slide calls onSelectVisit.
  *
+ * P1-14: Compare affordance — when 2+ visits exist, a Compare button opens a
+ * focused overlay that diffs the active visit's chart against a chosen prior
+ * snapshot. The diff is client-side (computeChartDiff). Cover Flow stays for
+ * browsing; compare is a focused overlay. Honors prefers-reduced-motion.
+ *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
@@ -22,6 +27,7 @@ import { useInitializeDentition } from '@/features/workspace/hooks/use-initializ
 import { getDentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import type { ToothData, DentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
+import { ChartCompareOverlay } from '@/features/workspace/components/chart-compare-overlay';
 
 export interface VisitCard {
   id: string;
@@ -59,6 +65,7 @@ function VisitChartCard({
   lockPending,
   dentitionType,
   completedToothNumbers,
+  onTeethLoaded,
 }: {
   visit: VisitCard;
   isActive: boolean;
@@ -69,6 +76,8 @@ function VisitChartCard({
   lockPending?: boolean;
   dentitionType: DentitionType;
   completedToothNumbers?: Set<number>;
+  /** Called with the fetched tooth data when the active card loads (for compare diff). */
+  onTeethLoaded?: (teeth: ToothData[]) => void;
 }) {
   const { data, isLoading, isError, refetch } = useQuery({
     ...getDentalChartOptions({ path: { visitId: visit.id } }),
@@ -78,6 +87,14 @@ function VisitChartCard({
     },
   });
   const teeth = data ?? [];
+
+  // Notify parent when active card loads teeth (for compare diff)
+  useEffect(() => {
+    if (isActive && !isLoading && !isError && onTeethLoaded) {
+      onTeethLoaded(teeth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, isLoading, isError, teeth.length]);
 
   const initDentition = useInitializeDentition();
   // TR-P1-07: a fresh, editable visit with no charted teeth can auto-populate its
@@ -89,9 +106,9 @@ function VisitChartCard({
     <div
       data-testid="visit-slide"
       data-active-card={isActive ? '1' : undefined}
-      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-[#FFCC5E] border-2 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_6px_rgba(0,0,0,0.04)]' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
+      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_6px_rgba(0,0,0,0.04)]' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
     >
-      {isActive && <div data-accent-bar className="h-1 rounded-full bg-[#FFE97D]" />}
+      {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
       <div className="overflow-x-auto flex-1 min-h-0">
         {isLoading ? (
           <div data-testid="visit-chart-loading" className="flex flex-col gap-2 p-2">
@@ -130,7 +147,7 @@ function VisitChartCard({
                   dateOfBirth: patientDateOfBirth as string,
                 })
               }
-              className="h-9 px-4 rounded-lg border-2 border-[#FFCC5E] bg-[#FFE97D]/40 text-sm font-semibold text-foreground hover:bg-[#FFE97D]/70 transition-colors disabled:opacity-50"
+              className="h-9 px-4 rounded-lg border-2 border-lemon-hover bg-lemon/40 text-sm font-semibold text-foreground hover:bg-lemon/70 transition-colors disabled:opacity-50"
             >
               {initDentition.isPending ? 'Initializing…' : 'Initialize Dentition'}
             </button>
@@ -218,6 +235,10 @@ export function TimelineCarousel({
   const [activeIndex, setActiveIndex] = useState(initialSlide);
   const swiperRef = useRef<{ slideTo: (index: number) => void } | null>(null);
 
+  // P1-14: compare state
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [activeTeeth, setActiveTeeth] = useState<import('./dental-chart.helpers').ToothData[]>([]);
+
   // WR-02: when the selected visit changes (e.g. a freshly-created visit becomes
   // current), focus its card. Swiper only honors initialSlide on mount, so sync
   // imperatively here.
@@ -238,14 +259,51 @@ export function TimelineCarousel({
     // Only notify the parent when the visit actually changed, to avoid feedback
     // loops with the currentVisitId-driven sync effect above.
     if (visit && visit.id !== currentVisitId) onSelectVisit(visit.id);
+    // Close compare overlay when slide changes (P1-14)
+    setCompareOpen(false);
   }
+
+  // Build reference options: all visits except the currently active one
+  const activeVisit = sorted[activeIndex];
+  const referenceOptions = sorted
+    .filter((v) => v.id !== activeVisit?.id)
+    .map((v) => ({
+      id: v.id,
+      label: formatDate(v.activatedAt ?? v.createdAt),
+    }));
 
   return (
     <div
       data-testid="timeline-carousel"
-      className="flex flex-col gap-4 py-4 transition-all duration-300"
+      className="flex flex-col gap-4 py-4 transition-all duration-300 relative"
       style={{ width: panelOpen ? 'calc(100% - 340px)' : '100%' }}
     >
+      {/* P1-14: Compare button — only shown when 2+ visits exist */}
+      {sorted.length >= 2 && (
+        <div className="flex justify-end px-4">
+          <button
+            type="button"
+            data-testid="compare-btn"
+            onClick={() => setCompareOpen(true)}
+            aria-label="Compare visit charts"
+            className="h-7 px-3 rounded-lg border border-lemon-hover bg-lemon/20 text-xs font-medium text-lemon-foreground hover:bg-lemon/40 transition-colors"
+          >
+            Compare
+          </button>
+        </div>
+      )}
+
+      {/* Compare overlay (P1-14) — positioned over the carousel */}
+      {compareOpen && (
+        <div className="absolute inset-0 z-10 px-4 pb-4">
+          <ChartCompareOverlay
+            focusTeeth={activeTeeth}
+            referenceOptions={referenceOptions}
+            onClose={() => setCompareOpen(false)}
+          />
+        </div>
+      )}
+
       <Swiper
         modules={[EffectCoverflow, Pagination, Keyboard]}
         effect="coverflow"
@@ -278,6 +336,7 @@ export function TimelineCarousel({
                 lockPending={lockMutation.isPending}
                 dentitionType={dentitionType}
                 completedToothNumbers={completedToothNumbers}
+                onTeethLoaded={isActive ? setActiveTeeth : undefined}
               />
             </SwiperSlide>
           );

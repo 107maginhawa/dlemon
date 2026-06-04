@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiBaseUrl } from '@/lib/config'
 
 export interface ImagingAnnotation {
   id: string
@@ -25,7 +26,9 @@ export function useMeasurements(imageId: string) {
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<ImagingAnnotation[]> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/measurements`)
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/measurements`, {
+        credentials: 'include',
+      })
       if (!res.ok) throw new Error(await res.text())
       const data = (await res.json()) as { items: ImagingAnnotation[] }
       return data.items
@@ -36,8 +39,9 @@ export function useMeasurements(imageId: string) {
 
   const createMeasurement = useMutation({
     mutationFn: async (input: CreateMeasurementInput): Promise<ImagingAnnotation> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/measurements`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/measurements`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
@@ -72,8 +76,9 @@ export function useMeasurements(imageId: string) {
 
   const deleteMeasurement = useMutation({
     mutationFn: async (measurementId: string): Promise<void> => {
-      const res = await fetch(`/dental/imaging/measurements/${measurementId}`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/measurements/${measurementId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       if (!res.ok && res.status !== 204) throw new Error(await res.text())
     },

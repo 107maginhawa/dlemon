@@ -14,8 +14,6 @@
  * nullability information at every call site.
  */
 
-import type { FieldValues, UseFormReturn, Path } from 'react-hook-form';
-
 type NullableKeys<T> = {
   [K in keyof T]-?: null extends T[K] ? K : never;
 }[keyof T];
@@ -59,54 +57,4 @@ export function buildPatch<T extends object>(input: PatchInput<T>): Partial<T> {
     if (v !== undefined) (out as Record<keyof T, unknown>)[k] = v;
   }
   return out;
-}
-
-/**
- * React Hook Form integration: read `formState.dirtyFields` and produce a
- * patch via a transform callback that maps form fields to schema fields.
- *
- * @example
- * const getPatch = useDirtyPatch<PersonUpdateRequest, PersonForm>(form, (dirty, values) => ({
- *   firstName: dirty.firstName ? values.firstName : undefined,
- *   lastName: values.clearLastName ? null : (dirty.lastName ? values.lastName : undefined),
- * }));
- * mutation.mutate({ body: getPatch() });
- */
-export function useDirtyPatch<TSchema extends object, TForm extends FieldValues>(
-  form: UseFormReturn<TForm>,
-  transform: (
-    dirtyFields: Partial<Record<keyof TForm, boolean>>,
-    values: TForm,
-  ) => PatchInput<TSchema>,
-): () => Partial<TSchema> {
-  return () => {
-    const dirty = form.formState.dirtyFields as Partial<Record<keyof TForm, boolean>>;
-    const values = form.getValues() as TForm;
-    return buildPatch<TSchema>(transform(dirty, values));
-  };
-}
-
-/**
- * Convenience helper for the common case where form field names match schema
- * field names exactly: collect every dirty field's current value into a patch.
- *
- * @example
- * const getPatch = useDirtyValues<PersonUpdateRequest, PersonForm>(form);
- * mutation.mutate({ body: getPatch() });
- */
-export function useDirtyValues<
-  TSchema extends object,
-  TForm extends FieldValues & PatchInput<TSchema>,
->(form: UseFormReturn<TForm>): () => Partial<TSchema> {
-  return () => {
-    const dirty = form.formState.dirtyFields as Partial<Record<keyof TForm, boolean>>;
-    const out: PatchInput<TSchema> = {};
-    for (const key of Object.keys(dirty) as Array<keyof TForm>) {
-      if (dirty[key]) {
-        const value = form.getValues(key as Path<TForm>);
-        (out as Record<string, unknown>)[key as string] = value;
-      }
-    }
-    return buildPatch<TSchema>(out);
-  };
 }

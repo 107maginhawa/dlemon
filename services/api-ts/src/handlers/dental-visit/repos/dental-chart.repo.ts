@@ -22,6 +22,8 @@ export interface UpsertChartInput {
   visitId: string;
   patientId: string;
   teeth: ToothChartState[];
+  /** GAP-001: optional client-generated id, persisted only on first insert */
+  localId?: string;
 }
 
 export interface UpdateToothInput {
@@ -78,6 +80,8 @@ export class DentalChartRepository {
         visitId: input.visitId,
         patientId: input.patientId,
         teeth: input.teeth,
+        // GAP-001: persist optional client-generated id on first insert.
+        localId: input.localId,
       })
       .returning();
     return created!;

@@ -42,6 +42,7 @@ import {
   CreateDentalTreatmentParams,
   CreateDentalTreatmentBody,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
 } from '@/generated/openapi/validators';
 
 // ---------------------------------------------------------------------------
@@ -107,6 +108,7 @@ function makeApp(user: { id: string; email: string }) {
   app.post(
     '/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
   );
   return app;
@@ -322,7 +324,7 @@ describe('RBAC — POST invoice/void: dentist_associate and staff_scheduling blo
     const app = makeApp(USER_ASSOCIATE);
     const res = await app.request(
       `/dental/billing/invoices/${invoice.id}/void`,
-      { method: 'POST' },
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'RBAC void test reason' }) },
     );
     expect(res.status).toBe(403);
     const body = await res.json() as any;
@@ -335,7 +337,7 @@ describe('RBAC — POST invoice/void: dentist_associate and staff_scheduling blo
     const app = makeApp(USER_SCHEDULER);
     const res = await app.request(
       `/dental/billing/invoices/${invoice.id}/void`,
-      { method: 'POST' },
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'RBAC void test reason' }) },
     );
     expect(res.status).toBe(403);
   });
@@ -346,7 +348,7 @@ describe('RBAC — POST invoice/void: dentist_associate and staff_scheduling blo
     const app = makeApp(USER_OWNER);
     const res = await app.request(
       `/dental/billing/invoices/${invoice.id}/void`,
-      { method: 'POST' },
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'RBAC void test reason' }) },
     );
     expect(res.status).toBe(200);
     const body = await res.json() as any;

@@ -35,12 +35,21 @@ export const APP = 'http://localhost:3003'
 export const DEMO_EMAIL = 'demo@dentalemon.com'
 export const DEMO_PASSWORD = 'DemoClinic1!'
 
+// Free-tier clinic credentials (scripts/seed-demo.ts §8.7) — a SEPARATE org on the
+// free imaging tier with a (downgrade-seeded) cephalometric image whose ceph
+// analysis is gated to 403. Used only by B01.
+export const FREE_EMAIL = 'free@dentalemon.com'
+export const FREE_PASSWORD = 'FreeClinic1!'
+
 // Seed personas (scripts/seed-demo.ts §4 Staff). The seed only provisions
 // dentist_owner + staff_full PINs; front-desk/assistant journeys use the
 // best-available seeded role and the spec records the substitution.
 export const PERSONAS = {
   dentist: { displayName: 'Dr. Maria Reyes', pin: ['1', '2', '3', '4', '5', '6'], role: 'dentist_owner' },
   staff: { displayName: 'Ana Santos', pin: ['6', '5', '4', '3', '2', '1'], role: 'staff_full' },
+  // Free-tier clinic owner (seed §8.7). Use with the FREE_EMAIL/FREE_PASSWORD
+  // account override on pinAuth (different org than the demo personas).
+  freeDentist: { displayName: 'Dr. Ben Tan', pin: ['1', '1', '1', '1', '1', '1'], role: 'dentist_owner' },
 } as const
 
 export type PersonaKey = keyof typeof PERSONAS
@@ -173,7 +182,11 @@ export async function readPatientIdByName(
  * ensures pin-select.tsx's own fetch({ credentials: 'include' }) sees the
  * session and can load member cards.
  */
-async function ensureAccountSession(page: Page): Promise<void> {
+async function ensureAccountSession(
+  page: Page,
+  email: string = DEMO_EMAIL,
+  password: string = DEMO_PASSWORD,
+): Promise<void> {
   // Navigate to the app origin first — page.evaluate runs in this origin's context.
   await page.goto(`${APP}/`)
   await page.waitForLoadState('networkidle')
@@ -189,7 +202,7 @@ async function ensureAccountSession(page: Page): Promise<void> {
       })
       return resp.status
     },
-    { api: API, email: DEMO_EMAIL, password: DEMO_PASSWORD },
+    { api: API, email, password },
   )
   if (signInStatus >= 400) {
     throw new Error(
@@ -227,10 +240,14 @@ async function ensureAccountSession(page: Page): Promise<void> {
  * /auth/pin-entry/:id → 6-digit keypad. No cookie injection, no
  * page.evaluate(startSession). Lands on the role route.
  */
-export async function pinAuth(page: Page, persona: PersonaKey): Promise<void> {
+export async function pinAuth(
+  page: Page,
+  persona: PersonaKey,
+  account?: { email: string; password: string },
+): Promise<void> {
   const { displayName, pin } = PERSONAS[persona]
 
-  await ensureAccountSession(page)
+  await ensureAccountSession(page, account?.email, account?.password)
   await page.goto(`${APP}/auth/pin-select`)
   await page.waitForLoadState('networkidle')
 
@@ -257,7 +274,17 @@ export async function pinAuth(page: Page, persona: PersonaKey): Promise<void> {
 /** Open the clinical workspace for a patient (DOM navigation). */
 export async function openWorkspace(page: Page, patientId: string): Promise<void> {
   // Route is /$patientId — _workspace is a pathless layout (TanStack Router).
-  await page.goto(`${APP}/${patientId}`)
+  // SPA-navigate (history.pushState) instead of a hard page.goto: the workspace
+  // route is PIN-gated and the PIN session minted by pinAuth() lives ONLY in
+  // memory. A full reload (page.goto) wipes that session and bounces back to
+  // /auth/pin-select, so the carousel never mounts. TanStack Router intercepts
+  // the same-origin history change and renders the workspace with the session
+  // intact (same approach as tests/e2e/helpers/perio-e2e.ts spaNavigate).
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, `/${patientId}`)
+  await page.waitForURL((u: URL) => u.pathname === `/${patientId}`, { timeout: 15_000 })
   await page.waitForLoadState('networkidle')
   // Workspace mounted = carousel zone present, not the loading shell.
   await expect(
@@ -368,7 +395,11 @@ export const CEPH_GOLDEN: Record<string, { x: number; y: number }> = {
   L1A: { x: 293, y: 285 },
 }
 
-// Expected derived measurements for CEPH_GOLDEN (contract §Set B header).
-export const CEPH_EXPECTED = { sna: 82.0, snb: 80.0, anb: 2.0 } as const
+// Expected derived measurements for the seeded ceph chain. The demo now traces a
+// REAL lateral cephalogram (scripts/seed-assets/imaging/ceph-lateral-demo.jpg) with
+// anatomically-placed landmarks → a mild Class II reading (deterministic, rounded
+// to 2dp by the isomorphic ceph-math engine). Update both here and seed-demo.ts
+// together if the seeded landmark coordinates change.
+export const CEPH_EXPECTED = { sna: 79.51, snb: 75.94, anb: 3.57 } as const
 
 export { pwRequest }

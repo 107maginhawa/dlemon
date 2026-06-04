@@ -116,7 +116,7 @@ export function NotificationSettings() {
               <button
                 type="button"
                 onClick={() => handleToggle(item.key)}
-                className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-[#FFE97D]' : 'bg-secondary'}`}
+                className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-lemon' : 'bg-secondary'}`}
                 aria-label={`Toggle ${item.label}`}
               >
                 <span
@@ -141,7 +141,7 @@ export function NotificationSettings() {
               <button
                 type="button"
                 onClick={() => handleToggle(item.key)}
-                className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-[#FFE97D]' : 'bg-secondary'}`}
+                className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-lemon' : 'bg-secondary'}`}
                 aria-label={`Toggle ${item.label}`}
               >
                 <span
@@ -157,7 +157,7 @@ export function NotificationSettings() {
         type="button"
         onClick={handleSave}
         disabled={isPending}
-        className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60 w-fit px-8"
+        className="h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60 w-fit px-8"
       >
         {isPending ? 'Saving...' : 'Save Notification Settings'}
       </button>

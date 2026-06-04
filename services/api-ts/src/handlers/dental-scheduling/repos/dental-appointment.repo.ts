@@ -5,7 +5,7 @@
  * No-show is reversible (can revert to completed per PRD FR3.x).
  */
 
-import { eq, and, gte, lt, ne, or, sql } from 'drizzle-orm';
+import { eq, and, gte, lt, ne, or, sql, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
@@ -59,7 +59,95 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
   }
 
   /**
+   * P1-25: resolve an online booking by its unguessable confirmation code (the
+   * bearer for the public lookup endpoint). Returns null when no row matches.
+   */
+  async findByConfirmationCode(confirmationCode: string): Promise<DentalAppointment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalAppointments)
+      .where(eq(dentalAppointments.confirmationCode, confirmationCode));
+    return row ?? null;
+  }
+
+  /**
+   * Confirm an appointment: records the patient acknowledged they will attend.
+   * Guard: only a `scheduled` appointment can be confirmed.
+   * P1-24: `confirmedVia` records the channel ('staff' | 'sms' | 'email' | 'link').
+   */
+  async confirm(id: string, updatedBy?: string, confirmedVia: string = 'staff'): Promise<DentalAppointment | null> {
+    const [updated] = await this.db
+      .update(dentalAppointments)
+      .set({
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        confirmedVia,
+        updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
+      })
+      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'scheduled')))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
+   * P1-24: resolve an appointment by its single-use reminder confirmation token.
+   */
+  async findByConfirmationToken(token: string): Promise<DentalAppointment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalAppointments)
+      .where(eq(dentalAppointments.confirmationToken, token));
+    return row ?? null;
+  }
+
+  /**
+   * P1-24: ensure an appointment has a confirmation token (idempotent — only sets
+   * one when absent). Returns the (possibly newly-minted) token.
+   */
+  async ensureConfirmationToken(id: string): Promise<string | null> {
+    const [existing] = await this.db
+      .select({ token: dentalAppointments.confirmationToken })
+      .from(dentalAppointments)
+      .where(eq(dentalAppointments.id, id));
+    if (!existing) return null;
+    if (existing.token) return existing.token;
+    const [updated] = await this.db
+      .update(dentalAppointments)
+      .set({ confirmationToken: sql`gen_random_uuid()`, updatedAt: new Date() })
+      .where(and(eq(dentalAppointments.id, id), isNull(dentalAppointments.confirmationToken)))
+      .returning({ token: dentalAppointments.confirmationToken });
+    return updated?.token ?? existing.token ?? null;
+  }
+
+  /**
+   * P1-24: token-gated public self-confirm. Single-use: confirms only when the
+   * appointment is still `scheduled` AND the token matches. Clears the token so a
+   * replay finds nothing. Returns the confirmed row, or null when the token is
+   * unknown/already-used/appointment-not-confirmable.
+   */
+  async confirmByToken(id: string, token: string): Promise<DentalAppointment | null> {
+    const [updated] = await this.db
+      .update(dentalAppointments)
+      .set({
+        status: 'confirmed',
+        confirmedAt: new Date(),
+        confirmedVia: 'link',
+        confirmationToken: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(dentalAppointments.id, id),
+        eq(dentalAppointments.confirmationToken, token),
+        eq(dentalAppointments.status, 'scheduled'),
+      ))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
    * Check in an appointment: sets status to checkedIn and records checkInTime.
+   * Guard: a scheduled OR confirmed appointment can be checked in.
    */
   async checkIn(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -70,14 +158,17 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
         updatedAt: new Date(),
         ...(updatedBy ? { updatedBy } : {}),
       })
-      .where(and(eq(dentalAppointments.id, id), eq(dentalAppointments.status, 'scheduled')))
+      .where(and(
+        eq(dentalAppointments.id, id),
+        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'confirmed')),
+      ))
       .returning();
     return updated ?? null;
   }
 
   /**
    * Cancel an appointment: sets status to cancelled and records cancelledAt + optional reason.
-   * Guard: only scheduled or checkedIn appointments can be cancelled.
+   * Guard: only scheduled, confirmed or checkedIn appointments can be cancelled.
    */
   async cancel(id: string, reason?: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -91,7 +182,11 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
+        or(
+          eq(dentalAppointments.status, 'scheduled'),
+          eq(dentalAppointments.status, 'confirmed'),
+          eq(dentalAppointments.status, 'checked_in'),
+        ),
       ))
       .returning();
     return updated ?? null;
@@ -99,7 +194,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
 
   /**
    * Mark an appointment as no-show.
-   * Guard: only scheduled or checkedIn appointments can be marked as no-show.
+   * Guard: only scheduled, confirmed or checkedIn appointments can be marked as no-show.
    */
   async markNoShow(id: string, updatedBy?: string): Promise<DentalAppointment | null> {
     const [updated] = await this.db
@@ -112,7 +207,11 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       })
       .where(and(
         eq(dentalAppointments.id, id),
-        or(eq(dentalAppointments.status, 'scheduled'), eq(dentalAppointments.status, 'checked_in')),
+        or(
+          eq(dentalAppointments.status, 'scheduled'),
+          eq(dentalAppointments.status, 'confirmed'),
+          eq(dentalAppointments.status, 'checked_in'),
+        ),
       ))
       .returning();
     return updated ?? null;
@@ -160,6 +259,7 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       sql`${dentalAppointments.scheduledAt} + (${dentalAppointments.durationMinutes} * interval '1 minute') > ${startTime.toISOString()}::timestamptz`,
       or(
         eq(dentalAppointments.status, 'scheduled'),
+        eq(dentalAppointments.status, 'confirmed'),
         eq(dentalAppointments.status, 'checked_in'),
       )!,
     ];

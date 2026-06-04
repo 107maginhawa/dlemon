@@ -17,33 +17,39 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 1. Create a dental organization
-POST {{api}}/dental/organizations
+# 1. Self-service onboarding — provisions the org (caller = owner) + a default
+# branch + the owner's membership in one call. The granular branch/member CRUD
+# below still exercises DentalBranchManagement / DentalMembershipManagement as the
+# owner. (POST /dental/organizations stays admin-only — EM-ORG-002 — so onboarding
+# is the path a real owner uses.)
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Bright Smiles Dental {{suffix}}",
+  "organizationName": "Bright Smiles Dental {{suffix}}",
   "tier": "clinic",
   "countryCode": "PH"
 }
 HTTP 201
 [Captures]
-org_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+default_branch_id: jsonpath "$.branchId"
 [Asserts]
-jsonpath "$.name" contains "Bright Smiles Dental"
-jsonpath "$.tier" == "clinic"
-jsonpath "$.countryCode" == "PH"
-jsonpath "$.active" == true
-jsonpath "$.id" isString
+jsonpath "$.organizationId" isString
+jsonpath "$.branchId" isString
+jsonpath "$.membershipId" isString
 
 
-# 2. Get the created organization
+# 2. Get the created organization (asserts the org fields the onboarding response omits)
 GET {{api}}/dental/organizations/{{org_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{org_id}}"
 jsonpath "$.name" contains "Bright Smiles Dental"
+jsonpath "$.tier" == "clinic"
+jsonpath "$.countryCode" == "PH"
+jsonpath "$.active" == true
 
 
 # 3. Update the organization name
@@ -80,16 +86,41 @@ jsonpath "$.timezone" == "Asia/Manila"
 jsonpath "$.active" == true
 
 
-# 5. List branches for the organization
+# 5. List branches for the organization (onboarding's default branch + Main Clinic,
+# so assert the created branch is present rather than first)
 GET {{api}}/dental/organizations/{{org_id}}/branches
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.items" isCollection
-jsonpath "$.items[0].id" == "{{branch_id}}"
+jsonpath "$.items[*].id" includes "{{branch_id}}"
 
 
-# 6. Create a staff membership (PIN-only staff, no cloud account)
+# 6pre. Owner bootstraps their OWN membership in the freshly-created Main Clinic.
+# The owner was onboarded into the DEFAULT branch, not this one — and the FIRST
+# membership an owner creates in a branch they don't belong to becomes the OWNER's
+# own membership (bootstrap → personId=owner). So we explicitly bootstrap the owner
+# as dentist_owner here; otherwise a 'staff_full' first member would silently demote
+# the owner to staff in this branch and break every owner-only op below.
+POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Dr. Practice Owner",
+  "role": "dentist_owner"
+}
+HTTP 201
+[Captures]
+owner_membership_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.branchId" == "{{branch_id}}"
+jsonpath "$.role" == "dentist_owner"
+jsonpath "$.status" == "active"
+
+
+# 6. Create a staff membership (PIN-only staff, no cloud account). The owner now
+# holds a dentist_owner membership here, so this is a normal (non-bootstrap) create:
+# personId stays null → a genuine PIN-only staff member.
 POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -107,16 +138,18 @@ jsonpath "$.role" == "staff_full"
 jsonpath "$.status" == "active"
 
 
-# 7. List members for the branch
+# 7. List members for the branch (now contains the owner + Ana Cruz, order not
+# guaranteed → assert the staff member is present rather than first).
 GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
-jsonpath "$.data[0].id" == "{{membership_id}}"
+jsonpath "$.data[*].id" includes "{{membership_id}}"
+jsonpath "$.pagination.totalCount" == 2
 
 
-# 8. Deactivate the member
+# 8. Deactivate the staff member
 POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members/{{membership_id}}/deactivate
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -128,12 +161,14 @@ HTTP 200
 jsonpath "$.status" == "inactive"
 
 
-# 9. Confirm member is no longer in active list
+# 9. Confirm the staff member is no longer in the active list — only the owner's own
+# dentist_owner membership remains active in this branch.
 GET {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.pagination.totalCount" == 0
+jsonpath "$.pagination.totalCount" == 1
+jsonpath "$.data[0].id" == "{{owner_membership_id}}"
 
 
 # NEW: G2-S4 — create a second staff member for PIN flow
@@ -199,8 +234,8 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.appointmentDurationMinutes" == 30
-jsonpath "$.currency" == "PHP"
+jsonpath "$.settings.appointmentDurationMinutes" == 30
+jsonpath "$.settings.currency" == "PHP"
 
 
 # ============================================================
@@ -213,82 +248,97 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 
 
-# NEW: G2.5-S6 — set working hours
+# NEW: G2.5-S6 — set working hours. Body is wrapped in a `workingHours` object and
+# each day uses the `enabled` flag (not `isOpen`); the response echoes the same
+# wrapped shape ({ branchId, workingHours }).
 PUT {{api}}/dental/branches/{{branch_id}}/working-hours
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "monday": {"open": "08:00", "close": "17:00", "isOpen": true},
-  "tuesday": {"open": "08:00", "close": "17:00", "isOpen": true},
-  "wednesday": {"open": "08:00", "close": "17:00", "isOpen": true},
-  "thursday": {"open": "08:00", "close": "17:00", "isOpen": true},
-  "friday": {"open": "08:00", "close": "17:00", "isOpen": true},
-  "saturday": {"open": "09:00", "close": "13:00", "isOpen": true},
-  "sunday": {"open": "00:00", "close": "00:00", "isOpen": false}
+  "workingHours": {
+    "monday": {"open": "08:00", "close": "17:00", "enabled": true},
+    "tuesday": {"open": "08:00", "close": "17:00", "enabled": true},
+    "wednesday": {"open": "08:00", "close": "17:00", "enabled": true},
+    "thursday": {"open": "08:00", "close": "17:00", "enabled": true},
+    "friday": {"open": "08:00", "close": "17:00", "enabled": true},
+    "saturday": {"open": "09:00", "close": "13:00", "enabled": true},
+    "sunday": {"open": "00:00", "close": "00:00", "enabled": false}
+  }
 }
 HTTP 200
 [Asserts]
-jsonpath "$.monday.isOpen" == true
-jsonpath "$.sunday.isOpen" == false
+jsonpath "$.workingHours.monday.enabled" == true
+jsonpath "$.workingHours.sunday.enabled" == false
 
 
 # ============================================================
 # CONSENT TEMPLATES
 # ============================================================
 
-# NEW: G2.5-S6 — create consent template
+# NEW: G2.5-S6 — create consent template. The generated wire validator requires
+# `title`/`content`, while the handler persists from `name`/`body`; we send BOTH so
+# both layers are satisfied. The created template is returned wrapped under `template`
+# with the handler's `name`/`body` fields.
 POST {{api}}/dental/branches/{{branch_id}}/consent-templates
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "title": "General Treatment Consent",
-  "content": "I consent to general dental treatment as determined by my dentist."
+  "content": "I consent to general dental treatment as determined by my dentist.",
+  "name": "General Treatment Consent",
+  "body": "I consent to general dental treatment as determined by my dentist."
 }
 HTTP 201
 [Captures]
-consent_template_id: jsonpath "$.id"
+consent_template_id: jsonpath "$.template.id"
 [Asserts]
-jsonpath "$.title" == "General Treatment Consent"
+jsonpath "$.template.name" == "General Treatment Consent"
 
 
-# NEW: G2.5-S6 — list consent templates
+# NEW: G2.5-S6 — list consent templates (returned under `templates`)
 GET {{api}}/dental/branches/{{branch_id}}/consent-templates
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.templates" isCollection
 
 
-# NEW: G2.5-S6 — update consent template
+# NEW: G2.5-S6 — update consent template (name/body fields; response wrapped under `template`)
 PATCH {{api}}/dental/branches/{{branch_id}}/consent-templates/{{consent_template_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "title": "General Treatment Consent v2",
-  "isActive": true
+  "name": "General Treatment Consent v2",
+  "requiresWitnessSignature": true
 }
 HTTP 200
 [Asserts]
-jsonpath "$.id" == "{{consent_template_id}}"
+jsonpath "$.template.id" == "{{consent_template_id}}"
+jsonpath "$.template.name" == "General Treatment Consent v2"
 
 
-# NEW: G2.5-S6 — delete consent template
+# NEW: G2.5-S6 — delete consent template (soft-delete → { deleted: true })
 DELETE {{api}}/dental/branches/{{branch_id}}/consent-templates/{{consent_template_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Asserts]
+jsonpath "$.deleted" == true
 
 
 # ============================================================
 # ORG MEMBERS (flat — context-resolved)
 # ============================================================
 
-# NEW: G2.5-S6 — create flat member (org/branch from auth context)
+# NEW: G2.5-S6 — create flat member. The flat endpoint still requires an explicit
+# branchId (query or body); it does NOT infer from auth context. Scope to Main Clinic,
+# where the owner holds the dentist_owner role required to invite staff.
 POST {{api}}/dental/org/members
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "displayName": "Staff Maya Cruz",
-  "role": "staff_scheduling"
+  "role": "staff_scheduling",
+  "branchId": "{{branch_id}}"
 }
 HTTP 201
 [Captures]
@@ -298,8 +348,8 @@ jsonpath "$.role" == "staff_scheduling"
 jsonpath "$.status" == "active"
 
 
-# NEW: G2.5-S6 — list org members
-GET {{api}}/dental/org/members
+# NEW: G2.5-S6 — list org members (branchId required, same as create)
+GET {{api}}/dental/org/members?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
@@ -318,41 +368,48 @@ Content-Type: application/json
 HTTP 200
 
 
-# NEW: G2.5-S6 — recover PIN using security question
+# NEW: G2.5-S6 — recover PIN using security question. The wire validator requires
+# `securityQuestion`+`answer`; the handler verifies the `answer` and atomically sets a
+# new PIN, so `newPin` (4-6 digits) is also required. Response is { success: true }.
 POST {{api}}/dental/org/members/{{flat_member_id}}/recover-pin
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "securityQuestion": "What is your mother's maiden name?",
-  "answer": "Reyes"
+  "answer": "Reyes",
+  "newPin": "5678"
 }
 HTTP 200
+[Asserts]
+jsonpath "$.success" == true
 
 
-# NEW: G2.5-S6 — reset PIN (owner-level action)
+# NEW: G2.5-S6 — reset PIN (owner-level action). newPin must be exactly 6 digits;
+# response is { success: true }.
 POST {{api}}/dental/org/members/{{flat_member_id}}/reset-pin
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "newPin": "9876"
+  "newPin": "987654"
 }
 HTTP 200
 [Asserts]
-jsonpath "$.id" == "{{flat_member_id}}"
+jsonpath "$.success" == true
 
 
 # ============================================================
 # ORG CONTEXT + BRANCH LOOKUP
 # ============================================================
 
-# NEW: G2.5-S6 — get org context for authenticated user
+# NEW: G2.5-S6 — get org context for authenticated user. Response is nested under
+# org/branch/member (the resolved org, the caller's active branch, and their membership).
 GET {{api}}/dental/org/context
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.organizationId" == "{{org_id}}"
-jsonpath "$.branchId" isString
-jsonpath "$.role" isString
+jsonpath "$.org.id" == "{{org_id}}"
+jsonpath "$.branch.id" isString
+jsonpath "$.member.role" isString
 
 
 # NEW: G2.5-S6 — get specific branch by orgId + branchId
@@ -364,6 +421,9 @@ jsonpath "$.id" == "{{branch_id}}"
 jsonpath "$.organizationId" == "{{org_id}}"
 
 
-# NEW: G2.5-S6 — org context auth check
+# NEW: G2.5-S6 — org context auth check → 401. Hurl replays the signed-in session
+# cookie across the whole file, so send an invalid bearer; Better-Auth's bearer plugin
+# takes precedence over the stored cookie → no session → 401.
 GET {{api}}/dental/org/context
+Authorization: Bearer invalid-no-session
 HTTP 401

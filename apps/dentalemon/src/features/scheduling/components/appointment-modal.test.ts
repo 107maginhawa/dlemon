@@ -31,7 +31,10 @@ describe('AppointmentModal — form validation', () => {
     expect(payload.patientId).toBe('p-1');
     // V-SCH-006/007: canonical wire shape.
     expect(payload.providerId).toBe('m-1');
-    expect(payload.startAt).toBe('2026-06-01T09:00:00');
+    // startAt must be a valid ISO-8601 datetime WITH timezone — the backend
+    // validates it with z.string().datetime(), which rejects a TZ-naive string.
+    expect(payload.startAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/);
+    expect(payload.startAt).toBe(new Date('2026-06-01T09:00:00').toISOString());
     // endAt = startAt + 30 min.
     expect(new Date(payload.endAt).getTime() - new Date(payload.startAt).getTime()).toBe(30 * 60 * 1000);
     expect(payload.visitType).toBe('Cleaning');

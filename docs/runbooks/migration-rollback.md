@@ -26,6 +26,46 @@ WHERE hash IN ('<hash-of-rolled-back-migration>');
 
 The server reads `drizzle_migrations` on boot; after removing the record the migration will re-run on next deploy. Do **not** delete the SQL file from the repo.
 
+> **The migrator is journal-only.** Drizzle runs exactly the migrations listed in
+> `src/generated/migrations/meta/_journal.json` (matched to `{tag}.sql` files), gated by a
+> `created_at` watermark in `drizzle_migrations`. A `.sql` file with no journal entry is
+> invisible and never runs. Never hand-edit `_journal.json` to "activate" a stray file —
+> that has caused journal drift here before. Generate schema migrations only via
+> `bun run db:generate`.
+
+---
+
+## Coverage status
+
+The per-group reverse SQL below was authored for migrations **0000–0028** (groups A–H).
+Migrations **0029–0075** do not yet have hand-authored down-SQL. For a rollback touching
+those, the **primary path is restore-from-backup** (`pg_dump` snapshot before each deploy →
+`pg_restore` to the prior point), authoring targeted reverse SQL on demand for the specific
+migration(s) involved. Treat backup/restore as the first-line rollback for a PHI database;
+the group scripts below are a convenience for the older, well-understood core schema.
+
+---
+
+## Pre-Migration Remediations
+
+### GAP-003 — TreatmentPlan `in_progress` rows (DBs upgraded before ~2026-05-17)
+
+If a long-lived database was upgraded across the GAP-003 code change and still contains
+`dental_treatment_plan` rows with `status = 'in_progress'`, those rows are permanently
+stuck — `in_progress` is no longer a valid TreatmentPlan status and no FSM transition
+accepts it. Remediate once (idempotent; a no-op on fresh/seeded/demo DBs, which never
+hold such rows):
+
+```sql
+UPDATE dental_treatment_plan
+SET status = 'partially_completed'
+WHERE status = 'in_progress';
+```
+
+> History: this rename previously existed as un-journaled orphan files
+> (`0059_gap003_treatment_plan_partial.sql` / `0059a_…`) that never ran. They were removed;
+> the canonical remediation is this documented one-liner.
+
 ---
 
 ## Migration Groups

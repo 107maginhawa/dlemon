@@ -1,8 +1,43 @@
+<!-- enforce-fold refresh: 2026-06-01 @ ece7f89c (oli-check --enforcement Phase 2.5) -->
+
+# Traceability — Enforce-Fold Refresh (2026-06-01 @ ece7f89c)
+
+> This enforce-folded artifact lives at `docs/audits/enforce/trace.md` and is NOT the standalone
+> `docs/trace/TRACE_REPORT.md`. The detailed run-7 body below is retained as the gap inventory;
+> the header reconciles it to the current HEAD (ece7f89c) for this enforcement cycle.
+
+**Re-verified at HEAD this cycle:**
+- **TR-DG-002 CLEARED** — manual dental routes migrated to TypeSpec codegen (8 commits a3bfc9a5..ece7f89c);
+  dental OpenAPI namespace 103→140 paths; erasure + legal-hold + audit-events + branches + 13 Cat-3 groups
+  now route-bound via generated `registry.ts`. Spec→code chain for these routes is INTACT.
+- Erasure/legal-hold governance chains verified: services emit `logAuditEvent` on every transition
+  (`dental-erasure/erasure-service.ts:59,160`, `dental-legalhold/legal-hold-service.ts:47,81`); RBAC at
+  handler layer (`approveErasureHandler.ts` admin-gate). DATA_GOVERNANCE V-DG-002 → service → route-registration test.
+- **TR-016/TR-025 (TR-IMG-ANNOT-SM) — ✅ CLEARED 2026-06-01 as a FALSE POSITIVE (spec doc-drift).**
+  The detailed run-7 body below (TR-016/TR-025/TR-026, §"AC-IMG-002 dead spec") is **superseded**: it was
+  written before the V-IMG-007/V-IMG-008 spec reconciliation and mistook a doc-naming collision for a
+  missing feature. SM-01 + AC-IMG-002 belong to **`imaging_finding`**, not annotations. The finding FSM is
+  fully implemented — `imaging_finding.schema.ts` exposes `FINDING_STATUSES = ['draft','confirmed','resolved']`
+  with `FINDING_TRANSITIONS` (no `confirmed→draft` back-edge → 422), enforced in `updateFinding.ts`, and
+  tested by `imaging-finding.fsm.property.test.ts:71` + `imaging.test.ts:1704`. MODULE_SPEC §7 **V-IMG-008**
+  intentionally makes `imaging_annotation` a stateless `visible`-only overlay — **no annotation FSM is to be
+  built**. Per this doc's own recommended fix (TR-016/TR-025 §Fix item 5 + TR-033), the resolution is the
+  documentation clarification: the two drifted spec lines (glossary §2 + AC-IMG-002 §11) were corrected so
+  the criteria trace to the finding FSM. The run-7 detail rows below are retained for history only.
+
+**Enforce-fold traceability rollup (this cycle): P0=0, P1=0 (TR-IMG-ANNOT-SM cleared — false positive / spec doc-drift, see above), P2/P3 = see body.**
+The remaining run-7 P1/P2 gaps (dashboard chain, payment-plan UI, PMD generate/import UI, event emission,
+unspecced dental-patient sub-modules) are KNOWN/pre-existing, unchanged by this cycle's route-migration work,
+and are catalogued in the inventory below. They are deferred to the standalone `--traceability` dimension and
+do not change the enforcement verdict.
+
+---
+
 <!-- oli-version: 1.1 | skill: oli-trace | run: run-7-2026-05-29 | prev: run-6-strict-2026-05-29 -->
-<!-- generated: 2026-05-29 | phase: D (TDD_PROOFs + test files present) -->
+<!-- generated: 2026-05-29 | phase: D (TDD_PROOFs + test files present) — RETAINED AS GAP INVENTORY -->
 <!-- partial-staleness: dashboard module (no MODULE_SPEC), dental-patient sub-modules (alerts/insurance/contacts/sync unspecced) -->
 
-# Traceability Report — run-7-2026-05-29
+# Traceability Report — run-7-2026-05-29 (inventory)
 
 **Run ID:** run-7-2026-05-29
 **Date:** 2026-05-29

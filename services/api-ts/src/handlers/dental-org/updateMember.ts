@@ -18,6 +18,12 @@ const updateMemberSchema = z.object({
   displayName: z.string().min(1).optional(),
   role: z.enum(VALID_MEMBER_ROLES).optional(),
   avatarUrl: z.string().optional().nullable(),
+  // P2-17: Provider credentials. All nullable so they can be cleared.
+  licenseNumber: z.string().max(64).optional().nullable(),
+  npi: z.string().regex(/^\d{10}$/, 'NPI must be exactly 10 digits').optional().nullable(),
+  credentialType: z.string().max(32).optional().nullable(),
+  // Accept ISO date/datetime string; persisted as a timestamp.
+  licenseExpiry: z.string().datetime({ offset: true }).optional().nullable(),
 }).refine(
   (data) => Object.values(data).some((v) => v !== undefined),
   { message: 'No valid fields to update' }
@@ -61,6 +67,13 @@ export async function updateMember(ctx: Context): Promise<Response> {
   if (body.displayName !== undefined) updateData['displayName'] = body.displayName;
   if (body.role !== undefined) updateData['role'] = body.role;
   if (body.avatarUrl !== undefined) updateData['avatarUrl'] = body.avatarUrl;
+  // P2-17: Provider credentials
+  if (body.licenseNumber !== undefined) updateData['licenseNumber'] = body.licenseNumber;
+  if (body.npi !== undefined) updateData['npi'] = body.npi;
+  if (body.credentialType !== undefined) updateData['credentialType'] = body.credentialType;
+  if (body.licenseExpiry !== undefined) {
+    updateData['licenseExpiry'] = body.licenseExpiry === null ? null : new Date(body.licenseExpiry);
+  }
 
   try {
     const updated = await repo.updateOneById(memberId, updateData);

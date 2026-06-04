@@ -156,7 +156,7 @@ export function ToothOverviewStep({
                 className={[
                   'px-3 py-1.5 rounded-full border text-sm font-medium capitalize transition-colors flex items-center gap-1.5',
                   isFocused
-                    ? 'border-2 border-[#FFE97D] bg-[#FFE97D]/20 font-semibold ring-2 ring-[#FFE97D] ring-offset-1'
+                    ? 'border-2 border-lemon bg-lemon/20 font-semibold ring-2 ring-lemon ring-offset-1'
                     : assignedCondition
                       ? 'border-border font-medium'
                       : 'border-border hover:bg-secondary',
@@ -238,7 +238,7 @@ export function ToothOverviewStep({
                 className={[
                   'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors',
                   isActive
-                    ? 'border-2 border-[#FFE97D] bg-[#FFE97D]/20 font-semibold'
+                    ? 'border-2 border-lemon bg-lemon/20 font-semibold'
                     : 'border-border hover:bg-secondary',
                 ].join(' ')}
               >

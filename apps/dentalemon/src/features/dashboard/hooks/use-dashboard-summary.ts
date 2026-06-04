@@ -66,8 +66,8 @@ async function fetchDashboardSummary(
 
   const b = encodeURIComponent(branchId);
   const fetches: Promise<Response>[] = [
-    fetch(`${API}/dental/appointments?date=${today}&branchId=${b}`, { credentials: 'include' }),
-    fetch(`${API}/dental/appointments?date=${tomorrow}&branchId=${b}`, { credentials: 'include' }),
+    fetch(`${API}/dental/appointments?date_from=${today}&date_to=${today}&branchId=${b}`, { credentials: 'include' }),
+    fetch(`${API}/dental/appointments?date_from=${tomorrow}&date_to=${tomorrow}&branchId=${b}`, { credentials: 'include' }),
     fetch(`${API}/dental/dashboard/summary?branchId=${b}`, { credentials: 'include' }),
   ];
 

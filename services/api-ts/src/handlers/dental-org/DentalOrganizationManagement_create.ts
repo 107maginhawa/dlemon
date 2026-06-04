@@ -5,6 +5,7 @@ import type { User } from '@/types/auth';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import type { OrgTier } from '@/handlers/dental-org/repos/organization.schema';
 import { logAuditEvent } from '@/core/audit-logger';
+import { seedDefaultRetentionPolicies } from '@/handlers/retention/retention-defaults';
 import type { DentalOrganizationManagement_createBody } from '@/generated/openapi/validators';
 
 /**
@@ -53,6 +54,16 @@ export async function DentalOrganizationManagement_create(
     });
   } catch (auditErr) {
     logger?.warn?.({ auditErr }, 'AL-001: failed to write createOrganization audit log');
+  }
+
+  // V-DG-001 / V-RET-001: seed the default data-retention policy registry for
+  // the new org so declared retention is present from day one (enforcement
+  // still gated on RETENTION_ENFORCEMENT_ENABLED). Best-effort — never fail org
+  // creation on a governance-seed hiccup.
+  try {
+    await seedDefaultRetentionPolicies(db, org.id, { createdBy: user.id });
+  } catch (seedErr) {
+    logger?.warn?.({ seedErr }, 'V-DG-001: failed to seed default retention policies for new org');
   }
 
   return ctx.json(org, 201);

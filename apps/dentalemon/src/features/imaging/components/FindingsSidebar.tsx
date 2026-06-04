@@ -159,7 +159,7 @@ export function FindingsSidebar({
               onClick={() => handleChipClick(chip.value)}
               className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
                 selectedType === chip.value
-                  ? 'border-[#FFE97D] bg-[#FFE97D]/20 text-[#FFE97D]'
+                  ? 'border-lemon bg-lemon/20 text-lemon'
                   : 'border-zinc-600 text-zinc-400 hover:border-zinc-400'
               }`}
             >
@@ -254,7 +254,7 @@ export function FindingsSidebar({
         <Button
           type="submit"
           disabled={!selectedType || createFinding.isPending}
-          className="bg-[#FFE97D] text-zinc-900 hover:bg-[#FFE97D]/90 text-sm font-medium"
+          className="bg-lemon text-zinc-900 hover:bg-lemon/90 text-sm font-medium"
         >
           {createFinding.isPending ? 'Adding...' : 'Add Finding'}
         </Button>
@@ -286,7 +286,7 @@ export function FindingsSidebar({
             >
               <div className="flex flex-col gap-1 min-w-0">
                 {/* Type badge */}
-                <span className="text-xs font-medium text-[#FFE97D] truncate">
+                <span className="text-xs font-medium text-lemon truncate">
                   {FINDING_TYPE_LABELS[finding.type] ?? finding.type}
                 </span>
                 <div className="flex items-center gap-1 flex-wrap">
@@ -308,7 +308,7 @@ export function FindingsSidebar({
                   onClick={() => handleCycleStatus(finding)}
                   aria-label="Cycle status"
                   title="Cycle status"
-                  className="p-1 text-zinc-400 hover:text-[#FFE97D] transition-colors"
+                  className="p-1 text-zinc-400 hover:text-lemon transition-colors"
                   disabled={updateFinding.isPending || deleteFinding.isPending}
                 >
                   <RefreshCw size={12} />

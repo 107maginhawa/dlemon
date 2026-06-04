@@ -1,0 +1,1 @@
+ALTER TYPE "public"."ceph_analysis_type" ADD VALUE 'ricketts';

@@ -18,6 +18,12 @@ import { TimelineCarousel } from '../components/timeline-carousel';
 // useInitializeDentition's success/error paths call sonner toasts — stub them.
 mock.module('sonner', () => ({ toast: { error: () => {}, success: () => {} } }));
 
+// NOTE: useUpdateVisit is intentionally NOT mock.module()'d here. Bun's
+// mock.module is process-global and persists across files regardless of run
+// order, so stubbing it would shadow use-update-visit's own unit test. The real
+// hook works fine in these component tests: it only needs a QueryClientProvider
+// (supplied by renderCarousel) and the stubbed global.fetch above.
+
 // Access swiper captures from test-setup.ts (accessed lazily — preload sets this up)
 const getCaptures = () => (globalThis as any).__swiperCaptures as Record<string, unknown>;
 
@@ -356,6 +362,84 @@ describe('TimelineCarousel (Swiper)', () => {
         });
       await user.click(screen.getByTestId('new-visit-btn'));
       expect(clicked).toBe(true);
+    });
+  });
+
+  // ── P1-14: Compare affordance ───────────────────────────────────────────
+  // RED: compare button and overlay do not yet exist — tests will fail until
+  // the compare feature is implemented in timeline-carousel.tsx.
+
+  describe('compare affordance (P1-14)', () => {
+    test('renders a Compare button when there are at least 2 visits', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.getByTestId('compare-btn')).not.toBeNull();
+    });
+
+    test('does NOT render a Compare button when there is only 1 visit', () => {
+      renderCarousel({
+        visits: [VISIT_NEW],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.queryByTestId('compare-btn')).toBeNull();
+    });
+
+    test('clicking Compare opens the compare overlay', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      expect(screen.getByTestId('compare-overlay')).not.toBeNull();
+    });
+
+    test('compare overlay shows a reference visit selector', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      // Overlay should show a way to pick the reference visit
+      expect(screen.getByTestId('compare-reference-picker')).not.toBeNull();
+    });
+
+    test('compare overlay can be dismissed', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      expect(screen.getByTestId('compare-overlay')).not.toBeNull();
+      await user.click(screen.getByTestId('compare-close-btn'));
+      expect(screen.queryByTestId('compare-overlay')).toBeNull();
+    });
+
+    test('compare overlay shows diff summary (added / resolved counts)', async () => {
+      const user = userEvent.setup();
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      await user.click(screen.getByTestId('compare-btn'));
+      // Diff summary should be visible in the overlay
+      expect(screen.getByTestId('compare-diff-summary')).not.toBeNull();
     });
   });
 });

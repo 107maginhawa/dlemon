@@ -1,16 +1,34 @@
 /**
  * DentalChart — interactive SVG dental chart
  *
- * Renders 32 teeth in FDI notation as clickable SVG elements.
- * Each tooth is color-coded by its state.
+ * Renders 32 teeth with tooth numbers displayed in the notation selected in
+ * branch settings (FDI / Universal / Palmer). Tooth identity (key, click
+ * callbacks, API data) always uses the canonical FDI number — only the
+ * visible label changes.
+ *
+ * P1-15: Layer toggle is multi-select (combinable), not mutually exclusive.
+ * P1-17: Mixed dentition renders both erupted permanent + remaining primary teeth.
  *
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
 import React, { useState } from 'react';
-import { TOOTH_NUMBERS, PEDIATRIC_TOOTH_NUMBERS, buildToothMap, getToothFillColor, getToothInfo, getToothLayer } from './dental-chart.helpers';
-import type { ToothData, ToothState, DentitionType, ChartLayer } from './dental-chart.helpers';
+import {
+  TOOTH_NUMBERS,
+  PEDIATRIC_TOOTH_NUMBERS,
+  buildToothMap,
+  getToothFillColor,
+  getToothInfo,
+  getToothLayer,
+  getToothDisplayLabel,
+  isToothVisible,
+  DEFAULT_VISIBLE_LAYERS,
+  getMixedDentitionTeeth,
+} from './dental-chart.helpers';
+import type { ToothData, ToothState, DentitionType, ChartLayer, ToothNotation } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { useBranchSettings } from '@/features/settings/hooks/use-branch-settings';
 
 export interface DentalChartProps {
   teeth: ToothData[];
@@ -20,7 +38,7 @@ export interface DentalChartProps {
   toothSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   /** Show the color legend below the chart. Default: true */
   showLegend?: boolean;
-  /** Permanent (32-tooth adult) or primary (20-tooth pediatric). Default: 'permanent' */
+  /** Permanent (32-tooth adult), primary (20-tooth pediatric), or mixed (dual-arch). Default: 'permanent' */
   dentitionType?: DentitionType;
   /** Show the baseline/proposed/completed layer toggle. Default: true (gate to active card in carousels). */
   showLayerToggle?: boolean;
@@ -28,18 +46,87 @@ export interface DentalChartProps {
   completedToothNumbers?: Set<number>;
 }
 
-const CHART_LAYERS: { layer: ChartLayer; label: string }[] = [
-  { layer: 'baseline', label: 'Baseline' },
-  { layer: 'proposed', label: 'Proposed' },
-  { layer: 'completed', label: 'Completed' },
+/** Layer chip config with color coding for multi-select (P1-15). */
+const CHART_LAYERS: { layer: ChartLayer; label: string; activeClass: string; dotClass: string }[] = [
+  {
+    layer: 'baseline',
+    label: 'Baseline',
+    activeClass: 'bg-blue-100 text-blue-700 border-blue-300',
+    dotClass: 'bg-blue-400',
+  },
+  {
+    layer: 'proposed',
+    label: 'Proposed',
+    activeClass: 'bg-lemon text-lemon-foreground border-lemon-hover',
+    dotClass: 'bg-lemon-hover',
+  },
+  {
+    layer: 'completed',
+    label: 'Completed',
+    activeClass: 'bg-green-100 text-green-700 border-green-300',
+    dotClass: 'bg-green-400',
+  },
 ];
 
-export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = 'sm', showLegend = true, dentitionType = 'permanent', showLayerToggle = true, completedToothNumbers }: DentalChartProps) {
+/**
+ * Color ring shown at the base of a tooth to indicate its layer (P1-15).
+ * Visible when multiple layers are shown simultaneously.
+ */
+function LayerDot({ layer }: { layer: ChartLayer }) {
+  const config = CHART_LAYERS.find(c => c.layer === layer);
+  if (!config) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className={`block w-1.5 h-1.5 rounded-full mx-auto mt-0.5 ${config.dotClass}`}
+    />
+  );
+}
+
+export function DentalChart({
+  teeth,
+  selectedTooth,
+  onSelectTooth,
+  toothSize = 'sm',
+  showLegend = true,
+  dentitionType = 'permanent',
+  showLayerToggle = true,
+  completedToothNumbers,
+}: DentalChartProps) {
+  // ── Notation preference (QW-5) ───────────────────────────────────────────
+  // Read from branch settings so the chart respects the locale/notation toggle
+  // saved in Settings → Locale. Falls back to FDI when settings are loading or
+  // not yet configured. Tooth identity stays FDI throughout — only labels change.
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const { settings } = useBranchSettings(branchId);
+  const notation: ToothNotation =
+    (settings?.toothNotation as ToothNotation | undefined) ?? 'FDI';
+
   const toothMap = buildToothMap(teeth);
   // Per-tooth entryClassification lookup for layer resolution (CR-03).
   const toothByNumber = new Map<number, ToothData>(teeth.map((t) => [t.toothNumber, t]));
   const [filterStates, setFilterStates] = useState<Set<ToothState>>(new Set());
-  const [activeLayer, setActiveLayer] = useState<ChartLayer>('baseline');
+
+  // P1-15: multi-select layers (Set<ChartLayer>) instead of single activeLayer.
+  // Default shows all three layers simultaneously.
+  const [visibleLayers, setVisibleLayers] = useState<Set<ChartLayer>>(
+    new Set(DEFAULT_VISIBLE_LAYERS),
+  );
+
+  /** Toggle a layer on/off. Never empties the set — if the last layer is clicked, keep it. */
+  function toggleLayer(layer: ChartLayer) {
+    setVisibleLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(layer)) {
+        // Prevent deselecting the last visible layer
+        if (next.size === 1) return prev;
+        next.delete(layer);
+      } else {
+        next.add(layer);
+      }
+      return next;
+    });
+  }
 
   /** Effective layer for a tooth: completed (from treatments) wins, else by entryClassification. */
   function toothLayerFor(toothNumber: number): ChartLayer {
@@ -56,30 +143,82 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
     });
   }
 
-  // Split into 4 quadrants for rendering — permanent (8 per quadrant) or primary (5 per quadrant)
+  // ── P1-17: Mixed dentition arch layout ──────────────────────────────────
+  // Mixed dentition shows a combined set of primary + erupted permanent teeth.
+  // We render two rows: a "permanent" row for the standard 8-position arch, and
+  // a "primary" row in the canine/molar region where primary teeth persist.
+  //
+  // For simplicity and clarity, mixed dentition uses the getMixedDentitionTeeth()
+  // set and renders primary teeth (51-85) interleaved with permanent (11-48) in
+  // the standard arch grid — primary teeth are rendered at slightly smaller size
+  // with a visual indicator so clinicians can distinguish them at a glance.
+
+  const isMixed = dentitionType === 'mixed';
   const isPrimary = dentitionType === 'primary';
-  const upperRight = isPrimary
-    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 51 && n <= 55).reverse() // 55 → 51
-    : TOOTH_NUMBERS.filter(n => n >= 11 && n <= 18).reverse();           // 18 → 11
-  const upperLeft = isPrimary
-    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 61 && n <= 65)            // 61 → 65
-    : TOOTH_NUMBERS.filter(n => n >= 21 && n <= 28);                     // 21 → 28
-  const lowerLeft = isPrimary
-    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 71 && n <= 75)            // 71 → 75
-    : TOOTH_NUMBERS.filter(n => n >= 31 && n <= 38);                     // 31 → 38
-  const lowerRight = isPrimary
-    ? PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 81 && n <= 85).reverse()  // 85 → 81
-    : TOOTH_NUMBERS.filter(n => n >= 41 && n <= 48).reverse();           // 48 → 41
+
+  // Determine the tooth number sets for each quadrant
+  let upperRight: number[];
+  let upperLeft: number[];
+  let lowerLeft: number[];
+  let lowerRight: number[];
+
+  if (isPrimary) {
+    upperRight = PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 51 && n <= 55).reverse(); // 55 → 51
+    upperLeft  = PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 61 && n <= 65);            // 61 → 65
+    lowerLeft  = PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 71 && n <= 75);            // 71 → 75
+    lowerRight = PEDIATRIC_TOOTH_NUMBERS.filter(n => n >= 81 && n <= 85).reverse();  // 85 → 81
+  } else if (isMixed) {
+    // Mixed: use the full mixed set split by quadrant.
+    // Primary teeth (51-85) and permanent teeth (11-48) are in the same set;
+    // render each quadrant in anatomical order (midline outward).
+    const mixedSet = getMixedDentitionTeeth();
+    // Upper right: permanent 11-12 + primary 53-55 in anatomical order (midline→distal)
+    const urPermanent = mixedSet.filter(n => n >= 11 && n <= 18).reverse(); // 1x: 11→18
+    const urPrimary = mixedSet.filter(n => n >= 51 && n <= 55).reverse();   // 5x: 55→51
+    upperRight = [...urPermanent, ...urPrimary.filter(n => !urPermanent.some(p => p % 10 === n % 10))];
+
+    // Build each quadrant independently for cleaner split
+    const allMixedPermanentUR = mixedSet.filter(n => n >= 11 && n <= 18);
+    const allMixedPrimaryUR   = mixedSet.filter(n => n >= 51 && n <= 55);
+    const allMixedPermanentUL = mixedSet.filter(n => n >= 21 && n <= 28);
+    const allMixedPrimaryUL   = mixedSet.filter(n => n >= 61 && n <= 65);
+    const allMixedPermanentLL = mixedSet.filter(n => n >= 31 && n <= 38);
+    const allMixedPrimaryLL   = mixedSet.filter(n => n >= 71 && n <= 75);
+    const allMixedPermanentLR = mixedSet.filter(n => n >= 41 && n <= 48);
+    const allMixedPrimaryLR   = mixedSet.filter(n => n >= 81 && n <= 85);
+
+    // Anatomical layout: permanent midline teeth first, then primary distal teeth
+    upperRight = [...allMixedPermanentUR.reverse(), ...allMixedPrimaryUR.reverse()];
+    upperLeft  = [...allMixedPermanentUL, ...allMixedPrimaryUL];
+    lowerLeft  = [...allMixedPermanentLL, ...allMixedPrimaryLL];
+    lowerRight = [...allMixedPermanentLR.reverse(), ...allMixedPrimaryLR.reverse()];
+  } else {
+    // Permanent (default)
+    upperRight = TOOTH_NUMBERS.filter(n => n >= 11 && n <= 18).reverse(); // 18 → 11
+    upperLeft  = TOOTH_NUMBERS.filter(n => n >= 21 && n <= 28);           // 21 → 28
+    lowerLeft  = TOOTH_NUMBERS.filter(n => n >= 31 && n <= 38);           // 31 → 38
+    lowerRight = TOOTH_NUMBERS.filter(n => n >= 41 && n <= 48).reverse(); // 48 → 41
+  }
+
+  /** True when multiple layers are visible — enables layer color-coding dots. */
+  const showLayerDots = visibleLayers.size > 1;
 
   function renderTooth(toothNumber: number, isLastInQuadrant = false) {
     const state = toothMap.get(toothNumber) ?? 'healthy' as ToothState;
     const isSelected = selectedTooth === toothNumber;
     const { name } = getToothInfo(toothNumber);
     const toothLayer = toothLayerFor(toothNumber);
-    const isOffLayer = toothLayer !== activeLayer;
-    const isDimmed = (filterStates.size > 0 && !filterStates.has(state)) || isOffLayer;
-    // Proposed work stays visually distinct (dashed outline) when on its layer — CHART-BR-006.
-    const isProposedOnLayer = toothLayer === 'proposed' && !isOffLayer;
+    // P1-15: dim when the tooth's layer is not in the visible set
+    const isLayerHidden = !isToothVisible(toothLayer, visibleLayers);
+    const isFilterDimmed = filterStates.size > 0 && !filterStates.has(state);
+    const isDimmed = isFilterDimmed || isLayerHidden;
+    // Proposed work stays visually distinct (dashed outline) when its layer is visible — CHART-BR-006.
+    const isProposedOnLayer = toothLayer === 'proposed' && !isLayerHidden;
+    // Display label for the current notation preference (QW-5).
+    const displayLabel = getToothDisplayLabel(toothNumber, notation);
+    // Primary teeth in mixed dentition rendered at smaller size for visual distinction
+    const isPrimaryTooth = toothNumber >= 51 && toothNumber <= 85;
+    const effectiveSize = isMixed && isPrimaryTooth ? 'xs' : toothSize;
 
     return (
       <button
@@ -87,8 +226,10 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
         type="button"
         data-testid={`tooth-${toothNumber}`}
         data-tooth-layer={toothLayer}
+        data-tooth-label={displayLabel}
+        data-tooth-primary={isPrimaryTooth ? '1' : undefined}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${toothNumber} — ${name} (${state}, ${toothLayer})`}
+        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer})`}
         style={{
           flex: '1 1 0',
           minWidth: 0,
@@ -103,16 +244,18 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
           !isLastInQuadrant ? 'border-r border-border/20' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
-        aria-label={`Tooth ${toothNumber}: ${name}, ${state}, ${toothLayer}`}
+        aria-label={`Tooth ${displayLabel}: ${name}, ${state}, ${toothLayer}`}
         aria-pressed={isSelected}
       >
         <UniversalToothFdi
           fdiToothNumber={toothNumber}
+          label={displayLabel}
           fillColor={getToothFillColor(state) || undefined}
-          size={toothSize}
+          size={effectiveSize}
           interactive={false}
           showLabel={true}
         />
+        {showLayerDots && !isDimmed && <LayerDot layer={toothLayer} />}
       </button>
     );
   }
@@ -120,34 +263,48 @@ export function DentalChart({ teeth, selectedTooth, onSelectTooth, toothSize = '
   return (
     <div
       data-testid="dental-chart"
+      data-dentition={dentitionType}
       className="h-full flex flex-col rounded-md overflow-hidden border border-border/50 bg-muted/30"
     >
-      {/* Layer toggle — baseline / proposed / completed separation (CR-03) */}
+      {/* P1-15: Multi-select layer chips — baseline / proposed / completed */}
       {showLayerToggle && (
         <div
           data-testid="chart-layer-toggle"
           role="group"
-          aria-label="Chart layer"
-          className="flex gap-1 px-2 py-1.5 border-b border-border/30 bg-background/60"
+          aria-label="Chart layers — toggle to show or hide"
+          className="flex gap-1.5 px-2 py-1.5 border-b border-border/30 bg-background/60"
         >
-          {CHART_LAYERS.map(({ layer, label }) => {
-            const isActive = activeLayer === layer;
+          {CHART_LAYERS.map(({ layer, label, activeClass }) => {
+            const isActive = visibleLayers.has(layer);
             return (
               <button
                 key={layer}
                 type="button"
                 data-testid={`chart-layer-${layer}`}
-                onClick={() => setActiveLayer(layer)}
+                onClick={() => toggleLayer(layer)}
                 aria-pressed={isActive}
                 className={[
-                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
-                  isActive ? 'bg-[#FFE97D] text-[#4A4018]' : 'text-muted-foreground hover:bg-muted/60',
+                  'flex-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
+                  isActive
+                    ? activeClass
+                    : 'text-muted-foreground border-transparent hover:bg-muted/60',
                 ].join(' ')}
               >
                 {label}
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Mixed dentition label banner (P1-17) */}
+      {isMixed && (
+        <div
+          data-testid="mixed-dentition-banner"
+          className="px-2 py-0.5 text-[10px] text-muted-foreground bg-background/40 border-b border-border/20 text-center"
+          aria-label="Mixed dentition: primary and permanent teeth shown together"
+        >
+          Mixed dentition — primary (smaller) + permanent teeth
         </div>
       )}
 

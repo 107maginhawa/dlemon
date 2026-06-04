@@ -21,7 +21,8 @@ import { PerioChartRepository } from './repos/perio-chart.repo';
 import { PerioReadingRepository } from './repos/perio-reading.repo';
 import { getVisitForPerio } from '@/handlers/dental-visit/repos/visit-perio.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { assertValidDepths, assertValidToothNumber, assertValidGrades } from './utils/perio-validation';
+import { assertValidDepths, assertValidToothNumber, assertValidGrades, assertValidGingivalMargins } from './utils/perio-validation';
+import { computeReadingCal } from './utils/perio-cal';
 import type { User } from '@/types/auth';
 import type {
   UpsertToothReadingBody,
@@ -44,6 +45,8 @@ export async function upsertToothReading(
   assertValidDepths(body as Record<string, unknown>);
   // V-PER-004: mobility / furcation must be grade 0–3.
   assertValidGrades(body as Record<string, unknown>);
+  // P1-5: per-site gingival margin must be an integer -5..20mm.
+  assertValidGingivalMargins(body as Record<string, unknown>);
 
   const chartRepo = new PerioChartRepository(db);
   const chart = await chartRepo.findOneById(chartId);
@@ -68,27 +71,17 @@ export async function upsertToothReading(
   await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
   const repo = new PerioReadingRepository(db);
+
+  // The chairside flow PATCHes ONE site per keystroke, so most fields are absent
+  // from any given request. Pass the patch straight through: repo.upsert writes
+  // ONLY the columns present in `body` on conflict, so a single-site write leaves
+  // every other site on the tooth untouched (no full-row replace, and no
+  // read-then-write — the upsert is one atomic, race-free statement).
+  // `createdBy` is used only on first insert; the conflict-update never touches it.
   const reading = await repo.upsert({
     chartId,
     toothNumber,
-    depthBM: body.depthBM ?? null,
-    depthBC: body.depthBC ?? null,
-    depthBD: body.depthBD ?? null,
-    depthLM: body.depthLM ?? null,
-    depthLC: body.depthLC ?? null,
-    depthLD: body.depthLD ?? null,
-    bopBM: body.bopBM ?? null,
-    bopBC: body.bopBC ?? null,
-    bopBD: body.bopBD ?? null,
-    bopLM: body.bopLM ?? null,
-    bopLC: body.bopLC ?? null,
-    bopLD: body.bopLD ?? null,
-    recession: body.recession ?? null,
-    mobility: body.mobility ?? 0,
-    furcation: body.furcation ?? 0,
-    plaque: body.plaque ?? false,
-    suppuration: body.suppuration ?? false,
-    notes: body.notes,
+    ...body,
     createdBy: user.id,
     updatedBy: user.id,
   });
@@ -104,5 +97,7 @@ export async function upsertToothReading(
     'Perio tooth reading upserted',
   );
 
-  return ctx.json(reading);
+  // P1-5: CAL is derived read-only per-site from probing depth + gingival
+  // margin — never stored, so it can never drift from its inputs.
+  return ctx.json({ ...reading, ...computeReadingCal(reading) });
 }

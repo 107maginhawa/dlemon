@@ -5,6 +5,17 @@
  * live query state. An existing report row cannot silently change (D-I);
  * re-editing landmarks after export produces a new version.
  */
+import { useState } from 'react'
+
+// Tracing lines drawn over the radiograph when both endpoints are placed.
+// Reference overlay only — D-N: not to scale, no scale bar.
+const TRACING_LINES: [string, string][] = [
+  ['S', 'N'],   // SN
+  ['N', 'A'],   // NA
+  ['N', 'B'],   // NB
+  ['Go', 'Me'], // mandibular plane
+  ['N', 'Pog'], // facial line
+]
 
 // D-F labels — SN-referenced naming. NOT Frankfort.
 const METRIC_ROWS: { key: string; label: string; mm?: boolean }[] = [
@@ -80,6 +91,8 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
   const missing = snapshot.missing ?? []
   const uncalibrated = snapshot.uncalibrated ?? false
   const placedCodes = Object.keys(snapshot.landmarks)
+  // Natural image dimensions (captured on load) so the SVG tracing overlay aligns.
+  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null)
 
   return (
     <div className="bg-white text-zinc-900 min-h-screen p-8 font-sans print:p-4">
@@ -108,16 +121,60 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
         {/* D-G: analysis label badge */}
         <span
           data-testid="analysis-label-badge"
-          className="text-xs px-2 py-1 rounded bg-zinc-800 text-yellow-300 font-medium whitespace-nowrap"
+          className="text-xs px-2 py-1 rounded bg-zinc-800 text-lemon font-medium whitespace-nowrap print:bg-transparent print:text-zinc-900 print:border print:border-zinc-800"
         >
           {snapshot.analysis_label}
         </span>
       </div>
 
-      {/* ── Composite image placeholder ── */}
+      {/* ── Composite: radiograph + tracing overlay (D-N: reference only, not to scale) ── */}
       {imageUrl && (
         <div className="mb-6">
-          {/* Image renders at natural resolution; no scale bar (D-N) */}
+          <div className="relative inline-block max-w-full">
+            <img
+              src={imageUrl}
+              alt="Cephalometric radiograph with landmark tracing"
+              className="max-w-full max-h-[480px] border border-zinc-300"
+              onLoad={(e) =>
+                setImgDims({
+                  w: e.currentTarget.naturalWidth,
+                  h: e.currentTarget.naturalHeight,
+                })
+              }
+            />
+            {imgDims && (
+              <svg
+                className="absolute inset-0 h-full w-full"
+                viewBox={`0 0 ${imgDims.w} ${imgDims.h}`}
+                preserveAspectRatio="xMidYMid meet"
+                aria-hidden="true"
+              >
+                {TRACING_LINES.map(([a, b]) => {
+                  const p1 = snapshot.landmarks[a]
+                  const p2 = snapshot.landmarks[b]
+                  if (!p1 || !p2) return null
+                  return (
+                    <line
+                      key={`${a}-${b}`}
+                      x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                      stroke="#86efac" strokeWidth={Math.max(imgDims.w, imgDims.h) / 400}
+                      opacity={0.85}
+                    />
+                  )
+                })}
+                {Object.entries(snapshot.landmarks).map(([code, p]) => (
+                  <circle
+                    key={code}
+                    cx={p.x} cy={p.y} r={Math.max(imgDims.w, imgDims.h) / 220}
+                    fill="#FFE97D" stroke="#7c6f1a" strokeWidth={Math.max(imgDims.w, imgDims.h) / 800}
+                  />
+                ))}
+              </svg>
+            )}
+          </div>
+          <p className="text-[10px] text-zinc-500 mt-1">
+            Tracing overlay — for reference, not to scale.
+          </p>
         </div>
       )}
 

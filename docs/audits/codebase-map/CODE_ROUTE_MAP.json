@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "strategy": "file-based",
+  "version": 6,
+  "strategy": "mixed",
   "routes": {
     "/_dashboard": {
       "method": "*",
@@ -9,7 +9,7 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_workspace": {
       "method": "*",
@@ -18,7 +18,29 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
+    },
+    "/book/$branchId": {
+      "method": "*",
+      "page_component": "PublicBookingPage",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [
+        "branchId"
+      ],
+      "module": "src/routes"
+    },
+    "/dental-onboarding": {
+      "method": "*",
+      "page_component": "DentalOnboardingPage",
+      "layout": null,
+      "middleware": [
+        "requireAuth"
+      ],
+      "auth_required": true,
+      "params": [],
+      "module": "src/routes"
     },
     "/imaging-ceph-report/$imageId": {
       "method": "*",
@@ -29,7 +51,25 @@
       "params": [
         "imageId"
       ],
-      "module": "routes"
+      "module": "src/routes"
+    },
+    "/imaging-comparison-test": {
+      "method": "*",
+      "page_component": "ComparisonTestHarness",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "src/routes"
+    },
+    "/imaging-test": {
+      "method": "*",
+      "page_component": "ImagingTestHarness",
+      "layout": null,
+      "middleware": [],
+      "auth_required": null,
+      "params": [],
+      "module": "src/routes"
     },
     "/": {
       "method": "*",
@@ -40,7 +80,7 @@
       ],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/onboarding": {
       "method": "*",
@@ -53,7 +93,7 @@
       ],
       "auth_required": true,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/verify-email": {
       "method": "*",
@@ -65,7 +105,7 @@
       ],
       "auth_required": true,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/billing": {
       "method": "*",
@@ -76,7 +116,7 @@
       ],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/calendar": {
       "method": "*",
@@ -85,7 +125,7 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/dashboard": {
       "method": "*",
@@ -94,16 +134,7 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
-    },
-    "/_dashboard/dental-onboarding": {
-      "method": "*",
-      "page_component": "DentalOnboardingPage",
-      "layout": "DashboardLayout",
-      "middleware": [],
-      "auth_required": null,
-      "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/patients": {
       "method": "*",
@@ -112,7 +143,7 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/reports": {
       "method": "*",
@@ -123,7 +154,7 @@
       ],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/settings": {
       "method": "*",
@@ -134,7 +165,7 @@
       ],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/staff": {
       "method": "*",
@@ -145,7 +176,7 @@
       ],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_workspace/$patientId": {
       "method": "*",
@@ -156,7 +187,7 @@
       "params": [
         "patientId"
       ],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_workspace/queue-board": {
       "method": "*",
@@ -165,7 +196,7 @@
       "middleware": [],
       "auth_required": null,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/auth/$authView": {
       "method": "*",
@@ -176,7 +207,7 @@
       "params": [
         "authView"
       ],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/auth/pin-entry/$memberId": {
       "method": "*",
@@ -189,7 +220,7 @@
       "params": [
         "memberId"
       ],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/auth/pin-select": {
       "method": "*",
@@ -200,7 +231,7 @@
       ],
       "auth_required": true,
       "params": [],
-      "module": "routes"
+      "module": "src/routes"
     },
     "/_dashboard/patients_/$patientId": {
       "method": "*",
@@ -211,7 +242,7 @@
       "params": [
         "patientId"
       ],
-      "module": "routes"
+      "module": "src/routes"
     }
   }
 }

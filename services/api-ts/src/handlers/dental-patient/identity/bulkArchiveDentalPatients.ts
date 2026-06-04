@@ -14,7 +14,7 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
-import { PatientRepository } from '../../patient/repos/patient.repo';
+import { getDentalPatientRecord, archiveDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { z } from 'zod';
 
@@ -38,11 +38,10 @@ export async function bulkArchiveDentalPatients(ctx: BaseContext): Promise<Respo
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
-  const repo = new PatientRepository(db, logger);
 
   // Branch-level authorization: verify access to all unique branch IDs
   const patientsToCheck = await Promise.all(
-    ids.map(id => repo.findOneById(id))
+    ids.map(id => getDentalPatientRecord(db, id))
   );
   const uniqueBranchIds = [...new Set(
     patientsToCheck
@@ -55,7 +54,7 @@ export async function bulkArchiveDentalPatients(ctx: BaseContext): Promise<Respo
 
   const results = await Promise.all(
     ids.map(async (id) => {
-      const result = await repo.archivePatient(id, reason);
+      const result = await archiveDentalPatientRecord(db, id, reason);
       return { id, ...result };
     })
   );

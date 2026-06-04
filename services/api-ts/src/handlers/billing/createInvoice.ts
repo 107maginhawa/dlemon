@@ -15,7 +15,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { CreateInvoiceBody } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
-import { PersonRepository } from '../person/repos/person.repo';
+import { findBillingParty } from '../person/repos/person-billing.facade';
 // Customer and merchant are both persons in monobase
 import type { CreateInvoiceRequest } from './repos/billing.schema';
 
@@ -60,11 +60,10 @@ export async function createInvoice(
 
   // Create repository instances
   const invoiceRepo = new InvoiceRepository(database, logger);
-  const personRepo = new PersonRepository(database, logger);
   
 
   // Check provider exists and user has access
-  const merchantPerson = await personRepo.findOneById(merchant);
+  const merchantPerson = await findBillingParty(database, merchant, logger);
   if (!merchantPerson) {
     throw new NotFoundError('Merchant person not found', {
       resourceType: 'person',
@@ -74,7 +73,7 @@ export async function createInvoice(
   }
 
   // Check patient exists
-  const customerPerson = await personRepo.findOneById(customer);
+  const customerPerson = await findBillingParty(database, customer, logger);
   if (!customerPerson) {
     throw new NotFoundError('Customer person not found', {
       resourceType: 'person',

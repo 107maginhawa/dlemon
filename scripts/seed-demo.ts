@@ -7,6 +7,8 @@
  * Demo login: demo@dentalemon.com / DemoClinic1!  →  PIN 1 2 3 4 5 6
  */
 
+import { S3Client } from 'bun'
+
 const API = 'http://localhost:7213'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -33,6 +35,83 @@ const patch = (p: string, b: unknown, c: string) => req('PATCH', p, b, c)
 function must<T>(r: { ok: boolean; status: number; data: T }, label: string): T {
   if (!r.ok) throw new Error(`${label} → ${r.status}: ${JSON.stringify(r.data).slice(0, 300)}`)
   return r.data
+}
+
+// ─── Demo imaging upload ──────────────────────────────────────────────────────
+// POST /dental/imaging/studies persists an imaging_study_image whose `fileId` IS the
+// S3 object key (no stored_file row, no /complete step — that's the generic storage
+// flow, not imaging). The image is served via a presigned GET on the key, so all the
+// viewer needs is the bytes present. We PutObject directly (no SSE) because the API's
+// presigned PUT signs ServerSideEncryption:AES256, which this dev MinIO (no KMS) 501s.
+const DEMO_CEPH_IMAGE = `${import.meta.dir}/seed-assets/imaging/ceph-lateral-demo.jpg`
+let demoImageBytes: ArrayBuffer | null = null
+
+const seedS3 = new S3Client({
+  accessKeyId: process.env['STORAGE_ACCESS_KEY_ID'] ?? 'minioadmin',
+  secretAccessKey: process.env['STORAGE_SECRET_ACCESS_KEY'] ?? 'minioadmin',
+  bucket: process.env['STORAGE_BUCKET'] ?? 'monobase-files',
+  endpoint: process.env['STORAGE_ENDPOINT'] ?? 'http://localhost:9000',
+  region: process.env['STORAGE_REGION'] ?? 'us-east-1',
+  virtualHostedStyle: false, // path-style: required for MinIO
+})
+
+async function uploadDemoImage(fileId: string, mimeType: string): Promise<void> {
+  if (!demoImageBytes) demoImageBytes = await Bun.file(DEMO_CEPH_IMAGE).arrayBuffer()
+  await seedS3.write(fileId, demoImageBytes, { type: mimeType })
+}
+
+// Seeds a complete cephalometric chain (study + uploaded image + 14 landmarks with
+// A/B/Go/Po confirmed + S locked + analysis + report). Visit-independent so it never
+// gets blocked by the visit-completion cascade. Landmarks are placed on the REAL
+// lateral cephalogram seed asset (ceph-lateral-demo.jpg, 1000×800) at anatomically
+// estimated positions → SNA≈79.5/SNB≈75.9/ANB≈3.6 (a mild Class II reading;
+// CEPH_EXPECTED in _journey-helpers → B02/B04). U1A/L1A apices are left unplaced
+// (not visible without expert annotation) so the panel shows them as "missing".
+// Throws on failure.
+async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string): Promise<string> {
+  const studyR = await post('/dental/imaging/studies', {
+    patientId, ...(visitId ? { visitId } : {}), branchId,
+    modality: 'cephalometric', filename: 'torres-miguel-ceph-lateral.jpg',
+    mimeType: 'image/jpeg', size: 2048000,
+  }, cookie)
+  if (!studyR.ok) throw new Error(`ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0, 160)}`)
+  const imageId: string | undefined = studyR.data.image?.id ?? studyR.data.imageId
+  if (!imageId) throw new Error(`ceph study missing imageId: ${JSON.stringify(studyR.data).slice(0, 160)}`)
+  await uploadDemoImage(studyR.data.fileId, 'image/jpeg')
+  log(`  ✓ Ceph imaging study + image uploaded (imageId: ${imageId.slice(0, 8)}…)`)
+
+  // Image-space pixel coords on the 1000×800 real cephalogram (face pointing right).
+  const landmarks = [
+    { landmarkCode: 'S', x: 560, y: 380 }, { landmarkCode: 'N', x: 815, y: 295 },
+    { landmarkCode: 'A', x: 845, y: 510 }, { landmarkCode: 'B', x: 840, y: 622 },
+    { landmarkCode: 'Pog', x: 865, y: 668 }, { landmarkCode: 'Me', x: 835, y: 702 },
+    { landmarkCode: 'Gn', x: 850, y: 690 }, { landmarkCode: 'Go', x: 560, y: 635 },
+    { landmarkCode: 'ANS', x: 855, y: 475 }, { landmarkCode: 'PNS', x: 700, y: 478 },
+    { landmarkCode: 'Po', x: 515, y: 400 }, { landmarkCode: 'Or', x: 805, y: 365 },
+    { landmarkCode: 'U1T', x: 865, y: 575 }, { landmarkCode: 'L1T', x: 858, y: 582 },
+  ].map(lm => ({ ...lm, status: 'placed' }))
+  const lmBatchR = await post(`/dental/imaging/images/${imageId}/ceph/landmarks`, { landmarks }, cookie)
+  if (!lmBatchR.ok) throw new Error(`ceph landmarks → ${lmBatchR.status}: ${JSON.stringify(lmBatchR.data).slice(0, 160)}`)
+  for (const code of ['A', 'B', 'Go', 'Po']) {
+    const r = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/${code}`, { status: 'confirmed' }, cookie)
+    if (!r.ok) throw new Error(`ceph confirm ${code} → ${r.status}: ${JSON.stringify(r.data).slice(0, 120)}`)
+  }
+  // B03 precondition: confirm then lock S (placed→confirmed→locked)
+  const cS = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'confirmed' }, cookie)
+  if (!cS.ok) throw new Error(`ceph confirm S → ${cS.status}`)
+  const lS = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'locked' }, cookie)
+  if (!lS.ok) throw new Error(`ceph lock S → ${lS.status}`)
+  // Calibrate (within the 0.05–0.50 mm/px guard) so recompute succeeds and mm-metrics
+  // (overjet/overbite) populate. Analysis already exists from the landmark write, so
+  // calibration + recompute are best-effort; the report is the required artifact.
+  const calR = await patch(`/dental/imaging/images/${imageId}/calibration`, { pixelSpacingMm: 0.25 }, cookie)
+  if (!calR.ok) log(`  ⚠ ceph calibration → ${calR.status} (continuing)`)
+  const rc = await post(`/dental/imaging/images/${imageId}/ceph/analysis/recompute`, {}, cookie)
+  if (!rc.ok) log(`  ⚠ ceph recompute → ${rc.status} (analysis already computed on write; continuing)`)
+  const rep = await post(`/dental/imaging/images/${imageId}/ceph/reports`, {}, cookie)
+  if (!rep.ok) throw new Error(`ceph report → ${rep.status}: ${JSON.stringify(rep.data).slice(0, 120)}`)
+  log(`  ✓ Ceph: 14 landmarks, A/B/Go/Po confirmed, S locked, calibrated, analysis + report v1`)
+  return imageId
 }
 
 function getCookie(res: Response): string {
@@ -290,9 +369,89 @@ async function addNotes(visitId: string, soap: any, cookie: string): Promise<str
   return r.ok ? (r.data?.id ?? null) : null
 }
 
+// Set once the branch consent templates are created (section 5). completeVisit
+// signs a consent per visit so the completion gate (and treatment→performed,
+// which also requires consent) is satisfied.
+let SEED_GENERAL_CONSENT_TPL_ID: string | null = null
+
+/** Create + sign a general treatment consent for a visit (idempotent enough for seed). */
+async function ensureSignedConsent(visitId: string, patientId: string, cookie: string) {
+  if (!SEED_GENERAL_CONSENT_TPL_ID || SEED_GENERAL_CONSENT_TPL_ID === 'general') return
+  const consentR = await post(`/dental/visits/${visitId}/consents`, {
+    visitId, patientId,
+    templateId: SEED_GENERAL_CONSENT_TPL_ID, templateName: 'General Treatment Consent',
+  }, cookie)
+  if (consentR.ok) {
+    await post(
+      `/dental/visits/${visitId}/consents/${consentR.data.id}/sign`,
+      { signatureData: 'data:image/png;base64,iVBORw0KGgo=' },
+      cookie,
+    )
+  }
+}
+
 async function completeVisit(visitId: string, patientId: string, cookie: string) {
-  await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
+  // The completion gate (updateDentalVisit §completed) rejects the transition
+  // unless: (a) NO treatment is left at diagnosed/planned, (b) a signed consent
+  // exists, (c) a notes row exists (createDentalVisit auto-seeds one). If it
+  // rejects, the PATCH 422s and the visit stays ACTIVE — which makes every later
+  // visit for this patient 409 (ACTIVE_VISIT_EXISTS) and collapses the patient's
+  // whole timeline to a single card. Satisfy the gate here so historical visits
+  // actually persist as `completed`.
+  //
+  // Consent must be signed BEFORE advancing treatments to `performed` — the
+  // treatment FSM also enforces TREATMENT_CONSENT_REQUIRED on planned→performed.
+  await ensureSignedConsent(visitId, patientId, cookie)
+
+  const listR = await get(`/dental/visits/${visitId}/treatments`, cookie)
+  const treatments: any[] = listR.ok ? (listR.data?.data ?? listR.data ?? []) : []
+  for (const t of treatments) {
+    // FSM is two-step: diagnosed→planned→performed (single jump 422s).
+    if (t.status === 'diagnosed') {
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'planned' }, cookie)
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'performed' }, cookie)
+    } else if (t.status === 'planned') {
+      await patch(`/dental/visits/${visitId}/treatments/${t.id}`, { status: 'performed' }, cookie)
+    }
+  }
+
+  const r = await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
+  if (!r.ok) log(`  ⚠ Complete visit (${r.status}): ${JSON.stringify(r.data).slice(0, 120)}`)
   await post(`/dental/visits/${visitId}/pmd`, { visitId, patientId }, cookie)
+}
+
+interface OpenTreatment { cdtCode: string; description: string; priceCents: number; toothNumber?: number; plan?: boolean }
+
+/**
+ * Add an ACTIVE "current" visit carrying an OPEN treatment plan — the realistic
+ * in-progress visit a clinician is working in. Deliberately NOT completed: the
+ * workspace carousel needs an editable active card with a chart to click and
+ * pending treatments to plan/decline. Items with `plan:true` advance to
+ * `planned` (accepted, awaiting delivery); the rest stay `diagnosed` (new
+ * finding). A signed consent is attached so accepted items CAN be marked
+ * performed from the UI (revenue-chain demo) without forcing them performed.
+ *
+ * Chart teeth are layered on the patient's cumulative snapshot, so the active
+ * card shows prior conditions PLUS this visit's new findings — coherent with the
+ * carousel's cumulative-snapshot model.
+ */
+async function addCurrentVisit(
+  patientId: string, branchId: string, memberId: string,
+  complaint: string, chartTeeth: any[], openTreatments: OpenTreatment[],
+  cookie: string, opts: { soap?: any; signConsent?: boolean } = {},
+): Promise<string | null> {
+  const vid = await activateVisit(patientId, branchId, memberId, 0, complaint, cookie)
+  if (!vid) return null
+  await addChart(vid, patientId, chartTeeth, cookie)
+  for (const t of openTreatments) {
+    const { plan, ...body } = t
+    const r = await post(`/dental/visits/${vid}/treatments`, { visitId: vid, patientId, ...body }, cookie)
+    // New treatments POST at `diagnosed`. `plan:true` → advance to `planned`.
+    if (r.ok && plan) await patch(`/dental/visits/${vid}/treatments/${r.data.id}`, { status: 'planned' }, cookie)
+  }
+  if (opts.soap) await addNotes(vid, opts.soap, cookie)
+  if (opts.signConsent) await ensureSignedConsent(vid, patientId, cookie)
+  return vid
 }
 
 async function makeInvoice(
@@ -339,6 +498,19 @@ async function seed() {
     catch { throw new Error(`API not reachable at ${API}.\nStart: cd services/api-ts && bun dev`) }
   }
 
+  // MinIO (storage) preflight — imaging/ceph need it; never fail silently.
+  if (process.env['SEED_SKIP_STORAGE'] === '1') {
+    log('⚠ SEED_SKIP_STORAGE=1 — imaging/ceph image uploads will be skipped')
+  } else {
+    try {
+      const m = await fetch('http://localhost:9000/minio/health/live', { signal: AbortSignal.timeout(4000) })
+      log(`✓ MinIO up at http://localhost:9000 (${m.status})`)
+    } catch {
+      log('⚠⚠ MinIO NOT reachable at http://localhost:9000 — imaging/ceph images will NOT load.')
+      log('    Fix: cd services/api-ts && bun run dev:deps:up   (or SEED_SKIP_STORAGE=1 to silence)')
+    }
+  }
+
   // ── 1. Auth ──────────────────────────────────────────────────────────────
   section('1. Auth')
   const { cookie, userId, created: userCreated } = await signUpOrIn(
@@ -360,13 +532,20 @@ async function seed() {
     org = ctxR.data.org; branch = ctxR.data.branch; ownerMember = ctxR.data.member
     log(`→ Existing: ${org.name} / ${branch.name}`)
   } else {
-    org = must(await post('/dental/organizations', { name: 'Reyes Family Dental', tier: 'clinic', countryCode: 'PH' }, cookie), 'create org')
-    log(`✓ Org: ${org.name}`)
-    branch = must(await post(`/dental/organizations/${org.id}/branches`, {
-      name: 'Main Clinic', timezone: 'Asia/Manila',
+    // Self-service onboarding — the demo owner provisions org + default branch +
+    // their dentist_owner membership in ONE call, exactly as a real clinic owner
+    // does (demo@dentalemon.com is NOT a platform admin; org creation is admin-only,
+    // EM-ORG-002). Proves the real onboarding path end-to-end on every db:reseed.
+    const onb = must(await post('/dental/onboarding', {
+      organizationName: 'Reyes Family Dental', tier: 'clinic', countryCode: 'PH',
+      branchName: 'Main Clinic', timezone: 'Asia/Manila',
       address: '123 Bonifacio Ave', city: 'Makati', phone: '+63 2 8123 4567',
-    }, cookie), 'create branch')
-    log(`✓ Branch: ${branch.name}`)
+      ownerDisplayName: 'Dr. Maria Reyes',
+    }, cookie), 'self-service onboarding')
+    org = { id: onb.organizationId, name: 'Reyes Family Dental' }
+    branch = { id: onb.branchId, name: 'Main Clinic' }
+    ownerMember = { id: onb.membershipId, displayName: 'Dr. Maria Reyes', role: 'dentist_owner' }
+    log(`✓ Onboarded: ${org.name} / ${branch.name} (owner membership ${ownerMember.id})`)
   }
 
   // ── 4. Staff ─────────────────────────────────────────────────────────────
@@ -443,12 +622,20 @@ async function seed() {
       title: consentNames[i], content: consentBodies[i],
       name: consentNames[i], body: consentBodies[i],
     }, cookie)
-    if (r.ok) { consentTemplateIds.push(r.data.id); log(`✓ Consent template: ${consentNames[i]}`) }
-    else log(`⚠ Consent template (${r.status}): ${consentNames[i]}`)
+    // Create returns { template: { id, … } } — NOT a bare { id }. Reading r.data.id
+    // (undefined) silently left every consent template unusable, so generalConsentTplId
+    // fell back to 'general', no consent was ever signed, and every visit completion
+    // 422'd (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
+    const tplId = r.data?.template?.id ?? r.data?.id
+    if (r.ok && tplId) { consentTemplateIds.push(tplId); log(`✓ Consent template: ${consentNames[i]}`) }
+    else log(`⚠ Consent template (${r.status}): ${consentNames[i]} ${r.ok ? '(no id in response)' : ''}`)
   }
   const generalConsentTplId = consentTemplateIds[0] ?? 'general'
   const extractionConsentTplId = consentTemplateIds[1] ?? 'extraction'
   const rctConsentTplId = consentTemplateIds[2] ?? 'rct'
+  // Expose to completeVisit so every historical visit gets a signed consent
+  // (required by both the visit-completion gate and treatment→performed).
+  SEED_GENERAL_CONSENT_TPL_ID = generalConsentTplId
 
   // ── 6. Patients ──────────────────────────────────────────────────────────
   section('6. Patients')
@@ -958,6 +1145,10 @@ async function seed() {
       await addNotes(v1id, v1tpl.soap, cookie)
       await completeVisit(v1id, p6.id, cookie)
       completedCount++
+      // Ceph chain seeds off V1 (always created) so it never gets blocked by the
+      // V2 visit-completion cascade (see seedCephChain). Non-fatal if storage is down.
+      try { await seedCephChain(p6.id, branch.id, v1id, cookie) }
+      catch (e: any) { log(`  ⚠ P6 ceph skipped: ${String(e?.message).slice(0, 140)}`) }
     }
 
     // V2 — ortho + imaging + ceph + lab order (while active)
@@ -967,90 +1158,8 @@ async function seed() {
       await addChart(v2id, p6.id, v2tpl.teeth, cookie)
       await addTreatments(v2id, p6.id, v2tpl.treatments, cookie, 'mixed')
 
-      // ── Imaging: cephalometric study ──
-      // Wrapped in try-catch: MinIO (storage) may not be running in dev/CI.
-      // Failure here is non-fatal — P6 visits still seed; ceph journeys (B02/B04)
-      // will be skipped/broken without MinIO, which is expected.
-      let imageId: string | null = null
-      try {
-      const studyR = await post('/dental/imaging/studies', {
-        patientId: p6.id, visitId: v2id, branchId: branch.id,
-        modality: 'cephalometric',
-        filename: 'torres-miguel-ceph-lateral.jpg',
-        mimeType: 'image/jpeg',
-        size: 2048000,
-      }, cookie)
-      if (!studyR.ok) throw new Error(`P6 ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0,200)}`)
-      imageId = studyR.data.image?.id ?? studyR.data.imageId
-      if (!imageId) throw new Error(`P6 ceph study response missing imageId: ${JSON.stringify(studyR.data).slice(0,200)}`)
-      log(`  ✓ Imaging study created (imageId: ${imageId.slice(0,8)}…)`)
-
-      {
-          // Finding: suspected → confirmed
-          const findingR = await post(`/dental/imaging/images/${imageId}/findings`, {
-            type: 'caries', visitId: v2id, patientId: p6.id, branchId: branch.id,
-            status: 'suspected',
-          }, cookie)
-          if (findingR.ok) {
-            await patch(`/dental/imaging/findings/${findingR.data.id}`, { status: 'confirmed' }, cookie)
-            log(`  ✓ Finding: suspected → confirmed`)
-          } else {
-            log(`  ⚠ Finding (${findingR.status}): ${JSON.stringify(findingR.data).slice(0,100)}`)
-          }
-
-          // Periapical attachment linked to this visit
-          await post(`/dental/visits/${v2id}/attachments`, {
-            visitId: v2id, patientId: p6.id, imageType: 'xray',
-            fileName: 'torres-ceph-lateral-print.jpg', filePath: '/uploads/p6/ceph-print.jpg',
-            fileSizeBytes: 512000, mimeType: 'image/jpeg',
-            note: 'Cephalometric lateral skull radiograph for orthodontic analysis',
-          }, cookie)
-
-          // Ceph: batch upsert landmarks.
-          // Core S/N/A/B/Pog/Me/Go use CLASS_I golden coords from packages/ceph-math
-          // so that computeCephAnalysis produces SNA≈82, SNB≈80, ANB≈2, convexity>0
-          // (matching CEPH_EXPECTED in _journey-helpers — required for B02/B04 PASS).
-          const landmarks = [
-            { landmarkCode: 'S',   x: 100, y: 200 },
-            { landmarkCode: 'N',   x: 300, y: 200 },
-            { landmarkCode: 'A',   x: 290, y: 271 },
-            { landmarkCode: 'B',   x: 288, y: 268 },
-            { landmarkCode: 'Pog', x: 285, y: 280 },
-            { landmarkCode: 'Me',  x: 282, y: 310 },
-            { landmarkCode: 'Go',  x: 220, y: 310 },
-            { landmarkCode: 'ANS', x: 430, y: 390 },
-            { landmarkCode: 'PNS', x: 520, y: 385 },
-            { landmarkCode: 'Po',  x: 575, y: 295 },
-            { landmarkCode: 'Or',  x: 540, y: 300 },
-          ].map(lm => ({ ...lm, status: 'placed' }))
-
-          const lmBatchR = await post(`/dental/imaging/images/${imageId}/ceph/landmarks`, { landmarks }, cookie)
-          if (!lmBatchR.ok) throw new Error(`P6 ceph landmarks batch POST → ${lmBatchR.status}: ${JSON.stringify(lmBatchR.data).slice(0,200)}`)
-          log(`  ✓ Ceph landmarks batch upsert (${landmarks.length} points)`)
-          // Confirm gate landmarks A, B, Go, Po
-          for (const code of ['A', 'B', 'Go', 'Po']) {
-            const confirmR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/${code}`, { status: 'confirmed' }, cookie)
-            if (!confirmR.ok) throw new Error(`P6 ceph landmark ${code} confirm PATCH → ${confirmR.status}: ${JSON.stringify(confirmR.data).slice(0,200)}`)
-          }
-          log(`  ✓ A, B, Go, Po → confirmed`)
-          // B03 precondition: lock landmark 'S' (Sella). Confirm it first (placed→confirmed→locked).
-          const confirmSR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'confirmed' }, cookie)
-          if (!confirmSR.ok) throw new Error(`P6 ceph landmark S confirm PATCH → ${confirmSR.status}: ${JSON.stringify(confirmSR.data).slice(0,200)}`)
-          const lockSR = await patch(`/dental/imaging/images/${imageId}/ceph/landmarks/S`, { status: 'locked' }, cookie)
-          if (!lockSR.ok) throw new Error(`P6 ceph landmark S lock PATCH → ${lockSR.status}: ${JSON.stringify(lockSR.data).slice(0,200)}`)
-          log(`  ✓ Landmark S → locked (B03 precondition)`)
-          // Recompute analysis
-          const recomputeR = await post(`/dental/imaging/images/${imageId}/ceph/analysis/recompute`, {}, cookie)
-          if (!recomputeR.ok) throw new Error(`P6 ceph analysis recompute POST → ${recomputeR.status}: ${JSON.stringify(recomputeR.data).slice(0,200)}`)
-          log(`  ✓ Ceph analysis recomputed`)
-          // Create ceph report
-          const reportR = await post(`/dental/imaging/images/${imageId}/ceph/reports`, {}, cookie)
-          if (!reportR.ok) throw new Error(`P6 ceph report POST → ${reportR.status}: ${JSON.stringify(reportR.data).slice(0,200)}`)
-          log(`  ✓ Ceph report generated`)
-      }
-      } catch (cephErr: any) {
-        log(`  ⚠ P6 ceph/imaging skipped (storage unavailable): ${cephErr.message?.slice(0, 100)}`)
-      }
+      // Ceph chain seeds off V1 above (seedCephChain) — kept out of V2 so it isn't
+      // blocked by the visit-completion cascade and Miguel can't get a duplicate study.
 
       // Lab order for ortho appliance — stays at in_fabrication
       const labR = await post(`/dental/visits/${v2id}/lab-orders`, {
@@ -1256,6 +1365,92 @@ async function seed() {
 
   log(`\n  ✓ Total: ${completedCount} completed visits, ${activeCount} active`)
 
+  // ── 8.6 Current open visits (one active in-progress visit per patient) ───────
+  // Every demo patient EXCEPT Maria (already has active V4) and Diego (checked in
+  // via today's appointment in §9) gets ONE active "current" visit with an OPEN
+  // plan, so the workspace carousel always opens on an editable card: a chart to
+  // click + pending treatments to plan/decline/bill. Teeth layer on the cumulative
+  // snapshot (prior conditions + this visit's new findings).
+  section('8.6 Current open visits')
+
+  const currentVisitSpecs: Array<{
+    p: any; complaint: string; teeth: any[]; plan: OpenTreatment[]; soap?: any
+  }> = [
+    { p: P[0], complaint: 'Recall exam — sensitivity upper right',
+      teeth: [{ toothNumber: 17, state: 'caries', surfaces: ['occlusal'], conditionCode: 'K02.1', note: 'Occlusal caries — restorable' }],
+      plan: [
+        { cdtCode: 'D0120', description: 'Periodic oral evaluation', priceCents: 100000 },
+        { cdtCode: 'D2392', description: 'Resin composite #17 — two surfaces', priceCents: 450000, toothNumber: 17, plan: true },
+      ],
+      soap: { subjective: 'Sensitivity upper right when chewing.', objective: 'Occlusal caries #17. Cold test positive, subsides quickly.' } },
+    { p: P[2], complaint: 'Crown review + new interproximal finding #15',
+      teeth: [{ toothNumber: 15, state: 'caries', surfaces: ['mesial'], note: 'Interproximal caries' }],
+      plan: [
+        { cdtCode: 'D0140', description: 'Limited oral evaluation — problem focused', priceCents: 120000 },
+        { cdtCode: 'D2391', description: 'Resin composite #15 — one surface', priceCents: 350000, toothNumber: 15, plan: true },
+      ],
+      soap: { subjective: 'Crown comfortable. New cold sensitivity #15.', objective: '#46 crown well seated. #15 mesial caries on bitewing.' } },
+    { p: P[3], complaint: 'Pediatric recall — fluoride + watch #46',
+      teeth: [{ toothNumber: 46, state: 'watchlist', surfaces: ['occlusal'], note: 'Deep fissure — monitor' }],
+      plan: [
+        { cdtCode: 'D1206', description: 'Topical fluoride varnish', priceCents: 80000 },
+        { cdtCode: 'D1351', description: 'Sealant #46', priceCents: 150000, toothNumber: 46, plan: true },
+      ],
+      soap: { subjective: 'Routine pediatric recall. No complaints.', objective: 'Good OH. Deep occlusal fissure #46 — sealant indicated.' } },
+    { p: P[4], complaint: 'Implant planning — #46 site + caries #37',
+      teeth: [{ toothNumber: 37, state: 'caries', surfaces: ['distal'], note: 'Distal caries' }],
+      plan: [
+        { cdtCode: 'D6010', description: 'Surgical placement implant body #46', priceCents: 6500000, toothNumber: 46, plan: true },
+        { cdtCode: 'D2393', description: 'Resin composite #37 — three surfaces', priceCents: 550000, toothNumber: 37 },
+      ],
+      soap: { subjective: 'Ready to proceed with implant. Mild sensitivity #37.', objective: '#46 edentulous site healed. #37 distal caries.' } },
+    { p: P[5], complaint: 'Recall — endo evaluation #36',
+      teeth: [
+        { toothNumber: 16, state: 'watchlist', surfaces: ['cervical'], note: 'Cervical abrasion — monitor' },
+        { toothNumber: 36, state: 'caries', surfaces: ['mesial', 'occlusal'], conditionCode: 'K04.0', note: 'Deep caries → pulpitis' },
+      ],
+      plan: [
+        { cdtCode: 'D0120', description: 'Periodic oral evaluation', priceCents: 100000 },
+        { cdtCode: 'D3330', description: 'Endodontic therapy — molar #36 (RCT)', priceCents: 1800000, toothNumber: 36 },
+        { cdtCode: 'D2950', description: 'Core buildup #36', priceCents: 350000, toothNumber: 36, plan: true },
+      ],
+      soap: { subjective: 'Lingering pain #36 to hot. Considering options.', objective: 'Deep mesio-occlusal caries #36, irreversible pulpitis. RCT vs extraction discussed.' } },
+    { p: P[6], complaint: 'Ortho review + restorative #25',
+      teeth: [{ toothNumber: 25, state: 'caries', surfaces: ['occlusal'], note: 'Occlusal caries' }],
+      plan: [
+        { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 180000 },
+        { cdtCode: 'D2391', description: 'Resin composite #25 — one surface', priceCents: 350000, toothNumber: 25, plan: true },
+      ],
+      soap: { subjective: 'Ortho progressing. Sensitivity #25.', objective: 'Alignment improving. #25 occlusal caries.' } },
+    { p: P[7], complaint: 'Follow-up — perio maintenance + #44 finding',
+      teeth: [{ toothNumber: 44, state: 'caries', surfaces: ['buccal'], note: 'Cervical caries' }],
+      plan: [
+        { cdtCode: 'D4910', description: 'Periodontal maintenance', priceCents: 250000 },
+        { cdtCode: 'D2391', description: 'Resin composite #44 — one surface', priceCents: 350000, toothNumber: 44, plan: true },
+      ],
+      soap: { subjective: 'Here for perio maintenance. Notes #44 sensitivity.', objective: 'Stable perio. #44 buccal cervical caries.' } },
+    { p: P[9], complaint: 'New patient transfer — comprehensive plan',
+      teeth: [
+        { toothNumber: 26, state: 'caries', surfaces: ['occlusal'], note: 'Occlusal caries' },
+        { toothNumber: 47, state: 'watchlist', surfaces: ['occlusal'], note: 'Stained fissure — monitor' },
+      ],
+      plan: [
+        { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 180000 },
+        { cdtCode: 'D2392', description: 'Resin composite #26 — two surfaces', priceCents: 450000, toothNumber: 26, plan: true },
+      ],
+      soap: { subjective: 'Transferred from previous clinic. Wants full plan.', objective: 'Generalized good OH. #26 occlusal caries. #47 watch.' } },
+  ]
+
+  for (const s of currentVisitSpecs) {
+    if (!s.p) continue
+    const vid = await addCurrentVisit(
+      s.p.id, branch.id, ownerMember.id, s.complaint, s.teeth, s.plan, cookie,
+      { soap: s.soap, signConsent: true },
+    )
+    if (vid) { activeCount++; log(`  ◎ Current visit: ${s.p.displayName} (open plan: ${s.plan.length} items)`) }
+  }
+  log(`\n  ✓ Current open visits added (carousel now opens on an editable active card)`)
+
   // ── 8.5 Imaging studies (all patients) ──────────────────────────────────────
   section('8.5 Imaging studies')
 
@@ -1278,8 +1473,109 @@ async function seed() {
       modality: def.modality, filename: def.filename,
       mimeType: 'image/jpeg', size: 1024000,
     }, cookie)
-    if (r.ok) log(`  ✓ ${def.p.displayName}: ${def.modality}`)
-    else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
+    if (r.ok) {
+      try {
+        await uploadDemoImage(r.data.fileId, 'image/jpeg')
+        log(`  ✓ ${def.p.displayName}: ${def.modality} (image available)`)
+      } catch (e: any) {
+        log(`  ⚠ ${def.p.displayName} ${def.modality} upload skipped: ${String(e?.message).slice(0, 80)}`)
+      }
+    } else log(`  ⚠ ${def.p.displayName} imaging (${r.status}): ${JSON.stringify(r.data).slice(0, 100)}`)
+  }
+
+  // ── 8.5b CBCT volume (P2-7) — seed one cone-beam study so the volume card +
+  // finalize + viewer-link routes are actually exercised (avoid the ceph
+  // "untested because unseeded" gap). Routes through multipart + server-side
+  // DICOM parse via the synthetic fixture; finalize flips is_volume=true.
+  if (P[4]) {
+    try {
+      const { buildSyntheticDicom } = await import(
+        '../services/api-ts/src/handlers/dental-imaging/repos/dicom-fixture'
+      )
+      const dicomBytes = buildSyntheticDicom()
+      // 6 MB so it routes through the multipart envelope (DICOM > 5 MB threshold).
+      const cbctR = await post('/dental/imaging/studies', {
+        patientId: P[4].id, branchId: branch.id,
+        modality: 'cbct', filename: 'mendoza-carlos-cbct-volume.dcm',
+        mimeType: 'application/dicom', size: 6 * 1024 * 1024,
+      }, cookie)
+      if (cbctR.ok) {
+        const imageId: string | undefined = cbctR.data.image?.id ?? cbctR.data.imageId
+        // Write the DICOM bytes straight to the object store (same direct-PutObject
+        // approach as uploadDemoImage; the presigned multipart parts aren't needed
+        // for a local seed). The fileId IS the object key.
+        await seedS3.write(cbctR.data.fileId, dicomBytes.buffer as ArrayBuffer, { type: 'application/dicom' })
+        const finR = await post(`/dental/imaging/studies/${cbctR.data.study.id}/cbct/finalize`, {
+          imageId,
+          dicomBase64: Buffer.from(dicomBytes).toString('base64'),
+        }, cookie)
+        if (finR.ok) {
+          log(`  ✓ ${P[4].displayName}: CBCT volume (is_volume=${finR.data.image?.isVolume}, frames=${finR.data.image?.frameCount})`)
+        } else {
+          log(`  ⚠ ${P[4].displayName} CBCT finalize (${finR.status}): ${JSON.stringify(finR.data).slice(0, 100)}`)
+        }
+      } else {
+        log(`  ⚠ ${P[4].displayName} CBCT study (${cbctR.status}): ${JSON.stringify(cbctR.data).slice(0, 100)}`)
+      }
+    } catch (e: any) {
+      log(`  ⚠ CBCT seed skipped: ${String(e?.message).slice(0, 100)}`)
+    }
+  }
+
+  // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
+
+  // ── 8.7 Free-tier clinic (B01 ceph free-tier gate) ──────────────────────────
+  // A SEPARATE org whose imagingTier is left at the default (NULL = 'free'), with a
+  // patient + cephalometric image. Ceph analysis on this org's image must 403
+  // (IMAGING_TIER_REQUIRED). The demo org is 'addon' (paid), so the free-tier gate
+  // can ONLY be exercised against this dedicated free clinic. Fully self-contained:
+  // its own account + org + member PIN — it never touches the demo org.
+  section('8.7 Free-tier clinic (ceph gate)')
+  try {
+    const free = await signUpOrIn('free@dentalemon.com', 'FreeClinic1!', 'Dr. Ben Tan')
+    await post('/persons', { firstName: 'Ben', lastName: 'Tan', gender: 'male', timezone: 'Asia/Manila' }, free.cookie)
+    let fOrgId: string, fBranchId: string, fMemberId: string
+    const fctx = await get('/dental/org/context', free.cookie)
+    if (fctx.ok && fctx.data?.branch?.id) {
+      fOrgId = fctx.data.org.id; fBranchId = fctx.data.branch.id; fMemberId = fctx.data.member.id
+      log(`→ Existing free clinic: ${fctx.data.org.name}`)
+    } else {
+      const onb = must(await post('/dental/onboarding', {
+        organizationName: 'Budget Dental Clinic', tier: 'solo', countryCode: 'PH',
+        branchName: 'Free Branch', timezone: 'Asia/Manila', ownerDisplayName: 'Dr. Ben Tan',
+      }, free.cookie), 'free-clinic onboarding')
+      fOrgId = onb.organizationId; fBranchId = onb.branchId; fMemberId = onb.membershipId
+      log('✓ Onboarded free clinic: Budget Dental Clinic')
+    }
+    await post(`/dental/organizations/${fOrgId}/branches/${fBranchId}/members/${fMemberId}/set-pin`, { pin: '111111' }, free.cookie)
+    const fPatient = must(await post('/dental/patients', {
+      displayName: 'Free Patient', dateOfBirth: '1990-01-01', gender: 'male',
+      consentGiven: true, branchId: fBranchId,
+    }, free.cookie), 'free patient')
+    const fVisit = await activateVisit(fPatient.id, fBranchId, fMemberId, 0, 'Cephalometric consult', free.cookie)
+    // Cephalometric study CREATE is itself addon-gated (createImagingStudy V-IMG-001),
+    // so a free org can never normally hold a ceph image. Reproduce the realistic
+    // DOWNGRADE scenario: a clinic that HAD the add-on (uploaded a ceph), then dropped
+    // to free. Temporarily enable addon → create the ceph image → revert to free, so
+    // the image exists but ceph ANALYSIS is gated to 403 (CIMG-001/002).
+    await patch(`/dental/organizations/${fOrgId}`, { imagingTier: 'addon' }, free.cookie)
+    const studyR = await post('/dental/imaging/studies', {
+      patientId: fPatient.id, ...(fVisit ? { visitId: fVisit } : {}), branchId: fBranchId,
+      modality: 'cephalometric', filename: 'free-ceph-lateral.jpg', mimeType: 'image/jpeg', size: 2048000,
+    }, free.cookie)
+    if (studyR.ok) {
+      const imageId = studyR.data.image?.id ?? studyR.data.imageId
+      if (studyR.data.fileId) await uploadDemoImage(studyR.data.fileId, 'image/jpeg').catch(() => {})
+      // Downgrade back to free — image stays, ceph analysis now 403s.
+      const downR = await patch(`/dental/organizations/${fOrgId}`, { imagingTier: 'free' }, free.cookie)
+      log(downR.ok
+        ? `  ✓ Free-tier ceph image (imageId ${String(imageId).slice(0, 8)}… — downgraded to free → analysis 403). Login free@dentalemon.com / FreeClinic1! · PIN 1 1 1 1 1 1`
+        : `  ⚠ Free-tier downgrade failed (${downR.status}) — org may still be addon`)
+    } else {
+      log(`  ⚠ Free-tier ceph study (${studyR.status}): ${JSON.stringify(studyR.data).slice(0, 120)}`)
+    }
+  } catch (e: any) {
+    log(`  ⚠ Free-tier clinic seed skipped: ${String(e?.message).slice(0, 140)}`)
   }
 
   // ── 9. Appointments ──────────────────────────────────────────────────────
@@ -1398,7 +1694,7 @@ async function seed() {
   console.log('║  App:   http://localhost:3003                        ║')
   console.log('╠══════════════════════════════════════════════════════╣')
   console.log('║  Coverage:                                           ║')
-  console.log('║  • 10 patients, ~40 visits, full clinical data       ║')
+  console.log('║  • 20 patients, full clinical data                   ║')
   console.log('║  • Treatment Breakdown: visible on EVERY patient     ║')
   console.log('║  • Treatment Plan: P3/P4/P5 (planned/carried)        ║')
   console.log('║  • Carry-over: P3 (Elena) + P5 (Ana)                 ║')
@@ -1410,6 +1706,7 @@ async function seed() {
   console.log('║  • Medical history, recall, follow-up, NPS reviews   ║')
   console.log('║  • Guardian: Elena Garcia (P3) → Rosario Garcia      ║')
   console.log('║  • Sync log: demo pending row (GAP-007)               ║')
+  console.log('║  • Longitudinal multi-visit: see seed-supplement.ts  ║')
   console.log('╚══════════════════════════════════════════════════════╝\n')
 }
 
@@ -1430,16 +1727,23 @@ async function seedAuditLogRows() {
   const DB_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
   const sql = new Bun.SQL(DB_URL)
   try {
+    // API-created visits leave dental_visit.created_by NULL, so fall back to a
+    // branch membership's person_id for a valid (non-null) audit actor — the
+    // actor_id column is NOT NULL.
     const rows = await sql`
-      SELECT v.id, v.branch_id, v.created_by as actor_id, b.organization_id as tenant_id
+      SELECT v.id, v.branch_id,
+             COALESCE(v.created_by, m.person_id) as actor_id,
+             b.organization_id as tenant_id
       FROM dental_visit v
       JOIN dental_branch b ON b.id = v.branch_id
+      LEFT JOIN dental_membership m ON m.branch_id = v.branch_id AND m.person_id IS NOT NULL
       WHERE v.status = 'completed'
       ORDER BY v.created_at
       LIMIT 1
     `
     if (!rows.length) { log('⚠ Audit seed: no completed visit found'); return }
     const { id: visitId, branch_id: branchId, actor_id: actorId, tenant_id: tenantId } = rows[0]
+    if (!actorId) { log('⚠ Audit seed: no valid actor (created_by + membership.person_id both null)'); return }
     const events = [
       { action: 'visit.complete',      target_type: 'dental_visit',      target_id: visitId },
       { action: 'treatment.performed', target_type: 'dental_treatment',   target_id: visitId },

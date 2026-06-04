@@ -15,9 +15,8 @@ import {
   type TimeSlot
 } from './booking.schema';
 import { bookingEvents } from './booking.schema';
-import { persons } from '../../person/repos/person.schema';
 import { NotFoundError, ConflictError, ValidationError } from '@/core/errors';
-import { InvoiceRepository } from '../../billing/repos/billing.repo';
+import { createInvoiceForBooking } from '../../billing/repos/billing-booking.facade';
 
 export interface BookingFilters {
   client?: string;
@@ -143,10 +142,8 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
     if (billingConfig) {
       this.logger?.debug({ bookingId, billingConfig }, 'Creating invoice for booking with billingConfig');
       
-      const invoiceRepo = new InvoiceRepository(this.db, this.logger);
-      
       try {
-        const invoice = await invoiceRepo.createOne({
+        const invoice = await createInvoiceForBooking(this.db, {
           invoiceNumber: `INV-${Date.now()}-${bookingId.substring(0, 8)}`,
           customer: clientId,
           merchant: slot.owner,
@@ -158,7 +155,7 @@ export class BookingRepository extends DatabaseRepository<Booking, NewBooking, B
           paymentDueAt: slot.startTime,
           createdBy: clientId,
           updatedBy: clientId
-        });
+        }, this.logger);
         
         invoiceId = invoice.id;
         this.logger?.info({ invoiceId, bookingId }, 'Invoice created for booking');

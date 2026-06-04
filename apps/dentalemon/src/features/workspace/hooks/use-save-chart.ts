@@ -10,18 +10,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { upsertDentalChart } from '@monobase/sdk-ts/generated';
 import { getDentalChartQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import type { ToothData } from '@/features/workspace/components/dental-chart.helpers';
-
-function chartSaveErrorMessage(err: unknown): string {
-  try {
-    const serialized = JSON.stringify(err) + String(err);
-    if (serialized.includes('VISIT_LOCKED') || serialized.includes('locked')) {
-      return 'Visit is locked. Reopen the visit to make changes.';
-    }
-  } catch { /* ignore */ }
-  return 'Failed to save chart. Please try again.';
-}
 
 interface SaveChartInput {
   visitId: string;
@@ -47,7 +37,7 @@ export function useSaveChart() {
       });
     },
     onError: (err) => {
-      toast.error(chartSaveErrorMessage(err));
+      toastError(err, 'Failed to save chart. Please try again.');
     },
   });
 }

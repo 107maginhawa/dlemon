@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useMemo } from 'react'
+import { apiBaseUrl } from '@/lib/config'
 
 export type CephLandmarkCode = 'S' | 'N' | 'A' | 'B' | 'ANS' | 'PNS' | 'Go' | 'Po' | 'Me' | 'Or' | 'Pog' | 'Gn' | 'U1T' | 'U1A' | 'L1T' | 'L1A'
 export type CephLandmarkSource = 'manual' | 'ai' | 'ai_corrected'
@@ -52,6 +53,30 @@ interface CommitLandmarkVars {
   status?: CephLandmarkStatus
 }
 
+export interface CephLandmarkPrediction {
+  landmarkCode: CephLandmarkCode
+  x: number
+  y: number
+  confidence: number
+}
+
+export interface CephDetectionResult {
+  jobId: string
+  status: 'pending' | 'succeeded' | 'failed'
+  modelVersion: string
+  provider: string
+  predictions: CephLandmarkPrediction[]
+  items: CephLandmark[]
+  analysis: CephAnalysis | null
+  error?: string
+}
+
+/**
+ * P1-10: per-point low-confidence threshold (single source of truth shared with
+ * the overlay + palette). Mirrors the backend CEPH_LOW_CONFIDENCE_THRESHOLD.
+ */
+export const CEPH_LOW_CONFIDENCE_THRESHOLD = 0.6
+
 export function useCephLandmarks(imageId: string) {
   const queryClient = useQueryClient()
   const seqRef = useRef(0)
@@ -63,7 +88,9 @@ export function useCephLandmarks(imageId: string) {
   const query = useQuery({
     queryKey: landmarksQueryKey,
     queryFn: async (): Promise<CephLandmarksResponse> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/landmarks`)
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks`, {
+        credentials: 'include',
+      })
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<CephLandmarksResponse>
     },
@@ -97,9 +124,10 @@ export function useCephLandmarks(imageId: string) {
       const body: Record<string, unknown> = { x: vars.x, y: vars.y }
       if (vars.status) body.status = vars.status
       const res = await fetch(
-        `/dental/imaging/images/${imageId}/ceph/landmarks/${vars.code}`,
+        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/${vars.code}`,
         {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         },
@@ -142,8 +170,9 @@ export function useCephLandmarks(imageId: string) {
 
   const batchUpsert = useMutation({
     mutationFn: async (landmarks: CephLandmarkInput[]): Promise<CephLandmarksResponse> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/ceph/landmarks`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ landmarks }),
       })
@@ -163,8 +192,8 @@ export function useCephLandmarks(imageId: string) {
   const deleteLandmark = useMutation({
     mutationFn: async (code: CephLandmarkCode): Promise<void> => {
       const res = await fetch(
-        `/dental/imaging/images/${imageId}/ceph/landmarks/${code}`,
-        { method: 'DELETE' },
+        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/${code}`,
+        { method: 'DELETE', credentials: 'include' },
       )
       if (!res.ok && res.status !== 204) throw new Error(await res.text())
     },
@@ -180,6 +209,34 @@ export function useCephLandmarks(imageId: string) {
     onError: (_err, _code, context) => {
       if (context?.snapshot) {
         queryClient.setQueryData(landmarksQueryKey, context.snapshot)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: landmarksQueryKey })
+      void queryClient.invalidateQueries({ queryKey: analysisQueryKey })
+    },
+  })
+
+  // P1-10: AI / auto landmark detection. POSTs to the detect endpoint; the server
+  // persists predictions (source='ai', status='placed') and returns the post-write
+  // landmark set, which seeds the caches so AI points render immediately. Tier/flag
+  // gating surfaces as a thrown error (reuses isAddonError / FEATURE_DISABLED).
+  const autoDetect = useMutation<CephDetectionResult, Error, void>({
+    mutationFn: async (): Promise<CephDetectionResult> => {
+      const res = await fetch(
+        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/detect`,
+        { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } },
+      )
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<CephDetectionResult>
+    },
+    onSuccess: (data) => {
+      if (data.analysis) {
+        queryClient.setQueryData<CephLandmarksResponse>(landmarksQueryKey, {
+          items: data.items,
+          analysis: data.analysis,
+        })
+        queryClient.setQueryData<CephAnalysis>(analysisQueryKey, data.analysis)
       }
     },
     onSettled: () => {
@@ -204,5 +261,6 @@ export function useCephLandmarks(imageId: string) {
     commitLandmark,
     batchUpsert,
     deleteLandmark,
+    autoDetect,
   }
 }

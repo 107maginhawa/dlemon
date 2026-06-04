@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiBaseUrl } from '@/lib/config'
 
 export type ImagingFindingType =
   | 'caries'
@@ -63,7 +64,9 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<ImagingFinding[]> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/findings`)
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/findings`, {
+        credentials: 'include',
+      })
       if (!res.ok) throw new Error(await res.text())
       const data = (await res.json()) as { data: ImagingFinding[] }
       return data.data
@@ -74,8 +77,9 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
 
   const createFinding = useMutation({
     mutationFn: async (input: CreateFindingInput): Promise<ImagingFinding> => {
-      const res = await fetch(`/dental/imaging/images/${imageId}/findings`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/findings`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
@@ -96,8 +100,9 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
       findingId: string
       data: UpdateFindingInput
     }): Promise<ImagingFinding> => {
-      const res = await fetch(`/dental/imaging/findings/${findingId}`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/findings/${findingId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
@@ -112,8 +117,9 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
 
   const deleteFinding = useMutation({
     mutationFn: async (findingId: string): Promise<void> => {
-      const res = await fetch(`/dental/imaging/findings/${findingId}`, {
+      const res = await fetch(`${apiBaseUrl}/dental/imaging/findings/${findingId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       if (!res.ok && res.status !== 204) throw new Error(await res.text())
     },

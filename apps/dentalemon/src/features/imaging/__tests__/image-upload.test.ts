@@ -78,6 +78,22 @@ describe('ImageUpload', () => {
     expect(screen.queryByText(/too large/i)).toBeNull();
   });
 
+  test('P1-9 accepts a DICOM file by application/dicom MIME type', () => {
+    render(React.createElement(ImageUpload, DEFAULT_PROPS), { wrapper: makeWrapper() });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = makeFile('ceph.dcm', 'application/dicom', 1024);
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(screen.queryByText(/unsupported/i)).toBeNull();
+  });
+
+  test('P1-9 accepts a .dcm file even when the browser gives no MIME type', () => {
+    render(React.createElement(ImageUpload, DEFAULT_PROPS), { wrapper: makeWrapper() });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = makeFile('ceph.dcm', '', 1024);
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(screen.queryByText(/unsupported/i)).toBeNull();
+  });
+
   test('submit button disabled when no file selected', () => {
     render(React.createElement(ImageUpload, DEFAULT_PROPS), { wrapper: makeWrapper() });
     const btn = screen.getByRole('button', { name: /upload/i });

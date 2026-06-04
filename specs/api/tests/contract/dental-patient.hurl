@@ -17,48 +17,28 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; the caller becomes the org
+# owner + a dentist_owner member, so the rest of the suite runs on the user's token).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Patient Test Clinic {{suffix}}",
+  "organizationName": "Patient Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
+  "countryCode": "PH",
+  "branchName": "Main Branch",
   "timezone": "Asia/Manila",
   "address": "123 Test Street",
   "city": "Manila",
-  "phone": "+639001234569"
+  "phone": "+639001234569",
+  "ownerDisplayName": "Dr. Dental Tester"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0c. Create branch membership for this user (needed for import branchId access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Dental Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # 1. Create a dental patient
@@ -69,7 +49,8 @@ Content-Type: application/json
   "displayName": "Maria Santos {{suffix}}",
   "dateOfBirth": "1985-06-15",
   "gender": "female",
-  "consentGiven": true
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
 }
 HTTP 201
 [Captures]
@@ -228,7 +209,8 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "displayName": "Bulk Test Patient {{suffix}}",
-  "consentGiven": true
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
 }
 HTTP 201
 [Captures]
@@ -242,7 +224,8 @@ POST {{api}}/dental/patients/bulk-archive
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "patientIds": ["{{patient_id}}", "{{patient2_id}}"]
+  "ids": ["{{patient_id}}", "{{patient2_id}}"],
+  "reason": "Bulk archive contract test cleanup"
 }
 HTTP 200
 [Asserts]
@@ -265,6 +248,16 @@ jsonpath "$.pagination.totalCount" >= 0
 # NEW: G2.5-S6 — patient images, treatments, visits, treatment-plan, dentition
 # ============================================================
 
+# Restore the primary patient — the bulk-archive above archived it, and the
+# treatment-plan accept / dentition / recall steps below 422 on an archived patient
+# (PATIENT_ARCHIVED). This section needs an ACTIVE patient.
+POST {{api}}/dental/patients/{{patient_id}}/restore
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "active"
+
+
 # NEW: G2.5-S6 — create a visit for patient FK contexts
 POST {{api}}/dental/visits
 Cookie: better-auth.session_token={{session_token}}
@@ -279,16 +272,18 @@ HTTP 201
 patient_visit_id: jsonpath "$.id"
 
 
-# NEW: G2.5-S6 — list patient images
+# NEW: G2.5-S6 — list patient images (returns {items,total})
 GET {{api}}/dental/patients/{{patient_id}}/images?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
 
 
-# NEW: G2.5-S6 — list patient images auth check
+# NEW: G2.5-S6 — list patient images auth check (Bearer override beats Hurl's
+# auto-replayed session cookie → true 401; mirrors sibling files)
 GET {{api}}/dental/patients/{{patient_id}}/images?branchId={{branch_id}}
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -302,6 +297,7 @@ jsonpath "$.data" isCollection
 
 # NEW: G2.5-S6 — list patient treatments auth check
 GET {{api}}/dental/patients/{{patient_id}}/treatments
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
@@ -315,27 +311,30 @@ jsonpath "$.data" isCollection
 
 # NEW: G2.5-S6 — list patient visits auth check
 GET {{api}}/dental/patients/{{patient_id}}/visits
+Authorization: Bearer invalid-no-session
 HTTP 401
 
 
-# NEW: G2.5-S6 — get treatment plan (may be empty for new patient)
-GET {{api}}/dental/patients/{{patient_id}}/treatment-plan
+# G2.5-S6 — get treatment plan: a new patient has an empty v0 plan (branchId required)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP [200, 404]
+HTTP 200
 
 
-# NEW: G2.5-S6 — get treatment plan version 1 (404 acceptable if no plan exists)
-GET {{api}}/dental/patients/{{patient_id}}/treatment-plan/versions/1
-Cookie: better-auth.session_token={{session_token}}
-HTTP [200, 404]
-
-
-# NEW: G2.5-S6 — accept treatment plan (body is optional — consentFormId not required)
-POST {{api}}/dental/patients/{{patient_id}}/treatment-plan/accept
+# G2.5-S6 — accept the treatment plan → creates version 1 (branchId required)
+POST {{api}}/dental/patients/{{patient_id}}/treatment-plan/accept?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {}
-HTTP [201, 400, 404]
+HTTP 201
+[Captures]
+plan_version_id: jsonpath "$.id"
+
+
+# G2.5-S6 — fetch that plan version by id (versionId is a UUID, not a sequence number)
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan/versions/{{plan_version_id}}?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
 
 
 # NEW: G2.5-S6 — initialize dentition chart
@@ -353,9 +352,90 @@ jsonpath "$.patientId" == "{{patient_id}}"
 
 # NEW: G2.5-S6 — dentition auth check
 POST {{api}}/dental/patients/{{patient_id}}/dentition
+Authorization: Bearer invalid-no-session
 Content-Type: application/json
 {
   "dateOfBirth": "1990-05-15",
   "visitId": "{{patient_visit_id}}"
 }
 HTTP 401
+
+
+# ── P1-24: recall recurrence + recare due-list ───────────────────────────────
+# R0. Ensure the patient is assigned to the branch (recall handlers are branch-scoped)
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "preferredBranchId": "{{branch_id}}"
+}
+HTTP 200
+
+
+# R1. Create a recurring recall already due (past dueDate), interval 6 months
+POST {{api}}/dental/patients/{{patient_id}}/recalls
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "cleaning",
+  "dueDate": "2024-01-01",
+  "intervalMonths": 6
+}
+HTTP 201
+[Captures]
+recall_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.status" == "pending"
+jsonpath "$.intervalMonths" == 6
+
+
+# R2. Recare due-list for the branch returns the due recall (branch-scoped)
+GET {{api}}/dental/recalls/due?branchId={{branch_id}}&from=2000-01-01&to=2999-12-31
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$[0].patientName" isString
+
+
+# R3. Due-list requires auth (Bearer override beats Hurl's auto-replayed cookie)
+GET {{api}}/dental/recalls/due?branchId={{branch_id}}
+Authorization: Bearer invalid-no-session
+HTTP 401
+
+
+# R4. Due-list missing branchId → 400 (query validator wired)
+GET {{api}}/dental/recalls/due
+Cookie: better-auth.session_token={{session_token}}
+HTTP 400
+
+
+# R5. Complete the recurring recall — must go through 'sent' first (FSM), then completed
+PATCH {{api}}/dental/patients/{{patient_id}}/recalls/{{recall_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "sent"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "sent"
+
+PATCH {{api}}/dental/patients/{{patient_id}}/recalls/{{recall_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "completed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "completed"
+
+
+# R6. Next-cycle recall was seeded (a new pending recall now exists)
+GET {{api}}/dental/patients/{{patient_id}}/recalls
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$[*].status" includes "pending"

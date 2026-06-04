@@ -120,7 +120,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="h-10 px-4 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors"
+            className="h-10 px-4 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors"
           >
             + Add Staff
           </button>

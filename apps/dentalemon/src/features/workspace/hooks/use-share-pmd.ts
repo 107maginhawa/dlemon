@@ -7,6 +7,7 @@
  */
 import { useMutation } from '@tanstack/react-query';
 import { generatePmd } from '@monobase/sdk-ts/generated';
+import { toastError } from '@/lib/error-toast';
 
 interface SharePMDInput {
   visitId: string;
@@ -27,6 +28,11 @@ export function useSharePMD() {
         throwOnError: true,
       });
       return data as unknown as PMDResult;
+    },
+    // V-FE-ERR-001: surface PMD generation/share failures rather than letting
+    // the rejected promise fall through silently.
+    onError: (err) => {
+      toastError(err, 'Failed to share medical document. Please try again.');
     },
   });
 }

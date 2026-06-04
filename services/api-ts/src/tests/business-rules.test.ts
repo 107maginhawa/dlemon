@@ -72,6 +72,7 @@ import {
   CreateDentalInvoiceBody,
   IssueDentalInvoiceParams,
   VoidDentalInvoiceParams,
+  VoidDentalInvoiceBody,
   CreateDentalPaymentPlanParams,
   CreateDentalPaymentPlanBody,
   CreateConsentFormBody,
@@ -172,6 +173,7 @@ function makeApp(user?: typeof TEST_USER) {
   );
   app.post('/dental/billing/invoices/:invoiceId/void',
     zValidator('param', VoidDentalInvoiceParams, validationErrorHandler),
+    zValidator('json', VoidDentalInvoiceBody, validationErrorHandler),
     voidDentalInvoice as any,
   );
   app.post('/dental/billing/invoices/:invoiceId/plan',
@@ -952,6 +954,8 @@ describe('BR-011: active payment plan blocks invoice void', () => {
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'BR-012 void test reason' }),
     });
 
     expect(res.status).toBeGreaterThanOrEqual(400);
@@ -1030,6 +1034,8 @@ describe('BR-012: invoice state machine', () => { // [BR-012]
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'BR-012 void test reason' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1046,6 +1052,8 @@ describe('BR-012: invoice state machine', () => { // [BR-012]
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/void`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'BR-012 void test reason' }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const body = await res.json() as any;

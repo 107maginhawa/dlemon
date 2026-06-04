@@ -160,9 +160,9 @@ beforeEach(async () => {
   await db.delete(imagingStudyTeeth);
   await db.delete(imagingStudyImages);
   await db.delete(imagingStudies);
-  await db.execute(
-    (await import('drizzle-orm')).sql`DELETE FROM dental_audit_log WHERE branch_id = ${BRANCH_ID}`,
-  );
+  // dental_audit_log is append-only (DB trigger denies row UPDATE/DELETE, V-AUD-IMM-001).
+  // Reset via table-level TRUNCATE, which the BEFORE ROW trigger does not block.
+  await db.execute((await import('drizzle-orm')).sql`TRUNCATE TABLE dental_audit_log`);
 });
 
 // ---------------------------------------------------------------------------

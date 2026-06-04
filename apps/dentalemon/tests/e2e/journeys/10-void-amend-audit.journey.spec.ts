@@ -3,9 +3,12 @@
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J10
  * Rubric: J10; Q36, Q37, Q38, Q39 (P0), C2, Gap #3, #5. Persona: dentist.
- * Expected verdict: BROKEN.
- * P0 ref: P0-004 (notes are local React state, no DB column → no signed/
- *         locked persistence, no addendum model, no audit trail).
+ * Expected verdict: PASS.
+ * P0-004 RESOLVED: visit notes persist with a `signed` flag and an append-only
+ * version history. POST /dental/visits/:id/notes/sign signs+locks the entry;
+ * POST .../notes/addendum appends an immutable amendment; GET .../notes/history
+ * exposes the audit trail. This spec DOM-drives Sign & Lock → Add Addendum and
+ * confirms the original entry is preserved alongside the appended addendum.
  */
 import {
   test,
@@ -17,6 +20,7 @@ import {
   readPatientIdByName,
   SEED_PATIENTS,
   expectJourneyBroken,
+  recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
 
@@ -49,75 +53,95 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     }
     await notesBtn.click()
     await page.waitForLoadState('networkidle')
-    const notesSheet = page.locator('[data-testid="soap-notes-sheet"], [role="dialog"]').first()
-    await expect(notesSheet).toBeVisible({ timeout: 10_000 }).catch(() => {})
-
-    // Independent read: is there ANY persisted note row with a signed/locked
-    // state for this patient? P0-004 says notes are local React state with no
-    // DB column — so this read returns nothing durable.
-    // Notes are per-visit (GET /dental/visits/:visitId/notes), not per-patient.
-    // First resolve Sofia's most recent visit, then check notes on that visit.
-    const visitsResp = await apiReader.get(`/dental/patients/${patientId}/visits`)
-    const visitsBody = visitsResp.ok() ? await visitsResp.json() : null
-    const visitList: Array<{ id: string; createdAt?: string; created_at?: string }> =
-      Array.isArray(visitsBody)
-        ? visitsBody
-        : (visitsBody?.items ?? visitsBody?.visits ?? visitsBody?.data ?? [])
-    visitList.sort((a, b) =>
-      ((b.createdAt ?? b.created_at) ?? '').localeCompare((a.createdAt ?? a.created_at) ?? ''),
-    )
-    const visitId = visitList[0]?.id ?? null
-    const notesResp = visitId
-      ? await apiReader.get(`/dental/visits/${visitId}/notes`)
-      : null
-    const notesOk = notesResp?.ok() ?? false
-    const notesStr = notesOk ? JSON.stringify(await notesResp!.json()) : ''
-    const hasSignedPersisted = notesOk && /"(signed|locked)":\s*true/.test(notesStr)
-
-    // Step 4: an addendum/amendment control must exist on a locked note.
-    const addendumCtl = notesSheet
-      .getByRole('button', { name: /addendum|amend|amendment/i })
+    const notesSheet = page
+      .getByTestId('soap-notes-sheet')
+      .or(page.locator('[role="dialog"]'))
       .first()
-    const hasAddendum = await addendumCtl.count()
+    await expect(notesSheet).toBeVisible({ timeout: 10_000 })
 
-    if (!hasSignedPersisted || !hasAddendum) {
+    // Resolve the active visit the sheet operates on (currentVisitId), for the
+    // independent read. Notes are per-visit (GET /dental/visits/:visitId/notes).
+    const visitsResp = await apiReader.get(
+      `/dental/visits?patientId=${patientId}&branchId=${branchId}`,
+    )
+    const visitsBody = visitsResp.ok() ? await visitsResp.json() : null
+    const visitList: Array<{ id: string; status?: string }> = Array.isArray(visitsBody)
+      ? visitsBody
+      : (visitsBody?.data ?? visitsBody?.items ?? visitsBody?.visits ?? [])
+    const activeVisit = visitList.find((v) => v.status === 'active') ?? visitList[0]
+    const visitId = activeVisit?.id ?? null
+
+    // Step 2: sign & lock the note (if still editable) — a signed entry is the
+    // precondition for the void/amend audit model. Signing is immutable.
+    const signBtn = notesSheet.getByTestId('sign-lock-btn')
+    if (await signBtn.count()) {
+      const signPost = page
+        .waitForResponse(
+          (r) => /\/notes\/sign/.test(r.url()) && r.request().method() === 'POST',
+          { timeout: 10_000 },
+        )
+        .catch(() => null)
+      await signBtn.click()
+      await signPost
+      await page.waitForLoadState('networkidle')
+    }
+
+    // Step 3: a signed/locked note must expose an addendum/amend control (you
+    // amend by appending an addendum, never by editing the signed entry).
+    const addendumCtl = notesSheet
+      .getByTestId('add-addendum-btn')
+      .or(notesSheet.getByRole('button', { name: /add addendum|addendum|amend/i }))
+      .first()
+    if (!(await addendumCtl.count())) {
       await expectJourneyBroken(
         page,
         META,
-        `P0-004 CONFIRMED: notes are local React state with no DB column. ` +
-          `Independent read of /dental/visits/${visitId ?? 'unknown'}/notes ` +
-          `${notesOk ? '' : `→ ${notesResp?.status() ?? 'null'} `}` +
-          `shows no signed/locked persisted note (hasSignedPersisted=` +
-          `${hasSignedPersisted}); UI addendum control present=${hasAddendum > 0}. ` +
-          `No signed/locked persistence ⇒ no addendum model ⇒ no audit trail ` +
-          `for note mutations. The void/amend journey cannot complete through ` +
-          `the UI (Gap #3 hard-delete, Gap #5 editable signed notes).`,
+        `Signed note exposes no addendum/amend control — the void/amend audit model ` +
+          `(Gap #3 hard-delete, Gap #5 editable signed notes) is unreachable through the UI.`,
       )
       return
     }
-
-    // If the persistence + addendum surfaces unexpectedly exist, verify the
-    // original survives an amendment (immutability) via independent read.
     await addendumCtl.click()
-    const reason = notesSheet.getByRole('textbox').last()
-    if (await reason.count()) await reason.fill('Addendum: clarified anesthetic dosage.')
-    const save = notesSheet.getByRole('button', { name: /save|add|confirm/i }).first()
-    if (await save.count()) await save.click()
+
+    // Step 4: document the amendment as an appended addendum (DOM-only).
+    const reasonField = notesSheet.locator('#addendum-reason')
+    if (await reasonField.count()) await reasonField.fill('Correction')
+    await notesSheet.locator('#addendum-content').fill('Addendum: clarified anesthetic dosage.')
+    const addendumPost = page
+      .waitForResponse(
+        (r) => /\/notes\/addendum/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      )
+      .catch(() => null)
+    await notesSheet.getByRole('button', { name: /submit addendum/i }).first().click()
+    await addendumPost
     await page.waitForLoadState('networkidle')
 
-    const afterResp = visitId
-      ? await apiReader.get(`/dental/visits/${visitId}/notes`)
+    // Independent read — the audit trail must show the original entry PRESERVED
+    // (no hard delete) plus the appended addendum version.
+    const histResp = visitId
+      ? await apiReader.get(`/dental/visits/${visitId}/notes/history`)
       : null
-    const afterStr = afterResp?.ok() ? JSON.stringify(await afterResp.json()) : ''
-    const hasAddendumRow = /addendum|amendment/i.test(afterStr)
+    const histBody = histResp?.ok() ? await histResp.json() : null
+    const versions: Array<{ snapshot?: unknown }> = Array.isArray(histBody)
+      ? histBody
+      : (histBody?.data ?? histBody?.versions ?? [])
+    const hasAddendumVersion = versions.some((v) =>
+      /correction|addendum|anesthetic/i.test(JSON.stringify(v?.snapshot ?? v)),
+    )
+
+    if (versions.length >= 2 && hasAddendumVersion) {
+      // Signed entry preserved + addendum appended via a separate version row =
+      // no hard delete, audit trail intact.
+      recordJourneyPass(META)
+      return
+    }
 
     await expectJourneyBroken(
       page,
       META,
-      hasAddendumRow
-        ? 'Original preserved + addendum row appended — note amendment model may be implemented.'
-        : 'Independent read shows no addendum row appended (P0-004 confirmed).',
-      { unexpectedlyOk: hasAddendumRow },
+      `Void/amend audit trail not preserved: GET /dental/visits/${visitId ?? 'unknown'}/notes/history ` +
+        `→ ${histResp?.status() ?? 'null'}, versions=${versions.length}, addendumVersion=${hasAddendumVersion}.`,
     )
   } catch (err) {
     recordJourneyError(META, err)

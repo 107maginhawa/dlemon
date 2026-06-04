@@ -45,6 +45,10 @@ export async function createLabOrder(
     toothFdi: body.toothFdi,
     labName: body.labName,
     description: body.description,
+    // P2-12: restoration shade/material + clinically-needed due date
+    shade: body.shade,
+    material: body.material,
+    dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
     expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,
   });
 

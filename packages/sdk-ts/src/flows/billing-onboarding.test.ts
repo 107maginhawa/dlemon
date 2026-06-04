@@ -17,11 +17,12 @@ import type { MerchantAccount } from '../generated/types.gen';
 function makeMerchantAccount(metadata: Record<string, unknown> = {}): MerchantAccount {
   return {
     id: 'ma-1',
+    version: 1,
     person: 'person-1',
     active: true,
     metadata,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   } as MerchantAccount;
 }
 

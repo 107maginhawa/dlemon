@@ -3,8 +3,12 @@
  *
  * Contract: docs/audits/JOURNEY_HARNESS_CONTRACT.md §J09
  * Rubric: J9; Q34, Q35 (C3, Gap #6). Persona: dentist edits; front-desk
- * captures acceptance. Expected verdict: BROKEN (provisional).
- * P0 ref: Gap #6 (no treatment-plan versioning).
+ * captures acceptance. Expected verdict: PASS.
+ * Gap #6 RESOLVED: treatment-plan versioning is implemented —
+ * POST /dental/patients/:id/treatment-plan/accept append-snapshots the live
+ * plan into an immutable treatment_plan_version row; the live plan reports the
+ * latest accepted `version`. This spec DOM-drives acceptance and confirms the
+ * version froze via an independent read.
  */
 import {
   test,
@@ -49,31 +53,52 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await page.waitForLoadState('networkidle')
     const tpPanel = page.locator('[data-testid="treatment-plan-tab"], [role="dialog"]').first()
 
-    // Step 1: capture acceptance of version N.
+    // Step 1: locate the acceptance-capture control (TXPL-03 / J09).
     const acceptCtl = tpPanel
-      .getByRole('button', { name: /accept|capture acceptance|sign plan/i })
-      .or(tpPanel.locator('[data-testid*="accept"], [data-testid*="version"]'))
+      .getByTestId('accept-plan-btn')
+      .or(tpPanel.getByRole('button', { name: /accept plan|capture acceptance|sign plan/i }))
       .first()
 
     if (!(await acceptCtl.count())) {
       await expectJourneyBroken(
         page,
         META,
-        'Treatment Plan tab exposes no acceptance-capture or version-history ' +
-          'control (Gap #6). An accepted plan cannot be frozen as an immutable ' +
-          'versioned snapshot through the UI; the goal state (version N frozen, ' +
-          'N+1 with the edit) is unreachable.',
+        'Treatment Plan tab exposes no acceptance-capture control (Gap #6). An ' +
+          'accepted plan cannot be frozen as an immutable versioned snapshot through ' +
+          'the UI; the goal state (version N frozen) is unreachable.',
       )
       return
     }
 
-    // Snapshot the plan via independent read before any edit.
-    const beforeResp = await apiReader.get(`/dental/patients/${patientId}/treatment-plan`)
-    const beforeStr = beforeResp.ok() ? JSON.stringify(await beforeResp.json()) : ''
-    const hasVersioning = /"version":\s*\d+/.test(beforeStr)
+    // Baseline plan version BEFORE acceptance (independent read — branchId required).
+    const beforeResp = await apiReader.get(
+      `/dental/patients/${patientId}/treatment-plan?branchId=${branchId}`,
+    )
+    const beforeVersion = beforeResp.ok() ? ((await beforeResp.json())?.version ?? 0) : 0
 
-    if (hasVersioning) {
-      // Version field confirmed — immutable-snapshot versioning is implemented.
+    // Step 2: capture acceptance THROUGH the UI (DOM-only drive). This POSTs
+    // /treatment-plan/accept, which append-snapshots the live plan into a new
+    // immutable treatment_plan_version row.
+    const acceptPromise = page
+      .waitForResponse(
+        (r) => /\/treatment-plan\/accept/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      )
+      .catch(() => null)
+    await acceptCtl.click()
+    const acceptResp = await acceptPromise
+
+    // Step 3: independent read — confirm a frozen versioned snapshot now exists
+    // (the live plan reports the latest accepted version, which must have incremented).
+    const afterResp = await apiReader.get(
+      `/dental/patients/${patientId}/treatment-plan?branchId=${branchId}`,
+    )
+    const afterBody = afterResp.ok() ? await afterResp.json() : null
+    const afterVersion = afterBody?.version ?? 0
+
+    if (afterVersion >= 1 && afterVersion > beforeVersion) {
+      // Immutable-snapshot versioning works end-to-end: UI acceptance froze a new
+      // version, confirmed by a separate read.
       recordJourneyPass(META)
       return
     }
@@ -81,7 +106,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await expectJourneyBroken(
       page,
       META,
-      'Independent read shows no plan version field (Gap #6 confirmed) — accepted plan cannot be frozen.',
+      `UI plan acceptance did not freeze a new version snapshot. ` +
+        `accept POST=${acceptResp?.status() ?? 'no-resp'}, version before=${beforeVersion} ` +
+        `after=${afterVersion}. Versioning (Gap #6) not working through the UI.`,
     )
   } catch (err) {
     recordJourneyError(META, err)

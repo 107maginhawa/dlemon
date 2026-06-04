@@ -40,6 +40,15 @@ enum DentalTreatmentStatus {
   declined,
 }
 
+@doc("P1-18: clinical sequencing phase (systemic → disease control → re-eval → definitive → maintenance)")
+enum DentalTreatmentPhase {
+  systemic,
+  disease_control,
+  re_evaluation,
+  definitive,
+  maintenance,
+}
+
 enum ToothState {
   healthy,
   caries,
@@ -105,6 +114,9 @@ model CreateDentalVisitRequest {
   branchId: UUID;
   dentistMemberId: UUID;
   chiefComplaint?: string;
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateDentalVisitRequest {
@@ -135,6 +147,9 @@ model CreateDentalChartRequest {
   visitId: UUID;
   patientId: UUID;
   teeth: ToothChartState[];
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateToothRequest {
@@ -161,6 +176,8 @@ model UpdateToothRequest {
   status: DentalTreatmentStatus.planned,
   priceCents: 18000,
   carriedOver: false,
+  phase: DentalTreatmentPhase.definitive,
+  priority: 0,
 }, #{ title: "Planned composite restoration" })
 model DentalTreatment {
   id: UUID;
@@ -182,6 +199,12 @@ model DentalTreatment {
   sourceVisitId?: UUID;
   autoDismissed?: boolean;
   clinicalNotes?: string;
+
+  /** P1-18: clinical sequencing phase (null = unphased) */
+  phase?: DentalTreatmentPhase;
+
+  /** P1-18: intra-phase ordering — lower is scheduled sooner */
+  priority: int32;
 }
 
 model CreateDentalTreatmentRequest {
@@ -194,6 +217,16 @@ model CreateDentalTreatmentRequest {
   conditionCode?: string;
   priceCents: int32;
   clinicalNotes?: string;
+
+  /** P1-18: clinical sequencing phase */
+  phase?: DentalTreatmentPhase;
+
+  /** P1-18: intra-phase ordering (default 0) */
+  @minValue(0)
+  priority?: int32;
+
+  /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
 }
 
 model UpdateDentalTreatmentRequest {
@@ -207,6 +240,13 @@ model UpdateDentalTreatmentRequest {
   conditionCode?: string;
   priceCents?: int32;
   clinicalNotes?: string;
+
+  /** P1-18: re-phase a treatment item */
+  phase?: DentalTreatmentPhase;
+
+  /** P1-18: re-rank a treatment item within its phase */
+  @minValue(0)
+  priority?: int32;
 }
 
 model VisitNotes {

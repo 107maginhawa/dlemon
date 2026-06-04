@@ -161,21 +161,21 @@ test.describe('CEPH-05: Layer controls', () => {
   })
 
   test('Landmarks, Tracing, Arcs buttons present', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Landmarks' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Landmarks', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Tracing' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Arcs' })).toBeVisible()
   })
 
   test('Landmarks button defaults to aria-pressed=true', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Landmarks' })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Landmarks', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
   })
 
   test('clicking Landmarks toggles aria-pressed to false', async ({ page }) => {
-    await page.getByRole('button', { name: 'Landmarks' }).click()
-    await expect(page.getByRole('button', { name: 'Landmarks' })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Landmarks', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Landmarks', exact: true })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
@@ -184,8 +184,8 @@ test.describe('CEPH-05: Layer controls', () => {
   test('toggling Landmarks off hides ceph-landmark-layer SVG', async ({ page }) => {
     // Wait for canvas transform to be applied and overlays to mount
     await expect(page.getByTestId('ceph-landmark-layer')).toBeAttached({ timeout: 5000 })
-    await page.getByRole('button', { name: 'Landmarks' }).click()
-    await expect(page.getByRole('button', { name: 'Landmarks' })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Landmarks', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Landmarks', exact: true })).toHaveAttribute(
       'aria-pressed',
       'false',
     )

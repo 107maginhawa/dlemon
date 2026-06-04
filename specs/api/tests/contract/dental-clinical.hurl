@@ -17,48 +17,28 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; the caller becomes the org
+# owner + a dentist_owner member, so the rest of the suite runs on the user's token).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Clinical Test Clinic {{suffix}}",
+  "organizationName": "Clinical Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
+  "countryCode": "PH",
+  "branchName": "Main Branch",
   "timezone": "Asia/Manila",
   "address": "123 Test Street",
   "city": "Manila",
-  "phone": "+639001234568"
+  "phone": "+639001234568",
+  "ownerDisplayName": "Dr. Clinical Tester"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
-
-
-# 0c. Create branch membership for this user (grants branch access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Clinical Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
 # 0d. Create a dental patient
@@ -183,13 +163,15 @@ jsonpath "$.signedAt" != null
 
 
 # 8. Re-sign should fail (immutable after signing)
+# V-CLN-005: a signed consent form is immutable; re-signing is a business-rule
+# violation → 422 CONSENT_FORM_SIGNED (not 400).
 POST {{api}}/dental/visits/{{visit_id}}/consents/{{consent_id}}/sign
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "signatureData": "new-sig-data"
 }
-HTTP 400
+HTTP 422
 
 
 # ============================================================
@@ -285,13 +267,15 @@ jsonpath "$.status" == "in_fabrication"
 
 
 # 16. Invalid transition: inFabrication → fitted (skip)
+# V-CLN-008: an illegal lab-order FSM transition is a business-rule violation
+# → 422 INVALID_STATUS_TRANSITION (not 400).
 PATCH {{api}}/dental/visits/{{visit_id}}/lab-orders/{{order_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "status": "fitted"
 }
-HTTP 400
+HTTP 422
 
 
 # 17. Advance to delivered
@@ -352,7 +336,10 @@ HTTP 200
 jsonpath "$.data" count >= 1
 
 
-# 21. Update medical history entry (mark resolved)
+# 21. Update medical history entry — rejected: entries are immutable.
+# V-CLN-009 / AC-CLI-005: medical history is append-only; PATCH is not an allowed
+# method on this resource → 405 MEDICAL_HISTORY_IMMUTABLE. Corrections flow through
+# a new entry or the additive amendment path, not an in-place update.
 PATCH {{api}}/dental/clinical/medical-history/{{history_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -361,10 +348,9 @@ Content-Type: application/json
   "active": false,
   "notes": "BP controlled with medication"
 }
-HTTP 200
+HTTP 405
 [Asserts]
-jsonpath "$.active" == false
-jsonpath "$.resolvedDate" == "2025-01-01"
+jsonpath "$.code" == "MEDICAL_HISTORY_IMMUTABLE"
 
 
 # ============================================================
@@ -404,28 +390,40 @@ jsonpath "$.data" count >= 1
 # ============================================================
 
 # 24. Create treatment template
+# Current API runs two validation layers: the generated wire validator still
+# requires a `treatments` string, while the handler additionally requires
+# `branchId` + a non-empty `items[]` array
+# ({cdtCode, description, priceCents, toothNumber?, surfaces?}). The persisted row
+# is returned directly with `items` as a JSON array (no `treatments` field).
 POST {{api}}/dental/treatment-templates
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "name": "Composite Restoration Protocol {{suffix}}",
+  "branchId": "{{branch_id}}",
   "description": "Standard composite filling workflow",
-  "treatments": "[{\"code\":\"D2391\",\"description\":\"Composite resin, one surface, primary\"}]"
+  "treatments": "D2391",
+  "items": [
+    { "cdtCode": "D2391", "description": "Composite resin, one surface, primary", "priceCents": 12000 }
+  ]
 }
 HTTP 201
 [Captures]
 template_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.name" == "Composite Restoration Protocol {{suffix}}"
-jsonpath "$.treatments" isString
+jsonpath "$.items" isCollection
+jsonpath "$.items[0].cdtCode" == "D2391"
 
 
 # 25. List treatment templates
-GET {{api}}/dental/treatment-templates
+# Current API: requires ?branchId= and returns { templates: [...] }.
+GET {{api}}/dental/treatment-templates?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
+jsonpath "$.templates" isCollection
+jsonpath "$.templates" count >= 1
 
 
 # 26. Update treatment template
@@ -478,6 +476,9 @@ jsonpath "$.signedAt" != null
 
 
 # 30. Add addendum to visit notes
+# Current API: returns 201 with the appended note-version snapshot row
+# ({ id, noteId, version, snapshot, createdBy }); the addendum reason/content live
+# under `snapshot`, and there is no top-level visitId on a version row.
 POST {{api}}/dental/visits/{{visit_id}}/notes/addendum
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -485,17 +486,22 @@ Content-Type: application/json
   "reason": "Additional finding",
   "content": "Post-procedure: patient tolerated treatment well."
 }
-HTTP 200
+HTTP 201
 [Asserts]
-jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.snapshot.type" == "addendum"
+jsonpath "$.snapshot.reason" == "Additional finding"
+jsonpath "$.version" >= 2
 
 
 # 31. Get visit notes history
+# Current API returns a bare array of note-version snapshot rows (not a { data: [] }
+# envelope): the sign version + the addendum version.
 GET {{api}}/dental/visits/{{visit_id}}/notes/history
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$" isCollection
+jsonpath "$" count >= 2
 
 
 # 32. Create a second treatment template for apply-template test
@@ -504,7 +510,11 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "name": "Root Canal Protocol {{suffix}}",
-  "treatments": "[{\"code\":\"D3330\",\"description\":\"Endodontic therapy, molar tooth\"}]"
+  "branchId": "{{branch_id}}",
+  "treatments": "D3330",
+  "items": [
+    { "cdtCode": "D3330", "description": "Endodontic therapy, molar tooth", "priceCents": 80000 }
+  ]
 }
 HTTP 201
 [Captures]
@@ -512,9 +522,14 @@ apply_template_id: jsonpath "$.id"
 
 
 # 33. Apply template to visit
+# Current API returns 201 with { applied: [...], count } (templated treatments are
+# created as new planned treatment rows).
 POST {{api}}/dental/visits/{{visit_id}}/apply-template/{{apply_template_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 201
+[Asserts]
+jsonpath "$.count" >= 1
+jsonpath "$.applied" isCollection
 
 
 # 34. Create a second visit for carry-over source
@@ -556,16 +571,26 @@ HTTP 200
 # ============================================================
 
 # 37. Get dashboard summary
-GET {{api}}/dental/dashboard/summary
+# Current API requires ?branchId= (dentist_owner only) and returns a branch-scoped
+# summary of active payment plans + pending lab orders (the old todayVisits/
+# pendingInvoices/totalPatients/revenueThisMonthCents shape is gone).
+GET {{api}}/dental/dashboard/summary?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.todayVisits" isInteger
-jsonpath "$.pendingInvoices" isInteger
-jsonpath "$.totalPatients" isInteger
-jsonpath "$.revenueThisMonthCents" isInteger
+jsonpath "$.activePaymentPlans.count" isInteger
+jsonpath "$.activePaymentPlans.behindCount" isInteger
+jsonpath "$.activePaymentPlans.totalOutstandingCents" isInteger
+jsonpath "$.labOrders.totalPending" isInteger
+jsonpath "$.labOrders.ordered" isInteger
+jsonpath "$.labOrders.inFabrication" isInteger
+jsonpath "$.labOrders.overdueDelivery" isInteger
 
 
-# 38. Dashboard summary auth check
-GET {{api}}/dental/dashboard/summary
+# 38. Dashboard summary auth check → 401.
+# Hurl keeps an in-file cookie jar, so the signed-in session_token from step 0 is
+# auto-replayed; an invalid bearer overrides hurl's stored cookie and exercises the
+# unauthenticated path.
+GET {{api}}/dental/dashboard/summary?branchId={{branch_id}}
+Authorization: Bearer invalid-no-session
 HTTP 401

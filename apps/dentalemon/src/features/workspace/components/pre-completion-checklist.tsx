@@ -250,7 +250,7 @@ export function PreCompletionChecklist({
                   type="button"
                   onClick={handleComplete}
                   disabled={isPending || checks.length === 0}
-                  className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50"
+                  className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
                 >
                   {isPending ? 'Completing…' : 'Complete Visit'}
                 </button>

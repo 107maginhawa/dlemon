@@ -54,7 +54,8 @@ export async function DentalMembershipManagement_create(
   // owner holds any membership, their membership role governs as normal.
   const callerIsOwner = user.id === org.ownerPersonId;
   const callerMembership = await memberRepo.findActiveByPersonAndBranch(user.id, branchId);
-  if (!(callerIsOwner && !callerMembership)) {
+  const isOwnerBootstrap = callerIsOwner && !callerMembership;
+  if (!isOwnerBootstrap) {
     await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
   }
 
@@ -73,7 +74,10 @@ export async function DentalMembershipManagement_create(
     branchId,
     displayName: body.displayName,
     role: body.role as typeof dentalMemberships.role._.data,
-    personId: body.personId ?? null,
+    // Owner bootstrap: the owner's first membership IS the owner — link it to
+    // their account so they gain branch access (set-pin and all subsequent
+    // owner operations assert an active membership for user.id).
+    personId: body.personId ?? (isOwnerBootstrap ? user.id : null),
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
   });

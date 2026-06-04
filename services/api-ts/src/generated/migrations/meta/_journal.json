@@ -526,6 +526,104 @@
       "when": 1780114090896,
       "tag": "0074_black_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1780151274792,
+      "tag": "0075_gifted_vector",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1780238827180,
+      "tag": "0076_past_annihilus",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1780264603207,
+      "tag": "0077_nervous_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1780280692975,
+      "tag": "0078_loving_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1780315051808,
+      "tag": "0079_zippy_alice",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1780401451808,
+      "tag": "0080_audit_log_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1780393831011,
+      "tag": "0081_conscious_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1780398720526,
+      "tag": "0082_free_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1780406122848,
+      "tag": "0083_calm_namor",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1780406122849,
+      "tag": "0084_dental_appointment_no_overlap",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1780411169636,
+      "tag": "0085_watery_amazoness",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1780413044355,
+      "tag": "0086_serious_wolfsbane",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1780416319214,
+      "tag": "0087_solid_colleen_wing",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1780459483237,
+      "tag": "0088_sloppy_sprite",
+      "breakpoints": true
     }
   ]
 }

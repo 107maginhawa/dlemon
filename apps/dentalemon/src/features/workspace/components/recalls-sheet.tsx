@@ -4,6 +4,7 @@
  * B3: List recalls, create new recall, update status via FSM buttons.
  */
 import React, { useState } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { X, CalendarClock, Plus } from 'lucide-react';
 import {
   useRecalls,
@@ -106,7 +107,7 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
               onClick={() => onUpdateStatus(recall.id, { status: next })}
               className="rounded px-2 py-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors disabled:opacity-50"
             >
-              {next === 'cancelled' ? 'Cancel' : TRANSITION_BUTTON_LABELS[next]}
+              {next === 'cancelled' ? 'Cancel' : TRANSITION_BUTTON_LABELS[recall.status]}
             </button>
           ))}
         </div>
@@ -120,6 +121,9 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
 // ---------------------------------------------------------------------------
 
 export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const { recalls, isLoading, isError, createRecall, updateRecall, isCreating, isUpdating } =
     useRecalls(patientId);
 
@@ -263,7 +267,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
               <button
                 type="submit"
                 disabled={isCreating || !formDueDate}
-                className="rounded px-3 py-1.5 text-xs font-semibold bg-[#FFE97D] text-[#4A4018] hover:bg-[#f5df6a] disabled:opacity-50"
+                className="rounded px-3 py-1.5 text-xs font-semibold bg-lemon text-lemon-foreground hover:bg-[#f5df6a] disabled:opacity-50"
               >
                 {isCreating ? 'Saving…' : 'Save Recall'}
               </button>

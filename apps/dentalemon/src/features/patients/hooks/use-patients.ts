@@ -9,7 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { listDentalPatientsOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { PatientCardData } from '../components/patient-folder-card';
-import type { ToothState } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothState } from '@/lib/dental-chart-types';
 
 // ─── Raw API shape ──────────────────────────────────────────────────────────
 
@@ -84,10 +84,13 @@ export interface UsePatientsOptions {
 export function usePatients(options: UsePatientsOptions) {
   const { branchId, searchQuery, status, needsFollowUp } = options;
 
+  // branchId is required by the API contract (GET /dental/patients); pass through
+  // (empty when unset) to satisfy the generated type — the runtime 400-guard and
+  // the caller's branch context handle the unset case.
   const query = useQuery({
     ...listDentalPatientsOptions({
       query: {
-        branchId: branchId ?? undefined,
+        branchId: branchId ?? '',
         q: searchQuery,
         status: status === 'all' ? undefined : status,
         needsFollowUp,

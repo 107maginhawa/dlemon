@@ -1,0 +1,62 @@
+/**
+ * useSheetA11y — WCAG 2.4.3 focus management for sheet/slideout overlays.
+ *
+ * Behaviour contract:
+ *   1. When `open` transitions false→true, capture `document.activeElement`
+ *      as the "opener" so focus can be returned after close.
+ *   2. While open, listen for `Escape` on the document and call `onClose`.
+ *   3. When `open` transitions true→false, return focus to the captured opener.
+ *
+ * Usage:
+ *   const { containerRef } = useSheetA11y({ open, onClose });
+ *   // Attach containerRef to the outermost element of the sheet/slideout.
+ *   // The hook does NOT auto-focus the container — sheets with their own
+ *   // autofocus (e.g. first input) should handle that separately.
+ */
+
+import { useEffect, useRef } from 'react';
+
+export interface UseSheetA11yOptions {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function useSheetA11y({ open, onClose }: UseSheetA11yOptions) {
+  // Element that triggered the sheet — we return focus here on close.
+  const openerRef = useRef<Element | null>(null);
+
+  // Capture the opener when the sheet opens, restore focus when it closes.
+  useEffect(() => {
+    if (open) {
+      // Capture the active element at the moment the sheet opens.
+      openerRef.current = document.activeElement;
+    } else {
+      // Restore focus to the opener when the sheet closes.
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (opener && opener instanceof HTMLElement) {
+        // Defer one tick so the sheet's exit animation/unmount doesn't steal focus back.
+        requestAnimationFrame(() => {
+          opener.focus({ preventScroll: true });
+        });
+      }
+    }
+  }, [open]);
+
+  // Close on Escape while the sheet is open.
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [open, onClose]);
+}

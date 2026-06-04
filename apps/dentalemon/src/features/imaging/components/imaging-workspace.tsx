@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { composeCephCanvas, canvasToPngBlob } from '../../../lib/ceph-export'
+import { composeCephCanvas, canvasToPngBlob } from '../lib/ceph-export'
 import type { LayerState } from './CephLayerPanel'
 import { useOfflineCache } from '../hooks/use-offline-cache'
 import { useMeasurements } from '../hooks/use-measurements'
@@ -9,6 +9,8 @@ import { CalibrationDialog } from './calibration-dialog'
 import { FindingsSidebar } from './FindingsSidebar'
 import { CephWorkspacePanel } from './CephWorkspacePanel'
 import { CephLandmarkLayer } from './CephLandmarkLayer'
+import { CephLoupe } from './CephLoupe'
+import { decideCephKey, nextUnplacedCode } from '../lib/ceph-keyboard'
 import { CephTracingOverlay } from './CephTracingOverlay'
 import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
@@ -16,6 +18,7 @@ import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
+import { apiBaseUrl } from '@/lib/config'
 import {
   processToolClick,
   buildLabelMeasurement,
@@ -83,6 +86,8 @@ export function ImagingWorkspace({
   const [cephPanelOpen, setCephPanelOpen] = useState(false)
   const [cephTransform, setCephTransform] = useState<CephTransformState | null>(null)
   const [cephSelectedCode, setCephSelectedCode] = useState<import('../hooks/use-ceph-landmarks').CephLandmarkCode | null>(null)
+  // Pointer position (main-canvas px) for the magnifier loupe; null when off the image.
+  const [cephPointer, setCephPointer] = useState<{ x: number; y: number } | null>(null)
   const [cephLayers, setCephLayers] = useState<LayerState>({ landmarks: true, tracing: true, arcs: true })
 
   const isCeph = modality === 'cephalometric'
@@ -131,6 +136,11 @@ export function ImagingWorkspace({
       const cached = await getCachedBlob(imageId)
       const src = cached ? URL.createObjectURL(cached) : imageUrl
       const img = new Image()
+      // Request CORS so the composited canvas stays untainted — the loupe reads
+      // pixels back from it and the report PNG export calls toBlob(). The storage
+      // origin (MinIO/S3) returns Access-Control-Allow-Origin; same-origin blob:
+      // URLs ignore this attribute.
+      img.crossOrigin = 'anonymous'
       img.onload = () => {
         if (cancelled) return
         imgRef.current = img
@@ -153,6 +163,26 @@ export function ImagingWorkspace({
       cancelled = true
     }
   }, [imageId, imageUrl, getCachedBlob, setCachedBlob, render])
+
+  // Keep the canvas backing-store + ceph transform in sync with the element's
+  // displayed size. Without this, resizing the window leaves canvas.width/height
+  // (and cephTransform) stale, so the SVG landmark/tracing overlays — mapped via
+  // imageToScreen(transform) — drift away from the image ("points all over").
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const w = canvas.offsetWidth
+      const h = canvas.offsetHeight
+      if (!w || !h) return
+      if (canvas.width === w && canvas.height === h) return
+      canvas.width = w
+      canvas.height = h
+      render()
+    })
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [render])
 
   // Wheel zoom
   useEffect(() => {
@@ -266,8 +296,9 @@ export function ImagingWorkspace({
     async (actualMm: number) => {
       if (calibrationPixelDist <= 0 || actualMm <= 0) return
       const pxMm = actualMm / calibrationPixelDist
-      await fetch(`/dental/imaging/images/${imageId}/calibration`, {
+      await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/calibration`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pixelSpacingMm: pxMm }),
       })
@@ -296,6 +327,38 @@ export function ImagingWorkspace({
     [imageId, cephLandmarks],
   )
 
+  // #13 keyboard flow: Tab/Enter advance to next unplaced; arrows nudge the
+  // selected placed (non-locked) landmark 1px. preventDefault traps focus so Tab
+  // doesn't escape to browser chrome.
+  const handleCephKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isCeph || !cephPanelOpen) return
+      const { action, preventDefault } = decideCephKey({
+        key: e.key,
+        selectedCode: cephSelectedCode,
+        landmarks: cephLandmarks.map((l) => ({
+          landmarkCode: l.landmarkCode,
+          x: l.x,
+          y: l.y,
+          status: l.status,
+        })),
+      })
+      if (preventDefault) e.preventDefault()
+      switch (action.type) {
+        case 'select':
+          setCephSelectedCode(action.code)
+          return
+        case 'nudge':
+          dragLandmark(action.code, action.x, action.y)
+          void commitLandmark.mutateAsync({ code: action.code, x: action.x, y: action.y })
+          return
+        case 'none':
+          return
+      }
+    },
+    [isCeph, cephPanelOpen, cephSelectedCode, cephLandmarks, dragLandmark, commitLandmark],
+  )
+
   const isCalibrated = Boolean(pixelSpacingMm)
 
   return (
@@ -315,7 +378,7 @@ export function ImagingWorkspace({
         </label>
         <button
           onClick={() => setFindingsPanelOpen((prev) => !prev)}
-          className={`px-2 py-1 text-xs rounded ${findingsPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
+          className={`px-2 py-1 text-xs rounded ${findingsPanelOpen ? 'bg-lemon/20 text-lemon border border-lemon/40' : 'text-white bg-zinc-700'}`}
           aria-pressed={findingsPanelOpen}
         >
           Findings
@@ -323,7 +386,7 @@ export function ImagingWorkspace({
         {isCeph && (
           <button
             onClick={() => setCephPanelOpen((prev) => !prev)}
-            className={`px-2 py-1 text-xs rounded ${cephPanelOpen ? 'bg-[#FFE97D]/20 text-[#FFE97D] border border-[#FFE97D]/40' : 'text-white bg-zinc-700'}`}
+            className={`px-2 py-1 text-xs rounded ${cephPanelOpen ? 'bg-lemon/20 text-lemon border border-lemon/40' : 'text-white bg-zinc-700'}`}
             aria-pressed={cephPanelOpen}
             aria-label="Toggle ceph panel"
           >
@@ -333,13 +396,21 @@ export function ImagingWorkspace({
         <button onClick={fullscreen} className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
       </div>
 
-      <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} />
+      <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} onRequestCalibrate={() => setToolMode('calibration')} />
       <AnnotationToolbar toolMode={toolMode} onToolChange={setToolMode} />
 
       <div className="flex flex-row flex-1 overflow-hidden">
         <div
           style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)`, flex: 1, position: 'relative' }}
-          className="overflow-hidden"
+          className="overflow-hidden outline-none"
+          tabIndex={isCeph && cephPanelOpen ? 0 : undefined}
+          onKeyDown={handleCephKeyDown}
+          onPointerMove={(e) => {
+            if (!isCeph || !cephPanelOpen || !cephSelectedCode) return
+            const rect = e.currentTarget.getBoundingClientRect()
+            setCephPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+          }}
+          onPointerLeave={() => setCephPointer(null)}
         >
           <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" style={{ display: 'block' }} />
           <svg
@@ -398,12 +469,26 @@ export function ImagingWorkspace({
                   transform={cephTransform}
                   width={cephTransform.canvasWidth}
                   height={cephTransform.canvasHeight}
-                  onPlace={(code, x, y) => { setCephSelectedCode(null); void commitLandmark.mutateAsync({ code, x, y }) }}
+                  onPlace={(code, x, y) => {
+                    void commitLandmark.mutateAsync({ code, x, y })
+                    // Advance to the next unplaced landmark (keyboard-free fast flow)
+                    const placed = new Set(cephLandmarks.map((l) => l.landmarkCode))
+                    placed.add(code)
+                    setCephSelectedCode(nextUnplacedCode(placed, code))
+                  }}
                   onDrag={(code, x, y) => dragLandmark(code, x, y)}
                   onCommit={(code, x, y) => void commitLandmark.mutateAsync({ code, x, y })}
                 />
               )}
             </>
+          )}
+
+          {isCeph && cephPanelOpen && (
+            <CephLoupe
+              sourceCanvas={canvasRef.current}
+              pointer={cephPointer}
+              selectedCode={cephSelectedCode}
+            />
           )}
         </div>
 
@@ -414,6 +499,8 @@ export function ImagingWorkspace({
           onClose={() => setCephPanelOpen(false)}
           onLayerChange={(key, value) => setCephLayers((prev) => ({ ...prev, [key]: value }))}
           onExportPng={(v) => void handleExportPng(v)}
+          selectedCode={cephSelectedCode}
+          onSelectCode={setCephSelectedCode}
         />
       </div>
 

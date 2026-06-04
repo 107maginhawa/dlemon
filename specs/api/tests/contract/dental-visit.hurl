@@ -2,6 +2,15 @@
 # Tests: create visit (draft), update to active, upsert chart, update tooth,
 # add treatment, update treatment, add notes, lock visit, tooth history.
 
+# G2.5-S6 — tooth history auth check.
+# Run BEFORE any sign-up so Hurl's cookie jar is empty (Hurl resends the
+# session cookie automatically once it has been set, so an unauthenticated
+# request must precede the sign-up to truly exercise the 401 path). The
+# patientId is a throwaway UUID — auth middleware rejects before the handler runs.
+GET {{api}}/dental/visits/history/00000000-0000-0000-0000-000000000000/teeth/36
+HTTP 401
+
+
 # 0. Sign up as a user
 POST {{api}}/auth/sign-up/email
 Content-Type: application/json
@@ -17,61 +26,42 @@ session_token: cookie "better-auth.session_token"
 user_id: jsonpath "$.user.id"
 
 
-# 0a. Create a dental organization
-POST {{api}}/dental/organizations
+# 0a. Self-service onboarding — provisions org + default branch + owner membership
+# in one call (replaces the old org→branch→member setup; the caller becomes the org
+# owner + a dentist_owner member, so the rest of the suite runs on the user's token).
+POST {{api}}/dental/onboarding
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "name": "Visit Test Clinic {{suffix}}",
+  "organizationName": "Visit Test Clinic {{suffix}}",
   "tier": "clinic",
-  "countryCode": "PH"
-}
-HTTP 201
-[Captures]
-org_id: jsonpath "$.id"
-
-
-# 0b. Create a branch
-POST {{api}}/dental/organizations/{{org_id}}/branches
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "name": "Main Branch",
+  "countryCode": "PH",
+  "branchName": "Main Branch",
   "timezone": "Asia/Manila",
   "address": "123 Test Street",
   "city": "Manila",
-  "phone": "+639001234567"
+  "phone": "+639001234567",
+  "ownerDisplayName": "Dr. Visit Tester"
 }
 HTTP 201
 [Captures]
-branch_id: jsonpath "$.id"
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+dentist_member_id: jsonpath "$.membershipId"
 
 
-# 0c. Create a dental patient
+# 0b. Create a dental patient
 POST {{api}}/dental/patients
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "displayName": "Visit Test Patient {{suffix}}",
-  "consentGiven": true
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
 }
 HTTP 201
 [Captures]
 patient_id: jsonpath "$.id"
-
-
-# 0d. Create branch membership for this user (grants branch access)
-POST {{api}}/dental/organizations/{{org_id}}/branches/{{branch_id}}/members
-Cookie: better-auth.session_token={{session_token}}
-Content-Type: application/json
-{
-  "displayName": "Dr. Visit Tester",
-  "role": "dentist_owner",
-  "personId": "{{user_id}}"
-}
-HTTP 201
-[Captures]
-dentist_member_id: jsonpath "$.id"
 
 
 # 1. Create a dental visit (draft)
@@ -208,6 +198,42 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "planned"
+
+
+# 9b. Create a consent form for the visit (required before performing a treatment
+# and before completing the visit — P0-003 / VISIT_CONSENT_REQUIRED gate).
+POST {{api}}/dental/visits/{{visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "tmpl-restorative",
+  "templateName": "Restorative Treatment Consent",
+  "procedureNature": "Resin composite restoration on tooth #26",
+  "benefits": "Restores tooth structure and function",
+  "risks": "Post-operative sensitivity",
+  "alternatives": "No treatment, extraction",
+  "risksOfNonTreatment": "Progression of caries, possible pulp involvement"
+}
+HTTP 201
+[Captures]
+consent_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.signed" == false
+
+
+# 9c. Sign the consent form (satisfies the signed-consent gate)
+POST {{api}}/dental/visits/{{visit_id}}/consents/{{consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+}
+HTTP 200
+[Asserts]
+jsonpath "$.signed" == true
 
 
 # 10. Update treatment to performed (planned → performed)
@@ -362,8 +388,3 @@ HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 jsonpath "$.pagination" isCollection
-
-
-# NEW: G2.5-S6 — tooth history auth check
-GET {{api}}/dental/visits/history/{{patient_id}}/teeth/36
-HTTP 401

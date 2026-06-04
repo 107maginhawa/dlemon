@@ -40,6 +40,9 @@ import { deleteMeasurement } from './deleteMeasurement';
 import { deleteImage } from './deleteImage';
 import { updateImageCalibration } from './updateImageCalibration';
 import { updateImageModality } from './updateImageModality';
+import { finalizeCbctStudy } from './finalizeCbctStudy';
+import { getCbctViewerLink } from './getCbctViewerLink';
+import { buildSyntheticDicom } from './repos/dicom-fixture';
 
 const db = createDatabase({
   url: process.env['DATABASE_URL'] ?? 'postgresql://postgres:password@localhost:5432/monobase_test',
@@ -70,6 +73,14 @@ const PATIENT_ID = 'd1a00000-0000-4000-8000-0000000000f5';
 const storage = {
   generateUploadUrl: async (_fileId: string, _mime: string) =>
     'https://storage.example.com/presigned-upload-url',
+  generateDownloadUrl: async (fileId: string) =>
+    `https://storage.example.com/presigned-get/${fileId}`,
+  initiateMultipartUpload: async (_fileId: string, _filename: string, _mime: string) =>
+    'test-upload-id',
+  generatePartUploadUrl: async (_fileId: string, _uploadId: string, partNumber: number) =>
+    `https://storage.example.com/presigned-part/${partNumber}`,
+  completeMultipartUpload: async () => undefined,
+  abortMultipartUpload: async () => undefined,
 } as any;
 
 // ---------------------------------------------------------------------------
@@ -117,6 +128,10 @@ function buildTestApp(user?: { id: string; email: string }) {
   app.patch('/dental/imaging/images/:imageId/calibration', updateImageCalibration as any);
   app.patch('/dental/imaging/images/:imageId/modality', updateImageModality as any);
 
+  // P2-7 CBCT
+  app.post('/dental/imaging/studies/:studyId/cbct/finalize', finalizeCbctStudy as any);
+  app.get('/dental/imaging/studies/:studyId/cbct/viewer-link', getCbctViewerLink as any);
+
   return app;
 }
 
@@ -144,7 +159,11 @@ async function seedOrgsAndMembers() {
     },
     {
       id: FREE_ORG_ID, name: 'Imaging Int Free Clinic', tier: 'solo',
-      ownerPersonId: DENTIST.id, countryCode: 'PH', imagingTier: 'free',
+      // Distinct owner: the dental_org_one_active_per_owner invariant forbids one
+      // owner holding two active solo/clinic orgs. The dentist exercises the free
+      // branch via its membership below (tier-gate test, not ownership), so a
+      // separate owner is the faithful seed.
+      ownerPersonId: 'c1a00000-0000-4000-8000-0000000000ff', countryCode: 'PH', imagingTier: 'free',
       createdBy: DENTIST.id, updatedBy: DENTIST.id,
     },
   ]).onConflictDoNothing();
@@ -941,5 +960,227 @@ describe('updateImageModality', () => {
       ...json({ modality: 'bitewing' }),
     });
     expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// P2-7 CBCT — multipart create routing, finalize parse, viewer-link, tier gate,
+// volume surfacing, finding frame_index. Real DB wiring.
+// =============================================================================
+
+/** Seed a CBCT study + pre-finalize image (is_volume=false) + stored_file. */
+async function seedCbctStudy(opts: { branchId?: string } = {}): Promise<{ studyId: string; imageId: string; fileId: string }> {
+  const { imagingStudies, imagingStudyImages } = await import('./repos/imaging.schema');
+  const { storedFiles } = await import('@/handlers/storage/repos/file.schema');
+  const studyId = uuidv4();
+  const imageId = uuidv4();
+  const fileId = uuidv4();
+  const branchId = opts.branchId ?? BRANCH_ID;
+
+  await db.insert(storedFiles).values({
+    id: fileId, filename: 'cbct.dcm', mimeType: 'application/dicom', size: 50 * 1024 * 1024,
+    status: 'available', owner: DENTIST.id, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  });
+  await db.insert(imagingStudies).values({
+    id: studyId, patientId: PATIENT_ID, visitId: null, branchId, acquiredBy: DENTIST.id,
+    modality: 'cbct', status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  });
+  await db.insert(imagingStudyImages).values({
+    id: imageId, studyId, fileId, modality: 'cbct', sequenceNumber: 0,
+    dicomMetadata: { fileName: 'cbct.dcm', mimeType: 'application/dicom' },
+    isVolume: false, status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  });
+  return { studyId, imageId, fileId };
+}
+
+const dicomB64 = (opts?: Parameters<typeof buildSyntheticDicom>[0]) =>
+  Buffer.from(buildSyntheticDicom(opts)).toString('base64');
+
+describe('P2-7 CBCT createImagingStudy multipart routing', () => {
+  test('large cbct DICOM routes to S3 multipart (uploadId + parts, not single PUT)', async () => {
+    const app = buildTestApp(DENTIST);
+    const res = await app.request('/dental/imaging/studies', {
+      method: 'POST',
+      ...json({
+        patientId: PATIENT_ID, branchId: BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom', size: 50 * 1024 * 1024,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.uploadMethod).toBe('MULTIPART');
+    expect(body.uploadId).toBe('test-upload-id');
+    expect(body.partCount).toBe(10);
+    expect(Array.isArray(body.partUrls)).toBe(true);
+  });
+
+  test('free-tier branch blocked from cbct create with IMAGING_TIER_REQUIRED', async () => {
+    const app = buildTestApp(DENTIST);
+    const res = await app.request('/dental/imaging/studies', {
+      method: 'POST',
+      ...json({
+        patientId: PATIENT_ID, branchId: FREE_BRANCH_ID, modality: 'cbct',
+        filename: 'cbct.dcm', mimeType: 'application/dicom', size: 50 * 1024 * 1024,
+      }),
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('IMAGING_TIER_REQUIRED');
+  });
+});
+
+describe('P2-7 finalizeCbctStudy', () => {
+  test('parses DICOM tags, sets is_volume + spacing + frameCount + UIDs + dicom_tag calibration', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST',
+      ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.image.isVolume).toBe(true);
+    expect(body.image.frameCount).toBe(128);
+    expect(body.image.sliceThicknessMm).toBeCloseTo(0.3, 4);
+    expect(body.image.seriesInstanceUid).toBe('1.2.3.4.6');
+    expect(body.image.studyInstanceUid).toBe('1.2.3.4.5');
+    expect(body.image.pixelSpacingMm).toBeCloseTo(0.25, 4);
+    expect(body.image.dicomMetadata.calibrationMethod).toBe('dicom_tag');
+    expect(body.image.dicomMetadata.spacing).toEqual([0.25, 0.25, 0.3]);
+  });
+
+  test('malformed DICOM → 422 INVALID_DICOM, NO half-written volume state', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    const junkB64 = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]).toString('base64');
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST',
+      ...json({ imageId, dicomBase64: junkB64 }),
+    });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('INVALID_DICOM');
+
+    // The image row must remain at its pre-finalize state (is_volume still false).
+    const { imagingStudyImages } = await import('./repos/imaging.schema');
+    const { eq } = await import('drizzle-orm');
+    const [img] = await db.select().from(imagingStudyImages).where(eq(imagingStudyImages.id, imageId));
+    expect(img!.isVolume).toBe(false);
+    expect(img!.frameCount).toBeNull();
+  });
+
+  test('403 when caller lacks branch role (hygienist)', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(HYGIENIST);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST',
+      ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('404 for a study in another tenant/branch the caller cannot access', async () => {
+    const { studyId, imageId } = await seedCbctStudy({ branchId: OTHER_BRANCH_ID });
+    // OUTSIDER has no membership anywhere → assertBranchRole denies.
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST',
+      ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    expect([403, 404]).toContain(res.status);
+  });
+
+  test('401 when unauthenticated', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(undefined);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST',
+      ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('P2-7 getCbctViewerLink (A1 presigned download handoff)', () => {
+  test('returns presigned download URL + viewerKind=download for a finalized volume', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    // finalize first so is_volume=true
+    await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST', ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/viewer-link`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.viewerKind).toBe('download');
+    expect(body.downloadUrl).toMatch(/^https:\/\//);
+    expect(body.isVolume).toBe(true);
+    expect(body.frameCount).toBe(128);
+  });
+
+  test('422 NOT_A_VOLUME for a non-finalized (flat) study', async () => {
+    const { studyId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/viewer-link`);
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('NOT_A_VOLUME');
+  });
+
+  test('401 when unauthenticated', async () => {
+    const { studyId } = await seedCbctStudy();
+    const app = buildTestApp(undefined);
+    const res = await app.request(`/dental/imaging/studies/${studyId}/cbct/viewer-link`);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('P2-7 volume surfacing + finding frame_index', () => {
+  test('getImagingStudy surfaces viewerKind=volume after finalize', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST', ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    const res = await app.request(`/dental/imaging/studies/${studyId}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.images[0].viewerKind).toBe('volume');
+    expect(body.images[0].isVolume).toBe(true);
+  });
+
+  test('listPatientImages surfaces isVolume/frameCount/viewerKind', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST', ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    const item = body.items.find((i: any) => i.studyId === studyId);
+    expect(item).toBeDefined();
+    expect(item.isVolume).toBe(true);
+    expect(item.frameCount).toBe(128);
+    expect(item.viewerKind).toBe('volume');
+  });
+
+  test('createFinding persists frame_index on a CBCT volume finding', async () => {
+    const { studyId, imageId } = await seedCbctStudy();
+    const app = buildTestApp(DENTIST);
+    await app.request(`/dental/imaging/studies/${studyId}/cbct/finalize`, {
+      method: 'POST', ...json({ imageId, dicomBase64: dicomB64() }),
+    });
+    const res = await app.request(`/dental/imaging/images/${imageId}/findings`, {
+      method: 'POST',
+      ...json({
+        type: 'periapical_lesion', toothNumber: 36,
+        visitId: uuidv4(), patientId: PATIENT_ID, branchId: BRANCH_ID,
+        frameIndex: 64,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.frameIndex).toBe(64);
   });
 });

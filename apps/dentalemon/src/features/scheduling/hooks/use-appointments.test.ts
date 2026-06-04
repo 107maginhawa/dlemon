@@ -102,6 +102,20 @@ describe('useAppointments', () => {
     expect(result.current.error).not.toBeNull();
   });
 
+  test('V-FE-ERR-002: on failure surfaces error + refetch with empty list (calendar must render error, not empty)', async () => {
+    global.fetch = mock(() => jsonResponse({ message: 'Internal Server Error' }, 500));
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      { wrapper: makeWrapper(qc) },
+    );
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    // The calendar route branches on `error` first; appointments stays empty,
+    // so without the error branch it would collapse to the empty-grid state.
+    expect(result.current.appointments).toHaveLength(0);
+    expect(typeof result.current.refetch).toBe('function');
+  });
+
   test('refetch function is defined', async () => {
     global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();

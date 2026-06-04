@@ -11,82 +11,27 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock } from './helpers/e2e-seed';
 
 async function setup(page: Page) {
-  const suffix = Date.now();
-
-  // Sign up
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Handoff Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(`handoff-e2e-${suffix}@example.org`);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Seed org + branch + owner membership
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Handoff Clinic', tier: 'clinic', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-  const orgId = orgRes.id;
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Branch', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId });
-  const branchId = branchRes.id;
-
-  // Create owner membership for session user
-  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    const session = await sessionRes.json() as any;
-    const personId = session?.user?.id;
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'Handoff Owner', role: 'dentist_owner', personId }),
-    });
-    return res.json();
-  }, { api: API, orgId, branchId });
-  const memberId = memberRes.id;
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
+  const { orgId, branchId, memberId } = await signUpOnboardAndUnlock(page, {
+    tier: 'clinic',
+    label: 'Handoff',
+  });
 
   // Create patient via dental patients endpoint
-  const patientRes = await page.evaluate(async (api) => {
+  const patientRes = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
     const res = await fetch(`${api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ displayName: 'Russel Herrera', consentGiven: true }),
+      body: JSON.stringify({ displayName: 'Russel Herrera', branchId, consentGiven: true }),
     });
+    if (!res.ok) throw new Error(`Patient create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
-  }, API);
+  }, { api: API, branchId });
 
   return { patientId: patientRes.id, branchId, memberId, orgId };
 }

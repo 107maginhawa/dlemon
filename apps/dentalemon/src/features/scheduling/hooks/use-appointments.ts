@@ -76,7 +76,7 @@ function normalizeAppointment(raw: Record<string, unknown>): Appointment {
 export function useAppointments({ date, view, branchId }: UseAppointmentsOptions) {
   const { from, to } = computeWindow(date, view);
   const query = useQuery({
-    ...listAppointmentsOptions({ query: { branchId, date_from: from, date_to: to } as Record<string, unknown> }),
+    ...listAppointmentsOptions({ query: { branchId: branchId as string, date_from: from, date_to: to } }),
     select: (data) => {
       const rows = (Array.isArray(data) ? data : (data as Record<string, unknown>).appointments ?? []) as Record<string, unknown>[];
       return rows.map(normalizeAppointment);

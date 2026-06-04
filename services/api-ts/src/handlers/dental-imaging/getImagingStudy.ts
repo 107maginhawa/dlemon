@@ -13,6 +13,7 @@ import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { ImagingRepository } from './repos/imaging.repo';
+import { viewerKindFor } from './repos/imaging.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 
 export async function getImagingStudy(ctx: BaseContext): Promise<Response> {
@@ -32,11 +33,16 @@ export async function getImagingStudy(ctx: BaseContext): Promise<Response> {
 
   const images = await repo.listImagesByStudy(studyId);
 
-  // Attach tooth numbers to each image
+  // Attach tooth numbers + P2-7 viewerKind discriminator to each image so the
+  // frontend renders the right affordance (volume card vs flat image).
   const imagesWithTeeth = await Promise.all(
     images.map(async (image) => {
       const toothNumbers = await repo.listTeethByImage(image.id);
-      return { ...image, toothNumbers };
+      return {
+        ...image,
+        toothNumbers,
+        viewerKind: viewerKindFor({ isVolume: image.isVolume, modality: image.modality }),
+      };
     }),
   );
 

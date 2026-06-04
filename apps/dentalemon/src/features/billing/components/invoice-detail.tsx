@@ -11,14 +11,18 @@ import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/lib/config';
 import {
   type InvoiceData,
-  canIssue, canVoid, canRecord,
+  showIssueButton, showVoidButton, showRecordButton,
   validatePaymentForm, buildPaymentPayload,
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
-export { canIssue, canVoid, canRecord, validatePaymentForm, buildPaymentPayload, calcChangeAmount } from './invoice-detail.helpers';
+export {
+  canIssue, canVoid, canRecord,
+  showIssueButton, showVoidButton, showRecordButton,
+  validatePaymentForm, buildPaymentPayload, calcChangeAmount,
+} from './invoice-detail.helpers';
 
 const API = apiBaseUrl;
 
@@ -29,9 +33,18 @@ export interface InvoiceDetailProps {
   onUpdated?: () => void;
   /** Called when the user clicks "View Payment Plan" */
   onViewPlan?: () => void;
+  /**
+   * Whether the current role may perform billing WRITE lifecycle actions
+   * (issue / void). Defaults to `true` to preserve existing callers; the
+   * billing route passes `canWriteBilling(role)` so roles like `staff_full`
+   * and `billing_staff` see "Record Payment" but NOT "Issue"/"Void"
+   * (J-RBAC-001). Recording a payment is always allowed when the invoice
+   * status permits it.
+   */
+  canWrite?: boolean;
 }
 
-export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +54,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
   const [receiptNumber, setReceiptNumber] = useState('');
   const [paymentErrors, setPaymentErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showVoidForm, setShowVoidForm] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && invoiceId) loadInvoice();
@@ -80,14 +96,29 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
 
   async function handleVoid() {
     if (!invoice) return;
+    // Contract (API_CONTRACTS §void): reason is required (min 5) so the void is
+    // auditable. Guard client-side before sending.
+    const reason = voidReason.trim();
+    if (reason.length < 5) {
+      setVoidError('Please enter a void reason (at least 5 characters).');
+      return;
+    }
+    setVoidError(null);
     setSaving(true);
     try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/void`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason }),
+      });
       if (!res.ok) throw new Error('Failed to void invoice');
+      setShowVoidForm(false);
+      setVoidReason('');
       await loadInvoice();
       onUpdated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed');
+      setVoidError(err instanceof Error ? err.message : 'Failed');
     } finally {
       setSaving(false);
     }
@@ -124,6 +155,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
   function handleClose() {
     setShowPaymentForm(false);
     setPaymentErrors([]);
+    setShowVoidForm(false);
+    setVoidReason('');
+    setVoidError(null);
     setError(null);
     onClose();
   }
@@ -252,7 +286,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
                     <tbody>
                       {invoice.payments.map((pmt) => (
                         <tr key={pmt.id}>
-                          <td className="px-3 py-2.5 text-xs font-semibold text-[#4A4018]">{pmt.receiptNumber}</td>
+                          <td className="px-3 py-2.5 text-xs font-semibold text-lemon-foreground">{pmt.receiptNumber}</td>
                           <td className="px-3 py-2.5 text-[13px] tabular-nums">{new Date(pmt.createdAt).toLocaleDateString()}</td>
                           <td className="px-3 py-2.5 text-[13px]">{METHOD_LABELS[pmt.method] ?? pmt.method}</td>
                           <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(pmt.amountCents)}</td>
@@ -280,14 +314,14 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
                   )}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pay-amount">Amount *</label>
-                    <input id="pay-amount" type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none" />
+                    <input id="pay-amount" type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Method *</label>
                     <div className="flex border border-border rounded-xl overflow-hidden bg-secondary/30 p-0.5 gap-0.5" role="group">
                       {PAYMENT_METHODS.map((m) => (
                         <button key={m} type="button" onClick={() => setPaymentMethod(m)} aria-pressed={paymentMethod === m}
-                          className={`flex-1 h-9 text-[13px] font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-[#FFE97D] text-[#4A4018] font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
+                          className={`flex-1 h-9 text-[13px] font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
                           {METHOD_LABELS[m]}
                         </button>
                       ))}
@@ -295,12 +329,32 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pay-receipt">Receipt # *</label>
-                    <input id="pay-receipt" type="text" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="e.g. R-A-0001" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none" />
+                    <input id="pay-receipt" type="text" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="e.g. R-A-0001" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowPaymentForm(false); setPaymentErrors([]); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
-                    <button type="button" onClick={handleRecordPayment} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+                    <button type="button" onClick={handleRecordPayment} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
                       {saving ? 'Recording...' : 'Record'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Void reason form — the void contract requires an auditable reason */}
+              {showVoidForm && (
+                <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-red-600">Void Invoice</h4>
+                  {voidError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{voidError}</div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="void-reason">Reason *</label>
+                    <input id="void-reason" type="text" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="e.g. Duplicate invoice" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setShowVoidForm(false); setVoidReason(''); setVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" onClick={handleVoid} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
+                      {saving ? 'Voiding...' : 'Confirm Void'}
                     </button>
                   </div>
                 </div>
@@ -312,17 +366,17 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan 
         {/* Footer */}
         {invoice && !loading && (
           <div className="flex items-center gap-3 px-5 h-16 border-t flex-shrink-0">
-            {canIssue(invoice.status) && (
-              <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">Issue Invoice</button>
+            {showIssueButton(invoice.status, canWrite) && (
+              <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">Issue Invoice</button>
             )}
-            {canRecord(invoice.status) && !showPaymentForm && (
-              <button type="button" onClick={() => setShowPaymentForm(true)} className="h-11 px-5 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">Record Payment</button>
+            {showRecordButton(invoice.status) && !showPaymentForm && (
+              <button type="button" onClick={() => setShowPaymentForm(true)} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors">Record Payment</button>
             )}
             {onViewPlan && (
               <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
             )}
-            {canVoid(invoice.status) && (
-              <button type="button" onClick={handleVoid} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
+            {showVoidButton(invoice.status, canWrite) && !showVoidForm && (
+              <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
             )}
             <div className="flex-1" />
             <button type="button" onClick={handleClose} className="h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>

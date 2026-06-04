@@ -49,6 +49,25 @@ export function canRecord(status: string): boolean {
   return status === 'issued' || status === 'partial' || status === 'overdue';
 }
 
+// ---------------------------------------------------------------------------
+// Action-button visibility (status x role). J-RBAC-001: issue/void are billing
+// WRITE lifecycle operations gated by role (`canWrite`); recording a payment is
+// always allowed when status permits, so staff_full / billing_staff can record
+// payments without seeing issue/void.
+// ---------------------------------------------------------------------------
+
+export function showIssueButton(status: string, canWrite: boolean): boolean {
+  return canWrite && canIssue(status);
+}
+
+export function showVoidButton(status: string, canWrite: boolean): boolean {
+  return canWrite && canVoid(status);
+}
+
+export function showRecordButton(status: string): boolean {
+  return canRecord(status);
+}
+
 export function validatePaymentForm(form: {
   amountCents: number;
   method: string;

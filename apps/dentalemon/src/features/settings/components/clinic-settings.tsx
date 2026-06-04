@@ -57,7 +57,7 @@ export function ClinicSettings() {
     }
   }
 
-  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none';
+  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none';
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
@@ -88,7 +88,7 @@ export function ClinicSettings() {
         type="button"
         onClick={handleSave}
         disabled={isPending}
-        className="h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-60"
+        className="h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60"
       >
         {isPending ? 'Saving…' : 'Save Settings'}
       </button>

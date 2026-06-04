@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import type { ToothSurface } from './five-surface-selector.helpers';
 import { getSurfacesForTooth } from './five-surface-selector.helpers';
 import type { ToothState, ChartEntryClassification } from './dental-chart.helpers';
@@ -54,6 +55,9 @@ export interface ToothSlideoutProps {
 }
 
 export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId }: ToothSlideoutProps) {
+  // WCAG 2.4.3: Escape closes the slideout; focus returns to the opener on close.
+  useSheetA11y({ open, onClose });
+
   const [step, setStep] = useState<Step>('overview');
   // Per-surface condition state — replaces single state + surfaces[]
   const [surfaceConditions, setSurfaceConditions] = useState<Record<string, ToothState>>({});
@@ -272,7 +276,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
                   className={[
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
                     isActive
-                      ? 'bg-[#FFE97D] text-foreground'
+                      ? 'bg-lemon text-foreground'
                       : isCompleted
                         ? 'bg-green-400 text-white'
                         : 'bg-muted text-muted-foreground',

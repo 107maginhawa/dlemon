@@ -147,7 +147,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceFacility}
                   onChange={e => setSourceFacility(e.target.value)}
                   placeholder="e.g. City Dental Clinic"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div>
@@ -160,7 +160,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceReference}
                   onChange={e => setSourceReference(e.target.value)}
                   placeholder="e.g. REF-2025-001"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
               </div>
               <div>
@@ -174,7 +174,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setSourceDescription(e.target.value)}
                   maxLength={200}
                   placeholder="e.g. Open Dental v21.1, Dentrix G7"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-[#FFE97D] outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Originating system — required for data-provenance audit trail.</p>
               </div>
@@ -188,7 +188,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setContent(e.target.value)}
                   placeholder='{"conditions":["I10"],"medications":["Amoxicillin"],"allergies":[]}'
                   rows={5}
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus:border-[#FFE97D] outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus:border-lemon outline-none resize-none"
                 />
               </div>
             </>
@@ -260,7 +260,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
               <button type="button" onClick={handleClose} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">
                 Cancel
               </button>
-              <button type="button" onClick={handleNext} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
+              <button type="button" onClick={handleNext} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors">
                 Preview
               </button>
             </>
@@ -270,13 +270,13 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
               <button type="button" onClick={() => setStep('form')} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">
                 Back
               </button>
-              <button type="button" onClick={handleConfirm} disabled={saving} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors disabled:opacity-50">
+              <button type="button" onClick={handleConfirm} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
                 {saving ? 'Importing…' : 'Confirm Import'}
               </button>
             </>
           )}
           {step === 'done' && (
-            <button type="button" onClick={handleClose} className="flex-1 h-11 rounded-xl bg-[#FFE97D] text-[#4A4018] text-sm font-semibold hover:bg-[#F5DC60] transition-colors">
+            <button type="button" onClick={handleClose} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors">
               Done
             </button>
           )}
