@@ -1156,6 +1156,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.updateMember as unknown as Handler
   );
 
+  // deactivateMember
+  app.delete('/dental/org/members/:memberId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.DeactivateMemberParams, validationErrorHandler),
+    registry.deactivateMember as unknown as Handler
+  );
+
   // recoverPin
   app.post('/dental/org/members/:memberId/recover-pin',
     zValidator('param', validators.RecoverPinParams, validationErrorHandler),

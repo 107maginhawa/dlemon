@@ -848,6 +848,19 @@ namespace DentalOrgModule {
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
+    @doc("Deactivate (soft-revoke) a member. Owner-only (branch dentist_owner); 204 on success.")
+    @delete
+    @route("/{memberId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("deactivateMember")
+    deactivateMember(
+      @path memberId: UUID
+    ): ApiNoContentResponse
+      | ApiNotFoundResponse
+      | ApiForbiddenResponse
+      | ApiUnauthorizedResponse;
+
     @post
     @route("/{memberId}/reset-pin")
     @useAuth(bearerAuth)

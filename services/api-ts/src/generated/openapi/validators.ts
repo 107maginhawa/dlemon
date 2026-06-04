@@ -20641,6 +20641,13 @@ export type UpdateMemberBody = z.infer<typeof UpdateMemberBody>;
 
 export const UpdateMemberResponse = DentalOrgModuleDentalMembershipSchema;
 
+export const DeactivateMemberParams = z.object({
+  memberId: UUIDSchema,
+});
+export type DeactivateMemberParams = z.infer<typeof DeactivateMemberParams>;
+
+export const DeactivateMemberResponse = z.void();
+
 export const RecoverPinParams = z.object({
   memberId: UUIDSchema,
 });
