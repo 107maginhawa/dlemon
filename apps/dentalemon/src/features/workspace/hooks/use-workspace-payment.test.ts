@@ -134,12 +134,16 @@ describe('useCreateInvoice', () => {
     qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     global.fetch = mockFetch as unknown as typeof fetch;
     mockFetch.mockReset();
+    // QA-008: POST /dental/billing/invoices requires branchId + dentistMemberId
+    // (sourced from org context inside the hook). Seed them so the request fires.
+    useOrgContextStore.setState({ branchId: 'branch-1', memberId: 'member-1' });
   });
 
   afterEach(() => {
     cleanup();
     global.fetch = originalFetch;
     qc.clear();
+    useOrgContextStore.setState({ branchId: null, memberId: null });
   });
 
   it('POSTs to /dental/billing/invoices (PAY-01)', async () => {
@@ -150,16 +154,45 @@ describe('useCreateInvoice', () => {
     const wrapper = makeWrapper(qc);
     const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
 
-    result.current.mutate({ patientId: 'pat-1', visitId: 'visit-1' });
+    result.current.mutate({ visitId: 'visit-1' });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const req = mockFetch.mock.calls[0]![0] as Request | string;
     const url = req instanceof Request ? req.url : String(req);
     expect(url).toContain('/dental/billing/invoices');
-    // Method is on the Request object when SDK sends a Request
     if (req instanceof Request) {
       expect(req.method).toBe('POST');
     }
+  });
+
+  it('QA-008: POST body carries the required branchId + dentistMemberId (contract regression)', async () => {
+    let capturedBody: Record<string, unknown> = {};
+    mockFetch.mockImplementationOnce(async (req: Request | string) => {
+      if (req instanceof Request) capturedBody = await req.clone().json();
+      return new Response(JSON.stringify(INVOICE), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
+    result.current.mutate({ visitId: 'visit-1' });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // Pre-fix the body was only { patientId, visitId } behind an `as any`, so the
+    // backend 400'd "branchId/dentistMemberId required" — the button always failed.
+    expect(capturedBody.patientId).toBe('pat-1');
+    expect(capturedBody.visitId).toBe('visit-1');
+    expect(capturedBody.branchId).toBe('branch-1');
+    expect(capturedBody.dentistMemberId).toBe('member-1');
+  });
+
+  it('QA-008: errors instead of POSTing when org context is missing', async () => {
+    useOrgContextStore.setState({ branchId: null, memberId: null });
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
+    result.current.mutate({ visitId: 'visit-1' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('returns created invoice', async () => {
@@ -169,7 +202,7 @@ describe('useCreateInvoice', () => {
 
     const wrapper = makeWrapper(qc);
     const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
-    result.current.mutate({ patientId: 'pat-1' });
+    result.current.mutate({ visitId: 'visit-1' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.id).toBe('inv-1');
@@ -182,7 +215,7 @@ describe('useCreateInvoice', () => {
 
     const wrapper = makeWrapper(qc);
     const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
-    result.current.mutate({ patientId: 'pat-1' });
+    result.current.mutate({ visitId: 'visit-1' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
@@ -195,7 +228,7 @@ describe('useCreateInvoice', () => {
 
     const wrapper = makeWrapper(qc);
     const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
-    result.current.mutate({ patientId: 'pat-1' });
+    result.current.mutate({ visitId: 'visit-1' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);

@@ -179,11 +179,11 @@ export function WorkspacePaymentModal({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   async function handleCreateInvoice() {
+    // QA-008: the backend requires a visitId (plus branch + member, sourced from
+    // org context inside the hook). Without a visit there is nothing to invoice.
+    if (!visitId) return;
     try {
-      const inv = await createInvoice.mutateAsync({
-        patientId,
-        visitId: visitId ?? undefined,
-      });
+      const inv = await createInvoice.mutateAsync({ visitId });
       setInvoiceDetailId(inv.id);
     } catch {
       // error state surfaced via createInvoice.isError / createInvoice.error
@@ -314,7 +314,7 @@ export function WorkspacePaymentModal({
               <button
                 type="button"
                 onClick={handleCreateInvoice}
-                disabled={createInvoice.isPending || lineItems.length === 0}
+                disabled={createInvoice.isPending || lineItems.length === 0 || !visitId}
                 data-testid="create-invoice-btn"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
               >

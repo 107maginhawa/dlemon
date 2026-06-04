@@ -12,24 +12,16 @@ import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase
 import { createDentalInvoice } from '@monobase/sdk-ts/generated';
 import { toastError } from '@/lib/error-toast';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { type Invoice } from '@/features/billing/hooks/use-invoices';
 
-export interface WorkspaceInvoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  patientName?: string;
-  visitDate?: string;
-  dueDate?: string;
-  totalCents: number;
-  paidCents: number;
-  balanceCents: number;
-  status: string;
-  createdAt: string;
-}
+// Cause-fix (oli QA_ESCAPES §6): this hook hits the SAME endpoint as
+// use-invoices.ts, so it consumes that hook's proven SDK-derived type instead of
+// re-declaring its own + casting. `Invoice` = DentalInvoice intersected for the
+// two live-confirmed enrichments the (stale) SDK omits (patientName, visitDate).
+export type WorkspaceInvoice = Invoice;
 
 export interface CreateInvoiceInput {
-  patientId: string;
-  visitId?: string;
+  visitId: string;
   dueDate?: string;
 }
 
@@ -44,11 +36,11 @@ export function usePatientInvoices(patientId: string | null) {
     ...listDentalInvoicesOptions({
       query: { patientId: patientId ?? undefined, branchId: branchId ?? undefined },
     }),
+    // The SDK response is { data: DentalInvoice[]; pagination }. Single `as` widens
+    // to the documented enrichment shape — no blind `as unknown as` (GAP-D).
     select: (data) => {
-      if (Array.isArray(data)) return data as unknown as WorkspaceInvoice[];
-      const obj = data as Record<string, unknown>;
-      const items = obj.data ?? obj.invoices ?? [];
-      return (Array.isArray(items) ? items : []) as unknown as WorkspaceInvoice[];
+      const items = Array.isArray(data) ? data : (data?.data ?? []);
+      return items as WorkspaceInvoice[];
     },
     enabled: Boolean(patientId && branchId),
     staleTime: 30_000,
@@ -58,10 +50,30 @@ export function usePatientInvoices(patientId: string | null) {
 
 export function useCreateInvoice(patientId: string | null) {
   const qc = useQueryClient();
+  // QA-008 (request-side contract-drift): POST /dental/billing/invoices REQUIRES
+  // branchId + dentistMemberId (CreateDentalInvoiceRequest; live-confirmed 400
+  // "branchId/dentistMemberId required" 2026-06-04). The previous body was only
+  // { patientId, visitId } wrapped in `as any`, so the cast hid that the
+  // "Create Invoice & Pay" button always failed. Source branch + member from org
+  // context (same fix shape as QA-004) and build the full, SDK-typed body.
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const dentistMemberId = useOrgContextStore((s) => s.memberId);
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
-      const { data } = await createDentalInvoice({ body: input as Parameters<typeof createDentalInvoice>[0]['body'], throwOnError: true } as any);
-      return data as unknown as WorkspaceInvoice;
+      if (!patientId || !branchId || !dentistMemberId) {
+        throw new Error('Missing patient, branch, or member context — cannot create invoice.');
+      }
+      const { data } = await createDentalInvoice({
+        body: {
+          patientId,
+          visitId: input.visitId,
+          branchId,
+          dentistMemberId,
+          dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
+        },
+        throwOnError: true,
+      });
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: listDentalInvoicesQueryKey({ query: { patientId: patientId ?? undefined } }) });

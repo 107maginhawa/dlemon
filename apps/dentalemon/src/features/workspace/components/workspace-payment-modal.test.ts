@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { WorkspacePaymentModal, type PaymentLineItem } from './workspace-payment-modal';
+import { useOrgContextStore } from '@/stores/org-context.store';
 import { jsonResponse, freshClientWithMutations } from '@/test-utils';
 
 const originalFetch = global.fetch;
@@ -75,12 +76,17 @@ describe('WorkspacePaymentModal', () => {
     mockFetch.mockReset();
     // Default: no existing invoices (SDK list envelope)
     mockFetch.mockImplementation(() => invoiceListResponse([]));
+    // QA-004 + QA-008: the invoice list query is gated on branchId, and invoice
+    // creation requires branchId + dentistMemberId from org context. Seed them so
+    // the modal's data flows (without this the query stays disabled → no banner).
+    useOrgContextStore.setState({ branchId: 'branch-1', memberId: 'member-1' });
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
     cleanup();
     mockFetch.mockReset();
+    useOrgContextStore.setState({ branchId: null, memberId: null });
   });
 
   it('does not render when open=false', () => {
