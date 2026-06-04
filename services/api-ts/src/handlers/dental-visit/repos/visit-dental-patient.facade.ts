@@ -5,11 +5,12 @@
  * Isolates cross-module access behind typed functions.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, desc, inArray, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DentalChartRepository } from './dental-chart.repo';
 import { TreatmentRepository } from './treatment.repo';
 import { VisitRepository } from './visit.repo';
+import { dentalVisits } from './visit.schema';
 import type { ToothChartState } from './dental-chart.schema';
 
 /** Re-exported so dental-patient handlers can type tooth-chart payloads without
@@ -46,4 +47,30 @@ export async function upsertDentitionChart(
   logger?: unknown,
 ) {
   return new DentalChartRepository(db, logger as never).upsert(input);
+}
+
+/** All visits for a patient, newest first (profile/statement aggregation). */
+export async function getVisitsByPatientId(db: DatabaseInstance, patientId: string) {
+  return db
+    .select()
+    .from(dentalVisits)
+    .where(eq(dentalVisits.patientId, patientId))
+    .orderBy(desc(dentalVisits.createdAt));
+}
+
+/** Batch visit count + last-completed-visit date for a set of patients (list view). */
+export async function getVisitStatsForPatients(
+  db: DatabaseInstance,
+  patientIds: string[],
+): Promise<Array<{ patientId: string; visitCount: number; lastVisit: string | null }>> {
+  if (patientIds.length === 0) return [];
+  return db
+    .select({
+      patientId: dentalVisits.patientId,
+      visitCount: sql<number>`count(*)::int`.as('visit_count'),
+      lastVisit: sql<string>`max(${dentalVisits.completedAt})`.as('last_visit'),
+    })
+    .from(dentalVisits)
+    .where(inArray(dentalVisits.patientId, patientIds))
+    .groupBy(dentalVisits.patientId);
 }

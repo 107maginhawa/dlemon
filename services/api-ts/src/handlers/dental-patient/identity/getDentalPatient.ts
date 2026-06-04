@@ -10,11 +10,10 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getDentalPatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
+import { getVisitsByPatientId } from '../../dental-visit/repos/visit-dental-patient.facade';
+import { getInvoicesByPatientId } from '../../dental-billing/repos/billing-dental-patient.facade';
+import { getActiveMedicalHistoryByPatientId } from '../../dental-clinical/repos/clinical-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { eq, desc, and } from 'drizzle-orm';
-import { dentalVisits } from '../../dental-visit/repos/visit.schema';
-import { dentalInvoices } from '../../dental-billing/repos/dental-invoice.schema';
-import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { GetDentalPatientParams } from '@/generated/openapi/validators';
 
@@ -38,20 +37,13 @@ export async function getDentalPatient(
   await assertBranchAccess(db, user.id, patient.preferredBranchId);
 
   // Visit count + last visit date
-  const visits = await db
-    .select()
-    .from(dentalVisits)
-    .where(eq(dentalVisits.patientId, patientId))
-    .orderBy(desc(dentalVisits.createdAt));
+  const visits = await getVisitsByPatientId(db, patientId);
 
   const visitCount = visits.length;
   const lastVisit = visits.find(v => v.status === 'completed' || v.status === 'locked')?.completedAt ?? null;
 
   // Outstanding balance: sum balanceCents from non-voided invoices
-  const invoices = await db
-    .select()
-    .from(dentalInvoices)
-    .where(eq(dentalInvoices.patientId, patientId));
+  const invoices = await getInvoicesByPatientId(db, patientId);
 
   const outstandingCents = invoices
     .filter(inv => inv.status !== 'voided')
@@ -62,15 +54,7 @@ export async function getDentalPatient(
   const lastName = person?.lastName ?? '';
 
   // V-PAT-007 / AC-PAT-003: safety-floor aggregation on the profile endpoint.
-  const safetyEntries = await db
-    .select()
-    .from(medicalHistoryEntries)
-    .where(
-      and(
-        eq(medicalHistoryEntries.patientId, patientId),
-        eq(medicalHistoryEntries.active, true)
-      )
-    );
+  const safetyEntries = await getActiveMedicalHistoryByPatientId(db, patientId);
   const allergyCount = safetyEntries.filter(e => e.entryType === 'allergy').length;
   const medicationCount = safetyEntries.filter(e => e.entryType === 'medication').length;
   const conditionCount = safetyEntries.filter(e => e.entryType === 'condition').length;

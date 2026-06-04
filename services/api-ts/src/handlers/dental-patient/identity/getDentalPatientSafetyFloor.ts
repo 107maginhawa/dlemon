@@ -14,8 +14,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
-import { medicalHistoryEntries } from '../../dental-clinical/repos/medical-history.schema';
-import { eq, and } from 'drizzle-orm';
+import { getActiveMedicalHistoryByPatientId } from '../../dental-clinical/repos/clinical-dental-patient.facade';
 import type { GetDentalPatientSafetyFloorParams } from '@/generated/openapi/validators';
 
 export async function getDentalPatientSafetyFloor(
@@ -36,15 +35,7 @@ export async function getDentalPatientSafetyFloor(
   await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // Fetch all active medical history entries for this patient
-  const entries = await db
-    .select()
-    .from(medicalHistoryEntries)
-    .where(
-      and(
-        eq(medicalHistoryEntries.patientId, patientId),
-        eq(medicalHistoryEntries.active, true)
-      )
-    );
+  const entries = await getActiveMedicalHistoryByPatientId(db, patientId);
 
   const allergies = entries.filter(e => e.entryType === 'allergy');
   const medications = entries.filter(e => e.entryType === 'medication');
