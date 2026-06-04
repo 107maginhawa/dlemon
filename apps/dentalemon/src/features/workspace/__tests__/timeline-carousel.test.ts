@@ -7,8 +7,7 @@
  * the __swiperCaptures global for captured Swiper callbacks.
  */
 
-import { describe, test, expect, afterEach, beforeEach, mock, test as _test } from 'bun:test';
-const skipMockDependent = _test.skip; // tests that rely on Swiper prop capture not yet wired
+import { describe, test, expect, afterEach, beforeEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -110,7 +109,7 @@ describe('TimelineCarousel (Swiper)', () => {
   });
 
   describe('initialSlide', () => {
-    skipMockDependent('initialSlide equals visits.length - 1 (most-recent visit last in sorted order)', () => {
+    test('initialSlide equals visits.length - 1 (most-recent visit last in sorted order)', () => {
       renderCarousel({
           visits: THREE_VISITS,
           patientId: 'test-patient',
@@ -121,7 +120,7 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(getCaptures().initialSlide).toBe(THREE_VISITS.length - 1);
     });
 
-    skipMockDependent('initialSlide is 0 for a single visit', () => {
+    test('initialSlide is 0 for a single visit', () => {
       renderCarousel({
           visits: [VISIT_NEW],
           patientId: 'test-patient',
@@ -160,15 +159,19 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(screen.getByText(/draft/i)).not.toBeNull();
     });
 
-    skipMockDependent('renders a DentalChart stub inside each slide', () => {
+    test('renders a DentalChart stub inside each slide', async () => {
       renderCarousel({
           visits: THREE_VISITS,
           patientId: 'test-patient',
           onSelectVisit: () => {},
           onNewVisit: () => {},
         });
-      const charts = screen.getAllByTestId('dental-chart-stub');
-      expect(charts).toHaveLength(THREE_VISITS.length);
+      // Each card fetches its chart via useQuery; the stub only appears once the
+      // (empty) chart query resolves — wait for it rather than asserting on the
+      // synchronous loading-skeleton frame.
+      await waitFor(() =>
+        expect(screen.getAllByTestId('dental-chart-stub')).toHaveLength(THREE_VISITS.length),
+      );
     });
   });
 
@@ -216,7 +219,7 @@ describe('TimelineCarousel (Swiper)', () => {
   });
 
   describe('onSlideChange callback', () => {
-    skipMockDependent('calls onSelectVisit with the visit id of the new active slide', () => {
+    test('calls onSelectVisit with the visit id of the new active slide', () => {
       const calls: string[] = [];
       renderCarousel({
           visits: THREE_VISITS,
@@ -232,7 +235,7 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(calls).toContain(VISIT_OLD.id);
     });
 
-    skipMockDependent('calls onSelectVisit with the correct id when sliding to middle index', () => {
+    test('calls onSelectVisit with the correct id when sliding to middle index', () => {
       const calls: string[] = [];
       renderCarousel({
           visits: THREE_VISITS,
