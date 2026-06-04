@@ -1,7 +1,7 @@
 # Code Spec Trace
 
 <!-- oli:regen:code-spec-trace:begin -->
-Spec: `specs/api/dist/openapi/openapi.json` · Matched: 352 · Spec-only: 0 · Code-only: 0 · Auth-drift: 2
+Spec: `specs/api/dist/openapi/openapi.json` · Matched: 352 · Spec-only: 0 · Code-only: 0 · Auth-drift: 0
 
 | Operation | operationId | Roles | Backend | Status | Drift |
 |---|---|---|---|---|---|
@@ -343,8 +343,8 @@ Spec: `specs/api/dist/openapi/openapi.json` · Matched: 352 · Spec-only: 0 · C
 | `POST /notifs/:notif/read` | `markNotificationAsRead` | user | `markNotificationAsRead` | matched |  |
 | `POST /notifs/read-all` | `markAllNotificationsAsRead` | user | `markAllNotificationsAsRead` | matched |  |
 | `POST /patients` | `createPatient` | admin, clinician, registrar, user | `createPatient` | matched |  |
-| `POST /patients/merge` | `mergePatients` | admin | `mergePatients` | matched | ⚠️ |
-| `POST /patients/unmerge` | `unmergePatients` | admin | `unmergePatients` | matched | ⚠️ |
+| `POST /patients/merge` | `mergePatients` | admin | `mergePatients` | matched |  |
+| `POST /patients/unmerge` | `unmergePatients` | admin | `unmergePatients` | matched |  |
 | `POST /persons` | `createPerson` | user | `createPerson` | matched |  |
 | `POST /providers/practitioner-roles` | `createPractitionerRole` | admin, credentialing | `createPractitionerRole` | matched |  |
 | `POST /providers/practitioners` | `createPractitioner` | admin, credentialing | `createPractitioner` | matched |  |

@@ -5602,7 +5602,7 @@
       },
       "consumers": [],
       "status": "matched",
-      "auth_drift": true
+      "auth_drift": false
     },
     {
       "operation_id": "unmergePatients",
@@ -5618,7 +5618,7 @@
       },
       "consumers": [],
       "status": "matched",
-      "auth_drift": true
+      "auth_drift": false
     },
     {
       "operation_id": "createPerson",
@@ -6186,9 +6186,6 @@
     ],
     "spec_only": [],
     "code_only": [],
-    "auth_drift": [
-      "POST /patients/merge",
-      "POST /patients/unmerge"
-    ]
+    "auth_drift": []
   }
 }

@@ -10815,8 +10815,8 @@
       "path": "/patients/merge",
       "handler_file": "services/api-ts/src/handlers/patient/mergePatients.ts",
       "handler_function": "mergePatients",
-      "auth_required": null,
-      "auth_middleware": null,
+      "auth_required": true,
+      "auth_middleware": "authMiddleware",
       "request_shape": {
         "targetPatientId": "string",
         "sourcePatientId": "string",
@@ -10846,8 +10846,8 @@
       "path": "/patients/unmerge",
       "handler_file": "services/api-ts/src/handlers/patient/unmergePatients.ts",
       "handler_function": "unmergePatients",
-      "auth_required": null,
-      "auth_middleware": null,
+      "auth_required": true,
+      "auth_middleware": "authMiddleware",
       "request_shape": {
         "targetPatientId": "string",
         "sourcePatientId": "string",

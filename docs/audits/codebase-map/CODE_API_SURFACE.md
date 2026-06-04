@@ -322,8 +322,8 @@
 | `POST /notifs/:notif/read` | `markNotificationAsRead` | true | 0 |  | HIGH |
 | `POST /patients` | `createPatient` | true | 0 |  | HIGH |
 | `GET /patients` | `listPatients` | true | 0 |  | HIGH |
-| `POST /patients/merge` | `mergePatients` | ? | 0 |  | HIGH |
-| `POST /patients/unmerge` | `unmergePatients` | ? | 0 |  | HIGH |
+| `POST /patients/merge` | `mergePatients` | true | 0 |  | HIGH |
+| `POST /patients/unmerge` | `unmergePatients` | true | 0 |  | HIGH |
 | `GET /patients/:id` | `getPatient` | true | 0 |  | HIGH |
 | `PATCH /patients/:id` | `updatePatient` | true | 0 |  | HIGH |
 | `DELETE /patients/:id` | `deactivatePatient` | true | 0 |  | HIGH |

@@ -19,7 +19,7 @@ PRODUCER:      engine (oli-engine v6)
 MAP-FRESHNESS: FRESH (rescanned post-fix this session)
 ENGINE:        resolved via legacy fallback (~/Desktop/oli-engine/dist/cli.js)
 SPEC-TRACE:    ON — spec_trace_optin=true, spec_source=specs/api/dist/openapi/openapi.json
-               matched=352, spec_only=0, code_only=0, auth_drift=2
+               matched=352, spec_only=0, code_only=0, auth_drift=0 (full parity)
 SCOPE:         apps/dentalemon/src/** + services/api-ts/src/** (full FE+BE)
 fields_unavailable: []
 unverified:    0   (5g materialized — response_shape populated 336/353; is_phantom 1, an engine URL-parse artifact)
@@ -86,11 +86,11 @@ Dimensions not selected this run (single `--traceability`): Consistency, Discove
 
 Movement vs prior run (2026-06-02 @ c26d37bd):
 - **Resolved:** TR-INFRA-001 (EXTERNAL spec-trace-off → fully resolved, matched=352/0/0); 5g map-degenerate caveat (response_shape populated); **TR-PHANTOM-ORG-001** (found + fixed this session).
-- **Confirmed FP:** `auth_drift=2` on patient merge/unmerge (in-handler admin guard enforced; route-level-only detection).
+- **Cleared:** `auth_drift` 2→0 — added `@useAuth(bearerAuth)` to `/patients/merge`+`/unmerge` in TypeSpec; routes now carry `authMiddleware({roles:["admin"]})` + OpenAPI `security` (was a route-level-only FP; now declared = defense in depth).
 
 ## 7. What's Next
 
 1. **Commit the fix** (currently uncommitted): `specs/api/src/modules/dental-org.tsp` (+`@delete deactivateMember`), regenerated `services/api-ts/src/generated/openapi/{routes,registry,validators}.ts` + `specs/api/dist/openapi/openapi.json`, new test `deactivateMember.route.test.ts`, refreshed codebase-map + trace artifacts.
-2. *(Optional, P3)* Declare the admin security scheme on `POST /patients/merge` + `/unmerge` in TypeSpec so the OpenAPI contract advertises the admin requirement the handler already enforces (clears `auth_drift=2`).
+2. ~~Declare the admin security scheme on `POST /patients/merge` + `/unmerge`~~ — **DONE 2026-06-04** (`@useAuth(bearerAuth)` added; `auth_drift` 2→0).
 3. *(Optional)* Regenerate `packages/sdk-ts` to add the `deactivateMember` operation for SDK parity (the FE uses a raw `fetch` for this call, so no functional dependency).
 4. P2 backlog (report-only) unchanged — E2E for unit-only BRs, AC tag normalization, perio ACs, legal-hold/retention spec nodes.
