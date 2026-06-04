@@ -1,10 +1,10 @@
 {
-  "version": 5,
+  "version": 6,
   "components": {
     "AppSidebar": {
       "name": "AppSidebar",
       "file_path": "apps/dentalemon/src/components/app-sidebar.tsx",
-      "module": "components",
+      "module": "src/components",
       "type": "component",
       "props_in": [
         {
@@ -43,15 +43,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "Combobox": {
       "name": "Combobox",
       "file_path": "apps/dentalemon/src/components/combobox.tsx",
-      "module": "components",
+      "module": "src/components",
       "type": "component",
       "props_in": [
         {
@@ -172,15 +175,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DateTimeFilter": {
       "name": "DateTimeFilter",
       "file_path": "apps/dentalemon/src/components/datetime-filter.tsx",
-      "module": "components",
+      "module": "src/components",
       "type": "component",
       "props_in": [
         {
@@ -217,15 +223,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "EmptyState": {
       "name": "EmptyState",
       "file_path": "apps/dentalemon/src/components/empty-state.tsx",
-      "module": "components",
+      "module": "src/components",
       "type": "component",
       "props_in": [
         {
@@ -263,15 +272,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ImageCropperDialog": {
       "name": "ImageCropperDialog",
       "file_path": "apps/dentalemon/src/components/image-cropper-dialog.tsx",
-      "module": "components",
+      "module": "src/components",
       "type": "component",
       "props_in": [
         {
@@ -330,15 +342,60 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "ListErrorState": {
+      "name": "ListErrorState",
+      "file_path": "apps/dentalemon/src/components/list-error-state.tsx",
+      "module": "src/components",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "message",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onRetry",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onRetry",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useOneSignal": {
       "name": "useOneSignal",
       "file_path": "apps/dentalemon/src/hooks/use-onesignal.ts",
-      "module": "hooks",
+      "module": "src/hooks",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -348,12 +405,34 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePatientProfile": {
       "name": "usePatientProfile",
       "file_path": "apps/dentalemon/src/hooks/use-patient-profile.ts",
-      "module": "hooks",
+      "module": "src/hooks",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:id"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useSheetA11y": {
+      "name": "useSheetA11y",
+      "file_path": "apps/dentalemon/src/hooks/use-sheet-a11y.ts",
+      "module": "src/hooks",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -363,12 +442,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "RootComponent": {
       "name": "RootComponent",
       "file_path": "apps/dentalemon/src/routes/__root.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -381,15 +461,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DashboardLayout": {
       "name": "DashboardLayout",
       "file_path": "apps/dentalemon/src/routes/_dashboard.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -401,12 +484,13 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "WorkspaceLayout": {
       "name": "WorkspaceLayout",
       "file_path": "apps/dentalemon/src/routes/_workspace.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -418,12 +502,31 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PublicBookingPage": {
+      "name": "PublicBookingPage",
+      "file_path": "apps/dentalemon/src/routes/book.$branchId.tsx",
+      "module": "src/routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/book/$branchId"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DentalOnboardingPage": {
       "name": "DentalOnboardingPage",
       "file_path": "apps/dentalemon/src/routes/dental-onboarding.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -438,15 +541,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephReportPage": {
       "name": "CephReportPage",
       "file_path": "apps/dentalemon/src/routes/imaging-ceph-report.$imageId.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -465,12 +571,65 @@
         "confidence": "MEDIUM"
       },
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "ComparisonTestHarness": {
+      "name": "ComparisonTestHarness",
+      "file_path": "apps/dentalemon/src/routes/imaging-comparison-test.tsx",
+      "module": "src/routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/imaging-comparison-test"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "ImagingTestHarness": {
+      "name": "ImagingTestHarness",
+      "file_path": "apps/dentalemon/src/routes/imaging-test.tsx",
+      "module": "src/routes",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [
+        "/imaging-test"
+      ],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "HomePage": {
       "name": "HomePage",
       "file_path": "apps/dentalemon/src/routes/index.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -485,21 +644,34 @@
         "has_handler": true,
         "handler_nonempty": false,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [
+          "/auth/$authView"
+        ],
+        "href_attrs": [
+          "to"
+        ],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "OnboardingPage": {
       "name": "OnboardingPage",
       "file_path": "apps/dentalemon/src/routes/onboarding.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/persons"
+        }
+      ],
       "routes_used_in": [
         "/onboarding"
       ],
@@ -515,15 +687,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "VerifyEmailPage": {
       "name": "VerifyEmailPage",
       "file_path": "apps/dentalemon/src/routes/verify-email.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -538,15 +713,404 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [
+        {
+          "sink": "toast.error",
+          "arg_literal": "Failed to send verification email",
+          "generic": false,
+          "file": "apps/dentalemon/src/routes/verify-email.tsx",
+          "line": 34
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    "BookingWizard": {
+      "name": "BookingWizard",
+      "file_path": "apps/dentalemon/src/features/booking/BookingWizard.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/public/branches/:branchId/booking-config"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/public/branches/:branchId/availability"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/public/branches/:branchId/holds"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/public/branches/:branchId/bookings"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useBookingConfig": {
+      "name": "useBookingConfig",
+      "file_path": "apps/dentalemon/src/features/booking/use-online-booking.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/public/branches/:branchId/booking-config"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useAvailability": {
+      "name": "useAvailability",
+      "file_path": "apps/dentalemon/src/features/booking/use-online-booking.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/public/branches/:branchId/availability"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCreateHold": {
+      "name": "useCreateHold",
+      "file_path": "apps/dentalemon/src/features/booking/use-online-booking.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/public/branches/:branchId/holds"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCreateBooking": {
+      "name": "useCreateBooking",
+      "file_path": "apps/dentalemon/src/features/booking/use-online-booking.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/public/branches/:branchId/bookings"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useBookingWizard": {
+      "name": "useBookingWizard",
+      "file_path": "apps/dentalemon/src/features/booking/use-online-booking.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "CasePresentationPanel": {
+      "name": "CasePresentationPanel",
+      "file_path": "apps/dentalemon/src/features/case-presentation/case-presentation-panel.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "presentationId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId/accept"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId/reject"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": true,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "CasePresentationView": {
+      "name": "CasePresentationView",
+      "file_path": "apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "aggregate",
+          "type": "CasePresentationAggregate",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isAccepting",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isRejecting",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAccept",
+          "type": "(input: { signerName: string; signatureData: string }) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onReject",
+          "type": "(input: { rejectionReason?: string }) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onAccept",
+          "payload_type": "(input: { signerName: string; signatureData: string }) => void"
+        },
+        {
+          "name": "onReject",
+          "payload_type": "(input: { rejectionReason?: string }) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "SignaturePad": {
+      "name": "SignaturePad",
+      "file_path": "apps/dentalemon/src/features/case-presentation/signature-pad.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "isSubmitting",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "submitted",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAccept",
+          "type": "(input: { signerName: string; signatureData: string }) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onAccept",
+          "payload_type": "(input: { signerName: string; signatureData: string }) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCasePresentation": {
+      "name": "useCasePresentation",
+      "file_path": "apps/dentalemon/src/features/case-presentation/use-case-presentation.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId/accept"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/case-presentations/:presentationId/reject"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCasePresentations": {
+      "name": "useCasePresentations",
+      "file_path": "apps/dentalemon/src/features/case-presentation/use-case-presentations.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/case-presentations"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/case-presentations"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "BillingPage": {
       "name": "BillingPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/billing.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -561,21 +1125,41 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CalendarPage": {
       "name": "CalendarPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/calendar.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/appointments/:appointmentId/check-in"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/appointments/:appointmentId/confirm"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/appointments/:appointmentId"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/appointments"
+        }
+      ],
       "routes_used_in": [
         "/_dashboard/calendar"
       ],
@@ -591,15 +1175,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DashboardPage": {
       "name": "DashboardPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/dashboard.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -611,12 +1198,13 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientsPage": {
       "name": "PatientsPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/patients.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -626,6 +1214,10 @@
         {
           "method": "POST",
           "endpoint": "/dental/patients"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:id/communication-consent"
         }
       ],
       "routes_used_in": [
@@ -643,15 +1235,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ReportsPage": {
       "name": "ReportsPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/reports.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -666,15 +1261,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "SettingsPage": {
       "name": "SettingsPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/settings.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -689,15 +1287,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "StaffPage": {
       "name": "StaffPage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/staff.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -709,12 +1310,13 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "WorkspacePage": {
       "name": "WorkspacePage",
       "file_path": "apps/dentalemon/src/routes/_workspace/$patientId.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -736,15 +1338,31 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [
+          "/patients/$patientId"
+        ],
+        "href_attrs": [
+          "to"
+        ],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [
+        {
+          "sink": "toast.error",
+          "arg_literal": "Branch context unavailable — re-select your branch to start a visit.",
+          "generic": false,
+          "file": "apps/dentalemon/src/routes/_workspace/$patientId.tsx",
+          "line": 148
+        }
+      ],
       "confidence": "MEDIUM"
     },
     "QueueBoardPage": {
       "name": "QueueBoardPage",
       "file_path": "apps/dentalemon/src/routes/_workspace/queue-board.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -759,15 +1377,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "RouteComponent": {
       "name": "RouteComponent",
       "file_path": "apps/dentalemon/src/routes/auth/$authView.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -779,12 +1400,13 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PinEntry": {
       "name": "PinEntry",
       "file_path": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [
         {
@@ -843,15 +1465,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PinEntryRoute": {
       "name": "PinEntryRoute",
       "file_path": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -875,15 +1500,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PinSelect": {
       "name": "PinSelect",
       "file_path": "apps/dentalemon/src/routes/auth/pin-select.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [
         {
@@ -936,15 +1564,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PinSelectRoute": {
       "name": "PinSelectRoute",
       "file_path": "apps/dentalemon/src/routes/auth/pin-select.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -971,15 +1602,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "BillingList": {
       "name": "BillingList",
       "file_path": "apps/dentalemon/src/features/billing/components/billing-list.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1003,7 +1637,12 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -1017,15 +1656,126 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "ClaimsWorklist": {
+      "name": "ClaimsWorklist",
+      "file_path": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "canWrite",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/claims"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/claims/aging"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/billing/claims/:claimId/status"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/claims/:claimId/remittance"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "CollectionsView": {
+      "name": "CollectionsView",
+      "file_path": "apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/collections/aging"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/statements/batch"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "InvoiceDetail": {
       "name": "InvoiceDetail",
       "file_path": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1105,15 +1855,59 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "InvoiceInsuranceBlock": {
+      "name": "InvoiceInsuranceBlock",
+      "file_path": "apps/dentalemon/src/features/billing/components/invoice-insurance-block.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "hasActiveProfile",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "estimatedCoveredCents",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "estimatedPatientPortionCents",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "claimNumber",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PaymentPlanView": {
       "name": "PaymentPlanView",
       "file_path": "apps/dentalemon/src/features/billing/components/payment-plan-view.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1155,45 +1949,236 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useArAging": {
+      "name": "useArAging",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/collections/aging"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useStatementBatch": {
+      "name": "useStatementBatch",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/statements/batch"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useInsuranceClaims": {
+      "name": "useInsuranceClaims",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/claims"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "usePayerArAging": {
+      "name": "usePayerArAging",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/claims/aging"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useClaimMutations": {
+      "name": "useClaimMutations",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/billing/claims/:claimId/status"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/claims/:claimId/remittance"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCoverageEstimate": {
+      "name": "useCoverageEstimate",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/estimate"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "usePatientAuthorizations": {
+      "name": "usePatientAuthorizations",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/authorizations"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useAuthorizationMutations": {
+      "name": "useAuthorizationMutations",
+      "file_path": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/authorizations"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/authorizations/:authorizationId/status"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useInvoiceDetail": {
       "name": "useInvoiceDetail",
       "file_path": "apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices/:invoiceId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useInvoices": {
       "name": "useInvoices",
       "file_path": "apps/dentalemon/src/features/billing/hooks/use-invoices.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MetricCard": {
       "name": "MetricCard",
       "file_path": "apps/dentalemon/src/features/dashboard/components/metric-card.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1254,15 +2239,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MorningBriefing": {
       "name": "MorningBriefing",
       "file_path": "apps/dentalemon/src/features/dashboard/components/morning-briefing.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1295,15 +2283,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useDashboardSummary": {
       "name": "useDashboardSummary",
       "file_path": "apps/dentalemon/src/features/dashboard/hooks/use-dashboard-summary.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -1313,12 +2304,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AnnotationToolbar": {
       "name": "AnnotationToolbar",
       "file_path": "apps/dentalemon/src/features/imaging/components/annotation-toolbar.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1349,15 +2341,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CalibrationDialog": {
       "name": "CalibrationDialog",
       "file_path": "apps/dentalemon/src/features/imaging/components/calibration-dialog.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1404,15 +2399,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MeasurementShape": {
       "name": "MeasurementShape",
       "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1459,15 +2457,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AnnotationShape": {
       "name": "AnnotationShape",
       "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1514,15 +2515,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DrawingPreview": {
       "name": "DrawingPreview",
       "file_path": "apps/dentalemon/src/features/imaging/components/canvas-overlays.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1545,12 +2549,51 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "CbctStudyCard": {
+      "name": "CbctStudyCard",
+      "file_path": "apps/dentalemon/src/features/imaging/components/CbctStudyCard.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "item",
+          "type": "PatientImageItem",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephAngleArcLayer": {
       "name": "CephAngleArcLayer",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephAngleArcLayer.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1597,12 +2640,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephLandmarkLayer": {
       "name": "CephLandmarkLayer",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephLandmarkLayer.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1677,15 +2721,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephLandmarkPalette": {
       "name": "CephLandmarkPalette",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephLandmarkPalette.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1722,15 +2769,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephLayerPanel": {
       "name": "CephLayerPanel",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephLayerPanel.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1761,15 +2811,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephLoupe": {
       "name": "CephLoupe",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephLoupe.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1804,12 +2857,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephMeasurementsPanel": {
       "name": "CephMeasurementsPanel",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephMeasurementsPanel.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1823,6 +2877,12 @@
           "type": "boolean",
           "required": false,
           "default": null
+        },
+        {
+          "name": "population",
+          "type": "string",
+          "required": false,
+          "default": null
         }
       ],
       "events_out": [],
@@ -1832,12 +2892,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephReportView": {
       "name": "CephReportView",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephReportView.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1869,15 +2930,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephTracingOverlay": {
       "name": "CephTracingOverlay",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephTracingOverlay.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -1918,12 +2982,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CephWorkspacePanel": {
       "name": "CephWorkspacePanel",
       "file_path": "apps/dentalemon/src/features/imaging/components/CephWorkspacePanel.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2011,6 +3076,10 @@
           "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
         },
         {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/detect"
+        },
+        {
           "method": "GET",
           "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs"
         }
@@ -2028,15 +3097,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ComparisonView": {
       "name": "ComparisonView",
       "file_path": "apps/dentalemon/src/features/imaging/components/comparison-view.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2068,20 +3140,30 @@
       "state_access": [],
       "api_calls": [],
       "routes_used_in": [],
-      "loading_state_hygiene": null,
-      "interaction_hygiene": {
-        "has_handler": true,
-        "handler_nonempty": true,
-        "reaches_api_or_nav": false,
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "FindingsSidebar": {
       "name": "FindingsSidebar",
       "file_path": "apps/dentalemon/src/features/imaging/components/FindingsSidebar.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2131,15 +3213,60 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "FmxMount": {
+      "name": "FmxMount",
+      "file_path": "apps/dentalemon/src/features/imaging/components/FmxMount.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "images",
+          "type": "PatientImageItem[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onSelectImage",
+          "type": "(item: PatientImageItem) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSelectImage",
+          "payload_type": "(item: PatientImageItem) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ImageUpload": {
       "name": "ImageUpload",
       "file_path": "apps/dentalemon/src/features/imaging/components/image-upload.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2182,15 +3309,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ImagingWorkspace": {
       "name": "ImagingWorkspace",
       "file_path": "apps/dentalemon/src/features/imaging/components/imaging-workspace.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2304,6 +3434,10 @@
           "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
         },
         {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/detect"
+        },
+        {
           "method": "GET",
           "endpoint": "/dental/imaging/images/:imageId/ceph/analysis:qs"
         },
@@ -2326,15 +3460,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MeasurementToolbar": {
       "name": "MeasurementToolbar",
       "file_path": "apps/dentalemon/src/features/imaging/components/measurement-toolbar.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2360,12 +3497,22 @@
           "type": "string",
           "required": false,
           "default": null
+        },
+        {
+          "name": "onRequestCalibrate",
+          "type": "() => void",
+          "required": false,
+          "default": null
         }
       ],
       "events_out": [
         {
           "name": "onToolChange",
           "payload_type": "(mode: ToolMode) => void"
+        },
+        {
+          "name": "onRequestCalibrate",
+          "payload_type": "() => void"
         }
       ],
       "slots": [],
@@ -2377,15 +3524,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientImageList": {
       "name": "PatientImageList",
       "file_path": "apps/dentalemon/src/features/imaging/components/patient-image-list.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2439,15 +3589,143 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "SuperimpositionPanel": {
+      "name": "SuperimpositionPanel",
+      "file_path": "apps/dentalemon/src/features/imaging/components/SuperimpositionPanel.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "result",
+          "type": "CephSuperimposition | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "error",
+          "type": "string | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "reference",
+          "type": "SuperimpositionReference",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onReferenceChange",
+          "type": "(r: SuperimpositionReference) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "opacityPct",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onOpacityChange",
+          "type": "(pct: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onionSkin",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onOnionSkinChange",
+          "type": "(on: boolean) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "fromLabel",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "toLabel",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onReferenceChange",
+          "payload_type": "(r: SuperimpositionReference) => void"
+        },
+        {
+          "name": "onOpacityChange",
+          "payload_type": "(pct: number) => void"
+        },
+        {
+          "name": "onOnionSkinChange",
+          "payload_type": "(on: boolean) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCbctViewerLink": {
+      "name": "useCbctViewerLink",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-cbct-viewer.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/studies/:studyId/cbct/viewer-link"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useCephAnalysis": {
       "name": "useCephAnalysis",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-analysis.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2462,12 +3740,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useCephLandmarks": {
       "name": "useCephLandmarks",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-landmarks.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2489,17 +3768,64 @@
         {
           "method": "DELETE",
           "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/:code"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/landmarks/detect"
         }
       ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useCephSuperimpositionPreview": {
+      "name": "useCephSuperimpositionPreview",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-superimposition.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/imaging/ceph/superimpositions/preview"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useLatestCephReport": {
+      "name": "useLatestCephReport",
+      "file_path": "apps/dentalemon/src/features/imaging/hooks/use-ceph-superimposition.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/imaging/images/:imageId/ceph/reports"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useImagingFindings": {
       "name": "useImagingFindings",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-findings.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2526,12 +3852,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useImagingStudies": {
       "name": "useImagingStudies",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-studies.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2546,12 +3873,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useImagingUpload": {
       "name": "useImagingUpload",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-imaging-upload.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2563,6 +3891,10 @@
           "endpoint": "/dental/imaging/studies"
         },
         {
+          "method": "POST",
+          "endpoint": "/storage/multipart/:fileId/complete"
+        },
+        {
           "method": "DELETE",
           "endpoint": "/storage/multipart/:fileId/abort"
         }
@@ -2570,12 +3902,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useMeasurements": {
       "name": "useMeasurements",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-measurements.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2598,12 +3931,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useOfflineCache": {
       "name": "useOfflineCache",
       "file_path": "apps/dentalemon/src/features/imaging/hooks/use-offline-cache.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -2613,12 +3947,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "OnboardingWizard": {
       "name": "OnboardingWizard",
       "file_path": "apps/dentalemon/src/features/onboarding/components/onboarding-wizard.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2639,19 +3974,11 @@
       "api_calls": [
         {
           "method": "POST",
-          "endpoint": "/dental/organizations"
+          "endpoint": "/dental/onboarding"
         },
         {
           "method": "POST",
-          "endpoint": "/dental/organizations/:id/branches"
-        },
-        {
-          "method": "POST",
-          "endpoint": "/dental/organizations/:id/branches/:id/members"
-        },
-        {
-          "method": "POST",
-          "endpoint": "/dental/organizations/:id/branches/:id/members/:id/set-pin"
+          "endpoint": "/dental/organizations/:organizationId/branches/:branchId/members/:membershipId/set-pin"
         },
         {
           "method": "POST",
@@ -2664,15 +3991,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ClinicStep": {
       "name": "ClinicStep",
       "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-clinic.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2751,15 +4081,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DentistStep": {
       "name": "DentistStep",
       "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-dentist.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2838,15 +4171,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "FeesStep": {
       "name": "FeesStep",
       "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-fees.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2877,15 +4213,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientStep": {
       "name": "PatientStep",
       "file_path": "apps/dentalemon/src/features/onboarding/components/wizard-step-patient.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2964,15 +4303,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DentalChartThumbnail": {
       "name": "DentalChartThumbnail",
       "file_path": "apps/dentalemon/src/features/patients/components/dental-chart-thumbnail.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -2989,12 +4331,61 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "DuplicatePatientsPanel": {
+      "name": "DuplicatePatientsPanel",
+      "file_path": "apps/dentalemon/src/features/patients/components/duplicate-patients-panel.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string | null",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/duplicates"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": false,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [
+          "/patients/$patientId"
+        ],
+        "href_attrs": [
+          "to"
+        ],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "FollowUpNotes": {
       "name": "FollowUpNotes",
       "file_path": "apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3007,7 +4398,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:id/follow-up-notes"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:id/follow-up-notes"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -3021,15 +4421,53 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "HouseholdCard": {
+      "name": "HouseholdCard",
+      "file_path": "apps/dentalemon/src/features/patients/components/household-card.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/household"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientFilterTabs": {
       "name": "PatientFilterTabs",
       "file_path": "apps/dentalemon/src/features/patients/components/patient-filter-tabs.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3066,15 +4504,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientFolderCard": {
       "name": "PatientFolderCard",
       "file_path": "apps/dentalemon/src/features/patients/components/patient-folder-card.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3115,15 +4556,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientList": {
       "name": "PatientList",
       "file_path": "apps/dentalemon/src/features/patients/components/patient-list.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3203,6 +4647,24 @@
           "type": "boolean",
           "required": false,
           "default": null
+        },
+        {
+          "name": "isError",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "errorMessage",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onRetry",
+          "type": "() => void",
+          "required": false,
+          "default": null
         }
       ],
       "events_out": [
@@ -3233,6 +4695,10 @@
         {
           "name": "onExport",
           "payload_type": "() => void"
+        },
+        {
+          "name": "onRetry",
+          "payload_type": "() => void"
         }
       ],
       "slots": [],
@@ -3244,15 +4710,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientProfilePage": {
       "name": "PatientProfilePage",
       "file_path": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3279,15 +4748,23 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [
+          "/patients"
+        ],
+        "href_attrs": [
+          "to"
+        ],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientRegistrationModal": {
       "name": "PatientRegistrationModal",
       "file_path": "apps/dentalemon/src/features/patients/components/patient-registration-modal.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3328,135 +4805,228 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useDuplicatePatients": {
+      "name": "useDuplicatePatients",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-duplicate-patients.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/duplicates"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useFollowUpNotes": {
       "name": "useFollowUpNotes",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:id/follow-up-notes"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useAddFollowUpNote": {
       "name": "useAddFollowUpNote",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:id/follow-up-notes"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useHousehold": {
+      "name": "useHousehold",
+      "file_path": "apps/dentalemon/src/features/patients/hooks/use-household.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/household"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useArchivePatient": {
       "name": "useArchivePatient",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:id/archive"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useRestorePatient": {
       "name": "useRestorePatient",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:id/restore"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useBulkArchive": {
       "name": "useBulkArchive",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/bulk-archive"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useExportPatients": {
       "name": "useExportPatients",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/export"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePatientBilling": {
       "name": "usePatientBilling",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patient-billing.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePatients": {
       "name": "usePatients",
       "file_path": "apps/dentalemon/src/features/patients/hooks/use-patients.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AddressForm": {
       "name": "AddressForm",
       "file_path": "apps/dentalemon/src/features/person/components/address-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3531,15 +5101,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ContactInfoForm": {
       "name": "ContactInfoForm",
       "file_path": "apps/dentalemon/src/features/person/components/contact-info-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3619,12 +5192,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PersonalInfoForm": {
       "name": "PersonalInfoForm",
       "file_path": "apps/dentalemon/src/features/person/components/personal-info-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3717,15 +5291,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PreferencesForm": {
       "name": "PreferencesForm",
       "file_path": "apps/dentalemon/src/features/person/components/preferences-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3775,12 +5352,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PMDImport": {
       "name": "PMDImport",
       "file_path": "apps/dentalemon/src/features/pmd/components/pmd-import.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3832,15 +5410,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PMDViewerSheet": {
       "name": "PMDViewerSheet",
       "file_path": "apps/dentalemon/src/features/pmd/components/pmd-viewer-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3887,15 +5468,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PMDViewer": {
       "name": "PMDViewer",
       "file_path": "apps/dentalemon/src/features/pmd/components/pmd-viewer.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3912,12 +5496,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "InvoiceDetailSheet": {
       "name": "InvoiceDetailSheet",
       "file_path": "apps/dentalemon/src/features/reports/components/invoice-detail-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3961,15 +5546,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PatientReport": {
       "name": "PatientReport",
       "file_path": "apps/dentalemon/src/features/reports/components/patient-report.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -3982,7 +5570,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -3996,15 +5589,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "RevenueReport": {
       "name": "RevenueReport",
       "file_path": "apps/dentalemon/src/features/reports/components/revenue-report.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4029,15 +5625,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "TreatmentReport": {
       "name": "TreatmentReport",
       "file_path": "apps/dentalemon/src/features/reports/components/treatment-report.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4050,7 +5649,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/treatments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -4064,45 +5672,64 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePatientReport": {
       "name": "usePatientReport",
       "file_path": "apps/dentalemon/src/features/reports/hooks/use-patient-report.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useTreatmentReport": {
       "name": "useTreatmentReport",
       "file_path": "apps/dentalemon/src/features/reports/hooks/use-treatment-report.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/treatments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AppointmentCard": {
       "name": "AppointmentCard",
       "file_path": "apps/dentalemon/src/features/scheduling/components/appointment-card.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4124,6 +5751,12 @@
           "default": null
         },
         {
+          "name": "onConfirm",
+          "type": "(appointmentId: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
           "name": "compact",
           "type": "boolean",
           "required": false,
@@ -4138,6 +5771,10 @@
         {
           "name": "onCheckIn",
           "payload_type": "(appointmentId: string) => void"
+        },
+        {
+          "name": "onConfirm",
+          "payload_type": "(appointmentId: string) => void"
         }
       ],
       "slots": [],
@@ -4149,15 +5786,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AppointmentModal": {
       "name": "AppointmentModal",
       "file_path": "apps/dentalemon/src/features/scheduling/components/appointment-modal.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4203,22 +5843,34 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/appointments/:appointmentId"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/appointments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": {
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CalendarDay": {
       "name": "CalendarDay",
       "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-day.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4250,6 +5902,18 @@
           "type": "(appointmentId: string) => void",
           "required": true,
           "default": null
+        },
+        {
+          "name": "onConfirm",
+          "type": "(appointmentId: string) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onReschedule",
+          "type": "(appointmentId: string, newStartAt: string, newDurationMinutes: number) => void",
+          "required": false,
+          "default": null
         }
       ],
       "events_out": [
@@ -4264,6 +5928,14 @@
         {
           "name": "onCheckIn",
           "payload_type": "(appointmentId: string) => void"
+        },
+        {
+          "name": "onConfirm",
+          "payload_type": "(appointmentId: string) => void"
+        },
+        {
+          "name": "onReschedule",
+          "payload_type": "(appointmentId: string, newStartAt: string, newDurationMinutes: number) => void"
         }
       ],
       "slots": [],
@@ -4275,15 +5947,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CalendarMonth": {
       "name": "CalendarMonth",
       "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-month.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4320,15 +5995,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CalendarWeek": {
       "name": "CalendarWeek",
       "file_path": "apps/dentalemon/src/features/scheduling/components/calendar-week.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4375,15 +6053,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "QueueBoard": {
       "name": "QueueBoard",
       "file_path": "apps/dentalemon/src/features/scheduling/components/queue-board.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4416,27 +6097,92 @@
         "confidence": "MEDIUM"
       },
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "RecallDueList": {
+      "name": "RecallDueList",
+      "file_path": "apps/dentalemon/src/features/scheduling/components/recall-due-list.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "branchId",
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onSchedule",
+          "type": "(recall: RecallDueItem) => void",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onSchedule",
+          "payload_type": "(recall: RecallDueItem) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/patients/:patientId/recalls/:recallId"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/recalls/due"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useAppointments": {
       "name": "useAppointments",
       "file_path": "apps/dentalemon/src/features/scheduling/hooks/use-appointments.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/appointments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useQueueBoard": {
       "name": "useQueueBoard",
       "file_path": "apps/dentalemon/src/features/scheduling/hooks/use-queue-board.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -4455,12 +6201,34 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useRecallDueList": {
+      "name": "useRecallDueList",
+      "file_path": "apps/dentalemon/src/features/scheduling/hooks/use-recall-due-list.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/recalls/due"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ClinicSettings": {
       "name": "ClinicSettings",
       "file_path": "apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4480,15 +6248,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "FeeSchedule": {
       "name": "FeeSchedule",
       "file_path": "apps/dentalemon/src/features/settings/components/fee-schedule.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4508,15 +6279,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "LocaleSettings": {
       "name": "LocaleSettings",
       "file_path": "apps/dentalemon/src/features/settings/components/locale-settings.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4536,15 +6310,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "NotificationSettings": {
       "name": "NotificationSettings",
       "file_path": "apps/dentalemon/src/features/settings/components/notification-settings.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4564,15 +6341,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
-    "WorkingHours": {
-      "name": "WorkingHours",
-      "file_path": "apps/dentalemon/src/features/settings/components/working-hours.tsx",
-      "module": "features",
+    "PermissionGrid": {
+      "name": "PermissionGrid",
+      "file_path": "apps/dentalemon/src/features/settings/components/permission-grid.tsx",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4592,15 +6372,49 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "WorkingHours": {
+      "name": "WorkingHours",
+      "file_path": "apps/dentalemon/src/features/settings/components/working-hours.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useBranchSettings": {
       "name": "useBranchSettings",
       "file_path": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -4610,12 +6424,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useUpdateBranchSettings": {
       "name": "useUpdateBranchSettings",
       "file_path": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -4625,12 +6440,45 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "usePermissionGrid": {
+      "name": "usePermissionGrid",
+      "file_path": "apps/dentalemon/src/features/settings/hooks/use-permissions.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useUpdatePermissions": {
+      "name": "useUpdatePermissions",
+      "file_path": "apps/dentalemon/src/features/settings/hooks/use-permissions.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "StaffCreateModal": {
       "name": "StaffCreateModal",
       "file_path": "apps/dentalemon/src/features/staff/components/staff-create-modal.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4677,15 +6525,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "StaffAccessDenied": {
       "name": "StaffAccessDenied",
       "file_path": "apps/dentalemon/src/features/staff/components/staff-list.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -4695,12 +6546,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "StaffList": {
       "name": "StaffList",
       "file_path": "apps/dentalemon/src/features/staff/components/staff-list.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4733,15 +6585,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useStaffMembers": {
       "name": "useStaffMembers",
       "file_path": "apps/dentalemon/src/features/staff/hooks/use-staff-members.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -4751,12 +6606,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useStaffMutations": {
       "name": "useStaffMutations",
       "file_path": "apps/dentalemon/src/features/staff/hooks/use-staff-members.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -4766,12 +6622,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AmendmentForm": {
       "name": "AmendmentForm",
       "file_path": "apps/dentalemon/src/features/workspace/components/amendment-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4823,22 +6680,30 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/amendments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": {
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "AttachmentsSheet": {
       "name": "AttachmentsSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/attachments-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4874,7 +6739,12 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/attachments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -4888,15 +6758,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "CdtCodeBrowser": {
       "name": "CdtCodeBrowser",
       "file_path": "apps/dentalemon/src/features/workspace/components/cdt-code-browser.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4927,15 +6800,78 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "ChartCompareOverlay": {
+      "name": "ChartCompareOverlay",
+      "file_path": "apps/dentalemon/src/features/workspace/components/chart-compare-overlay.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "focusTeeth",
+          "type": "ToothData[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "referenceOptions",
+          "type": "CompareVisitOption[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/chart"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": false,
+        "has_error_branch": false,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ConsentSheet": {
       "name": "ConsentSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/consent-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -4948,6 +6884,12 @@
           "name": "patientId",
           "type": "string",
           "required": true,
+          "default": null
+        },
+        {
+          "name": "currentMemberId",
+          "type": "string",
+          "required": false,
           "default": null
         },
         {
@@ -4981,22 +6923,38 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/consents"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/consents/:consentId/sign"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/consent-refusals"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": {
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DentalChart": {
       "name": "DentalChart",
       "file_path": "apps/dentalemon/src/features/workspace/components/dental-chart.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5062,16 +7020,19 @@
       "interaction_hygiene": {
         "has_handler": true,
         "handler_nonempty": true,
-        "reaches_api_or_nav": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "FiveSurfaceSelector": {
       "name": "FiveSurfaceSelector",
       "file_path": "apps/dentalemon/src/features/workspace/components/five-surface-selector.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5114,15 +7075,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "LabOrdersSheet": {
       "name": "LabOrdersSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/lab-orders-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5158,7 +7122,20 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/lab-orders"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/lab-orders/:orderId"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/lab-orders"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -5172,15 +7149,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MedicalHistoryForm": {
       "name": "MedicalHistoryForm",
       "file_path": "apps/dentalemon/src/features/workspace/components/medical-history-form.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5193,7 +7173,28 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/clinical/medical-history"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/clinical/medical-history"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/clinical/medical-history/:entryId"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/clinical/medical-history-review"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/clinical/medical-history-review"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -5207,15 +7208,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "MedicalHistorySheet": {
       "name": "MedicalHistorySheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/medical-history-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5252,15 +7256,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "PreCompletionChecklist": {
       "name": "PreCompletionChecklist",
       "file_path": "apps/dentalemon/src/features/workspace/components/pre-completion-checklist.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5306,7 +7313,12 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -5320,15 +7332,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "RecallsSheet": {
       "name": "RecallsSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/recalls-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5385,15 +7400,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ResizableDivider": {
       "name": "ResizableDivider",
       "file_path": "apps/dentalemon/src/features/workspace/components/resizable-divider.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5424,15 +7442,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "RxSheet": {
       "name": "RxSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/rx-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5484,22 +7505,30 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/prescriptions"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": {
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "SoapNotesSheet": {
       "name": "SoapNotesSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/soap-notes-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5539,7 +7568,28 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/notes"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/notes/history"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes/sign"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes/addendum"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -5553,15 +7603,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "SyncStatusBadge": {
       "name": "SyncStatusBadge",
       "file_path": "apps/dentalemon/src/features/workspace/components/sync-status-badge.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5590,12 +7643,13 @@
         "confidence": "MEDIUM"
       },
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "TimelineCarousel": {
       "name": "TimelineCarousel",
       "file_path": "apps/dentalemon/src/features/workspace/components/timeline-carousel.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5683,15 +7737,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ToothOverviewStep": {
       "name": "ToothOverviewStep",
       "file_path": "apps/dentalemon/src/features/workspace/components/tooth-overview-step.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5759,7 +7816,12 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/history/:patientId/teeth/:toothNumber"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -5773,15 +7835,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ToothSlideout": {
       "name": "ToothSlideout",
       "file_path": "apps/dentalemon/src/features/workspace/components/tooth-slideout.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5862,15 +7927,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "TreatmentPlanTab": {
       "name": "TreatmentPlanTab",
       "file_path": "apps/dentalemon/src/features/workspace/components/treatment-plan-tab.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5916,15 +7984,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "TreatmentPlansSheet": {
       "name": "TreatmentPlansSheet",
       "file_path": "apps/dentalemon/src/features/workspace/components/treatment-plans-sheet.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -5943,6 +8014,12 @@
           "name": "onClose",
           "type": "() => void",
           "required": true,
+          "default": null
+        },
+        {
+          "name": "optionGroupIds",
+          "type": "string[]",
+          "required": false,
           "default": null
         }
       ],
@@ -5981,15 +8058,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DismissTreatmentPopover": {
       "name": "DismissTreatmentPopover",
       "file_path": "apps/dentalemon/src/features/workspace/components/treatment-row-popovers.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6058,15 +8138,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "DeclineTreatmentPopover": {
       "name": "DeclineTreatmentPopover",
       "file_path": "apps/dentalemon/src/features/workspace/components/treatment-row-popovers.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6135,15 +8218,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "TreatmentTable": {
       "name": "TreatmentTable",
       "file_path": "apps/dentalemon/src/features/workspace/components/treatment-table.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6207,7 +8293,12 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -6221,15 +8312,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "WorkspaceImagingOverlay": {
       "name": "WorkspaceImagingOverlay",
       "file_path": "apps/dentalemon/src/features/workspace/components/workspace-imaging-overlay.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6278,15 +8372,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "WorkspacePaymentModal": {
       "name": "WorkspacePaymentModal",
       "file_path": "apps/dentalemon/src/features/workspace/components/workspace-payment-modal.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6334,7 +8431,16 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -6348,15 +8454,18 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "WorkspaceTopBar": {
       "name": "WorkspaceTopBar",
       "file_path": "apps/dentalemon/src/features/workspace/components/workspace-top-bar.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6466,12 +8575,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "YearSegmentControl": {
       "name": "YearSegmentControl",
       "file_path": "apps/dentalemon/src/features/workspace/components/year-segment-control.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6508,165 +8618,315 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useAttachments": {
       "name": "useAttachments",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/attachments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useUploadAttachment": {
       "name": "useUploadAttachment",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/storage/files/upload"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/storage/files/:file/complete"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/attachments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useDeleteAttachment": {
       "name": "useDeleteAttachment",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-attachments.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/visits/:visitId/attachments/:attachmentId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useCreateVisit": {
       "name": "useCreateVisit",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-create-visit.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useDentalChart": {
       "name": "useDentalChart",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-dental-chart-query.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/chart"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useInitializeDentition": {
       "name": "useInitializeDentition",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-initialize-dentition.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/dentition"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useMarkTreatmentDone": {
       "name": "useMarkTreatmentDone",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-mark-treatment-done.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useMedicalHistoryReview": {
+      "name": "useMedicalHistoryReview",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history-review.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/clinical/medical-history-review"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useMedicalHistoryReviewMutation": {
+      "name": "useMedicalHistoryReviewMutation",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history-review.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/clinical/medical-history-review"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useMedicalHistory": {
       "name": "useMedicalHistory",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/clinical/medical-history"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useMedicalHistoryMutations": {
       "name": "useMedicalHistoryMutations",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/clinical/medical-history"
+        },
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/clinical/medical-history/:entryId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "usePerioChart": {
+      "name": "usePerioChart",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-perio-chart.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/perio-chart"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/perio-charts"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/perio-charts/:chartId/readings/:toothNumber"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/perio-charts/:chartId/complete"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePMD": {
       "name": "usePMD",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-pmd.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/pmd"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useRecalls": {
       "name": "useRecalls",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-recalls.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -6689,72 +8949,101 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useSaveChart": {
       "name": "useSaveChart",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-chart.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/chart"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useSaveToothFlow": {
       "name": "useSaveToothFlow",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-tooth-flow.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/chart"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/treatments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useSaveTreatment": {
       "name": "useSaveTreatment",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-save-treatment.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/treatments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useSharePMD": {
       "name": "useSharePMD",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-share-pmd.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/pmd"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useSyncStatus": {
       "name": "useSyncStatus",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-sync-status.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -6769,27 +9058,59 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useToothHistory": {
       "name": "useToothHistory",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-tooth-history.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/history/:patientId/teeth/:toothNumber"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useTreatmentOptions": {
+      "name": "useTreatmentOptions",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatment-options.ts",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/patients/:patientId/treatment-options/:optionGroupId"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/patients/:patientId/treatment-options/:optionGroupId/accept"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useTreatmentPlan": {
       "name": "useTreatmentPlan",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -6812,12 +9133,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useTreatmentPlans": {
       "name": "useTreatmentPlans",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatment-plans.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -6840,72 +9162,134 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useTreatments": {
       "name": "useTreatments",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-treatments.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/treatments"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useUpdateTreatment": {
       "name": "useUpdateTreatment",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-update-treatment.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId/treatments/:treatmentId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useUpdateVisit": {
       "name": "useUpdateVisit",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-update-visit.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PATCH",
+          "endpoint": "/dental/visits/:visitId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useVisitNotes": {
       "name": "useVisitNotes",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-visit-notes.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/notes"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/notes/history"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes/sign"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/visits/:visitId/notes/addendum"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useVisits": {
       "name": "useVisits",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-visits.ts",
-      "module": "features",
+      "module": "src/features",
+      "type": "hook",
+      "props_in": [],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "useVoicePerio": {
+      "name": "useVoicePerio",
+      "file_path": "apps/dentalemon/src/features/workspace/hooks/use-voice-perio.ts",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
@@ -6915,42 +9299,55 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "usePatientInvoices": {
       "name": "usePatientInvoices",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-workspace-payment.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "useCreateInvoice": {
       "name": "useCreateInvoice",
       "file_path": "apps/dentalemon/src/features/workspace/hooks/use-workspace-payment.ts",
-      "module": "features",
+      "module": "src/features",
       "type": "hook",
       "props_in": [],
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "ProfilePage": {
       "name": "ProfilePage",
       "file_path": "apps/dentalemon/src/routes/_dashboard/patients_/$patientId.tsx",
-      "module": "routes",
+      "module": "src/routes",
       "type": "component",
       "props_in": [],
       "events_out": [],
@@ -6962,12 +9359,13 @@
       ],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "UniversalToothFdi": {
       "name": "UniversalToothFdi",
       "file_path": "apps/dentalemon/src/features/workspace/components/dental/universal-tooth-fdi.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -6990,12 +9388,13 @@
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     },
     "UniversalTooth": {
       "name": "UniversalTooth",
       "file_path": "apps/dentalemon/src/features/workspace/components/dental/universal-tooth.tsx",
-      "module": "features",
+      "module": "src/features",
       "type": "component",
       "props_in": [
         {
@@ -7075,9 +9474,626 @@
         "has_handler": true,
         "handler_nonempty": true,
         "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
         "violation": false,
         "confidence": "MEDIUM"
       },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioBopDot": {
+      "name": "PerioBopDot",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-bop-dot.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "tooth",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "site",
+          "type": "PerioSite",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onToggle",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToggle",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioCalCell": {
+      "name": "PerioCalCell",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-cal-cell.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "tooth",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "site",
+          "type": "PerioSite",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "value",
+          "type": "number | null | undefined",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioChartGrid": {
+      "name": "PerioChartGrid",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-chart-grid.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "readings",
+          "type": "readonly PerioToothReading[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "dentition",
+          "type": "Dentition",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onPatchTooth",
+          "type": "(toothNumber: number, patch: UpsertToothReadingRequest) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "activeCell",
+          "type": "{ tooth: number; site: PerioSite } | null",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onPatchTooth",
+          "payload_type": "(toothNumber: number, patch: UpsertToothReadingRequest) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioChartOverlay": {
+      "name": "PerioChartOverlay",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-chart-overlay.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "patientId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "visitId",
+          "type": "string",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "speechProvider",
+          "type": "SpeechProvider",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "voiceEnabled",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onClose",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/visits/:visitId/perio-chart"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/perio-charts"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/perio-charts/:chartId/readings/:toothNumber"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/perio-charts/:chartId/complete"
+        }
+      ],
+      "routes_used_in": [],
+      "loading_state_hygiene": {
+        "has_skeleton": true,
+        "has_error_branch": true,
+        "has_timeout": false,
+        "has_exemption": false,
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": true,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioClassificationPanel": {
+      "name": "PerioClassificationPanel",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-classification-panel.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "value",
+          "type": "CompletePerioChartRequest",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onChange",
+          "type": "(next: CompletePerioChartRequest) => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onChange",
+          "payload_type": "(next: CompletePerioChartRequest) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioSiteCell": {
+      "name": "PerioSiteCell",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-site-cell.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "tooth",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "site",
+          "type": "PerioSite",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "kind",
+          "type": "'depth' | 'gm'",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "value",
+          "type": "number | null | undefined",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onCommit",
+          "type": "(value: number) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAdvance",
+          "type": "() => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "inputRef",
+          "type": "React.Ref<HTMLInputElement>",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onCommit",
+          "payload_type": "(value: number) => void"
+        },
+        {
+          "name": "onAdvance",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioSummaryBar": {
+      "name": "PerioSummaryBar",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-summary-bar.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "bopPercent",
+          "type": "number | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "meanDepth",
+          "type": "number | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "deepPocketCount",
+          "type": "number | null",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "overThresholdCount",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "stage",
+          "type": "'I' | 'II' | 'III' | 'IV'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "grade",
+          "type": "'A' | 'B' | 'C'",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "extent",
+          "type": "'localized' | 'generalized' | 'molar_incisor'",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": null,
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "PerioToothColumn": {
+      "name": "PerioToothColumn",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/perio-tooth-column.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "tooth",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "reading",
+          "type": "PerioToothReading",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "readOnly",
+          "type": "boolean",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "onPatch",
+          "type": "(patch: UpsertToothReadingRequest) => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onAdvance",
+          "type": "(tooth: number, site: PerioSite) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "registerCellRef",
+          "type": "(tooth: number, site: PerioSite, el: HTMLInputElement | null) => void",
+          "required": false,
+          "default": null
+        },
+        {
+          "name": "activeSite",
+          "type": "PerioSite | null",
+          "required": false,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onPatch",
+          "payload_type": "(patch: UpsertToothReadingRequest) => void"
+        },
+        {
+          "name": "onAdvance",
+          "payload_type": "(tooth: number, site: PerioSite) => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
+      "confidence": "MEDIUM"
+    },
+    "VoicePerioControls": {
+      "name": "VoicePerioControls",
+      "file_path": "apps/dentalemon/src/features/workspace/components/perio/voice/voice-perio-controls.tsx",
+      "module": "src/features",
+      "type": "component",
+      "props_in": [
+        {
+          "name": "active",
+          "type": "boolean",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "micState",
+          "type": "MicState",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "transcriptLog",
+          "type": "readonly TranscriptEntry[]",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "pending",
+          "type": "PendingConfirm | null",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onToggle",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onConfirm",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "onDismiss",
+          "type": "() => void",
+          "required": true,
+          "default": null
+        }
+      ],
+      "events_out": [
+        {
+          "name": "onToggle",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onConfirm",
+          "payload_type": "() => void"
+        },
+        {
+          "name": "onDismiss",
+          "payload_type": "() => void"
+        }
+      ],
+      "slots": [],
+      "state_access": [],
+      "api_calls": [],
+      "routes_used_in": [],
+      "loading_state_hygiene": null,
+      "interaction_hygiene": {
+        "has_handler": true,
+        "handler_nonempty": true,
+        "reaches_api_or_nav": false,
+        "nav_targets": [],
+        "hrefs": [],
+        "violation": false,
+        "confidence": "MEDIUM"
+      },
+      "error_sink_calls": [],
       "confidence": "MEDIUM"
     }
   }

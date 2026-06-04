@@ -3,47 +3,356 @@
 <!-- oli:regen:code-api-surface:begin -->
 | Endpoint | Handler | Auth | Consumers | Phantom | Confidence |
 |---|---|---|---|---|---|
-| `POST /dental/patients` | — | ? | 2 | ⚠️ | LOW |
-| `GET /dental/org/members` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/organizations/:orgId/branches/:branchId/members/:memberId/verify-pin` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/billing/invoices/:invoiceId` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/billing/invoices/:invoiceId/issue` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/billing/invoices/:invoiceId/void` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/billing/invoices/:invoiceId/payments` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/billing/invoices/:invoiceId/plan` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/imaging/images/:imageId/ceph/reports` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/imaging/images/:imageId/ceph/landmarks` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/imaging/images/:imageId/ceph/landmarks` | — | ? | 1 | ⚠️ | LOW |
-| `DELETE /dental/imaging/images/:imageId/ceph/landmarks/:code` | — | ? | 1 | ⚠️ | LOW |
+| `GET /audit/logs` | `listAuditLogs` | true | 0 |  | HIGH |
+| `POST /billing/invoices` | `createInvoice` | true | 0 |  | HIGH |
+| `GET /billing/invoices` | `listInvoices` | true | 0 |  | HIGH |
+| `GET /billing/invoices/:invoice` | `getInvoice` | true | 0 |  | HIGH |
+| `PATCH /billing/invoices/:invoice` | `updateInvoice` | true | 0 |  | HIGH |
+| `DELETE /billing/invoices/:invoice` | `deleteInvoice` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/capture` | `captureInvoicePayment` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/finalize` | `finalizeInvoice` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/mark-uncollectible` | `markInvoiceUncollectible` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/pay` | `payInvoice` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/refund` | `refundInvoicePayment` | true | 0 |  | HIGH |
+| `POST /billing/invoices/:invoice/void` | `voidInvoice` | true | 0 |  | HIGH |
+| `POST /billing/merchant-accounts` | `createMerchantAccount` | true | 0 |  | HIGH |
+| `GET /billing/merchant-accounts/:merchantAccount` | `getMerchantAccount` | true | 0 |  | HIGH |
+| `POST /billing/merchant-accounts/:merchantAccount/dashboard` | `getMerchantDashboard` | true | 0 |  | HIGH |
+| `POST /billing/merchant-accounts/:merchantAccount/onboard` | `onboardMerchantAccount` | true | 0 |  | HIGH |
+| `POST /billing/webhooks/stripe` | `handleStripeWebhook` | ? | 0 |  | HIGH |
+| `POST /booking/bookings` | `createBooking` | true | 0 |  | HIGH |
+| `GET /booking/bookings` | `listBookings` | true | 0 |  | HIGH |
+| `GET /booking/bookings/:booking` | `getBooking` | true | 0 |  | HIGH |
+| `POST /booking/bookings/:booking/cancel` | `cancelBooking` | true | 0 |  | HIGH |
+| `POST /booking/bookings/:booking/confirm` | `confirmBooking` | true | 0 |  | HIGH |
+| `POST /booking/bookings/:booking/no-show` | `markNoShowBooking` | true | 0 |  | HIGH |
+| `POST /booking/bookings/:booking/reject` | `rejectBooking` | true | 0 |  | HIGH |
+| `GET /booking/events` | `listBookingEvents` | true | 0 |  | HIGH |
+| `POST /booking/events` | `createBookingEvent` | true | 0 |  | HIGH |
+| `GET /booking/events/:event` | `getBookingEvent` | true | 0 |  | HIGH |
+| `PATCH /booking/events/:event` | `updateBookingEvent` | true | 0 |  | HIGH |
+| `DELETE /booking/events/:event` | `deleteBookingEvent` | true | 0 |  | HIGH |
+| `POST /booking/events/:event/exceptions` | `createScheduleException` | true | 0 |  | HIGH |
+| `GET /booking/events/:event/exceptions` | `listScheduleExceptions` | true | 0 |  | HIGH |
+| `GET /booking/events/:event/exceptions/:exception` | `getScheduleException` | true | 0 |  | HIGH |
+| `DELETE /booking/events/:event/exceptions/:exception` | `deleteScheduleException` | true | 0 |  | HIGH |
+| `GET /booking/events/:event/slots` | `listEventSlots` | true | 0 |  | HIGH |
+| `GET /booking/slots/:slotId` | `getTimeSlot` | true | 0 |  | HIGH |
+| `POST /comms/chat-rooms` | `createChatRoom` | true | 0 |  | HIGH |
+| `GET /comms/chat-rooms` | `listChatRooms` | true | 0 |  | HIGH |
+| `GET /comms/chat-rooms/:room` | `getChatRoom` | true | 0 |  | HIGH |
+| `GET /comms/chat-rooms/:room/messages` | `getChatMessages` | true | 0 |  | HIGH |
+| `POST /comms/chat-rooms/:room/messages` | `sendChatMessage` | true | 0 |  | HIGH |
+| `POST /comms/chat-rooms/:room/video-call/end` | `endVideoCall` | true | 0 |  | HIGH |
+| `POST /comms/chat-rooms/:room/video-call/join` | `joinVideoCall` | true | 0 |  | HIGH |
+| `POST /comms/chat-rooms/:room/video-call/leave` | `leaveVideoCall` | true | 0 |  | HIGH |
+| `PATCH /comms/chat-rooms/:room/video-call/participant` | `updateVideoCallParticipant` | true | 0 |  | HIGH |
+| `GET /comms/ice-servers` | `getIceServers` | true | 0 |  | HIGH |
+| `POST /dental/appointments` | `createAppointment` | true | 1 |  | HIGH |
+| `GET /dental/appointments` | `listAppointments` | true | 2 |  | HIGH |
+| `GET /dental/appointments/:appointmentId` | `getAppointment` | true | 0 |  | HIGH |
+| `PATCH /dental/appointments/:appointmentId` | `updateAppointment` | true | 2 |  | HIGH |
+| `DELETE /dental/appointments/:appointmentId` | `cancelAppointment` | true | 0 |  | HIGH |
+| `POST /dental/appointments/:appointmentId/check-in` | `checkInAppointment` | true | 1 |  | HIGH |
+| `POST /dental/appointments/:appointmentId/confirm` | `confirmAppointment` | true | 1 |  | HIGH |
+| `POST /dental/appointments/:appointmentId/queue-item` | `createQueueItem` | true | 0 |  | HIGH |
+| `GET /dental/audit-events` | `getAuditEvents` | true | 0 |  | HIGH |
+| `POST /dental/billing/claims` | `createInsuranceClaim` | true | 0 |  | HIGH |
+| `GET /dental/billing/claims` | `listInsuranceClaims` | true | 1 |  | HIGH |
+| `GET /dental/billing/claims/aging` | `getPayerArAging` | true | 1 |  | HIGH |
+| `GET /dental/billing/claims/:claimId` | `getInsuranceClaim` | true | 0 |  | HIGH |
+| `POST /dental/billing/claims/:claimId/lines` | `addInsuranceClaimLine` | true | 0 |  | HIGH |
+| `PATCH /dental/billing/claims/:claimId/lines/:lineId` | `updateInsuranceClaimLine` | true | 0 |  | HIGH |
+| `POST /dental/billing/claims/:claimId/remittance` | `recordClaimRemittance` | true | 1 |  | HIGH |
+| `PATCH /dental/billing/claims/:claimId/status` | `updateInsuranceClaimStatus` | true | 1 |  | HIGH |
+| `GET /dental/billing/collections/aging` | `getArAging` | true | 1 |  | HIGH |
+| `GET /dental/billing/collections/summary` | `getCollectionsSummary` | true | 0 |  | HIGH |
+| `POST /dental/billing/estimate` | `estimateClaimCoverage` | true | 1 |  | HIGH |
+| `POST /dental/billing/invoices` | `createDentalInvoice` | true | 1 |  | HIGH |
+| `GET /dental/billing/invoices` | `listDentalInvoices` | true | 1 |  | HIGH |
+| `GET /dental/billing/invoices/:invoiceId` | `getDentalInvoice` | true | 1 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/discount` | `applyDentalDiscount` | true | 0 |  | HIGH |
+| `PATCH /dental/billing/invoices/:invoiceId/issue` | `issueDentalInvoice` | true | 1 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/payments` | `recordDentalPayment` | true | 1 |  | HIGH |
+| `GET /dental/billing/invoices/:invoiceId/payments` | `listDentalPayments` | true | 0 |  | HIGH |
+| `GET /dental/billing/invoices/:invoiceId/payments/:paymentId/receipt` | `getDentalPaymentReceipt` | true | 0 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/payments/:paymentId/void` | `voidDentalPayment` | true | 0 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/plan` | `createDentalPaymentPlan` | true | 0 |  | HIGH |
+| `GET /dental/billing/invoices/:invoiceId/plan` | `getDentalPaymentPlan` | true | 1 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/uncollectible` | `markUncollectible` | true | 0 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/void` | `voidDentalInvoice` | true | 1 |  | HIGH |
+| `GET /dental/billing/patients/:patientId/balance` | `getPatientBalance` | true | 0 |  | HIGH |
+| `POST /dental/billing/statements/batch` | `generateStatementBatch` | true | 1 |  | HIGH |
+| `GET /dental/branches` | `getBranchesByUser` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/consent-templates` | `listConsentTemplates` | true | 0 |  | HIGH |
+| `POST /dental/branches/:branchId/consent-templates` | `createConsentTemplate` | true | 0 |  | HIGH |
+| `PATCH /dental/branches/:branchId/consent-templates/:id` | `updateConsentTemplate` | true | 0 |  | HIGH |
+| `DELETE /dental/branches/:branchId/consent-templates/:id` | `deleteConsentTemplate` | true | 0 |  | HIGH |
+| `POST /dental/branches/:branchId/inventory` | `createInventoryItem` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/inventory` | `listInventoryItems` | true | 0 |  | HIGH |
+| `PATCH /dental/branches/:branchId/inventory/:itemId` | `updateInventoryItem` | true | 0 |  | HIGH |
+| `POST /dental/branches/:branchId/inventory/:itemId/adjustments` | `createInventoryAdjustment` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/inventory/:itemId/adjustments` | `listInventoryAdjustments` | true | 0 |  | HIGH |
+| `POST /dental/branches/:branchId/postop-templates` | `createPostopTemplate` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/postop-templates` | `listPostopTemplates` | true | 0 |  | HIGH |
+| `PATCH /dental/branches/:branchId/postop-templates/:templateId` | `updatePostopTemplate` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/queue-board` | `listQueueBoard` | true | 1 |  | HIGH |
+| `GET /dental/branches/:branchId/settings` | `getBranchSettings` | true | 0 |  | HIGH |
+| `PUT /dental/branches/:branchId/settings` | `updateBranchSettings` | true | 0 |  | HIGH |
+| `POST /dental/branches/:branchId/waitlist` | `createWaitlistEntry` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/waitlist` | `listWaitlist` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/working-hours` | `getWorkingHours` | true | 0 |  | HIGH |
+| `PUT /dental/branches/:branchId/working-hours` | `updateWorkingHours` | true | 0 |  | HIGH |
+| `POST /dental/clinical/medical-history` | `createMedicalHistoryEntry` | true | 1 |  | HIGH |
+| `GET /dental/clinical/medical-history` | `listMedicalHistory` | true | 1 |  | HIGH |
+| `POST /dental/clinical/medical-history-review` | `recordMedicalHistoryReview` | true | 1 |  | HIGH |
+| `GET /dental/clinical/medical-history-review` | `getMedicalHistoryReview` | true | 1 |  | HIGH |
+| `PATCH /dental/clinical/medical-history/:entryId` | `updateMedicalHistoryEntry` | true | 1 |  | HIGH |
+| `GET /dental/dashboard/summary` | `getDashboardSummary` | true | 0 |  | HIGH |
+| `POST /dental/erasure-requests` | `requestErasure` | true | 0 |  | HIGH |
+| `GET /dental/erasure-requests` | `listErasureRequests` | true | 0 |  | HIGH |
+| `GET /dental/erasure-requests/:id` | `getErasureRequest` | true | 0 |  | HIGH |
+| `POST /dental/erasure-requests/:id/approve` | `approveErasure` | true | 0 |  | HIGH |
+| `POST /dental/erasure-requests/:id/reject` | `rejectErasure` | true | 0 |  | HIGH |
+| `GET /dental/fee-schedule` | `getFeeSchedule` | true | 0 |  | HIGH |
+| `PATCH /dental/fee-schedule/:cdt` | `updateFeeScheduleEntry` | true | 0 |  | HIGH |
+| `POST /dental/households` | `createHousehold` | true | 0 |  | HIGH |
+| `GET /dental/households/:householdId` | `getHousehold` | true | 0 |  | HIGH |
+| `POST /dental/households/:householdId/members` | `addHouseholdMember` | true | 0 |  | HIGH |
+| `DELETE /dental/households/:householdId/members/:patientId` | `removeHouseholdMember` | true | 0 |  | HIGH |
+| `POST /dental/imaging/ceph/superimpositions` | `CephMgmt_createCephSuperimposition` | true | 0 |  | HIGH |
+| `POST /dental/imaging/ceph/superimpositions/preview` | `CephMgmt_previewCephSuperimposition` | true | 1 |  | HIGH |
+| `GET /dental/imaging/ceph/superimpositions/:superimpositionId` | `CephMgmt_getCephSuperimposition` | true | 0 |  | HIGH |
+| `PATCH /dental/imaging/findings/:findingId` | `ImagingFindingsMgmt_updateFinding` | true | 1 |  | HIGH |
+| `DELETE /dental/imaging/findings/:findingId` | `ImagingFindingsMgmt_deleteFinding` | true | 1 |  | HIGH |
+| `DELETE /dental/imaging/images/:imageId` | `ImagingMgmt_deleteImage` | true | 0 |  | HIGH |
+| `PATCH /dental/imaging/images/:imageId/calibration` | `ImagingMgmt_updateImageCalibration` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/ceph/analysis` | `CephMgmt_getCephAnalysis` | true | 0 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/ceph/analysis/recompute` | `CephMgmt_recomputeCephAnalysis` | true | 0 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/ceph/landmarks` | `CephMgmt_batchUpsertCephLandmarks` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/ceph/landmarks` | `CephMgmt_listCephLandmarks` | true | 1 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/ceph/landmarks/detect` | `CephMgmt_detectCephLandmarks` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/ceph/landmarks/detect/:jobId` | `CephMgmt_getCephLandmarkDetectionJob` | true | 0 |  | HIGH |
+| `PATCH /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode` | `CephMgmt_updateCephLandmark` | true | 1 |  | HIGH |
+| `DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode` | `CephMgmt_deleteCephLandmark` | true | 1 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/ceph/reports` | `CephMgmt_createCephReport` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/ceph/reports` | `CephMgmt_getCephReport` | true | 1 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/findings` | `ImagingFindingsMgmt_createFinding` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/findings` | `ImagingFindingsMgmt_listFindings` | true | 1 |  | HIGH |
+| `POST /dental/imaging/images/:imageId/measurements` | `ImagingMgmt_createMeasurement` | true | 1 |  | HIGH |
+| `GET /dental/imaging/images/:imageId/measurements` | `ImagingMgmt_listMeasurements` | true | 1 |  | HIGH |
+| `PATCH /dental/imaging/images/:imageId/modality` | `ImagingMgmt_updateImageModality` | true | 0 |  | HIGH |
+| `DELETE /dental/imaging/measurements/:measurementId` | `ImagingMgmt_deleteMeasurement` | true | 1 |  | HIGH |
+| `GET /dental/imaging/patients/:patientId/ceph/superimpositions` | `CephMgmt_listCephSuperimpositions` | true | 0 |  | HIGH |
+| `POST /dental/imaging/studies` | `ImagingMgmt_createImagingStudy` | true | 1 |  | HIGH |
+| `GET /dental/imaging/studies/:studyId` | `ImagingMgmt_getImagingStudy` | true | 0 |  | HIGH |
+| `POST /dental/imaging/studies/:studyId/cbct/finalize` | `ImagingMgmt_finalizeCbctStudy` | true | 0 |  | HIGH |
+| `GET /dental/imaging/studies/:studyId/cbct/viewer-link` | `ImagingMgmt_getCbctViewerLink` | true | 1 |  | HIGH |
+| `POST /dental/legal-holds` | `placeLegalHold` | true | 0 |  | HIGH |
+| `GET /dental/legal-holds` | `listLegalHolds` | true | 0 |  | HIGH |
+| `POST /dental/legal-holds/:id/release` | `releaseLegalHold` | true | 0 |  | HIGH |
+| `POST /dental/onboarding` | `createOnboarding` | true | 1 |  | HIGH |
+| `GET /dental/org/context` | `getOrgContext` | true | 0 |  | HIGH |
+| `GET /dental/org/members` | `listMembers` | true | 1 |  | HIGH |
+| `POST /dental/org/members` | `createMember` | true | 0 |  | HIGH |
+| `PATCH /dental/org/members/:memberId` | `updateMember` | true | 0 |  | HIGH |
+| `POST /dental/org/members/:memberId/recover-pin` | `recoverPin` | ? | 0 |  | HIGH |
+| `POST /dental/org/members/:memberId/reset-pin` | `resetMemberPin` | true | 0 |  | HIGH |
+| `POST /dental/org/members/:memberId/security-question` | `setSecurityQuestion` | true | 0 |  | HIGH |
+| `GET /dental/org/permissions` | `getPermissionGrid` | true | 0 |  | HIGH |
+| `PUT /dental/org/permissions` | `updatePermissions` | true | 0 |  | HIGH |
+| `POST /dental/organizations` | `DentalOrganizationManagement_create` | true | 0 |  | HIGH |
+| `GET /dental/organizations/:id` | `DentalOrganizationManagement_get` | true | 0 |  | HIGH |
+| `PATCH /dental/organizations/:id` | `DentalOrganizationManagement_update` | true | 0 |  | HIGH |
+| `POST /dental/organizations/:orgId/branches` | `DentalBranchManagement_create` | true | 0 |  | HIGH |
+| `GET /dental/organizations/:orgId/branches` | `DentalBranchManagement_list` | true | 0 |  | HIGH |
+| `GET /dental/organizations/:orgId/branches/:branchId` | `DentalBranchManagement_get` | true | 0 |  | HIGH |
+| `POST /dental/organizations/:orgId/branches/:branchId/members` | `DentalMembershipManagement_create` | true | 0 |  | HIGH |
+| `GET /dental/organizations/:orgId/branches/:branchId/members` | `DentalMembershipManagement_list` | true | 0 |  | HIGH |
+| `POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/deactivate` | `DentalMembershipManagement_deactivate` | true | 0 |  | HIGH |
+| `POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin` | `DentalMembershipManagement_setPin` | true | 1 |  | HIGH |
+| `POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin` | `DentalMembershipManagement_verifyPin` | true | 1 |  | HIGH |
+| `POST /dental/patients` | `createDentalPatient` | true | 2 |  | HIGH |
+| `GET /dental/patients` | `listDentalPatients` | true | 1 |  | HIGH |
+| `POST /dental/patients/bulk-archive` | `bulkArchiveDentalPatients` | true | 1 |  | HIGH |
+| `GET /dental/patients/duplicates` | `detectDuplicatePatients` | true | 1 |  | HIGH |
+| `GET /dental/patients/export` | `exportDentalPatients` | true | 1 |  | HIGH |
+| `POST /dental/patients/import` | `importPatients` | true | 0 |  | HIGH |
+| `GET /dental/patients/:id` | `getDentalPatient` | true | 1 |  | HIGH |
+| `PATCH /dental/patients/:id` | `updateDentalPatient` | true | 0 |  | HIGH |
+| `POST /dental/patients/:id/archive` | `archiveDentalPatient` | true | 1 |  | HIGH |
+| `GET /dental/patients/:id/follow-up-notes` | `listFollowUpNotes` | true | 1 |  | HIGH |
+| `POST /dental/patients/:id/follow-up-notes` | `addFollowUpNote` | true | 1 |  | HIGH |
+| `POST /dental/patients/:id/restore` | `restoreDentalPatient` | true | 1 |  | HIGH |
+| `GET /dental/patients/:id/safety-floor` | `getDentalPatientSafetyFloor` | true | 0 |  | HIGH |
+| `GET /dental/patients/:id/statement` | `getDentalPatientStatement` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/authorizations` | `createCoverageAuthorization` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/authorizations` | `listCoverageAuthorizations` | true | 1 |  | HIGH |
+| `PATCH /dental/patients/:patientId/authorizations/:authorizationId/status` | `updateCoverageAuthorizationStatus` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/case-presentations` | `createCasePresentation` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/case-presentations` | `listCasePresentations` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/case-presentations/:presentationId` | `getCasePresentation` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/case-presentations/:presentationId/accept` | `acceptCasePresentation` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/case-presentations/:presentationId/reject` | `rejectCasePresentation` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/claims` | `createClaimDraft` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/claims` | `listPatientClaims` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/claims/:claimId/readiness` | `getClaimReadiness` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/claims/:claimId/status` | `updateClaimStatus` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/communication-consent` | `getPatientCommunicationConsent` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/communication-consent` | `updatePatientCommunicationConsent` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/contacts` | `createPatientContact` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/contacts` | `listPatientContacts` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/contacts/:contactId` | `updatePatientContact` | true | 0 |  | HIGH |
+| `DELETE /dental/patients/:patientId/contacts/:contactId` | `deletePatientContact` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/dental-alerts` | `createDentalAlert` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/dental-alerts` | `listDentalAlerts` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/dental-alerts/:alertId` | `updateDentalAlert` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/dentition` | `initializeDentition` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/household` | `getPatientHousehold` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/images` | `PatientImageMgmt_listPatientImages` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/insurance-profiles` | `createInsuranceProfile` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/insurance-profiles` | `listPatientInsuranceProfiles` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/insurance-profiles/:profileId` | `updateInsuranceProfile` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/occlusion-screenings` | `createOcclusionScreening` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/occlusion-screenings` | `listOcclusionScreenings` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/recalls` | `createRecall` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/recalls` | `listPatientRecalls` | true | 1 |  | HIGH |
+| `PATCH /dental/patients/:patientId/recalls/:recallId` | `updateRecall` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/tasks` | `createTask` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/tasks` | `listPatientTasks` | true | 0 |  | HIGH |
+| `PATCH /dental/patients/:patientId/tasks/:taskId` | `updateTask` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/treatment-options/:optionGroupId` | `listTreatmentOptionGroup` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/treatment-options/:optionGroupId/accept` | `acceptTreatmentOption` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/treatment-plan` | `getTreatmentPlan` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/treatment-plan/accept` | `acceptTreatmentPlan` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/treatment-plan/versions/:versionId` | `getTreatmentPlanVersion` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/treatment-plans` | `createTreatmentPlan` | true | 1 |  | HIGH |
+| `GET /dental/patients/:patientId/treatment-plans` | `listPatientTreatmentPlans` | true | 1 |  | HIGH |
+| `PATCH /dental/patients/:patientId/treatment-plans/:planId` | `updateTreatmentPlan` | true | 1 |  | HIGH |
+| `POST /dental/patients/:patientId/treatment-plans/:planId/approval` | `approveTreatmentPlan` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/treatment-plans/:planId/status-history` | `listTreatmentPlanStatusHistory` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/treatments` | `listPatientConditions` | true | 0 |  | HIGH |
+| `POST /dental/patients/:patientId/treatments/:treatmentId/appointment` | `attachTreatmentAppointment` | true | 0 |  | HIGH |
+| `DELETE /dental/patients/:patientId/treatments/:treatmentId/appointment` | `detachTreatmentAppointment` | true | 0 |  | HIGH |
+| `GET /dental/patients/:patientId/visits` | `listPatientVisits` | true | 0 |  | HIGH |
+| `POST /dental/perio-charts` | `createPerioChart` | true | 1 |  | HIGH |
+| `GET /dental/perio-charts/:chartId` | `getPerioChart` | true | 0 |  | HIGH |
+| `POST /dental/perio-charts/:chartId/complete` | `completePerioChart` | true | 1 |  | HIGH |
+| `PUT /dental/perio-charts/:chartId/readings/:toothNumber` | `upsertToothReading` | true | 1 |  | HIGH |
+| `POST /dental/pmd/import` | `importPMD` | true | 1 |  | HIGH |
+| `GET /dental/pmd/imported` | `listImportedPMDs` | true | 0 |  | HIGH |
+| `GET /dental/pmd/imported/:id` | `getImportedPMD` | true | 0 |  | HIGH |
+| `GET /dental/pmd/patient/:patientId/care-record` | `exportPatientCareRecord` | true | 0 |  | HIGH |
+| `POST /dental/public/appointments/:appointmentId/confirm/:token` | `confirmAppointmentByToken` | ? | 0 |  | HIGH |
+| `GET /dental/public/bookings/:confirmationCode` | `getOnlineBooking` | ? | 0 |  | HIGH |
+| `GET /dental/public/branches/:branchId/availability` | `getPublicAvailability` | ? | 1 |  | HIGH |
+| `GET /dental/public/branches/:branchId/booking-config` | `getPublicBookingConfig` | ? | 1 |  | HIGH |
+| `POST /dental/public/branches/:branchId/bookings` | `createOnlineBooking` | ? | 1 |  | HIGH |
+| `POST /dental/public/branches/:branchId/holds` | `createBookingHold` | ? | 1 |  | HIGH |
+| `PATCH /dental/queue-items/:itemId/status` | `updateQueueItemStatus` | true | 1 |  | HIGH |
+| `GET /dental/recalls/due` | `listDueRecalls` | true | 1 |  | HIGH |
+| `POST /dental/sync-logs` | `createSyncLog` | true | 0 |  | HIGH |
+| `GET /dental/sync-logs` | `listSyncLogs` | true | 1 |  | HIGH |
+| `PATCH /dental/sync-logs/:logId` | `updateSyncLog` | true | 0 |  | HIGH |
+| `GET /dental/treatment-templates` | `listTreatmentTemplates` | true | 0 |  | HIGH |
+| `POST /dental/treatment-templates` | `createTreatmentTemplate` | true | 0 |  | HIGH |
+| `PATCH /dental/treatment-templates/:id` | `updateTreatmentTemplate` | true | 0 |  | HIGH |
+| `DELETE /dental/treatment-templates/:id` | `deleteTreatmentTemplate` | true | 0 |  | HIGH |
+| `POST /dental/visits` | `createDentalVisit` | true | 1 |  | HIGH |
+| `GET /dental/visits` | `listDentalVisits` | true | 1 |  | HIGH |
+| `GET /dental/visits/history/:patientId/teeth/:toothNumber` | `getToothHistory` | true | 1 |  | HIGH |
+| `GET /dental/visits/pmd` | `listPMDs` | true | 0 |  | HIGH |
+| `GET /dental/visits/:visitId` | `getDentalVisit` | true | 0 |  | HIGH |
+| `PATCH /dental/visits/:visitId` | `updateDentalVisit` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/amendments` | `createAmendment` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/amendments` | `listAmendments` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/amendments/:amendmentId/approve` | `approveAmendment` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/apply-template/:templateId` | `applyTemplate` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/attachments` | `createAttachment` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/attachments` | `listAttachments` | true | 1 |  | HIGH |
+| `DELETE /dental/visits/:visitId/attachments/:attachmentId` | `deleteAttachment` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/carry-over` | `carryOverTreatments` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/chart` | `upsertDentalChart` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/chart` | `getDentalChart` | true | 1 |  | HIGH |
+| `PATCH /dental/visits/:visitId/chart/teeth/:toothNumber` | `updateTooth` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/consent-refusals` | `recordConsentRefusal` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/consent-refusals` | `listConsentRefusals` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/consents` | `createConsentForm` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/consents` | `listConsentForms` | true | 0 |  | HIGH |
+| `PATCH /dental/visits/:visitId/consents/:cid/revoke` | `revokeConsentForm` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/consents/:consentId/sign` | `signConsentForm` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/lab-orders` | `createLabOrder` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/lab-orders` | `listLabOrders` | true | 1 |  | HIGH |
+| `PATCH /dental/visits/:visitId/lab-orders/:orderId` | `updateLabOrder` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/notes` | `upsertVisitNotes` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/notes` | `getVisitNotes` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/notes/addendum` | `createVisitNoteAddendum` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/notes/history` | `getVisitNoteHistory` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/notes/sign` | `signVisitNotes` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/perio-chart` | `getVisitPerioChart` | true | 1 |  | HIGH |
+| `POST /dental/visits/:visitId/pmd` | `generatePMD` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/pmd` | `getPMDForVisit` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/pmd/export` | `exportPMD` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/prescriptions` | `createPrescription` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/prescriptions` | `listPrescriptions` | true | 0 |  | HIGH |
+| `PATCH /dental/visits/:visitId/prescriptions/:prescriptionId` | `updatePrescription` | true | 0 |  | HIGH |
+| `POST /dental/visits/:visitId/treatments` | `createDentalTreatment` | true | 1 |  | HIGH |
+| `GET /dental/visits/:visitId/treatments` | `listDentalTreatments` | true | 1 |  | HIGH |
+| `PATCH /dental/visits/:visitId/treatments/:treatmentId` | `updateDentalTreatment` | true | 1 |  | HIGH |
+| `POST /dental/waitlist/:entryId/promote` | `promoteWaitlistEntry` | true | 0 |  | HIGH |
+| `GET /email/queue` | `listEmailQueueItems` | true | 0 |  | HIGH |
+| `GET /email/queue/:queue` | `getEmailQueueItem` | true | 0 |  | HIGH |
+| `POST /email/queue/:queue/cancel` | `cancelEmailQueueItem` | true | 0 |  | HIGH |
+| `POST /email/queue/:queue/retry` | `retryEmailQueueItem` | true | 0 |  | HIGH |
+| `GET /email/templates` | `listEmailTemplates` | true | 0 |  | HIGH |
+| `POST /email/templates` | `createEmailTemplate` | true | 0 |  | HIGH |
+| `GET /email/templates/:template` | `getEmailTemplate` | true | 0 |  | HIGH |
+| `PATCH /email/templates/:template` | `updateEmailTemplate` | true | 0 |  | HIGH |
+| `POST /email/templates/:template/test` | `testEmailTemplate` | true | 0 |  | HIGH |
+| `POST /emr/consultations` | `createConsultation` | true | 0 |  | HIGH |
+| `GET /emr/consultations` | `listConsultations` | true | 0 |  | HIGH |
+| `GET /emr/consultations/:consultation` | `getConsultation` | true | 0 |  | HIGH |
+| `PATCH /emr/consultations/:consultation` | `updateConsultation` | true | 0 |  | HIGH |
+| `POST /emr/consultations/:consultation/finalize` | `finalizeConsultation` | true | 0 |  | HIGH |
+| `GET /emr/patients` | `listEMRPatients` | true | 0 |  | HIGH |
+| `GET /notifs` | `listNotifications` | true | 0 |  | HIGH |
+| `POST /notifs/read-all` | `markAllNotificationsAsRead` | true | 0 |  | HIGH |
+| `GET /notifs/:notif` | `getNotification` | true | 0 |  | HIGH |
+| `POST /notifs/:notif/read` | `markNotificationAsRead` | true | 0 |  | HIGH |
+| `POST /patients` | `createPatient` | true | 0 |  | HIGH |
+| `GET /patients` | `listPatients` | true | 0 |  | HIGH |
+| `POST /patients/merge` | `mergePatients` | ? | 0 |  | HIGH |
+| `POST /patients/unmerge` | `unmergePatients` | ? | 0 |  | HIGH |
+| `GET /patients/:id` | `getPatient` | true | 0 |  | HIGH |
+| `PATCH /patients/:id` | `updatePatient` | true | 0 |  | HIGH |
+| `DELETE /patients/:id` | `deactivatePatient` | true | 0 |  | HIGH |
+| `POST /persons` | `createPerson` | true | 1 |  | HIGH |
+| `GET /persons` | `listPersons` | true | 0 |  | HIGH |
+| `GET /persons/:person` | `getPerson` | true | 0 |  | HIGH |
+| `PATCH /persons/:person` | `updatePerson` | true | 0 |  | HIGH |
+| `POST /providers/practitioner-roles` | `createPractitionerRole` | true | 0 |  | HIGH |
+| `GET /providers/practitioner-roles` | `listPractitionerRoles` | true | 0 |  | HIGH |
+| `GET /providers/practitioner-roles/:id` | `getPractitionerRole` | true | 0 |  | HIGH |
+| `PATCH /providers/practitioner-roles/:id` | `updatePractitionerRole` | true | 0 |  | HIGH |
+| `DELETE /providers/practitioner-roles/:id` | `deactivatePractitionerRole` | true | 0 |  | HIGH |
+| `POST /providers/practitioners` | `createPractitioner` | true | 0 |  | HIGH |
+| `GET /providers/practitioners` | `listPractitioners` | true | 0 |  | HIGH |
+| `GET /providers/practitioners/:id` | `getPractitioner` | true | 0 |  | HIGH |
+| `PATCH /providers/practitioners/:id` | `updatePractitioner` | true | 0 |  | HIGH |
+| `DELETE /providers/practitioners/:id` | `deactivatePractitioner` | true | 0 |  | HIGH |
+| `POST /reviews/` | `createReview` | true | 0 |  | HIGH |
+| `GET /reviews/` | `listReviews` | true | 0 |  | HIGH |
+| `GET /reviews/:review` | `getReview` | true | 0 |  | HIGH |
+| `DELETE /reviews/:review` | `deleteReview` | true | 0 |  | HIGH |
+| `GET /storage/files` | `listFiles` | true | 0 |  | HIGH |
+| `POST /storage/files/upload` | `uploadFile` | true | 1 |  | HIGH |
+| `GET /storage/files/:file` | `getFile` | true | 0 |  | HIGH |
+| `DELETE /storage/files/:file` | `deleteFile` | true | 0 |  | HIGH |
+| `POST /storage/files/:file/complete` | `completeFileUpload` | true | 1 |  | HIGH |
+| `GET /storage/files/:file/download` | `getFileDownload` | true | 0 |  | HIGH |
+| `POST /storage/multipart/initiate` | `initiateMultipartUpload` | true | 0 |  | HIGH |
+| `DELETE /storage/multipart/:file/abort` | `abortMultipartUpload` | true | 1 |  | HIGH |
+| `POST /storage/multipart/:file/complete` | `completeMultipartUpload` | true | 1 |  | HIGH |
+| `GET /storage/multipart/:file/part-url` | `generateMultipartPartUrl` | true | 0 |  | HIGH |
 | `GET /dental/imaging/images/:imageId/ceph/analysis:qs` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/imaging/images/:imageId/calibration` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/imaging/images/:imageId/measurements` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/imaging/images/:imageId/measurements` | — | ? | 1 | ⚠️ | LOW |
-| `DELETE /dental/imaging/measurements/:measurementId` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/imaging/images/:imageId/findings` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/imaging/images/:imageId/findings` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/imaging/findings/:findingId` | — | ? | 1 | ⚠️ | LOW |
-| `DELETE /dental/imaging/findings/:findingId` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/patients/:patientId/images` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/imaging/studies` | — | ? | 1 | ⚠️ | LOW |
-| `DELETE /storage/multipart/:fileId/abort` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/organizations` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/organizations/:id/branches` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/organizations/:id/branches/:id/members` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/organizations/:id/branches/:id/members/:id/set-pin` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/pmd/import` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/billing/invoices` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/branches/:branchId/queue-board` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/queue-items/:itemId/status` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/patients/:patientId/recalls` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/patients/:patientId/recalls` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/patients/:patientId/recalls/:recallId` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/sync-logs` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/patients/:patientId/treatment-plan` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/patients/:patientId/treatment-plan/accept` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/visits/:visitId/treatments/:treatmentId` | — | ? | 1 | ⚠️ | LOW |
-| `GET /dental/patients/:patientId/treatment-plans` | — | ? | 1 | ⚠️ | LOW |
-| `POST /dental/patients/:patientId/treatment-plans` | — | ? | 1 | ⚠️ | LOW |
-| `PATCH /dental/patients/:patientId/treatment-plans/:planId` | — | ? | 1 | ⚠️ | LOW |
 <!-- oli:regen:code-api-surface:end -->

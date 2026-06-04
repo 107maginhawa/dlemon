@@ -6,22 +6,38 @@
 | `AppSidebar` | DashboardLayout | — | — | — | — |
 | `Combobox` | PreferencesForm | PreferencesForm | — | — | — |
 | `DateTimeFilter` | — | — | — | — | — |
-| `EmptyState` | TreatmentPlanTab | — | — | — | — |
+| `EmptyState` | BookingWizard, TreatmentPlanTab | — | — | — | — |
 | `ImageCropperDialog` | PersonalInfoForm | PersonalInfoForm | — | — | — |
+| `ListErrorState` | BillingList, CalendarPage, ClaimsWorklist, CollectionsView, PatientList | BillingList, CalendarPage, ClaimsWorklist, CollectionsView, PatientList | — | — | — |
 | `useOneSignal` | — | — | — | — | — |
 | `usePatientProfile` | — | — | — | — | — |
+| `useSheetA11y` | — | — | — | — | — |
 | `RootComponent` | — | — | — | — | — |
 | `DashboardLayout` | — | — | — | — | — |
 | `WorkspaceLayout` | — | — | — | — | — |
+| `PublicBookingPage` | — | — | — | — | — |
 | `DentalOnboardingPage` | — | — | — | — | — |
 | `CephReportPage` | — | — | — | — | — |
+| `ComparisonTestHarness` | — | — | — | — | — |
+| `ImagingTestHarness` | — | — | — | — | — |
 | `HomePage` | — | — | — | — | — |
 | `OnboardingPage` | — | — | — | — | — |
 | `VerifyEmailPage` | — | — | — | — | — |
+| `BookingWizard` | PublicBookingPage | — | — | — | — |
+| `useBookingConfig` | — | — | — | — | — |
+| `useAvailability` | — | — | — | — | — |
+| `useCreateHold` | — | — | — | — | — |
+| `useCreateBooking` | — | — | — | — | — |
+| `useBookingWizard` | — | — | — | — | — |
+| `CasePresentationPanel` | — | — | — | — | — |
+| `CasePresentationView` | CasePresentationPanel | CasePresentationPanel | — | — | — |
+| `SignaturePad` | CasePresentationView | CasePresentationView | — | — | — |
+| `useCasePresentation` | — | — | — | — | GET /dental/patients/:patientId/case-presentations/:presentationId, POST /dental/patients/:patientId/case-presentations/:presentationId/accept, POST /dental/patients/:patientId/case-presentations/:presentationId/reject |
+| `useCasePresentations` | — | — | — | — | GET /dental/patients/:patientId/case-presentations, POST /dental/patients/:patientId/case-presentations |
 | `BillingPage` | — | — | — | — | — |
 | `CalendarPage` | — | — | — | — | — |
 | `DashboardPage` | — | — | — | — | — |
-| `PatientsPage` | — | — | — | — | POST /dental/patients |
+| `PatientsPage` | — | — | — | — | POST /dental/patients, PATCH /dental/patients/:id/communication-consent |
 | `ReportsPage` | — | — | — | — | — |
 | `SettingsPage` | — | — | — | — | — |
 | `StaffPage` | — | — | — | — | — |
@@ -33,8 +49,19 @@
 | `PinSelect` | PinSelectRoute | PinSelectRoute | — | — | — |
 | `PinSelectRoute` | — | — | — | — | GET /dental/org/members |
 | `BillingList` | BillingPage | BillingPage | — | — | — |
+| `ClaimsWorklist` | BillingPage | — | — | — | — |
+| `CollectionsView` | BillingPage | — | — | — | — |
 | `InvoiceDetail` | BillingPage, WorkspacePaymentModal | BillingPage, WorkspacePaymentModal | — | — | GET /dental/billing/invoices/:invoiceId, PATCH /dental/billing/invoices/:invoiceId/issue, POST /dental/billing/invoices/:invoiceId/void, POST /dental/billing/invoices/:invoiceId/payments |
+| `InvoiceInsuranceBlock` | — | — | — | — | — |
 | `PaymentPlanView` | BillingPage | BillingPage | — | — | GET /dental/billing/invoices/:invoiceId/plan |
+| `useArAging` | — | — | — | — | — |
+| `useStatementBatch` | — | — | — | — | — |
+| `useInsuranceClaims` | — | — | — | — | — |
+| `usePayerArAging` | — | — | — | — | — |
+| `useClaimMutations` | — | — | — | — | — |
+| `useCoverageEstimate` | — | — | — | — | — |
+| `usePatientAuthorizations` | — | — | — | — | — |
+| `useAuthorizationMutations` | — | — | — | — | — |
 | `useInvoiceDetail` | — | — | — | — | — |
 | `useInvoices` | — | — | — | — | — |
 | `MetricCard` | MorningBriefing | — | — | — | — |
@@ -45,6 +72,7 @@
 | `MeasurementShape` | ImagingWorkspace | ImagingWorkspace | — | — | — |
 | `AnnotationShape` | ImagingWorkspace | ImagingWorkspace | — | — | — |
 | `DrawingPreview` | ImagingWorkspace | — | — | — | — |
+| `CbctStudyCard` | PatientImageList | — | — | — | — |
 | `CephAngleArcLayer` | ImagingWorkspace | — | — | — | — |
 | `CephLandmarkLayer` | ImagingWorkspace | ImagingWorkspace | — | — | — |
 | `CephLandmarkPalette` | CephWorkspacePanel | CephWorkspacePanel | — | — | — |
@@ -54,33 +82,42 @@
 | `CephReportView` | CephReportPage | — | — | — | — |
 | `CephTracingOverlay` | ImagingWorkspace | — | — | — | — |
 | `CephWorkspacePanel` | ImagingWorkspace | ImagingWorkspace | — | — | POST /dental/imaging/images/:imageId/ceph/reports |
-| `ComparisonView` | WorkspaceImagingOverlay | WorkspaceImagingOverlay | — | — | — |
+| `ComparisonView` | ComparisonTestHarness, ImagingTestHarness, WorkspaceImagingOverlay | ComparisonTestHarness, ImagingTestHarness, WorkspaceImagingOverlay | — | — | — |
 | `FindingsSidebar` | ImagingWorkspace | ImagingWorkspace | — | — | — |
+| `FmxMount` | PatientImageList | PatientImageList | — | — | — |
 | `ImageUpload` | PatientImageList | PatientImageList | — | — | — |
-| `ImagingWorkspace` | ComparisonView, WorkspaceImagingOverlay | — | — | — | PATCH /dental/imaging/images/:imageId/calibration |
+| `ImagingWorkspace` | ComparisonView, ImagingTestHarness, WorkspaceImagingOverlay | — | — | — | PATCH /dental/imaging/images/:imageId/calibration |
 | `MeasurementToolbar` | ImagingWorkspace | ImagingWorkspace | — | — | — |
-| `PatientImageList` | WorkspaceImagingOverlay | WorkspaceImagingOverlay | — | — | — |
+| `PatientImageList` | ImagingTestHarness, WorkspaceImagingOverlay | ImagingTestHarness, WorkspaceImagingOverlay | — | — | — |
+| `SuperimpositionPanel` | ComparisonView | ComparisonView | — | — | — |
+| `useCbctViewerLink` | — | — | — | — | GET /dental/imaging/studies/:studyId/cbct/viewer-link |
 | `useCephAnalysis` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/analysis:qs |
-| `useCephLandmarks` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/landmarks, PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code, POST /dental/imaging/images/:imageId/ceph/landmarks, DELETE /dental/imaging/images/:imageId/ceph/landmarks/:code |
+| `useCephLandmarks` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/landmarks, PATCH /dental/imaging/images/:imageId/ceph/landmarks/:code, POST /dental/imaging/images/:imageId/ceph/landmarks, DELETE /dental/imaging/images/:imageId/ceph/landmarks/:code, POST /dental/imaging/images/:imageId/ceph/landmarks/detect |
+| `useCephSuperimpositionPreview` | — | — | — | — | POST /dental/imaging/ceph/superimpositions/preview |
+| `useLatestCephReport` | — | — | — | — | GET /dental/imaging/images/:imageId/ceph/reports |
 | `useImagingFindings` | — | — | — | — | GET /dental/imaging/images/:imageId/findings, POST /dental/imaging/images/:imageId/findings, PATCH /dental/imaging/findings/:findingId, DELETE /dental/imaging/findings/:findingId |
 | `useImagingStudies` | — | — | — | — | GET /dental/patients/:patientId/images |
-| `useImagingUpload` | — | — | — | — | POST /dental/imaging/studies, DELETE /storage/multipart/:fileId/abort |
+| `useImagingUpload` | — | — | — | — | POST /dental/imaging/studies, POST /storage/multipart/:fileId/complete, DELETE /storage/multipart/:fileId/abort |
 | `useMeasurements` | — | — | — | — | GET /dental/imaging/images/:imageId/measurements, POST /dental/imaging/images/:imageId/measurements, DELETE /dental/imaging/measurements/:measurementId |
 | `useOfflineCache` | — | — | — | — | — |
-| `OnboardingWizard` | DentalOnboardingPage | DentalOnboardingPage | — | — | POST /dental/organizations, POST /dental/organizations/:id/branches, POST /dental/organizations/:id/branches/:id/members, POST /dental/organizations/:id/branches/:id/members/:id/set-pin, POST /dental/patients |
+| `OnboardingWizard` | DentalOnboardingPage | DentalOnboardingPage | — | — | POST /dental/onboarding, POST /dental/organizations/:organizationId/branches/:branchId/members/:membershipId/set-pin, POST /dental/patients |
 | `ClinicStep` | OnboardingWizard | OnboardingWizard | — | — | — |
 | `DentistStep` | OnboardingWizard | OnboardingWizard | — | — | — |
 | `FeesStep` | OnboardingWizard | OnboardingWizard | — | — | — |
 | `PatientStep` | OnboardingWizard | OnboardingWizard | — | — | — |
 | `DentalChartThumbnail` | PatientFolderCard | — | — | — | — |
+| `DuplicatePatientsPanel` | PatientsPage | — | — | — | — |
 | `FollowUpNotes` | — | — | — | — | — |
+| `HouseholdCard` | — | — | — | — | — |
 | `PatientFilterTabs` | PatientsPage | PatientsPage | — | — | — |
 | `PatientFolderCard` | PatientList | PatientList | — | — | — |
 | `PatientList` | PatientsPage | PatientsPage | — | — | — |
 | `PatientProfilePage` | ProfilePage | — | — | — | — |
 | `PatientRegistrationModal` | PatientsPage | PatientsPage | — | — | — |
+| `useDuplicatePatients` | — | — | — | — | GET /dental/patients/duplicates |
 | `useFollowUpNotes` | — | — | — | — | — |
 | `useAddFollowUpNote` | — | — | — | — | — |
+| `useHousehold` | — | — | — | — | GET /dental/patients/:patientId/household |
 | `useArchivePatient` | — | — | — | — | — |
 | `useRestorePatient` | — | — | — | — | — |
 | `useBulkArchive` | — | — | — | — | — |
@@ -100,21 +137,26 @@
 | `TreatmentReport` | ReportsPage | — | — | — | — |
 | `usePatientReport` | — | — | — | — | — |
 | `useTreatmentReport` | — | — | — | — | — |
-| `AppointmentCard` | CalendarDay | CalendarDay | — | — | — |
+| `AppointmentCard` | — | — | — | — | — |
 | `AppointmentModal` | CalendarPage | CalendarPage | — | — | — |
 | `CalendarDay` | CalendarPage | CalendarPage | — | — | — |
 | `CalendarMonth` | CalendarPage | CalendarPage | — | — | — |
 | `CalendarWeek` | CalendarPage | CalendarPage | — | — | — |
 | `QueueBoard` | QueueBoardPage | — | — | — | — |
+| `RecallDueList` | CalendarPage | CalendarPage | — | — | — |
 | `useAppointments` | — | — | — | — | — |
 | `useQueueBoard` | — | — | — | — | GET /dental/branches/:branchId/queue-board, PATCH /dental/queue-items/:itemId/status |
+| `useRecallDueList` | — | — | — | — | — |
 | `ClinicSettings` | SettingsPage | — | — | — | — |
 | `FeeSchedule` | SettingsPage | — | — | — | — |
 | `LocaleSettings` | SettingsPage | — | — | — | — |
 | `NotificationSettings` | SettingsPage | — | — | — | — |
+| `PermissionGrid` | SettingsPage | — | — | — | — |
 | `WorkingHours` | SettingsPage | — | — | — | — |
 | `useBranchSettings` | — | — | — | — | — |
 | `useUpdateBranchSettings` | — | — | — | — | — |
+| `usePermissionGrid` | — | — | — | — | — |
+| `useUpdatePermissions` | — | — | — | — | — |
 | `StaffCreateModal` | StaffList | StaffList | — | — | — |
 | `StaffAccessDenied` | StaffPage | — | — | — | — |
 | `StaffList` | StaffPage | — | — | — | — |
@@ -123,6 +165,7 @@
 | `AmendmentForm` | ToothSlideout | ToothSlideout | — | — | — |
 | `AttachmentsSheet` | WorkspacePage | WorkspacePage | — | — | — |
 | `CdtCodeBrowser` | ToothSlideout | ToothSlideout | — | — | — |
+| `ChartCompareOverlay` | TimelineCarousel | TimelineCarousel | — | — | — |
 | `ConsentSheet` | WorkspacePage | WorkspacePage | — | — | — |
 | `DentalChart` | — | — | — | — | — |
 | `FiveSurfaceSelector` | — | — | — | — | — |
@@ -154,8 +197,11 @@
 | `useDentalChart` | — | — | — | — | — |
 | `useInitializeDentition` | — | — | — | — | — |
 | `useMarkTreatmentDone` | — | — | — | — | — |
+| `useMedicalHistoryReview` | — | — | — | — | — |
+| `useMedicalHistoryReviewMutation` | — | — | — | — | — |
 | `useMedicalHistory` | — | — | — | — | — |
 | `useMedicalHistoryMutations` | — | — | — | — | — |
+| `usePerioChart` | — | — | — | — | GET /dental/visits/:visitId/perio-chart, POST /dental/perio-charts, PUT /dental/perio-charts/:chartId/readings/:toothNumber, POST /dental/perio-charts/:chartId/complete |
 | `usePMD` | — | — | — | — | — |
 | `useRecalls` | — | — | — | — | GET /dental/patients/:patientId/recalls, POST /dental/patients/:patientId/recalls, PATCH /dental/patients/:patientId/recalls/:recallId |
 | `useSaveChart` | — | — | — | — | — |
@@ -164,16 +210,27 @@
 | `useSharePMD` | — | — | — | — | — |
 | `useSyncStatus` | — | — | — | — | GET /dental/sync-logs |
 | `useToothHistory` | — | — | — | — | — |
-| `useTreatmentPlan` | — | — | — | — | GET /dental/patients/:patientId/treatment-plan, POST /dental/patients/:patientId/treatment-plan/accept, PATCH /dental/visits/:visitId/treatments/:treatmentId |
+| `useTreatmentOptions` | — | — | — | — | GET /dental/patients/:patientId/treatment-options/:optionGroupId, POST /dental/patients/:patientId/treatment-options/:optionGroupId/accept |
+| `useTreatmentPlan` | — | — | — | — | GET /dental/patients/:patientId/treatment-plan, POST /dental/patients/:patientId/treatment-plan/accept, PATCH /dental/visits/:visitId/treatments/:treatmentId, PATCH /dental/visits/:visitId/treatments/:treatmentId |
 | `useTreatmentPlans` | — | — | — | — | GET /dental/patients/:patientId/treatment-plans, POST /dental/patients/:patientId/treatment-plans, PATCH /dental/patients/:patientId/treatment-plans/:planId |
 | `useTreatments` | — | — | — | — | — |
 | `useUpdateTreatment` | — | — | — | — | — |
 | `useUpdateVisit` | — | — | — | — | — |
 | `useVisitNotes` | — | — | — | — | — |
 | `useVisits` | — | — | — | — | — |
+| `useVoicePerio` | — | — | — | — | — |
 | `usePatientInvoices` | — | — | — | — | — |
 | `useCreateInvoice` | — | — | — | — | — |
 | `ProfilePage` | — | — | — | — | — |
 | `UniversalToothFdi` | DentalChart, FiveSurfaceSelector, ToothOverviewStep | — | — | — | — |
 | `UniversalTooth` | UniversalToothFdi | — | — | — | — |
+| `PerioBopDot` | PerioToothColumn | PerioToothColumn | — | — | — |
+| `PerioCalCell` | PerioToothColumn | — | — | — | — |
+| `PerioChartGrid` | PerioChartOverlay | PerioChartOverlay | — | — | — |
+| `PerioChartOverlay` | WorkspacePage | WorkspacePage | — | — | — |
+| `PerioClassificationPanel` | PerioChartOverlay | PerioChartOverlay | — | — | — |
+| `PerioSiteCell` | PerioToothColumn | PerioToothColumn | — | — | — |
+| `PerioSummaryBar` | PerioChartOverlay | — | — | — | — |
+| `PerioToothColumn` | PerioChartGrid | PerioChartGrid | — | — | — |
+| `VoicePerioControls` | PerioChartOverlay | PerioChartOverlay | — | — | — |
 <!-- oli:regen:code-data-flow:end -->
