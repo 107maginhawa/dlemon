@@ -2269,7 +2269,20 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/appointments"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/dashboard/summary"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -2300,7 +2313,20 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/appointments"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/dashboard/summary"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/dental/billing/invoices"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6234,7 +6260,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6265,7 +6300,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6296,7 +6340,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6327,7 +6380,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6358,7 +6420,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/permissions"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/org/permissions"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6389,7 +6460,16 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        },
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": true,
@@ -6420,7 +6500,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6436,7 +6521,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PUT",
+          "endpoint": "/dental/branches/:branchId/settings"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6452,7 +6542,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/permissions"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6468,7 +6563,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "PUT",
+          "endpoint": "/dental/org/permissions"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6518,7 +6618,20 @@
       ],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members/:id/reset-pin"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/org/members/:memberId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": {
@@ -6571,7 +6684,24 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members/:id/reset-pin"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/org/members/:memberId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": {
         "has_skeleton": false,
@@ -6602,7 +6732,12 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "GET",
+          "endpoint": "/dental/org/members"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,
@@ -6618,7 +6753,20 @@
       "events_out": [],
       "slots": [],
       "state_access": [],
-      "api_calls": [],
+      "api_calls": [
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/org/members/:id/reset-pin"
+        },
+        {
+          "method": "DELETE",
+          "endpoint": "/dental/org/members/:memberId"
+        }
+      ],
       "routes_used_in": [],
       "loading_state_hygiene": null,
       "interaction_hygiene": null,

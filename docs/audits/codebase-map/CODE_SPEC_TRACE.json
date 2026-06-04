@@ -929,7 +929,9 @@
         "handler_function": "getBranchSettings",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -1013,7 +1015,9 @@
         "handler_function": "getDashboardSummary",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -1276,6 +1280,7 @@
         "module": "src/handlers"
       },
       "consumers": [
+        "src/features",
         "src/routes"
       ],
       "status": "matched",
@@ -1293,7 +1298,9 @@
         "handler_function": "getPermissionGrid",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -4429,7 +4436,9 @@
         "handler_function": "createMember",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -4459,7 +4468,9 @@
         "handler_function": "resetMemberPin",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -5741,7 +5752,9 @@
         "handler_function": "updateBranchSettings",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },
@@ -5773,7 +5786,9 @@
         "handler_function": "updatePermissions",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },

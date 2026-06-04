@@ -97,8 +97,8 @@
 | `GET /dental/branches/:branchId/postop-templates` | `listPostopTemplates` | true | 0 |  | HIGH |
 | `PATCH /dental/branches/:branchId/postop-templates/:templateId` | `updatePostopTemplate` | true | 0 |  | HIGH |
 | `GET /dental/branches/:branchId/queue-board` | `listQueueBoard` | true | 1 |  | HIGH |
-| `GET /dental/branches/:branchId/settings` | `getBranchSettings` | true | 0 |  | HIGH |
-| `PUT /dental/branches/:branchId/settings` | `updateBranchSettings` | true | 0 |  | HIGH |
+| `GET /dental/branches/:branchId/settings` | `getBranchSettings` | true | 1 |  | HIGH |
+| `PUT /dental/branches/:branchId/settings` | `updateBranchSettings` | true | 1 |  | HIGH |
 | `POST /dental/branches/:branchId/waitlist` | `createWaitlistEntry` | true | 0 |  | HIGH |
 | `GET /dental/branches/:branchId/waitlist` | `listWaitlist` | true | 0 |  | HIGH |
 | `GET /dental/branches/:branchId/working-hours` | `getWorkingHours` | true | 0 |  | HIGH |
@@ -108,7 +108,7 @@
 | `POST /dental/clinical/medical-history-review` | `recordMedicalHistoryReview` | true | 1 |  | HIGH |
 | `GET /dental/clinical/medical-history-review` | `getMedicalHistoryReview` | true | 1 |  | HIGH |
 | `PATCH /dental/clinical/medical-history/:entryId` | `updateMedicalHistoryEntry` | true | 1 |  | HIGH |
-| `GET /dental/dashboard/summary` | `getDashboardSummary` | true | 0 |  | HIGH |
+| `GET /dental/dashboard/summary` | `getDashboardSummary` | true | 1 |  | HIGH |
 | `POST /dental/erasure-requests` | `requestErasure` | true | 0 |  | HIGH |
 | `GET /dental/erasure-requests` | `listErasureRequests` | true | 0 |  | HIGH |
 | `GET /dental/erasure-requests/:id` | `getErasureRequest` | true | 0 |  | HIGH |
@@ -153,14 +153,14 @@
 | `POST /dental/legal-holds/:id/release` | `releaseLegalHold` | true | 0 |  | HIGH |
 | `POST /dental/onboarding` | `createOnboarding` | true | 1 |  | HIGH |
 | `GET /dental/org/context` | `getOrgContext` | true | 0 |  | HIGH |
-| `GET /dental/org/members` | `listMembers` | true | 1 |  | HIGH |
-| `POST /dental/org/members` | `createMember` | true | 0 |  | HIGH |
+| `GET /dental/org/members` | `listMembers` | true | 2 |  | HIGH |
+| `POST /dental/org/members` | `createMember` | true | 1 |  | HIGH |
 | `PATCH /dental/org/members/:memberId` | `updateMember` | true | 0 |  | HIGH |
 | `POST /dental/org/members/:memberId/recover-pin` | `recoverPin` | ? | 0 |  | HIGH |
-| `POST /dental/org/members/:memberId/reset-pin` | `resetMemberPin` | true | 0 |  | HIGH |
+| `POST /dental/org/members/:memberId/reset-pin` | `resetMemberPin` | true | 1 |  | HIGH |
 | `POST /dental/org/members/:memberId/security-question` | `setSecurityQuestion` | true | 0 |  | HIGH |
-| `GET /dental/org/permissions` | `getPermissionGrid` | true | 0 |  | HIGH |
-| `PUT /dental/org/permissions` | `updatePermissions` | true | 0 |  | HIGH |
+| `GET /dental/org/permissions` | `getPermissionGrid` | true | 1 |  | HIGH |
+| `PUT /dental/org/permissions` | `updatePermissions` | true | 1 |  | HIGH |
 | `POST /dental/organizations` | `DentalOrganizationManagement_create` | true | 0 |  | HIGH |
 | `GET /dental/organizations/:id` | `DentalOrganizationManagement_get` | true | 0 |  | HIGH |
 | `PATCH /dental/organizations/:id` | `DentalOrganizationManagement_update` | true | 0 |  | HIGH |
@@ -355,4 +355,5 @@
 | `POST /storage/multipart/:file/complete` | `completeMultipartUpload` | true | 1 |  | HIGH |
 | `GET /storage/multipart/:file/part-url` | `generateMultipartPartUrl` | true | 0 |  | HIGH |
 | `GET /dental/imaging/images/:imageId/ceph/analysis:qs` | — | ? | 1 | ⚠️ | LOW |
+| `DELETE /dental/org/members/:memberId` | — | ? | 1 | ⚠️ | LOW |
 <!-- oli:regen:code-api-surface:end -->
