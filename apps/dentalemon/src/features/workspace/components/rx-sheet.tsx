@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { createPrescription } from '@monobase/sdk-ts/generated';
+import { createPrescription, type Prescription } from '@monobase/sdk-ts/generated';
 
 const FREQUENCY_OPTIONS = [
   'OD (once daily)',
@@ -46,7 +46,11 @@ type DrugInteraction = {
   description: string;
 };
 
-type PrescriptionWithWarnings = {
+// Intersect the SDK Prescription with the `warnings` enrichment the spec omits
+// (oli QA_ESCAPES §6 — the documented stale-spec / enrichment pattern), so tsc
+// still checks the base prescription fields. TODO(spec): add `warnings` to the
+// create-prescription response schema, regenerate, then drop the intersection.
+type PrescriptionWithWarnings = Prescription & {
   warnings?: {
     allergyConflicts?: string[];
     /** P1-2: drug-drug interactions against active medications */
@@ -126,8 +130,9 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, open, onClose,
 
       // QW-1/P1-1: surface drug-allergy conflicts returned by the server.
       // P1-2: also surface drug-drug interaction warnings.
-      // The generated type omits `warnings`; we cast narrowly to read it.
-      const data = result.data as unknown as PrescriptionWithWarnings | undefined;
+      // The generated type omits `warnings`; a single narrowing `as` widens to the
+      // intersection above (no blind `as unknown as` — GAP-D).
+      const data = result.data as PrescriptionWithWarnings | undefined;
       const conflicts = data?.warnings?.allergyConflicts ?? [];
       const interactions = data?.warnings?.drugInteractions ?? [];
       if (conflicts.length > 0 || interactions.length > 0) {

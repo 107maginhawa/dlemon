@@ -9,7 +9,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button, Checkbox, Input, Textarea } from '@monobase/ui';
-import { createAppointment, updateAppointment } from '@monobase/sdk-ts/generated';
+import {
+  createAppointment,
+  updateAppointment,
+  type VisitType,
+  type CreateAppointmentRequest,
+  type UpdateAppointmentRequest,
+} from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const DURATION_OPTIONS = [
@@ -65,19 +71,23 @@ export function buildAppointmentPayload(form: {
   date: string;
   time: string;
   durationMinutes: number;
-  serviceType: string;
+  serviceType: VisitType;
   notes: string;
   walkIn: boolean;
-}) {
+}): CreateAppointmentRequest {
   // Canonical wire shape: providerId / startAt / endAt / visitType (V-SCH-006/007).
+  // Cause-fix (oli QA_ESCAPES §6 / QA-009): visitType is the SDK VisitType enum
+  // (the backend validates it with z.enum) — not free text. startAt/endAt are Date
+  // (the SDK request type; serialized to the ISO string the validator expects).
+  // Returning the exact CreateAppointmentRequest lets the call site drop its cast.
   const { startAt, endAt } = buildTimeRange(form.date, form.time, form.durationMinutes);
   return {
     patientId: form.patientId.trim(),
-    providerId: form.dentistMemberId.trim() || undefined,
+    providerId: form.dentistMemberId.trim(),
     branchId: form.branchId.trim() || useOrgContextStore.getState().branchId || '',
-    startAt,
-    endAt,
-    visitType: form.serviceType.trim(),
+    startAt: new Date(startAt),
+    endAt: new Date(endAt),
+    visitType: form.serviceType,
     notes: form.notes.trim() || undefined,
     walkIn: form.walkIn,
   };
@@ -97,7 +107,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   const [date, setDate] = useState(initialDate || '');
   const [time, setTime] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
-  const [serviceType, setServiceType] = useState('');
+  const [serviceType, setServiceType] = useState<VisitType | ''>('');
   const [notes, setNotes] = useState('');
   const [walkIn, setWalkIn] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -136,6 +146,9 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
       setErrors(errs);
       return;
     }
+    // validateAppointmentForm guarantees a non-empty serviceType; narrow '' away so
+    // the SDK-typed body (visitType: VisitType) type-checks without a cast.
+    if (!serviceType) return;
     setErrors([]);
     setDoubleBookingWarning(false);
     setSaving(true);
@@ -143,15 +156,13 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
       let appointment: unknown;
       if (appointmentId) {
         const { startAt, endAt } = buildTimeRange(date, time, durationMinutes);
-        const { data } = await updateAppointment({
-          path: { appointmentId },
-          body: {
-            startAt: new Date(startAt),
-            endAt: new Date(endAt),
-            visitType: serviceType.trim(),
-            notes: notes.trim() || undefined,
-          } as unknown as Parameters<typeof updateAppointment>[0]['body'],
-        });
+        const body: UpdateAppointmentRequest = {
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          visitType: serviceType,
+          notes: notes.trim() || undefined,
+        };
+        const { data } = await updateAppointment({ path: { appointmentId }, body });
         appointment = data;
       } else {
         const payload = buildAppointmentPayload({
@@ -165,7 +176,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
           notes,
           walkIn,
         });
-        const { data } = await createAppointment({ body: payload as unknown as Parameters<typeof createAppointment>[0]['body'] });
+        const { data } = await createAppointment({ body: payload });
         appointment = data;
       }
       if (!appointment) {
@@ -342,14 +353,20 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="appt-procedure">
               Service Type *
             </label>
-            <Input
+            {/* QA-009: the backend validates visitType against a fixed enum, so the
+                input must be a constrained select — a free-text field produced 400s
+                ("Invalid option: expected one of checkup|treatment|emergency|recall"). */}
+            <select
               id="appt-procedure"
-              type="text"
               value={serviceType}
-              onChange={e => setServiceType(e.target.value)}
-              placeholder="e.g. Cleaning, Filling, Crown"
+              onChange={e => setServiceType(e.target.value as VisitType)}
               className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
-            />
+            >
+              <option value="" disabled>Select a service type…</option>
+              {VISIT_TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Notes */}

@@ -46,7 +46,9 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
     try {
       await updateRecall({
         path: { patientId: recall.patientId, recallId: recall.id },
-        body: { status: 'sent' } as unknown as Parameters<typeof updateRecall>[0]['body'],
+        // 'sent' is a valid recall status — the SDK body type accepts it directly
+        // (cast removed; oli QA_ESCAPES §6 / GAP-D).
+        body: { status: 'sent' },
       });
       await refetch();
     } catch {

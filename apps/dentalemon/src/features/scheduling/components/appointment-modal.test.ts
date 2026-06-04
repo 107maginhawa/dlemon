@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import type { VisitType } from '@monobase/sdk-ts/generated';
 import {
   validateAppointmentForm,
   buildAppointmentPayload,
@@ -21,7 +22,8 @@ describe('AppointmentModal — form validation', () => {
     date: '2026-06-01',
     time: '09:00',
     durationMinutes: 30,
-    serviceType: 'Cleaning',
+    // QA-009: visitType is a backend-validated enum, not free text.
+    serviceType: 'checkup' as VisitType,
     notes: '',
     walkIn: false,
   };
@@ -31,13 +33,15 @@ describe('AppointmentModal — form validation', () => {
     expect(payload.patientId).toBe('p-1');
     // V-SCH-006/007: canonical wire shape.
     expect(payload.providerId).toBe('m-1');
-    // startAt must be a valid ISO-8601 datetime WITH timezone — the backend
-    // validates it with z.string().datetime(), which rejects a TZ-naive string.
-    expect(payload.startAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/);
-    expect(payload.startAt).toBe(new Date('2026-06-01T09:00:00').toISOString());
+    // startAt/endAt are Date (the SDK CreateAppointmentRequest type); the SDK
+    // serializes them to the ISO string the z.string().datetime() validator wants.
+    expect(payload.startAt).toBeInstanceOf(Date);
+    expect(payload.startAt.toISOString()).toBe(new Date('2026-06-01T09:00:00').toISOString());
     // endAt = startAt + 30 min.
-    expect(new Date(payload.endAt).getTime() - new Date(payload.startAt).getTime()).toBe(30 * 60 * 1000);
-    expect(payload.visitType).toBe('Cleaning');
+    expect(payload.endAt.getTime() - payload.startAt.getTime()).toBe(30 * 60 * 1000);
+    // QA-009: visitType must be a valid enum value, not the free text the form
+    // used to send (which the backend 400'd).
+    expect(payload.visitType).toBe('checkup');
     expect(payload.walkIn).toBe(false);
   });
 

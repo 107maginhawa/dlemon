@@ -163,7 +163,9 @@ function CalendarPage() {
     try {
       await updateAppointment({
         path: { appointmentId },
-        body: { startAt, endAt } as unknown as Parameters<typeof updateAppointment>[0]['body'],
+        // startAt/endAt are Date — matches UpdateAppointmentRequest directly
+        // (cast removed; oli QA_ESCAPES §6 / GAP-D).
+        body: { startAt, endAt },
       });
       invalidateAppointments();
     } catch {
