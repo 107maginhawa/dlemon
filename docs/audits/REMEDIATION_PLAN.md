@@ -56,7 +56,7 @@ these are P2/P3 quality + gap closures. Executed systematically in conflict-awar
 - **F17 already-satisfied:** verified perio MODULE_SPEC defines AC-P01–AC-P10 and billing tests/spec use `AC-BIL-` consistently (no `AC-BL`). The traceability finding was inaccurate on specifics.
 
 ## Deferred (product decision / separate repo — NOT executed, documented only)
-| D1 | ADR-007 session TTL value + WFG-006 GDPR Art.20 portability format | needs product decision |
+| D1 | Session TTL value: ✅ DECIDED 2026-06-04 — keep 7-day cloud session (standard) backed by 5-min PIN idle-lock (HIPAA automatic-logoff equiv); recorded in ADR-003 addendum, no code change. WFG-006 GDPR Art.20 portability format: product chose KEEP DEFERRED (2026-06-04) — DATA_GOVERNANCE note stands. | resolved / deferred-by-choice |
 | D2 | oli-engine repo: widen scan scope + behavior.ts resolver + response_shape | separate repo |
 
 ## Backlog (large, staged — tracked, not done this session)
@@ -69,5 +69,5 @@ these are P2/P3 quality + gap closures. Executed systematically in conflict-awar
 - **E2E coverage for unit-only BRs** — ⊘ ASSESSED, NOT A REAL GAP (2026-06-04). Investigated: all 58/58 BRs already carry test coverage; imaging annotation BR-024..035 each have backend unit tests (BR-026: 6, BR-027: 6, BR-035: 4, …) and BR-024 also has E2E; scheduling BR-SCH-001..004 are covered (SCH-004 tagged + calendar-riley.spec.ts). The "~26% BR→E2E" is a layer-DISTRIBUTION metric, not a coverage hole — the unit-only BRs are predominantly backend data-integrity / RBAC / validation rules (NOT NULL, soft-delete, branch-isolation, modality default, MIME allow-list, 100 MB cap) where unit/contract is the CORRECT layer; the project's own TRACE_REPORT classifies this as P2/report-only. Adding canvas-drawing / upload E2E to inflate the metric would add flake risk for no real coverage gain. Recommendation: keep as report-only; add targeted E2E only for a specific high-value persistence/RBAC flow if a concrete need arises.
 
 ## Deferred — product decision / separate repo (unchanged)
-- **D1** ADR-007 session TTL value + WFG-006 GDPR Art.20 portability format — needs product decision.
-- **D2** oli-engine repo: widen scan to `services/api-ts/**` + `spec_trace_optin` + behavior.ts raw-fetch resolver + `response_shape`. Clears TR-INFRA-001 + restores Confidence headline 9.
+- **D1** — ✅ RESOLVED 2026-06-04. Session TTL: keep 7-day cloud session + 5-min PIN idle-lock (ADR-003 addendum; no code change). WFG-006 GDPR Art.20 portability format: product chose to KEEP DEFERRED (build remains a future feature; DATA_GOVERNANCE note stands).
+- **D2** — ◑ dentalemon-side DONE 2026-06-04 (commit 3c28b862): `.oli/config.json` widened to scan `services/api-ts/**` (+ hono_route_tables + sdk_operation_sources) and the unified codebase-map regenerated (engine v6, 1002 files, FE+BE). REMAINING (oli-engine repo `$OLI_ENGINE_HOME`, out of scope here): `behavior.ts` raw-fetch/SDK resolver, `response_shape`, `spec_trace_optin` flip — these clear TR-INFRA-001 + restore Confidence headline 9.
