@@ -5,25 +5,14 @@
  * Money is integer cents; display uses ₱ / en-PH.
  */
 
-export interface AgingRow {
-  patientId: string;
-  patientName: string;
-  currentCents: number;
-  days30Cents: number;
-  days60Cents: number;
-  days90PlusCents: number;
-  totalOutstandingCents: number;
-  oldestInvoiceDays: number;
-}
+import type { ArAgingPatientRow, ArAgingSummary, PatientStatement } from '@monobase/sdk-ts/generated';
 
-export interface AgingSummary {
-  currentCents: number;
-  days30Cents: number;
-  days60Cents: number;
-  days90PlusCents: number;
-  totalOutstandingCents: number;
-  patientCount: number;
-}
+// Cause-fix (oli QA_ESCAPES §6): these were hand-rolled duplicates of the
+// generated SDK rows (field-for-field identical, live-confirmed 2026-06-04).
+// Alias to the SDK types so there is a single source of truth and they cannot
+// silently drift from the backend contract.
+export type AgingRow = ArAgingPatientRow;
+export type AgingSummary = ArAgingSummary;
 
 export const AGING_BUCKETS = [
   { key: 'currentCents', label: 'Current', sublabel: '0–30 days' },
@@ -71,15 +60,9 @@ export function bucketPct(bucketCents: number, totalCents: number): number {
   return Math.round((bucketCents / totalCents) * 100);
 }
 
-export interface StatementRow {
-  patientId: string;
-  patientName: string;
-  statementNumber: string;
-  balanceCents: number;
-  totalChargedCents: number;
-  totalPaidCents: number;
-  oldestUnpaidInvoiceDays: number;
-}
+// The batch endpoint returns PatientStatement rows (a superset of the columns
+// the worklist displays). Alias rather than re-declare a divergent subset.
+export type StatementRow = PatientStatement;
 
 /** One-line summary of a completed batch run for a toast / banner. */
 export function summarizeBatch(count: number, totalBalanceCents: number): string {

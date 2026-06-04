@@ -7,24 +7,30 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getArAgingOptions, getArAgingQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { generateStatementBatch } from '@monobase/sdk-ts/generated';
-import type { AgingRow, AgingSummary, StatementRow } from '../components/collections-view.helpers';
+import {
+  generateStatementBatch,
+  type ArAgingResponse,
+  type GenerateStatementBatchResponse,
+} from '@monobase/sdk-ts/generated';
 
 interface UseArAgingOptions {
   branchId?: string | null;
 }
 
-export interface ArAgingData {
-  asOf: string;
-  summary: AgingSummary;
-  patients: AgingRow[];
-}
+// Cause-fix (oli QA_ESCAPES §6): the generated SDK fully and accurately models
+// both responses (live-confirmed against GET /dental/billing/collections/aging
+// and the statement-batch run, 2026-06-04), so the previous local re-declarations
+// + `as unknown as` casts were gratuitous type-blinding. Consume the SDK types
+// directly. Re-exported under the historical names for existing imports.
+// NOTE: `asOf` is a Date at runtime (the SDK date transformer converts it) — do
+// not treat it as a string.
+export type ArAgingData = ArAgingResponse;
+export type StatementBatchResult = GenerateStatementBatchResponse;
 
 export function useArAging({ branchId }: UseArAgingOptions) {
   const query = useQuery({
     ...getArAgingOptions({ query: { branchId: branchId ?? undefined } }),
     enabled: Boolean(branchId),
-    select: (data) => data as unknown as ArAgingData,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -35,14 +41,6 @@ export function useArAging({ branchId }: UseArAgingOptions) {
     error: query.error as Error | null,
     refetch: query.refetch,
   };
-}
-
-export interface StatementBatchResult {
-  batchId: string;
-  asOf: string;
-  statementCount: number;
-  totalBalanceCents: number;
-  statements: StatementRow[];
 }
 
 export function useStatementBatch({ branchId }: UseArAgingOptions) {
@@ -58,7 +56,7 @@ export function useStatementBatch({ branchId }: UseArAgingOptions) {
         },
         throwOnError: true,
       });
-      return data as unknown as StatementBatchResult;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: getArAgingQueryKey({ query: { branchId: branchId ?? undefined } }) });
