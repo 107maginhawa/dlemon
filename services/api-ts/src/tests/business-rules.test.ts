@@ -1613,30 +1613,41 @@ describe('BR-022: imported PMD records are read-only', () => {
 describe.skip('BR-005: auto-discard draft visits [deferred v1.3]', () => {});
 
 // ===========================================================================
-// BR-013 / AC-BIL-005: Mark invoice as uncollectible — DEFERRED (returns 501)
-// The dental invoice status enum ('draft'|'issued'|'partial'|'paid'|'overdue'|'voided')
-// has no 'uncollectible' value; the write-off workflow is gated behind feature
-// flag `dental_billing_uncollectible` (default off) and intentionally deferred
-// (MODULE_SPEC BR-013, repeated in 6 places). Rather than skip, we ENFORCE the
-// deferral: the registered endpoint must return 501 NOT_IMPLEMENTED so the
-// contract stays honest until the flag is lifted. (TR-P1-06: keep-deferred ruling.)
+// BR-013 / AC-BIL-005: Mark invoice as uncollectible — IMPLEMENTED
+// An owner can write off an outstanding (issued/partial/overdue) invoice to the
+// terminal `uncollectible` state. Draft/paid/voided are rejected. (BR-013
+// promoted from deferred 2026-06-04.)
 // ===========================================================================
 
-describe('BR-013: markUncollectible deferred → 501', () => {
-  test('POST /dental/billing/invoices/:id/uncollectible returns 501 NOT_IMPLEMENTED [AC-BIL-005]', async () => {
+describe('BR-013: markUncollectible [AC-BIL-005]', () => {
+  test('issued invoice can be written off → status=uncollectible', async () => {
     const visit = await seedActiveVisit();
     const invoice = await seedInvoiceForVisit(visit!.id);
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    await invoiceRepo.issue(invoice.id);
     const app = makeApp(TEST_USER);
 
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.code).toBe('NOT_IMPLEMENTED');
+    expect(body.status).toBe('uncollectible');
+  });
+
+  test('draft invoice cannot be written off → 422', async () => {
+    const visit = await seedActiveVisit();
+    const invoice = await seedInvoiceForVisit(visit!.id); // draft
+    const app = makeApp(TEST_USER);
+
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_STATUS_TRANSITION');
   });
 });
 

@@ -128,6 +128,23 @@ export class DentalInvoiceRepository {
   }
 
   /**
+   * BR-013: write off an invoice — set status=uncollectible and uncollectibleAt.
+   * Terminal state; the handler guards the allowed source statuses.
+   */
+  async markUncollectible(invoiceId: string): Promise<DentalInvoice | null> {
+    const [updated] = await this.db
+      .update(dentalInvoices)
+      .set({
+        status: 'uncollectible',
+        uncollectibleAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(dentalInvoices.id, invoiceId))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
    * Add a payment amount to the invoice using atomic SQL arithmetic.
    * Prevents concurrent payment race conditions by computing new totals in the DB.
    */

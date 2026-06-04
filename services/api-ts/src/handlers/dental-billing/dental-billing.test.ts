@@ -699,7 +699,7 @@ describe('voidDentalInvoice handler', () => {
 });
 
 // ===========================================================================
-// markUncollectible — AC-BIL-005 / BR-013: deferred write-off → 501
+// markUncollectible — AC-BIL-005 / BR-013: write-off (implemented)
 // ===========================================================================
 
 describe('markUncollectible handler', () => {
@@ -711,15 +711,57 @@ describe('markUncollectible handler', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 501 NOT_IMPLEMENTED (write-off deferred, BR-013)', async () => {
-    const { invoice } = await seedInvoice();
+  test('returns 404 when invoice not found', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('issued invoice → 200 with status=uncollectible and uncollectibleAt set', async () => {
+    const { invoice } = await seedIssuedInvoice();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
       method: 'POST',
     });
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.code).toBe('NOT_IMPLEMENTED');
+    expect(body.status).toBe('uncollectible');
+    expect(body.uncollectibleAt).not.toBeNull();
+  });
+
+  test('draft invoice → 422 INVALID_STATUS_TRANSITION (must be issued first)', async () => {
+    const { invoice } = await seedInvoice(); // status=draft
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('INVALID_STATUS_TRANSITION');
+  });
+
+  test('already-uncollectible invoice → 422 ALREADY_UNCOLLECTIBLE', async () => {
+    const { invoice } = await seedIssuedInvoice();
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    await invoiceRepo.markUncollectible(invoice.id);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('ALREADY_UNCOLLECTIBLE');
+  });
+
+  test('non-owner (staff_full) → 403', async () => {
+    const { invoice } = await seedIssuedInvoice();
+    const app = buildTestApp(STAFF_USER);
+    const res = await app.request(`/dental/billing/invoices/${invoice.id}/uncollectible`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(403);
   });
 });
 

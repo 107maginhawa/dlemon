@@ -52,7 +52,7 @@ const FSMS: FsmDef[] = [
     name: 'Invoice',
     schema: 'dental-billing/repos/dental-invoice.schema.ts',
     pgEnumName: 'dental_invoice_status',
-    deferred: ['uncollectible'], // BR-013 — 501 stub, feature-flag off
+    deferred: [], // BR-013 implemented — 'uncollectible' is now a live enum value
     docSections: {
       domainModel: ['### SM-INVOICE: Invoice Lifecycle'],
       workflowMap: ['### Invoice State Machine'],

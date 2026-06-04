@@ -2,11 +2,13 @@
  * Property-based tests for the Invoice FSM
  *
  * Invoice lifecycle:
- *   draft → issued → partial → paid | overdue | voided
- *   voided is reachable from any non-voided state
+ *   draft → issued → partial → paid | overdue | voided | uncollectible
+ *   voided is reachable from any non-terminal state
+ *   uncollectible (BR-013 write-off) is reachable from issued/partial/overdue
  *
  * The invoice repo enforces transitions via imperative guards
- * (issue() requires draft, voidInvoice() rejects already-voided).
+ * (issue() requires draft, voidInvoice() rejects already-voided,
+ * markUncollectible() requires an outstanding status).
  * We test the declared transition map here.
  *
  * G6-S2: property tests via fast-check
@@ -15,25 +17,27 @@ import { describe, test, expect } from 'bun:test';
 import * as fc from 'fast-check';
 
 // Invoice status values match dental_invoice_status enum
-const INVOICE_STATES = ['draft', 'issued', 'partial', 'paid', 'overdue', 'voided'] as const;
+const INVOICE_STATES = ['draft', 'issued', 'partial', 'paid', 'overdue', 'voided', 'uncollectible'] as const;
 type InvoiceStatus = typeof INVOICE_STATES[number];
 
 /**
  * Transition map derived from the repo business rules:
- *   - draft   → issued (via issue())
- *   - issued  → partial (payment applied), overdue, voided
- *   - partial → paid, overdue, voided
- *   - paid    → [] (terminal — fully settled)
- *   - overdue → paid, voided (can still collect or write off)
- *   - voided  → [] (terminal)
+ *   - draft         → issued (via issue())
+ *   - issued        → partial (payment applied), overdue, voided, uncollectible
+ *   - partial       → paid, overdue, voided, uncollectible
+ *   - paid          → [] (terminal — fully settled)
+ *   - overdue       → paid, voided, uncollectible (collect, void, or write off)
+ *   - voided        → [] (terminal)
+ *   - uncollectible → [] (terminal — BR-013 write-off)
  */
 const INVOICE_TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
-  draft:   ['issued', 'voided'],
-  issued:  ['partial', 'paid', 'overdue', 'voided'],
-  partial: ['paid', 'overdue', 'voided'],
-  paid:    [],
-  overdue: ['paid', 'voided'],
-  voided:  [],
+  draft:         ['issued', 'voided'],
+  issued:        ['partial', 'paid', 'overdue', 'voided', 'uncollectible'],
+  partial:       ['paid', 'overdue', 'voided', 'uncollectible'],
+  paid:          [],
+  overdue:       ['paid', 'voided', 'uncollectible'],
+  voided:        [],
+  uncollectible: [],
 };
 
 function isValidTransition(from: InvoiceStatus, to: InvoiceStatus): boolean {
@@ -60,6 +64,7 @@ describe('Invoice FSM property tests', () => {
     const terminals = INVOICE_STATES.filter(s => INVOICE_TRANSITIONS[s].length === 0);
     expect(terminals).toContain('paid');
     expect(terminals).toContain('voided');
+    expect(terminals).toContain('uncollectible');
     for (const terminal of terminals) {
       for (const to of INVOICE_STATES) {
         expect(isValidTransition(terminal, to)).toBe(false);
