@@ -39,7 +39,7 @@ Companion to `docs/prd/v3-dentalemon.md`. Formalizes implicit business rules ext
 | BR-010 | Tax is always 0. Fee schedule prices are pre-tax. Tax calculation is a stub pending per-country tax rules in Phase 2. | Calculation stub | `dental-billing/createInvoice.ts` (TODO comment) | partial |
 | BR-011 | An active payment plan blocks invoice archival (void or uncollectible). Staff must resolve the payment plan before voiding. | Lifecycle guard | `dental-billing` handlers | implemented |
 | BR-012 | Invoice state lifecycle: `draft` → `sent` → `paid` / `partial` / `overdue` / `void`. `partial` status requires a payment plan record. **Note:** Voiding from `paid` is intentional (admin correction for duplicate/error invoices). | State machine | `dental-billing` handlers | implemented |
-| BR-013 | Dental invoices do not support an `uncollectible` status. The dental invoice status enum is closed (`draft → issued → partial → paid / overdue / voided`). The base billing module has a `markInvoiceUncollectible` handler, but it does not apply to dental invoices. | Deferred | `dental-billing/repos/dental-invoice.schema.ts` — no 'uncollectible' in status enum | deferred |
+| BR-013 | Dental invoices support an owner-only write-off to `uncollectible`. An outstanding invoice (`issued / partial / overdue`) transitions to the terminal `uncollectible` state via `POST /dental/billing/invoices/:id/uncollectible`; `draft / paid / voided` (and a repeat write-off) are rejected with 422. | Implemented | `dental-billing/markUncollectible.ts`; `dental-invoice.schema.ts` — `uncollectible` in status enum | implemented |
 
 ### Consent and Compliance
 

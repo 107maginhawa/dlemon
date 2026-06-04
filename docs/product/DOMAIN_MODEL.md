@@ -186,7 +186,7 @@ draft ──► issued ──► paid
                   ├──► partial (requires PaymentPlan)
                   └──► overdue (scheduled job)
 draft/issued ──► voided  [BR-011: no active PaymentPlan]
-issued ──► uncollectible  [BR-013: INCOMPLETE]
+issued ──► uncollectible  [BR-013: owner-only write-off; also from partial/overdue]
 ```
 
 | From | To | Actor | Condition | Event Published |

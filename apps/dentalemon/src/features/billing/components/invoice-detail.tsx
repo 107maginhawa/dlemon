@@ -11,7 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { apiBaseUrl } from '@/lib/config';
 import {
   type InvoiceData,
-  showIssueButton, showVoidButton, showRecordButton,
+  showIssueButton, showVoidButton, showRecordButton, showMarkUncollectibleButton,
   validatePaymentForm, buildPaymentPayload,
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
@@ -57,6 +57,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [showVoidForm, setShowVoidForm] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
+  const [showUncollectibleForm, setShowUncollectibleForm] = useState(false);
+  const [uncollectibleError, setUncollectibleError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && invoiceId) loadInvoice();
@@ -119,6 +121,28 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       onUpdated?.();
     } catch (err) {
       setVoidError(err instanceof Error ? err.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleMarkUncollectible() {
+    if (!invoice) return;
+    // BR-013: write off the invoice. Owner-only + transition guard are enforced
+    // server-side; no request body. Terminal — the UI confirms before sending.
+    setUncollectibleError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/uncollectible`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to mark invoice uncollectible');
+      setShowUncollectibleForm(false);
+      await loadInvoice();
+      onUpdated?.();
+    } catch (err) {
+      setUncollectibleError(err instanceof Error ? err.message : 'Failed');
     } finally {
       setSaving(false);
     }
@@ -359,6 +383,23 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   </div>
                 </div>
               )}
+
+              {/* BR-013: write-off confirmation — terminal, owner-only */}
+              {showUncollectibleForm && (
+                <div data-testid="uncollectible-confirm" className="rounded-xl border border-gray-300 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-gray-700">Mark Uncollectible</h4>
+                  <p className="text-sm text-muted-foreground">This writes off the invoice as uncollectible. This cannot be undone.</p>
+                  {uncollectibleError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{uncollectibleError}</div>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setShowUncollectibleForm(false); setUncollectibleError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" onClick={handleMarkUncollectible} disabled={saving} className="flex-1 h-11 rounded-xl border border-gray-300 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50">
+                      {saving ? 'Writing off...' : 'Confirm Write-Off'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -377,6 +418,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
             )}
             {showVoidButton(invoice.status, canWrite) && !showVoidForm && (
               <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
+            )}
+            {showMarkUncollectibleButton(invoice.status, canWrite) && !showUncollectibleForm && (
+              <button type="button" data-testid="mark-uncollectible-btn" onClick={() => { setShowUncollectibleForm(true); setUncollectibleError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">Mark Uncollectible</button>
             )}
             <div className="flex-1" />
             <button type="button" onClick={handleClose} className="h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>

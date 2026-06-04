@@ -49,6 +49,12 @@ export function canRecord(status: string): boolean {
   return status === 'issued' || status === 'partial' || status === 'overdue';
 }
 
+// BR-013: write off an outstanding invoice. Same source statuses as void; the
+// backend enforces the transition and owner-only role.
+export function canMarkUncollectible(status: string): boolean {
+  return status === 'issued' || status === 'partial' || status === 'overdue';
+}
+
 // ---------------------------------------------------------------------------
 // Action-button visibility (status x role). J-RBAC-001: issue/void are billing
 // WRITE lifecycle operations gated by role (`canWrite`); recording a payment is
@@ -66,6 +72,10 @@ export function showVoidButton(status: string, canWrite: boolean): boolean {
 
 export function showRecordButton(status: string): boolean {
   return canRecord(status);
+}
+
+export function showMarkUncollectibleButton(status: string, canWrite: boolean): boolean {
+  return canWrite && canMarkUncollectible(status);
 }
 
 export function validatePaymentForm(form: {
@@ -117,6 +127,8 @@ export function getStatusBadgeClass(status: string): string {
       return 'bg-red-100 text-red-700';
     case 'voided':
       return 'bg-gray-100 text-gray-400 line-through';
+    case 'uncollectible':
+      return 'bg-gray-200 text-gray-700';
     default:
       return 'bg-gray-100 text-gray-500';
   }
@@ -130,6 +142,7 @@ export function formatStatus(status: string): string {
     paid: 'Paid',
     overdue: 'Overdue',
     voided: 'Voided',
+    uncollectible: 'Written Off',
   };
   return map[status] ?? status;
 }

@@ -163,7 +163,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | Mark partial | System | WF-053 [INFERRED] | BR-012, BR-015 |
 | Mark overdue | System (scheduled job) | WF-054 [INFERRED] | BR-012 |
 | Void | Dentist-Owner | WF-041 | BR-011 (no active plan), BR-013 |
-| Mark uncollectible | Staff Full | WF-041 | BR-013 (deferred — 501 stub) |
+| Mark uncollectible | Dentist Owner | WF-041 | BR-013 (write-off; owner-only) |
 
 ### Patient
 
@@ -330,7 +330,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | BR-010 | Tax = 0 stub | WF-013 | N/A (stub) | Phase 2 |
 | BR-011 | Active plan blocks void | WF-041 | 409 — resolve plan first | No |
 | BR-012 | Invoice state machine | WF-013, WF-014, WF-041, WF-052 | 422 | No |
-| BR-013 | markUncollectible | WF-041 | **DEFERRED** — feature-flagged off (`dental_billing_uncollectible`, dental-billing MODULE_SPEC §18); endpoint is an intentional **501 NOT_IMPLEMENTED stub** with deferral tests (`dental-billing.test.ts` + `business-rules.test.ts` assert the 501; AC-BIL-005). Documented error path = 501. Tracked: TR-BR-013, Phase 2. NOT a wire gap. | — |
+| BR-013 | markUncollectible | WF-041 | **IMPLEMENTED** 2026-06-04 — owner-only write-off; outstanding (issued/partial/overdue) → `uncollectible`, else 422 (AC-BIL-005). Tests: `dental-billing.test.ts` + `business-rules.test.ts`. | — |
 | BR-014 | Consent required before treatment | WF-018, WF-010 | 422 / UI guard | Dentist-Owner can override |
 | BR-015 | Marketing consent at registration | WF-005, WF-044 | UI validation | Patient can opt-out |
 | BR-016 | assertBranchAccess every handler | All clinical WFs | 403 | No |
@@ -342,7 +342,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | BR-022 | Imported PMD read-only | WF-022 | 405 PUT/PATCH/DELETE | No |
 
 **Orphan BRs (no enforcing workflow):** BR-005, BR-020
-**Deferred BRs (501 stub + feature flag, not orphan):** BR-013 (`dental_billing_uncollectible`), BR-019 (`dental_clinical_amendment_approval`)
+**Deferred BRs (501 stub + feature flag, not orphan):** BR-019 (`dental_clinical_amendment_approval`)
 
 ---
 
@@ -387,7 +387,7 @@ draft ──► issued ──► paid
                 ├──► partial ──► paid (via payment plan)
                 └──► overdue
 draft/issued ──► voided (BR-011: no active payment plan)
-                └──► uncollectible (BR-013: deferred — 501 stub, feature-flag off)
+                └──► uncollectible (BR-013: owner-only write-off from issued/partial/overdue)
 ```
 
 ### Consent Form State Machine
@@ -604,7 +604,7 @@ Applied to the 10 highest-impact core workflows:
 | WFG-005 | SLA undefined | PMD generation SLA unspecified — sync or async unclear | MEDIUM — UX impact | BR-021 |
 | WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person+Patient targets, two-step audited, legal-hold blocks) + admin HTTP endpoints `/dental/erasure-requests`. Remaining: more entity targets, real LegalHold store | RESOLVED | — |
 | WFG-007 | Missing workflow | Patient merge (BR-020) — no workflow, no cross-module cascade defined | HIGH — data integrity | BR-020 |
-| WFG-008 | ~~Orphan BR~~ **Deferred** | BR-013 markUncollectible — **DEFERRED to Phase 2** (feature-flag `dental_billing_uncollectible` off, dental-billing MODULE_SPEC §18); intentional 501 NOT_IMPLEMENTED stub, documented error path AC-BIL-005 → 501. Tracked TR-BR-013. Not a coverage gap. | RESOLVED (deferred) | BR-013 |
+| WFG-008 | ~~Orphan BR~~ **Implemented** | BR-013 markUncollectible — **IMPLEMENTED** 2026-06-04 (owner-only write-off; outstanding → `uncollectible`, else 422; AC-BIL-005). Tests in `dental-billing.test.ts` + `business-rules.test.ts`. | RESOLVED (implemented) | BR-013 |
 | WFG-009 | Missing notification | Appointment reminder (24h) — not implemented | LOW–MEDIUM | — |
 | WFG-010 | Missing notification | Invoice overdue notification — not implemented | MEDIUM — revenue | — |
 | WFG-011 | Missing notification | PMD ready notification — not implemented | LOW | — |

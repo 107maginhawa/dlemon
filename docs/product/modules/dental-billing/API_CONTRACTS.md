@@ -15,7 +15,7 @@
 > <!-- V-BIL-001/002/010: discount rate bounded 0–100; installment count bounded 2–24; payment amount_cents min 1. -->
 > <!-- V-BIL-012: invoice responses expose `outstanding_cents` (alias of internal balanceCents). -->
 > <!-- V-BIL-003: create-invoice / create-plan / issue restricted to dentist_owner + dentist_associate (own patients); staff_full NOT permitted (record-payment is). -->
-> <!-- V-BIL-006: POST /dental/invoices/:id/uncollectible → 501 NOT_IMPLEMENTED (BR-013 deferred). -->
+> <!-- V-BIL-006: POST /dental/invoices/:id/uncollectible → owner-only write-off; outstanding (issued/partial/overdue) → uncollectible, else 422 INVALID_STATUS_TRANSITION (BR-013 implemented). -->
 > <!-- V-BIL-011: DE-008 InvoicePaid fires only on transition to fully `paid`; per ADR-006 it is an audit-log marker, not a bus event. -->
 > <!-- V-BIL-007: signed-consent-before-invoice gate is BR-014 (was mislabeled BR-011). -->
 

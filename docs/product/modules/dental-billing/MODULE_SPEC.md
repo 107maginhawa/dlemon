@@ -91,7 +91,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | BR-010 | Tax = 0 (stub, ADR-008) | taxCents always 0 |
 | BR-011 | Active payment plan blocks void | 409 ACTIVE_PAYMENT_PLAN |
 | BR-012 | Invoice state machine (see §8) | 422 on invalid transition |
-| BR-013 | markUncollectible not implemented | 501 NOT_IMPLEMENTED |
+| BR-013 | markUncollectible: outstanding (issued/partial/overdue) → uncollectible; reject otherwise | 422 on invalid transition |
 | BR-014 | Signed consent form required before invoicing (V-BIL-007 — previously mislabeled BR-011 in code) | 422 CONSENT_REQUIRED |
 | BR-015 | Discount rate must be 0–100; installment count 2–24; payment amount ≥ 1 cent (V-BIL-001/002/010) | 422 INVALID_DISCOUNT_RATE / INVALID_INSTALLMENT_COUNT / VALIDATION_ERROR |
 
@@ -108,7 +108,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 | Record payment | dentist_owner, dentist_associate, staff_full | — |
 | Void invoice | dentist_owner | owner-only |
 | Create payment plan | dentist_owner, dentist_associate (own patients) | staff_full NOT permitted (V-BIL-003) |
-| Mark uncollectible | dentist_owner | 501 NOT_IMPLEMENTED (BR-013 deferred) |
+| Mark uncollectible | dentist_owner | owner-only (BR-013 write-off) |
 | View invoices | all dental roles | — |
 
 ---
@@ -163,7 +163,7 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 **AC-BIL-002:** Void invoice with active payment plan → 409.
 **AC-BIL-003:** Record partial payment → invoice transitions to partial + requires PaymentPlan.
 **AC-BIL-004:** taxCents always 0 in all invoice responses (BR-010).
-**AC-BIL-005:** markUncollectible → 501 (BR-013).
+**AC-BIL-005:** markUncollectible → outstanding invoice (issued/partial/overdue) transitions to `uncollectible`; draft/paid/voided rejected with 422 (BR-013).
 
 ---
 
@@ -178,7 +178,7 @@ Integration: treatment performed → invoice creation → payment recording → 
 - Payment plan with 0 installments → 422
 - Invoice for visit with no dentist assigned [VERIFY]
 - Overdue cron fires on already-paid invoice → idempotent (no-op)
-- markUncollectible: returns 501 — do not attempt to implement (BR-013 **deferred to Phase 2**, tracked TR-BR-013; feature-flag `dental_billing_uncollectible` §18). The `uncollectible` state is intentionally absent from the invoice status enum until the flag is lifted.
+- markUncollectible: owner-only write-off. An outstanding invoice (issued/partial/overdue) transitions to the terminal `uncollectible` state; draft/paid/voided (and a repeat write-off) are rejected with 422. (BR-013 implemented 2026-06-04; the `uncollectible` value is live in the invoice status enum.)
 
 ---
 
@@ -201,7 +201,7 @@ Integration: treatment performed → invoice creation → payment recording → 
 | Signed consent missing before invoicing | 422 | CONSENT_REQUIRED (BR-014, V-BIL-007) |
 | Discount rate outside 0–100 | 422 | INVALID_DISCOUNT_RATE (V-BIL-001) |
 | Installment count outside 2–24 | 422 | INVALID_INSTALLMENT_COUNT (V-BIL-002) |
-| Mark uncollectible | 501 | NOT_IMPLEMENTED |
+| Mark uncollectible (non-outstanding invoice) | 422 | INVALID_STATUS_TRANSITION |
 
 ---
 
@@ -219,7 +219,7 @@ dental-billing.invoice-created (INFO), dental-billing.payment-recorded (INFO), d
 | Flag | Default | Description |
 |------|---------|-------------|
 | dental_billing_tax_enabled | false | Phase 2 tax calculation (ADR-008) |
-| dental_billing_uncollectible | false | Enable markUncollectible (BR-013) |
+| dental_billing_uncollectible | true | markUncollectible (BR-013) — lifted 2026-06-04; flag is documentation-only (no runtime gate), write-off is always available |
 
 ---
 
@@ -230,7 +230,7 @@ BIL-S1: Create invoice (BR-009) | BIL-S2: Issue + pay (state machine) | BIL-S3: 
 
 ## 20. AI Instructions
 1. taxCents must always be 0 (BR-010) — do not compute tax.
-2. markUncollectible must return 501 — do not implement (BR-013 deferred).
+2. markUncollectible: owner-only; only an outstanding (issued/partial/overdue) invoice may be written off to `uncollectible` (BR-013); reject others with 422.
 3. Void permission check: dentist_owner role required, assertBranchRole.
 4. Invoice state machine in BR-012 is strict — throw 422 on any invalid transition.
 5. Follow ARCHITECTURE.md, CONTRIBUTING.md, VERTICAL_TDD.md.
