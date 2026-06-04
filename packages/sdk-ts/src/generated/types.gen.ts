@@ -67172,6 +67172,41 @@ export type CreateMemberResponses = {
 
 export type CreateMemberResponse = CreateMemberResponses[keyof CreateMemberResponses];
 
+export type DeactivateMemberData = {
+    body?: never;
+    path: {
+        memberId: Uuid;
+    };
+    query?: never;
+    url: '/dental/org/members/{memberId}';
+};
+
+export type DeactivateMemberErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type DeactivateMemberError = DeactivateMemberErrors[keyof DeactivateMemberErrors];
+
+export type DeactivateMemberResponses = {
+    /**
+     * Success response with no content
+     */
+    204: void;
+};
+
+export type DeactivateMemberResponse = DeactivateMemberResponses[keyof DeactivateMemberResponses];
+
 export type UpdateMemberData = {
     body: DentalOrgModuleUpdateMemberRequest;
     path: {
