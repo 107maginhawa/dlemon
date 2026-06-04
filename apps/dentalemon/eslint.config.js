@@ -16,7 +16,10 @@ const GAP_D_MESSAGE =
 export default [
   ...config,
   {
-    files: ['src/features/**/hooks/**/*.ts', 'src/features/**/hooks/**/*.tsx'],
+    // Cover both feature hooks and the top-level src/hooks dir — QA-010's latent
+    // balanceCents drift lived in src/hooks/use-patient-profile.ts, outside the
+    // original feature-scoped glob.
+    files: ['src/features/**/hooks/**/*.ts', 'src/features/**/hooks/**/*.tsx', 'src/hooks/**/*.ts', 'src/hooks/**/*.tsx'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-syntax': ['error', { selector: GAP_D_SELECTOR, message: GAP_D_MESSAGE }],
