@@ -30,6 +30,9 @@ enum DentalInvoiceStatus {
   paid,
   overdue,
   voided,
+  // BR-013: terminal write-off state — an issued/partial/overdue invoice the
+  // practice has given up collecting. Owner-only, no further payments/voids.
+  uncollectible,
 }
 
 enum PaymentMethod {
@@ -788,9 +791,9 @@ namespace DentalBillingModule {
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
-    // V-BIL-006 / BR-013 / AC-BIL-005: write-off endpoint is contract-present
-    // but deferred — handler returns 501 NOT_IMPLEMENTED until the
-    // dental_billing_uncollectible feature flag is lifted.
+    // V-BIL-006 / BR-013 / AC-BIL-005: write-off endpoint. Owner-only; transitions
+    // an issued/partial/overdue invoice to the terminal `uncollectible` state.
+    // Rejects paid/voided/draft. Implemented 2026-06-04 (BR-013 promoted).
     @post
     @route("/invoices/{invoiceId}/uncollectible")
     @useAuth(bearerAuth)

@@ -3526,7 +3526,7 @@ export type DentalInvoice = {
     updatedAt: Date;
 };
 
-export type DentalInvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'voided';
+export type DentalInvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'voided' | 'uncollectible';
 
 /**
  * A legal-hold record
@@ -60661,6 +60661,9 @@ export type ToothHistoryEntry = {
     conditionCode?: string;
     treatmentCdtCode?: string;
     treatmentDescription?: string;
+    surfaces?: Array<ToothSurfaceCode>;
+    treatmentStatus?: DentalTreatmentStatus;
+    treatmentPriceCents?: number;
 };
 
 export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';

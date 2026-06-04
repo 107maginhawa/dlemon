@@ -1,7 +1,7 @@
 /**
  * Drizzle schema for dental invoices and line items
  *
- * Invoice lifecycle: draft -> issued -> partial -> paid | overdue | voided
+ * Invoice lifecycle: draft -> issued -> partial -> paid | overdue | voided | uncollectible
  * Line items are derived from dental treatments (performed/verified).
  */
 
@@ -14,7 +14,7 @@ import { dentalBranches } from '../../dental-org/repos/branch.schema';
 import { dentalMemberships } from '../../dental-org/repos/membership.schema';
 
 export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
-  'draft', 'issued', 'partial', 'paid', 'overdue', 'voided',
+  'draft', 'issued', 'partial', 'paid', 'overdue', 'voided', 'uncollectible',
 ]);
 
 export const dentalInvoices = pgTable('dental_invoice', {
@@ -39,6 +39,7 @@ export const dentalInvoices = pgTable('dental_invoice', {
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   paidAt: timestamp('paid_at', { withTimezone: true }),
   voidedAt: timestamp('voided_at', { withTimezone: true }),
+  uncollectibleAt: timestamp('uncollectible_at', { withTimezone: true }),
 }, (table) => ({
   invoiceNumberUniq: uniqueIndex('dental_invoice_number_uniq').on(table.invoiceNumber),
   patientIdx: index('dental_invoice_patient_id_idx').on(table.patientId),

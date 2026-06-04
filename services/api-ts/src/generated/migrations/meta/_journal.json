@@ -624,6 +624,13 @@
       "when": 1780459483237,
       "tag": "0088_sloppy_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1780580638605,
+      "tag": "0089_windy_taskmaster",
+      "breakpoints": true
     }
   ]
 }

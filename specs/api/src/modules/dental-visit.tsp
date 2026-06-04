@@ -299,6 +299,12 @@ model ToothHistoryEntry {
   conditionCode?: string;
   treatmentCdtCode?: string;
   treatmentDescription?: string;
+  // QA-003: surfaces / status / locked price of the tooth's treatment on the
+  // visit, sourced from dental_treatments. Optional — a history row may have a
+  // condition but no treatment.
+  surfaces?: ToothSurfaceCode[];
+  treatmentStatus?: DentalTreatmentStatus;
+  treatmentPriceCents?: int32;
 }
 
 model TreatmentTemplate {
